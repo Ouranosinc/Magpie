@@ -13,7 +13,7 @@ from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInSuccess
 from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignOut
 from ziggurat_foundations.models.services.external_identity import ExternalIdentityService
 from ziggurat_foundations.models.services.group import GroupService
-
+from ziggurat_foundations.ext.pyramid import get_user
 from security import authomatic
 import models
 
@@ -149,6 +149,9 @@ def get_session(request):
         json_response = {'authenticated': False}
     return HTTPOk(
         body=json.dumps(json_response),
-        content_type='application/json')
+        content_type='application/json'
+    )
+
+
 
 

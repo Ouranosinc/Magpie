@@ -21,10 +21,10 @@ from pyramid.session import SignedCookieSessionFactory
 
 # -- Project specific --------------------------------------------------------
 #from .__meta__ import __version__ as __ver__
-import models
+#import models
+from __init__ import *
 
 THIS_DIR = os.path.dirname(__file__)
-
 
 def main(global_config, **settings):
     """
@@ -61,6 +61,7 @@ def main(global_config, **settings):
     config.include('login')
     config.include('home')
     config.include('db')
+    config.include('management')
 
     config.scan('magpie')
 
