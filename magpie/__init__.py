@@ -15,7 +15,7 @@ from pyramid.httpexceptions import (
     HTTPCreated,
     HTTPNotFound
 )
-
+from pyramid.security import ALL_PERMISSIONS
 from pyramid.view import view_config
 from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInBadAuth
 from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInSuccess
@@ -24,4 +24,12 @@ from ziggurat_foundations.models.services.external_identity import ExternalIdent
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.user import UserService
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
+from ziggurat_foundations.models.services.group_resource_permission import GroupResourcePermissionService
+from ziggurat_foundations.models.services.resource import ResourceService
+from ziggurat_foundations.models.services.user_resource_permission import UserResourcePermissionService
+from ziggurat_foundations.permissions import ANY_PERMISSION
+from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
+from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
+
+ADMIN_NAME = 'admin'
 

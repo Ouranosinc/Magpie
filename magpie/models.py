@@ -16,6 +16,12 @@ import sqlalchemy as sa
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
 from sqlalchemy.ext.declarative import declared_attr
 from ziggurat_foundations.models import groupfinder as gf
+from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
+from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
+
+
+
+
 
 Base = declarative_base()
 group_finder = gf
@@ -47,6 +53,8 @@ class Resource(ResourceMixin, Base):
     # ... your own properties....
 
     # example implementation of ACLS for pyramid application
+    permission_names = []
+
     @property
     def __acl__(self):
         acls = []
@@ -113,9 +121,56 @@ class Service(Resource):
             self.__acl__.append((outcome, perm_user, perm_name,))
 
 
+class Directory(Resource):
+    __mapper_args__ = {'polymorphic_identity': 'directory'}
+    permission_names = ['download']
+
+
+class File(Resource):
+    __mapper_args__ = {'polymorphic_identity': 'file'}
+    permission_names = ['download']
+
+
+class Workspace(Resource):
+    __mapper_args__ = {'polymorphic_identity': 'workspace'}
+    permission_names = ['getcapabilities',
+                        'getmap',
+                        'getfeatureinfo',
+                        'getlegendgraphic',
+                        'getmetadata',
+                        'describefeaturetype',
+                        'getfeature',
+                        'lockfeature',
+                        'transaction']
+
+
+
 
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
                UserResourcePermission, GroupResourcePermission, Resource,
                ExternalIdentity, passwordmanager=None)
 
+resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
 
+resource_type_dico = {'service': Service, 'directory': Directory, 'file': File, 'workspace': Workspace}
+
+
+def resource_factory(**kwargs):
+    try:
+        resource_type = kwargs['resource_type']
+    except Exception, e:
+        raise Exception(e.message)
+    return resource_type_dico[resource_type](**kwargs)
+
+
+def get_all_resource_permission_names():
+    all_permission_names_list = set()
+    for service_type in resource_type_dico.keys():
+        all_permission_names_list.update(resource_type_dico[service_type].permission_names)
+    return all_permission_names_list
+
+
+def find_children_by_name(name, parent_id, db_session):
+    tree_struct = resource_tree_service.from_parent_deeper(parent_id=parent_id, limit_depth=1, db_session=db_session)
+    child_found = node.Resource if name in [node.Resource.resource_name for node in tree_struct] else None
+    return child_found

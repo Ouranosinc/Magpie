@@ -1,9 +1,10 @@
 from magpie import *
 from owsrequest import *
+from models import find_children_by_name
 
 
 class ServiceI(object):
-    permission_types = []
+    permission_names = []
     param_values = []
 
     acl = []
@@ -17,12 +18,14 @@ class ServiceI(object):
         raise NotImplementedError
 
     def expand_acl(self, resource, user):
-        for ace in resource.__acl__:
-            self.acl.append(ace)
-        # Custom acl
-        permissions = resource.perms_for_user(user)
-        for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-            self.acl.append((outcome, perm_user, perm_name,))
+        if resource:
+            for ace in resource.__acl__:
+                self.acl.append(ace)
+            # Custom acl
+            if user:
+                permissions = resource.perms_for_user(user)
+                for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
+                    self.acl.append((outcome, perm_user, perm_name,))
 
     def permission_requested(self):
         raise NotImplementedError
@@ -30,7 +33,7 @@ class ServiceI(object):
 
 class ServiceWPS(ServiceI):
 
-    permission_types = ['getcapabilities',
+    permission_names = ['getcapabilities',
                         'describeprocess',
                         'execute']
 
@@ -54,92 +57,152 @@ class ServiceWPS(ServiceI):
 
 
 
-'''
 
-class ServiceWMS(object):
-    permission_types = ['getcapabilities',
+
+class ServiceWMS(ServiceI):
+    permission_names = ['getcapabilities',
                          'getmap',
                          'getfeatureinfo',
                          'getlegendgraphic',
                          'getmetadata']
 
-    param_values = ['service',
+    params_expected = ['service',
                     'request',
                     'version',
                     'layers']
 
-    def permission_requested(self, http_request):
-        return self.parser.params['request']
-
-    def get_workspace(self):
-        #should be the same infront befor prefix and in the path
-        # geoserver/WATERSHED
-        # layers=WATHERSHED:BV_N1_S
-        return workspace_name
-
-
-    def __init__(self, service):
-        self.service = service
+    def __init__(self, service, request):
+        super(ServiceWMS, self).__init__(service, request)
         self.parser = ows_parser_factory(request)
-        self.parser.parse()
-        self.init_acl() #modify the acl
+        self.parser.parse(self.params_expected)
 
-    def extend_acl(self,resource):
-        self.__acl__.append(resource.__acl__)
-        permissions = self.perms_for_user(self.request.user)
-        for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-            self.__acl__.append((outcome, perm_user, perm_name,))
+    @property
+    def __acl__(self):
+        self.expand_acl(self.service, self.request.user)
 
-        # you need to add WORKSPACE ACL !
-    def init_acl(self):
-        self.acl = self.service.acl
-        self.extend_acl(self.service)
-        workspace_name = self.parser.params['workspace']
-        tree = tree_structure(self.service.resource_id)
-        workspace_resource = go_1level_in_the_children_and_find_WorkspaceName
-        self.extend_acl(workspace_resource)
+        #localhost:8087/geoserver/WATERSHED/wms?layers=WATERSHED:BV_1NS&request=getmap
+        #localhost:8087/geoserver/wms?layers=WATERERSHED:BV1_NS&request=getmap
+        #those two request lead to the same thing so, here we need to check the workspace in the layer
+
+        #localhost:8087/geoserver/wms?request=getcapabilities (dangerous, get all workspace)
+        # localhost:8087/geoserver/WATERSHED/wms?request=getcapabilities (only for the workspace in the path)
+        #here we need to check the workspace in the path
 
 
+        request_type = self.permission_requested()
+        if request_type == 'getcapabilities':
+            path_elem = self.request.path.split('/')
+            wms_idx = path_elem.index('wms')
+            if path_elem[wms_idx-1] != 'geoserver':
+                worskpace_name = path_elem[wms_idx-1]
+            else:
+                worskpace_name = ''
+        else:
+            layer_name = self.parser.params['layers']
+            worskpace_name = layer_name.split(':')[0]
 
+        #load workspace resource from the database
+        workspace = find_children_by_name(name=worskpace_name,
+                                          parent_id=self.service.resource_id,
+                                          db_session=self.request.db)
+        if workspace:
+            self.expand_acl(workspace, self.request.user)
+        return self.acl
+
+    def permission_requested(self):
+        # should be in permission_types
+        return self.parser.params['request']
 
 
 class ServiceWFS(object):
-    permission_types = ['getcapabilities',
-                        'DescribeFeatureType',
-                        'GetFeature',
-                        'LockFeature',
-                        'Transaction']
+    permission_names = ['getcapabilities',
+                        'describefeaturetype',
+                        'getfeature',
+                        'lockfeature',
+                        'transaction']
 
-    pass
+    params_expected = ['service',
+                       'request',
+                       'version',
+                       'typenames']
+
+    def __init__(self, service, request):
+        super(ServiceWMS, self).__init__(service, request)
+        self.parser = ows_parser_factory(request)
+        self.parser.parse(self.params_expected)
+
+    @property
+    def __acl__(self):
+        self.expand_acl(self.service, self.request.user)
+        request_type = self.permission_requested()
+        if request_type == 'getcapabilities':
+            path_elem = self.request.path.split('/')
+            wms_idx = path_elem.index('wfs')
+            if path_elem[wms_idx - 1] != 'geoserver':
+                worskpace_name = path_elem[wms_idx - 1]
+            else:
+                worskpace_name = ''
+        else:
+            layer_name = self.parser.params['typenames']
+            worskpace_name = layer_name.split(':')[0]
+
+        # load workspace resource from the database
+        workspace = find_children_by_name(name=worskpace_name,
+                                          parent_id=self.service.resource_id,
+                                          db_session=self.request.db)
+        if workspace:
+            self.expand_acl(workspace, self.request.user)
+        return self.acl
+
+    def permission_requested(self):
+        # should be in permission_types
+        return self.parser.params['request']
 
 
-class ServiceTHREDDS(object):
-    permission_types = ['fileserver',
-                        'dods']
+class ServiceTHREDDS(ServiceI):
+    permission_names = ['download']
 
-    def permission_requested(self, http_request):
+    def __init__(self, service, request):
+        super(ServiceTHREDDS, self).__init__(service, request)
+
+
+    @property
+    def __acl__(self):
+        self.expand_acl(self.service, self.request.user)
+        elems = self.request.path.split('/')
+
+        if 'fileServer' in elems:
+            first_idx = elems.index('fileServer')
+        elif 'dodsC' in elems:
+            first_idx = elems.index('dodsC')
+            elems[-1] = elems[-1].replace('.html', '')
+        else:
+            return self.acl
+
+        elems = elems[first_idx+1::]
+        db = self.request.db
+        new_child = self.service
+        while new_child and elems:
+            name = elems.pop(0)
+            new_child = find_children_by_name(name, parent_id=new_child.resource_id, db_session=db)
+            self.expand_acl(new_child, self.request.user)
+
+        return self.acl
+
+    def permission_requested(self):
         # /thredds/fileServer
         # /thredds/dods
         # /thredds/{access_method}
-
-        return  access_method
-
-    def init_acl(self):
-        #Use traversal or treestructure
-        # maketree_from(self.service.id)
-        # /thredds/fileServer/*traversal
-        # go deep in the three
-        # for resource_name in traversal:
-        #
-        #   extend_acl(resource)
-        #
-
+        return 'download'
 
     pass
 
-'''
 
-service_type_dico = {'wps': ServiceWPS}
+service_type_dico = {'wps': ServiceWPS,
+                     'wms': ServiceWMS,
+                     'wfs': ServiceWFS,
+                     'thredds': ServiceTHREDDS}
+
 
 def service_factory(service, request):
     try:
@@ -149,3 +212,8 @@ def service_factory(service, request):
         raise Exception('This type of service dows not exist')
 
 
+def get_all_service_permission_names():
+    all_permission_names_list = set()
+    for service_type in service_type_dico.keys():
+        all_permission_names_list.update(service_type_dico[service_type].permission_names)
+    return all_permission_names_list
