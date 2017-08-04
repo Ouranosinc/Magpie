@@ -42,7 +42,8 @@ def get_service(request):
     service = models.Service.by_service_name(service_name, db_session=request.db)
 
     if service:
-        json_response = {'service_name': service.resource_name,
+        json_response = {'resource_id': service.resource_id,
+                         'service_name': service.resource_name,
                          'service_type': service.type,
                          'service_url': service.url}
 

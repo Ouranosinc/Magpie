@@ -111,7 +111,7 @@ def assign_user_group(request):
 
 
 @view_config(route_name='user_group', request_method='DELETE')
-def delete_user_group(request, request_method='POST'):
+def delete_user_group(request):
     user_name = request.matchdict.get('user_name')
     group_name = request.matchdict.get('group_name')
 
@@ -170,6 +170,82 @@ def get_user_resources_types_view(request):
     return get_user_resources(request, resource_types=[request.matchdict.get('resource_type')])
 
 
+def get_user_resource_permissions(resource, user):
+    if resource is None or user is None:
+        raise HTTPNotFound(detail='this service/user does not exist')
+
+    if resource.owner_user_id == user.id:
+        permission_names = ['ALL_PERMISSIONS']
+    else:
+        user_res_permission = resource.perms_for_user(user)
+        permission_names = [permission.perm_name for permission in user_res_permission]
+        if ALL_PERMISSIONS in permission_names:
+            permission_names = ['ALL_PERMISSIONS']
+
+    return HTTPOk(
+        body=json.dumps({'permission_names': permission_names}),
+        content_type='application/json'
+    )
+
+
+@view_config(route_name='user_resource_permissions', request_method='GET')
+def get_user_resource_permissions_view(request):
+    user_name = request.matchdict.get('user_name')
+    resource_id = request.matchdict.get('resource_id')
+    db = request.db
+    resource = ResourceService.by_resource_id(resource_id, db)
+    user = UserService.by_user_name(user_name=user_name, db_session=db)
+
+    return get_user_resource_permissions(resource=resource, user=user)
+
+def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
+    try:
+        new_permission = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
+        new_permission.perm_name = permission_name
+        db_session.add(new_permission)
+        db_session.commit()
+    except:
+        db_session.rollback()
+        raise HTTPConflict('This permission on that service already exists for that user')
+    return HTTPCreated()
+
+
+@view_config(route_name='user_resource_permissions', request_method='POST')
+def create_user_resource_permission_view(request):
+    user_name = request.matchdict.get('user_name')
+    resource_id = request.matchdict.get('resource_id')
+    permission_name = request.POST.get('permission_name')
+    db = request.db
+
+    user = UserService.by_user_name(user_name=user_name, db_session=db)
+    resource = ResourceService.by_resource_id(resource_id, db)
+    if resource is None or user is None:
+        raise HTTPNotFound(detail='this user/resource does not exist')
+    if permission_name not in resource_type_dico[resource.resource_type].permission_names:
+        raise HTTPBadRequest(detail='This permission is not allowed for that resource')
+
+    return create_user_resource_permission(permission_name, resource_id, user.id, db)
+
+
+@view_config(route_name='user_resource_permission', request_method='DELETE')
+def delete_user_resource_permission_view(request):
+    user_name = request.matchdict.get('user_name')
+    resource_id = request.matchdict.get('resource_id')
+    permission_name = request.matchdict.get('permission_name')
+
+    db = request.db
+    user = UserService.by_user_name(user_name=user_name, db_session=db)
+    resource = ResourceService.by_resource_id(resource_id, db)
+    if resource is None or user is None:
+        raise HTTPNotFound(detail='this user/resource does not exist')
+    if permission_name not in resource_type_dico[resource.resource_type].permission_names:
+        raise HTTPBadRequest(detail='This permission is not allowed for that resource')
+
+    return delete_user_resource_permission(permission_name,
+                                           resource_id,
+                                           user.id,
+                                           db)
+
 
 from services import get_all_service_permission_names
 @view_config(route_name='user_services', request_method='GET')
@@ -193,22 +269,6 @@ def get_user_services(request):
     )
 
 
-def get_user_resource_permissions(resource, user, db_session):
-    if resource is None or user is None:
-        raise HTTPNotFound(detail='this service/user does not exist')
-
-    if resource.owner_user_id == user.id:
-        permission_names = ['ALL_PERMISSIONS']
-    else:
-        user_res_permission = resource.perms_for_user(user)
-        permission_names = [permission.perm_name for permission in user_res_permission]
-        if ALL_PERMISSIONS in permission_names:
-            permission_names = ['ALL_PERMISSIONS']
-
-    return HTTPOk(
-        body=json.dumps({'permission_names': permission_names}),
-        content_type='application/json'
-    )
 
 
 @view_config(route_name='user_service_permissions', request_method='GET')
@@ -223,16 +283,6 @@ def get_user_service_permissions(request):
     return get_user_resource_permissions(resource=service, user=user, db_session=db)
 
 
-def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
-    try:
-        new_permission = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
-        new_permission.perm_name = permission_name
-        db_session.add(new_permission)
-        db_session.commit()
-    except:
-        db_session.rollback()
-        raise HTTPConflict('This permission on that service already exists for that user')
-    return HTTPCreated()
 
 
 @view_config(route_name='user_service_permissions', request_method='POST')
@@ -285,53 +335,6 @@ def delete_user_service_permission(request):
                                            user.id,
                                            db)
 
-
-@view_config(route_name='user_resource_permissions', request_method='GET')
-def get_user_resource_permissions_view(request):
-    user_name = request.matchdict.get('user_name')
-    resource_id = request.matchdict.get('resource_id')
-    db = request.db
-    resource = ResourceService.by_resource_id(resource_id, db)
-    user = UserService.by_user_name(user_name=user_name, db_session=db)
-
-    return get_user_resource_permissions(resource=resource, user=user, db_session=db)
-
-
-@view_config(route_name='user_resource_permissions', request_method='POST')
-def create_user_resource_permission_view(request):
-    user_name = request.matchdict.get('user_name')
-    resource_id = request.matchdict.get('resource_id')
-    permission_name = request.POST.get('permission_name')
-    db = request.db
-
-    user = UserService.by_user_name(user_name=user_name, db_session=db)
-    resource = ResourceService.by_resource_id(resource_id, db)
-    if resource is None or user is None:
-        raise HTTPNotFound(detail='this user/resource does not exist')
-    if permission_name not in resource_type_dico[resource.resource_type].permission_names:
-        raise HTTPBadRequest(detail='This permission is not allowed for that resource')
-
-    return create_user_resource_permission(permission_name, resource_id, user.id, db)
-
-
-@view_config(route_name='user_resource_permission', request_method='DELETE')
-def delete_user_resource_permission_view(request):
-    user_name = request.matchdict.get('user_name')
-    resource_id = request.matchdict.get('resource_id')
-    permission_name = request.matchdict.get('permission_name')
-
-    db = request.db
-    user = UserService.by_user_name(user_name=user_name, db_session=db)
-    resource = ResourceService.by_resource_id(resource_id, db)
-    if resource is None or user is None:
-        raise HTTPNotFound(detail='this user/resource does not exist')
-    if permission_name not in resource_type_dico[resource.resource_type].permission_names:
-        raise HTTPBadRequest(detail='This permission is not allowed for that resource')
-
-    return delete_user_resource_permission(permission_name,
-                                           resource_id,
-                                           user.id,
-                                           db)
 
 
 @view_config(route_name='user_service_resources', request_method='GET')

@@ -202,6 +202,23 @@ def create_group_resource_permission(permission_name, resource_id, group_id, db_
         raise HTTPConflict('This permission on that service already exists for that group')
     return HTTPOk()
 
+@view_config(route_name='group_resource_permissions', request_method='POST')
+def create_group_resource_permission_view(request):
+    group_name = request.matchdict.get('group_name')
+    resource_id = request.matchdict.get('resource_id')
+    permission_name = request.POST.get('permission_name')
+
+    db = request.db
+    resource = ResourceService.by_resource_id(resource_id, db_session=db)
+    group = GroupService.by_group_name(group_name=group_name, db_session=db)
+    if resource is None or group is None:
+        raise HTTPNotFound(detail='this service/group does not exist')
+    if permission_name not in resource_type_dico[resource.resource_type].permission_names:
+        raise HTTPBadRequest(detail='This permission is not allowed for that service')
+
+    return create_group_resource_permission(permission_name, resource.resource_id, group.id, db_session=db)
+
+
 
 def delete_group_resource_permission(permission_name, resource_id, group_id, db_session):
     try:
@@ -230,22 +247,6 @@ def delete_group_resource_permission_view(request):
         raise HTTPBadRequest(detail='This permission is not allowed for that service')
     return delete_group_resource_permission(permission_name, resource.resource_id, group.id, db_session=db)
 
-
-@view_config(route_name='group_resource_permissions', request_method='POST')
-def create_group_resource_permission_view(request):
-    group_name = request.matchdict.get('group_name')
-    resource_id = request.matchdict.get('resource_id')
-    permission_name = request.POST.get('permission_name')
-
-    db = request.db
-    resource = ResourceService.by_resource_id(resource_id, db_session=db)
-    group = GroupService.by_group_name(group_name=group_name, db_session=db)
-    if resource is None or group is None:
-        raise HTTPNotFound(detail='this service/group does not exist')
-    if permission_name not in resource_type_dico[resource.resource_type].permission_names:
-        raise HTTPBadRequest(detail='This permission is not allowed for that service')
-
-    return create_group_resource_permission(permission_name, resource.resource_id, group.id, db_session=db)
 
 
 @view_config(route_name='group_service_resources', request_method='GET')

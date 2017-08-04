@@ -116,14 +116,11 @@ def delete_resources(request):
 @view_config(route_name='resources', request_method='GET')
 def get_resources(request):
     resources = models.Resource.all(db_session=request.db)
-    resource_info_list = []
+    resource_info_dico = {}
     for resource in resources:
-        resource_info = {
-            resource.resource_id: get_resource_info(resource.resource_id, request.db)
-        }
-        resource_info_list.append(resource_info)
+        resource_info_dico[resource.resource_id] = get_resource_info(resource.resource_id, request.db)
 
-    json_response = {'resources': resource_info_list}
+    json_response = {'resources': resource_info_dico}
     return HTTPOk(
         body=json.dumps(json_response),
         content_type='application/json'

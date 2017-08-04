@@ -15,6 +15,7 @@ from ziggurat_foundations.models.services.external_identity import ExternalIdent
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.ext.pyramid import get_user
 from security import authomatic
+import requests
 import models
 
 external_provider = ['openid',
@@ -25,13 +26,18 @@ external_provider = ['openid',
                      'smhi']
 
 
-@view_config(route_name='signin')
+@view_config(route_name='signin', request_method='POST')
 def sign_in(request):
     provider_name = request.POST.get('provider_name')
     user_name = request.POST.get('user_name')
+    password = request.POST.get('password')
+
     if provider_name == 'ziggurat':
         # redirection to ziggurat sign in
         return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_in'))
+        #ziggu_route = request.route_url('ziggurat.routes.sign_in')
+        #res = requests.post(request.route_url('ziggurat.routes.sign_in'), data=post_data)
+        #return res
     elif provider_name in external_provider:
         user_name_field = {'username': user_name}
         external_login_route = request.route_url('external_login', provider_name=provider_name, _query=user_name_field)
@@ -40,17 +46,17 @@ def sign_in(request):
     return HTTPBadRequest(detail='Bad provider name')
 
 
-@view_config(route_name='signout')
+@view_config(route_name='signout', request_method='GET')
 def sign_out(request):
     return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_out'))
 
 
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
 def login_success_ziggu(request):
-    came_from_path = request.POST.get('came_from')
-    user = request.user
-    return HTTPFound(location=came_from_path,
-                     headers=request.context.headers)
+    #return HTTPFound(location=request.route_url('successful_operation'),
+    #                 headers=request.context.headers)
+    return HTTPOk(detail='login success',
+                  headers=request.context.headers)
 
 
 def login_success_external(request, username, external_id, email, providername):
@@ -87,16 +93,22 @@ def login_success_external(request, username, external_id, email, providername):
 
 
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
-def login_failure(request, message=''):
-    came_from_path = request.cookies['homepage_route']
-    return HTTPFound(location=came_from_path, detail=message)
+def login_failure(request, message='login failure'):
+    #came_from_path = request.cookies['homepage_route']
 
+    return HTTPBadRequest(detail=message)
+
+
+@view_config(route_name='successful_operation')
+def successful_operation(request):
+    return HTTPOk()
 
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
 def sign_out_ziggu(request):
-    came_from_path = request.POST.get('came_from')
-    return HTTPFound(location=came_from_path,
+    #came_from_path = request.POST.get('came_from')
+    return HTTPFound(location=request.route_url('successful_operation'),
                      headers=request.context.headers)
+    #return HTTPOk(detail='successful logout')
 
 
 @view_config(route_name='external_login')
@@ -144,7 +156,9 @@ def get_session(request):
     if Authenticated in principals:
         user = request.user
         json_response = {'authenticated': True,
-                         'user_name': user.user_name}
+                         'user_name': user.user_name,
+                         'user_email': user.email,
+                         'group_names': [group.group_name for group in user.groups]}
     else:
         json_response = {'authenticated': False}
     return HTTPOk(
