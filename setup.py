@@ -16,7 +16,8 @@ with open('HISTORY.rst') as history_file:
     HISTORY = history_file.read().replace('.. :changelog:', '')
 
 REQUIREMENTS = [
-    # TODO: put package requirements here
+    "pyramid",
+    "ziggurat-foundations",
 ]
 
 TEST_REQUIREMENTS = [

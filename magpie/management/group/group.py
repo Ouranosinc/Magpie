@@ -24,6 +24,7 @@ def create_group(request):
         db.commit()
     except:
         # Group already exist
+        db.rollback()
         raise HTTPConflict(detail='This name already exists')
 
     return HTTPCreated()
@@ -39,6 +40,7 @@ def delete_group(request):
         db.commit()
 
     except:
+        db.rollback()
         raise HTTPNotFound(detail="This group does not exist")
 
     return HTTPOk()

@@ -24,6 +24,7 @@ def create_user(request):
         db.add(group_entry)
         db.commit()
     except:
+        db.rollback()
         raise HTTPConflict(detail='this user already exists')
 
     return HTTPCreated()

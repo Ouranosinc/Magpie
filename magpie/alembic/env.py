@@ -1,8 +1,9 @@
 from __future__ import with_statement
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool, create_engine
 from logging.config import fileConfig
-
+from sqlalchemy.schema import MetaData
+import os
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -15,13 +16,30 @@ fileConfig(config.config_file_name)
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+
+
+target_metadata = MetaData(naming_convention={
+    "ix": 'ix_%(column_0_label)s',
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s"
+})
+
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+def get_url():
+    return "postgresql://%s:%s@%s:%s/%s" % (
+        os.getenv("POSTGRES_USER", "pavics"),
+        os.getenv("POSTGRES_PASSWORD", "qwerty"),
+        os.getenv("POSTGRES_HOST", "localhost"),
+        os.getenv("POSTGRES_PORT", "5432"),
+        os.getenv("POSTGRES_DB", "pavics"),
+    )
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -35,7 +53,8 @@ def run_migrations_offline():
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    #url = config.get_main_option("sqlalchemy.url")
+    url = get_url()
     context.configure(
         url=url, target_metadata=target_metadata, literal_binds=True)
 
@@ -50,19 +69,26 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix='sqlalchemy.',
-        poolclass=pool.NullPool)
+    #connectable = engine_from_config(
+    #    config.get_section(config.config_ini_section),
+    #    prefix='sqlalchemy.',
+    #    poolclass=pool.NullPool)
+    connectable = create_engine(get_url())
+
 
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=target_metadata
+            target_metadata=target_metadata,
+            version_table='alembic_version',
+            transaction_per_migration=True,
+            render_as_batch=True
         )
-
-        with context.begin_transaction():
-            context.run_migrations()
+        try:
+            with context.begin_transaction():
+                context.run_migrations()
+        finally:
+            connection.close()
 
 if context.is_offline_mode():
     run_migrations_offline()

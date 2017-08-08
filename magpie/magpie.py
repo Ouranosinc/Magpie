@@ -31,8 +31,8 @@ def main(global_config, **settings):
     This function returns a Pyramid WSGI application.
     """
     from pyramid.config import Configurator
-    config = Configurator(settings=settings)
-    session_factory = SignedCookieSessionFactory(settings['auth.secret'])
+    #config = Configurator(settings=settings)
+    #session_factory = SignedCookieSessionFactory(settings['auth.secret'])
 
     authn_policy = AuthTktAuthenticationPolicy(
         settings['auth.secret'],
