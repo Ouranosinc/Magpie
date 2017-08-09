@@ -20,11 +20,20 @@ from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.session import SignedCookieSessionFactory
 
 # -- Project specific --------------------------------------------------------
-#from .__meta__ import __version__ as __ver__
-#import models
+from __meta__ import __version__ as __ver__
 from __init__ import *
 
 THIS_DIR = os.path.dirname(__file__)
+
+
+@view_config(route_name='version')
+def get_version(request):
+    version = __ver__
+    return HTTPOk(
+        body=json.dumps({'version': version}),
+        content_type='application/json'
+    )
+
 
 def main(global_config, **settings):
     """
@@ -40,15 +49,6 @@ def main(global_config, **settings):
     )
     authz_policy = ACLAuthorizationPolicy()
 
-    '''
-    config = Configurator(
-        settings=settings,
-        authentication_policy=authn_policy,
-        authorization_policy=authz_policy,
-        root_factory=models.RootFactory,
-        session_factory=session_factory,
-    )
-    '''
     config = Configurator(
         settings=settings,
         authentication_policy=authn_policy,
@@ -57,12 +57,14 @@ def main(global_config, **settings):
 
 
     # include magpie components (all the file which define includeme)
+
     config.include('pyramid_chameleon')
     config.include('login')
     config.include('home')
     config.include('db')
     config.include('management')
 
+    config.add_route('version', '/version')
     config.scan('magpie')
 
     return config.make_wsgi_app()

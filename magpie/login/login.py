@@ -166,6 +166,15 @@ def get_session(request):
         content_type='application/json'
     )
 
+@view_config(route_name='providers', request_method='GET')
+def get_providers(request):
+    provider_names = ['ziggurat', 'dkrz', 'ipsl', 'badc', 'pcmdi', 'smhi']
+    return HTTPOk(
+        body=json.dumps({'provider_names': provider_names}),
+        content_type='application/json'
+    )
+
+
 
 
 
