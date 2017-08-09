@@ -36,5 +36,5 @@ ENV POSTGRES_PORT=5432
 
 
 
-CMD ["alembic","-c","/opt/local/src/magpie/alembic.ini","upgrade","heads"]
+#CMD ["alembic","-c","/opt/local/src/magpie/alembic.ini","upgrade","heads"]
 ENTRYPOINT exec gunicorn -b 0.0.0.0:2001 --paste /opt/local/src/magpie/magpie/magpie.ini 
