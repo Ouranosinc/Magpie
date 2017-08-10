@@ -2,7 +2,7 @@
 Magpie: A RestFul AuthN/AuthZ service
 ======================================
 Magpie (the smart-bird)
-  *a very smart bird who knows everything about you.
+  *a very smart bird who knows everything about you.*
 
 Magpie is service for AuthN/AuthZ accessible via a `RestAPI`_ implemented with the Pyramid web framework. It allows you to manage User/Group/Resource/permission with a postgres database. Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
