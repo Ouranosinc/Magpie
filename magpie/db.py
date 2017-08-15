@@ -7,9 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def postgresdb(registry):
-    settings = registry.settings
-    #engine = create_engine('postgresql://postgres:postgres@localhost/ziggudb', echo=True)
+def postgresdb():
 
     '''
     database_url = 'postgresql://'\
@@ -25,14 +23,12 @@ def postgresdb(registry):
                    '@' + os.getenv('POSTGRES_HOST') + \
                    '/' + os.getenv('POSTGRES_DB')
 
-
-
     engine = create_engine(database_url, echo=True)
     db = sessionmaker(bind=engine)()
     return db
 
 def includeme(config):
-    config.registry.db = postgresdb(config.registry)
+    config.registry.db = postgresdb()
 
     def _add_db(request):
         db = request.registry.db

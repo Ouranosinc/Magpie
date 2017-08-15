@@ -81,6 +81,14 @@ class ExternalIdentity(ExternalIdentityMixin, Base):
     pass
 
 
+class RootFactory(object):
+    def __init__(self, request):
+        self.__acl__ = []
+        if request.user:
+            for outcome, perm_user, perm_name in permission_to_pyramid_acls(request.user.permissions):
+                self.__acl__.append((outcome, perm_user, perm_name))
+
+
 # you can define multiple resource derived models to build a complex
 # application like CMS, forum or other permission based solution
 
@@ -155,6 +163,10 @@ resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
 resource_type_dico = {'service': Service, 'directory': Directory, 'file': File, 'workspace': Workspace}
 
 
+
+
+
+
 def resource_factory(**kwargs):
     try:
         resource_type = kwargs['resource_type']
@@ -174,3 +186,5 @@ def find_children_by_name(name, parent_id, db_session):
     tree_struct = resource_tree_service.from_parent_deeper(parent_id=parent_id, limit_depth=1, db_session=db_session)
     child_found = node.Resource if name in [node.Resource.resource_name for node in tree_struct] else None
     return child_found
+
+

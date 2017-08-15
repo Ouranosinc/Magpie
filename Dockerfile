@@ -1,12 +1,6 @@
 FROM ubuntu:16.04
 MAINTAINER Francois-Xavier Derue
 
-
-
-
-
-
-
 RUN apt-get update && apt-get install -y \
 	build-essential \
 	libssl-dev \
@@ -30,11 +24,7 @@ ENV POSTGRES_DB=pavics
 ENV POSTGRES_PASSWORD=qwerty
 ENV POSTGRES_HOST=postgres
 ENV POSTGRES_PORT=5432
-#initialize database with models
-
-#RUN alembic -c /opt/local/src/magpie/alembic.ini upgrade heads
 
 
-
-#CMD ["alembic","-c","/opt/local/src/magpie/alembic.ini","upgrade","heads"]
-ENTRYPOINT exec gunicorn -b 0.0.0.0:2001 --paste /opt/local/src/magpie/magpie/magpie.ini 
+ENTRYPOINT alembic -c /opt/local/src/magpie/alembic.ini upgrade heads && \
+		   exec gunicorn -b 0.0.0.0:2001 --paste /opt/local/src/magpie/magpie/magpie.ini

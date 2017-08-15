@@ -6,6 +6,7 @@ __version__ = '0.1.0'
 
 
 import json
+import os
 from pyramid.httpexceptions import (
     HTTPFound,
     HTTPOk,
@@ -31,5 +32,10 @@ from ziggurat_foundations.permissions import ANY_PERMISSION
 from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
 from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
 
-ADMIN_NAME = 'admin'
+ADMIN_NAME = os.getenv('ADMIN_NAME')
+ADMIN_GROUP = os.getenv('ADMIN_GROUP')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
+ADMIN_PERM = 'edit'
+
+
 

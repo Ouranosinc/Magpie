@@ -26,7 +26,7 @@ external_provider = ['openid',
                      'smhi']
 
 
-@view_config(route_name='signin', request_method='POST')
+@view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
     provider_name = request.POST.get('provider_name')
     user_name = request.POST.get('user_name')
@@ -46,7 +46,7 @@ def sign_in(request):
     return HTTPBadRequest(detail='Bad provider name')
 
 
-@view_config(route_name='signout', request_method='GET')
+@view_config(route_name='signout', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def sign_out(request):
     return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_out'))
 
@@ -103,15 +103,14 @@ def login_failure(request, message='login failure'):
 def successful_operation(request):
     return HTTPOk()
 
+
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
 def sign_out_ziggu(request):
-    #came_from_path = request.POST.get('came_from')
     return HTTPFound(location=request.route_url('successful_operation'),
                      headers=request.context.headers)
-    #return HTTPOk(detail='successful logout')
 
 
-@view_config(route_name='external_login')
+@view_config(route_name='external_login', permission=NO_PERMISSION_REQUIRED)
 def authomatic_login(request):
     _authomatic = authomatic(request)
     open_id_provider_name = request.matchdict.get('provider_name')
@@ -149,7 +148,7 @@ def authomatic_login(request):
     return response
 
 
-@view_config(route_name='session')
+@view_config(route_name='session', permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
     authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
     principals = authn_policy.effective_principals(request)

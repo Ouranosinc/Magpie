@@ -9,10 +9,11 @@ Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations
 import logging.config
 import argparse
 import os
+import logging
+LOGGER = logging.getLogger(__name__)
 
 # -- Ziggurat_foundation ----
 from ziggurat_foundations.models import groupfinder
-
 
 # -- Pyramid ----
 from pyramid.authentication import AuthTktAuthenticationPolicy
@@ -22,7 +23,8 @@ from pyramid.session import SignedCookieSessionFactory
 # -- Project specific --------------------------------------------------------
 from __meta__ import __version__ as __ver__
 from __init__ import *
-
+from db import postgresdb
+import models
 THIS_DIR = os.path.dirname(__file__)
 
 
@@ -35,27 +37,58 @@ def get_version(request):
     )
 
 
+def init_admin():
+    db = postgresdb()
+    if not GroupService.by_group_name(ADMIN_GROUP, db_session=db):
+        admin_group = models.Group(group_name=ADMIN_GROUP)
+        db.add(admin_group)
+        db.commit()
+
+        admin_user = models.User(user_name=ADMIN_NAME, email='')
+        admin_user.set_password(ADMIN_PASSWORD)
+        admin_user.regenerate_security_code()
+        db.add(admin_user)
+        db.commit()
+
+        group = GroupService.by_group_name(ADMIN_GROUP, db_session=db)
+        group_entry = models.UserGroup(group_id=group.id, user_id=admin_user.id)
+        db.add(group_entry)
+        db.commit()
+
+        new_group_permission = models.GroupPermission(perm_name=ADMIN_PERM, group_id=group.id)
+        db.add(new_group_permission)
+        db.commit()
+    else:
+        LOGGER.debug('admin already initialized')
+
+
 def main(global_config, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
+    # Initialize database with admin
+
+    init_admin()
+
     from pyramid.config import Configurator
-    #config = Configurator(settings=settings)
-    #session_factory = SignedCookieSessionFactory(settings['auth.secret'])
+
+    magpie_secret = os.getenv('MAGPIE_SECRET')
+    if magpie_secret is None:
+        LOGGER.debug('Use default secret from magpie.ini')
+        magpie_secret = settings['magpie.secret']
 
     authn_policy = AuthTktAuthenticationPolicy(
-        settings['auth.secret'],
+        magpie_secret,
         callback=groupfinder,
     )
     authz_policy = ACLAuthorizationPolicy()
 
     config = Configurator(
         settings=settings,
+        root_factory=models.RootFactory,
         authentication_policy=authn_policy,
         authorization_policy=authz_policy
     )
-
-
     # include magpie components (all the file which define includeme)
 
     config.include('pyramid_chameleon')
@@ -67,6 +100,7 @@ def main(global_config, **settings):
     config.add_route('version', '/version')
     config.scan('magpie')
 
+    config.set_default_permission(ADMIN_PERM)
     return config.make_wsgi_app()
 
 
