@@ -37,6 +37,24 @@ def get_version(request):
     )
 
 
+def init_anonymous():
+    db = postgresdb()
+    if not GroupService.by_group_name(ANONYMOUS_USER, db_session=db):
+        anonymous_group = models.Group(group_name=ANONYMOUS_USER)
+        db.add(anonymous_group)
+        db.commit()
+
+        anonymous_user = models.User(user_name=ANONYMOUS_USER, email=ANONYMOUS_USER+'@mail.com')
+        db.add(anonymous_user)
+        db.commit()
+
+        group_entry = models.UserGroup(group_id=anonymous_group.id, user_id=anonymous_user.id)
+        db.add(group_entry)
+        db.commit()
+    else:
+        LOGGER.debug('anonymous already initialized')
+
+
 def init_admin():
     db = postgresdb()
     if not GroupService.by_group_name(ADMIN_GROUP, db_session=db):
@@ -44,7 +62,7 @@ def init_admin():
         db.add(admin_group)
         db.commit()
 
-        admin_user = models.User(user_name=ADMIN_NAME, email='')
+        admin_user = models.User(user_name=ADMIN_USER, email='')
         admin_user.set_password(ADMIN_PASSWORD)
         admin_user.regenerate_security_code()
         db.add(admin_user)
@@ -66,9 +84,9 @@ def main(global_config, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
-    # Initialize database with admin
-
+    # Initialize database with default user: admin+anonymous
     init_admin()
+    init_anonymous()
 
     from pyramid.config import Configurator
 

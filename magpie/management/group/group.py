@@ -65,6 +65,7 @@ def get_group_users(request):
 @view_config(route_name='group_services', request_method='GET')
 def get_group_services(request):
     json_response = get_group_resources(request, resource_types=['service'])
+
     return HTTPOk(
         body=json.dumps({'services': json_response}),
         content_type='application/json'
@@ -130,6 +131,7 @@ def delete_group_service_permission(request):
     if permission_name not in service_type_dico[service.type].permission_names:
         raise HTTPBadRequest(detail='This permission is not allowed for that service')
     return delete_group_resource_permission(permission_name, service.resource_id, group.id, db_session=db)
+
 
 def get_group_resources(request, resource_types):
     group_name = request.matchdict.get('group_name')

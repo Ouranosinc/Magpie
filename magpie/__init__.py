@@ -31,11 +31,15 @@ from ziggurat_foundations.models.services.user_resource_permission import UserRe
 from ziggurat_foundations.permissions import ANY_PERMISSION
 from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
 from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
-
-ADMIN_NAME = os.getenv('ADMIN_NAME')
+from pyramid.security import NO_PERMISSION_REQUIRED
+ADMIN_USER = os.getenv('ADMIN_USER')
 ADMIN_GROUP = os.getenv('ADMIN_GROUP')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
-ADMIN_PERM = 'edit'
+#ADMIN_PERM = 'edit'
+ADMIN_PERM = NO_PERMISSION_REQUIRED
+
+ANONYMOUS_USER = os.getenv('ANONYMOUS_USER')
+
 
 
 

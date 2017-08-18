@@ -3,6 +3,7 @@ MAINTAINER Francois-Xavier Derue
 
 RUN apt-get update && apt-get install -y \
 	build-essential \
+	supervisor \
 	libssl-dev \
 	libffi-dev \
 	python-dev \
@@ -25,6 +26,9 @@ ENV POSTGRES_PASSWORD=qwerty
 ENV POSTGRES_HOST=postgres
 ENV POSTGRES_PORT=5432
 
-
-ENTRYPOINT alembic -c /opt/local/src/magpie/alembic.ini upgrade heads && \
-		   exec gunicorn -b 0.0.0.0:2001 --paste /opt/local/src/magpie/magpie/magpie.ini
+# Start supervisor in foreground
+#RUN systemctl enable supervisor.service
+ENV DAEMON_OPTS --nodaemon
+CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf", "--nodaemon"]
+#WORKDIR /
+#ENTRYPOINT exec gunicorn -b 0.0.0.0:2001 --paste /opt/local/src/magpie/magpie/magpie.ini

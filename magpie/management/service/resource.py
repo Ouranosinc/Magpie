@@ -1,6 +1,7 @@
 from magpie import *
 import models
 from models import resource_tree_service
+from models import resource_type_dico
 
 
 
@@ -120,7 +121,8 @@ def get_resources(request):
     for resource in resources:
         resource_info_dico[resource.resource_id] = get_resource_info(resource.resource_id, request.db)
 
-    json_response = {'resources': resource_info_dico}
+    json_response = {'resource_types': [key for key in resource_type_dico.keys()],
+                     'resources': resource_info_dico}
     return HTTPOk(
         body=json.dumps(json_response),
         content_type='application/json'

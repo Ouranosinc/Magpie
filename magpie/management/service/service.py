@@ -5,8 +5,15 @@ from management.service.resource import *
 
 @view_config(route_name='services', request_method='GET')
 def get_services(request):
-    service_names = [service.resource_name for service in models.Service.all(db_session=request.db)]
-    json_response = {'service_names': service_names}
+
+    json_response = {'service_types': []}
+    for key in service_type_dico.keys():
+        json_response[key] = {}
+        json_response['service_types'].append(key)
+
+    for service in models.Service.all(db_session=request.db):
+        json_response[service.type][service.resource_name] = {'service_type': service.type,
+                                                              'service_url': service.url}
     return HTTPOk(
         body=json.dumps(json_response),
         content_type='application/json'
@@ -53,6 +60,9 @@ def get_service(request):
         )
     else:
         return HTTPNotFound(detail="This service does not exist")
+
+
+
 
 
 @view_config(route_name='service', request_method='DELETE')
