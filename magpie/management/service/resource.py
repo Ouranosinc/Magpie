@@ -2,8 +2,59 @@ from magpie import *
 import models
 from models import resource_tree_service
 from models import resource_type_dico
+from services import service_type_dico
 
 
+
+def format_resource(resource, perms=[]):
+    return {
+        'resource_name': resource.resource_name,
+        'resource_id': resource.resource_id,
+        'resource_type': resource.resource_type,
+        'children': {},
+        'permission_names': perms
+    }
+
+
+def format_resource_tree(children, db_session, group=None, user=None):
+    formatted_resource_tree = {}
+    for child_id, dico in children.items():
+        resource = dico['node']
+        new_children = dico['children']
+
+        perms = []
+        if group:
+            from management.group.group import get_group_resource_permissions
+            perms = get_group_resource_permissions(group=group, resource=resource, db_session=db_session)
+        elif user:
+            from management.user.user import get_user_resource_permissions
+            perms = get_user_resource_permissions(user=user, resource=resource, db_session=db_session)
+
+        formatted_resource_tree[child_id] = format_resource(resource, perms)
+
+        formatted_resource_tree[child_id]['children'] = format_resource_tree(new_children,
+                                                                             db_session=db_session,
+                                                                             user=user,
+                                                                             group=group)
+
+    return formatted_resource_tree
+
+
+def get_resource_children(resource, db_session):
+    query = resource_tree_service.from_parent_deeper(resource.resource_id, db_session=db_session)
+    tree_struct_dico = resource_tree_service.build_subtree_strut(query)
+    return tree_struct_dico['children']
+
+
+def format_resource_with_children(resource, db_session, group=None, user=None):
+    resource_formatted = format_resource(resource)
+    resource_formatted['children'] = format_resource_tree(
+        get_resource_children(resource, db_session),
+        db_session=db_session,
+        user=user,
+        group=group
+    )
+    return resource_formatted
 
 
 def get_resource_path(resource_id, db_session):
@@ -15,37 +66,20 @@ def get_resource_path(resource_id, db_session):
     return parent_path
 
 
-def get_resource_info(resource_id, db_session):
+@view_config(route_name='resource', request_method='GET')
+def get_resource_view(request):
+    resource_id = request.matchdict.get('resource_id')
+    db = request.db
     try:
-        resource = ResourceService.by_resource_id(resource_id, db_session=db_session)
+        resource = ResourceService.by_resource_id(resource_id, db_session=db)
     except Exception, e:
         raise HTTPBadRequest(detail=e.message)
     if not resource:
-        db_session.rollback()
+        db.rollback()
         raise HTTPNotFound(detail="This resource id does not exist")
-    parent_path = get_resource_path(resource.resource_id, db_session)
-
-    #owner_user = UserService.by_id(resource.owner_user_id, db_session=db_session)
-    #owner_group = GroupService.get(resource.owner_group_id, db_session=db_session)
-
-    json_response = {
-        'resource_name': resource.resource_name,
-        'resource_type': resource.resource_type,
-        #'owner_user_name': '' if not owner_user else owner_user.user_name,
-        #'owner_group_name': '' if not owner_group else owner_group.group_name,
-        'resource_path': parent_path
-    }
-    return json_response
-
-
-@view_config(route_name='resource', request_method='GET')
-def get_resource(request):
-    resource_id = request.matchdict.get('resource_id')
-    db = request.db
-    json_response = get_resource_info(resource_id, db)
-
+    json_response = format_resource_with_children(resource, db_session=db)
     return HTTPOk(
-        body=json.dumps(json_response),
+        body=json.dumps({resource.resource_id: json_response}),
         content_type='application/json'
     )
 
@@ -119,7 +153,7 @@ def get_resources(request):
     resources = models.Resource.all(db_session=request.db)
     resource_info_dico = {}
     for resource in resources:
-        resource_info_dico[resource.resource_id] = get_resource_info(resource.resource_id, request.db)
+        resource_info_dico[resource.resource_id] = format_resource_with_children(resource, request.db)
 
     json_response = {'resource_types': [key for key in resource_type_dico.keys()],
                      'resources': resource_info_dico}
@@ -145,9 +179,6 @@ def update_resource(request):
         raise HTTPNotFound('incorrect resource id')
 
     return HTTPOk()
-
-
-
 
 
 @view_config(route_name='resource_permissions', request_method='GET')

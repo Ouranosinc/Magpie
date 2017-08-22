@@ -3,17 +3,36 @@ import models
 from models import resource_tree_service
 from management.service.resource import *
 
+def format_service(service, perms=[]):
+    return {
+        'service_url': service.url,
+        'service_name': service.resource_name,
+        'service_type': service.type,
+        'resource_id': service.resource_id,
+        'permission_names': perms
+    }
+
+def get_services_by_type(service_type, db_session):
+    services = db_session.query(models.Service).filter(models.Service.type == service_type)
+    return services
+
+
+@view_config(route_name='services_type', request_method='GET')
 @view_config(route_name='services', request_method='GET')
-def get_services(request):
+def get_services_view(request):
+    service_type = request.matchdict.get('service_type')
+    json_response = {}
+    if not service_type:
+        service_types = [s for s in service_type_dico.keys()]
+    else:
+        service_types = [service_type]
 
-    json_response = {'service_types': []}
-    for key in service_type_dico.keys():
-        json_response[key] = {}
-        json_response['service_types'].append(key)
+    for service_type in service_types:
+        services = get_services_by_type(service_type, db_session=request.db)
+        json_response[service_type] = {}
+        for service in services:
+            json_response[service_type][service.resource_name] = format_service(service)
 
-    for service in models.Service.all(db_session=request.db):
-        json_response[service.type][service.resource_name] = {'service_type': service.type,
-                                                              'service_url': service.url}
     return HTTPOk(
         body=json.dumps(json_response),
         content_type='application/json'
@@ -47,22 +66,15 @@ def register_service(request):
 def get_service(request):
     service_name = request.matchdict.get('service_name')
     service = models.Service.by_service_name(service_name, db_session=request.db)
-
+    json_response = {}
     if service:
-        json_response = {'resource_id': service.resource_id,
-                         'service_name': service.resource_name,
-                         'service_type': service.type,
-                         'service_url': service.url}
-
+        json_response[service.resource_name] = format_service(service)
         return HTTPOk(
             body=json.dumps(json_response),
             content_type='application/json'
         )
     else:
         return HTTPNotFound(detail="This service does not exist")
-
-
-
 
 
 @view_config(route_name='service', request_method='DELETE')
@@ -104,24 +116,32 @@ def get_service_permissions(request):
     )
 
 
+def format_service_resources(service, db_session, user=None, group=None):
+    children = get_resource_children(service, db_session)
+    perms = []
+    if group:
+        from management.group.group import get_group_service_permissions
+        perms = get_group_service_permissions(group=group, service=service, db_session=db_session)
+
+    service_resources_formatted = format_service(service, perms)
+    service_resources_formatted['resources'] = format_resource_tree(children,
+                                                                    db_session=db_session,
+                                                                    user=user,
+                                                                    group=group)
+    return service_resources_formatted
+
+
 @view_config(route_name='service_resources', request_method='GET')
-def get_service_resources(request):
+def get_service_resources_view(request):
     service_name = request.matchdict.get('service_name')
     db = request.db
     service = models.Service.by_service_name(service_name, db_session=db)
     if not service:
         raise HTTPNotFound(detail='This service does not exist')
-    tree_struct = resource_tree_service.from_parent_deeper(service.resource_id, db_session=db)
 
-    resource_info_dict={}
-    for node in tree_struct:
-        resource_id = node.Resource.resource_id
-        resource_info = get_resource_info(resource_id, db_session=db)
-        resource_info_dict[resource_id] = resource_info
-
-
+    json_response = format_service_resources(service, db_session=db)
     return HTTPOk(
-        body=json.dumps({'resources': resource_info_dict}),
+        body=json.dumps({service.resource_name: json_response}),
         content_type='application/json'
     )
 

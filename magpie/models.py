@@ -116,6 +116,7 @@ class Service(Resource):
         service = db.query(Service).filter(Resource.resource_name == service_name).first()
         return service
 
+
     def permission_requested(self, request):
         raise NotImplementedError
 

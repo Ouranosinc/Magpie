@@ -2,8 +2,11 @@ from magpie import *
 import models
 from services import service_type_dico
 from models import resource_type_dico
-from management.service.resource import get_resource_info
+#from management.service.resource import get_resource_info
 from models import resource_tree_service
+from management.service.service import format_service, format_resource
+from management.service.service import format_service_resources
+
 
 @view_config(route_name='users', request_method='POST')
 def create_user(request):
@@ -134,57 +137,76 @@ def delete_user_group(request):
 
     return HTTPOk()
 
-from models import get_all_resource_permission_names
-def get_user_resources(request, resource_types):
+
+
+def get_user_resource_permissions(user, resource, db_session):
+    if resource.owner_user_id == user.id:
+        permission_names = resource_type_dico[resource.type].permission_names
+    else:
+        permission_names = [permission.perm_name for permission in resource.perms_for_user(user, db_session=db_session)]
+    return permission_names
+
+
+def get_user_service_permissions(user, service, db_session):
+    if service.owner_user_id == user.id:
+        permission_names = service_type_dico[service.type].permission_names
+    else:
+        permission_names = [permission.perm_name for permission in service.perms_for_user(user, db_session=db_session)]
+    return permission_names
+
+
+def get_user_resources_permissions_dict(user, resource_types, db_session, resource_ids=None):
+    db = db_session
+    if user is None:
+        raise HTTPBadRequest(detail='This user does not exist')
+    resource_permission_tuple = user.resources_with_possible_perms(resource_ids=resource_ids, resource_types=resource_types, db_session=db)
+    resources_permissions_dict = {}
+    for tuple in resource_permission_tuple:
+        if tuple.resource.resource_id not in resources_permissions_dict:
+            resources_permissions_dict[tuple.resource.resource_id] = [tuple.perm_name]
+        else:
+            resources_permissions_dict[tuple.resource.resource_id].append(tuple.perm_name)
+
+    return resources_permissions_dict
+
+
+@view_config(route_name='user_resources', request_method='GET')
+def get_user_resources_view(request):
     user_name = request.matchdict.get('user_name')
     db = request.db
     user = UserService.by_user_name(user_name=user_name, db_session=db)
     if user is None:
         raise HTTPBadRequest(detail='This user does not exist')
-    all_resource_permission = get_all_resource_permission_names()
-    resources = UserService.resources_with_perms(user, resource_types=resource_types, perms=all_resource_permission,
-                                                 db_session=db).all()
 
-    resource_available_dico = {}
+    resources = models.Resource.all(db_session=request.db)
+    resource_info_dico = {}
+    from management.service.resource import format_resource_with_children
     for resource in resources:
-        resource_available_dico[resource.resource_id] = get_resource_info(resource.resource_id, db)
-        resource_available_dico[resource.resource_id]['permission_names'] = [
-            'ALL_PERMISSIONS' if permission.perm_name is ALL_PERMISSIONS
-            else permission.perm_name
-            for permission in resource.perms_for_user(user)]
-
-
+        resource_info_dico[resource.resource_id] = format_resource_with_children(resource,
+                                                                                 db_session=request.db,
+                                                                                 user=user)
+    json_response = {'resources': resource_info_dico}
     return HTTPOk(
-        body=json.dumps({'resources': resource_available_dico}),
+        body=json.dumps(json_response),
         content_type='application/json'
     )
-
-
-@view_config(route_name='user_resources', request_method='GET')
-def get_user_resources_view(request):
-    return get_user_resources(request, resource_types=None)
 
 
 from models import get_all_resource_permission_names
 @view_config(route_name='user_resources_type', request_method='GET')
 def get_user_resources_types_view(request):
-    return get_user_resources(request, resource_types=[request.matchdict.get('resource_type')])
-
-
-def get_user_resource_permissions(resource, user):
-    if resource is None or user is None:
-        raise HTTPNotFound(detail='this service/user does not exist')
-
-    if resource.owner_user_id == user.id:
-        permission_names = ['ALL_PERMISSIONS']
-    else:
-        user_res_permission = resource.perms_for_user(user)
-        permission_names = [permission.perm_name for permission in user_res_permission]
-        if ALL_PERMISSIONS in permission_names:
-            permission_names = ['ALL_PERMISSIONS']
+    user = UserService.by_user_name(request.matchdict.get('user_name'), db_session=request.db)
+    resource_type = request.matchdict.get('resource_type')
+    resources_permissions_dict = get_user_resources_permissions_dict(user,
+                                                                      resource_types=[resource_type],
+                                                                      db_session=request.db)
+    json_response = {}
+    for resource_id, perms in resources_permissions_dict.items():
+        resource = ResourceService.by_resource_id(resource_id, db_session=request.db)
+        json_response[resource.resource_name] = format_resource(resource, perms)
 
     return HTTPOk(
-        body=json.dumps({'permission_names': permission_names}),
+        body=json.dumps({'resources': json_response}),
         content_type='application/json'
     )
 
@@ -197,7 +219,11 @@ def get_user_resource_permissions_view(request):
     resource = ResourceService.by_resource_id(resource_id, db)
     user = UserService.by_user_name(user_name=user_name, db_session=db)
 
-    return get_user_resource_permissions(resource=resource, user=user)
+    permission_names = get_user_resource_permissions(resource=resource, user=user, db_session=db)
+    return HTTPOk(
+        body=json.dumps({'permission_names': permission_names}),
+        content_type='application/json'
+    )
 
 def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
     try:
@@ -248,32 +274,28 @@ def delete_user_resource_permission_view(request):
                                            db)
 
 
-from services import get_all_service_permission_names
 @view_config(route_name='user_services', request_method='GET')
-def get_user_services(request):
+def get_user_services_view(request):
     user_name = request.matchdict.get('user_name')
     db = request.db
     user = UserService.by_user_name(user_name=user_name, db_session=db)
-    all_service_permission = get_all_service_permission_names()
 
-    services = UserService.resources_with_perms(user, perms=all_service_permission, db_session=db).all()
-    service_available_dico = {}
-    for service in services:
-        service_available_dico[service.resource_id] = get_resource_info(service.resource_id, db)
-        service_available_dico[service.resource_id]['permission_names'] = ['ALL_PERMISSIONS' if permission.perm_name is ALL_PERMISSIONS
-                                                                           else permission.perm_name
-                                                                           for permission in service.perms_for_user(user)]
+    json_response = {}
+    for service in models.Service.all(db_session=request.db):
+        perms = get_user_service_permissions(user, service, db_session=request.db)
+        if service.type not in json_response:
+            json_response[service.type] = {}
+        json_response[service.type][service.resource_name] = format_service(service, perms)
 
     return HTTPOk(
-        body=json.dumps({'services': service_available_dico}),
+        body=json.dumps({'services': json_response}),
         content_type='application/json'
     )
 
 
 
-
 @view_config(route_name='user_service_permissions', request_method='GET')
-def get_user_service_permissions(request):
+def get_user_service_permissions_view(request):
     user_name = request.matchdict.get('user_name')
     service_name = request.matchdict.get('service_name')
 
@@ -281,7 +303,13 @@ def get_user_service_permissions(request):
     service = models.Service.by_service_name(service_name, db_session=db)
     user = UserService.by_user_name(user_name=user_name, db_session=db)
 
-    return get_user_resource_permissions(resource=service, user=user, db_session=db)
+    permission_names = get_user_service_permissions(service=service, user=user, db_session=db)
+    json_response = {service.resource_name: format_service(service)}
+    json_response[service.resource_name]['permission_names'] = permission_names
+    return HTTPOk(
+        body=json.dumps(json_response),
+        content_type='application/json'
+    )
 
 
 
@@ -348,26 +376,16 @@ def get_user_service_resources(request):
     if service is None or user is None:
         raise HTTPNotFound(detail='this user/resource does not exist')
 
-    tree_struct = resource_tree_service.from_parent_deeper(service.resource_id, db_session=db)
-    children_ids = []
-    for node in tree_struct:
-        children_ids.append(node.Resource.resource_id)
+    perms = get_user_service_permissions(user, service, db_session=db)
 
-    resource_info_dic = {}
-    if children_ids:
-        resources = user.resources_with_possible_perms(resource_ids=children_ids, db_session=db)
-        for resource_tuple in resources:
-            if resource_tuple.resource.resource_id in resource_info_dic.keys():
-                resource_info_dic[resource_tuple.resource.resource_id]['permission_names'].append(resource_tuple.perm_name)
-            else:
-                resource_info = get_resource_info(resource_tuple.resource.resource_id, db_session=db)
-                resource_info['permission_names'] = [resource_tuple.perm_name]
-                resource_info_dic[resource_tuple.resource.resource_id] = resource_info
+    json_response = {service.resource_name: format_service_resources(service, db_session=db, user=user)}
 
     return HTTPOk(
-        body=json.dumps({'resources': resource_info_dic}),
+        body=json.dumps({'resources': json_response}),
         content_type='application/json'
     )
+
+
 
 
 
