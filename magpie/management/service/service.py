@@ -34,7 +34,7 @@ def get_services_view(request):
             json_response[service_type][service.resource_name] = format_service(service)
 
     return HTTPOk(
-        body=json.dumps(json_response),
+        body=json.dumps({'services': json_response}),
         content_type='application/json'
     )
 

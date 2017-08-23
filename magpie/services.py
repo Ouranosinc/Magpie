@@ -172,7 +172,8 @@ class ServiceWFS(object):
 
 
 class ServiceTHREDDS(ServiceI):
-    permission_names = ['download']
+    permission_names = ['download',
+                        'upload']
 
     def __init__(self, service, request):
         super(ServiceTHREDDS, self).__init__(service, request)

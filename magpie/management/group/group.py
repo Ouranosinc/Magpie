@@ -3,7 +3,7 @@ import models
 from models import resource_type_dico
 from models import resource_tree_service
 from management.service.service import format_service, format_resource
-from management.service.service import format_service_resources
+from management.service.resource import format_resource_tree, get_resource_children, crop_tree_with_permission
 
 
 @view_config(route_name='groups', request_method='GET')
@@ -78,11 +78,17 @@ def get_group_services_view(request):
     group = GroupService.by_group_name(request.matchdict.get('group_name'), db_session=request.db)
 
     json_response = {}
-    for service in models.Service.all(db_session=request.db):
-        perms = get_group_service_permissions(group,service,db_session=request.db)
-        if service.type not in json_response:
-            json_response[service.type] = {}
-        json_response[service.type][service.resource_name] = format_service(service, perms)
+    resources_permissions_dict = get_group_resources_permissions_dict(group,
+                                                                      resource_types=['service'],
+                                                                      db_session=request.db)
+
+    for resource_id, perms in resources_permissions_dict.items():
+        curr_service = models.Service.by_resource_id(resource_id=resource_id, db_session=request.db)
+        service_type = curr_service.type
+        service_name = curr_service.resource_name
+        if service_type not in json_response:
+            json_response[service_type] = {}
+        json_response[service_type][service_name] = format_service(curr_service, perms)
 
     return HTTPOk(
         body=json.dumps({'services': json_response}),
@@ -151,7 +157,7 @@ def delete_group_service_permission(request):
     return delete_group_resource_permission(permission_name, service.resource_id, group.id, db_session=db)
 
 
-def get_group_resources_permissions_dict(group, resource_types, db_session, resource_ids=None):
+def get_group_resources_permissions_dict(group, db_session, resource_ids=None, resource_types=None):
     db = db_session
     if group is None:
         raise HTTPBadRequest(detail='This group does not exist')
@@ -310,10 +316,18 @@ def get_group_service_resources_view(request):
     if service is None or group is None:
         raise HTTPNotFound(detail='this service/group does not exist')
 
-    perms = get_group_service_permissions(group, service, db_session=db)
+    resources_under_service = resource_tree_service.from_parent_deeper(parent_id=service.resource_id, db_session=db)
+    tree_struct_dico = resource_tree_service.build_subtree_strut(resources_under_service)
+    resources_permissions = get_group_resources_permissions_dict(group=group, db_session=db)
 
-    json_response = {service.resource_name: format_service_resources(service, db_session=db, user=None, group=group)}
-
+    json_response = {}
+    tree_crop, resource_id_list_remain = crop_tree_with_permission(tree_struct_dico['children'],
+                                                                   resources_permissions.keys())
+    json_response[service_name] = format_service(service)
+    json_response[service_name]['resources'] = format_resource_tree(tree_crop,
+                                                                    db_session=db,
+                                                                    group=group,
+                                                                    user=None)
     return HTTPOk(
         body=json.dumps({'resources': json_response}),
         content_type='application/json'

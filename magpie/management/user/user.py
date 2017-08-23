@@ -6,6 +6,7 @@ from models import resource_type_dico
 from models import resource_tree_service
 from management.service.service import format_service, format_resource
 from management.service.service import format_service_resources
+from management.service.resource import format_resource_tree, get_resource_children,crop_tree_with_permission
 
 
 @view_config(route_name='users', request_method='POST')
@@ -155,7 +156,7 @@ def get_user_service_permissions(user, service, db_session):
     return permission_names
 
 
-def get_user_resources_permissions_dict(user, resource_types, db_session, resource_ids=None):
+def get_user_resources_permissions_dict(user, db_session,resource_types=None, resource_ids=None):
     db = db_session
     if user is None:
         raise HTTPBadRequest(detail='This user does not exist')
@@ -185,6 +186,8 @@ def get_user_resources_view(request):
         resource_info_dico[resource.resource_id] = format_resource_with_children(resource,
                                                                                  db_session=request.db,
                                                                                  user=user)
+
+
     json_response = {'resources': resource_info_dico}
     return HTTPOk(
         body=json.dumps(json_response),
@@ -281,11 +284,18 @@ def get_user_services_view(request):
     user = UserService.by_user_name(user_name=user_name, db_session=db)
 
     json_response = {}
-    for service in models.Service.all(db_session=request.db):
-        perms = get_user_service_permissions(user, service, db_session=request.db)
-        if service.type not in json_response:
-            json_response[service.type] = {}
-        json_response[service.type][service.resource_name] = format_service(service, perms)
+
+    resources_permissions_dict = get_user_resources_permissions_dict(user,
+                                                                     resource_types=['service'],
+                                                                     db_session=request.db)
+
+    for resource_id, perms in resources_permissions_dict.items():
+        curr_service = models.Service.by_resource_id(resource_id=resource_id, db_session=db)
+        service_type = curr_service.type
+        service_name = curr_service.resource_name
+        if service_type not in json_response:
+            json_response[service_type] = {}
+        json_response[service_type][service_name] = format_service(curr_service, perms)
 
     return HTTPOk(
         body=json.dumps({'services': json_response}),
@@ -302,6 +312,8 @@ def get_user_service_permissions_view(request):
     db = request.db
     service = models.Service.by_service_name(service_name, db_session=db)
     user = UserService.by_user_name(user_name=user_name, db_session=db)
+    if service is None or user is None:
+        raise HTTPNotFound(detail='this service/user does not exist')
 
     permission_names = get_user_service_permissions(service=service, user=user, db_session=db)
     json_response = {service.resource_name: format_service(service)}
@@ -310,8 +322,6 @@ def get_user_service_permissions_view(request):
         body=json.dumps(json_response),
         content_type='application/json'
     )
-
-
 
 
 @view_config(route_name='user_service_permissions', request_method='POST')
@@ -366,6 +376,8 @@ def delete_user_service_permission(request):
 
 
 
+
+
 @view_config(route_name='user_service_resources', request_method='GET')
 def get_user_service_resources(request):
     user_name = request.matchdict.get('user_name')
@@ -376,12 +388,21 @@ def get_user_service_resources(request):
     if service is None or user is None:
         raise HTTPNotFound(detail='this user/resource does not exist')
 
-    perms = get_user_service_permissions(user, service, db_session=db)
+    resources_under_service = resource_tree_service.from_parent_deeper(parent_id=service.resource_id, db_session=db)
+    tree_struct_dico = resource_tree_service.build_subtree_strut(resources_under_service)
+    resources_permissions = get_user_resources_permissions_dict(user=user, db_session=db)
 
-    json_response = {service.resource_name: format_service_resources(service, db_session=db, user=user)}
+    json_response = {}
+    tree_crop, resource_id_list_remain = crop_tree_with_permission(tree_struct_dico['children'], resources_permissions.keys())
+    json_response[service_name] = format_service(service)
+    json_response[service_name]['resources'] = format_resource_tree(tree_crop,
+                                                                    db_session=db,
+                                                                    group=None,
+                                                                    user=user)
+
 
     return HTTPOk(
-        body=json.dumps({'resources': json_response}),
+        body=json.dumps({'service': json_response}),
         content_type='application/json'
     )
 
