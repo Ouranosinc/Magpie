@@ -7,7 +7,7 @@ from models import resource_tree_service
 from management.service.service import format_service, format_resource
 from management.service.service import format_service_resources
 from management.service.resource import format_resource_tree, get_resource_children,crop_tree_with_permission
-
+from pyramid.interfaces import IAuthenticationPolicy
 
 @view_config(route_name='users', request_method='POST')
 def create_user(request):
@@ -44,12 +44,40 @@ def get_users(request):
     )
 
 
+def get_user(request, user_name_or_token):
+    try:
+        if len(user_name_or_token) > 20:
+            authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
+            user_id = get_userid_by_token(user_name_or_token, authn_policy)
+            return UserService.by_id(user_id, db_session=request.db)
+        else:
+            return UserService.by_user_name(user_name_or_token, db_session=request.db)
+    except Exception, e:
+        raise HTTPNotFound(detail=e.message)
+
+
+def get_userid_by_token(token, authn_policy):
+    cookie_helper = authn_policy.cookie
+    cookie = token
+    if cookie is None:
+        return None
+    remote_addr = '0.0.0.0'
+
+    timestamp, userid, tokens, user_data = cookie_helper.parse_ticket(
+        cookie_helper.secret,
+        cookie,
+        remote_addr,
+        cookie_helper.hashalg
+    )
+    return userid
+
+
 @view_config(route_name='user', request_method='GET')
-def get_user(request):
+def get_user_view(request):
     user_name = request.matchdict.get('user_name')
     try:
-        db = request.db
-        user = UserService.by_user_name(user_name, db_session=db)
+        #user = UserService.by_user_name(user_name, db_session=db)
+        user = get_user(request, user_name)
         json_response = {'user_name': user.user_name,
                          'email': user.email,
                          'group_names': [group.group_name for group in user.groups]}
@@ -175,7 +203,8 @@ def get_user_resources_permissions_dict(user, db_session,resource_types=None, re
 def get_user_resources_view(request):
     user_name = request.matchdict.get('user_name')
     db = request.db
-    user = UserService.by_user_name(user_name=user_name, db_session=db)
+    #user = UserService.by_user_name(user_name=user_name, db_session=db)
+    user = get_user(request, user_name_or_token=user_name)
     if user is None:
         raise HTTPBadRequest(detail='This user does not exist')
 
@@ -198,11 +227,13 @@ def get_user_resources_view(request):
 from models import get_all_resource_permission_names
 @view_config(route_name='user_resources_type', request_method='GET')
 def get_user_resources_types_view(request):
-    user = UserService.by_user_name(request.matchdict.get('user_name'), db_session=request.db)
+    #user = UserService.by_user_name(request.matchdict.get('user_name'), db_session=request.db)
+    user_name = request.matchdict.get('user_name')
+    user = get_user(request, user_name_or_token=user_name)
     resource_type = request.matchdict.get('resource_type')
     resources_permissions_dict = get_user_resources_permissions_dict(user,
-                                                                      resource_types=[resource_type],
-                                                                      db_session=request.db)
+                                                                     resource_types=[resource_type],
+                                                                     db_session=request.db)
     json_response = {}
     for resource_id, perms in resources_permissions_dict.items():
         resource = ResourceService.by_resource_id(resource_id, db_session=request.db)
@@ -220,13 +251,15 @@ def get_user_resource_permissions_view(request):
     resource_id = request.matchdict.get('resource_id')
     db = request.db
     resource = ResourceService.by_resource_id(resource_id, db)
-    user = UserService.by_user_name(user_name=user_name, db_session=db)
+    #user = UserService.by_user_name(user_name=user_name, db_session=db)
+    user = get_user(request, user_name_or_token=user_name)
 
     permission_names = get_user_resource_permissions(resource=resource, user=user, db_session=db)
     return HTTPOk(
         body=json.dumps({'permission_names': permission_names}),
         content_type='application/json'
     )
+
 
 def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
     try:
@@ -264,7 +297,8 @@ def delete_user_resource_permission_view(request):
     permission_name = request.matchdict.get('permission_name')
 
     db = request.db
-    user = UserService.by_user_name(user_name=user_name, db_session=db)
+    #user = UserService.by_user_name(user_name=user_name, db_session=db)
+    user = get_user(request, user_name_or_token=user_name)
     resource = ResourceService.by_resource_id(resource_id, db)
     if resource is None or user is None:
         raise HTTPNotFound(detail='this user/resource does not exist')
@@ -281,7 +315,8 @@ def delete_user_resource_permission_view(request):
 def get_user_services_view(request):
     user_name = request.matchdict.get('user_name')
     db = request.db
-    user = UserService.by_user_name(user_name=user_name, db_session=db)
+    # user = UserService.by_user_name(user_name=user_name, db_session=db)
+    user = get_user(request, user_name_or_token=user_name)
 
     json_response = {}
 
@@ -311,7 +346,9 @@ def get_user_service_permissions_view(request):
 
     db = request.db
     service = models.Service.by_service_name(service_name, db_session=db)
-    user = UserService.by_user_name(user_name=user_name, db_session=db)
+    # user = UserService.by_user_name(user_name=user_name, db_session=db)
+    user = get_user(request, user_name_or_token=user_name)
+
     if service is None or user is None:
         raise HTTPNotFound(detail='this service/user does not exist')
 
@@ -332,7 +369,9 @@ def create_user_service_permission(request):
 
     db = request.db
     service = models.Service.by_service_name(service_name, db_session=db)
-    user = UserService.by_user_name(user_name=user_name, db_session=db)
+    # user = UserService.by_user_name(user_name=user_name, db_session=db)
+    user = get_user(request, user_name_or_token=user_name)
+
     if service is None or user is None:
         raise HTTPNotFound(detail='this service/user does not exist')
     if permission_name not in service_type_dico[service.type].permission_names:
@@ -363,7 +402,9 @@ def delete_user_service_permission(request):
 
     db = request.db
     service = models.Service.by_service_name(service_name, db_session=db)
-    user = UserService.by_user_name(user_name=user_name, db_session=db)
+    # user = UserService.by_user_name(user_name=user_name, db_session=db)
+    user = get_user(request, user_name_or_token=user_name)
+
     if service is None or user is None:
         raise HTTPNotFound(detail='this service/user does not exist')
     if permission_name not in service_type_dico[service.type].permission_names:
@@ -375,16 +416,15 @@ def delete_user_service_permission(request):
                                            db)
 
 
-
-
-
 @view_config(route_name='user_service_resources', request_method='GET')
 def get_user_service_resources(request):
     user_name = request.matchdict.get('user_name')
     service_name = request.matchdict.get('service_name')
     db = request.db
     service = models.Service.by_service_name(service_name, db_session=db)
-    user = UserService.by_user_name(user_name, db_session=db)
+    #user = UserService.by_user_name(user_name, db_session=db)
+    user = get_user(request, user_name_or_token=user_name)
+
     if service is None or user is None:
         raise HTTPNotFound(detail='this user/resource does not exist')
 
