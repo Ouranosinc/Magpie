@@ -258,34 +258,36 @@ def get_user_resources_view(request):
     if user is None:
         raise HTTPBadRequest(detail='This user does not exist')
 
-    resources_permissions_dict = get_user_resources_permissions_dict(user,
-                                                                     resource_types=['service'],
-                                                                     db_session=request.db)
+    services_permissions_dict = get_user_resources_permissions_dict(user,
+                                                                    resource_types=['service'],
+                                                                    db_session=request.db)
 
     json_response = {}
-    for resource_id, perms in resources_permissions_dict.items():
-        curr_service = models.Service.by_resource_id(resource_id=resource_id, db_session=db)
+
+    for curr_service in models.Service.all(db_session=db):
+        service_perms = get_user_service_permissions(user=user, service=curr_service, db_session=db)
+        service_name = curr_service.resource_name
         service_type = curr_service.type
         if service_type not in json_response:
             json_response[service_type] = {}
 
-        resources_perms_dico = get_user_service_resources_permissions_dict(user=user, service=curr_service, db_session=db)
-        json_response[service_type].update(
-            format_service_resources(
+        resources_perms_dico = get_user_service_resources_permissions_dict(user=user,
+                                                                           service=curr_service,
+                                                                           db_session=db)
+        json_response[service_type][service_name] = format_service_resources(
                 curr_service,
                 db_session=db,
-                service_perms=perms,
+                service_perms=service_perms,
                 resources_perms_dico=resources_perms_dico,
                 display_all=False
             )
-        )
+
 
     json_response = {'resources': json_response}
     return HTTPOk(
         body=json.dumps(json_response),
         content_type='application/json'
     )
-
 
 
 @view_config(route_name='user_resource_permissions', request_method='GET')

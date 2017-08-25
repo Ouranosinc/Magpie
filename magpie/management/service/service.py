@@ -144,7 +144,7 @@ def get_service_resources_view(request):
     if not service:
         raise HTTPNotFound(detail='This service does not exist')
 
-    json_response = format_service_resources(service, db_session=db)
+    json_response = format_service_resources(service, db_session=db, display_all=True)
     return HTTPOk(
         body=json.dumps({service.resource_name: json_response}),
         content_type='application/json'

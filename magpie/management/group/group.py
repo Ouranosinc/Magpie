@@ -189,24 +189,23 @@ def get_group_resources_view(request):
                                                                       db_session=request.db)
 
     json_response = {}
-    for resource_id, perms in resources_permissions_dict.items():
-        curr_service = models.Service.by_resource_id(resource_id=resource_id, db_session=db)
+    for curr_service in models.Service.all(db_session=db):
+        service_perms = get_group_service_permissions(group=group, service=curr_service, db_session=db)
+        service_name = curr_service.resource_name
         service_type = curr_service.type
         if service_type not in json_response:
             json_response[service_type] = {}
 
         resources_perms_dico = get_group_service_resources_permissions_dict(group=group,
-                                                                            service=curr_service,
-                                                                            db_session=db)
-        json_response[service_type].update(
-            format_service_resources(
+                                                                           service=curr_service,
+                                                                           db_session=db)
+        json_response[service_type][service_name] = format_service_resources(
                 curr_service,
                 db_session=db,
-                service_perms=perms,
+                service_perms=service_perms,
                 resources_perms_dico=resources_perms_dico,
                 display_all=False
             )
-        )
 
     json_response = {'resources': json_response}
     return HTTPOk(

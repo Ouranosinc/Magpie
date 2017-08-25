@@ -92,6 +92,12 @@ def get_resource_view(request):
 def create_resource(resource_name, resource_type, parent_id, db_session):
     db = db_session
     try:
+        parent_resource = ResourceService.by_resource_id(parent_id, db_session=db_session)
+        if not parent_resource:
+            raise HTTPBadRequest(detail='parent_id not valid')
+    except:
+        raise HTTPBadRequest(detail='parent_id not valid')
+    try:
         new_resource = models.resource_factory(resource_type=resource_type,
                                                resource_name=resource_name,
                                                parent_id=parent_id)
