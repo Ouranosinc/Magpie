@@ -156,9 +156,13 @@ def create_service_direct_resource(request):
     service_name = request.matchdict.get('service_name')
     resource_name = request.POST.get('resource_name')
     resource_type = request.POST.get('resource_type')
+    parent_id = request.POST.get('parent_id')
     service = models.Service.by_service_name(service_name, db_session=request.db)
     if service:
-        return create_resource(resource_name, resource_type, service.resource_id, db_session=request.db)
+
+        if not parent_id:
+            parent_id = service.resource_id
+        return create_resource(resource_name, resource_type, parent_id=parent_id, db_session=request.db)
     else:
         raise HTTPNotFound(detail='Bad entry: service_name or service_type')
 
