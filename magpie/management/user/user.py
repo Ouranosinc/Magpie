@@ -2,34 +2,76 @@ from magpie import *
 import models
 from services import service_type_dico
 from models import resource_type_dico
-#from management.service.resource import get_resource_info
+from management.service.service import format_service, format_service_resources
 from models import resource_tree_service
-from management.service.service import format_service, format_resource
-from management.service.service import format_service_resources
-from management.service.resource import format_resource_tree, get_resource_children,crop_tree_with_permission
 from pyramid.interfaces import IAuthenticationPolicy
 
 @view_config(route_name='users', request_method='POST')
 def create_user(request):
+    """
+    When a user is created, he is automatically assigned to a group with the same name.
+    He is also added to a default group specified by group_name.
+    It is then easier to check permission on resource a user has:
+    Check all permission inherited from group: GET /users/user_name/permissions
+    Check direct permission of user: GET /groups/user_name/permissions
+    
+    :param request: 
+    :return: 
+    """
+
     user_name = request.POST.get('user_name')
     email = request.POST.get('email')
     password = request.POST.get('password')
     group_name = request.POST.get('group_name')
+
+
+    # Check if group already exist
+    db = request.db
+    group = GroupService.by_group_name(group_name, db_session=db)
+    if not group:
+        raise HTTPNotFound(detail='This group does not exist')
+
+    # Create new_group associated to user
+    new_group = GroupService.by_group_name(group_name=user_name, db_session=db)
+    new_user = UserService.by_user_name(user_name=user_name, db_session=db)
+    if new_group or new_user:
+        raise HTTPConflict(detail="This user already exist")
+
     try:
-        db = request.db
+        new_group = models.Group(group_name=user_name)
+        db.add(new_group)
+        db.commit()
+    except Exception, e:
+        db.rollback()
+        raise HTTPConflict(detail=e.message)
+
+    try:
         new_user = models.User(user_name=user_name, email=email)
         new_user.set_password(password)
         new_user.regenerate_security_code()
         db.add(new_user)
         db.commit()
+    except Exception, e:
+        db.rollback()
+        new_group.delete(db_session=db)
+        db.commit()
+        raise HTTPConflict(detail=e.message)
 
-        group = GroupService.by_group_name(group_name, db_session=db)
+    # Assign user to default group and own group
+    try:
         group_entry = models.UserGroup(group_id=group.id, user_id=new_user.id)
         db.add(group_entry)
+
+        new_group_entry = models.UserGroup(group_id=new_group.id, user_id=new_user.id)
+        db.add(new_group_entry)
+
         db.commit()
+
     except:
         db.rollback()
-        raise HTTPConflict(detail='this user already exists')
+        raise HTTPConflict(
+            detail='No way to add '+user_name+' to group '+group_name + ', maybe this group does not exist'
+        )
 
     return HTTPCreated()
 
@@ -176,6 +218,8 @@ def get_user_resource_permissions(user, resource, db_session):
     return permission_names
 
 
+
+
 def get_user_service_permissions(user, service, db_session):
     if service.owner_user_id == user.id:
         permission_names = service_type_dico[service.type].permission_names
@@ -199,6 +243,12 @@ def get_user_resources_permissions_dict(user, db_session,resource_types=None, re
     return resources_permissions_dict
 
 
+def get_user_service_resources_permissions_dict(user, service, db_session):
+    resources_under_service = resource_tree_service.from_parent_deeper(parent_id=service.resource_id, db_session=db_session)
+    resource_ids = [resource.Resource.resource_id for resource in resources_under_service]
+    return get_user_resources_permissions_dict(user, db_session, resource_types=None, resource_ids=resource_ids)
+
+
 @view_config(route_name='user_resources', request_method='GET')
 def get_user_resources_view(request):
     user_name = request.matchdict.get('user_name')
@@ -208,41 +258,34 @@ def get_user_resources_view(request):
     if user is None:
         raise HTTPBadRequest(detail='This user does not exist')
 
-    resources = models.Resource.all(db_session=request.db)
-    resource_info_dico = {}
-    from management.service.resource import format_resource_with_children
-    for resource in resources:
-        resource_info_dico[resource.resource_id] = format_resource_with_children(resource,
-                                                                                 db_session=request.db,
-                                                                                 user=user)
+    resources_permissions_dict = get_user_resources_permissions_dict(user,
+                                                                     resource_types=['service'],
+                                                                     db_session=request.db)
 
+    json_response = {}
+    for resource_id, perms in resources_permissions_dict.items():
+        curr_service = models.Service.by_resource_id(resource_id=resource_id, db_session=db)
+        service_type = curr_service.type
+        if service_type not in json_response:
+            json_response[service_type] = {}
 
-    json_response = {'resources': resource_info_dico}
+        resources_perms_dico = get_user_service_resources_permissions_dict(user=user, service=curr_service, db_session=db)
+        json_response[service_type].update(
+            format_service_resources(
+                curr_service,
+                db_session=db,
+                service_perms=perms,
+                resources_perms_dico=resources_perms_dico,
+                display_all=False
+            )
+        )
+
+    json_response = {'resources': json_response}
     return HTTPOk(
         body=json.dumps(json_response),
         content_type='application/json'
     )
 
-
-from models import get_all_resource_permission_names
-@view_config(route_name='user_resources_type', request_method='GET')
-def get_user_resources_types_view(request):
-    #user = UserService.by_user_name(request.matchdict.get('user_name'), db_session=request.db)
-    user_name = request.matchdict.get('user_name')
-    user = get_user(request, user_name_or_token=user_name)
-    resource_type = request.matchdict.get('resource_type')
-    resources_permissions_dict = get_user_resources_permissions_dict(user,
-                                                                     resource_types=[resource_type],
-                                                                     db_session=request.db)
-    json_response = {}
-    for resource_id, perms in resources_permissions_dict.items():
-        resource = ResourceService.by_resource_id(resource_id, db_session=request.db)
-        json_response[resource.resource_name] = format_resource(resource, perms)
-
-    return HTTPOk(
-        body=json.dumps({'resources': json_response}),
-        content_type='application/json'
-    )
 
 
 @view_config(route_name='user_resource_permissions', request_method='GET')
@@ -394,6 +437,7 @@ def delete_user_resource_permission(permission_name, resource_id, user_id, db_se
 
     return HTTPOk()
 
+
 @view_config(route_name='user_service_permission', request_method='DELETE')
 def delete_user_service_permission(request):
     user_name = request.matchdict.get('user_name')
@@ -417,7 +461,7 @@ def delete_user_service_permission(request):
 
 
 @view_config(route_name='user_service_resources', request_method='GET')
-def get_user_service_resources(request):
+def get_user_service_resources_view(request):
     user_name = request.matchdict.get('user_name')
     service_name = request.matchdict.get('service_name')
     db = request.db
@@ -428,17 +472,18 @@ def get_user_service_resources(request):
     if service is None or user is None:
         raise HTTPNotFound(detail='this user/resource does not exist')
 
-    resources_under_service = resource_tree_service.from_parent_deeper(parent_id=service.resource_id, db_session=db)
-    tree_struct_dico = resource_tree_service.build_subtree_strut(resources_under_service)
-    resources_permissions = get_user_resources_permissions_dict(user=user, db_session=db)
+    service_perms = get_user_service_permissions(user=user, service=service, db_session=db)
 
-    json_response = {}
-    tree_crop, resource_id_list_remain = crop_tree_with_permission(tree_struct_dico['children'], resources_permissions.keys())
-    json_response[service_name] = format_service(service)
-    json_response[service_name]['resources'] = format_resource_tree(tree_crop,
-                                                                    db_session=db,
-                                                                    group=None,
-                                                                    user=user)
+    resources_perms_dico = get_user_service_resources_permissions_dict(user=user,
+                                                                       service=service,
+                                                                       db_session=db)
+    json_response = format_service_resources(
+        service=service,
+        db_session=db,
+        service_perms=service_perms,
+        resources_perms_dico=resources_perms_dico,
+        display_all=False
+    )
 
 
     return HTTPOk(

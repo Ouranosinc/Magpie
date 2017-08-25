@@ -3,6 +3,7 @@ import models
 from models import resource_tree_service
 from management.service.resource import *
 
+
 def format_service(service, perms=[]):
     return {
         'service_url': service.url,
@@ -11,6 +12,7 @@ def format_service(service, perms=[]):
         'resource_id': service.resource_id,
         'permission_names': perms
     }
+
 
 def get_services_by_type(service_type, db_session):
     services = db_session.query(models.Service).filter(models.Service.type == service_type)
@@ -116,18 +118,21 @@ def get_service_permissions(request):
     )
 
 
-def format_service_resources(service, db_session, user=None, group=None):
-    children = get_resource_children(service, db_session)
-    perms = []
-    if group:
-        from management.group.group import get_group_service_permissions
-        perms = get_group_service_permissions(group=group, service=service, db_session=db_session)
+def format_service_resources(service,
+                             db_session,
+                             service_perms=[],
+                             resources_perms_dico={},
+                             display_all=False):
 
-    service_resources_formatted = format_service(service, perms)
-    service_resources_formatted['resources'] = format_resource_tree(children,
-                                                                    db_session=db_session,
-                                                                    user=user,
-                                                                    group=group)
+    tree = get_resource_children(service, db_session)
+    if not display_all:
+        tree, resource_id_list_remain = crop_tree_with_permission(tree,
+                                                                  resources_perms_dico.keys())
+
+    service_resources_formatted = format_service(service, service_perms)
+    service_resources_formatted['resources'] = format_resource_tree(tree,
+                                                                    resources_perms_dico=resources_perms_dico,
+                                                                    db_session=db_session)
     return service_resources_formatted
 
 
@@ -156,3 +161,22 @@ def create_service_direct_resource(request):
         return create_resource(resource_name, resource_type, service.resource_id, db_session=request.db)
     else:
         raise HTTPNotFound(detail='Bad entry: service_name or service_type')
+
+
+
+@view_config(route_name='resources', request_method='GET')
+def get_resources_view(request):
+    json_response = {}
+    for service_type in service_type_dico.keys():
+        services = get_services_by_type(service_type, db_session=request.db)
+        json_response[service_type] = {}
+        for service in services:
+            json_response[service_type][service.resource_name] = format_service_resources(service,
+                                                                                          db_session=request.db,
+                                                                                          display_all=True)
+    json_response = {'resource_types': [key for key in resource_type_dico.keys()],
+                     'resources': json_response}
+    return HTTPOk(
+        body=json.dumps(json_response),
+        content_type='application/json'
+    )

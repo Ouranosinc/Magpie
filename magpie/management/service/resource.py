@@ -2,7 +2,6 @@ from magpie import *
 import models
 from models import resource_tree_service
 from models import resource_type_dico
-from services import service_type_dico
 
 
 
@@ -10,32 +9,26 @@ def format_resource(resource, perms=[]):
     return {
         'resource_name': resource.resource_name,
         'resource_id': resource.resource_id,
+        'parent_id': resource.parent_id,
         'resource_type': resource.resource_type,
         'children': {},
         'permission_names': perms
     }
 
 
-def format_resource_tree(children, db_session, group=None, user=None):
+def format_resource_tree(children, db_session, resources_perms_dico={}):
     formatted_resource_tree = {}
     for child_id, dico in children.items():
         resource = dico['node']
         new_children = dico['children']
-
         perms = []
-        if group:
-            from management.group.group import get_group_resource_permissions
-            perms = get_group_resource_permissions(group=group, resource=resource, db_session=db_session)
-        elif user:
-            from management.user.user import get_user_resource_permissions
-            perms = get_user_resource_permissions(user=user, resource=resource, db_session=db_session)
+        if resource.resource_id in resources_perms_dico.keys():
+            perms = resources_perms_dico[resource.resource_id]
 
         formatted_resource_tree[child_id] = format_resource(resource, perms)
-
         formatted_resource_tree[child_id]['children'] = format_resource_tree(new_children,
                                                                              db_session=db_session,
-                                                                             user=user,
-                                                                             group=group)
+                                                                             resources_perms_dico=resources_perms_dico)
 
     return formatted_resource_tree
 
@@ -46,13 +39,12 @@ def get_resource_children(resource, db_session):
     return tree_struct_dico['children']
 
 
-def format_resource_with_children(resource, db_session, group=None, user=None):
+def format_resource_with_children(resource, db_session):
     resource_formatted = format_resource(resource)
+
     resource_formatted['children'] = format_resource_tree(
         get_resource_children(resource, db_session),
-        db_session=db_session,
-        user=user,
-        group=group
+        db_session=db_session
     )
     return resource_formatted
 
@@ -160,20 +152,6 @@ def delete_resources(request):
     return HTTPOk()
 
 
-
-@view_config(route_name='resources', request_method='GET')
-def get_resources(request):
-    resources = models.Resource.all(db_session=request.db)
-    resource_info_dico = {}
-    for resource in resources:
-        resource_info_dico[resource.resource_id] = format_resource_with_children(resource, request.db)
-
-    json_response = {'resource_types': [key for key in resource_type_dico.keys()],
-                     'resources': resource_info_dico}
-    return HTTPOk(
-        body=json.dumps(json_response),
-        content_type='application/json'
-    )
 
 
 @view_config(route_name='resource', request_method='PUT')

@@ -132,12 +132,14 @@ class Service(Resource):
 
 class Directory(Resource):
     __mapper_args__ = {'polymorphic_identity': 'directory'}
-    permission_names = ['download']
+    permission_names = ['download',
+                        'upload']
 
 
 class File(Resource):
     __mapper_args__ = {'polymorphic_identity': 'file'}
-    permission_names = ['download']
+    permission_names = ['download',
+                        'upload']
 
 
 class Workspace(Resource):
