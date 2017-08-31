@@ -6,6 +6,7 @@ from management.service.service import format_service, format_service_resources
 from models import resource_tree_service
 from pyramid.interfaces import IAuthenticationPolicy
 
+
 @view_config(route_name='users', request_method='POST')
 def create_user(request):
     """
@@ -19,10 +20,10 @@ def create_user(request):
     :return: 
     """
 
-    user_name = request.POST.get('user_name')
-    email = request.POST.get('email')
-    password = request.POST.get('password')
-    group_name = request.POST.get('group_name')
+    user_name = get_multiformat_post(request, 'user_name')
+    email = get_multiformat_post(request, 'email')
+    password = get_multiformat_post(request, 'password')
+    group_name = get_multiformat_post(request, 'group_name')
 
 
     # Check if group already exist
@@ -322,7 +323,7 @@ def create_user_resource_permission(permission_name, resource_id, user_id, db_se
 def create_user_resource_permission_view(request):
     user_name = request.matchdict.get('user_name')
     resource_id = request.matchdict.get('resource_id')
-    permission_name = request.POST.get('permission_name')
+    permission_name = get_multiformat_post(request, 'permission_name')
     db = request.db
 
     user = UserService.by_user_name(user_name=user_name, db_session=db)
@@ -410,7 +411,7 @@ def get_user_service_permissions_view(request):
 def create_user_service_permission(request):
     user_name = request.matchdict.get('user_name')
     service_name = request.matchdict.get('service_name')
-    permission_name = request.POST.get('permission_name')
+    permission_name = get_multiformat_post(request, 'permission_name')
 
     db = request.db
     service = models.Service.by_service_name(service_name, db_session=db)

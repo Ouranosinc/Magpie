@@ -134,9 +134,9 @@ def create_resource_view(request):
     :param request: 
     :return: 
     """
-    resource_name = request.POST.get('resource_name')
-    resource_type = request.POST.get('resource_type')
-    parent_id = request.POST.get('parent_id')
+    resource_name = get_multiformat_post(request, 'resource_name')
+    resource_type = get_multiformat_post(request, 'resource_type')
+    parent_id = get_multiformat_post(request, 'parent_id')
 
     return create_resource(resource_name, resource_type, parent_id, request.db)
 
@@ -163,7 +163,7 @@ def delete_resources(request):
 @view_config(route_name='resource', request_method='PUT')
 def update_resource(request):
     resource_id = request.matchdict.get('resource_id')
-    new_name = request.POST.get('resource_name')
+    new_name = get_multiformat_post(request, 'resource_name')
     db = request.db
     if new_name is None:
         raise HTTPBadRequest(detail='the new resource_name is missing')

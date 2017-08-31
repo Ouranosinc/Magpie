@@ -43,9 +43,9 @@ def get_services_view(request):
 
 @view_config(route_name='services', request_method='POST')
 def register_service(request):
-    service_name = request.POST.get('service_name')
-    service_url = request.POST.get('service_url')
-    service_type = request.POST.get('service_type')
+    service_name = get_multiformat_post(request, 'service_name')
+    service_url = get_multiformat_post(request, 'service_url')
+    service_type = get_multiformat_post(request, 'service_type')
     db = request.db
     if models.Service.by_service_name(service_name, db_session=db):
         raise HTTPConflict(detail='This service name is already used')
@@ -154,9 +154,9 @@ def get_service_resources_view(request):
 @view_config(route_name='service_resources', request_method='POST')
 def create_service_direct_resource(request):
     service_name = request.matchdict.get('service_name')
-    resource_name = request.POST.get('resource_name')
-    resource_type = request.POST.get('resource_type')
-    parent_id = request.POST.get('parent_id')
+    resource_name = get_multiformat_post(request, 'resource_name')
+    resource_type = get_multiformat_post(request, 'resource_type')
+    parent_id = get_multiformat_post(request, 'parent_id')
     service = models.Service.by_service_name(service_name, db_session=request.db)
     if service:
 

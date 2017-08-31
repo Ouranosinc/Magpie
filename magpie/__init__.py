@@ -41,5 +41,14 @@ ADMIN_PERM = NO_PERMISSION_REQUIRED
 ANONYMOUS_USER = os.getenv('ANONYMOUS_USER')
 
 
+def get_multiformat_post(request, key):
+    if request.content_type == 'application/json':
+        try:
+            value = request.json_body.get(key)
+        except Exception, e:
+            raise HTTPBadRequest(detail=e.message)
+        return value
+    else:
+        return request.POST.get(key)
 
 

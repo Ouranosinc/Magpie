@@ -17,6 +17,7 @@ from ziggurat_foundations.ext.pyramid import get_user
 from security import authomatic
 import requests
 import models
+from magpie import get_multiformat_post
 
 external_provider = ['openid',
                      'dkrz',
@@ -28,9 +29,10 @@ external_provider = ['openid',
 
 @view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
-    provider_name = request.POST.get('provider_name')
-    user_name = request.POST.get('user_name')
-    password = request.POST.get('password')
+    provider_name = get_multiformat_post(request, 'provider_name')
+
+    user_name = get_multiformat_post(request, 'user_name')
+    password = get_multiformat_post(request, 'password')
 
     if provider_name == 'ziggurat':
         # redirection to ziggurat sign in
@@ -143,7 +145,7 @@ def authomatic_login(request):
                     pass
                 return login_success_external(login_id=login_id, name=result.user.name)
     else:
-        came_from = request.POST.get('came_from')
+        came_from = get_multiformat_post(request, 'came_from')
         response.set_cookie('homepage_route', came_from)
     return response
 

@@ -19,14 +19,15 @@ def get_groups(request):
 def create_group(request):
     try:
         db = request.db
-        group_name = request.POST.get('group_name')
+        group_name = get_multiformat_post(request, 'group_name')
+
         new_group = models.Group(group_name=group_name)
         db.add(new_group)
         db.commit()
-    except:
+    except Exception, e:
         # Group already exist
         db.rollback()
-        raise HTTPConflict(detail='This name already exists')
+        raise HTTPConflict(detail=e.message)
 
     return HTTPCreated()
 
@@ -125,7 +126,7 @@ def get_group_service_permissions_view(request):
 def create_group_service_permission(request):
     group_name = request.matchdict.get('group_name')
     service_name = request.matchdict.get('service_name')
-    permission_name = request.POST.get('permission_name')
+    permission_name = get_multiformat_post(request, 'permission_name')
 
     db = request.db
     service = models.Service.by_service_name(service_name, db_session=db)
@@ -271,7 +272,7 @@ def create_group_resource_permission(permission_name, resource_id, group_id, db_
 def create_group_resource_permission_view(request):
     group_name = request.matchdict.get('group_name')
     resource_id = request.matchdict.get('resource_id')
-    permission_name = request.POST.get('permission_name')
+    permission_name = get_multiformat_post(request, 'permission_name')
 
     db = request.db
     resource = ResourceService.by_resource_id(resource_id, db_session=db)
