@@ -1,6 +1,7 @@
 import requests
 from pyramid.view import view_config
 from management import check_res
+from home import add_template_data
 from pyramid.httpexceptions import (
     HTTPFound,
     HTTPOk,
@@ -25,6 +26,15 @@ class ManagementViews(object):
         res_groups = requests.get(self.magpie_url + '/groups')
         try:
             return res_groups.json()['group_names']
+        except:
+            raise HTTPBadRequest(detail='Bad Json response')
+        return []
+
+    def get_user_groups(self, user_name):
+        try:
+            res_user_groups = requests.get(self.magpie_url + '/users/' + user_name + '/groups')
+            check_res(res_user_groups)
+            return res_user_groups.json()['group_names']
         except:
             raise HTTPBadRequest(detail='Bad Json response')
         return []
@@ -61,23 +71,49 @@ class ManagementViews(object):
             user_name = self.request.POST.get('user_name')
             return HTTPFound(self.request.route_url('edit_user', user_name=user_name))
 
-        return {'users': self.get_users()}
+        return add_template_data(self.request, {'users': self.get_users()})
+
+    @view_config(route_name='add_user', renderer='templates/add_user.mako')
+    def add_user(self):
+        if 'create' in self.request.POST:
+            groups = self.get_groups()
+            user_name = self.request.POST.get('user_name')
+            group_name = self.request.POST.get('group_name')
+            if group_name not in groups:
+                self.create_group(group_name)
+
+            data = {'user_name': user_name,
+                    'email': self.request.POST.get('email'),
+                    'password': self.request.POST.get('password'),
+                    'group_name': group_name}
+            check_res(requests.post(self.magpie_url + '/users', data))
+            return HTTPFound(self.request.route_url('view_users'))
+
+        return add_template_data(self.request)
 
     @view_config(route_name='edit_user', renderer='templates/edit_user.mako')
     def edit_user(self):
         user_name = self.request.matchdict['user_name']
+        own_groups = self.get_user_groups(user_name)
 
-        own_groups = []
-        try:
-            res_user_groups = requests.get(self.magpie_url + '/users/' + user_name + '/groups')
-            check_res(res_user_groups)
-            own_groups = res_user_groups.json()['group_names']
-        except:
-            raise HTTPBadRequest(detail='Bad Json response')
+        if 'member' in self.request.POST:
+            groups = self.request.POST.getall('member')
 
-        return {'user_name': user_name,
-                'own_groups': own_groups,
-                'groups': self.get_groups()}
+            removed_groups = list(set(own_groups) - set(groups))
+            new_groups = list(set(groups) - set(own_groups))
+
+            for group in removed_groups:
+                check_res(requests.delete(self.magpie_url + '/users/' + user_name + '/groups/' + group))
+
+            for group in new_groups:
+                check_res(requests.post(self.magpie_url+'/users/'+user_name+'/groups/'+group))
+
+            own_groups = self.get_user_groups(user_name)
+
+        return add_template_data(self.request,
+                                 {'user_name': user_name,
+                                  'own_groups': own_groups,
+                                  'groups': self.get_groups()})
 
     @view_config(route_name='view_groups', renderer='templates/view_groups.mako')
     def view_groups(self):
@@ -93,7 +129,7 @@ class ManagementViews(object):
             group_name = self.request.POST.get('group_name')
             return HTTPFound(self.request.route_url('edit_group', group_name=group_name, cur_svc_type='default'))
 
-        return {'group_names': self.get_groups()}
+        return add_template_data(self.request, {'group_names': self.get_groups()})
 
 
     @view_config(route_name='edit_group', renderer='templates/edit_group.mako')
@@ -120,13 +156,14 @@ class ManagementViews(object):
                                                      cmip5={'pr_daily.nc': {}})),
                         )
 
-        return {'group_name': group_name,
-                'users': self.get_users(),
-                'members': members,
-                'svc_types': svc_types,
-                'cur_svc_type': cur_svc_type,
-                'resources': resources,
-                'permissions': ['permission3', 'permission2', 'permission1']}
+        return add_template_data(self.request,
+                                 {'group_name': group_name,
+                                  'users': self.get_users(),
+                                  'members': members,
+                                  'svc_types': svc_types,
+                                  'cur_svc_type': cur_svc_type,
+                                  'resources': resources,
+                                  'permissions': ['permission3', 'permission2', 'permission1']})
 
 
     def user_manager_view(self):
@@ -169,12 +206,12 @@ class ManagementViews(object):
         except:
             raise HTTPBadRequest(detail='Bad Json response')
 
-        return {'users': users,
-                'groups': group_names,
-                'user_groups_dict': user_groups_dict}
+        return add_template_data(self.request, {'users': users,
+                                                'groups': group_names,
+                                                'user_groups_dict': user_groups_dict})
 
 
-    @view_config(route_name='service_manager', renderer='templates/service_manager.mako')
+    @view_config(route_name='view_services', renderer='templates/view_services.mako')
     def service_manager_view(self):
 
         if 'register' in self.request.POST:
@@ -193,6 +230,7 @@ class ManagementViews(object):
         check_res(res)
         service_names = res.json()['services']
 
-        return {'service_info_list': service_names,
-                'service_types': ['wps', 'wms', 'thredds']}
+        return add_template_data(self.request,
+                                 {'service_info_list': service_names,
+                                  'service_types': ['wps', 'wms', 'thredds']})
 

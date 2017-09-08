@@ -25,7 +25,7 @@ def main(global_settings, **settings):
 if __name__ == '__main__':
     settings = {
         'auth.secret': 'magpie',
-        'magpie.url': 'http://pluvier.crim.ca:2001',
+        'magpie.url': 'http://localhost:2001',
         'pyramid.reload_templates': True
     }
     app = main({}, **settings)

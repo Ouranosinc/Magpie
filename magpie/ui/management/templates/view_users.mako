@@ -1,46 +1,27 @@
-<html>
-<head>
-<link href="${request.static_url('management:static/style.css')}" rel="stylesheet" type="text/css" media="all" />
-</head>
-<body>
+<%inherit file="home:templates/template.mako"/>
 
-<h3>Users</h3>
-<form action="${request.path}" method="post">
-    <table>
-        <tr>
-            <td>User name</td>
-            <td><input type="text" name="user_name"></td>
-        </tr>
-        <tr>
-            <td>Email</td>
-            <td><input type="text" name="email"></td>
-        </tr>
-        <tr>
-            <td>Password</td>
-            <td><input type="password" name="password"></td>
-        </tr>
-    </table>
-    <input type="radio" name="group_name" value="admin" />Admin<br>
-    <input type="radio" name="group_name" value="user" />User<br>
-    <input type="radio" name="group_name" value="guest" />Guest<br>
-    <input type="submit" value="Add User" name="create">
-</form>
+<%block name="breadcrumb">
+<li><a href="${request.route_url('home')}">Home</a></li>
+<li><a href="${request.route_url('view_users')}">Users</a></li>
+</%block>
 
-<table>
+<h1>Users</h1>
+
+<button class="img_button" type="button" onclick="location.href='${request.route_url('add_user')}'">
+    <img src="${request.static_url('home:static/add.png')}">
+    Add User
+</button>
+
+
+<table id="users_table">
 
 %for user in users:
 <form action="${request.path}" method="post">
 <tr>
-    <td><input type="hidden" value=${user} name="user_name"></td>
-    <td>${user}</td>
+    <td><input type="hidden" value=${user} name="user_name">${user}</td>
     <td><input type="submit" value="Delete" name="delete"></td>
     <td><input type="submit" value="Edit" name="edit"></td>
 </tr>
 </form>
 %endfor
 </table>
-
-
-
-</body>
-</html>

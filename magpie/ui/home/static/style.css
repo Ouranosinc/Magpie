@@ -1,0 +1,198 @@
+html,body {
+    margin:0;
+    padding:0;
+    border:0;
+}
+
+.content {
+    margin: 5em;
+}
+
+.img_button {
+	background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    vertical-align: center;
+    padding: 0.7em;
+    margin: 1em 0em 1em;
+}
+
+.img_button>img {
+	height: 1em;
+}
+
+table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+td, th {
+    border: 1px solid #dddddd;
+    padding: 8px;
+}
+
+tr:nth-child(even) {
+    background-color: #dddddd;
+}
+
+
+/*---View users page ---*/
+#users_table tr th:first-child,
+ tr td:first-child {
+    width: 80%;
+    text-align: left;
+}
+
+#users_table tr, th:not(:first-child) {
+    text-align: center;
+}
+
+
+
+/*---Resource tree rendering ---*/
+.tree li {
+    border: 1px solid #dddddd;
+}
+
+.Collapsable input {
+    float:left;
+    padding: 5px 100px;
+    border: 1px solid #eee;
+}
+
+li.Expanded {
+    list-style-image: url('${request.static_url('home:static/ArrowExpanded.jpg')}');
+}
+
+li.Collapsed {
+    list-style-image: url('${request.static_url('home:static/ArrowCollapsed.jpg')}');
+}
+
+div.tree_item {
+    display:block;
+    float:left;
+}
+
+div.perm_checkbox {
+    display:block;
+    width:5em;
+    float:right;
+}
+.clear {
+  clear: both;
+}
+
+
+/*---Header breadcrumb---*/
+ul.breadcrumb {
+    padding: 10px 16px;
+    list-style: none;
+}
+ul.breadcrumb li {
+    display: inline;
+    font-size: 18px;
+}
+ul.breadcrumb li+li:before {
+    padding: 8px;
+    color: #DDDDDD;
+    content: ">\00a0";
+}
+ul.breadcrumb li a {
+    color: #DDDDDD;
+    text-decoration: none;
+}
+ul.breadcrumb li a:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+/*---Header---*/
+
+.header {
+	background: #000000;
+
+    background: black; /* For browsers that do not support gradients */
+    background: -webkit-linear-gradient(left bottom, black, gray); /* For Safari 5.1 to 6.0 */
+    background: -o-linear-gradient(bottom top, black, gray); /* For Opera 11.1 to 12.0 */
+    background: -moz-linear-gradient(bottom top, black, gray); /* For Firefox 3.6 to 15 */
+    background: linear-gradient(to bottom top, black, gray); /* Standard syntax (must be last) */
+    padding: 1em 1em 0em 1em;
+}
+
+
+.header{
+    vertical-align: center;
+
+}
+.header>a{
+	color: white;
+	font-size: 3em;
+	text-decoration: none;
+	float: left;
+	vertical-align: center;
+}
+
+
+.header>button{
+	background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    height: 40px;
+    width: 100px;
+    float: right;
+    vertical-align: center;
+}
+
+/*---Home---*/
+
+.admin_links>a {
+    float:left;
+    width: 27%;
+    margin: 2%;
+    padding: 1%;
+    background: lightgray;
+    text-align: center;
+    text-decoration: none;
+    color: black;
+    border: 1px solid black;
+    border-radius: 3px;
+    height: 10em;
+}
+
+.admin_links>a>img {
+    height: 60%;
+    padding: 5%;
+}
+
+/*---Service tabs---*/
+.current_tab a{
+	color: #5E5E5E;
+	line-height:1.5em;
+	width:90%;
+	margin:0 auto 2em;
+}
+
+a.current_tab:link, a.current_tab:visited {
+    background-color: #f44336;
+    color: white;
+    padding: 14px 25px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}
+
+a.tab:link, a.tab:visited {
+    background-color: #ff43ff;
+    color: white;
+    padding: 14px 25px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}
+
+a.tab:hover, a.tab:active {
+    background-color: red;
+}

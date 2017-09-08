@@ -31,7 +31,7 @@ tr:nth-child(even) {
 %for group in group_names:
 <form action="${request.path}" method="post">
 <tr>
-    <td><input type="hidden" value=${group} name="group_name""></td>
+    <td><input type="hidden" value=${group} name="group_name"></td>
     <td>${group}</td>
     <td><input type="submit" value="Delete" name="delete"></td>
     <td><input type="submit" value="Edit" name="edit"></td>

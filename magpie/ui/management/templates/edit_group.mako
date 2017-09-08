@@ -142,8 +142,9 @@ li:nth-child(even) {
     <div class="perm_checkbox">${perm}</div>
 %endfor
 
+<div class="tree">
 ${render_tree(resources)}
-
+</div>
 
 </body>
 </html>
