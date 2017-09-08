@@ -14,6 +14,7 @@ def includeme(config):
 
     logger.info('Adding management ...')
     config.add_route('view_groups', '/groups')
+    config.add_route('add_group', '/groups/add')
     config.add_route('edit_group', '/groups/{group_name}/{cur_svc_type}')
     config.add_route('view_users', '/users')
     config.add_route('add_user', '/users/add')

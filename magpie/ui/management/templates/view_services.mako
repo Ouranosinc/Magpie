@@ -1,4 +1,12 @@
-<h2>Services Manager</h2>
+<%inherit file="home:templates/template.mako"/>
+
+<%block name="breadcrumb">
+<li><a href="${request.route_url('home')}">Home</a></li>
+<li><a href="${request.route_url('view_services')}">Services</a></li>
+</%block>
+
+<h1>Services</h1>
+
 
 <form action="${request.path}" method="post">
     service name (unique): <input type="text" value="" name="service_name" placeholder="emu">

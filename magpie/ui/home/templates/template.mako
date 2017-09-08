@@ -30,3 +30,5 @@ ${self.body()}
 
 </body>
 </html>
+
+<%block name="script"/>

@@ -1,12 +1,12 @@
 <%inherit file="home:templates/template.mako"/>
 
 <%block name="breadcrumb">
-<li><a href="/">Home</a></li>
+<li><a href="${request.route_url('home')}">Home</a></li>
 <li><a href="${request.route_url('view_users')}">Users</a></li>
-<li><a href="${request.route_url('add_user')}">Add user</a></li>
+<li><a href="${request.route_url('add_user')}">Add User</a></li>
 </%block>
 
-<h1>Add user</h1>
+<h1>Add User</h1>
 
 <form action="${request.path}" method="post">
     <table>

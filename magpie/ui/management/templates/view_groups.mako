@@ -1,46 +1,27 @@
-<html>
-<head>
-<style>
-table {
-    font-family: arial, sans-serif;
-    border-collapse: collapse;
-    width: 100%;
-}
+<%inherit file="home:templates/template.mako"/>
 
-td, th {
-    border: 1px solid #dddddd;
-    text-align: left;
-    padding: 8px;
-}
+<%block name="breadcrumb">
+<li><a href="${request.route_url('home')}">Home</a></li>
+<li><a href="${request.route_url('view_groups')}">Groups</a></li>
+</%block>
 
-tr:nth-child(even) {
-    background-color: #dddddd;
-}
-</style>
-</head>
-<body>
+<h1>Groups</h1>
 
-<h3>Groups</h3>
-<form action="${request.path}" method="post">
-    <input type="text" name="group_name">
-    <input type="submit" value="Add Group" name="create">
-</form>
 
-<table>
+<button class="img_button" type="button" onclick="location.href='${request.route_url('add_group')}'">
+    <img src="${request.static_url('home:static/add.png')}">
+    Add Group
+</button>
+
+<table class="simple_list_table">
 
 %for group in group_names:
 <form action="${request.path}" method="post">
 <tr>
-    <td><input type="hidden" value=${group} name="group_name"></td>
-    <td>${group}</td>
+    <td><input type="hidden" value=${group} name="group_name">${group}</td>
     <td><input type="submit" value="Delete" name="delete"></td>
     <td><input type="submit" value="Edit" name="edit"></td>
 </tr>
 </form>
 %endfor
 </table>
-
-
-
-</body>
-</html>

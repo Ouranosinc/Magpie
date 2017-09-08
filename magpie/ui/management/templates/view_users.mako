@@ -13,7 +13,7 @@
 </button>
 
 
-<table id="users_table">
+<table simple_list_table="simple_list_table">
 
 %for user in users:
 <form action="${request.path}" method="post">

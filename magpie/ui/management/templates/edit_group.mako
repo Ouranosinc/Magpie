@@ -1,92 +1,32 @@
-<html>
-<head>
-<style>
-table {
-    font-family: arial, sans-serif;
-    border-collapse: collapse;
-    width: 100%;
-}
+<%inherit file="home:templates/template.mako"/>
 
-td, th {
-    border: 1px solid #dddddd;
-    text-align: left;
-    padding: 8px;
-}
+<%block name="breadcrumb">
+<li><a href="${request.route_url('home')}">Home</a></li>
+<li><a href="${request.route_url('view_groups')}">Groups</a></li>
+<li><a href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=cur_svc_type)}">Group ${group_name}</a></li>
+</%block>
 
-tr:nth-child(even) {
-    background-color: #dddddd;
-}
+<%block name="script">
+<script type="text/javascript">
+    $(".Collapsable").click(function () {
+        var collapsable = $(this);
+        var parent_div = $(this).parent();
+        var li = $(this).parent().parent();
+        var next_elem = li.next();
 
-.current_tab a{
-	color: #5E5E5E;
-	line-height:1.5em;
-	width:90%;
-	margin:0 auto 2em;
-}
+        if (next_elem.length == 1 && next_elem[0].tagName == 'UL') {
+            var cur_class = li.attr("class");
+            if (cur_class == "Collapsed") {
+                li.attr("class", "Expanded");
+            } else {
+                li.attr("class", "Collapsed");
+            }
+            next_elem.children().toggle();
+        }
+    });
 
-a.current_tab:link, a.current_tab:visited {
-    background-color: #f44336;
-    color: white;
-    padding: 14px 25px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-}
-
-a.tab:link, a.tab:visited {
-    background-color: #ff43ff;
-    color: white;
-    padding: 14px 25px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-}
-
-a:hover, a:active {
-    background-color: red;
-}
-
-.Collapsable input {
-    float:left;
-    padding: 5px 100px;
-    border: 1px solid #eee;
-}
-
-li.Expanded {
-    list-style-image: url('${request.static_url('management:static/ArrowExpanded.jpg')}');
-}
-
-li.Collapsed {
-    list-style-image: url('${request.static_url('management:static/ArrowCollapsed.jpg')}');
-}
-
-div.tree_item {
-    display:block;
-    float:left;
-}
-
-div.perm_checkbox {
-    display:block;
-    width:5em;
-    float:right;
-}
-.clear {
-  clear: both;
-}
-
-li {
-    border: 1px solid #dddddd;
-}
-
-li:nth-child(even) {
-    background-color: #dddddd;
-}
-
-</style>
-
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
-</head>
-
+</script>
+</%block>
 
 <h1>Group ${group_name}</h1>
 
@@ -145,26 +85,3 @@ li:nth-child(even) {
 <div class="tree">
 ${render_tree(resources)}
 </div>
-
-</body>
-</html>
-
-<script type="text/javascript">
-    $(".Collapsable").click(function () {
-        var collapsable = $(this);
-        var parent_div = $(this).parent();
-        var li = $(this).parent().parent();
-        var next_elem = li.next();
-
-        if (next_elem.length == 1 && next_elem[0].tagName == 'UL') {
-            var cur_class = li.attr("class");
-            if (cur_class == "Collapsed") {
-                li.attr("class", "Expanded");
-            } else {
-                li.attr("class", "Collapsed");
-            }
-            next_elem.children().toggle();
-        }
-    });
-
-</script>

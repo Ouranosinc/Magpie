@@ -117,10 +117,6 @@ class ManagementViews(object):
 
     @view_config(route_name='view_groups', renderer='templates/view_groups.mako')
     def view_groups(self):
-        if 'create' in self.request.POST:
-            group_name = self.request.POST.get('group_name')
-            self.create_group(group_name)
-
         if 'delete' in self.request.POST:
             group_name = self.request.POST.get('group_name')
             check_res(requests.delete(self.magpie_url+'/groups/'+group_name))
@@ -131,6 +127,14 @@ class ManagementViews(object):
 
         return add_template_data(self.request, {'group_names': self.get_groups()})
 
+    @view_config(route_name='add_group', renderer='templates/add_group.mako')
+    def add_group(self):
+        if 'create' in self.request.POST:
+            group_name = self.request.POST.get('group_name')
+            self.create_group(group_name)
+            return HTTPFound(self.request.route_url('view_groups'))
+
+        return add_template_data(self.request)
 
     @view_config(route_name='edit_group', renderer='templates/edit_group.mako')
     def edit_group(self):
@@ -165,54 +169,8 @@ class ManagementViews(object):
                                   'resources': resources,
                                   'permissions': ['permission3', 'permission2', 'permission1']})
 
-
-    def user_manager_view(self):
-        if 'delete' in self.request.POST:
-            user_names = self.request.POST.getall('user_names')
-            for user_name in user_names:
-                check_res(requests.delete(self.magpie_url+'/users/'+user_name))
-
-        if 'assign' in self.request.POST:
-            user_name = self.request.POST.get('user_names')
-            group_names = self.request.POST.getall('group_names')
-            for group_name in group_names:
-                check_res(requests.post(self.magpie_url+'/users/'+user_name+'/groups/'+group_name))
-
-
-        if 'delete_user_groups' in self.request.POST:
-            group_names = self.request.POST.getall('group_names')
-            user_name = self.request.POST.get('user_name')
-            for group_name in group_names:
-                check_res(requests.delete(self.magpie_url+'/users/'+user_name+'/groups/'+group_name))
-
-        res = requests.get(self.magpie_url+'/users')
-        group_res = requests.get(self.magpie_url+'/groups')
-
-        user_groups_dict = {}
-
-        try:
-            user_names = res.json()['user_names']
-            group_names = group_res.json()['group_names']
-
-            users = []
-            for user_name in user_names:
-                user_res = requests.get(self.magpie_url+'/users/'+user_name)
-                check_res(user_res)
-
-                user_data = user_res.json()
-                users.append(user_data)
-                user_groups_res = requests.get(self.magpie_url+'/users/'+user_name+'/groups')
-                user_groups_dict[user_name] = user_groups_res.json()['group_names']
-        except:
-            raise HTTPBadRequest(detail='Bad Json response')
-
-        return add_template_data(self.request, {'users': users,
-                                                'groups': group_names,
-                                                'user_groups_dict': user_groups_dict})
-
-
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
-    def service_manager_view(self):
+    def view_services(self):
 
         if 'register' in self.request.POST:
             data = {'service_name': self.request.POST.get('service_name'),
