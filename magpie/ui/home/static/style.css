@@ -9,17 +9,38 @@ html,body {
 }
 
 .img_button {
-	background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    vertical-align: center;
-    padding: 0.7em;
+	padding: 0.7em;
     margin: 1em 0em 1em;
 }
 
-.img_button:hover, .img_button:focus {
+a.tab:link,
+a.tab:visited,
+.img_button,
+input[type="submit"]{
+    background-color: #4CAF50;
+    color: white;
+    vertical-align: center;
+    cursor:pointer;
+}
+
+a.tab:hover, a.tab:active,
+.img_button:hover, .img_button:focus
+input[type="submit"]:hover, input[type="submit"]:focus {
 	background-color: #5CBF60;
+}
+
+.img_button,
+input[type="submit"]{
+    border: none;
+    border-radius: 3px;
+}
+
+input[type="submit"]{
+    height: 2em;
+}
+
+.tree input[type="submit"]{
+    height: 1.5em;
 }
 
 .img_button>img {
@@ -74,6 +95,7 @@ tr:nth-child(even) {
     float:left;
     padding: 5px 100px;
     border: 1px solid #eee;
+    cursor:pointer;
 }
 
 div.tree_item {
@@ -97,6 +119,14 @@ div.perm_checkbox {
     float:right;
     text-align: left;
 }
+
+div.tree_button {
+    width:5em;
+    float:right;
+    text-align: center;
+    padding: 0 0 0 2em;
+}
+
 .clear {
   clear: both;
 }
@@ -151,20 +181,10 @@ ul.breadcrumb li a:hover {
 	vertical-align: center;
 }
 
-
 .header>button{
-	background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    height: 40px;
+	height: 40px;
     width: 100px;
     float: right;
-    vertical-align: center;
-}
-
-.header>button:hover, .header>button:focus {
-	background-color: #5CBF60;
 }
 
 /*---Home---*/
@@ -213,14 +233,8 @@ a.current_tab:link, a.current_tab:visited {
 }
 
 a.tab:link, a.tab:visited {
-    background-color: #4CAF50;
-    color: white;
     padding: 1em;
     text-align: center;
     text-decoration: none;
     display: inline-block;
-}
-
-a.tab:hover, a.tab:active {
-    background-color: #5CBF60;;
 }

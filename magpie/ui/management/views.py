@@ -219,15 +219,13 @@ class ManagementViews(object):
             self.request.session['edit_group_offset'] = 0
 
         try:
-            res_svcs = requests.get(self.magpie_url + '/services')
-            check_res(res_svcs)
-            svc_types = res_svcs.json()['services'].keys()
-            if cur_svc_type not in svc_types:
-                cur_svc_type = svc_types[0]
-            services = res_svcs.json()['services'][cur_svc_type]
+            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
             perms = set()
             resources = {}
             for service in services:
+                if not service:
+                    continue
+
                 res_svc = check_res(requests.get(self.magpie_url + '/services/' + service + '/permissions'))
                 perms.update(set(res_svc.json()['permission_names']))
 
@@ -257,9 +255,42 @@ class ManagementViews(object):
                                   'resources': resources,
                                   'permissions': list(perms)})
 
+    def get_services(self, cur_svc_type):
+        try:
+            res_svcs = requests.get(self.magpie_url + '/services')
+            check_res(res_svcs)
+            all_services = res_svcs.json()['services']
+            svc_types = all_services.keys()
+            if cur_svc_type not in svc_types:
+                cur_svc_type = svc_types[0]
+            services = all_services[cur_svc_type]
+            return svc_types, cur_svc_type, services
+        except Exception as e:
+            raise HTTPBadRequest(detail='Bad Json response')
+
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
     def view_services(self):
+        if 'delete' in self.request.POST:
+            service_name = self.request.POST.get('service_name')
+            check_res(requests.delete(self.magpie_url + '/services/' + service_name))
 
+        cur_svc_type = self.request.matchdict['cur_svc_type']
+        svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
+        service_names = services.keys()
+
+        if 'edit' in self.request.POST:
+            service_name = self.request.POST.get('service_name')
+            return HTTPFound(self.request.route_url('edit_service', service_name=service_name, cur_svc_type=cur_svc_type))
+
+        return add_template_data(self.request,
+                                 {'cur_svc_type': cur_svc_type,
+                                  'svc_types': svc_types,
+                                  'service_names': service_names})
+
+    @view_config(route_name='add_service', renderer='templates/add_service.mako')
+    def add_service(self):
+        cur_svc_type = self.request.matchdict['cur_svc_type']
+        svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
         if 'register' in self.request.POST:
             data = {'service_name': self.request.POST.get('service_name'),
                     'service_url': self.request.POST.get('service_url'),
@@ -267,16 +298,60 @@ class ManagementViews(object):
 
             check_res(requests.post(self.magpie_url+'/services', data=data))
 
-        if 'unregister' in self.request.POST:
-            service_names = self.request.POST.getall('service_names')
-            for service_name in service_names:
-                check_res(requests.delete(self.magpie_url+'/services/'+service_name))
-
-        res = requests.get(self.magpie_url + '/services')
-        check_res(res)
-        service_names = res.json()['services']
+            return HTTPFound(self.request.route_url('view_services', cur_svc_type=self.request.POST.get('service_type')))
 
         return add_template_data(self.request,
-                                 {'service_info_list': service_names,
-                                  'service_types': ['wps', 'wms', 'thredds']})
+                                 {'cur_svc_type': cur_svc_type,
+                                  'service_types': svc_types})
 
+    @view_config(route_name='edit_service', renderer='templates/edit_service.mako')
+    def edit_service(self):
+        cur_svc_type = self.request.matchdict['cur_svc_type']
+        service_name = self.request.matchdict['service_name']
+
+        if 'delete' in self.request.POST:
+            resource_id = self.request.POST.get('resource_id')
+            check_res(requests.delete(self.magpie_url+'/resources/{0}'.format(resource_id)))
+
+        if 'add_child' in self.request.POST:
+            resource_id = self.request.POST.get('resource_id')
+            return HTTPFound(self.request.route_url('add_resource',
+                                                    service_name=service_name,
+                                                    cur_svc_type=cur_svc_type,
+                                                    resource_id=resource_id))
+
+        try:
+            resources = {}
+            res_ressources = check_res(requests.get(self.magpie_url + '/services/' + service_name + '/resources'))
+            raw_resources = res_ressources.json()[service_name]
+            resources[service_name] = dict(
+                id=raw_resources['resource_id'],
+                permission_names=[],
+                children=self.res_tree_parser(raw_resources['resources'], {}))
+        except Exception as e:
+            raise HTTPBadRequest(detail='Bad Json response')
+
+        return add_template_data(self.request,
+                                 {'service_name': service_name,
+                                  'cur_svc_type': cur_svc_type,
+                                  'resources': resources})
+
+    @view_config(route_name='add_resource', renderer='templates/add_resource.mako')
+    def add_resource(self):
+        cur_svc_type = self.request.matchdict['cur_svc_type']
+        service_name = self.request.matchdict['service_name']
+        resource_id = self.request.matchdict['resource_id']
+
+        if 'add_child' in self.request.POST:
+            data = {'resource_name': self.request.POST.get('resource_name'),
+                    'resource_type': self.request.POST.get('resource_type'),
+                    'parent_id': resource_id}
+
+            check_res(requests.post(self.magpie_url + '/resources', data=data))
+
+            return HTTPFound(self.request.route_url('edit_service', service_name=service_name, cur_svc_type=cur_svc_type))
+
+        return add_template_data(self.request,
+                                 {'service_name': service_name,
+                                  'cur_svc_type': cur_svc_type,
+                                  'resource_id': resource_id})

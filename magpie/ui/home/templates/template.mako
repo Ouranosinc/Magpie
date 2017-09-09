@@ -15,11 +15,11 @@
 <div class="header">
     <a href="/">
         <img src="${request.static_url('home:static/settings_white.png')}">
-        Magpie Admin</a>
+        Magpie Administration</a>
     %if logged_user:
-        <button type="button" onclick="location.href='${request.route_url('logout')}'">Log out<br/>(${logged_user})</button>
+        <button class="img_button" type="button" onclick="location.href='${request.route_url('logout')}'">Log out<br/>(${logged_user})</button>
     % else:
-        <button type="button" onclick="location.href='${request.route_url('login')}'">Log In</button>
+        <button class="img_button" type="button" onclick="location.href='${request.route_url('login')}'">Log In</button>
     % endif
     <div class="clear"></div>
     <ul class="breadcrumb">
