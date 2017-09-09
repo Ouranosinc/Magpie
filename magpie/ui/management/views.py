@@ -30,6 +30,15 @@ class ManagementViews(object):
             raise HTTPBadRequest(detail='Bad Json response')
         return []
 
+    def get_group_users(self, group_name):
+        try:
+            res_group_users = requests.get(self.magpie_url + '/groups/' + group_name + '/users')
+            check_res(res_group_users)
+            return res_group_users.json()['user_names']
+        except:
+            raise HTTPBadRequest(detail='Bad Json response')
+        return []
+
     def get_user_groups(self, user_name):
         try:
             res_user_groups = requests.get(self.magpie_url + '/users/' + user_name + '/groups')
@@ -96,7 +105,7 @@ class ManagementViews(object):
         user_name = self.request.matchdict['user_name']
         own_groups = self.get_user_groups(user_name)
 
-        if 'member' in self.request.POST:
+        if self.request.method == 'POST':
             groups = self.request.POST.getall('member')
 
             removed_groups = list(set(own_groups) - set(groups))
@@ -136,29 +145,108 @@ class ManagementViews(object):
 
         return add_template_data(self.request)
 
+    def res_tree_parser(self, raw_resources_tree, permission):
+        resources_tree = {}
+        for r_id, resource in raw_resources_tree.items():
+            resources_tree[resource['resource_name']] = dict(id=r_id,
+                                                             permission_names=self.default_get(permission, r_id, []),
+                                                             children=self.res_tree_parser(resource['children'], permission))
+        return resources_tree
+
+    def perm_tree_parser(self, raw_perm_tree):
+        permission = {}
+        for r_id, resource in raw_perm_tree.items():
+            permission[r_id] = resource['permission_names']
+            permission.update(self.perm_tree_parser(resource['children']))
+        return permission
+
+    def default_get(self, dictionary, key, default):
+        try:
+            return dictionary[key]
+        except KeyError:
+            return default
+
     @view_config(route_name='edit_group', renderer='templates/edit_group.mako')
     def edit_group(self):
         group_name = self.request.matchdict['group_name']
         cur_svc_type = self.request.matchdict['cur_svc_type']
+        members = self.get_group_users(group_name)
 
-        members = []
+        if self.request.method == 'POST':
+            #self.request.session['edit_group_offset'] = window.pageYOffset
+
+            if 'perm_id' in self.request.POST:
+                res_id = self.request.POST.get('perm_id')
+
+                try:
+                    res_perms = requests.get(self.magpie_url + '/groups/' + group_name + '/resources/{resource_id}/permissions'.format(resource_id=res_id))
+                    perms = res_perms.json()['permission_names']
+                except:
+                    raise HTTPBadRequest(detail='Bad Json response')
+
+                new_perms_set = self.request.POST.getall('permission')
+
+                removed_perms = list(set(perms) - set(new_perms_set))
+                new_perms = list(set(new_perms_set) - set(perms))
+
+                url = '{host}/groups/{group}/resources/{res_id}/permissions'.format(
+                    host=self.magpie_url,
+                    group=group_name,
+                    res_id=res_id)
+                for perm in removed_perms:
+                    check_res(requests.delete(url + '/' + perm))
+
+                for perm in new_perms:
+                    data = {'permission_name': perm}
+                    check_res(requests.post(url, data=data))
+
+                members = self.get_group_users(group_name)
+            else:
+                new_members_set = self.request.POST.getall('member')
+
+                removed_members = list(set(members) - set(new_members_set))
+                new_members = list(set(new_members_set) - set(members))
+
+                for user in removed_members:
+                    check_res(requests.delete(self.magpie_url + '/users/' + user + '/groups/' + group_name))
+
+                for user in new_members:
+                    check_res(requests.post(self.magpie_url+'/users/'+ user+'/groups/'+ group_name))
+
+                members = self.get_group_users(group_name)
+        elif 'edit_group_offset' in self.request.session:
+            #window.scrollTo(0, self.request.session['edit_group_offset']);
+            self.request.session['edit_group_offset'] = 0
+
         try:
-            res_group_users = requests.get(self.magpie_url + '/groups/' + group_name + '/users')
-            check_res(res_group_users)
-            members = res_group_users.json()['user_names']
-
             res_svcs = requests.get(self.magpie_url + '/services')
             check_res(res_svcs)
             svc_types = res_svcs.json()['services'].keys()
             if cur_svc_type not in svc_types:
                 cur_svc_type = svc_types[0]
-        except:
-            raise HTTPBadRequest(detail='Bad Json response')
+            services = res_svcs.json()['services'][cur_svc_type]
+            perms = set()
+            resources = {}
+            for service in services:
+                res_svc = check_res(requests.get(self.magpie_url + '/services/' + service + '/permissions'))
+                perms.update(set(res_svc.json()['permission_names']))
 
-        resources= dict(thredds1=dict(birdhouse=dict(nrcan={'toto.nc': {}})),
-                        thredds2=dict(birdhouse=dict(ouranos={'tata.nc': {}},
-                                                     cmip5={'pr_daily.nc': {}})),
-                        )
+                res_group_perms = check_res(requests.get(self.magpie_url + '/groups/' + group_name + '/resources'))
+                permission = {}
+                try:
+                    raw_perms = res_group_perms.json()['resources'][cur_svc_type][service]
+                    permission[raw_perms['resource_id']] = raw_perms['permission_names']
+                    permission.update(self.perm_tree_parser(raw_perms['resources']))
+                except KeyError:
+                    pass
+
+                res_ressources = check_res(requests.get(self.magpie_url + '/services/' + service + '/resources'))
+                raw_resources = res_ressources.json()[service]
+                resources[service] = dict(id=raw_resources['resource_id'],
+                                          permission_names=self.default_get(permission, raw_resources['resource_id'], []),
+                                          children=self.res_tree_parser(raw_resources['resources'], permission))
+        except Exception as e:
+            raise HTTPBadRequest(detail='Bad Json response')
 
         return add_template_data(self.request,
                                  {'group_name': group_name,
@@ -167,7 +255,7 @@ class ManagementViews(object):
                                   'svc_types': svc_types,
                                   'cur_svc_type': cur_svc_type,
                                   'resources': resources,
-                                  'permissions': ['permission3', 'permission2', 'permission1']})
+                                  'permissions': list(perms)})
 
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
     def view_services(self):

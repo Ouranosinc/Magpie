@@ -18,6 +18,10 @@ html,body {
     margin: 1em 0em 1em;
 }
 
+.img_button:hover, .img_button:focus {
+	background-color: #5CBF60;
+}
+
 .img_button>img {
 	height: 1em;
 }
@@ -52,6 +56,16 @@ tr:nth-child(even) {
 
 
 /*---Resource tree rendering ---*/
+
+.tree {
+    background: white;
+}
+
+.tree_header {
+    padding: 5em 0em 2em;
+    font-weight: bold;
+}
+
 .tree li {
     border: 1px solid #dddddd;
 }
@@ -62,23 +76,26 @@ tr:nth-child(even) {
     border: 1px solid #eee;
 }
 
-li.Expanded {
-    list-style-image: url('${request.static_url('home:static/ArrowExpanded.jpg')}');
-}
-
-li.Collapsed {
-    list-style-image: url('${request.static_url('home:static/ArrowCollapsed.jpg')}');
-}
-
 div.tree_item {
     display:block;
     float:left;
 }
 
-div.perm_checkbox {
-    display:block;
-    width:5em;
+div.perm_title {
+    width:3em;
     float:right;
+    text-align: left;
+
+    -webkit-transform: rotate(-70deg); /* Safari */
+    -moz-transform: rotate(-70deg); /* Firefox */
+    -ms-transform: rotate(-70deg); /* IE */
+    -o-transform: rotate(-70deg); /* Opera */
+}
+
+div.perm_checkbox {
+    width:3em;
+    float:right;
+    text-align: left;
 }
 .clear {
   clear: both;
@@ -146,6 +163,10 @@ ul.breadcrumb li a:hover {
     vertical-align: center;
 }
 
+.header>button:hover, .header>button:focus {
+	background-color: #5CBF60;
+}
+
 /*---Home---*/
 
 .admin_links>a {
@@ -168,31 +189,38 @@ ul.breadcrumb li a:hover {
 }
 
 /*---Service tabs---*/
-.current_tab a{
-	color: #5E5E5E;
-	line-height:1.5em;
-	width:90%;
-	margin:0 auto 2em;
+
+.tabs_panel {
+    background: #DDDDDD;
+    padding: 0.2em;
+}
+
+.current_tab_panel {
+    background: white;
+    padding: 1em;
+    margin: 0;
+    border: 1px solid white;
+    min-height: 10em;
 }
 
 a.current_tab:link, a.current_tab:visited {
-    background-color: #f44336;
-    color: white;
-    padding: 14px 25px;
+    background-color: white;
+    color: black;
+    padding: 1em 1em 1.2em 1em;
     text-align: center;
     text-decoration: none;
     display: inline-block;
 }
 
 a.tab:link, a.tab:visited {
-    background-color: #ff43ff;
+    background-color: #4CAF50;
     color: white;
-    padding: 14px 25px;
+    padding: 1em;
     text-align: center;
     text-decoration: none;
     display: inline-block;
 }
 
 a.tab:hover, a.tab:active {
-    background-color: red;
+    background-color: #5CBF60;;
 }

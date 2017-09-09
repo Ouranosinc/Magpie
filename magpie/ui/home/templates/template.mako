@@ -6,6 +6,9 @@
 <link rel="shortcut icon" type="image/x-icon" href="${request.static_url('home:static/settings.png')}" />
 <link href="${request.static_url('home:static/style.css')}" rel="stylesheet" type="text/css" media="all" />
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
+<style>
+<%block name="style"/>
+</style>
 </head>
 <body>
 
@@ -31,4 +34,6 @@ ${self.body()}
 </body>
 </html>
 
+<script type="text/javascript">
 <%block name="script"/>
+</script>
