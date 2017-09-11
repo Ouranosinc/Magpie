@@ -1,4 +1,4 @@
-<%inherit file="home:templates/template.mako"/>
+<%inherit file="ui.home:templates/template.mako"/>
 
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">Home</a></li>
@@ -19,7 +19,7 @@
 
 <h3>External SignIn</h3>
 <form action="" method="post">
-    %for provider in external_provider:
+    %for provider in external_providers:
         <input type="radio" name="provider_name" value="${provider}"/>${provider}</br>
     %endfor
     <input type="hidden" value="${request.route_url('home')}" name="came_from">

@@ -1,9 +1,5 @@
-
-from pyramid.authentication import AuthTktAuthenticationPolicy
-from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid.session import SignedCookieSessionFactory
-
 
 
 def main(global_settings, **settings):
@@ -13,10 +9,9 @@ def main(global_settings, **settings):
         settings=settings,
         session_factory=session_factory
     )
+
     config.include('pyramid_mako')
-    config.include('login')
-    config.include('home')
-    config.include('management')
+    config.include('ui')
 
     config.scan()
     return config.make_wsgi_app()

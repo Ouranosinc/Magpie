@@ -1,12 +1,12 @@
-<%inherit file="home:templates/template.mako"/>
+<%inherit file="ui.home:templates/template.mako"/>
 
 <%block name="style">
 li.Expanded {
-    list-style-image: url('${request.static_url('home:static/ArrowExpanded.jpg')}');
+    list-style-image: url('${request.static_url('ui.home:static/ArrowExpanded.jpg')}');
 }
 
 li.Collapsed {
-    list-style-image: url('${request.static_url('home:static/ArrowCollapsed.jpg')}');
+    list-style-image: url('${request.static_url('ui.home:static/ArrowCollapsed.jpg')}');
 }
 </%block>
 

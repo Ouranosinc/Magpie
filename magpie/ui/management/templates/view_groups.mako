@@ -1,4 +1,4 @@
-<%inherit file="home:templates/template.mako"/>
+<%inherit file="ui.home:templates/template.mako"/>
 
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">Home</a></li>
@@ -9,7 +9,7 @@
 
 
 <button class="img_button" type="button" onclick="location.href='${request.route_url('add_group')}'">
-    <img src="${request.static_url('home:static/add.png')}">
+    <img src="${request.static_url('ui.home:static/add.png')}">
     Add Group
 </button>
 

@@ -3,8 +3,8 @@
 <head>
 <title>Magpie admin area</title>
 <meta charset="UTF-8">
-<link rel="shortcut icon" type="image/x-icon" href="${request.static_url('home:static/settings.png')}" />
-<link href="${request.static_url('home:static/style.css')}" rel="stylesheet" type="text/css" media="all" />
+<link rel="shortcut icon" type="image/x-icon" href="${request.static_url('ui.home:static/settings.png')}" />
+<link href="${request.static_url('ui.home:static/style.css')}" rel="stylesheet" type="text/css" media="all" />
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
 <style>
 <%block name="style"/>
@@ -14,7 +14,7 @@
 
 <div class="header">
     <a href="/">
-        <img src="${request.static_url('home:static/settings_white.png')}">
+        <img src="${request.static_url('ui.home:static/settings_white.png')}">
         Magpie Administration</a>
     %if logged_user:
         <button class="img_button" type="button" onclick="location.href='${request.route_url('logout')}'">Log out<br/>(${logged_user})</button>

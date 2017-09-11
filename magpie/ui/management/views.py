@@ -1,7 +1,6 @@
 import requests
 from pyramid.view import view_config
-from management import check_res
-from home import add_template_data
+from pyramid.httpexceptions import exception_response
 from pyramid.httpexceptions import (
     HTTPFound,
     HTTPOk,
@@ -11,6 +10,8 @@ from pyramid.httpexceptions import (
     HTTPCreated,
     HTTPNotFound
 )
+from ui.management import check_res
+from ui.home import add_template_data
 
 
 class ManagementViews(object):
@@ -214,9 +215,9 @@ class ManagementViews(object):
                     check_res(requests.post(self.magpie_url+'/users/'+ user+'/groups/'+ group_name))
 
                 members = self.get_group_users(group_name)
-        elif 'edit_group_offset' in self.request.session:
-            #window.scrollTo(0, self.request.session['edit_group_offset']);
-            self.request.session['edit_group_offset'] = 0
+        #elif 'edit_group_offset' in self.request.session:
+        #    #window.scrollTo(0, self.request.session['edit_group_offset']);
+        #    self.request.session['edit_group_offset'] = 0
 
         try:
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)

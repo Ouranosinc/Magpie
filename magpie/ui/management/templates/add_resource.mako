@@ -1,4 +1,4 @@
-<%inherit file="home:templates/template.mako"/>
+<%inherit file="ui.home:templates/template.mako"/>
 
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">Home</a></li>
