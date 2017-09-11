@@ -92,6 +92,9 @@ class ManagementViews(object):
             if group_name not in groups:
                 self.create_group(group_name)
 
+            if not user_name:
+                raise exception_response(400, 'User name must not be empty')
+
             data = {'user_name': user_name,
                     'email': self.request.POST.get('email'),
                     'password': self.request.POST.get('password'),
@@ -141,6 +144,10 @@ class ManagementViews(object):
     def add_group(self):
         if 'create' in self.request.POST:
             group_name = self.request.POST.get('group_name')
+
+            if not group_name:
+                raise exception_response(400, 'Group name must not be empty')
+
             self.create_group(group_name)
             return HTTPFound(self.request.route_url('view_groups'))
 
@@ -293,13 +300,20 @@ class ManagementViews(object):
         cur_svc_type = self.request.matchdict['cur_svc_type']
         svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
         if 'register' in self.request.POST:
-            data = {'service_name': self.request.POST.get('service_name'),
-                    'service_url': self.request.POST.get('service_url'),
-                    'service_type': self.request.POST.get('service_type')}
+            service_name = self.request.POST.get('service_name')
+            service_url = self.request.POST.get('service_url')
+            service_type = self.request.POST.get('service_type')
+
+            if not service_name:
+                raise exception_response(400, 'Service name must not be empty')
+
+            data = {'service_name': service_name,
+                    'service_url': service_url,
+                    'service_type': service_type}
 
             check_res(requests.post(self.magpie_url+'/services', data=data))
 
-            return HTTPFound(self.request.route_url('view_services', cur_svc_type=self.request.POST.get('service_type')))
+            return HTTPFound(self.request.route_url('view_services', cur_svc_type=service_type))
 
         return add_template_data(self.request,
                                  {'cur_svc_type': cur_svc_type,
@@ -344,8 +358,14 @@ class ManagementViews(object):
         resource_id = self.request.matchdict['resource_id']
 
         if 'add_child' in self.request.POST:
-            data = {'resource_name': self.request.POST.get('resource_name'),
-                    'resource_type': self.request.POST.get('resource_type'),
+            resource_name = self.request.POST.get('resource_name')
+            resource_type = self.request.POST.get('resource_type')
+
+            if not resource_name:
+                raise exception_response(400, 'Resource name must not be empty')
+
+            data = {'resource_name': resource_name,
+                    'resource_type': resource_type,
                     'parent_id': resource_id}
 
             check_res(requests.post(self.magpie_url + '/resources', data=data))
