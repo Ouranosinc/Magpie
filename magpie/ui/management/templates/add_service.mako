@@ -8,17 +8,22 @@
 
 <h1>Add Service</h1>
 
-
-<form action="${request.path}" method="post">
-    service name (unique): <input type="text" value="" name="service_name" placeholder="emu">
-    </br>
-    service url: <input type="text" value="" name="service_url" placeholder="http://localhost:8093">
-    </br>
-    service type:
-    %for service_type in service_types:
-        <input type="radio" name="service_type" value="${service_type}"> ${service_type}
-    %endfor
-    </br>
-    <input type="submit" value="register" name="register">
+<form class="new_item_form" action="${request.path}" method="post">
+    <table class="fields_table">
+        <tr>
+            <td>Service name (unique):</td>
+            <td><input type="text" value="" name="service_name" placeholder="emu"></td>
+        </tr>
+        <tr>
+            <td>Service url:</td>
+            <td><input type="text" value="" name="service_url" placeholder="http://localhost:8093"></td>
+        </tr>
+        <tr><td>Service type:</td></tr>
+        <tr><td class="centered" colspan="2">
+            %for service_type in service_types:
+                <input type="radio" name="service_type" value="${service_type}"> ${service_type}
+            %endfor
+        </td></tr>
+        <tr><td class="centered" colspan="2"><input type="submit" value="Register" name="register"></td></tr>
+    </table>
 </form>
-

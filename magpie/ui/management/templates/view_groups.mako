@@ -14,13 +14,18 @@
 </button>
 
 <table class="simple_list_table">
-
+<tr>
+    <th>Group</th>
+    <th>Members count</th>
+    <th>Action</th>
+</tr>
 %for group in group_names:
 <form action="${request.path}" method="post">
 <tr>
     <td><input type="hidden" value=${group} name="group_name">${group}</td>
-    <td><input type="submit" value="Delete" name="delete"></td>
-    <td><input type="submit" value="Edit" name="edit"></td>
+    <td>${group_names[group]['members']}</td>
+    <td><input type="submit" value="Delete" name="delete">
+    <input type="submit" value="Edit" name="edit"></td>
 </tr>
 </form>
 %endfor

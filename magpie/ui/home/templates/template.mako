@@ -3,6 +3,7 @@
 <head>
 <title>Magpie admin area</title>
 <meta charset="UTF-8">
+<link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans" />
 <link rel="shortcut icon" type="image/x-icon" href="${request.static_url('ui.home:static/settings.png')}" />
 <link href="${request.static_url('ui.home:static/style.css')}" rel="stylesheet" type="text/css" media="all" />
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>

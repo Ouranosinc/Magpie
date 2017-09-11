@@ -24,12 +24,17 @@
 
     <div class="current_tab_panel">
         <table class="simple_list_table">
+
+            <tr>
+                <th>Services</th>
+                <th>Action</th>
+            </tr>
             %for service in service_names:
                 <form action="${request.path}" method="post">
                     <tr>
                         <td><input type="hidden" value=${service} name="service_name">${service}</td>
-                        <td><input type="submit" value="Delete" name="delete"></td>
-                        <td><input type="submit" value="Edit" name="edit"></td>
+                        <td><input type="submit" value="Delete" name="delete">
+                        <input type="submit" value="Edit" name="edit"></td>
                     </tr>
                 </form>
             %endfor

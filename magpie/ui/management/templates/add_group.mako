@@ -8,7 +8,13 @@
 
 <h1>Add Group</h1>
 
-<form action="${request.path}" method="post">
-    <input type="text" name="group_name">
-    <input type="submit" value="Add Group" name="create">
+<form class="new_item_form" action="${request.path}" method="post">
+    <input type="hidden" value="${request.route_url('home')}" name="came_from">
+    <table class="fields_table">
+        <tr>
+            <td>Group name:</td>
+            <td><input type="text" name="group_name"></td>
+        </tr>
+        <tr><td class="centered" colspan="2"><input type="submit" value="Add Group" name="create"></td></tr>
+    </table>
 </form>

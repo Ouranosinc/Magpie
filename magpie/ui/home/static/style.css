@@ -2,6 +2,7 @@ html,body {
     margin:0;
     padding:0;
     border:0;
+    font-family: "Open Sans";
 }
 
 .content {
@@ -16,7 +17,9 @@ html,body {
 a.tab:link,
 a.tab:visited,
 .img_button,
+.admin_links>a,
 input[type="submit"]{
+    border: 1px solid #2C8F30;
     background-color: #4CAF50;
     color: white;
     vertical-align: center;
@@ -24,14 +27,14 @@ input[type="submit"]{
 }
 
 a.tab:hover, a.tab:active,
-.img_button:hover, .img_button:focus
+.img_button:hover, .img_button:focus,
+.admin_links>a:hover, .admin_links>a:active,
 input[type="submit"]:hover, input[type="submit"]:focus {
 	background-color: #5CBF60;
 }
 
 .img_button,
 input[type="submit"]{
-    border: none;
     border-radius: 3px;
 }
 
@@ -59,19 +62,23 @@ td, th {
 }
 
 tr:nth-child(even) {
-    background-color: #dddddd;
+    /*background-color: #dddddd;*/
 }
 
 
 /*---View users page ---*/
 .simple_list_table tr th:first-child,
  tr td:first-child {
-    width: 80%;
+    width: 75%;
     text-align: left;
 }
 
 .simple_list_table tr, th:not(:first-child) {
     text-align: center;
+}
+
+.simple_list_table input[type="submit"] {
+    margin: 0 0.5em;
 }
 
 
@@ -88,7 +95,8 @@ tr:nth-child(even) {
 }
 
 .tree li {
-    border: 1px solid #dddddd;
+    border-bottom: 1px solid #dddddd;
+    list-style-type: circle;
 }
 
 .Collapsable input {
@@ -189,18 +197,23 @@ ul.breadcrumb li a:hover {
 
 /*---Home---*/
 
+.admin_links {
+    margin: auto;
+    width: 50%;
+}
+
 .admin_links>a {
     float:left;
-    width: 27%;
-    margin: 2%;
-    padding: 1%;
-    background: lightgray;
+    width: 10em;
+    margin: 3em;
+    padding: 1em;
     text-align: center;
     text-decoration: none;
+    background: white;
     color: black;
-    border: 1px solid black;
     border-radius: 3px;
     height: 10em;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
 }
 
 .admin_links>a>img {
@@ -211,8 +224,8 @@ ul.breadcrumb li a:hover {
 /*---Service tabs---*/
 
 .tabs_panel {
-    background: #DDDDDD;
-    padding: 0.2em;
+    background: #ddd;
+    padding: 1px;
 }
 
 .current_tab_panel {
@@ -226,10 +239,11 @@ ul.breadcrumb li a:hover {
 a.current_tab:link, a.current_tab:visited {
     background-color: white;
     color: black;
-    padding: 1em 1em 1.2em 1em;
+    padding: 1em 1em 1.4em 1em;
     text-align: center;
     text-decoration: none;
     display: inline-block;
+    font-weight: bold;
 }
 
 a.tab:link, a.tab:visited {
@@ -237,4 +251,25 @@ a.tab:link, a.tab:visited {
     text-align: center;
     text-decoration: none;
     display: inline-block;
+}
+
+
+/*---field_form---*/
+
+.new_item_form {
+    margin: auto;
+    width: 30%;
+    min-width: 500px;
+}
+
+table.fields_table th, table.fields_table td {
+    border: 0;
+}
+
+table.fields_table td.centered {
+    text-align: center;
+}
+
+table.fields_table input[type="radio"] {
+    margin-left: 2em;
 }

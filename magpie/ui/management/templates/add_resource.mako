@@ -9,12 +9,16 @@
 
 <h1>New Resource</h1>
 
-
-<form action="${request.path}" method="post">
-    resource name: <input type="text" value="" name="resource_name">
-    </br>
-    resource type: <input type="text" value="" name="resource_type">
-    </br>
-    <input type="submit" value="Add" name="add_child">
+<form class="new_item_form" action="${request.path}" method="post">
+    <table class="fields_table">
+        <tr>
+            <td>Resource name:</td>
+            <td><input type="text" value="" name="resource_name"></td>
+        </tr>
+        <tr>
+            <td>Resource type:</td>
+            <td><input type="text" value="" name="resource_type"></td>
+        </tr>
+        <tr><td class="centered" colspan="2"><input type="submit" value="Add" name="add_child"></td></tr>
+    </table>
 </form>
-

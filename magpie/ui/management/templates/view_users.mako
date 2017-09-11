@@ -13,14 +13,18 @@
 </button>
 
 
-<table simple_list_table="simple_list_table">
+<table class="simple_list_table">
+<tr>
+    <th>User</th>
+    <th>Action</th>
+</tr>
 
 %for user in users:
 <form action="${request.path}" method="post">
 <tr>
     <td><input type="hidden" value=${user} name="user_name">${user}</td>
-    <td><input type="submit" value="Delete" name="delete"></td>
-    <td><input type="submit" value="Edit" name="edit"></td>
+    <td><input type="submit" value="Delete" name="delete">
+    <input type="submit" value="Edit" name="edit"></td>
 </tr>
 </form>
 %endfor

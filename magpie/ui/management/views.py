@@ -138,7 +138,12 @@ class ManagementViews(object):
             group_name = self.request.POST.get('group_name')
             return HTTPFound(self.request.route_url('edit_group', group_name=group_name, cur_svc_type='default'))
 
-        return add_template_data(self.request, {'group_names': self.get_groups()})
+        groups_info = {}
+        groups = self.get_groups()
+        for group in groups:
+            groups_info[group] = {'members': len(self.get_group_users(group))}
+
+        return add_template_data(self.request, {'group_names': groups_info})
 
     @view_config(route_name='add_group', renderer='templates/add_group.mako')
     def add_group(self):
@@ -183,8 +188,8 @@ class ManagementViews(object):
         if self.request.method == 'POST':
             #self.request.session['edit_group_offset'] = window.pageYOffset
 
-            if 'perm_id' in self.request.POST:
-                res_id = self.request.POST.get('perm_id')
+            if 'resource_id' in self.request.POST:
+                res_id = self.request.POST.get('resource_id')
 
                 try:
                     res_perms = requests.get(self.magpie_url + '/groups/' + group_name + '/resources/{resource_id}/permissions'.format(resource_id=res_id))
