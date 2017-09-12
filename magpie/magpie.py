@@ -110,10 +110,12 @@ def main(global_config, **settings):
     # include magpie components (all the file which define includeme)
 
     config.include('pyramid_chameleon')
+    config.include('pyramid_mako')
     config.include('login')
     config.include('home')
     config.include('db')
     config.include('management')
+    config.include('ui')
 
     config.add_route('version', '/version')
     config.scan('magpie')

@@ -1,0 +1,275 @@
+html,body {
+    margin:0;
+    padding:0;
+    border:0;
+    font-family: "Open Sans";
+}
+
+.content {
+    margin: 5em;
+}
+
+.img_button {
+	padding: 0.7em;
+    margin: 1em 0em 1em;
+}
+
+a.tab:link,
+a.tab:visited,
+.img_button,
+.admin_links>a,
+input[type="submit"]{
+    border: 1px solid #2C8F30;
+    background-color: #4CAF50;
+    color: white;
+    vertical-align: center;
+    cursor:pointer;
+}
+
+a.tab:hover, a.tab:active,
+.img_button:hover, .img_button:focus,
+.admin_links>a:hover, .admin_links>a:active,
+input[type="submit"]:hover, input[type="submit"]:focus {
+	background-color: #5CBF60;
+}
+
+.img_button,
+input[type="submit"]{
+    border-radius: 3px;
+}
+
+input[type="submit"]{
+    height: 2em;
+}
+
+.tree input[type="submit"]{
+    height: 1.5em;
+}
+
+.img_button>img {
+	height: 1em;
+}
+
+table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+td, th {
+    border: 1px solid #dddddd;
+    padding: 8px;
+}
+
+tr:nth-child(even) {
+    /*background-color: #dddddd;*/
+}
+
+
+/*---View users page ---*/
+.simple_list_table tr th:first-child,
+ tr td:first-child {
+    width: 75%;
+    text-align: left;
+}
+
+.simple_list_table tr, th:not(:first-child) {
+    text-align: center;
+}
+
+.simple_list_table input[type="submit"] {
+    margin: 0 0.5em;
+}
+
+
+
+/*---Resource tree rendering ---*/
+
+.tree {
+    background: white;
+}
+
+.tree_header {
+    padding: 5em 0em 2em;
+    font-weight: bold;
+}
+
+.tree li {
+    border-bottom: 1px solid #dddddd;
+    list-style-type: circle;
+}
+
+.Collapsable input {
+    float:left;
+    padding: 5px 100px;
+    border: 1px solid #eee;
+    cursor:pointer;
+}
+
+div.tree_item {
+    display:block;
+    float:left;
+}
+
+div.perm_title {
+    width:3em;
+    float:right;
+    text-align: left;
+
+    -webkit-transform: rotate(-70deg); /* Safari */
+    -moz-transform: rotate(-70deg); /* Firefox */
+    -ms-transform: rotate(-70deg); /* IE */
+    -o-transform: rotate(-70deg); /* Opera */
+}
+
+div.perm_checkbox {
+    width:3em;
+    float:right;
+    text-align: left;
+}
+
+div.tree_button {
+    width:5em;
+    float:right;
+    text-align: center;
+    padding: 0 0 0 2em;
+}
+
+.clear {
+  clear: both;
+}
+
+
+/*---Header breadcrumb---*/
+ul.breadcrumb {
+    padding: 10px 16px;
+    list-style: none;
+}
+ul.breadcrumb li {
+    display: inline;
+    font-size: 18px;
+}
+ul.breadcrumb li+li:before {
+    padding: 8px;
+    color: #DDDDDD;
+    content: ">\00a0";
+}
+ul.breadcrumb li a {
+    color: #DDDDDD;
+    text-decoration: none;
+}
+ul.breadcrumb li a:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+/*---Header---*/
+
+.header {
+	background: #000000;
+
+    background: black; /* For browsers that do not support gradients */
+    background: -webkit-linear-gradient(left bottom, black, gray); /* For Safari 5.1 to 6.0 */
+    background: -o-linear-gradient(bottom top, black, gray); /* For Opera 11.1 to 12.0 */
+    background: -moz-linear-gradient(bottom top, black, gray); /* For Firefox 3.6 to 15 */
+    background: linear-gradient(to bottom top, black, gray); /* Standard syntax (must be last) */
+    padding: 1em 1em 0em 1em;
+}
+
+
+.header{
+    vertical-align: center;
+
+}
+.header>a{
+	color: white;
+	font-size: 3em;
+	text-decoration: none;
+	float: left;
+	vertical-align: center;
+}
+
+.header>button{
+	height: 40px;
+    width: 100px;
+    float: right;
+}
+
+/*---Home---*/
+
+.admin_links {
+    margin: auto;
+    width: 50%;
+}
+
+.admin_links>a {
+    float:left;
+    width: 10em;
+    margin: 3em;
+    padding: 1em;
+    text-align: center;
+    text-decoration: none;
+    background: white;
+    color: black;
+    border-radius: 3px;
+    height: 10em;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.admin_links>a>img {
+    height: 60%;
+    padding: 5%;
+}
+
+/*---Service tabs---*/
+
+.tabs_panel {
+    background: #ddd;
+    padding: 1px;
+}
+
+.current_tab_panel {
+    background: white;
+    padding: 1em;
+    margin: 0;
+    border: 1px solid white;
+    min-height: 10em;
+}
+
+a.current_tab:link, a.current_tab:visited {
+    background-color: white;
+    color: black;
+    padding: 1em 1em 1.4em 1em;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-weight: bold;
+}
+
+a.tab:link, a.tab:visited {
+    padding: 1em;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}
+
+
+/*---field_form---*/
+
+.new_item_form {
+    margin: auto;
+    width: 30%;
+    min-width: 500px;
+}
+
+table.fields_table th, table.fields_table td {
+    border: 0;
+}
+
+table.fields_table td.centered {
+    text-align: center;
+}
+
+table.fields_table input[type="radio"] {
+    margin-left: 2em;
+}
