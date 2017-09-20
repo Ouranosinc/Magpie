@@ -30,13 +30,24 @@ external_provider = ['openid',
 @view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
     provider_name = get_multiformat_post(request, 'provider_name')
-
     user_name = get_multiformat_post(request, 'user_name')
     password = get_multiformat_post(request, 'password')
 
     if provider_name == 'ziggurat':
         # redirection to ziggurat sign in
-        return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_in'))
+        data_to_send = {'user_name': user_name,
+                        'password': password}
+        #return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_in'))
+        ziggu_url = request.route_url('ziggurat.routes.sign_in')
+        res = requests.post(ziggu_url, data=data_to_send)
+        if res.status_code == 200:
+            pyr_res = Response(body=res.content)
+            for cookie in res.cookies:
+                # request.response.set_cookie(name=cookie.name, value=cookie.value)
+                pyr_res.set_cookie(name=cookie.name, value=cookie.value)
+            return pyr_res
+        else:
+            return Response(body=res.content)
         #ziggu_route = request.route_url('ziggurat.routes.sign_in')
         #res = requests.post(request.route_url('ziggurat.routes.sign_in'), data=post_data)
         #return res
