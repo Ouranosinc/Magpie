@@ -109,7 +109,7 @@ class Service(Resource):
     # ... your own properties....
     url = sa.Column(sa.UnicodeText(), unique=True)  # http://localhost:8083
     type = sa.Column(sa.UnicodeText())  # wps, wms, thredds, ...
-
+    resource_type = 'service'
     @staticmethod
     def by_service_name(service_name, db_session):
         db = get_db_session(db_session)
@@ -134,13 +134,13 @@ class Directory(Resource):
     __mapper_args__ = {'polymorphic_identity': 'directory'}
     permission_names = ['download',
                         'upload']
-
+    resource_type = 'directory'
 
 class File(Resource):
     __mapper_args__ = {'polymorphic_identity': 'file'}
     permission_names = ['download',
                         'upload']
-
+    resource_type = 'file'
 
 class Workspace(Resource):
     __mapper_args__ = {'polymorphic_identity': 'workspace'}
@@ -153,7 +153,7 @@ class Workspace(Resource):
                         'getfeature',
                         'lockfeature',
                         'transaction']
-
+    resource_type = 'workspace'
 
 
 

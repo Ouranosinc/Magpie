@@ -7,7 +7,7 @@ from pyramid.security import Everyone as EVERYONE
 class ServiceI(object):
     permission_names = []
     param_values = []
-
+    resource_types = []
     acl = []
 
     def __init__(self, service, request):
@@ -82,6 +82,8 @@ class ServiceWMS(ServiceI):
                     'request',
                     'version',
                     'layers']
+
+    resource_types = [models.Workspace.resource_type]
 
     def __init__(self, service, request):
         super(ServiceWMS, self).__init__(service, request)
@@ -174,6 +176,9 @@ class ServiceWFS(object):
 class ServiceTHREDDS(ServiceI):
     permission_names = ['download',
                         'upload']
+
+    resource_types = [models.Directory.resource_type,
+                      models.File.resource_type]
 
     def __init__(self, service, request):
         super(ServiceTHREDDS, self).__init__(service, request)

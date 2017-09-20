@@ -184,3 +184,16 @@ def get_resources_view(request):
         body=json.dumps(json_response),
         content_type='application/json'
     )
+
+
+@view_config(route_name='service_type_resource_types', request_method='GET')
+def get_service_type_resource_types(request):
+    service_type = request.matchdict.get('type_name')
+    if service_type in service_type_dico:
+        resource_types = service_type_dico[service_type].resource_types
+        return HTTPOk(
+            body=json.dumps({'resource_types': resource_types}),
+            content_type='application/json'
+        )
+    else:
+        raise HTTPNotFound(detail='service type not found')
