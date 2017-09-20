@@ -9,6 +9,7 @@ Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations
 import logging.config
 import argparse
 import os
+import time
 import logging
 LOGGER = logging.getLogger(__name__)
 
@@ -85,8 +86,18 @@ def main(global_config, **settings):
     This function returns a Pyramid WSGI application.
     """
     # Initialize database with default user: admin+anonymous
-    init_admin()
-    init_anonymous()
+    # Allow multiple attempts in case the database might not be ready yet
+    max_restart = int(settings['magpie.max_restart'])
+    for test_id in range(0, max_restart):
+        try:
+            init_admin()
+            init_anonymous()
+            break
+        except Exception, e:
+            LOGGER.debug('Intialization failed at test #'+str(test_id) + ': '+e.message)
+            if test_id >= max_restart-1:
+                raise Exception('Initialization failed after max restart allowed')
+            time.sleep(5)  # wait some time before trying again
 
     from pyramid.config import Configurator
 
