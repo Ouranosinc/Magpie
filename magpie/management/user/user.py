@@ -140,11 +140,15 @@ def delete_user(request):
         db = request.db
         user = UserService.by_user_name(user_name, db_session=db)
         db.delete(user)
+
+        group_user = GroupService.by_group_name(user_name, db_session=db)
+        db.delete(group_user)
+
         db.commit()
 
-    except:
+    except Exception, e:
         db.rollback()
-        raise HTTPNotFound(detail="This user does not exist")
+        raise HTTPNotFound(detail=e.message)
 
     return HTTPOk()
 
