@@ -37,7 +37,8 @@ def sign_in(request):
         # redirection to ziggurat sign in
         data_to_send = {'user_name': user_name,
                         'password': password}
-        #return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_in'))
+        return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_in'))
+        '''
         ziggu_url = request.route_url('ziggurat.routes.sign_in')
         res = requests.post(ziggu_url, data=data_to_send)
         if res.status_code == 200:
@@ -48,9 +49,7 @@ def sign_in(request):
             return pyr_res
         else:
             return Response(body=res.content)
-        #ziggu_route = request.route_url('ziggurat.routes.sign_in')
-        #res = requests.post(request.route_url('ziggurat.routes.sign_in'), data=post_data)
-        #return res
+        '''
     elif provider_name in external_provider:
         user_name_field = {'username': user_name}
         external_login_route = request.route_url('external_login', provider_name=provider_name, _query=user_name_field)
