@@ -83,7 +83,7 @@ class ServiceWMS(ServiceI):
                     'version',
                     'layers']
 
-    resource_types = [models.Workspace.resource_type]
+    resource_types = [models.Workspace.resource_type_name]
 
     def __init__(self, service, request):
         super(ServiceWMS, self).__init__(service, request)
@@ -177,8 +177,8 @@ class ServiceTHREDDS(ServiceI):
     permission_names = ['download',
                         'upload']
 
-    resource_types = [models.Directory.resource_type,
-                      models.File.resource_type]
+    resource_types = [models.Directory.resource_type_name,
+                      models.File.resource_type_name]
 
     def __init__(self, service, request):
         super(ServiceTHREDDS, self).__init__(service, request)

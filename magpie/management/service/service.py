@@ -57,9 +57,9 @@ def register_service(request):
 
         db.add(service)
         db.commit()
-    except:
+    except Exception, e:
         db.rollback()
-        raise HTTPConflict(detail='Bad input:service_name|service_url|service_type')
+        raise HTTPConflict(detail=e.message)
 
     return HTTPCreated()
 

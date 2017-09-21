@@ -12,6 +12,7 @@ import os
 import time
 import logging
 import alembic.config
+from sqlalchemy.sql import select
 LOGGER = logging.getLogger(__name__)
 
 # -- Ziggurat_foundation ----
@@ -39,8 +40,8 @@ def get_version(request):
     )
 
 
-def init_anonymous():
-    db = postgresdb()
+def init_anonymous(db_session):
+    db = db_session
     if not GroupService.by_group_name(ANONYMOUS_USER, db_session=db):
         anonymous_group = models.Group(group_name=ANONYMOUS_USER)
         db.add(anonymous_group)
@@ -57,8 +58,8 @@ def init_anonymous():
         LOGGER.debug('anonymous already initialized')
 
 
-def init_admin():
-    db = postgresdb()
+def init_admin(db_session):
+    db = db_session
     if not GroupService.by_group_name(ADMIN_GROUP, db_session=db):
         admin_group = models.Group(group_name=ADMIN_GROUP)
         db.add(admin_group)
@@ -81,19 +82,35 @@ def init_admin():
     else:
         LOGGER.debug('admin already initialized')
 
-
-def main(global_config, **settings):
-    """
-    This function returns a Pyramid WSGI application.
-    """
-    # Initialize database with default user: admin+anonymous
+def init_db():
     curr_path = os.path.dirname(os.path.abspath(__file__))
     curr_path = os.path.dirname(curr_path)
     alembic_ini_path = curr_path+'/alembic.ini'
     alembic_args = ['-c'+alembic_ini_path, 'upgrade', 'heads']
     alembic.config.main(argv=alembic_args)
-    init_admin()
-    init_anonymous()
+
+
+def get_database_revision(db_session):
+    s = select(['version_num'], from_obj='alembic_version')
+    result = db_session.execute(s).fetchone()
+    return result['version_num']
+
+def main(global_config, **settings):
+    """
+    This function returns a Pyramid WSGI application.
+    """
+
+    # Initialize database with default user: admin+anonymous
+    db = postgresdb()
+
+    try:
+        current_rev = get_database_revision(db_session=db)
+        LOGGER.info('current_rev : '+str(current_rev))
+    except:
+        init_db()
+
+    init_admin(db_session=db)
+    init_anonymous(db_session=db)
     from pyramid.config import Configurator
 
     magpie_secret = os.getenv('MAGPIE_SECRET')
