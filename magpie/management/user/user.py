@@ -73,12 +73,13 @@ def create_user(user_name, password, email, group_name, db_session):
 
 @view_config(route_name='users', request_method='POST')
 def create_user_view(request):
-
-
     user_name = get_multiformat_post(request, 'user_name')
     email = get_multiformat_post(request, 'email')
     password = get_multiformat_post(request, 'password')
     group_name = get_multiformat_post(request, 'group_name')
+
+    if not (user_name and email and password and group_name):
+        raise HTTPBadRequest(detail='Missing entry')
 
     db = request.db
     return create_user(user_name, password, email, group_name, db_session=db)

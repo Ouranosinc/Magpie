@@ -50,8 +50,8 @@ def register_service(request):
     if models.Service.by_service_name(service_name, db_session=db):
         raise HTTPConflict(detail='This service name is already used')
 
-    if len(service_name) == 0 or len(service_url) == 0 or len(service_type) == 0:
-        raise HTTPBadRequest(detail="Bad entry: service_name:{0} || service_url:{1}".format(service_name, service_url))
+    if not (service_name and service_url and service_type):
+        raise HTTPBadRequest(detail="Bad entry: service_name:{0}, service_url:{1}, service_type:{2}".format(service_name, service_url, service_type))
     try:
         service = models.Service(resource_name=service_name,
                                  resource_type='service',

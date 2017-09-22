@@ -312,7 +312,7 @@ def delete_group_resource_permission_view(request):
     db = request.db
     resource = ResourceService.by_resource_id(resource_id, db_session=db)
     group = GroupService.by_group_name(group_name=group_name, db_session=db)
-    
+
     if resource is None or group is None:
         raise HTTPNotFound(detail='this service/group does not exist')
 
