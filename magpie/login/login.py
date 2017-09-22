@@ -17,7 +17,10 @@ from ziggurat_foundations.ext.pyramid import get_user
 from security import authomatic
 import requests
 import models
-from magpie import get_multiformat_post
+
+from magpie import *
+from management.user.user import create_user
+
 
 external_provider = ['openid',
                      'dkrz',
@@ -37,8 +40,8 @@ def sign_in(request):
         # redirection to ziggurat sign in
         data_to_send = {'user_name': user_name,
                         'password': password}
-        return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_in'))
-        '''
+        #return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_in'))
+
         ziggu_url = request.route_url('ziggurat.routes.sign_in')
         res = requests.post(ziggu_url, data=data_to_send)
         if res.status_code == 200:
@@ -49,7 +52,7 @@ def sign_in(request):
             return pyr_res
         else:
             return Response(body=res.content)
-        '''
+
     elif provider_name in external_provider:
         user_name_field = {'username': user_name}
         external_login_route = request.route_url('external_login', provider_name=provider_name, _query=user_name_field)
@@ -70,8 +73,7 @@ def login_success_ziggu(request):
     return HTTPOk(detail='login success',
                   headers=request.context.headers)
 
-
-def login_success_external(request, username, external_id, email, providername):
+def login_success_external(request, external_user_name, external_id, email, providername):
 
     # find user by external_id = login_id
     # replace user from mongodb by user ziggurat and connect to externalId
@@ -79,25 +81,23 @@ def login_success_external(request, username, external_id, email, providername):
     user = ExternalIdentityService.user_by_external_id_and_provider(external_id, providername, db)
     if user is None:
         # create new user with an External Identity
-        user = models.User(user_name=username, email=email)
-        user.regenerate_security_code()
+        local_user_name = external_user_name+'_'+providername
+        local_user_name = local_user_name.replace(" ", '_')
+        create_user(local_user_name, password=None, email=email, group_name=USER_GROUP, db_session=db)
 
-        db.add(user)
-        db.commit()
+        try:
+            user = UserService.by_user_name(local_user_name, db_session=db)
+            ex_identity = models.ExternalIdentity(external_id=external_id,
+                                                  local_user_id=user.id,
+                                                  provider_name=providername,
+                                                  external_user_name=external_user_name)
 
-        group = GroupService.by_group_name('user', db)
-        group_entry = models.UserGroup(group_id=group.id, user_id=user.id)
-        db.add(group_entry)
-        db.commit()
-
-        ex_identity = models.ExternalIdentity(external_id=external_id,
-                                              local_user_id=user.id,
-                                              provider_name=providername,
-                                              external_user_name=username)
-
-        db.add(ex_identity)
-        user.external_identities.append(ex_identity)
-        db.commit()
+            db.add(ex_identity)
+            user.external_identities.append(ex_identity)
+            db.commit()
+        except Exception, e:
+            db.rollback()
+            HTTPConflict(detail=e.message)
 
     # set a header to remember (set-cookie) -> this is the important line
     headers = remember(request, user.id)
@@ -145,7 +145,7 @@ def authomatic_login(request):
                                      external_id=result.user.id,
                                           email=result.user.email,
                                           providername=result.provider.name,
-                                          username=result.user.name)
+                                          external_user_name=result.user.name)
             elif result.provider.name == 'github':
                 # TODO: fix email ... get more infos ... which login_id?
                 login_id = "{0.username}@github.com".format(result.user)

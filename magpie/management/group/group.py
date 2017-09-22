@@ -17,9 +17,11 @@ def get_groups(request):
 
 @view_config(route_name='groups', request_method='POST')
 def create_group(request):
+    group_name = get_multiformat_post(request, 'group_name')
+    if not group_name:
+        raise HTTPBadRequest(detail='Bad entry for group_name')
     try:
         db = request.db
-        group_name = get_multiformat_post(request, 'group_name')
 
         new_group = models.Group(group_name=group_name)
         db.add(new_group)

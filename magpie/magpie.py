@@ -46,7 +46,7 @@ def init_anonymous(db_session):
         anonymous_group = models.Group(group_name=ANONYMOUS_USER)
         db.add(anonymous_group)
         db.commit()
-
+    if not UserService.by_user_name(ANONYMOUS_USER, db_session=db):
         anonymous_user = models.User(user_name=ANONYMOUS_USER, email=ANONYMOUS_USER+'@mail.com')
         db.add(anonymous_user)
         db.commit()
@@ -64,8 +64,8 @@ def init_admin(db_session):
         admin_group = models.Group(group_name=ADMIN_GROUP)
         db.add(admin_group)
         db.commit()
-
-        admin_user = models.User(user_name=ADMIN_USER, email='')
+    if not UserService.by_user_name(ADMIN_USER, db_session=db):
+        admin_user = models.User(user_name=ADMIN_USER, email=ADMIN_USER+'@mail.com')
         admin_user.set_password(ADMIN_PASSWORD)
         admin_user.regenerate_security_code()
         db.add(admin_user)
@@ -81,6 +81,17 @@ def init_admin(db_session):
         db.commit()
     else:
         LOGGER.debug('admin already initialized')
+
+
+def init_user(db_session):
+    db = db_session
+    if not GroupService.by_group_name(USER_GROUP, db_session=db):
+        admin_group = models.Group(group_name=USER_GROUP)
+        db.add(admin_group)
+        db.commit()
+    else:
+        LOGGER.debug('group USER already initialized')
+
 
 def init_db():
     curr_path = os.path.dirname(os.path.abspath(__file__))
@@ -100,17 +111,7 @@ def main(global_config, **settings):
     This function returns a Pyramid WSGI application.
     """
 
-    # Initialize database with default user: admin+anonymous
-    db = postgresdb()
 
-    try:
-        current_rev = get_database_revision(db_session=db)
-        LOGGER.info('current_rev : '+str(current_rev))
-    except:
-        init_db()
-
-    init_admin(db_session=db)
-    init_anonymous(db_session=db)
     from pyramid.config import Configurator
 
     magpie_secret = os.getenv('MAGPIE_SECRET')
@@ -144,6 +145,20 @@ def main(global_config, **settings):
     config.scan('magpie')
 
     config.set_default_permission(ADMIN_PERM)
+
+    # Initialize database with default user: admin+anonymous
+    db = config.registry.db
+    try:
+        current_rev = get_database_revision(db_session=db)
+        LOGGER.info('current_rev : ' + str(current_rev))
+    except:
+        init_db()
+
+    init_admin(db_session=db)
+    init_user(db_session=db)
+    init_anonymous(db_session=db)
+
+
     return config.make_wsgi_app()
 
 

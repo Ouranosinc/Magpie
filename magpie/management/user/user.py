@@ -7,27 +7,20 @@ from models import resource_tree_service
 from pyramid.interfaces import IAuthenticationPolicy
 
 
-@view_config(route_name='users', request_method='POST')
-def create_user(request):
+def create_user(user_name, password, email, group_name, db_session):
     """
     When a user is created, he is automatically assigned to a group with the same name.
     He is also added to a default group specified by group_name.
     It is then easier to check permission on resource a user has:
     Check all permission inherited from group: GET /users/user_name/permissions
     Check direct permission of user: GET /groups/user_name/permissions
-    
+
     :param request: 
     :return: 
     """
 
-    user_name = get_multiformat_post(request, 'user_name')
-    email = get_multiformat_post(request, 'email')
-    password = get_multiformat_post(request, 'password')
-    group_name = get_multiformat_post(request, 'group_name')
-
-
+    db = db_session
     # Check if group already exist
-    db = request.db
     group = GroupService.by_group_name(group_name, db_session=db)
     if not group:
         raise HTTPNotFound(detail='This group does not exist')
@@ -48,7 +41,8 @@ def create_user(request):
 
     try:
         new_user = models.User(user_name=user_name, email=email)
-        new_user.set_password(password)
+        if password:
+            new_user.set_password(password)
         new_user.regenerate_security_code()
         db.add(new_user)
         db.commit()
@@ -71,10 +65,23 @@ def create_user(request):
     except:
         db.rollback()
         raise HTTPConflict(
-            detail='No way to add '+user_name+' to group '+group_name + ', maybe this group does not exist'
+            detail='No way to add ' + user_name + ' to group ' + group_name + ', maybe this group does not exist'
         )
 
     return HTTPCreated()
+
+
+@view_config(route_name='users', request_method='POST')
+def create_user_view(request):
+
+
+    user_name = get_multiformat_post(request, 'user_name')
+    email = get_multiformat_post(request, 'email')
+    password = get_multiformat_post(request, 'password')
+    group_name = get_multiformat_post(request, 'group_name')
+
+    db = request.db
+    return create_user(user_name, password, email, group_name, db_session=db)
 
 
 @view_config(route_name='users', request_method='GET')

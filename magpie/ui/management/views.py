@@ -36,8 +36,8 @@ class ManagementViews(object):
             res_group_users = requests.get(self.magpie_url + '/groups/' + group_name + '/users')
             check_res(res_group_users)
             return res_group_users.json()['user_names']
-        except:
-            raise HTTPBadRequest(detail='Bad Json response')
+        except Exception, e:
+            raise HTTPBadRequest(detail=e.message)
         return []
 
     def get_user_groups(self, user_name):
@@ -45,16 +45,16 @@ class ManagementViews(object):
             res_user_groups = requests.get(self.magpie_url + '/users/' + user_name + '/groups')
             check_res(res_user_groups)
             return res_user_groups.json()['group_names']
-        except:
-            raise HTTPBadRequest(detail='Bad Json response')
+        except Exception, e:
+            raise HTTPBadRequest(detail=e.message)
         return []
 
     def get_users(self):
         res_users = requests.get(self.magpie_url + '/users')
         try:
             return res_users.json()['user_names']
-        except:
-            raise HTTPBadRequest(detail='Bad Json response')
+        except Exception, e:
+            raise HTTPBadRequest(detail=e.message)
         return []
 
     @view_config(route_name='view_users', renderer='templates/view_users.mako')
@@ -149,9 +149,6 @@ class ManagementViews(object):
     def add_group(self):
         if 'create' in self.request.POST:
             group_name = self.request.POST.get('group_name')
-
-            if not group_name:
-                raise exception_response(400, 'Group name must not be empty')
 
             self.create_group(group_name)
             return HTTPFound(self.request.route_url('view_groups'))
@@ -308,9 +305,6 @@ class ManagementViews(object):
             service_name = self.request.POST.get('service_name')
             service_url = self.request.POST.get('service_url')
             service_type = self.request.POST.get('service_type')
-
-            if not service_name:
-                raise exception_response(400, 'Service name must not be empty')
 
             data = {'service_name': service_name,
                     'service_url': service_url,

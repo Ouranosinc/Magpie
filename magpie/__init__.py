@@ -35,10 +35,14 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 ADMIN_USER = os.getenv('ADMIN_USER')
 ADMIN_GROUP = os.getenv('ADMIN_GROUP')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
+
+USER_GROUP = os.getenv('USER_GROUP')
+
+ANONYMOUS_USER = os.getenv('ANONYMOUS_USER')
+
 #ADMIN_PERM = 'edit'
 ADMIN_PERM = NO_PERMISSION_REQUIRED
 
-ANONYMOUS_USER = os.getenv('ANONYMOUS_USER')
 
 
 def get_multiformat_post(request, key):

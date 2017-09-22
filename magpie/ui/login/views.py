@@ -32,7 +32,8 @@ class ManagementViews(object):
                 for cookie in res.cookies:
                     pyr_res.set_cookie(name=cookie.name, value=cookie.value)
 
-                return HTTPFound(self.request.route_url('home'), headers=pyr_res.headers)
+                #return HTTPFound(self.request.route_url('home'), headers=pyr_res.headers)
+                return pyr_res
 
             else:
                 return Response(body=res.content)
