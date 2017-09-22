@@ -221,7 +221,7 @@ class ManagementViews(object):
                     check_res(requests.delete(self.magpie_url + '/users/' + user + '/groups/' + group_name))
 
                 for user in new_members:
-                    check_res(requests.post(self.magpie_url+'/users/'+ user+'/groups/'+ group_name))
+                    check_res(requests.post(self.magpie_url+'/users/'+ user+'/groups/' + group_name))
 
                 members = self.get_group_users(group_name)
         #elif 'edit_group_offset' in self.request.session:

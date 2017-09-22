@@ -210,10 +210,13 @@ def delete_user_group(request):
         group = GroupService.by_group_name(group_name, db_session=db)
         if group is None:
             raise HTTPNotFound(detail='group not found')
+
         db.query(models.UserGroup)\
             .filter(models.UserGroup.user_id == user.id)\
             .filter(models.UserGroup.group_id == group.id)\
             .delete()
+        db.commit()
+
     except:
         db.rollback()
         raise HTTPConflict(detail='this user does not belong to this group')

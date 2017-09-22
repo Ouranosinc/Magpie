@@ -73,6 +73,7 @@ def login_success_ziggu(request):
     return HTTPOk(detail='login success',
                   headers=request.context.headers)
 
+
 def login_success_external(request, external_user_name, external_id, email, providername):
 
     # find user by external_id = login_id
