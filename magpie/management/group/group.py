@@ -281,8 +281,12 @@ def create_group_resource_permission_view(request):
     group = GroupService.by_group_name(group_name=group_name, db_session=db)
     if resource is None or group is None:
         raise HTTPNotFound(detail='this service/group does not exist')
-    if permission_name not in resource_type_dico[resource.resource_type].permission_names:
-        raise HTTPBadRequest(detail='This permission is not allowed for that service')
+
+    if resource.resource_type == models.Service.resource_type_name:
+        if permission_name not in service_type_dico[resource.type].permission_names:
+            raise HTTPBadRequest(detail='This permission is not allowed for that service')
+    elif permission_name not in resource_type_dico[resource.resource_type].permission_names:
+        raise HTTPBadRequest(detail='This permission is not allowed for that resource')
 
     return create_group_resource_permission(permission_name, resource.resource_id, group.id, db_session=db)
 
@@ -308,10 +312,16 @@ def delete_group_resource_permission_view(request):
     db = request.db
     resource = ResourceService.by_resource_id(resource_id, db_session=db)
     group = GroupService.by_group_name(group_name=group_name, db_session=db)
+    
     if resource is None or group is None:
         raise HTTPNotFound(detail='this service/group does not exist')
-    if permission_name not in resource_type_dico[resource.resource_type].permission_names:
-        raise HTTPBadRequest(detail='This permission is not allowed for that service')
+
+    if resource.resource_type == models.Service.resource_type_name:
+        if permission_name not in service_type_dico[resource.type].permission_names:
+            raise HTTPBadRequest(detail='This permission is not allowed for that service')
+    elif permission_name not in resource_type_dico[resource.resource_type].permission_names:
+        raise HTTPBadRequest(detail='This permission is not allowed for that resource')
+
     return delete_group_resource_permission(permission_name, resource.resource_id, group.id, db_session=db)
 
 
