@@ -110,6 +110,9 @@ def main(global_config, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
+    hostname = os.getenv('HOSTNAME')
+    if hostname:
+        settings['magpie.url'] = 'http://{hostname}:{port}'.format(hostname=hostname, port=settings['magpie.port'])
 
 
     from pyramid.config import Configurator
