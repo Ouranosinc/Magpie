@@ -9,4 +9,4 @@ Development Lead
 Contributors
 ------------
 
-None yet. Why not be the first?
+* Francis Charette Migneault <francis.charette-migneault@crim.ca>

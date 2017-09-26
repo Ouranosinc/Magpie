@@ -395,7 +395,6 @@ class ManagementViews(object):
 
         cur_svc_res = check_res(requests.get(self.magpie_url + '/services/types/' + cur_svc_type + '/resources/types'))
         raw_svc_res = cur_svc_res.json()['resource_types']
-
         return add_template_data(self.request,
                                  {'service_name': service_name,
                                   'cur_svc_type': cur_svc_type,

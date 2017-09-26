@@ -144,7 +144,6 @@ def create_resource_view(request):
     return create_resource(resource_name, resource_type, parent_id, request.db)
 
 
-
 @view_config(route_name='service_resource', request_method='DELETE')
 @view_config(route_name='resource', request_method='DELETE')
 def delete_resources(request):
@@ -159,8 +158,6 @@ def delete_resources(request):
         db.rollback()
         raise HTTPNotFound('Bad resource id')
     return HTTPOk()
-
-
 
 
 @view_config(route_name='resource', request_method='PUT')
@@ -200,4 +197,3 @@ def get_resource_permissions(request):
         body=json.dumps({'permission_names': resource_permissions}),
         content_type='application/json'
     )
-
