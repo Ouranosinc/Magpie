@@ -54,8 +54,15 @@ def sign_in(request):
             return Response(body=res.content)
 
     elif provider_name in external_provider:
-        user_name_field = {'username': user_name}
-        external_login_route = request.route_url('external_login', provider_name=provider_name, _query=user_name_field)
+        if provider_name == 'openid':
+            query_field = dict(id=user_name)
+        else:
+            query_field = dict(username=user_name)
+
+        external_login_route = request.route_url('external_login', provider_name=provider_name, _query=query_field)
+
+
+
         return HTTPTemporaryRedirect(location=external_login_route)
 
     return HTTPBadRequest(detail='Bad provider name')
