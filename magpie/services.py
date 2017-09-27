@@ -227,7 +227,7 @@ def service_factory(service, request):
         service_specific = service_type_dico[service.type](service, request)
         return service_specific
     except:
-        raise Exception('This type of service dows not exist')
+        raise Exception('This type of service does not exist')
 
 
 def get_all_service_permission_names():
