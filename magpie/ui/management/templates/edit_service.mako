@@ -16,7 +16,6 @@
     % endif
 </%def>
 
-
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">Home</a></li>
 <li><a href="${request.route_url('view_services', cur_svc_type=cur_svc_type)}">Services</a></li>
@@ -29,4 +28,3 @@
 <div class="tree">
     ${tree.render_tree(render_item, resources)}
 </div>
-
