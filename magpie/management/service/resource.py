@@ -1,8 +1,6 @@
 from magpie import *
 import models
-from models import resource_tree_service
-from models import resource_type_dico
-
+from models import resource_tree_service, resource_type_dico
 
 
 def format_resource(resource, perms=[]):
@@ -147,14 +145,14 @@ def create_resource_view(request):
 @view_config(route_name='service_resource', request_method='DELETE')
 @view_config(route_name='resource', request_method='DELETE')
 def delete_resources(request):
+    db = request.db
     try:
         resource_id = request.matchdict.get('resource_id')
-        db = request.db
         resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db)
         resource_tree_service.delete_branch(resource_id=resource_id, db_session=db)
         db.delete(resource)
-        
-    except:
+        db.commit()
+    except Exception:
         db.rollback()
         raise HTTPNotFound('Bad resource id')
     return HTTPOk()
@@ -170,8 +168,8 @@ def update_resource(request):
     try:
         resource = ResourceService.by_resource_id(resource_id, db_session=db)
         resource.resource_name = new_name
-        
-    except:
+        db.commit()
+    except Exception:
         db.rollback()
         raise HTTPNotFound('incorrect resource id')
 
@@ -185,8 +183,8 @@ def get_resource_permissions(request):
     resource = ResourceService.by_resource_id(resource_id, db_session=db)
     if resource:
         try:
-            resource_permissions = models.resource_type_dico[resource.resource_type].permission_names
-        except:
+            resource_permissions = resource_type_dico[resource.resource_type].permission_names
+        except Exception:
             db.rollback()
             raise HTTPNotFound(detail="This type of resource is not implemented yet")
     else:

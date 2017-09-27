@@ -20,11 +20,9 @@ from ziggurat_foundations.models.services.resource_tree import ResourceTreeServi
 from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
 
 
-
-
-
 Base = declarative_base()
 group_finder = gf
+
 
 def get_session_callable(request):
     return request.db
@@ -40,14 +38,18 @@ def get_user(request):
 class Group(GroupMixin, Base):
     pass
 
+
 class GroupPermission(GroupPermissionMixin, Base):
     pass
+
 
 class UserGroup(UserGroupMixin, Base):
     pass
 
+
 class GroupResourcePermission(GroupResourcePermissionMixin, Base):
     pass
+
 
 class Resource(ResourceMixin, Base):
     # ... your own properties....
@@ -67,15 +69,19 @@ class Resource(ResourceMixin, Base):
                           ALL_PERMISSIONS,), ])
         return acls
 
+
 class UserPermission(UserPermissionMixin, Base):
     pass
+
 
 class UserResourcePermission(UserResourcePermissionMixin, Base):
     pass
 
+
 class User(UserMixin, Base):
     # ... your own properties....
     pass
+
 
 class ExternalIdentity(ExternalIdentityMixin, Base):
     pass
@@ -111,13 +117,11 @@ class Service(Resource):
     type = sa.Column(sa.UnicodeText())  # wps, wms, thredds, ...
     resource_type_name = 'service'
 
-
     @staticmethod
     def by_service_name(service_name, db_session):
         db = get_db_session(db_session)
         service = db.query(Service).filter(Resource.resource_name == service_name).first()
         return service
-
 
     def permission_requested(self, request):
         raise NotImplementedError
@@ -138,11 +142,13 @@ class Directory(Resource):
                         'upload']
     resource_type_name = 'directory'
 
+
 class File(Resource):
     __mapper_args__ = {'polymorphic_identity': 'file'}
     permission_names = ['download',
                         'upload']
     resource_type_name = 'file'
+
 
 class Workspace(Resource):
     __mapper_args__ = {'polymorphic_identity': 'workspace'}
@@ -158,24 +164,19 @@ class Workspace(Resource):
     resource_type_name = 'workspace'
 
 
-
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
-               UserResourcePermission, GroupResourcePermission, Resource,
-               ExternalIdentity, passwordmanager=None)
+                    UserResourcePermission, GroupResourcePermission, Resource,
+                    ExternalIdentity, passwordmanager=None)
 
 resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
 
 resource_type_dico = {'service': Service, 'directory': Directory, 'file': File, 'workspace': Workspace}
 
 
-
-
-
-
 def resource_factory(**kwargs):
     try:
         resource_type = kwargs['resource_type']
-    except Exception, e:
+    except Exception as e:
         raise Exception(e.message)
     return resource_type_dico[resource_type](**kwargs)
 
@@ -191,5 +192,3 @@ def find_children_by_name(name, parent_id, db_session):
     tree_struct = resource_tree_service.from_parent_deeper(parent_id=parent_id, limit_depth=1, db_session=db_session)
     child_found = node.Resource if name in [node.Resource.resource_name for node in tree_struct] else None
     return child_found
-
-

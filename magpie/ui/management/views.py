@@ -84,6 +84,7 @@ class ManagementViews(object):
     def get_resource_types(self):
         """
         :return: dictionary of all resources as {id: 'resource_type'}
+        :rtype: dict
         """
         all_res = requests.get(self.magpie_url + '/resources')
         check_res(all_res)
@@ -98,6 +99,7 @@ class ManagementViews(object):
         :param resource_node: any-level dictionary composing the resources tree
         :param resource_dict: reference of flattened dictionary across levels
         :return: flattened dictionary `resource_dict` of all {id: 'resource_type'}
+        :rtype: dict
         """
         if type(resource_node) is not dict:
             return
@@ -421,6 +423,7 @@ class ManagementViews(object):
 
         cur_svc_res = check_res(requests.get(self.magpie_url + '/services/types/' + cur_svc_type + '/resources/types'))
         raw_svc_res = cur_svc_res.json()['resource_types']
+
         return add_template_data(self.request,
                                  {'service_name': service_name,
                                   'cur_svc_type': cur_svc_type,
