@@ -1,2 +1,6 @@
 *.pyc
 .idea
+build/
+dist/
+env/
+magpie.egg-info/
