@@ -27,7 +27,8 @@ external_provider = ['openid',
                      'ipsl',
                      'badc',
                      'pcmdi',
-                     'smhi']
+                     'smhi',
+                     'github']
 
 
 @view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
@@ -44,26 +45,23 @@ def sign_in(request):
 
         ziggu_url = request.route_url('ziggurat.routes.sign_in')
         res = requests.post(ziggu_url, data=data_to_send)
-        if res.status_code == 200:
+        if res.status_code < 400:
             pyr_res = Response(body=res.content)
             for cookie in res.cookies:
-                # request.response.set_cookie(name=cookie.name, value=cookie.value)
                 pyr_res.set_cookie(name=cookie.name, value=cookie.value)
             return pyr_res
         else:
-            return Response(body=res.content)
+            return HTTPUnauthorized(body=res.content)
 
     elif provider_name in external_provider:
         if provider_name == 'openid':
             query_field = dict(id=user_name)
         else:
             query_field = dict(username=user_name)
-
+        query_field['came_from'] = get_multiformat_post(request, 'came_from')
         external_login_route = request.route_url('external_login', provider_name=provider_name, _query=query_field)
 
-
-
-        return HTTPTemporaryRedirect(location=external_login_route)
+        return HTTPFound(location=external_login_route)
 
     return HTTPBadRequest(detail='Bad provider name')
 
@@ -77,8 +75,8 @@ def sign_out(request):
 def login_success_ziggu(request):
     #return HTTPFound(location=request.route_url('successful_operation'),
     #                 headers=request.context.headers)
-    return HTTPOk(detail='login success',
-                  headers=request.context.headers)
+    return HTTPOk(detail='login success', headers=request.context.headers)
+
 
 
 def login_success_external(request, external_user_name, external_id, email, providername):
@@ -109,7 +107,9 @@ def login_success_external(request, external_user_name, external_id, email, prov
 
     # set a header to remember (set-cookie) -> this is the important line
     headers = remember(request, user.id)
+
     return HTTPFound(location=request.cookies['homepage_route'], headers=headers)
+
 
 
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
@@ -134,6 +134,7 @@ def sign_out_ziggu(request):
 def authomatic_login(request):
     _authomatic = authomatic(request)
     open_id_provider_name = request.matchdict.get('provider_name')
+
     # Start the login procedure.
 
     response = Response()
@@ -163,7 +164,7 @@ def authomatic_login(request):
                     pass
                 return login_success_external(login_id=login_id, name=result.user.name)
     else:
-        came_from = get_multiformat_post(request, 'came_from')
+        came_from = request.GET.get('came_from', '/')
         response.set_cookie('homepage_route', came_from)
     return response
 

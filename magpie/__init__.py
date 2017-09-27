@@ -14,7 +14,10 @@ from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
     HTTPCreated,
-    HTTPNotFound
+    HTTPNotFound,
+    HTTPUnauthorized,
+    HTTPAccepted,
+    HTTPNoContent,
 )
 from pyramid.security import ALL_PERMISSIONS
 from pyramid.view import view_config

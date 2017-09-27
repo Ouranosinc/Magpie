@@ -11,7 +11,8 @@ external_providers = ['openid',
                      'ipsl',
                      'badc',
                      'pcmdi',
-                     'smhi']
+                     'smhi',
+                      'github']
 
 
 class ManagementViews(object):
@@ -26,15 +27,16 @@ class ManagementViews(object):
             data_to_send = {}
             for tuple in self.request.POST:
                 data_to_send[tuple] = self.request.POST.get(tuple)
+
             res = requests.post(new_location, data=data_to_send)
-            if res.status_code == 200:
+
+            if res.status_code < 400:
                 pyr_res = Response(body=res.content)
                 for cookie in res.cookies:
                     pyr_res.set_cookie(name=cookie.name, value=cookie.value)
-
-                #return HTTPFound(self.request.route_url('home'), headers=pyr_res.headers)
                 return pyr_res
-
+            elif res.status_code == 401:
+                return HTTPFound(location=self.request.route_url('login', _query=dict(authentication='Failed')),)
             else:
                 return Response(body=res.content)
 

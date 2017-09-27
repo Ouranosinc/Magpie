@@ -128,7 +128,7 @@ class ServiceWMS(ServiceI):
         return self.parser.params['request']
 
 
-class ServiceWFS(object):
+class ServiceWFS(ServiceI):
     permission_names = ['getcapabilities',
                         'describefeaturetype',
                         'getfeature',
