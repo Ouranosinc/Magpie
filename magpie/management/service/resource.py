@@ -77,8 +77,8 @@ def get_resource_view(request):
     db = request.db
     try:
         resource = ResourceService.by_resource_id(resource_id, db_session=db)
-    except Exception, e:
-        raise HTTPBadRequest(detail=e.message)
+    except Exception as e:
+        raise HTTPBadRequest(detail=getattr(e, 'message', repr(e)))
     if not resource:
         db.rollback()
         raise HTTPNotFound(detail="This resource id does not exist")
@@ -95,15 +95,15 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
         parent_resource = ResourceService.by_resource_id(parent_id, db_session=db_session)
         if not parent_resource:
             raise HTTPBadRequest(detail='parent_id not valid')
-    except:
+    except Exception:
         raise HTTPBadRequest(detail='parent_id not valid')
     try:
         new_resource = models.resource_factory(resource_type=resource_type,
                                                resource_name=resource_name,
                                                parent_id=parent_id)
-    except Exception, e:
+    except Exception as e:
         db.rollback()
-        raise HTTPBadRequest(detail=e.message)
+        raise HTTPBadRequest(detail=getattr(e, 'message', repr(e)))
 
     # Two resources with the same parent can't have the same name !
     tree_struct = resource_tree_service.from_parent_deeper(parent_id, limit_depth=1, db_session=db)
@@ -119,9 +119,9 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
         resource_tree_service.set_position(resource_id=new_resource.resource_id,
                                            to_position=total_children,
                                            db_session=db)
-    except Exception, e:
+    except Exception as e:
         db.rollback()
-        raise HTTPBadRequest(detail=e.message)
+        raise HTTPBadRequest(detail=getattr(e, 'message', repr(e)))
 
     return HTTPCreated(body=json.dumps({'resource_id': new_resource.resource_id}),
                        content_type='application/json')

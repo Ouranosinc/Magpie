@@ -27,35 +27,59 @@ class ManagementViews(object):
         res_groups = requests.get(self.magpie_url + '/groups')
         try:
             return res_groups.json()['group_names']
-        except:
+        except Exception:
             raise HTTPBadRequest(detail='Bad Json response')
-        return []
 
     def get_group_users(self, group_name):
         try:
             res_group_users = requests.get(self.magpie_url + '/groups/' + group_name + '/users')
             check_res(res_group_users)
             return res_group_users.json()['user_names']
-        except Exception, e:
+        except Exception as e:
             raise HTTPBadRequest(detail=e.message)
-        return []
 
     def get_user_groups(self, user_name):
         try:
             res_user_groups = requests.get(self.magpie_url + '/users/' + user_name + '/groups')
             check_res(res_user_groups)
             return res_user_groups.json()['group_names']
-        except Exception, e:
+        except Exception as e:
             raise HTTPBadRequest(detail=e.message)
-        return []
 
     def get_users(self):
         res_users = requests.get(self.magpie_url + '/users')
         try:
             return res_users.json()['user_names']
-        except Exception, e:
+        except Exception as e:
             raise HTTPBadRequest(detail=e.message)
-        return []
+
+    def get_resource_types(self):
+        """
+        :return: dictionary of all resources as {id: 'resource_type'}
+        :rtype: dict
+        """
+        all_res = requests.get(self.magpie_url + '/resources')
+        check_res(all_res)
+        res_dic = self.default_get(all_res.json(), 'resources', dict())
+        res_ids = dict()
+        self.flatten_tree_resource(res_dic, res_ids)
+        return res_ids
+
+    @staticmethod
+    def flatten_tree_resource(resource_node, resource_dict):
+        """
+        :param resource_node: any-level dictionary composing the resources tree
+        :param resource_dict: reference of flattened dictionary across levels
+        :return: flattened dictionary `resource_dict` of all {id: 'resource_type'}
+        :rtype: dict
+        """
+        if type(resource_node) is not dict:
+            return
+        if not len(resource_node) > 0:
+            return
+        [ManagementViews.flatten_tree_resource(r, resource_dict) for r in resource_node.values()]
+        if 'resource_id' in resource_node.keys() and 'resource_type' in resource_node.keys():
+            resource_dict[resource_node['resource_id']] = resource_node['resource_type']
 
     @view_config(route_name='view_users', renderer='templates/view_users.mako')
     def view_users(self):
@@ -75,7 +99,7 @@ class ManagementViews(object):
         if 'delete' in self.request.POST:
             user_name = self.request.POST.get('user_name')
             #TODO: Magpie needs to remove the group automatically created with the user_name
-            check_res(requests.delete(self.magpie_url+'/users/'+ user_name))
+            check_res(requests.delete(self.magpie_url + '/users/' + user_name))
 
         if 'edit' in self.request.POST:
             user_name = self.request.POST.get('user_name')
@@ -170,7 +194,8 @@ class ManagementViews(object):
             permission.update(self.perm_tree_parser(resource['children']))
         return permission
 
-    def default_get(self, dictionary, key, default):
+    @staticmethod
+    def default_get(dictionary, key, default):
         try:
             return dictionary[key]
         except KeyError:
@@ -248,8 +273,8 @@ class ManagementViews(object):
                 except KeyError:
                     pass
 
-                res_ressources = check_res(requests.get(self.magpie_url + '/services/' + service + '/resources'))
-                raw_resources = res_ressources.json()[service]
+                res_resources = check_res(requests.get(self.magpie_url + '/services/' + service + '/resources'))
+                raw_resources = res_resources.json()[service]
                 resources[service] = dict(id=raw_resources['resource_id'],
                                           permission_names=self.default_get(permission, raw_resources['resource_id'], []),
                                           children=self.res_tree_parser(raw_resources['resources'], permission))
@@ -275,7 +300,7 @@ class ManagementViews(object):
                 cur_svc_type = svc_types[0]
             services = all_services[cur_svc_type]
             return svc_types, cur_svc_type, services
-        except Exception as e:
+        except Exception:
             raise HTTPBadRequest(detail='Bad Json response')
 
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
@@ -336,19 +361,22 @@ class ManagementViews(object):
 
         try:
             resources = {}
-            res_ressources = check_res(requests.get(self.magpie_url + '/services/' + service_name + '/resources'))
-            raw_resources = res_ressources.json()[service_name]
+            res_resources = check_res(requests.get(self.magpie_url + '/services/' + service_name + '/resources'))
+            raw_resources = res_resources.json()[service_name]
             resources[service_name] = dict(
                 id=raw_resources['resource_id'],
                 permission_names=[],
                 children=self.res_tree_parser(raw_resources['resources'], {}))
-        except Exception as e:
+            res_id_type = self.get_resource_types()
+        except Exception:
             raise HTTPBadRequest(detail='Bad Json response')
 
         return add_template_data(self.request,
                                  {'service_name': service_name,
                                   'cur_svc_type': cur_svc_type,
-                                  'resources': resources})
+                                  'resources': resources,
+                                  'res_id_type': res_id_type,
+                                  'res_no_child': {'file'}})
 
     @view_config(route_name='add_resource', renderer='templates/add_resource.mako')
     def add_resource(self):
@@ -371,7 +399,11 @@ class ManagementViews(object):
 
             return HTTPFound(self.request.route_url('edit_service', service_name=service_name, cur_svc_type=cur_svc_type))
 
+        cur_svc_res = check_res(requests.get(self.magpie_url + '/services/types/' + cur_svc_type + '/resources/types'))
+        raw_svc_res = cur_svc_res.json()['resource_types']
+
         return add_template_data(self.request,
                                  {'service_name': service_name,
                                   'cur_svc_type': cur_svc_type,
-                                  'resource_id': resource_id})
+                                  'resource_id': resource_id,
+                                  'cur_svc_res': raw_svc_res})

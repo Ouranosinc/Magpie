@@ -17,7 +17,11 @@
         </tr>
         <tr>
             <td>Resource type:</td>
-            <td><input type="text" value="" name="resource_type"></td>
+            <td><select name="resource_type">
+                %for res_type in cur_svc_res:
+                    <option value="${res_type}">${res_type}</option>
+                %endfor
+            </select></td>
         </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Add" name="add_child"></td></tr>
     </table>
