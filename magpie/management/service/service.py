@@ -59,7 +59,7 @@ def register_service(request):
                                  type=service_type)
 
         db.add(service)
-        db.commit()
+        
     except Exception, e:
         db.rollback()
         raise HTTPConflict(detail=e.message)
@@ -90,7 +90,7 @@ def unregister_service(request):
         service = models.Service.by_service_name(service_name, db_session=db)
         resource_tree_service.delete_branch(resource_id=service.resource_id, db_session=db)
         db.delete(service)
-        db.commit()
+        
 
     except:
         db.rollback()

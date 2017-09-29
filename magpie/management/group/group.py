@@ -25,7 +25,7 @@ def create_group(request):
 
         new_group = models.Group(group_name=group_name)
         db.add(new_group)
-        db.commit()
+        
     except Exception, e:
         # Group already exist
         db.rollback()
@@ -41,7 +41,7 @@ def delete_group(request):
         db = request.db
         group = GroupService.by_group_name(group_name, db_session=db)
         db.delete(group)
-        db.commit()
+        
 
     except:
         db.rollback()
@@ -263,7 +263,7 @@ def create_group_resource_permission(permission_name, resource_id, group_id, db_
         new_permission = models.GroupResourcePermission(resource_id=resource_id, group_id=group_id)
         new_permission.perm_name = permission_name
         db_session.add(new_permission)
-        db_session.commit()
+
     except:
         db_session.rollback()
         raise HTTPConflict('This permission on that service already exists for that group')
@@ -295,7 +295,7 @@ def delete_group_resource_permission(permission_name, resource_id, group_id, db_
     try:
         permission_to_delete = GroupResourcePermissionService.get(group_id, resource_id, permission_name, db_session=db_session)
         db_session.delete(permission_to_delete)
-        db_session.commit()
+
     except:
         db_session.rollback()
         raise HTTPNotFound(detail="This permission on that service does not exist for that group")

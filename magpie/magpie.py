@@ -26,7 +26,7 @@ from pyramid.session import SignedCookieSessionFactory
 # -- Project specific --------------------------------------------------------
 from __meta__ import __version__ as __ver__
 from __init__ import *
-from db import postgresdb
+#from db import postgresdb
 import models
 THIS_DIR = os.path.dirname(__file__)
 
@@ -45,15 +45,16 @@ def init_anonymous(db_session):
     if not GroupService.by_group_name(ANONYMOUS_USER, db_session=db):
         anonymous_group = models.Group(group_name=ANONYMOUS_USER)
         db.add(anonymous_group)
-        db.commit()
+
     if not UserService.by_user_name(ANONYMOUS_USER, db_session=db):
         anonymous_user = models.User(user_name=ANONYMOUS_USER, email=ANONYMOUS_USER+'@mail.com')
         db.add(anonymous_user)
-        db.commit()
 
-        group_entry = models.UserGroup(group_id=anonymous_group.id, user_id=anonymous_user.id)
+        group_id = GroupService.by_group_name(ANONYMOUS_USER, db_session=db).id
+        user_id = UserService.by_user_name(ANONYMOUS_USER, db_session=db).id
+        group_entry = models.UserGroup(group_id=group_id, user_id=user_id)
         db.add(group_entry)
-        db.commit()
+
     else:
         LOGGER.debug('anonymous already initialized')
 
@@ -63,22 +64,22 @@ def init_admin(db_session):
     if not GroupService.by_group_name(ADMIN_GROUP, db_session=db):
         admin_group = models.Group(group_name=ADMIN_GROUP)
         db.add(admin_group)
-        db.commit()
+        
     if not UserService.by_user_name(ADMIN_USER, db_session=db):
         admin_user = models.User(user_name=ADMIN_USER, email=ADMIN_USER+'@mail.com')
         admin_user.set_password(ADMIN_PASSWORD)
         admin_user.regenerate_security_code()
         db.add(admin_user)
-        db.commit()
 
         group = GroupService.by_group_name(ADMIN_GROUP, db_session=db)
-        group_entry = models.UserGroup(group_id=group.id, user_id=admin_user.id)
+        admin = UserService.by_user_name(ADMIN_USER, db_session=db)
+
+        group_entry = models.UserGroup(group_id=group.id, user_id=admin.id)
         db.add(group_entry)
-        db.commit()
 
         new_group_permission = models.GroupPermission(perm_name=ADMIN_PERM, group_id=group.id)
         db.add(new_group_permission)
-        db.commit()
+        
     else:
         LOGGER.debug('admin already initialized')
 
@@ -88,7 +89,7 @@ def init_user(db_session):
     if not GroupService.by_group_name(USER_GROUP, db_session=db):
         admin_group = models.Group(group_name=USER_GROUP)
         db.add(admin_group)
-        db.commit()
+        
     else:
         LOGGER.debug('group USER already initialized')
 
@@ -150,17 +151,20 @@ def main(global_config, **settings):
     config.set_default_permission(ADMIN_PERM)
 
     # Initialize database with default user: admin+anonymous
-    db = config.registry.db
+    import transaction
+    from db import get_tm_session
+    session_factory = config.registry['dbsession_factory']
+    db = get_tm_session(session_factory, transaction)
     try:
         current_rev = get_database_revision(db_session=db)
         LOGGER.info('current_rev : ' + str(current_rev))
     except:
-        init_db()
+        init_db() # Get out the initialization in an other script that I will run with supervisor because the multiple workers overlape
 
     init_admin(db_session=db)
     init_user(db_session=db)
     init_anonymous(db_session=db)
-
+    db.close()
 
     return config.make_wsgi_app()
 

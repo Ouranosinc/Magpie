@@ -100,7 +100,7 @@ def login_success_external(request, external_user_name, external_id, email, prov
 
             db.add(ex_identity)
             user.external_identities.append(ex_identity)
-            db.commit()
+            
         except Exception, e:
             db.rollback()
             HTTPConflict(detail=e.message)

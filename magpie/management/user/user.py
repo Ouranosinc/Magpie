@@ -34,7 +34,7 @@ def create_user(user_name, password, email, group_name, db_session):
     try:
         new_group = models.Group(group_name=user_name)
         db.add(new_group)
-        db.commit()
+        
     except Exception, e:
         db.rollback()
         raise HTTPConflict(detail=e.message)
@@ -45,22 +45,24 @@ def create_user(user_name, password, email, group_name, db_session):
             new_user.set_password(password)
         new_user.regenerate_security_code()
         db.add(new_user)
-        db.commit()
+        
     except Exception, e:
         db.rollback()
         new_group.delete(db_session=db)
-        db.commit()
+        
         raise HTTPConflict(detail=e.message)
 
     # Assign user to default group and own group
     try:
-        group_entry = models.UserGroup(group_id=group.id, user_id=new_user.id)
+        new_user_id = UserService.by_user_name(user_name, db_session=db).id
+        group_entry = models.UserGroup(group_id=group.id, user_id=new_user_id)
         db.add(group_entry)
 
-        new_group_entry = models.UserGroup(group_id=new_group.id, user_id=new_user.id)
+        new_group_id = GroupService.by_group_name(user_name, db_session=db).id
+        new_group_entry = models.UserGroup(group_id=new_group_id, user_id=new_user_id)
         db.add(new_group_entry)
 
-        db.commit()
+        
 
     except:
         db.rollback()
@@ -152,7 +154,7 @@ def delete_user(request):
         group_user = GroupService.by_group_name(user_name, db_session=db)
         db.delete(group_user)
 
-        db.commit()
+        
 
     except Exception, e:
         db.rollback()
@@ -190,7 +192,7 @@ def assign_user_group(request):
             raise HTTPNotFound(detail='group not found')
         new_user_group = models.UserGroup(group_id=cur_group.id, user_id=user.id)
         db.add(new_user_group)
-        db.commit()
+        
     except:
         db.rollback()
         raise HTTPConflict(detail='this user already belongs to this group')
@@ -216,7 +218,7 @@ def delete_user_group(request):
             .filter(models.UserGroup.user_id == user.id)\
             .filter(models.UserGroup.group_id == group.id)\
             .delete()
-        db.commit()
+        
 
     except:
         db.rollback()

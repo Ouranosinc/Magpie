@@ -114,7 +114,7 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
         raise HTTPConflict(detail='this resource name already exists at this tree level')
     try:
         db.add(new_resource)
-        db.commit()
+        
         total_children = resource_tree_service.count_children(new_resource.parent_id, db_session=db)
         resource_tree_service.set_position(resource_id=new_resource.resource_id,
                                            to_position=total_children,
@@ -151,7 +151,7 @@ def delete_resources(request):
         resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db)
         resource_tree_service.delete_branch(resource_id=resource_id, db_session=db)
         db.delete(resource)
-        db.commit()
+        
     except:
         db.rollback()
         raise HTTPNotFound('Bad resource id')
@@ -170,7 +170,7 @@ def update_resource(request):
     try:
         resource = ResourceService.by_resource_id(resource_id, db_session=db)
         resource.resource_name = new_name
-        db.commit()
+        
     except:
         db.rollback()
         raise HTTPNotFound('incorrect resource id')
