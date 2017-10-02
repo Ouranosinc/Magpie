@@ -14,11 +14,15 @@
     <table class="fields_table">
         <tr>
             <td>User name:</td>
-            <td><input type="text" name="user_name"></td>
+            <div class="input_container">
+                <td><input type="text" name="user_name" class="equal_width"></td>
+            </div>
         </tr>
         <tr>
             <td>Password:</td>
-            <td><input type="password" value="password" name="password"></td>
+            <div class="input_container">
+                <td><input type="password" value="password" name="password" class="equal_width"></td>
+            </div>
         </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Sign In" name="submit" id="submit"></td></tr>
     </table>
@@ -31,14 +35,19 @@
     <table class="fields_table">
         <tr>
             <td>User name:</td>
-            <td><input type="text" name="user_name"></td>
+            <div class="input_container">
+                <td><input type="text" name="user_name" class="equal_width"></td>
+            </div>
         </tr>
-        <tr><td>Provider:</td></tr>
-        <tr><td class="centered" colspan="2">
-                %for provider in external_providers:
-                    <input type="radio" name="provider_name" value="${provider}"/>${provider}
-                %endfor
-            </td>
+        <tr>
+            <td>Provider:</td>
+            <div class="input_container">
+                <td><select name="provider_name" class="equal_width">
+                    %for provider in external_providers:
+                        <option value="${provider}">${provider}</option>
+                    %endfor
+                </select></td>
+            </div>
         </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Sign In" name="submit"></td></tr>
     </table>
