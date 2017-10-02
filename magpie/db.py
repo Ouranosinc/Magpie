@@ -4,7 +4,7 @@ from sqlalchemy.orm import configure_mappers
 import zope.sqlalchemy
 import logging
 import os
-
+from magpie import models
 import logging
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,23 @@ def get_tm_session(session_factory, transaction_manager):
     zope.sqlalchemy.register(dbsession, transaction_manager=transaction_manager)
     return dbsession
 
+
+from sqlalchemy.engine.reflection import Inspector
+import inspect
+
+def is_database_ready():
+    inspector = Inspector.from_engine(get_engine(dict()))
+    table_names = inspector.get_table_names()
+
+    for name, obj in inspect.getmembers(models):
+        if inspect.isclass(obj):
+            try:
+                curr_table_name = obj.__tablename__
+                if curr_table_name not in table_names:
+                    return False
+            except:
+                continue
+    return True
 
 def includeme(config):
     """
