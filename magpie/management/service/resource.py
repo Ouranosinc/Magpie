@@ -137,6 +137,9 @@ def create_resource_view(request):
     resource_name = get_multiformat_post(request, 'resource_name')
     resource_type = get_multiformat_post(request, 'resource_type')
     parent_id = get_multiformat_post(request, 'parent_id')
+    if not (resource_name and resource_type and parent_id):
+        raise HTTPBadRequest(detail='Bad request: resource_name={0}, resource_type={1}, parent_id={2}'
+                             .format(resource_name, resource_type, parent_id))
 
     return create_resource(resource_name, resource_type, parent_id, request.db)
 

@@ -2,6 +2,7 @@ import requests
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPFound, HTTPOk, HTTPBadRequest,HTTPTemporaryRedirect
 from pyramid.response import Response
+from pyramid.security import forget
 
 from ui.management import check_res
 from ui.home import add_template_data
@@ -33,7 +34,7 @@ class ManagementViews(object):
             if res.status_code < 400:
                 pyr_res = Response(body=res.content)
                 for cookie in res.cookies:
-                    pyr_res.set_cookie(name=cookie.name, value=cookie.value)
+                    pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
                 return pyr_res
             elif res.status_code == 401:
                 return HTTPFound(location=self.request.route_url('login', _query=dict(authentication='Failed')),)
@@ -45,10 +46,8 @@ class ManagementViews(object):
 
     @view_config(route_name='logout', renderer='templates/login.mako')
     def logout(self):
-        check_res(requests.get(self.magpie_url + '/signout'))
-
         # Flush cookies and return to home
-        pyr_res = Response()
-        for cookie in self.request.cookies:
-            pyr_res.delete_cookie(cookie)
-        return HTTPFound(self.request.route_url('home'), headers=pyr_res.headers)
+        headers = forget(self.request)
+
+        return HTTPFound(location=self.request.route_url('home'), headers=headers)
+

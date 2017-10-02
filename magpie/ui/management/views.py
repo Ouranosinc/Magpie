@@ -116,9 +116,6 @@ class ManagementViews(object):
             if group_name not in groups:
                 self.create_group(group_name)
 
-            if not user_name:
-                raise exception_response(400, 'User name must not be empty')
-
             data = {'user_name': user_name,
                     'email': self.request.POST.get('email'),
                     'password': self.request.POST.get('password'),
@@ -387,9 +384,6 @@ class ManagementViews(object):
         if 'add_child' in self.request.POST:
             resource_name = self.request.POST.get('resource_name')
             resource_type = self.request.POST.get('resource_type')
-
-            if not resource_name:
-                raise exception_response(400, 'Resource name must not be empty')
 
             data = {'resource_name': resource_name,
                     'resource_type': resource_type,
