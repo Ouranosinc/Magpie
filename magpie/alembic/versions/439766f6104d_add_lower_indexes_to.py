@@ -48,7 +48,7 @@ def upgrade():
         ''')
 
         op.execute('''
-        CREATE UNIQUE INDEX users_email_key2 ON users (lower(email::text));
+        CREATE INDEX users_email_key2 ON users (lower(email::text));
         ''')
 
         op.execute('''

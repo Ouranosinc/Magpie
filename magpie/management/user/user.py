@@ -54,20 +54,20 @@ def create_user(user_name, password, email, group_name, db_session):
 
     # Assign user to default group and own group
     try:
-        new_user_id = UserService.by_user_name(user_name, db_session=db).id
-        group_entry = models.UserGroup(group_id=group.id, user_id=new_user_id)
+        new_user = UserService.by_user_name(user_name, db_session=db)
+        group_entry = models.UserGroup(group_id=group.id, user_id=new_user.id)
         db.add(group_entry)
 
-        new_group_id = GroupService.by_group_name(user_name, db_session=db).id
-        new_group_entry = models.UserGroup(group_id=new_group_id, user_id=new_user_id)
+        new_group = GroupService.by_group_name(user_name, db_session=db)
+        new_group_entry = models.UserGroup(group_id=new_group.id, user_id=new_user.id)
         db.add(new_group_entry)
 
         
 
-    except:
+    except Exception, e:
         db.rollback()
         raise HTTPConflict(
-            detail='No way to add ' + user_name + ' to group ' + group_name + ', maybe this group does not exist'
+            detail=e.message
         )
 
     return HTTPCreated()

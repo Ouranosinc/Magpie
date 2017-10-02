@@ -39,7 +39,7 @@ def upgrade():
                     sa.Column('user_name', sa.Unicode(30), unique=True),
                     sa.Column('user_password', sa.Unicode(40)),
                     sa.Column('email', sa.Unicode(100), nullable=False,
-                              unique=True),
+                              unique=False),
                     sa.Column('status', sa.SmallInteger(), nullable=False),
                     sa.Column('security_code', sa.Unicode(40),
                               default='default'),
