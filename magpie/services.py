@@ -5,14 +5,14 @@ from pyramid.security import Everyone as EVERYONE
 
 
 class ServiceI(object):
+    permission_names = []
+    param_values = []
+    resource_types = []
+    acl = []
 
     def __init__(self, service, request):
         self.service = service
         self.request = request
-        self.permission_names = []
-        self.param_values = []
-        self.resource_types = []
-        self.acl = []
 
     @property
     def __acl__(self):
