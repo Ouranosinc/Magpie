@@ -273,3 +273,20 @@ table.fields_table td.centered {
 table.fields_table input[type="radio"] {
     margin-left: 2em;
 }
+
+/*---field form equal width inputs---*/
+
+select.equal_width,
+option.equal_width,
+input.equal_width {
+    width: 250px;
+    /*-webkit-box-sizing: border-box;*/
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+}
+
+div.input_container {
+    width: 100%;
+    height:100%;
+    -webkit-box-sizing: border-box;
+}
