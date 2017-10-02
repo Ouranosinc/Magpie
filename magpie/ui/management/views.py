@@ -151,7 +151,8 @@ class ManagementViews(object):
             check_res(requests.post(self.magpie_url + '/users', data))
             return HTTPFound(self.request.route_url('view_users'))
 
-        return add_template_data(self.request)
+        return add_template_data(self.request,
+                                 {'user_groups': self.get_groups()})
 
     @view_config(route_name='edit_user', renderer='templates/edit_user.mako')
     def edit_user(self):
@@ -168,7 +169,7 @@ class ManagementViews(object):
                 check_res(requests.delete(self.magpie_url + '/users/' + user_name + '/groups/' + group))
 
             for group in new_groups:
-                check_res(requests.post(self.magpie_url+'/users/'+user_name+'/groups/'+group))
+                check_res(requests.post(self.magpie_url+'/users/' + user_name + '/groups/' + group))
 
             own_groups = self.get_user_groups(user_name)
 

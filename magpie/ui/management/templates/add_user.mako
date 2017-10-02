@@ -12,21 +12,33 @@
     <table class="fields_table">
         <tr>
             <td>User name:</td>
-            <td><input type="text" name="user_name"></td>
+            <div class="input_container">
+                <td><input type="text" name="user_name" class="equal_width"></td>
+            </div>
         </tr>
         <tr>
             <td>Email:</td>
-            <td><input type="text" name="email"></td>
+            <div class="input_container">
+                <td><input type="text" name="email" class="equal_width"></td>
+            </div>
         </tr>
         <tr>
             <td>Password:</td>
-            <td><input type="password" name="password"></td>
+            <div class="input_container">
+                <td><input type="password" name="password" class="equal_width"></td>
+            </div>
         </tr>
-        <tr><td class="centered" colspan="2">
-            <input type="radio" name="group_name" value="admin" />Admin
-            <input type="radio" name="group_name" value="user" />User
-            <input type="radio" name="group_name" value="guest" />Guest
-        </td></tr>
+        <tr>
+            <td>User group:</td>
+            <div class="input_container">
+                <td class="centered" colspan="2">
+                <select name="group_name" class="equal_width">
+                    %for group in user_groups:
+                        <option value="${group}">${group}</option>
+                    %endfor
+                </select></td>
+            </div>
+        </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Add User" name="create"></td></tr>
     </table>
 </form>
