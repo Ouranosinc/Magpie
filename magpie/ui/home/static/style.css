@@ -274,7 +274,9 @@ table.fields_table input[type="radio"] {
     margin-left: 2em;
 }
 
-/*---field form equal width inputs---*/
+/*---field form equal width inputs
+support different browsers using an higher level container
+---*/
 
 select.equal_width,
 option.equal_width,

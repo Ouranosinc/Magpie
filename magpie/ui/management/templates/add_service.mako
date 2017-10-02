@@ -12,18 +12,25 @@
     <table class="fields_table">
         <tr>
             <td>Service name (unique):</td>
-            <td><input type="text" value="" name="service_name" placeholder="emu"></td>
+            <div class="input_container">
+                <td><input type="text" value="" name="service_name" class="equal_width" placeholder="emu"></td>
+            </div>
         </tr>
         <tr>
             <td>Service url:</td>
-            <td><input type="text" value="" name="service_url" placeholder="http://localhost:8093"></td>
+            <div class="input_container">
+                <td><input type="text" value="" name="service_url" class="equal_width" placeholder="http://localhost:8093"></td>
+            </div>
         </tr>
-        <tr><td>Service type:</td></tr>
-        <tr><td class="centered" colspan="2">
-            %for service_type in service_types:
-                <input type="radio" name="service_type" value="${service_type}"> ${service_type}
-            %endfor
-        </td></tr>
+        <tr><td>Service type:</td>
+            <div class="input_container">
+                <td><select name="service_type" class="equal_width">
+                    %for service_type in service_types:
+                        <option value="${service_type}">${service_type}</option>
+                    %endfor
+                </td>
+            </div>
+        </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Register" name="register"></td></tr>
     </table>
 </form>
