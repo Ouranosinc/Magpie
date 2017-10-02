@@ -6,11 +6,11 @@
         <div class="tree_button"><input type="submit" value="Delete" name="delete"></div>
     % endif
     % if 'id' in value.keys():
-        % if int(value['id']) in res_id_type.keys():
-            % if not res_id_type[int(value['id'])] in res_no_child:
+        % if int(value['id']) in resources_id_type.keys():
+            % if not resources_id_type[int(value['id'])] in resources_no_child:
                 <div class="tree_button"><input type="submit" value="Add child" name="add_child"></div>
             % endif
-        % else:
+        % elif len(resources_types) > 0:
             <div class="tree_button"><input type="submit" value="Add child" name="add_child"></div>
         % endif
     % endif

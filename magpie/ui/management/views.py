@@ -392,7 +392,10 @@ class ManagementViews(object):
                 id=raw_resources['resource_id'],
                 permission_names=[],
                 children=self.res_tree_parser(raw_resources['resources'], {}))
-            res_id_type = self.get_resource_types()
+            res_resources_types = check_res(requests.get(self.magpie_url + '/services/types/' +
+                                                         cur_svc_type + '/resources/types'))
+            raw_resources_types = res_resources_types.json()['resource_types']
+            raw_resources_id_type = self.get_resource_types()
         except Exception:
             raise HTTPBadRequest(detail='Bad Json response')
 
@@ -400,8 +403,9 @@ class ManagementViews(object):
                                  {'service_name': service_name,
                                   'cur_svc_type': cur_svc_type,
                                   'resources': resources,
-                                  'res_id_type': res_id_type,
-                                  'res_no_child': {'file'}})
+                                  'resources_types': raw_resources_types,
+                                  'resources_id_type': raw_resources_id_type,
+                                  'resources_no_child': {'file'}})
 
     @view_config(route_name='add_resource', renderer='templates/add_resource.mako')
     def add_resource(self):
