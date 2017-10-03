@@ -30,7 +30,7 @@ input[type="submit"].delete_button:focus {
 a.tab:link,
 a.tab:visited,
 .img_button,
-.admin_links>a,
+.admin_button,
 input[type="submit"]{
     border: 1px solid #2C8F30;
     background-color: #4CAF50;
@@ -41,7 +41,7 @@ input[type="submit"]{
 
 a.tab:hover, a.tab:active,
 .img_button:hover, .img_button:focus,
-.admin_links>a:hover, .admin_links>a:active,
+.admin_button:hover, .admin_button:active,
 input[type="submit"]:hover, input[type="submit"]:focus {
 	background-color: #5CBF60;
 }
@@ -93,8 +93,6 @@ tr:nth-child(even) {
 .simple_list_table input[type="submit"] {
     margin: 0 0.5em;
 }
-
-
 
 /*---Resource tree rendering ---*/
 
@@ -152,8 +150,8 @@ div.tree_button {
   clear: both;
 }
 
-
 /*---Header breadcrumb---*/
+
 ul.breadcrumb {
     padding: 10px 16px;
     list-style: none;
@@ -191,7 +189,6 @@ ul.breadcrumb li a:hover {
 
 .header{
     vertical-align: center;
-
 }
 
 .header>a{
@@ -210,13 +207,30 @@ ul.breadcrumb li a:hover {
 
 /*---Home---*/
 
-.admin_links {
-    margin: auto;
-    width: 50%;
+/*  when the screen width is too small, force
+    buttons block-stacking with style override,
+    otherwise use default side-by-side view.
+    60em number from margins and button sizes
+*/
+@media only screen and (max-width: 60em) {
+    .admin_content {
+        display: inline;
+    }
 }
 
-.admin_links>a {
-    float:left;
+.admin_content {
+    width: 100%;
+    text-align: center;
+}
+
+.admin_button {
+    margin: auto;
+    width: 100%;
+}
+
+.admin_button {
+    display:inline-block;
+    box-sizing: border-box;
     width: 10em;
     margin: 3em;
     padding: 1em;
@@ -229,7 +243,7 @@ ul.breadcrumb li a:hover {
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
 }
 
-.admin_links>a>img {
+.admin_button>img {
     height: 60%;
     padding: 5%;
 }
