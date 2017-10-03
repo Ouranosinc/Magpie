@@ -14,6 +14,19 @@ html,body {
     margin: 1em 0em 1em;
 }
 
+input[type="submit"].delete_button {
+    border: 1px solid #8B3A3A;
+    background-color: #CD0000;
+    color: white;
+    vertical-align: center;
+    cursor:pointer;
+}
+
+input[type="submit"].delete_button:hover,
+input[type="submit"].delete_button:focus {
+	background-color: #EE6363;
+}
+
 a.tab:link,
 a.tab:visited,
 .img_button,
@@ -65,8 +78,8 @@ tr:nth-child(even) {
     /*background-color: #dddddd;*/
 }
 
-
 /*---View users page ---*/
+
 .simple_list_table tr th:first-child,
  tr td:first-child {
     width: 75%;
@@ -176,11 +189,11 @@ ul.breadcrumb li a:hover {
     padding: 1em 1em 0em 1em;
 }
 
-
 .header{
     vertical-align: center;
 
 }
+
 .header>a{
 	color: white;
 	font-size: 3em;
@@ -252,7 +265,6 @@ a.tab:link, a.tab:visited {
     text-decoration: none;
     display: inline-block;
 }
-
 
 /*---field_form---*/
 

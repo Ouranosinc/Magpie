@@ -24,8 +24,10 @@
 <tr>
     <td><input type="hidden" value=${group} name="group_name">${group}</td>
     <td>${group_names[group]['members']}</td>
-    <td><input type="submit" value="Delete" name="delete">
-    <input type="submit" value="Edit" name="edit"></td>
+    <td style="white-space: nowrap">
+        <input type="submit" value="Edit" name="edit">
+        <input type="submit" value="Delete" name="delete" class="delete_button">
+    </td>
 </tr>
 </form>
 %endfor
