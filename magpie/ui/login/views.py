@@ -29,13 +29,19 @@ class ManagementViews(object):
             for tuple in self.request.POST:
                 data_to_send[tuple] = self.request.POST.get(tuple)
 
-            res = requests.post(new_location, data=data_to_send)
+            #res = requests.post(new_location, data=data_to_send, allow_redirects=True)
+            return HTTPTemporaryRedirect(location=new_location)
 
             if res.status_code < 400:
-                pyr_res = Response(body=res.content)
+                pyr_res = Response(body=res.content, headers = res.headers)
                 for cookie in res.cookies:
                     pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
-                return pyr_res
+                #if res.status_code == 302:
+                #    return Response(body=res.content, headers=pyr_res.headers)
+                return HTTPFound(location=res.url, headers=pyr_res.headers)
+
+
+                #return pyr_res
             elif res.status_code == 401:
                 return HTTPFound(location=self.request.route_url('login', _query=dict(authentication='Failed')),)
             else:

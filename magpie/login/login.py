@@ -56,12 +56,16 @@ def sign_in(request):
     elif provider_name in external_provider:
         if provider_name == 'openid':
             query_field = dict(id=user_name)
+        elif provider_name == 'github':
+            query_field = dict()
         else:
             query_field = dict(username=user_name)
-        query_field['came_from'] = get_multiformat_post(request, 'came_from')
+
+        came_from = request.POST.get('came_from', '/')
+        request.response.set_cookie('homepage_route', came_from)
         external_login_route = request.route_url('external_login', provider_name=provider_name, _query=query_field)
 
-        return HTTPFound(location=external_login_route)
+        return HTTPFound(location=external_login_route, headers=request.response.headers)
 
     return HTTPBadRequest(detail='Bad provider name')
 
@@ -108,7 +112,11 @@ def login_success_external(request, external_user_name, external_id, email, prov
     # set a header to remember (set-cookie) -> this is the important line
     headers = remember(request, user.id)
 
-    return HTTPFound(location=request.cookies['homepage_route'], headers=headers)
+    # If redirection given
+    if 'homepage_route' in request.cookies:
+        return HTTPFound(location=request.cookies['homepage_route'], headers=headers)
+    else:
+        return HTTPOk()
 
 
 
@@ -162,13 +170,15 @@ def authomatic_login(request):
                 # get extra info
                 if result.user.credentials:
                     pass
-                return login_success_external(login_id=login_id, name=result.user.name)
-    else:
-        came_from = request.GET.get('came_from', '/')
-        response.set_cookie('homepage_route', came_from)
+                return login_success_external(request,
+                                              external_id=login_id,
+                                              email=login_id,
+                                              providername=result.provider.name,
+                                              external_user_name=result.user.name)
+
     return response
 
-
+'''
 @view_config(route_name='session', permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
     authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
@@ -185,7 +195,7 @@ def get_session(request):
         body=json.dumps(json_response),
         content_type='application/json'
     )
-
+'''
 @view_config(route_name='providers', request_method='GET')
 def get_providers(request):
     provider_names = ['ziggurat', 'dkrz', 'ipsl', 'badc', 'pcmdi', 'smhi']

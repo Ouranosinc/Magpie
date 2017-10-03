@@ -1,6 +1,7 @@
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
 from esgf import esgfopenid
+import os
 import logging
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ def authomatic_config(request):
         },
         'pcmdi': {
             'class_': esgfopenid.ESGFOpenID,
-            'hostname': 'pcmdi.llnl.gov',
+            'hostname': 'esgf-node.llnl.gov',
         },
         'smhi': {
             'class_': esgfopenid.ESGFOpenID,
@@ -48,12 +49,14 @@ def authomatic_config(request):
         },
     }
 
+    github_consumer_key = os.getenv('GITHUB_CLIENT_ID', '#####')
+    github_consumer_secret = os.getenv('GITHUB_CLIENT_SECRET', '#####')
     OAUTH2 = {
         'github': {
             'class_': oauth2.GitHub,
-            'consumer_key': '#####',
-            'consumer_secret': '#####',
-            'access_headers': {'User-Agent': 'Phoenix'},
+            'consumer_key': github_consumer_key,
+            'consumer_secret': github_consumer_secret,
+            'access_headers': {'User-Agent': 'Magpie'},
             'id': provider_id(),
             'scope': oauth2.GitHub.user_info_scope,
             '_apis': {
