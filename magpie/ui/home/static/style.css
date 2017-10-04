@@ -14,6 +14,16 @@ html,body {
     margin: 1em 0em 1em;
 }
 
+input[type="submit"].disabled_button,
+input[type="submit"].disabled_button:hover,
+input[type="submit"].disabled_button:focus {
+    border: 1px solid #808080;
+    background-color: #DDDDDD;
+    color: #808080;
+    vertical-align: center;
+    cursor:not-allowed;
+}
+
 input[type="submit"].delete_button {
     border: 1px solid #8B3A3A;
     background-color: #CD0000;
