@@ -348,7 +348,7 @@ class ManagementViews(object):
 
         if 'delete' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
-            check_res(requests.delete(self.magpie_url+'/resources/{0}'.format(resource_id)))
+            check_res(requests.delete(self.magpie_url + '/resources/' + resource_id))
 
         if 'add_child' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
@@ -369,8 +369,8 @@ class ManagementViews(object):
                                                          cur_svc_type + '/resources/types'))
             raw_resources_types = res_resources_types.json()['resource_types']
             raw_resources_id_type = self.get_resource_types()
-        except Exception:
-            raise HTTPBadRequest(detail='Bad Json response')
+        except Exception as e:
+            raise HTTPBadRequest(detail='Bad Json response [Exception: ' + e.message + ']')
 
         return add_template_data(self.request,
                                  {'service_name': service_name,
