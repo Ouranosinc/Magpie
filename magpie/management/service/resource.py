@@ -151,7 +151,6 @@ def delete_resources(request):
         resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db)
         resource_tree_service.delete_branch(resource_id=resource_id, db_session=db)
         db.delete(resource)
-        db.commit()
     except Exception:
         db.rollback()
         raise HTTPNotFound('Bad resource id')
@@ -168,7 +167,6 @@ def update_resource(request):
     try:
         resource = ResourceService.by_resource_id(resource_id, db_session=db)
         resource.resource_name = new_name
-        db.commit()
     except Exception:
         db.rollback()
         raise HTTPNotFound('incorrect resource id')
