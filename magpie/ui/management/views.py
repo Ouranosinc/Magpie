@@ -81,34 +81,6 @@ class ManagementViews(object):
         if 'resource_id' in resource_node.keys() and 'resource_type' in resource_node.keys():
             resource_dict[resource_node['resource_id']] = resource_node['resource_type']
 
-    def get_resource_types(self):
-        """
-        :return: dictionary of all resources as {id: 'resource_type'}
-        :rtype: dict
-        """
-        all_res = requests.get(self.magpie_url + '/resources')
-        check_res(all_res)
-        res_dic = self.default_get(all_res.json(), 'resources', dict())
-        res_ids = dict()
-        self.flatten_tree_resource(res_dic, res_ids)
-        return res_ids
-
-    @staticmethod
-    def flatten_tree_resource(resource_node, resource_dict):
-        """
-        :param resource_node: any-level dictionary composing the resources tree
-        :param resource_dict: reference of flattened dictionary across levels
-        :return: flattened dictionary `resource_dict` of all {id: 'resource_type'}
-        :rtype: dict
-        """
-        if type(resource_node) is not dict:
-            return
-        if not len(resource_node) > 0:
-            return
-        [ManagementViews.flatten_tree_resource(r, resource_dict) for r in resource_node.values()]
-        if 'resource_id' in resource_node.keys() and 'resource_type' in resource_node.keys():
-            resource_dict[resource_node['resource_id']] = resource_node['resource_type']
-
     @view_config(route_name='view_users', renderer='templates/view_users.mako')
     def view_users(self):
         if 'create' in self.request.POST:
