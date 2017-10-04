@@ -123,7 +123,8 @@ class ManagementViews(object):
             check_res(requests.post(self.magpie_url + '/users', data))
             return HTTPFound(self.request.route_url('view_users'))
 
-        return add_template_data(self.request)
+        return add_template_data(self.request,
+                                 {'user_groups': self.get_groups()})
 
     @view_config(route_name='edit_user', renderer='templates/edit_user.mako')
     def edit_user(self):
@@ -140,7 +141,7 @@ class ManagementViews(object):
                 check_res(requests.delete(self.magpie_url + '/users/' + user_name + '/groups/' + group))
 
             for group in new_groups:
-                check_res(requests.post(self.magpie_url+'/users/'+user_name+'/groups/'+group))
+                check_res(requests.post(self.magpie_url+'/users/' + user_name + '/groups/' + group))
 
             own_groups = self.get_user_groups(user_name)
 
@@ -347,7 +348,7 @@ class ManagementViews(object):
 
         if 'delete' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
-            check_res(requests.delete(self.magpie_url+'/resources/{0}'.format(resource_id)))
+            check_res(requests.delete(self.magpie_url + '/resources/' + resource_id))
 
         if 'add_child' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
@@ -364,16 +365,20 @@ class ManagementViews(object):
                 id=raw_resources['resource_id'],
                 permission_names=[],
                 children=self.res_tree_parser(raw_resources['resources'], {}))
-            res_id_type = self.get_resource_types()
-        except Exception:
-            raise HTTPBadRequest(detail='Bad Json response')
+            res_resources_types = check_res(requests.get(self.magpie_url + '/services/types/' +
+                                                         cur_svc_type + '/resources/types'))
+            raw_resources_types = res_resources_types.json()['resource_types']
+            raw_resources_id_type = self.get_resource_types()
+        except Exception as e:
+            raise HTTPBadRequest(detail='Bad Json response [Exception: ' + e.message + ']')
 
         return add_template_data(self.request,
                                  {'service_name': service_name,
                                   'cur_svc_type': cur_svc_type,
                                   'resources': resources,
-                                  'res_id_type': res_id_type,
-                                  'res_no_child': {'file'}})
+                                  'resources_types': raw_resources_types,
+                                  'resources_id_type': raw_resources_id_type,
+                                  'resources_no_child': {'file'}})
 
     @view_config(route_name='add_resource', renderer='templates/add_resource.mako')
     def add_resource(self):

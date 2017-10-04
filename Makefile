@@ -31,14 +31,14 @@ clean-build:
 	rm -fr build/
 	rm -fr dist/
 	rm -fr .eggs/
-	find . -name '*.egg-info' -exec rm -fr {} +
-	find . -name '*.egg' -exec rm -f {} +
+	find . -type f -name '*.egg-info' -exec rm -fr {} +
+	find . -type f -name '*.egg' -exec rm -f {} +
 
 clean-pyc:
-	find . -name '*.pyc' -exec rm -f {} +
-	find . -name '*.pyo' -exec rm -f {} +
-	find . -name '*~' -exec rm -f {} +
-	find . -name '__pycache__' -exec rm -fr {} +
+	find . -type f -name '*.pyc' -exec rm -f {} +
+	find . -type f -name '*.pyo' -exec rm -f {} +
+	find . -type f -name '*~' -exec rm -f {} +
+	find . -type f -name '__pycache__' -exec rm -fr {} +
 
 clean-test:
 	rm -fr .tox/

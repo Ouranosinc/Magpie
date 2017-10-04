@@ -33,8 +33,10 @@
                 <form action="${request.path}" method="post">
                     <tr>
                         <td><input type="hidden" value=${service} name="service_name">${service}</td>
-                        <td><input type="submit" value="Delete" name="delete">
-                        <input type="submit" value="Edit" name="edit"></td>
+                        <td style="white-space: nowrap">
+                            <input type="submit" value="Edit" name="edit">
+                            <input type="submit" value="Delete" name="delete" class="delete_button">
+                        </td>
                     </tr>
                 </form>
             %endfor

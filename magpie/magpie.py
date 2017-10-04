@@ -56,9 +56,7 @@ def get_database_revision(db_session):
     return result['version_num']
 
 
-
-
-def main(global_config, **settings):
+def main(global_config=None, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
@@ -72,7 +70,6 @@ def main(global_config, **settings):
     hostname = os.getenv('HOSTNAME')
     if hostname:
         settings['magpie.url'] = 'http://{hostname}:{port}'.format(hostname=hostname, port=settings['magpie.port'])
-
 
     from pyramid.config import Configurator
 

@@ -37,8 +37,6 @@ class ServiceI(object):
                     for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
                         self.acl.append((outcome, EVERYONE, perm_name,))
 
-
-
     def permission_requested(self):
         raise NotImplementedError
 
@@ -50,8 +48,8 @@ class ServiceWPS(ServiceI):
                         'execute']
 
     params_expected = ['service',
-                    'request',
-                    'version']
+                       'request',
+                       'version']
 
     def __init__(self, service, request):
         super(ServiceWPS, self).__init__(service, request)
@@ -68,20 +66,17 @@ class ServiceWPS(ServiceI):
         return self.parser.params['request']
 
 
-
-
-
 class ServiceWMS(ServiceI):
     permission_names = ['getcapabilities',
-                         'getmap',
-                         'getfeatureinfo',
-                         'getlegendgraphic',
-                         'getmetadata']
+                        'getmap',
+                        'getfeatureinfo',
+                        'getlegendgraphic',
+                        'getmetadata']
 
     params_expected = ['service',
-                    'request',
-                    'version',
-                    'layers']
+                       'request',
+                       'version',
+                       'layers']
 
     resource_types = [models.Workspace.resource_type_name]
 
@@ -108,15 +103,15 @@ class ServiceWMS(ServiceI):
             path_elem = self.request.path.split('/')
             wms_idx = path_elem.index('wms')
             if path_elem[wms_idx-1] != 'geoserver':
-                worskpace_name = path_elem[wms_idx-1]
+                workspace_name = path_elem[wms_idx-1]
             else:
-                worskpace_name = ''
+                workspace_name = ''
         else:
             layer_name = self.parser.params['layers']
-            worskpace_name = layer_name.split(':')[0]
+            workspace_name = layer_name.split(':')[0]
 
         #load workspace resource from the database
-        workspace = find_children_by_name(name=worskpace_name,
+        workspace = find_children_by_name(name=workspace_name,
                                           parent_id=self.service.resource_id,
                                           db_session=self.request.db)
         if workspace:
@@ -140,8 +135,10 @@ class ServiceWFS(ServiceI):
                        'version',
                        'typenames']
 
+    resource_types = []
+
     def __init__(self, service, request):
-        super(ServiceWMS, self).__init__(service, request)
+        super(ServiceWFS, self).__init__(service, request)
         self.parser = ows_parser_factory(request)
         self.parser.parse(self.params_expected)
 
@@ -153,15 +150,15 @@ class ServiceWFS(ServiceI):
             path_elem = self.request.path.split('/')
             wms_idx = path_elem.index('wfs')
             if path_elem[wms_idx - 1] != 'geoserver':
-                worskpace_name = path_elem[wms_idx - 1]
+                workspace_name = path_elem[wms_idx - 1]
             else:
-                worskpace_name = ''
+                workspace_name = ''
         else:
             layer_name = self.parser.params['typenames']
-            worskpace_name = layer_name.split(':')[0]
+            workspace_name = layer_name.split(':')[0]
 
         # load workspace resource from the database
-        workspace = find_children_by_name(name=worskpace_name,
+        workspace = find_children_by_name(name=workspace_name,
                                           parent_id=self.service.resource_id,
                                           db_session=self.request.db)
         if workspace:
@@ -227,7 +224,7 @@ def service_factory(service, request):
         service_specific = service_type_dico[service.type](service, request)
         return service_specific
     except:
-        raise Exception('This type of service dows not exist')
+        raise Exception('This type of service does not exist')
 
 
 def get_all_service_permission_names():

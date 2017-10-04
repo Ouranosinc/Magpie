@@ -3,19 +3,24 @@
 
 <%def name="render_item(key, value, level)">
     % if level > 0:
-        <div class="tree_button"><input type="submit" value="Delete" name="delete"></div>
+        <div class="tree_button"><input type="submit" value="Delete" name="delete" class="delete_button"></div>
+    % else:
+        <div class="tree_button"><input type="submit" value="Delete" name="delete" class="disabled_button" disabled></div>
     % endif
     % if 'id' in value.keys():
-        % if int(value['id']) in res_id_type.keys():
-            % if not res_id_type[int(value['id'])] in res_no_child:
+        % if int(value['id']) in resources_id_type.keys():
+            % if not resources_id_type[int(value['id'])] in resources_no_child:
                 <div class="tree_button"><input type="submit" value="Add child" name="add_child"></div>
+            % else:
+                <div class="tree_button"><input type="submit" value="Add child" name="add_child" class="disabled_button" disabled></div>
             % endif
-        % else:
+        % elif len(resources_types) > 0:
             <div class="tree_button"><input type="submit" value="Add child" name="add_child"></div>
+        % else:
+            <div class="tree_button"><input type="submit" value="Add child" name="add_child" class="disabled_button" disabled></div>
         % endif
     % endif
 </%def>
-
 
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">Home</a></li>
@@ -29,4 +34,3 @@
 <div class="tree">
     ${tree.render_tree(render_item, resources)}
 </div>
-

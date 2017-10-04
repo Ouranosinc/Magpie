@@ -13,15 +13,19 @@
     <table class="fields_table">
         <tr>
             <td>Resource name:</td>
-            <td><input type="text" value="" name="resource_name"></td>
+            <div class="input_container">
+                <td><input type="text" value="" name="resource_name" class="equal_width"></td>
+            </div>
         </tr>
         <tr>
             <td>Resource type:</td>
-            <td><select name="resource_type">
-                %for res_type in cur_svc_res:
-                    <option value="${res_type}">${res_type}</option>
-                %endfor
-            </select></td>
+            <div class="input_container">
+                <td><select name="resource_type" class="equal_width">
+                    %for res_type in cur_svc_res:
+                        <option value="${res_type}">${res_type}</option>
+                    %endfor
+                </select></td>
+            </div>
         </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Add" name="add_child"></td></tr>
     </table>
