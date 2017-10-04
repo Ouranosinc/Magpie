@@ -178,7 +178,7 @@ def authomatic_login(request):
 
     return response
 
-'''
+
 @view_config(route_name='session', permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
     authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
@@ -195,7 +195,7 @@ def get_session(request):
         body=json.dumps(json_response),
         content_type='application/json'
     )
-'''
+
 @view_config(route_name='providers', request_method='GET')
 def get_providers(request):
     provider_names = ['ziggurat', 'dkrz', 'ipsl', 'badc', 'pcmdi', 'smhi']
