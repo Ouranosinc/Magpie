@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 def includeme(config):
     logger.info('Adding login ...')
     # Add all the rest api routes
-    #config.add_route('session', '/session')
+    config.add_route('session', '/session')
     config.add_route('signin', '/signin')
     config.add_route('signout', '/signout')
     config.add_route('providers', '/providers')
