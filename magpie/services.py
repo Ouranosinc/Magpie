@@ -171,8 +171,7 @@ class ServiceWFS(ServiceI):
 
 
 class ServiceTHREDDS(ServiceI):
-    permission_names = ['download',
-                        'upload']
+    permission_names = models.File.permission_names
 
     resource_types = [models.Directory.resource_type_name,
                       models.File.resource_type_name]

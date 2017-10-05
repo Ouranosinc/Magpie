@@ -103,6 +103,8 @@ def get_user(request, user_name_or_token):
             authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
             user_id = get_userid_by_token(user_name_or_token, authn_policy)
             return UserService.by_id(user_id, db_session=request.db)
+        elif user_name_or_token == LOGGED_USER:
+            return request.user
         else:
             return UserService.by_user_name(user_name_or_token, db_session=request.db)
     except Exception, e:

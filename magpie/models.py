@@ -136,18 +136,19 @@ class Service(Resource):
             self.__acl__.append((outcome, perm_user, perm_name,))
 
 
+class File(Resource):
+    __mapper_args__ = {'polymorphic_identity': 'file'}
+    permission_names = ['read',
+                        'write']
+    resource_type_name = 'file'
+
+
 class Directory(Resource):
     __mapper_args__ = {'polymorphic_identity': 'directory'}
-    permission_names = ['download',
-                        'upload']
+    permission_names = File.permission_names
     resource_type_name = 'directory'
 
 
-class File(Resource):
-    __mapper_args__ = {'polymorphic_identity': 'file'}
-    permission_names = ['download',
-                        'upload']
-    resource_type_name = 'file'
 
 
 class Workspace(Resource):
