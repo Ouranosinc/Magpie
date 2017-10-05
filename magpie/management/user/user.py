@@ -329,7 +329,6 @@ def create_user_resource_permission(permission_name, resource_id, user_id, db_se
         new_permission = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
         new_permission.perm_name = permission_name
         db_session.add(new_permission)
-        db_session.commit()
     except:
         db_session.rollback()
         raise HTTPConflict('This permission on that service already exists for that user')
@@ -450,7 +449,6 @@ def delete_user_resource_permission(permission_name, resource_id, user_id, db_se
     try:
         permission_to_delete = UserResourcePermissionService.get(user_id, resource_id, permission_name, db_session)
         db_session.delete(permission_to_delete)
-        db_session.commit()
     except:
         db_session.rollback()
         raise HTTPNotFound(detail="This permission on that service does not exist for that user")
