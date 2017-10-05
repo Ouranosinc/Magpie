@@ -8,11 +8,11 @@ class ServiceI(object):
     permission_names = []
     param_values = []
     resource_types = []
-    acl = []
 
     def __init__(self, service, request):
         self.service = service
         self.request = request
+        self.acl = []
 
     @property
     def __acl__(self):
