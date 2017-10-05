@@ -37,15 +37,21 @@ def init_anonymous(db_session):
 
 
 def init_admin(db_session):
-    register_user_with_group(user_name=ADMIN_USER,
-                             group_name=ADMIN_GROUP,
-                             email=ADMIN_USER + '@mail.com',
-                             password=ADMIN_PASSWORD,
-                             db_session=db_session)
+    if not (UserService.by_user_name(ADMIN_USER, db_session=db_session)
+            and GroupService.by_group_name(ADMIN_GROUP, db_session=db_session)):
+        register_user_with_group(user_name=ADMIN_USER,
+                                 group_name=ADMIN_GROUP,
+                                 email=ADMIN_USER + '@mail.com',
+                                 password=ADMIN_PASSWORD,
+                                 db_session=db_session)
 
-    group = GroupService.by_group_name(ADMIN_GROUP, db_session=db_session)
-    new_group_permission = models.GroupPermission(perm_name=ADMIN_PERM, group_id=group.id)
-    db_session.add(new_group_permission)
+        group = GroupService.by_group_name(ADMIN_GROUP, db_session=db_session)
+        new_group_permission = models.GroupPermission(perm_name=ADMIN_PERM, group_id=group.id)
+        try:
+            db_session.add(new_group_permission)
+        except Exception, e:
+            db_session.rollback()
+            raise e
 
 
 def init_user_group(db_session):
