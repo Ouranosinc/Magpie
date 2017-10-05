@@ -80,5 +80,7 @@ class Post(OWSParser):
     def _get_param_value(self, param):
         if param in self.document.attrib:
             return self.document.attrib[param].lower()
+        elif param == 'request':
+            return self.document.tag.lower()
         else:
             return None
