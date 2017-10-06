@@ -63,14 +63,6 @@ def init_user_group(db_session):
         LOGGER.debug('group USER already initialized')
 
 
-def init_logged_user(db_session):
-    register_user_with_group(user_name=LOGGED_USER,
-                             group_name=LOGGED_USER,
-                             email=LOGGED_USER + '@mail.com',
-                             password=LOGGED_USER,
-                             db_session=db_session)
-
-
 
 import time
 from magpie.db import get_tm_session, get_session_factory, get_engine, is_database_ready
@@ -91,7 +83,6 @@ if __name__ == '__main__':
     init_admin(db_session)
     init_anonymous(db_session)
     init_user_group(db_session)
-    init_logged_user(db_session)
     transaction.commit()
     db_session.close()
 

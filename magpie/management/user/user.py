@@ -80,7 +80,7 @@ def create_user_view(request):
     password = get_multiformat_post(request, 'password')
     group_name = get_multiformat_post(request, 'group_name')
 
-    if not (user_name and email and password and group_name):
+    if not (user_name and email and password and group_name and (user_name != LOGGED_USER)):
         raise HTTPBadRequest(detail='Missing entry')
 
     db = request.db
