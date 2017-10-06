@@ -104,7 +104,14 @@ def get_user(request, user_name_or_token):
             user_id = get_userid_by_token(user_name_or_token, authn_policy)
             return UserService.by_id(user_id, db_session=request.db)
         elif user_name_or_token == LOGGED_USER:
-            return request.user
+            curr_user = request.user
+            if curr_user:
+                return curr_user
+            else:
+                anonymous = UserService.by_user_name(ANONYMOUS_USER, db_session=request.db)
+                if not anonymous:
+                    raise Exception('anonymous user is not in the database')
+                return anonymous
         else:
             return UserService.by_user_name(user_name_or_token, db_session=request.db)
     except Exception, e:
