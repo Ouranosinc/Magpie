@@ -46,7 +46,7 @@ ANONYMOUS_USER = os.getenv('ANONYMOUS_USER', 'anonymous')
 #ADMIN_PERM = 'edit'
 ADMIN_PERM = NO_PERMISSION_REQUIRED
 
-LOGGED_USER = os.getenv('LOGGED_USER', 'logged')
+LOGGED_USER = 'current'
 
 
 def get_multiformat_post(request, key):
