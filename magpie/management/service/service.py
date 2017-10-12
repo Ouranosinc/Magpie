@@ -99,6 +99,23 @@ def unregister_service(request):
     return HTTPOk()
 
 
+@view_config(route_name='service', request_method='PUT')
+def update_service(request):
+    service_name = get_multiformat_post(request, 'service_name')
+    service_url = get_multiformat_post(request, 'service_url')
+    db = request.db
+    if service_name is None:
+        raise HTTPBadRequest(detail='the service_name is missing')
+    try:
+        service = models.Service.by_service_name(service_name, db_session=db)
+        service.url = service_url
+    except Exception:
+        db.rollback()
+        raise HTTPNotFound('incorrect service_name')
+
+    return HTTPOk()
+
+
 from services import service_type_dico
 @view_config(route_name='service_permissions', request_method='GET')
 def get_service_permissions(request):

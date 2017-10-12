@@ -88,6 +88,82 @@ tr:nth-child(even) {
     /*background-color: #dddddd;*/
 }
 
+/*---Panel Information Box---*/
+
+.panel_box {
+    background-color: #fff;
+    border: 1px solid;
+    border-radius: 4px;
+    border-color: #ddd;
+    margin-top: 10px;
+    padding: 1px;
+}
+
+.panel_heading {
+    background-color: #f5f5f5;
+    border-bottom: 1px solid transparent;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-color: #ddd;
+    color: #333;
+    padding: 10px 15px;
+}
+
+.panel_heading_button {
+    float: right!important;
+    margin-top: -3px;
+}
+
+.panel_body {
+    padding: 15px;
+}
+
+.panel_line {
+    margin: 0.5em;
+}
+
+.panel_line input[type="submit"] {
+    height: auto;
+}
+
+.panel_title {
+    font-weight: bold;
+}
+
+.panel_entry {
+    font-weight: bold;
+}
+
+.panel_value {
+}
+
+/*---Labels---*/
+
+.label_danger {
+    background-color: #CD0000;
+}
+
+.label_warning {
+    background-color: #F0AD4E;
+}
+
+.label_info {
+    background-color: #5BC0DE;
+}
+
+.label {
+    display: inline;
+    padding: .2em .5em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: .25em;
+}
+
 /*---View users page ---*/
 
 .simple_list_table tr th:first-child,
@@ -118,6 +194,8 @@ tr:nth-child(even) {
 .tree li {
     border-bottom: 1px solid #dddddd;
     list-style-type: circle;
+    line-height: 24px;
+    padding-bottom: 4px;
 }
 
 .Collapsable input {
@@ -288,6 +366,12 @@ a.tab:link, a.tab:visited {
     text-align: center;
     text-decoration: none;
     display: inline-block;
+}
+
+/*---service details---*/
+
+table.service_details {
+    table-layout: fixed;
 }
 
 /*---field_form---*/
