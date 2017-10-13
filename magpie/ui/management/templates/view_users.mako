@@ -25,7 +25,7 @@
     <td><input type="hidden" value=${user} name="user_name">${user}</td>
     <td style="white-space: nowrap">
         <input type="submit" value="Edit" name="edit">
-        <input type="submit" value="Delete" name="delete" class="delete_button">
+        <input type="submit" value="Delete" name="delete" class="button delete">
     </td>
 </tr>
 </form>
