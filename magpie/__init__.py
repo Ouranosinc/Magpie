@@ -35,17 +35,18 @@ from ziggurat_foundations.permissions import ANY_PERMISSION
 from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
 from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
 from pyramid.security import NO_PERMISSION_REQUIRED
-ADMIN_USER = os.getenv('ADMIN_USER')
-ADMIN_GROUP = os.getenv('ADMIN_GROUP')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
+ADMIN_USER = os.getenv('ADMIN_USER', 'admin')
+ADMIN_GROUP = os.getenv('ADMIN_GROUP', 'admin')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin')
 
-USER_GROUP = os.getenv('USER_GROUP')
+USER_GROUP = os.getenv('USER_GROUP', 'user')
 
-ANONYMOUS_USER = os.getenv('ANONYMOUS_USER')
+ANONYMOUS_USER = os.getenv('ANONYMOUS_USER', 'anonymous')
 
 #ADMIN_PERM = 'edit'
 ADMIN_PERM = NO_PERMISSION_REQUIRED
 
+LOGGED_USER = 'current'
 
 
 def get_multiformat_post(request, key):

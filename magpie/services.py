@@ -8,11 +8,11 @@ class ServiceI(object):
     permission_names = []
     param_values = []
     resource_types = []
-    acl = []
 
     def __init__(self, service, request):
         self.service = service
         self.request = request
+        self.acl = []
 
     @property
     def __acl__(self):
@@ -171,8 +171,7 @@ class ServiceWFS(ServiceI):
 
 
 class ServiceTHREDDS(ServiceI):
-    permission_names = ['download',
-                        'upload']
+    permission_names = models.File.permission_names
 
     resource_types = [models.Directory.resource_type_name,
                       models.File.resource_type_name]

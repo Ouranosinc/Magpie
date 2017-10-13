@@ -44,7 +44,7 @@ def sign_in(request):
         #return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_in'))
 
         ziggu_url = request.route_url('ziggurat.routes.sign_in')
-        res = requests.post(ziggu_url, data=data_to_send)
+        res = requests.post(ziggu_url, data=data_to_send, verify=False)
         if res.status_code < 400:
             pyr_res = Response(body=res.content)
             for cookie in res.cookies:
