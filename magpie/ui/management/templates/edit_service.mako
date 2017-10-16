@@ -29,17 +29,16 @@
 </%block>
 
 <div class="alert danger" id="EditService_DeleteAlert">
-    <form action="${request.path}" method="post">
-        <input type="submit" id="EditService_DeleteConfirm" name="delete" value="Delete" style="display:none;">
-    </form>
-    <label class="alert_button" onclick="this.parentElement.style.display='none';" for="EditService_DeleteConfirm">&check;</label>
-    <span class="alert_button" onclick="this.parentElement.style.display='none';">&times;</span>
-    <strong>Danger!</strong>
+    <h3 class="alert_title danger">Danger!</h3>
     <p>
         This operation will remove the service and all its sub-resources.
-        This operation is not reversable.
+        This operation is not reversible.
     </p>
     <p>Continue?</p>
+    <form action="${request.path}" method="post">
+        <input type="submit" class="button delete" onclick="this.parentElement.style.display='none';" name="delete" value="Delete">
+        <input type="submit" class="button cancel" onclick="this.parentElement.style.display='none';" name="cancel" value="Cancel">
+    </form>
 </div>
 
 <form action="${request.path}" method="post">

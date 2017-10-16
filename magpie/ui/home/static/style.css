@@ -16,7 +16,10 @@ html,body {
 
 input[type="submit"].button.disabled,
 input[type="submit"].button.disabled:hover,
-input[type="submit"].button.disabled:focus {
+input[type="submit"].button.disabled:focus,
+input[type="button"].button.disabled,
+input[type="button"].button.disabled:hover,
+input[type="button"].button.disabled:focus {
     border: 1px solid #808080;
     background-color: #DDDDDD;
     color: #808080;
@@ -40,11 +43,19 @@ input[type="submit"].button.delete:focus {
 	background-color: #EE6363;
 }
 
+input[type="button"].button.cancel,
+input[type="submit"].button.cancel {
+    border: 1px solid #808080;
+    background-color: #A9A9A9;
+    color: #444444;
+}
+
 a.tab:link,
 a.tab:visited,
 .img_button,
 .admin_button,
-input[type="submit"]{
+input[type="submit"],
+ input[type="submit"].button.normal {
     border: 1px solid #2C8F30;
     background-color: #4CAF50;
     color: white;
@@ -191,7 +202,7 @@ tr:nth-child(even) {
 }
 
 .alert.warning {
-    background-color: #FF9800;
+    background-color: #994400;
 }
 
 .alert.info {
@@ -200,6 +211,26 @@ tr:nth-child(even) {
 
 .alert.success {
     background-color: #4CAF50;
+}
+
+.alert_title {
+    margin: 0;
+}
+
+.alert_title.danger {
+    color: #660000;
+}
+
+.alert_title.warning {
+    color: #FF9900;
+}
+
+.alert_title.info {
+    color: #FFFFFF;
+}
+
+.alert_title.success {
+    color: #666600;
 }
 
 .alert_button {
