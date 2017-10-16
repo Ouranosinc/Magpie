@@ -36,10 +36,22 @@
     </p>
     <p>Continue?</p>
     <form action="${request.path}" method="post">
-        <input type="submit" class="button delete" onclick="this.parentElement.style.display='none';" name="delete" value="Delete">
-        <input type="submit" class="button cancel" onclick="this.parentElement.style.display='none';" name="cancel" value="Cancel">
+        <input type="submit" class="button delete" name="delete" value="Delete"
+               onclick="this.parentElement.style.display='none';">
+        <input type="submit" class="button cancel"name="cancel" value="Cancel"
+               onclick="this.parentElement.style.display='none';">
     </form>
 </div>
+
+<script>
+    function adjustWidth(id) {
+        var x = document.getElementById(id);
+        if (x.value.length > 20)
+            x.size = x.value.length;
+        else
+            x.size = 20;
+    }
+</script>
 
 <form action="${request.path}" method="post">
     <div class="panel_box">
@@ -47,7 +59,8 @@
             <span class="panel_title">Service: </span>
             <span class="panel_value">${service_name}</span>
             <span class="panel_heading_button">
-                <input type="button" value="Remove Service" onclick="$('#EditService_DeleteAlert').show();" class="button delete">
+                <input type="button" value="Remove Service" class="button delete"
+                       onclick="$('#EditService_DeleteAlert').show();">
             </span>
         </div>
         <div class="panel_body">
@@ -59,7 +72,8 @@
                     <p class="panel_line">
                         <span class="panel_entry">Name: </span>
                         %if edit_mode == 'edit_name':
-                            <input type="text" value="${service_name}" name="new_svc_name">
+                            <input type="text" value="${service_name}" name="new_svc_name"
+                                   id="input_name" onkeyup="adjustWidth('input_name')">
                             <input type="submit" value="Save" name="save_name">
                             <input type="submit" value="Cancel" name="no_edit">
                         %else:
@@ -70,7 +84,8 @@
                     <p class="panel_line">
                         <span class="panel_entry">URL: </span>
                         %if edit_mode == 'edit_url':
-                            <input type="text" value="${service_url}" name="new_svc_url">
+                            <input type="text" value="${service_url}" name="new_svc_url"
+                                   id="input_url" onkeyup="adjustWidth('input_url')">
                             <input type="submit" value="Save" name="save_url">
                             <input type="submit" value="Cancel" name="no_edit">
                         %else:

@@ -202,7 +202,7 @@ tr:nth-child(even) {
 }
 
 .alert.warning {
-    background-color: #994400;
+    background-color: #FF9900;
 }
 
 .alert.info {
@@ -222,7 +222,7 @@ tr:nth-child(even) {
 }
 
 .alert_title.warning {
-    color: #FF9900;
+    color: #994400;
 }
 
 .alert_title.info {
