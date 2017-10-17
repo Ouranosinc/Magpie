@@ -8,6 +8,11 @@ from models import resource_tree_service
 from pyramid.interfaces import IAuthenticationPolicy
 
 
+def fallback_user(db, group):
+    db.rollback()
+    group.delete(db_session=db)
+
+
 def create_user(user_name, password, email, group_name, db_session):
     """
     When a user is created, he is automatically assigned to a group with the same name.
@@ -23,7 +28,7 @@ def create_user(user_name, password, email, group_name, db_session):
     db = db_session
     # Check if group already exist
     group = GroupService.by_group_name(group_name, db_session=db)
-    verify_param(group, notNone=True, notEmpty=True, exception=HTTPNotAcceptable
+    verify_param(group, notNone=True, notEmpty=True, exception=HTTPNotAcceptable,
                  msgOnFail="Group for new user already exists")
 
     # Create new_group associated to user
@@ -33,28 +38,17 @@ def create_user(user_name, password, email, group_name, db_session):
                  msgOnFail="User name matches an already existing group name")
     verify_param(new_user, notNone=True, notEmpty=True, exception=HTTPConflict,
                  msgOnFail="User name matches an already existing user name")
+    new_group = models.Group(group_name=user_name)
+    evaluate_call(lambda: db.add(new_group), fallback=lambda: db.rollback(),
+                  httpException=HTTPForbidden, msgOnFail="Failed to add group to db")
 
-    new_group = evaluate_call()
-
-    try:
-        new_group = models.Group(group_name=user_name)
-        db.add(new_group)
-    except Exception as e:
-        db.rollback()
-        raise_http_json(exception=HTTPConflict, detail=e.message)
-
-    try:
-        new_user = models.User(user_name=user_name, email=email)
-        if password:
-            new_user.set_password(password)
-        new_user.regenerate_security_code()
-        db.add(new_user)
-        
-    except Exception as e:
-        db.rollback()
-        new_group.delete(db_session=db)
-        
-        raise HTTPConflict(detail=e.message)
+    # Create user with specified name and newly created group
+    new_user = models.User(user_name=user_name, email=email)
+    if password:
+        new_user.set_password(password)
+    new_user.regenerate_security_code()
+    evaluate_call(lambda: db.add(new_user), fallback=lambda: fallback_user(db, new_group),
+                  httpException=HTTPForbidden, msgOnFail="Failed to add user to db")
 
     # Assign user to default group and own group
     try:
