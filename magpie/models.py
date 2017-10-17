@@ -1,4 +1,4 @@
-from pyramid.security import Allow,Everyone
+from pyramid.security import Allow, Everyone
 from pyramid.security import ALL_PERMISSIONS
 from ziggurat_foundations.models.external_identity import ExternalIdentityMixin
 from ziggurat_foundations.models.group import GroupMixin
