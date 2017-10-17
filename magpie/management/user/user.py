@@ -1,5 +1,6 @@
 from magpie import *
 import models
+import api_except
 from services import service_type_dico
 from models import resource_type_dico
 from management.service.service import format_service, format_service_resources
@@ -15,29 +16,32 @@ def create_user(user_name, password, email, group_name, db_session):
     Check all permission inherited from group: GET /users/user_name/permissions
     Check direct permission of user: GET /groups/user_name/permissions
 
-    :param request: 
-    :return: 
+    :return: `HTTPCreated` if successful
+    :raises:
     """
 
     db = db_session
     # Check if group already exist
     group = GroupService.by_group_name(group_name, db_session=db)
-    if not group:
-        raise HTTPNotFound(detail='This group does not exist')
+    verify_param(group, notNone=True, notEmpty=True, exception=HTTPNotAcceptable
+                 msgOnFail="Group for new user already exists")
 
     # Create new_group associated to user
     new_group = GroupService.by_group_name(group_name=user_name, db_session=db)
     new_user = UserService.by_user_name(user_name=user_name, db_session=db)
-    if new_group or new_user:
-        raise HTTPConflict(detail="This user already exist")
+    verify_param(new_group, notNone=True, notEmpty=True, exception=HTTPConflict,
+                 msgOnFail="User name matches an already existing group name")
+    verify_param(new_user, notNone=True, notEmpty=True, exception=HTTPConflict,
+                 msgOnFail="User name matches an already existing user name")
+
+    new_group = evaluate_call()
 
     try:
         new_group = models.Group(group_name=user_name)
         db.add(new_group)
-        
-    except Exception, e:
+    except Exception as e:
         db.rollback()
-        raise HTTPConflict(detail=e.message)
+        raise_http_json(exception=HTTPConflict, detail=e.message)
 
     try:
         new_user = models.User(user_name=user_name, email=email)
@@ -46,7 +50,7 @@ def create_user(user_name, password, email, group_name, db_session):
         new_user.regenerate_security_code()
         db.add(new_user)
         
-    except Exception, e:
+    except Exception as e:
         db.rollback()
         new_group.delete(db_session=db)
         
@@ -236,15 +240,12 @@ def delete_user_group(request):
     return HTTPOk()
 
 
-
 def get_user_resource_permissions(user, resource, db_session):
     if resource.owner_user_id == user.id:
         permission_names = resource_type_dico[resource.type].permission_names
     else:
         permission_names = [permission.perm_name for permission in resource.perms_for_user(user, db_session=db_session)]
     return permission_names
-
-
 
 
 def get_user_service_permissions(user, service, db_session):

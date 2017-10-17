@@ -3,4 +3,5 @@
 build/
 dist/
 env/
+docs/_build/
 magpie.egg-info/
