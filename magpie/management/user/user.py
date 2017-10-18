@@ -1,6 +1,6 @@
 from magpie import *
 import models
-import api_except
+from api_except import *
 from services import service_type_dico
 from models import resource_type_dico
 from management.service.service import format_service, format_service_resources
@@ -8,9 +8,9 @@ from models import resource_tree_service
 from pyramid.interfaces import IAuthenticationPolicy
 
 
-def fallback_user(db, group):
+def rollback_delete(db, entry):
     db.rollback()
-    group.delete(db_session=db)
+    entry.delete(db_session=db)
 
 
 def create_user(user_name, password, email, group_name, db_session):
@@ -22,51 +22,45 @@ def create_user(user_name, password, email, group_name, db_session):
     Check direct permission of user: GET /groups/user_name/permissions
 
     :return: `HTTPCreated` if successful
-    :raises:
+    :raise `HTTPNotAcceptable`:
+    :raise `HTTPConflict`:
+    :raise `HTTPForbidden`:
     """
 
     db = db_session
     # Check if group already exist
     group = GroupService.by_group_name(group_name, db_session=db)
-    verify_param(group, notNone=True, notEmpty=True, exception=HTTPNotAcceptable,
+    verify_param(group, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Group for new user already exists")
 
     # Create new_group associated to user
-    new_group = GroupService.by_group_name(group_name=user_name, db_session=db)
-    new_user = UserService.by_user_name(user_name=user_name, db_session=db)
-    verify_param(new_group, notNone=True, notEmpty=True, exception=HTTPConflict,
+    group_check = GroupService.by_group_name(group_name=user_name, db_session=db)
+    user_check = UserService.by_user_name(user_name=user_name, db_session=db)
+    verify_param(group_check, notNone=True, notEmpty=True, httpError=HTTPConflict,
                  msgOnFail="User name matches an already existing group name")
-    verify_param(new_user, notNone=True, notEmpty=True, exception=HTTPConflict,
+    verify_param(user_check, notNone=True, notEmpty=True, httpError=HTTPConflict,
                  msgOnFail="User name matches an already existing user name")
-    new_group = models.Group(group_name=user_name)
-    evaluate_call(lambda: db.add(new_group), fallback=lambda: db.rollback(),
-                  httpException=HTTPForbidden, msgOnFail="Failed to add group to db")
+    group_model = models.Group(group_name=user_name)
+    evaluate_call(lambda: db.add(group_model), fallback=lambda: rollback_delete(db, group_model),
+                  httpError=HTTPForbidden, msgOnFail="Failed to add group to db")
 
     # Create user with specified name and newly created group
-    new_user = models.User(user_name=user_name, email=email)
+    user_model = models.User(user_name=user_name, email=email)
     if password:
-        new_user.set_password(password)
-    new_user.regenerate_security_code()
-    evaluate_call(lambda: db.add(new_user), fallback=lambda: fallback_user(db, new_group),
-                  httpException=HTTPForbidden, msgOnFail="Failed to add user to db")
+        user_model.set_password(password)
+        user_model.regenerate_security_code()
+    evaluate_call(lambda: db.add(user_model), fallback=lambda: rollback_delete(db, group_model),
+                  httpError=HTTPForbidden, msgOnFail="Failed to add user to db")
 
     # Assign user to default group and own group
-    try:
-        new_user = UserService.by_user_name(user_name, db_session=db)
-        group_entry = models.UserGroup(group_id=group.id, user_id=new_user.id)
-        db.add(group_entry)
-
-        new_group = GroupService.by_group_name(user_name, db_session=db)
-        new_group_entry = models.UserGroup(group_id=new_group.id, user_id=new_user.id)
-        db.add(new_group_entry)
-
-        
-
-    except Exception, e:
-        db.rollback()
-        raise HTTPConflict(
-            detail=e.message
-        )
+    new_user = UserService.by_user_name(user_name, db_session=db)
+    group_entry = models.UserGroup(group_id=group.id, user_id=new_user.id)
+    evaluate_call(lambda: db.add(group_entry), fallback=lambda: db.rollback(),
+                  httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
+    new_group = GroupService.by_group_name(user_name, db_session=db)
+    new_group_entry = models.UserGroup(group_id=new_group.id, user_id=new_user.id)
+    evaluate_call(lambda: db.add(new_group_entry), fallback=lambda: db.rollback(),
+                  httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
 
     return HTTPCreated()
 
