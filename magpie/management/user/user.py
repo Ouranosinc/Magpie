@@ -30,15 +30,15 @@ def create_user(user_name, password, email, group_name, db_session):
     db = db_session
     # Check if group already exist
     group = GroupService.by_group_name(group_name, db_session=db)
-    verify_param(group, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+    verify_param(group, notNone=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Group for new user already exists")
 
     # Create new_group associated to user
     group_check = GroupService.by_group_name(group_name=user_name, db_session=db)
     user_check = UserService.by_user_name(user_name=user_name, db_session=db)
-    verify_param(group_check, notNone=True, notEmpty=True, httpError=HTTPConflict,
+    verify_param(group_check, isNone=True, httpError=HTTPConflict,
                  msgOnFail="User name matches an already existing group name")
-    verify_param(user_check, notNone=True, notEmpty=True, httpError=HTTPConflict,
+    verify_param(user_check, isNone=True, httpError=HTTPConflict,
                  msgOnFail="User name matches an already existing user name")
     group_model = models.Group(group_name=user_name)
     evaluate_call(lambda: db.add(group_model), fallback=lambda: rollback_delete(db, group_model),
@@ -62,7 +62,7 @@ def create_user(user_name, password, email, group_name, db_session):
     evaluate_call(lambda: db.add(new_group_entry), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
 
-    return HTTPCreated()
+    return valid_http(httpSuccess=HTTPCreated, detail="User successfully added to db")
 
 
 @view_config(route_name='users', request_method='POST')
@@ -71,12 +71,17 @@ def create_user_view(request):
     email = get_multiformat_post(request, 'email')
     password = get_multiformat_post(request, 'password')
     group_name = get_multiformat_post(request, 'group_name')
-
-    if not (user_name and email and password and group_name and (user_name != LOGGED_USER)):
-        raise HTTPBadRequest(detail='Missing entry')
-
-    db = request.db
-    return create_user(user_name, password, email, group_name, db_session=db)
+    verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `user_name` value specified")
+    verify_param(email, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `email` value specified")
+    verify_param(password, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `password` value specified")
+    verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `group_name` value specified")
+    verify_param(user_name, paramCompare=[LOGGED_USER], notIn=True, httpError=HTTPConflict,
+                 msgOnFail="Invalid `user_name` already logged in")
+    return create_user(user_name, password, email, group_name, db_session=request.db)
 
 
 @view_config(route_name='users', request_method='GET')

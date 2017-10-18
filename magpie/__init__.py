@@ -7,6 +7,7 @@ __version__ = '0.1.1'
 
 import json
 import os
+from api_except import *
 from pyramid.httpexceptions import (
     HTTPFound,
     HTTPOk,
@@ -51,11 +52,9 @@ LOGGED_USER = 'current'
 
 def get_multiformat_post(request, key):
     if request.content_type == 'application/json':
-        try:
-            value = request.json_body.get(key)
-        except Exception, e:
-            raise HTTPBadRequest(detail=e.message)
-        return value
+        return evaluate_call(lambda: request.json_body.get(key),
+                             httpError=HTTPInternalServerError,
+                             msgOnFail="Key " + repr(key) + " could not be extracted from multiformat POST")
     else:
         return request.POST.get(key)
 

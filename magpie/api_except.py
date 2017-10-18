@@ -19,7 +19,7 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
 
     :param param: (bool) parameter value to evaluate
     :param paramCompare:
-        other value(s) to test against, should be an iterable (otherwise resolved as one unless None)
+        other value(s) to test against, can be an iterable (single value resolved as iterable unless None)
         to test for None type, use `isNone`/`notNone` flags instead or `paramCompare`=[None]
     :param httpError: (HTTPError) derived exception to raise on test failure (default: `HTTPNotAcceptable`)
     :param msgOnFail: (str) message details to return in HTTP exception if flag condition failed
@@ -36,29 +36,40 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
     # precondition evaluation of input parameters
     try:
         if type(notNone) is not bool:
-            raise Exception("'notNone' is not a 'bool'")
+            raise Exception("`notNone` is not a `bool`")
         if type(notEmpty) is not bool:
-            raise Exception("'notEmpty' is not a 'bool'")
+            raise Exception("`notEmpty` is not a `bool`")
         if type(notIn) is not bool:
-            raise Exception("'notIn' is not a 'bool'")
+            raise Exception("`notIn` is not a `bool`")
         if type(isNone) is not bool:
-            raise Exception("'isNone' is not a 'bool'")
+            raise Exception("`isNone` is not a `bool`")
         if type(isEmpty) is not bool:
-            raise Exception("'isEmpty' is not a 'bool'")
+            raise Exception("`isEmpty` is not a `bool`")
         if type(isIn) is not bool:
-            raise Exception("'isIn' is not a 'bool'")
-        if paramCompare is not None and not hasattr(paramCompare, '__iter__'):
+            raise Exception("`isIn` is not a `bool`")
+        if paramCompare is None and (isIn or notIn):
+            raise Exception("`paramCompare` cannot be `None` with specified test flags")
+        if not hasattr(paramCompare, '__iter__'):
             paramCompare = [paramCompare]
-        if len(paramCompare) < 1:
-            raise Exception("'paramCompare' is empty")
     except Exception as e:
         raise_http(httpError=HTTPInternalServerError, detail=repr(e),
                    content={'traceback': repr(exc_info())})
 
     # evaluate requested parameter combinations
-    if (notNone and param is None) or (isNone and param is not None) \
-    or (notEmpty and param == "") or (isEmpty and not param == "") \
-    or (notIn and param in paramCompare) or (isIn and param not in paramCompare):
+    status = False
+    if notNone:
+        status = status or (param is None)
+    if isNone:
+        status = status or (param is not None)
+    if notEmpty:
+        status = status or (param == "")
+    if isEmpty:
+        status = status or (not param == "")
+    if notIn:
+        status = status or (param in paramCompare)
+    if isIn:
+        status = status or (param not in paramCompare)
+    if status:
         raise_http(httpError, detail=msgOnFail, content={'param': repr(param)})
 
 
@@ -118,23 +129,32 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
     raise_http(httpError, detail=msgOnFail, content={'call': {'exception': ce}})
 
 
-def islambda(func):
-    return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__
-
-
-def isclass(obj):
+def valid_http(httpSuccess=HTTPOk, detail="", content=None, contentType='application/json'):
     """
-    Evaluate an object for class type (ie: class definition, not an instance nor any other type).
+    Returns successful HTTP with standardized information formatted with content type.
+    (see `valid_http` for HTTP error calls)
 
-    :param obj: object to evaluate for class type
-    :return: (bool) indicating if `object` is a class
+    :param httpSuccess: any derived class from base `HTTPSuccessful` (default: HTTPOk)
+    :param detail: additional message information (default: empty)
+    :param content: json formatted content to include
+    :param contentType: format in which to return the exception ('application/json', 'text/html' or 'text/plain')
+    :return `HTTPSuccessful`: formatted successful with additional details and HTTP code
     """
-    return isinstance(obj, (type, types.ClassType))
+    content = dict() if content is None else content
+    detail = repr(detail) if type(detail) is not str else detail
+    httpCode, detail, content = validate_params(httpSuccess, HTTPSuccessful, detail, content, contentType)
+    json_body = format_content_json(httpCode, detail, content, contentType)
+    return httpSuccess(
+        body=json_body,
+        content_type='application/json'
+    )
 
 
 def raise_http(httpError=HTTPInternalServerError, detail="", content=None, contentType='application/json'):
     """
-    Raises an HTTP exception with standardized information formatted with content type.
+    Raises error HTTP with standardized information formatted with content type.
+    (see `valid_http` for HTTP successful calls)
+
     The content contains the corresponding http error code, the provided message as detail and
     optional specified additional json content (kwarg dict).
 
@@ -152,55 +172,10 @@ def raise_http(httpError=HTTPInternalServerError, detail="", content=None, conte
     if RAISE_RECURSIVE_SAFEGUARD_COUNT > RAISE_RECURSIVE_SAFEGUARD_MAX:
         raise HTTPInternalServerError(detail="Terminated. Too many recursions of `raise_http`")
 
-    # verify input arguments, raise `HTTPInternalServerError` with caller info if invalid
-    # cannot be done within a try/except because it would always trigger with `raise_http`
-    content = dict() if content is None else content
-    detail = repr(detail) if type(detail) is not str else detail
-    if not isclass(httpError):
-        raise_http(httpError=HTTPInternalServerError,
-                   detail="Object specified is not of type `HTTPError`",
-                   contentType='application/json',
-                   content={'caller': {'content': content,
-                                       'detail': detail,
-                                       'code': 520,  #'unknown' error
-                                       'type': contentType}})
-    httpCode = httpError.code if issubclass(httpError, HTTPException) else 'n/a'
-    if not issubclass(httpError, HTTPError):
-        raise_http(httpError=HTTPInternalServerError,
-                   detail="Invalid `HTTPError` derived class specified",
-                   contentType='application/json',
-                   content={'caller': {'content': content,
-                                       'detail': detail,
-                                       'code': httpCode,
-                                       'type': contentType}})
-    if contentType not in ['application/json', 'text/html', 'text/plain']:
-        raise_http(httpError=HTTPInternalServerError,
-                   detail="Invalid `contentType` specified for exception output",
-                   contentType='application/json',
-                   content={'caller': {'content': content,
-                                       'detail': detail,
-                                       'code': httpCode,
-                                       'type': contentType}})
-
     # try dumping content with json format, `HTTPInternalServerError` with caller info if fails.
     # content is added manually to avoid auto-format and suppression of fields by `HTTPException`
-    json_body = {}
-    try:
-        content['code'] = httpError.code
-        content['detail'] = detail
-        content['type'] = contentType
-        json_body = json.dumps(content)
-    except Exception as e:
-        msg = "Dumping json content [" + str(content) + \
-              "] resulted in exception [" + repr(e) + "]"
-        raise_http(httpError=HTTPInternalServerError, detail=msg,
-                   contentType='application/json',
-                   content={'traceback': repr(exc_info()),
-                            'caller': {'content': repr(content),   # raw string to avoid recursive json.dumps error
-                                       'detail': detail,
-                                       'code': httpError.code,
-                                       'type': contentType}})
-
+    httpCode, detail, content = validate_params(httpError, HTTPException, detail, content, contentType)
+    json_body = format_content_json(httpError.code, detail, content, contentType)
     # directly output json if asked with 'application/json'
     if contentType == 'application/json':
         raise httpError(
@@ -223,5 +198,80 @@ def raise_http(httpError=HTTPInternalServerError, detail="", content=None, conte
     )
 
 
-def return_http(httpSuccess=HTTPSuccessful, detail="", content=None, type='application/json'):
-    pass
+def validate_params(httpClass, httpBase, detail, content, contentType):
+    """
+    Validates parameter types and formats required by `valid_http` and `raise_http`.
+
+    :raise `HTTPInternalServerError`: if any parameter is of invalid expected format
+    :returns httpCode, detail, content: parameters with corrected and validated format if applicable
+    """
+    # verify input arguments, raise `HTTPInternalServerError` with caller info if invalid
+    # cannot be done within a try/except because it would always trigger with `raise_http`
+    content = dict() if content is None else content
+    detail = repr(detail) if type(detail) is not str else detail
+    if not isclass(httpClass):
+        raise_http(httpError=HTTPInternalServerError,
+                   detail="Object specified is not of type `HTTPError`",
+                   contentType='application/json',
+                   content={'caller': {'content': content,
+                                       'detail': detail,
+                                       'code': 520,  #'unknown' error
+                                       'type': contentType}})
+    httpCode = httpClass.code if issubclass(httpClass, httpBase) else 'n/a'
+    if not issubclass(httpClass, httpBase):
+        raise_http(httpError=HTTPInternalServerError,
+                   detail="Invalid `HTTPError` derived class specified",
+                   contentType='application/json',
+                   content={'caller': {'content': content,
+                                       'detail': detail,
+                                       'code': httpCode,
+                                       'type': contentType}})
+    if contentType not in ['application/json', 'text/html', 'text/plain']:
+        raise_http(httpError=HTTPInternalServerError,
+                   detail="Invalid `contentType` specified for exception output",
+                   contentType='application/json',
+                   content={'caller': {'content': content,
+                                       'detail': detail,
+                                       'code': httpCode,
+                                       'type': contentType}})
+    return httpCode, detail, content
+
+
+def format_content_json(httpCode, detail, content, contentType):
+    """
+    Inserts the code, details, content and type within the body using json format.
+
+    :raise `HTTPInternalServerError`: if parsing of the json content failed
+    :return json_body: formatted json content with added HTTP code and details
+    """
+    json_body = {}
+    try:
+        content['code'] = httpCode
+        content['detail'] = detail
+        content['type'] = contentType
+        json_body = json.dumps(content)
+    except Exception as e:
+        msg = "Dumping json content [" + str(content) + \
+              "] resulted in exception [" + repr(e) + "]"
+        raise_http(httpError=HTTPInternalServerError, detail=msg,
+                   contentType='application/json',
+                   content={'traceback': repr(exc_info()),
+                            'caller': {'content': repr(content),   # raw string to avoid recursive json.dumps error
+                                       'detail': detail,
+                                       'code': httpCode,
+                                       'type': contentType}})
+    return json_body
+
+
+def islambda(func):
+    return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__
+
+
+def isclass(obj):
+    """
+    Evaluate an object for class type (ie: class definition, not an instance nor any other type).
+
+    :param obj: object to evaluate for class type
+    :return: (bool) indicating if `object` is a class
+    """
+    return isinstance(obj, (type, types.ClassType))
