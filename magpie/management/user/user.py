@@ -66,7 +66,7 @@ def create_user(user_name, password, email, group_name, db_session):
     evaluate_call(lambda: db.add(new_group_entry), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
 
-    return valid_http(httpSuccess=HTTPCreated, detail="User successfully added to db")
+    return valid_http(httpSuccess=HTTPCreated, detail="Add user to db successful")
 
 
 @view_config(route_name='users', request_method='POST')
@@ -163,7 +163,7 @@ def get_user_view(request):
     json_response = {'user_name': user.user_name,
                      'email': user.email,
                      'group_names': [group.group_name for group in user.groups]}
-    return valid_http(httpSuccess=HTTPOk, detail="Get user", content=json_response)
+    return valid_http(httpSuccess=HTTPOk, detail="Get user successful", content=json_response)
 
 
 @view_config(route_name='user', request_method='DELETE')
@@ -177,7 +177,7 @@ def delete_user(request):
                                httpError=HTTPNotFound, msgOnFail="Could not find user-group in db")
     evaluate_call(lambda: db.delete(user_group), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Delete user-group refused by db")
-    return valid_http(httpSuccess=HTTPOk, detail="User deleted")
+    return valid_http(httpSuccess=HTTPOk, detail="Delete user successful")
 
 
 @view_config(route_name='user_groups', request_method='GET')
@@ -187,29 +187,19 @@ def get_user_groups(request):
     db = request.db
     group_names = evaluate_call(lambda: [group.group_name for group in user.groups], fallback=lambda: db.rollback(),
                                 httpError=HTTPInternalServerError, msgOnFail="Failed to extract groups from user")
-    return valid_http(httpSuccess=HTTPOk, detail="Get user groups", content={'group_names': group_names})
+    return valid_http(httpSuccess=HTTPOk, detail="Get user groups successful", content={'group_names': group_names})
 
 
 @view_config(route_name='user_group', request_method='POST')
 def assign_user_group(request):
-    user_name = request.matchdict.get('user_name')
-    group_name = request.matchdict.get('group_name')
+    user = get_user_matchdict_checked(request)
+    group = get_group_matchdict_checked(request)
+    new_user_group = models.UserGroup(group_id=group.id, user_id=user.id)
     db = request.db
-    try:
-        user = UserService.by_user_name(user_name, db_session=db)
-        if user is None:
-            raise HTTPNotFound(detail='user not found')
-        cur_group = GroupService.by_group_name(group_name, db_session=db)
-        if cur_group is None:
-            raise HTTPNotFound(detail='group not found')
-        new_user_group = models.UserGroup(group_id=cur_group.id, user_id=user.id)
-        db.add(new_user_group)
-        
-    except:
-        db.rollback()
-        raise HTTPConflict(detail='this user already belongs to this group')
-
-    return HTTPCreated()
+    evaluate_call(lambda: db.add(new_user_group), fallback=lambda: db.rollback(),
+                  httpError=HTTPConflict, msgOnFail='User already belongs to this group',
+                  content={'user_name': user.user_name, 'group_name': group.group_name})
+    return valid_http(httpSuccess=HTTPCreated, detail="Create user-group assignation successful")
 
 
 @view_config(route_name='user_group', request_method='DELETE')
