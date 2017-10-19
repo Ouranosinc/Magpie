@@ -149,8 +149,6 @@ class Directory(Resource):
     resource_type_name = 'directory'
 
 
-
-
 class Workspace(Resource):
     __mapper_args__ = {'polymorphic_identity': 'workspace'}
     permission_names = ['getcapabilities',
@@ -171,7 +169,7 @@ ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
 
 resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
 
-resource_type_dico = {'service': Service, 'directory': Directory, 'file': File, 'workspace': Workspace}
+resource_type_dict = {'service': Service, 'directory': Directory, 'file': File, 'workspace': Workspace}
 
 
 def resource_factory(**kwargs):
@@ -179,13 +177,13 @@ def resource_factory(**kwargs):
         resource_type = kwargs['resource_type']
     except Exception as e:
         raise Exception(e.message)
-    return resource_type_dico[resource_type](**kwargs)
+    return resource_type_dict[resource_type](**kwargs)
 
 
 def get_all_resource_permission_names():
     all_permission_names_list = set()
-    for service_type in resource_type_dico.keys():
-        all_permission_names_list.update(resource_type_dico[service_type].permission_names)
+    for service_type in resource_type_dict.keys():
+        all_permission_names_list.update(resource_type_dict[service_type].permission_names)
     return all_permission_names_list
 
 

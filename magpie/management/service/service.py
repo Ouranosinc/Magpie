@@ -198,7 +198,7 @@ def get_resources_view(request):
             json_response[service_type][service.resource_name] = format_service_resources(service,
                                                                                           db_session=request.db,
                                                                                           display_all=True)
-    json_response = {'resource_types': [key for key in resource_type_dico.keys()],
+    json_response = {'resource_types': [key for key in resource_type_dict.keys()],
                      'resources': json_response}
     return HTTPOk(
         body=json.dumps(json_response),

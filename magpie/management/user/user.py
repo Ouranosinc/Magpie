@@ -2,7 +2,7 @@ from magpie import *
 import models
 from api_except import *
 from services import service_type_dico
-from models import resource_type_dico
+from models import resource_type_dict
 from management.service.service import format_service, format_service_resources
 from models import resource_tree_service
 from pyramid.interfaces import IAuthenticationPolicy
@@ -235,7 +235,7 @@ def delete_user_group(request):
 
 def get_user_resource_permissions(user, resource, db_session):
     if resource.owner_user_id == user.id:
-        permission_names = resource_type_dico[resource.type].permission_names
+        permission_names = resource_type_dict[resource.type].permission_names
     else:
         permission_names = [permission.perm_name for permission in resource.perms_for_user(user, db_session=db_session)]
     return permission_names
@@ -349,7 +349,7 @@ def create_user_resource_permission_view(request):
     resource = ResourceService.by_resource_id(resource_id, db)
     if resource is None or user is None:
         raise HTTPNotFound(detail='this user/resource does not exist')
-    if permission_name not in resource_type_dico[resource.resource_type].permission_names:
+    if permission_name not in resource_type_dict[resource.resource_type].permission_names:
         raise HTTPBadRequest(detail='This permission is not allowed for that resource')
 
     return create_user_resource_permission(permission_name, resource_id, user.id, db)
@@ -367,7 +367,7 @@ def delete_user_resource_permission_view(request):
     resource = ResourceService.by_resource_id(resource_id, db)
     if resource is None or user is None:
         raise HTTPNotFound(detail='this user/resource does not exist')
-    if permission_name not in resource_type_dico[resource.resource_type].permission_names:
+    if permission_name not in resource_type_dict[resource.resource_type].permission_names:
         raise HTTPBadRequest(detail='This permission is not allowed for that resource')
 
     return delete_user_resource_permission(permission_name,

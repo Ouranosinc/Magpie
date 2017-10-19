@@ -1,6 +1,6 @@
 from magpie import *
 import models
-from models import resource_type_dico
+from models import resource_type_dict
 from models import resource_tree_service
 from management.service.service import format_service_resources, format_service
 from services import service_type_dico
@@ -219,7 +219,7 @@ def get_group_resources_view(request):
 
 def get_group_resource_permissions(group, resource, db_session):
     if resource.owner_group_id == group.id:
-        permission_names = resource_type_dico[resource.type].permission_names
+        permission_names = resource_type_dict[resource.type].permission_names
     else:
         group_res_permission = db_session.query(models.GroupResourcePermission) \
             .filter(models.GroupResourcePermission.resource_id == resource.resource_id) \
@@ -285,7 +285,7 @@ def create_group_resource_permission_view(request):
     if resource.resource_type == models.Service.resource_type_name:
         if permission_name not in service_type_dico[resource.type].permission_names:
             raise HTTPBadRequest(detail='This permission is not allowed for that service')
-    elif permission_name not in resource_type_dico[resource.resource_type].permission_names:
+    elif permission_name not in resource_type_dict[resource.resource_type].permission_names:
         raise HTTPBadRequest(detail='This permission is not allowed for that resource')
 
     return create_group_resource_permission(permission_name, resource.resource_id, group.id, db_session=db)
@@ -319,7 +319,7 @@ def delete_group_resource_permission_view(request):
     if resource.resource_type == models.Service.resource_type_name:
         if permission_name not in service_type_dico[resource.type].permission_names:
             raise HTTPBadRequest(detail='This permission is not allowed for that service')
-    elif permission_name not in resource_type_dico[resource.resource_type].permission_names:
+    elif permission_name not in resource_type_dict[resource.resource_type].permission_names:
         raise HTTPBadRequest(detail='This permission is not allowed for that resource')
 
     return delete_group_resource_permission(permission_name, resource.resource_id, group.id, db_session=db)

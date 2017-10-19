@@ -1,6 +1,6 @@
 from magpie import *
 import models
-from models import resource_tree_service, resource_type_dico
+from models import resource_tree_service, resource_type_dict
 
 
 def format_resource(resource, perms=[]):
@@ -181,7 +181,7 @@ def get_resource_permissions(request):
     resource = ResourceService.by_resource_id(resource_id, db_session=db)
     if resource:
         try:
-            resource_permissions = resource_type_dico[resource.resource_type].permission_names
+            resource_permissions = resource_type_dict[resource.resource_type].permission_names
         except Exception:
             db.rollback()
             raise HTTPNotFound(detail="This type of resource is not implemented yet")
