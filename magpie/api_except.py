@@ -73,7 +73,8 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
         raise_http(httpError, detail=msgOnFail, content={'param': repr(param)}, contentType=contentType)
 
 
-def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnFail="", contentType='application/json'):
+def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnFail="",
+                  content=None, contentType='application/json'):
     """
     Evaluates the specified `call` with a wrapped HTTP exception handling.
     On failure, tries to call `fallback` if specified, and finally raises the specified `httpError`.
@@ -98,6 +99,7 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
     :param fallback: function to call (if any) when `call` failed, *MUST* be `lambda: <function_call>`
     :param httpError: (HTTPError) alternative exception to raise on `call` failure
     :param msgOnFail: (str) message details to return in HTTP exception if `call` failed
+    :param content: json formatted additional content to provide in case of exception
     :param contentType: format in which to return the exception ('application/json', 'text/html' or 'text/plain')
     :raises httpError: on `call` failure
     :raises `HTTPInternalServerError`: on `fallback` failure
@@ -107,7 +109,7 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
     if not islambda(call):
         raise_http(httpError=HTTPInternalServerError,
                    detail="Input `call` is not a lambda expression",
-                   content={'call': {'detail': msgOnFail}},
+                   content={'call': {'detail': msgOnFail, 'content': repr(content)}},
                    contentType=contentType)
 
     # preemptively check fallback to avoid possible call exception without valid recovery
@@ -115,7 +117,7 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
         if not islambda(fallback):
             raise_http(httpError=HTTPInternalServerError,
                        detail="Input `fallback`  is not a lambda expression, not attempting `call`",
-                       content={'call': {'detail': msgOnFail}},
+                       content={'call': {'detail': msgOnFail, 'content': repr(content)}},
                        contentType=contentType)
     try:
         return call()
@@ -128,10 +130,12 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
         fe = repr(e)
         raise_http(httpError=HTTPInternalServerError,
                    detail="Exception occurred during `fallback` called after failing `call` exception",
-                   content={'call': {'exception': ce, 'detail': msgOnFail},
+                   content={'call': {'exception': ce, 'detail': msgOnFail, 'content': repr(content)},
                             'fallback': {'exception': fe}},
                    contentType=contentType)
-    raise_http(httpError, detail=msgOnFail, content={'call': {'exception': ce}}, contentType=contentType)
+    raise_http(httpError, detail=msgOnFail,
+               content={'call': {'exception': ce, 'content': repr(content)}},
+               contentType=contentType)
 
 
 def valid_http(httpSuccess=HTTPOk, detail="", content=None, contentType='application/json'):
