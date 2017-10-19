@@ -26,16 +26,18 @@ def create_user(user_name, password, email, group_name, db_session):
     :raise `HTTPConflict`:
     :raise `HTTPForbidden`:
     """
-
     db = db_session
     # Check if group already exist
-    group = GroupService.by_group_name(group_name, db_session=db)
+    group = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db),
+                          httpError=HTTPForbidden, msgOnFail="Group query was refused by db")
     verify_param(group, notNone=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Group for new user already exists")
 
     # Create new_group associated to user
-    group_check = GroupService.by_group_name(group_name=user_name, db_session=db)
-    user_check = UserService.by_user_name(user_name=user_name, db_session=db)
+    group_check = evaluate_call(lambda: GroupService.by_group_name(group_name=user_name, db_session=db),
+                                httpError=HTTPForbidden, msgOnFail="Group check query was refused by db")
+    user_check = evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db),
+                               httpError=HTTPForbidden, msgOnFail="User check query was refused by db")
     verify_param(group_check, isNone=True, httpError=HTTPConflict,
                  msgOnFail="User name matches an already existing group name")
     verify_param(user_check, isNone=True, httpError=HTTPConflict,
@@ -53,11 +55,13 @@ def create_user(user_name, password, email, group_name, db_session):
                   httpError=HTTPForbidden, msgOnFail="Failed to add user to db")
 
     # Assign user to default group and own group
-    new_user = UserService.by_user_name(user_name, db_session=db)
+    new_user = evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db),
+                             httpError=HTTPForbidden, msgOnFail="New user query was refused by db")
     group_entry = models.UserGroup(group_id=group.id, user_id=new_user.id)
     evaluate_call(lambda: db.add(group_entry), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
-    new_group = GroupService.by_group_name(user_name, db_session=db)
+    new_group = evaluate_call(lambda: GroupService.by_group_name(user_name, db_session=db),
+                              httpError=HTTPForbidden, msgOnFail="New group query was refused by db")
     new_group_entry = models.UserGroup(group_id=new_group.id, user_id=new_user.id)
     evaluate_call(lambda: db.add(new_group_entry), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
@@ -86,33 +90,41 @@ def create_user_view(request):
 
 @view_config(route_name='users', request_method='GET')
 def get_users(request):
-    user_name_list = [user.user_name for user in models.User.all(db_session=request.db)]
-    json_response = {'user_names': user_name_list}
-    return HTTPOk(
-        body=json.dumps(json_response),
-        content_type='application/json'
-    )
+    user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
+                                   httpError=HTTPForbidden, msgOnFail="Get user query refused by db")
+    return valid_http(httpSuccess=HTTPOk, detail="", content={'user_names': user_name_list})
+
+
+def get_user_matchdict_checked(request, user_name_key='user_name'):
+    user_name = request.matchdict.get(user_name_key)
+    verify_param(user_name, notNone=True, notEmpty=True,
+                 httpError=HTTPNotAcceptable, msgOnFail="Invalid user name specified")
+    return get_user(request, user_name)
 
 
 def get_user(request, user_name_or_token):
-    try:
-        if len(user_name_or_token) > 20:
-            authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
-            user_id = get_userid_by_token(user_name_or_token, authn_policy)
-            return UserService.by_id(user_id, db_session=request.db)
-        elif user_name_or_token == LOGGED_USER:
-            curr_user = request.user
-            if curr_user:
-                return curr_user
-            else:
-                anonymous = UserService.by_user_name(ANONYMOUS_USER, db_session=request.db)
-                if not anonymous:
-                    raise Exception('anonymous user is not in the database')
-                return anonymous
+
+    if len(user_name_or_token) > 20:
+        authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
+        user_id = get_userid_by_token(user_name_or_token, authn_policy)
+        user = evaluate_call(lambda: UserService.by_id(user_id, db_session=request.db),
+                             httpError=HTTPForbidden, msgOnFail="User id query refused by db")
+        verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User id not found in db")
+        return user
+    elif user_name_or_token == LOGGED_USER:
+        curr_user = request.user
+        if curr_user:
+            return curr_user
         else:
-            return UserService.by_user_name(user_name_or_token, db_session=request.db)
-    except Exception, e:
-        raise HTTPNotFound(detail=e.message)
+            anonymous = evaluate_call(lambda: UserService.by_user_name(ANONYMOUS_USER, db_session=request.db),
+                                      httpError=HTTPForbidden, msgOnFail="Anonymous user query refused by db")
+            verify_param(anonymous, notNone=True, httpError=HTTPNotFound, msgOnFail="Anonymous user not found in db")
+            return anonymous
+    else:
+        user = evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
+                             httpError=HTTPForbidden, msgOnFail="User name query refused by db")
+        verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db")
+        return user
 
 
 def get_userid_by_token(token, authn_policy):
@@ -133,56 +145,36 @@ def get_userid_by_token(token, authn_policy):
 
 @view_config(route_name='user', request_method='GET')
 def get_user_view(request):
-    user_name = request.matchdict.get('user_name')
-    try:
-        #user = UserService.by_user_name(user_name, db_session=db)
-        user = get_user(request, user_name)
-        json_response = {'user_name': user.user_name,
-                         'email': user.email,
-                         'group_names': [group.group_name for group in user.groups]}
-    except:
-        raise HTTPNotFound(detail='User not found')
-
-    return HTTPOk(
-        body=json.dumps(json_response),
-        content_type='application/json'
-    )
+    user = get_user_matchdict_checked(request)
+    json_response = {'user_name': user.user_name,
+                     'email': user.email,
+                     'group_names': [group.group_name for group in user.groups]}
+    return valid_http(httpSuccess=HTTPOk, detail="Get user", content=json_response)
 
 
 @view_config(route_name='user', request_method='DELETE')
 def delete_user(request):
-    user_name = request.matchdict.get('user_name')
-    try:
-        db = request.db
-        user = UserService.by_user_name(user_name, db_session=db)
-        db.delete(user)
-
-        group_user = GroupService.by_group_name(user_name, db_session=db)
-        db.delete(group_user)
-
-        
-
-    except Exception, e:
-        db.rollback()
-        raise HTTPNotFound(detail=e.message)
-
-    return HTTPOk()
+    user = get_user_matchdict_checked(request)
+    db = request.db
+    evaluate_call(lambda: db.delete(user), fallback=lambda: db.rollback(),
+                  httpError=HTTPForbidden, msgOnFail="Delete user by name refused by db")
+    user_group = evaluate_call(lambda: GroupService.by_group_name(user.user_name, db_session=db),
+                               fallback=lambda: db.rollback(),
+                               httpError=HTTPNotFound, msgOnFail="Could not find user-group in db")
+    evaluate_call(lambda: db.delete(user_group), fallback=lambda: db.rollback(),
+                  httpError=HTTPForbidden, msgOnFail="Delete user-group refused by db")
+    return valid_http(httpSuccess=HTTPOk, detail="User deleted")
 
 
 @view_config(route_name='user_groups', request_method='GET')
 def get_user_groups(request):
-    user_name = request.matchdict.get('user_name')
-    try:
-        db = request.db
-        user = UserService.by_user_name(user_name, db_session=db)
-        json_response = {'group_names': [group.group_name for group in user.groups]}
-    except:
-        db.rollback()
-        raise HTTPNotFound(detail="This user does not exist")
-    return HTTPOk(
-        body=json.dumps(json_response),
-        content_type='application/json'
-    )
+    user = get_user_matchdict_checked(request)
+    verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db")
+    db = request.db
+    group_names = evaluate_call(lambda: [group.group_name for group in user.groups], fallback=lambda: db.rollback(),
+                                httpError=HTTPInternalServerError, msgOnFail="Failed to extract groups from user")
+    return valid_http(httpSuccess=HTTPOk, detail="Get user groups", content={'group_names': group_names})
+
 
 @view_config(route_name='user_group', request_method='POST')
 def assign_user_group(request):
