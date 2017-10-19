@@ -199,14 +199,14 @@ def get_group_resources_view(request):
         if service_type not in json_response:
             json_response[service_type] = {}
 
-        resources_perms_dico = get_group_service_resources_permissions_dict(group=group,
+        resources_perms_dict = get_group_service_resources_permissions_dict(group=group,
                                                                            service=curr_service,
                                                                            db_session=db)
         json_response[service_type][service_name] = format_service_resources(
                 curr_service,
                 db_session=db,
                 service_perms=service_perms,
-                resources_perms_dico=resources_perms_dico,
+                resources_perms_dict=resources_perms_dict,
                 display_all=False
             )
 
@@ -337,14 +337,14 @@ def get_group_service_resources_view(request):
 
     service_perms = get_group_service_permissions(group=group, service=service, db_session=db)
 
-    resources_perms_dico = get_group_service_resources_permissions_dict(group=group,
+    resources_perms_dict = get_group_service_resources_permissions_dict(group=group,
                                                                         service=service,
                                                                         db_session=db)
     json_response = format_service_resources(
         service=service,
         db_session=db,
         service_perms=service_perms,
-        resources_perms_dico=resources_perms_dico,
+        resources_perms_dict=resources_perms_dict,
         display_all=False
     )
 

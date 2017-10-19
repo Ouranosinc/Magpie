@@ -14,19 +14,19 @@ def format_resource(resource, perms=[]):
     }
 
 
-def format_resource_tree(children, db_session, resources_perms_dico={}):
+def format_resource_tree(children, db_session, resources_perms_dict={}):
     formatted_resource_tree = {}
     for child_id, dico in children.items():
         resource = dico['node']
         new_children = dico['children']
         perms = []
-        if resource.resource_id in resources_perms_dico.keys():
-            perms = resources_perms_dico[resource.resource_id]
+        if resource.resource_id in resources_perms_dict.keys():
+            perms = resources_perms_dict[resource.resource_id]
 
         formatted_resource_tree[child_id] = format_resource(resource, perms)
         formatted_resource_tree[child_id]['children'] = format_resource_tree(new_children,
                                                                              db_session=db_session,
-                                                                             resources_perms_dico=resources_perms_dico)
+                                                                             resources_perms_dict=resources_perms_dict)
 
     return formatted_resource_tree
 

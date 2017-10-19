@@ -202,7 +202,7 @@ def assign_user_group(request):
     new_user_group = models.UserGroup(group_id=group.id, user_id=user.id)
     db = request.db
     evaluate_call(lambda: db.add(new_user_group), fallback=lambda: db.rollback(),
-                  httpError=HTTPConflict, msgOnFail='User already belongs to this group',
+                  httpError=HTTPConflict, msgOnFail="User already belongs to this group",
                   content={'user_name': user.user_name, 'group_name': group.group_name})
     return valid_http(httpSuccess=HTTPCreated, detail="Create user-group assignation successful")
 
@@ -220,7 +220,7 @@ def delete_user_group(request):
             .delete()
 
     evaluate_call(lambda: del_usr_grp(user, group), fallback=lambda: db.rollback(),
-                  httpError=HTTPNotAcceptable, msgOnFail='Invalid user-group combination for delete',
+                  httpError=HTTPNotAcceptable, msgOnFail="Invalid user-group combination for delete",
                   content={'user_name': user.user_name, 'group_name': group.group_name})
     return valid_http(httpSuccess=HTTPOk, detail="Delete user-group successful")
 
@@ -241,7 +241,7 @@ def get_user_service_permissions(user, service, db_session):
     return permission_names
 
 
-def get_user_resources_permissions_dict(user, db_session,resource_types=None, resource_ids=None):
+def get_user_resources_permissions_dict(user, db_session, resource_types=None, resource_ids=None):
     db = db_session
     if user is None:
         raise HTTPBadRequest(detail='This user does not exist')
@@ -487,14 +487,14 @@ def get_user_service_resources_view(request):
 
     service_perms = get_user_service_permissions(user=user, service=service, db_session=db)
 
-    resources_perms_dico = get_user_service_resources_permissions_dict(user=user,
+    resources_perms_dict = get_user_service_resources_permissions_dict(user=user,
                                                                        service=service,
                                                                        db_session=db)
     json_response = format_service_resources(
         service=service,
         db_session=db,
         service_perms=service_perms,
-        resources_perms_dico=resources_perms_dico,
+        resources_perms_dict=resources_perms_dict,
         display_all=False
     )
 

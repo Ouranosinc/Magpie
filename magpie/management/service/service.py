@@ -141,17 +141,17 @@ def get_service_permissions(request):
 def format_service_resources(service,
                              db_session,
                              service_perms=[],
-                             resources_perms_dico={},
+                             resources_perms_dict={},
                              display_all=False):
 
     tree = get_resource_children(service, db_session)
     if not display_all:
         tree, resource_id_list_remain = crop_tree_with_permission(tree,
-                                                                  resources_perms_dico.keys())
+                                                                  resources_perms_dict.keys())
 
     service_resources_formatted = format_service(service, service_perms)
     service_resources_formatted['resources'] = format_resource_tree(tree,
-                                                                    resources_perms_dico=resources_perms_dico,
+                                                                    resources_perms_dict=resources_perms_dict,
                                                                     db_session=db_session)
     return service_resources_formatted
 
