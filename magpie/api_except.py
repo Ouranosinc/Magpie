@@ -143,11 +143,8 @@ def valid_http(httpSuccess=HTTPOk, detail="", content=None, contentType='applica
     content = dict() if content is None else content
     detail = repr(detail) if type(detail) is not str else detail
     httpCode, detail, content = validate_params(httpSuccess, HTTPSuccessful, detail, content, contentType)
-    json_body = format_content_json(httpCode, detail, content, contentType)
-    return httpSuccess(
-        body=json_body,
-        content_type='application/json'
-    )
+    json_body = format_content_json_str(httpCode, detail, content, contentType)
+    return output_http_format(httpSuccess, json_body, outputType=contentType, outputMode='return')
 
 
 def raise_http(httpError=HTTPInternalServerError, detail="", content=None, contentType='application/json'):
@@ -175,27 +172,8 @@ def raise_http(httpError=HTTPInternalServerError, detail="", content=None, conte
     # try dumping content with json format, `HTTPInternalServerError` with caller info if fails.
     # content is added manually to avoid auto-format and suppression of fields by `HTTPException`
     httpCode, detail, content = validate_params(httpError, HTTPException, detail, content, contentType)
-    json_body = format_content_json(httpError.code, detail, content, contentType)
-    # directly output json if asked with 'application/json'
-    if contentType == 'application/json':
-        raise httpError(
-            body=json_body,
-            content_type='application/json'
-        )
-    # otherwise json is contained within the html <body> section
-    if contentType == 'text/html':
-        raise httpError(
-            # add preformat <pre> section to output as is within the <body> section
-            body_template=httpError.explanation + "<br><h2>Exception Details</h2>" +
-                          "<pre style='word-wrap: break-word; white-space: pre-wrap;'>" +
-                          json_body + "</pre>",
-            content_type='text/html'
-        )
-    # default back to 'text/plain'
-    raise httpError(
-        body=json_body,
-        content_type='text/plain'
-    )
+    json_body = format_content_json_str(httpError.code, detail, content, contentType)
+    output_http_format(httpError, json_body, outputType=contentType, outputMode='raise')
 
 
 def validate_params(httpClass, httpBase, detail, content, contentType):
@@ -237,12 +215,14 @@ def validate_params(httpClass, httpBase, detail, content, contentType):
     return httpCode, detail, content
 
 
-def format_content_json(httpCode, detail, content, contentType):
+def format_content_json_str(httpCode, detail, content, contentType):
     """
     Inserts the code, details, content and type within the body using json format.
+    Includes also any other specified json formatted content in the body.
+    Returns the whole json body as a single string for output.
 
     :raise `HTTPInternalServerError`: if parsing of the json content failed
-    :return json_body: formatted json content with added HTTP code and details
+    :returns: formatted json content as string with added HTTP code and details
     """
     json_body = {}
     try:
@@ -261,6 +241,42 @@ def format_content_json(httpCode, detail, content, contentType):
                                        'code': httpCode,
                                        'type': contentType}})
     return json_body
+
+
+def output_http_format(httpClass, jsonContent, outputType='text/plain', outputMode='raise'):
+    """
+    Formats the HTTP response output according to desired `outputType` using provided HTTP code and content.
+
+    :param httpClass: HTTPException derived class to use for output (code, generic title/explanation, etc.)
+    :param jsonContent: (str) formatted json content providing additional details for the response cause
+    :param outputType: {'application/json','text/html','text/plain'} (default: 'text/plain')
+    :param outputMode: {'raise','return'} (default: 'raise')
+    :return: modified HTTPException derived class with information and output type if `outputMode` is 'return'
+    :raises: modified HTTPException derived class with information and output type if `outputMode` is 'raise'
+    """
+    # content body is added manually to avoid auto-format and suppression of fields by `HTTPException`
+    jsonContent = str(jsonContent) if not type(jsonContent) == str else jsonContent
+
+    # directly output json if asked with 'application/json'
+    if outputType == 'application/json':
+        if outputMode == 'return':
+            return httpClass(body=jsonContent, content_type='application/json')
+        raise httpClass(body=jsonContent, content_type='application/json')
+
+    # otherwise json is contained within the html <body> section
+    if outputType == 'text/html':
+        # add preformat <pre> section to output as is within the <body> section
+        htmlBody = httpClass.explanation + "<br><h2>Exception Details</h2>" + \
+                   "<pre style='word-wrap: break-word; white-space: pre-wrap;'>" + \
+                   jsonContent + "</pre>"
+        if outputMode == 'return':
+            return httpClass(body_template=htmlBody, content_type='text/html')
+        raise httpClass(body_template=htmlBody, content_type='text/html')
+
+    # default back to 'text/plain'
+    if outputMode == 'return':
+        return httpClass(body=jsonContent, content_type='text/plain')
+    raise httpClass(body=jsonContent, content_type='text/plain')
 
 
 def islambda(func):
