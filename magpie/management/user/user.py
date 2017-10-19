@@ -264,43 +264,30 @@ def get_user_service_resources_permissions_dict(user, service, db_session):
 
 @view_config(route_name='user_resources', request_method='GET')
 def get_user_resources_view(request):
-    user_name = request.matchdict.get('user_name')
+    user = get_user_matchdict_checked(request)
     db = request.db
-    #user = UserService.by_user_name(user_name=user_name, db_session=db)
-    user = get_user(request, user_name_or_token=user_name)
-    if user is None:
-        raise HTTPBadRequest(detail='This user does not exist')
 
-    services_permissions_dict = get_user_resources_permissions_dict(user,
-                                                                    resource_types=['service'],
-                                                                    db_session=request.db)
-
-    json_response = {}
-
-    for curr_service in models.Service.all(db_session=db):
-        service_perms = get_user_service_permissions(user=user, service=curr_service, db_session=db)
-        service_name = curr_service.resource_name
-        service_type = curr_service.type
-        if service_type not in json_response:
-            json_response[service_type] = {}
-
-        resources_perms_dico = get_user_service_resources_permissions_dict(user=user,
-                                                                           service=curr_service,
-                                                                           db_session=db)
-        json_response[service_type][service_name] = format_service_resources(
-                curr_service,
+    def build_json_user_resource_tree(usr):
+        json_res = {}
+        for svc in models.Service.all(db_session=db):
+            svc_perms = get_user_service_permissions(user=usr, service=svc, db_session=db)
+            if svc.type not in json_res:
+                json_res[svc.type] = {}
+            res_perms_dict = get_user_service_resources_permissions_dict(user=usr, service=svc, db_session=db)
+            json_res[svc.type][svc.resource_name] = format_service_resources(
+                svc,
                 db_session=db,
-                service_perms=service_perms,
-                resources_perms_dico=resources_perms_dico,
+                service_perms=svc_perms,
+                resources_perms_dict=res_perms_dict,
                 display_all=False
             )
+        return json_res
 
-
-    json_response = {'resources': json_response}
-    return HTTPOk(
-        body=json.dumps(json_response),
-        content_type='application/json'
-    )
+    usr_res_dict = evaluate_call(lambda: build_json_user_resource_tree(user),
+                                 fallback=lambda: db.rollback(), httpError=HTTPNotFound,
+                                 msgOnFail="Failed to populate user resources",
+                                 content={'user_name': user.user_name, 'resource_types': ['service']})
+    return valid_http(httpSuccess=HTTPOk, detail="Get user resources successful", content={'resources': usr_res_dict})
 
 
 @view_config(route_name='user_resource_permissions', request_method='GET')
