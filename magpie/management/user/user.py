@@ -91,23 +91,35 @@ def create_user_view(request):
 @view_config(route_name='users', request_method='GET')
 def get_users(request):
     user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
+                                   fallback=lambda: request.db.rollback(),
                                    httpError=HTTPForbidden, msgOnFail="Get user query refused by db")
-    return valid_http(httpSuccess=HTTPOk, detail="", content={'user_names': user_name_list})
+    return valid_http(httpSuccess=HTTPOk, detail="Get users successful", content={'user_names': user_name_list})
+
+
+def get_group_matchdict_checked(request, group_name_key='group_name'):
+    group_name = request.matchdict.get(group_name_key)
+    verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid group name specified using key '" + str(group_name_key) + "'")
+    group = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
+                          fallback=lambda: request.db.rollback(),
+                          httpError=HTTPForbidden, msgOnFail="Group query by name refused by db")
+    verify_param(group, notNone=True, httpError=HTTPNotFound, msgOnFail="Group name not found in db")
+    return group
 
 
 def get_user_matchdict_checked(request, user_name_key='user_name'):
     user_name = request.matchdict.get(user_name_key)
-    verify_param(user_name, notNone=True, notEmpty=True,
-                 httpError=HTTPNotAcceptable, msgOnFail="Invalid user name specified")
+    verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid user name specified using key '" + str(user_name_key) + "'")
     return get_user(request, user_name)
 
 
 def get_user(request, user_name_or_token):
-
     if len(user_name_or_token) > 20:
         authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
         user_id = get_userid_by_token(user_name_or_token, authn_policy)
         user = evaluate_call(lambda: UserService.by_id(user_id, db_session=request.db),
+                             fallback=lambda: request.db.rollback(),
                              httpError=HTTPForbidden, msgOnFail="User id query refused by db")
         verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User id not found in db")
         return user
@@ -117,11 +129,13 @@ def get_user(request, user_name_or_token):
             return curr_user
         else:
             anonymous = evaluate_call(lambda: UserService.by_user_name(ANONYMOUS_USER, db_session=request.db),
+                                      fallback=lambda: request.db.rollback(),
                                       httpError=HTTPForbidden, msgOnFail="Anonymous user query refused by db")
             verify_param(anonymous, notNone=True, httpError=HTTPNotFound, msgOnFail="Anonymous user not found in db")
             return anonymous
     else:
         user = evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
+                             fallback=lambda: request.db.rollback(),
                              httpError=HTTPForbidden, msgOnFail="User name query refused by db")
         verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db")
         return user
