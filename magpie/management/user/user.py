@@ -180,13 +180,18 @@ def delete_user(request):
     return valid_http(httpSuccess=HTTPOk, detail="Delete user successful")
 
 
-@view_config(route_name='user_groups', request_method='GET')
-def get_user_groups(request):
-    user = get_user_matchdict_checked(request)
+def get_user_groups_checked(request, user):
     verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db")
     db = request.db
     group_names = evaluate_call(lambda: [group.group_name for group in user.groups], fallback=lambda: db.rollback(),
-                                httpError=HTTPInternalServerError, msgOnFail="Failed to extract groups from user")
+                                httpError=HTTPInternalServerError, msgOnFail="Failed to obtain groups of user")
+    return group_names
+
+
+@view_config(route_name='user_groups', request_method='GET')
+def get_user_groups(request):
+    user = get_user_matchdict_checked(request)
+    group_names = get_user_groups_checked(request, user)
     return valid_http(httpSuccess=HTTPOk, detail="Get user groups successful", content={'group_names': group_names})
 
 
@@ -204,29 +209,20 @@ def assign_user_group(request):
 
 @view_config(route_name='user_group', request_method='DELETE')
 def delete_user_group(request):
-    user_name = request.matchdict.get('user_name')
-    group_name = request.matchdict.get('group_name')
+    user = get_user_matchdict_checked(request)
+    group = get_group_matchdict_checked(request)
+    db = request.db
 
-    try:
-        db = request.db
-        user = UserService.by_user_name(user_name, db_session=db)
-        if user is None:
-            raise HTTPNotFound(detail='user not found')
-        group = GroupService.by_group_name(group_name, db_session=db)
-        if group is None:
-            raise HTTPNotFound(detail='group not found')
-
-        db.query(models.UserGroup)\
-            .filter(models.UserGroup.user_id == user.id)\
-            .filter(models.UserGroup.group_id == group.id)\
+    def del_usr_grp(usr, grp):
+        db.query(models.UserGroup) \
+            .filter(models.UserGroup.user_id == usr.id) \
+            .filter(models.UserGroup.group_id == grp.id) \
             .delete()
-        
 
-    except:
-        db.rollback()
-        raise HTTPConflict(detail='this user does not belong to this group')
-
-    return HTTPOk()
+    evaluate_call(lambda: del_usr_grp(user, group), fallback=lambda: db.rollback(),
+                  httpError=HTTPNotAcceptable, msgOnFail='Invalid user-group combination for delete',
+                  content={'user_name': user.user_name, 'group_name': group.group_name})
+    return valid_http(httpSuccess=HTTPOk, detail="Delete user-group successful")
 
 
 def get_user_resource_permissions(user, resource, db_session):
