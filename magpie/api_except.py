@@ -105,28 +105,32 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
     msgOnFail = repr(msgOnFail) if type(msgOnFail) is not str else msgOnFail
     if not islambda(call):
         raise_http(httpError=HTTPInternalServerError,
-                   detail="Input `call` is not a lambda expression")
+                   detail="Input `call` is not a lambda expression",
+                   content={'call': {'detail': msgOnFail}},
+                   contentType=contentType)
+
+    # preemptively check fallback to avoid possible call exception without valid recovery
+    if fallback is not None:
+        if not islambda(fallback):
+            raise_http(httpError=HTTPInternalServerError,
+                       detail="Input `fallback`  is not a lambda expression, not attempting `call`",
+                       content={'call': {'detail': msgOnFail}},
+                       contentType=contentType)
     try:
         return call()
     except Exception as e:
         ce = repr(e)
     try:
         if fallback is not None:
-            if islambda(fallback):
-                fallback()
-            else:
-                raise_http(httpError=HTTPInternalServerError,
-                           detail="Input `fallback`  is not a lambda expression",
-                           content={'call': {'exception': ce},
-                                    'detail': msgOnFail})
+            fallback()
     except Exception as e:
         fe = repr(e)
         raise_http(httpError=HTTPInternalServerError,
-                   detail="Fallback from `call` exception failed",
-                   content={'call': {'exception': ce},
-                            'fallback': {'exception': fe},
-                            'detail': msgOnFail})
-    raise_http(httpError, detail=msgOnFail, content={'call': {'exception': ce}})
+                   detail="Exception occurred during `fallback` called after failing `call` exception",
+                   content={'call': {'exception': ce, 'detail': msgOnFail},
+                            'fallback': {'exception': fe}},
+                   contentType=contentType)
+    raise_http(httpError, detail=msgOnFail, content={'call': {'exception': ce}}, contentType=contentType)
 
 
 def valid_http(httpSuccess=HTTPOk, detail="", content=None, contentType='application/json'):
@@ -195,10 +199,14 @@ def validate_params(httpClass, httpBase, detail, content, contentType):
                                        'detail': detail,
                                        'code': 520,  #'unknown' error
                                        'type': contentType}})
-    httpCode = httpClass.code if issubclass(httpClass, httpBase) else 'n/a'
+    # if `httpClass` derives from `httpBase` (ex: `HTTPSuccessful` or `HTTPError`) it is of proper requested type
+    # if it derives from `HTTPException`, it *could* be different than base (ex: 2xx instead of 4xx codes)
+    # return 'unknown error' (520) if not of lowest level base `HTTPException`, otherwise use the available code
+    httpCode = httpClass.code if issubclass(httpClass, httpBase) else \
+               httpClass.code if issubclass(httpClass, HTTPException) else 520
     if not issubclass(httpClass, httpBase):
         raise_http(httpError=HTTPInternalServerError,
-                   detail="Invalid `HTTPError` derived class specified",
+                   detail="Invalid `httpBase` derived class specified",
                    contentType='application/json',
                    content={'caller': {'content': content,
                                        'detail': detail,
