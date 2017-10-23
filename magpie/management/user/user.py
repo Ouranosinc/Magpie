@@ -116,6 +116,8 @@ def get_resource_matchdict_checked(request, resource_name_key='resource_id'):
                                 msgOnFail="Resource ID is an invalid literal for `int` type")
     resource = ResourceService.by_resource_id(resource_id, db_session=request.db)
     verify_param(resource, notNone=True, httpError=HTTPNotFound, msgOnFail="Resource ID not found in db")
+    verify_param(resource.resource_type, paramCompare=resource_type_dict, isIn=True,
+                 httpError=HTTPNotAcceptable, msgOnFail="Resource type does not match any valid entry")
     return resource
 
 
@@ -315,52 +317,45 @@ def get_user_resource_permissions_view(request):
 
 
 def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
-    try:
-        new_permission = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
-        new_permission.perm_name = permission_name
-        db_session.add(new_permission)
-    except:
-        db_session.rollback()
-        raise HTTPConflict('This permission on that service already exists for that user')
-    return HTTPCreated()
+    new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
+    verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Failed to create permission using resource id '" + str(resource_id) +
+                           "' and user id '" + str(user_id) + "'")
+    new_perm.perm_name = permission_name
+    evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
+                  httpError=HTTPConflict, msgOnFail="Permission already exist on service for user, cannot add to db",
+                  content={'resource_id': resource_id, 'user_id': user_id, 'permission_name': permission_name})
+    return valid_http(httpSuccess=HTTPCreated, detail="Create user resource permission successful",
+                      content={'resource_id': resource_id, 'user_id': user_id, 'permission_name': permission_name})
 
 
 @view_config(route_name='user_resource_permissions', request_method='POST')
 def create_user_resource_permission_view(request):
-    user_name = request.matchdict.get('user_name')
-    resource_id = request.matchdict.get('resource_id')
-    permission_name = get_multiformat_post(request, 'permission_name')
-    db = request.db
+    user = get_user_matchdict_checked(request)
+    res = get_resource_matchdict_checked(request)
+    perm_name = get_value_matchdict_checked(request, 'permission_name')
+    verify_param(perm_name, paramCompare=resource_type_dict[res.resource_type].permission_names, isIn=True,
+                 httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that resource type")
+    return create_user_resource_permission(perm_name, res.resource_id, user.id, request.db)
 
-    user = UserService.by_user_name(user_name=user_name, db_session=db)
-    resource = ResourceService.by_resource_id(resource_id, db)
-    if resource is None or user is None:
-        raise HTTPNotFound(detail='this user/resource does not exist')
-    if permission_name not in resource_type_dict[resource.resource_type].permission_names:
-        raise HTTPBadRequest(detail='This permission is not allowed for that resource')
 
-    return create_user_resource_permission(permission_name, resource_id, user.id, db)
+def delete_user_resource_permission(permission_name, resource_id, user_id, db_session):
+    del_perm = UserResourcePermissionService.get(user_id, resource_id, permission_name, db_session)
+    evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
+                  httpError=HTTPNotFound, msgOnFail="Could not find user resource permission to delete from db",
+                  content={'resource_id': resource_id, 'user_id': user_id, 'permission_name': permission_name})
+    return valid_http(httpSuccess=HTTPOk, detail="Delete user resource permission successful",
+                      content={'resource_id': resource_id, 'user_id': user_id, 'permission_name': permission_name})
 
 
 @view_config(route_name='user_resource_permission', request_method='DELETE')
 def delete_user_resource_permission_view(request):
-    user_name = request.matchdict.get('user_name')
-    resource_id = request.matchdict.get('resource_id')
-    permission_name = request.matchdict.get('permission_name')
-
-    db = request.db
-    #user = UserService.by_user_name(user_name=user_name, db_session=db)
-    user = get_user(request, user_name_or_token=user_name)
-    resource = ResourceService.by_resource_id(resource_id, db)
-    if resource is None or user is None:
-        raise HTTPNotFound(detail='this user/resource does not exist')
-    if permission_name not in resource_type_dict[resource.resource_type].permission_names:
-        raise HTTPBadRequest(detail='This permission is not allowed for that resource')
-
-    return delete_user_resource_permission(permission_name,
-                                           resource_id,
-                                           user.id,
-                                           db)
+    user = get_user_matchdict_checked(request)
+    res = get_resource_matchdict_checked(request)
+    perm_name = get_value_matchdict_checked(request, 'permission_name')
+    verify_param(perm_name, paramCompare=resource_type_dict[res.resource_type].permission_names, isIn=True,
+                 httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that resource type")
+    return delete_user_resource_permission(perm_name, res.resource_id, user.id, request.db)
 
 
 @view_config(route_name='user_services', request_method='GET')
@@ -388,7 +383,6 @@ def get_user_services_view(request):
         body=json.dumps({'services': json_response}),
         content_type='application/json'
     )
-
 
 
 @view_config(route_name='user_service_permissions', request_method='GET')
@@ -433,17 +427,6 @@ def create_user_service_permission(request):
                                            resource_id=service.resource_id,
                                            user_id=user.id,
                                            db_session=db)
-
-
-def delete_user_resource_permission(permission_name, resource_id, user_id, db_session):
-    try:
-        permission_to_delete = UserResourcePermissionService.get(user_id, resource_id, permission_name, db_session)
-        db_session.delete(permission_to_delete)
-    except:
-        db_session.rollback()
-        raise HTTPNotFound(detail="This permission on that service does not exist for that user")
-
-    return HTTPOk()
 
 
 @view_config(route_name='user_service_permission', request_method='DELETE')
