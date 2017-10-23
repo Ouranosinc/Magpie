@@ -54,7 +54,7 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
             paramCompare = [paramCompare]
     except Exception as e:
         raise_http(httpError=HTTPInternalServerError, detail=repr(e),
-                   content={'traceback': repr(exc_info())}, contentType=contentType)
+                   content={u'traceback': repr(exc_info())}, contentType=contentType)
 
     # evaluate requested parameter combinations
     status = False
@@ -73,7 +73,7 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
     if ofType is not None:
         status = status or (not type(param) == ofType)
     if status:
-        raise_http(httpError, detail=msgOnFail, content={'param': repr(param)}, contentType=contentType)
+        raise_http(httpError, detail=msgOnFail, content={u'param': repr(param)}, contentType=contentType)
 
 
 def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnFail="",
@@ -112,7 +112,7 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
     if not islambda(call):
         raise_http(httpError=HTTPInternalServerError,
                    detail="Input `call` is not a lambda expression",
-                   content={'call': {'detail': msgOnFail, 'content': repr(content)}},
+                   content={u'call': {u'detail': msgOnFail, u'content': repr(content)}},
                    contentType=contentType)
 
     # preemptively check fallback to avoid possible call exception without valid recovery
@@ -120,7 +120,7 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
         if not islambda(fallback):
             raise_http(httpError=HTTPInternalServerError,
                        detail="Input `fallback`  is not a lambda expression, not attempting `call`",
-                       content={'call': {'detail': msgOnFail, 'content': repr(content)}},
+                       content={u'call': {u'detail': msgOnFail, u'content': repr(content)}},
                        contentType=contentType)
     try:
         return call()
@@ -133,11 +133,11 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
         fe = repr(e)
         raise_http(httpError=HTTPInternalServerError,
                    detail="Exception occurred during `fallback` called after failing `call` exception",
-                   content={'call': {'exception': ce, 'detail': msgOnFail, 'content': repr(content)},
-                            'fallback': {'exception': fe}},
+                   content={u'call': {u'exception': ce, u'detail': msgOnFail, u'content': repr(content)},
+                            u'fallback': {u'exception': fe}},
                    contentType=contentType)
     raise_http(httpError, detail=msgOnFail,
-               content={'call': {'exception': ce, 'content': repr(content)}},
+               content={u'call': {u'exception': ce, u'content': repr(content)}},
                contentType=contentType)
 
 
@@ -203,10 +203,10 @@ def validate_params(httpClass, httpBase, detail, content, contentType):
         raise_http(httpError=HTTPInternalServerError,
                    detail="Object specified is not of type `HTTPError`",
                    contentType='application/json',
-                   content={'caller': {'content': content,
-                                       'detail': detail,
-                                       'code': 520,  #'unknown' error
-                                       'type': contentType}})
+                   content={u'caller': {u'content': content,
+                                        u'detail': detail,
+                                        u'code': 520,  #'unknown' error
+                                        u'type': contentType}})
     # if `httpClass` derives from `httpBase` (ex: `HTTPSuccessful` or `HTTPError`) it is of proper requested type
     # if it derives from `HTTPException`, it *could* be different than base (ex: 2xx instead of 4xx codes)
     # return 'unknown error' (520) if not of lowest level base `HTTPException`, otherwise use the available code
@@ -216,18 +216,18 @@ def validate_params(httpClass, httpBase, detail, content, contentType):
         raise_http(httpError=HTTPInternalServerError,
                    detail="Invalid `httpBase` derived class specified",
                    contentType='application/json',
-                   content={'caller': {'content': content,
-                                       'detail': detail,
-                                       'code': httpCode,
-                                       'type': contentType}})
+                   content={u'caller': {u'content': content,
+                                        u'detail': detail,
+                                        u'code': httpCode,
+                                        u'type': contentType}})
     if contentType not in ['application/json', 'text/html', 'text/plain']:
         raise_http(httpError=HTTPInternalServerError,
                    detail="Invalid `contentType` specified for exception output",
                    contentType='application/json',
-                   content={'caller': {'content': content,
-                                       'detail': detail,
-                                       'code': httpCode,
-                                       'type': contentType}})
+                   content={u'caller': {u'content': content,
+                                        u'detail': detail,
+                                        u'code': httpCode,
+                                        u'type': contentType}})
     return httpCode, detail, content
 
 
@@ -242,20 +242,20 @@ def format_content_json_str(httpCode, detail, content, contentType):
     """
     json_body = {}
     try:
-        content['code'] = httpCode
-        content['detail'] = detail
-        content['type'] = contentType
+        content[u'code'] = httpCode
+        content[u'detail'] = detail
+        content[u'type'] = contentType
         json_body = json.dumps(content)
     except Exception as e:
         msg = "Dumping json content [" + str(content) + \
               "] resulted in exception [" + repr(e) + "]"
         raise_http(httpError=HTTPInternalServerError, detail=msg,
                    contentType='application/json',
-                   content={'traceback': repr(exc_info()),
-                            'caller': {'content': repr(content),   # raw string to avoid recursive json.dumps error
-                                       'detail': detail,
-                                       'code': httpCode,
-                                       'type': contentType}})
+                   content={u'traceback': repr(exc_info()),
+                            u'caller': {u'content': repr(content),   # raw string to avoid recursive json.dumps error
+                                        u'detail': detail,
+                                        u'code': httpCode,
+                                        u'type': contentType}})
     return json_body
 
 

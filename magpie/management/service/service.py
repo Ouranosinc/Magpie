@@ -6,11 +6,11 @@ from management.service.resource import *
 
 def format_service(service, perms=[]):
     return {
-        'service_url': service.url,
-        'service_name': service.resource_name,
-        'service_type': service.type,
-        'resource_id': service.resource_id,
-        'permission_names': perms
+        u'service_url': service.url,
+        u'service_name': service.resource_name,
+        u'service_type': service.type,
+        u'resource_id': service.resource_id,
+        u'permission_names': perms
     }
 
 
@@ -36,7 +36,7 @@ def get_services_view(request):
             json_response[service_type][service.resource_name] = format_service(service)
 
     return HTTPOk(
-        body=json.dumps({'services': json_response}),
+        body=json.dumps({u'services': json_response}),
         content_type='application/json'
     )
 
@@ -53,10 +53,10 @@ def register_service(request):
     if not (service_name and service_url and service_type):
         raise HTTPBadRequest(detail="Bad entry: service_name:{0}, service_url:{1}, service_type:{2}".format(service_name, service_url, service_type))
     try:
-        service = models.Service(resource_name=service_name,
-                                 resource_type='service',
-                                 url=service_url,
-                                 type=service_type)
+        service = models.Service(resource_name=unicode(service_name),
+                                 resource_type=u'service',
+                                 url=unicode(service_url),
+                                 type=unicode(service_type))
 
         db.add(service)
         
@@ -150,9 +150,9 @@ def format_service_resources(service,
                                                                   resources_perms_dict.keys())
 
     service_resources_formatted = format_service(service, service_perms)
-    service_resources_formatted['resources'] = format_resource_tree(tree,
-                                                                    resources_perms_dict=resources_perms_dict,
-                                                                    db_session=db_session)
+    service_resources_formatted[u'resources'] = format_resource_tree(tree,
+                                                                     resources_perms_dict=resources_perms_dict,
+                                                                     db_session=db_session)
     return service_resources_formatted
 
 

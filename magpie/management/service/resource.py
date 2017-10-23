@@ -5,42 +5,42 @@ from models import resource_tree_service, resource_type_dict
 
 def format_resource(resource, perms=[]):
     return {
-        'resource_name': resource.resource_name,
-        'resource_id': resource.resource_id,
-        'parent_id': resource.parent_id,
-        'resource_type': resource.resource_type,
-        'children': {},
-        'permission_names': perms
+        u'resource_name': resource.resource_name,
+        u'resource_id': resource.resource_id,
+        u'parent_id': resource.parent_id,
+        u'resource_type': resource.resource_type,
+        u'children': {},
+        u'permission_names': perms
     }
 
 
 def format_resource_tree(children, db_session, resources_perms_dict={}):
     formatted_resource_tree = {}
-    for child_id, dico in children.items():
-        resource = dico['node']
-        new_children = dico['children']
+    for child_id, child_dict in children.items():
+        resource = child_dict[u'node']
+        new_children = child_dict[u'children']
         perms = []
         if resource.resource_id in resources_perms_dict.keys():
             perms = resources_perms_dict[resource.resource_id]
 
         formatted_resource_tree[child_id] = format_resource(resource, perms)
-        formatted_resource_tree[child_id]['children'] = format_resource_tree(new_children,
-                                                                             db_session=db_session,
-                                                                             resources_perms_dict=resources_perms_dict)
+        formatted_resource_tree[child_id][u'children'] = format_resource_tree(new_children,
+                                                                              db_session=db_session,
+                                                                              resources_perms_dict=resources_perms_dict)
 
     return formatted_resource_tree
 
 
 def get_resource_children(resource, db_session):
     query = resource_tree_service.from_parent_deeper(resource.resource_id, db_session=db_session)
-    tree_struct_dico = resource_tree_service.build_subtree_strut(query)
-    return tree_struct_dico['children']
+    tree_struct_dict = resource_tree_service.build_subtree_strut(query)
+    return tree_struct_dict[u'children']
 
 
 def format_resource_with_children(resource, db_session):
     resource_formatted = format_resource(resource)
 
-    resource_formatted['children'] = format_resource_tree(
+    resource_formatted[u'children'] = format_resource_tree(
         get_resource_children(resource, db_session),
         db_session=db_session
     )
@@ -48,8 +48,8 @@ def format_resource_with_children(resource, db_session):
 
 
 def crop_tree_with_permission(children, resource_id_list):
-    for child_id, child_dico in children.items():
-        new_children = child_dico['children']
+    for child_id, child_dict in children.items():
+        new_children = child_dict[u'children']
         children_returned, resource_id_list = crop_tree_with_permission(new_children, resource_id_list)
         is_in_resource_id_list = child_id in resource_id_list
         if not is_in_resource_id_list and not children_returned:
@@ -106,8 +106,8 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
     # Two resources with the same parent can't have the same name !
     tree_struct = resource_tree_service.from_parent_deeper(parent_id, limit_depth=1, db_session=db)
     tree_struct_dict = resource_tree_service.build_subtree_strut(tree_struct)
-    direct_children = tree_struct_dict['children']
-    if resource_name in [child_dico['node'].resource_name for child_dico in direct_children.values()]:
+    direct_children = tree_struct_dict[u'children']
+    if resource_name in [child_dict[u'node'].resource_name for child_dict in direct_children.values()]:
         db.rollback()
         raise HTTPConflict(detail='this resource name already exists at this tree level')
     try:
@@ -121,7 +121,7 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
         db.rollback()
         raise HTTPBadRequest(detail=getattr(e, 'message', repr(e)))
 
-    return HTTPCreated(body=json.dumps({'resource_id': new_resource.resource_id}),
+    return HTTPCreated(body=json.dumps({u'resource_id': new_resource.resource_id}),
                        content_type='application/json')
 
 
@@ -190,6 +190,6 @@ def get_resource_permissions(request):
         raise HTTPNotFound(detail="This resource does not exist")
 
     return HTTPOk(
-        body=json.dumps({'permission_names': resource_permissions}),
+        body=json.dumps({u'permission_names': resource_permissions}),
         content_type='application/json'
     )

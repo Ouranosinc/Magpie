@@ -1,11 +1,11 @@
 from magpie import *
 import models
 from api_except import *
+from api_requests import *
 from services import service_type_dict
 from models import resource_type_dict
 from management.service.service import format_service, format_service_resources
 from models import resource_tree_service
-from pyramid.interfaces import IAuthenticationPolicy
 
 
 def rollback_delete(db, entry):
@@ -93,115 +93,15 @@ def get_users(request):
     user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
                                    fallback=lambda: request.db.rollback(),
                                    httpError=HTTPForbidden, msgOnFail="Get user query refused by db")
-    return valid_http(httpSuccess=HTTPOk, detail="Get users successful", content={'user_names': user_name_list})
-
-
-def get_group_matchdict_checked(request, group_name_key='group_name'):
-    group_name = get_value_matchdict_checked(request, group_name_key)
-    group = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
-                          fallback=lambda: request.db.rollback(),
-                          httpError=HTTPForbidden, msgOnFail="Group query by name refused by db")
-    verify_param(group, notNone=True, httpError=HTTPNotFound, msgOnFail="Group name not found in db")
-    return group
-
-
-def get_user_matchdict_checked(request, user_name_key='user_name'):
-    user_name = get_value_matchdict_checked(request, user_name_key)
-    return get_user(request, user_name)
-
-
-def get_resource_matchdict_checked(request, resource_name_key='resource_id'):
-    resource_id = get_value_matchdict_checked(request, resource_name_key)
-    resource_id = evaluate_call(lambda: int(resource_id), httpError=HTTPNotAcceptable,
-                                msgOnFail="Resource ID is an invalid literal for `int` type")
-    resource = evaluate_call(lambda: ResourceService.by_resource_id(resource_id, db_session=request.db),
-                             fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail="Resource query by id refused by db")
-    verify_param(resource, notNone=True, httpError=HTTPNotFound, msgOnFail="Resource ID not found in db")
-    verify_param(resource.resource_type, paramCompare=resource_type_dict, isIn=True,
-                 httpError=HTTPNotAcceptable, msgOnFail="Resource type does not match any valid entry")
-    return resource
-
-
-def get_service_matchdict_checked(request, service_name_key='service_name'):
-    service_name = get_value_matchdict_checked(request, service_name_key)
-    service = evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
-                            fallback=lambda: request.db.rollback(),
-                            httpError=HTTPForbidden, msgOnFail="Service query by name refused by db")
-    verify_param(service, notNone=True, httpError=HTTPNotFound, msgOnFail="Service name not found in db")
-    return service
-
-
-def get_permission_matchdict_checked(request, service_resource, permission_name_key='permission_name'):
-    if isinstance(service_resource, models.Service):
-        res_type_dict = resource_type_dict[service_resource.type]
-    elif isinstance(service_resource, models.Resource):
-        res_type_dict = resource_type_dict[service_resource.resource_type]
-    else:
-        raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
-                   content={'service_resource': repr(type(service_resource))})
-    perm_name = get_multiformat_post(request, permission_name_key)
-    verify_param(perm_name, paramCompare=res_type_dict.permission_names, isIn=True,
-                 httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that service/resource")
-    return perm_name
-
-
-def get_value_matchdict_checked(request, key):
-    val = request.matchdict.get(key)
-    verify_param(val, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid value '" + str(val) + "' specified using key '" + str(key) + "'")
-    return val
-
-
-def get_user(request, user_name_or_token):
-    if len(user_name_or_token) > 20:
-        authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
-        user_id = get_userid_by_token(user_name_or_token, authn_policy)
-        user = evaluate_call(lambda: UserService.by_id(user_id, db_session=request.db),
-                             fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail="User id query refused by db")
-        verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User id not found in db")
-        return user
-    elif user_name_or_token == LOGGED_USER:
-        curr_user = request.user
-        if curr_user:
-            return curr_user
-        else:
-            anonymous = evaluate_call(lambda: UserService.by_user_name(ANONYMOUS_USER, db_session=request.db),
-                                      fallback=lambda: request.db.rollback(),
-                                      httpError=HTTPForbidden, msgOnFail="Anonymous user query refused by db")
-            verify_param(anonymous, notNone=True, httpError=HTTPNotFound, msgOnFail="Anonymous user not found in db")
-            return anonymous
-    else:
-        user = evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
-                             fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail="User name query refused by db")
-        verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db")
-        return user
-
-
-def get_userid_by_token(token, authn_policy):
-    cookie_helper = authn_policy.cookie
-    cookie = token
-    if cookie is None:
-        return None
-    remote_addr = '0.0.0.0'
-
-    timestamp, userid, tokens, user_data = cookie_helper.parse_ticket(
-        cookie_helper.secret,
-        cookie,
-        remote_addr,
-        cookie_helper.hashalg
-    )
-    return userid
+    return valid_http(httpSuccess=HTTPOk, detail="Get users successful", content={u'user_names': user_name_list})
 
 
 @view_config(route_name='user', request_method='GET')
 def get_user_view(request):
     user = get_user_matchdict_checked(request)
-    json_response = {'user_name': user.user_name,
-                     'email': user.email,
-                     'group_names': [group.group_name for group in user.groups]}
+    json_response = {u'user_name': user.user_name,
+                     u'email': user.email,
+                     u'group_names': [group.group_name for group in user.groups]}
     return valid_http(httpSuccess=HTTPOk, detail="Get user successful", content=json_response)
 
 
@@ -231,7 +131,7 @@ def get_user_groups_checked(request, user):
 def get_user_groups(request):
     user = get_user_matchdict_checked(request)
     group_names = get_user_groups_checked(request, user)
-    return valid_http(httpSuccess=HTTPOk, detail="Get user groups successful", content={'group_names': group_names})
+    return valid_http(httpSuccess=HTTPOk, detail="Get user groups successful", content={u'group_names': group_names})
 
 
 @view_config(route_name='user_group', request_method='POST')
@@ -242,7 +142,7 @@ def assign_user_group(request):
     db = request.db
     evaluate_call(lambda: db.add(new_user_group), fallback=lambda: db.rollback(),
                   httpError=HTTPConflict, msgOnFail="User already belongs to this group",
-                  content={'user_name': user.user_name, 'group_name': group.group_name})
+                  content={u'user_name': user.user_name, u'group_name': group.group_name})
     return valid_http(httpSuccess=HTTPCreated, detail="Create user-group assignation successful")
 
 
@@ -260,7 +160,7 @@ def delete_user_group(request):
 
     evaluate_call(lambda: del_usr_grp(user, group), fallback=lambda: db.rollback(),
                   httpError=HTTPNotAcceptable, msgOnFail="Invalid user-group combination for delete",
-                  content={'user_name': user.user_name, 'group_name': group.group_name})
+                  content={u'user_name': user.user_name, u'group_name': group.group_name})
     return valid_http(httpSuccess=HTTPOk, detail="Delete user-group successful")
 
 
@@ -326,9 +226,11 @@ def get_user_resources_view(request):
     usr_res_dict = evaluate_call(lambda: build_json_user_resource_tree(user),
                                  fallback=lambda: db.rollback(), httpError=HTTPNotFound,
                                  msgOnFail="Failed to populate user resources",
-                                 content={'user_name': user.user_name, 'resource_types': ['service']})
+                                 content={u'user_name': user.user_name, u'resource_types': [u'service']})
     return valid_http(httpSuccess=HTTPOk, detail="Get user resources successful",
-                      content={'user_name': user.user_name, 'resource_types': ['service'], 'resources': usr_res_dict})
+                      content={u'user_name': user.user_name,
+                               u'resource_types': [u'service'],
+                               u'resources': usr_res_dict})
 
 
 @view_config(route_name='user_resource_permissions', request_method='GET')
@@ -337,9 +239,9 @@ def get_user_resource_permissions_view(request):
     res = get_resource_matchdict_checked(request, 'resource_id')
     perm_names = get_user_resource_permissions(resource=res, user=user, db_session=request.db)
     return valid_http(httpSuccess=HTTPOk, detail="Get user resources permissions successful",
-                      content={'user_name': user.user_name,
-                               'resource_id': res.resource_id,
-                               'permission_names': perm_names})
+                      content={u'user_name': user.user_name,
+                               u'resource_id': res.resource_id,
+                               u'permission_names': perm_names})
 
 
 def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
@@ -350,9 +252,9 @@ def create_user_resource_permission(permission_name, resource_id, user_id, db_se
     new_perm.perm_name = permission_name
     evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                   httpError=HTTPConflict, msgOnFail="Permission already exist on service for user, cannot add to db",
-                  content={'resource_id': resource_id, 'user_id': user_id, 'permission_name': permission_name})
+                  content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
     return valid_http(httpSuccess=HTTPCreated, detail="Create user resource permission successful",
-                      content={'resource_id': resource_id, 'user_id': user_id, 'permission_name': permission_name})
+                      content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
 
 
 @view_config(route_name='user_resource_permissions', request_method='POST')
@@ -369,9 +271,9 @@ def delete_user_resource_permission(permission_name, resource_id, user_id, db_se
     del_perm = UserResourcePermissionService.get(user_id, resource_id, permission_name, db_session)
     evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                   httpError=HTTPNotFound, msgOnFail="Could not find user resource permission to delete from db",
-                  content={'resource_id': resource_id, 'user_id': user_id, 'permission_name': permission_name})
+                  content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
     return valid_http(httpSuccess=HTTPOk, detail="Delete user resource permission successful",
-                      content={'resource_id': resource_id, 'user_id': user_id, 'permission_name': permission_name})
+                      content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
 
 
 @view_config(route_name='user_resource_permission', request_method='DELETE')
@@ -397,7 +299,7 @@ def get_user_services_view(request):
         svc_json[svc.type][svc.resource_name] = format_service(svc, perms)
 
     return valid_http(httpSuccess=HTTPOk, detail="Get user services successful",
-                      content={'resource_types': ['service'], 'user_id': user.id, 'services': svc_json})
+                      content={u'resource_types': [u'service'], u'user_id': user.id, u'services': svc_json})
 
 
 @view_config(route_name='user_service_permissions', request_method='GET')
@@ -406,9 +308,9 @@ def get_user_service_permissions_view(request):
     service = get_service_matchdict_checked(request)
     perm_names = get_user_service_permissions(service=service, user=user, db_session=request.db)
     svc_json = {service.resource_name: format_service(service)}
-    svc_json[service.resource_name]['permission_names'] = perm_names
-    svc_json['user_id'] = user.id
-    svc_json['user_name'] = user.user_name
+    svc_json[service.resource_name][u'permission_names'] = perm_names
+    svc_json[u'user_id'] = user.id
+    svc_json[u'user_name'] = user.user_name
     return valid_http(httpSuccess=HTTPOk, detail="Get user service permissions successful", content=svc_json)
 
 
@@ -442,4 +344,4 @@ def get_user_service_resources_view(request):
         display_all=False
     )
     return valid_http(httpSuccess=HTTPOk, detail="Get user service resources successful",
-                      content={'service': user_svc_res_json})
+                      content={u'service': user_svc_res_json})

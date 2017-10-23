@@ -40,8 +40,6 @@ def get_version(request):
     )
 
 
-
-
 def init_db():
     curr_path = os.path.dirname(os.path.abspath(__file__))
     curr_path = os.path.dirname(curr_path)
@@ -110,4 +108,3 @@ def main(global_config=None, **settings):
 
 if __name__ == '__main__':
     main()
-
