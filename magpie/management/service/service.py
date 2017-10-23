@@ -25,7 +25,7 @@ def get_services_view(request):
     service_type = request.matchdict.get('service_type')
     json_response = {}
     if not service_type:
-        service_types = [s for s in service_type_dico.keys()]
+        service_types = [s for s in service_type_dict.keys()]
     else:
         service_types = [service_type]
 
@@ -116,7 +116,7 @@ def update_service(request):
     return HTTPOk()
 
 
-from services import service_type_dico
+from services import service_type_dict
 @view_config(route_name='service_permissions', request_method='GET')
 def get_service_permissions(request):
     service_name = request.matchdict.get('service_name')
@@ -124,7 +124,7 @@ def get_service_permissions(request):
     service = models.Service.by_service_name(service_name, db_session=db)
     if service:
         try:
-            service_permissions = service_type_dico[service.type].permission_names
+            service_permissions = service_type_dict[service.type].permission_names
         except:
             db.rollback()
             raise HTTPNotFound(detail="This type of service is not implemented yet")
@@ -191,7 +191,7 @@ def create_service_direct_resource(request):
 @view_config(route_name='resources', request_method='GET')
 def get_resources_view(request):
     json_response = {}
-    for service_type in service_type_dico.keys():
+    for service_type in service_type_dict.keys():
         services = get_services_by_type(service_type, db_session=request.db)
         json_response[service_type] = {}
         for service in services:
@@ -209,8 +209,8 @@ def get_resources_view(request):
 @view_config(route_name='service_type_resource_types', request_method='GET')
 def get_service_type_resource_types(request):
     service_type = request.matchdict.get('type_name')
-    if service_type in service_type_dico:
-        resource_types = service_type_dico[service_type].resource_types
+    if service_type in service_type_dict:
+        resource_types = service_type_dict[service_type].resource_types
         return HTTPOk(
             body=json.dumps({'resource_types': resource_types}),
             content_type='application/json'

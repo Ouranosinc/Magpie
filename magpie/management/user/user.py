@@ -1,7 +1,7 @@
 from magpie import *
 import models
 from api_except import *
-from services import service_type_dico
+from services import service_type_dict
 from models import resource_type_dict
 from management.service.service import format_service, format_service_resources
 from models import resource_tree_service
@@ -97,9 +97,7 @@ def get_users(request):
 
 
 def get_group_matchdict_checked(request, group_name_key='group_name'):
-    group_name = request.matchdict.get(group_name_key)
-    verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid group name specified using key '" + str(group_name_key) + "'")
+    group_name = get_value_matchdict_checked(request, group_name_key)
     group = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
                           fallback=lambda: request.db.rollback(),
                           httpError=HTTPForbidden, msgOnFail="Group query by name refused by db")
@@ -108,10 +106,24 @@ def get_group_matchdict_checked(request, group_name_key='group_name'):
 
 
 def get_user_matchdict_checked(request, user_name_key='user_name'):
-    user_name = request.matchdict.get(user_name_key)
-    verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid user name specified using key '" + str(user_name_key) + "'")
+    user_name = get_value_matchdict_checked(request, user_name_key)
     return get_user(request, user_name)
+
+
+def get_resource_matchdict_checked(request, resource_name_key='resource_id'):
+    resource_id = request.matchdict.get(resource_name_key)
+    resource_id = evaluate_call(lambda: int(resource_id), httpError=HTTPNotAcceptable,
+                                msgOnFail="Resource ID is an invalid literal for `int` type")
+    resource = ResourceService.by_resource_id(resource_id, db_session=request.db)
+    verify_param(resource, notNone=True, httpError=HTTPNotFound, msgOnFail="Resource ID not found in db")
+    return resource
+
+
+def get_value_matchdict_checked(request, key):
+    val = request.matchdict.get(key)
+    verify_param(val, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid value '" + str(val) + "' specified using key '" + str(key) + "'")
+    return val
 
 
 def get_user(request, user_name_or_token):
@@ -235,7 +247,7 @@ def get_user_resource_permissions(user, resource, db_session):
 
 def get_user_service_permissions(user, service, db_session):
     if service.owner_user_id == user.id:
-        permission_names = service_type_dico[service.type].permission_names
+        permission_names = service_type_dict[service.type].permission_names
     else:
         permission_names = [permission.perm_name for permission in service.perms_for_user(user, db_session=db_session)]
     return permission_names
@@ -247,11 +259,11 @@ def get_user_resources_permissions_dict(user, db_session, resource_types=None, r
         raise HTTPBadRequest(detail='This user does not exist')
     resource_permission_tuple = user.resources_with_possible_perms(resource_ids=resource_ids, resource_types=resource_types, db_session=db)
     resources_permissions_dict = {}
-    for tuple in resource_permission_tuple:
-        if tuple.resource.resource_id not in resources_permissions_dict:
-            resources_permissions_dict[tuple.resource.resource_id] = [tuple.perm_name]
+    for res_perm in resource_permission_tuple:
+        if res_perm.resource.resource_id not in resources_permissions_dict:
+            resources_permissions_dict[res_perm.resource.resource_id] = [res_perm.perm_name]
         else:
-            resources_permissions_dict[tuple.resource.resource_id].append(tuple.perm_name)
+            resources_permissions_dict[res_perm.resource.resource_id].append(res_perm.perm_name)
 
     return resources_permissions_dict
 
@@ -287,23 +299,19 @@ def get_user_resources_view(request):
                                  fallback=lambda: db.rollback(), httpError=HTTPNotFound,
                                  msgOnFail="Failed to populate user resources",
                                  content={'user_name': user.user_name, 'resource_types': ['service']})
-    return valid_http(httpSuccess=HTTPOk, detail="Get user resources successful", content={'resources': usr_res_dict})
+    return valid_http(httpSuccess=HTTPOk, detail="Get user resources successful",
+                      content={'user_name': user.user_name, 'resource_types': ['service'], 'resources': usr_res_dict})
 
 
 @view_config(route_name='user_resource_permissions', request_method='GET')
 def get_user_resource_permissions_view(request):
-    user_name = request.matchdict.get('user_name')
-    resource_id = request.matchdict.get('resource_id')
-    db = request.db
-    resource = ResourceService.by_resource_id(resource_id, db)
-    #user = UserService.by_user_name(user_name=user_name, db_session=db)
-    user = get_user(request, user_name_or_token=user_name)
-
-    permission_names = get_user_resource_permissions(resource=resource, user=user, db_session=db)
-    return HTTPOk(
-        body=json.dumps({'permission_names': permission_names}),
-        content_type='application/json'
-    )
+    user = get_user_matchdict_checked(request)
+    res = get_resource_matchdict_checked(request, 'resource_id')
+    perm_names = get_user_resource_permissions(resource=res, user=user, db_session=request.db)
+    return valid_http(httpSuccess=HTTPOk, detail="Get user resources permissions successful",
+                      content={'user_name': user.user_name,
+                               'resource_id': res.resource_id,
+                               'permission_names': perm_names})
 
 
 def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
@@ -418,7 +426,7 @@ def create_user_service_permission(request):
 
     if service is None or user is None:
         raise HTTPNotFound(detail='this service/user does not exist')
-    if permission_name not in service_type_dico[service.type].permission_names:
+    if permission_name not in service_type_dict[service.type].permission_names:
         raise HTTPBadRequest(detail='This permission is not allowed for that service')
 
     return create_user_resource_permission(permission_name=permission_name,
@@ -451,7 +459,7 @@ def delete_user_service_permission(request):
 
     if service is None or user is None:
         raise HTTPNotFound(detail='this service/user does not exist')
-    if permission_name not in service_type_dico[service.type].permission_names:
+    if permission_name not in service_type_dict[service.type].permission_names:
         raise HTTPBadRequest(detail='This permission is not allowed for that service')
 
     return delete_user_resource_permission(permission_name,

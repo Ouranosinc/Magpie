@@ -212,7 +212,7 @@ class ServiceTHREDDS(ServiceI):
     pass
 
 
-service_type_dico = {'wps': ServiceWPS,
+service_type_dict = {'wps': ServiceWPS,
                      'wms': ServiceWMS,
                      'wfs': ServiceWFS,
                      'thredds': ServiceTHREDDS}
@@ -220,7 +220,7 @@ service_type_dico = {'wps': ServiceWPS,
 
 def service_factory(service, request):
     try:
-        service_specific = service_type_dico[service.type](service, request)
+        service_specific = service_type_dict[service.type](service, request)
         return service_specific
     except:
         raise Exception('This type of service does not exist')
@@ -228,6 +228,6 @@ def service_factory(service, request):
 
 def get_all_service_permission_names():
     all_permission_names_list = set()
-    for service_type in service_type_dico.keys():
-        all_permission_names_list.update(service_type_dico[service_type].permission_names)
+    for service_type in service_type_dict.keys():
+        all_permission_names_list.update(service_type_dict[service_type].permission_names)
     return all_permission_names_list

@@ -3,7 +3,7 @@ import models
 from models import resource_type_dict
 from models import resource_tree_service
 from management.service.service import format_service_resources, format_service
-from services import service_type_dico
+from services import service_type_dict
 
 @view_config(route_name='groups', request_method='GET')
 def get_groups(request):
@@ -110,7 +110,7 @@ def get_group_service_permissions_view(request):
         raise HTTPNotFound(detail='this service/group does not exist')
 
     if service.owner_group_id == group.id:
-        permission_names = service_type_dico[service.type].permission_names
+        permission_names = service_type_dict[service.type].permission_names
     else:
         service_found_perms_list = get_group_services_permissions(group, db_session=db, resource_ids=[service.resource_id])
     if service_found_perms_list:
@@ -136,7 +136,7 @@ def create_group_service_permission(request):
     if service is None or group is None:
         db.rollback()
         raise HTTPNotFound(detail='this service/group does not exist')
-    if permission_name not in service_type_dico[service.type].permission_names:
+    if permission_name not in service_type_dict[service.type].permission_names:
         db.rollback()
         raise HTTPBadRequest(detail='This permission is not allowed for that service')
 
@@ -153,7 +153,7 @@ def delete_group_service_permission(request):
     group = GroupService.by_group_name(group_name=group_name, db_session=db)
     if service is None or group is None:
         raise HTTPNotFound(detail='this service/group does not exist')
-    if permission_name not in service_type_dico[service.type].permission_names:
+    if permission_name not in service_type_dict[service.type].permission_names:
         raise HTTPBadRequest(detail='This permission is not allowed for that service')
     return delete_group_resource_permission(permission_name, service.resource_id, group.id, db_session=db)
 
@@ -230,7 +230,7 @@ def get_group_resource_permissions(group, resource, db_session):
 
 def get_group_service_permissions(group, service, db_session):
     if service.owner_group_id == group.id:
-        permission_names = service_type_dico[service.type].permission_names
+        permission_names = service_type_dict[service.type].permission_names
     else:
         group_res_permission = db_session.query(models.GroupResourcePermission) \
             .filter(models.GroupResourcePermission.resource_id == service.resource_id) \
@@ -283,7 +283,7 @@ def create_group_resource_permission_view(request):
         raise HTTPNotFound(detail='this service/group does not exist')
 
     if resource.resource_type == models.Service.resource_type_name:
-        if permission_name not in service_type_dico[resource.type].permission_names:
+        if permission_name not in service_type_dict[resource.type].permission_names:
             raise HTTPBadRequest(detail='This permission is not allowed for that service')
     elif permission_name not in resource_type_dict[resource.resource_type].permission_names:
         raise HTTPBadRequest(detail='This permission is not allowed for that resource')
@@ -317,7 +317,7 @@ def delete_group_resource_permission_view(request):
         raise HTTPNotFound(detail='this service/group does not exist')
 
     if resource.resource_type == models.Service.resource_type_name:
-        if permission_name not in service_type_dico[resource.type].permission_names:
+        if permission_name not in service_type_dict[resource.type].permission_names:
             raise HTTPBadRequest(detail='This permission is not allowed for that service')
     elif permission_name not in resource_type_dict[resource.resource_type].permission_names:
         raise HTTPBadRequest(detail='This permission is not allowed for that resource')
