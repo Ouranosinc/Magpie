@@ -3,6 +3,12 @@
 History
 =======
 
+0.2.0
+---------------------
+
+* Revamp HTTP standard error output format, messages, values and general error/exception handling.
+* Update [Magpie Rest API documentation](https://app.swaggerhub.com/apis/fderue/magpie-rest_api)
+
 0.1.1
 ---------------------
 
