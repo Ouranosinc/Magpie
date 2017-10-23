@@ -1,5 +1,6 @@
 from pyramid.security import Allow, Everyone
 from pyramid.security import ALL_PERMISSIONS
+from pyramid.httpexceptions import HTTPInternalServerError
 from ziggurat_foundations.models.external_identity import ExternalIdentityMixin
 from ziggurat_foundations.models.group import GroupMixin
 from ziggurat_foundations.models.group_permission import GroupPermissionMixin
@@ -18,6 +19,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from ziggurat_foundations.models import groupfinder as gf
 from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
 from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
+from api_except import *
 
 
 Base = declarative_base()
@@ -103,8 +105,8 @@ class Service(Resource):
     Resource of `service` type
     """
 
-    __tablename__ = 'services'
-    __mapper_args__ = {'polymorphic_identity': 'service'}
+    __tablename__ = u'services'
+    __mapper_args__ = {u'polymorphic_identity': u'service'}
 
     resource_id = sa.Column(sa.Integer(),
                             sa.ForeignKey('resources.resource_id',
@@ -115,7 +117,7 @@ class Service(Resource):
     # ... your own properties....
     url = sa.Column(sa.UnicodeText(), unique=True)  # http://localhost:8083
     type = sa.Column(sa.UnicodeText())  # wps, wms, thredds, ...
-    resource_type_name = 'service'
+    resource_type_name = u'service'
 
     @staticmethod
     def by_service_name(service_name, db_session):
@@ -137,30 +139,30 @@ class Service(Resource):
 
 
 class File(Resource):
-    __mapper_args__ = {'polymorphic_identity': 'file'}
-    permission_names = ['read',
-                        'write']
-    resource_type_name = 'file'
+    __mapper_args__ = {u'polymorphic_identity': u'file'}
+    permission_names = [u'read',
+                        u'write']
+    resource_type_name = u'file'
 
 
 class Directory(Resource):
-    __mapper_args__ = {'polymorphic_identity': 'directory'}
+    __mapper_args__ = {u'polymorphic_identity': u'directory'}
     permission_names = File.permission_names
-    resource_type_name = 'directory'
+    resource_type_name = u'directory'
 
 
 class Workspace(Resource):
-    __mapper_args__ = {'polymorphic_identity': 'workspace'}
-    permission_names = ['getcapabilities',
-                        'getmap',
-                        'getfeatureinfo',
-                        'getlegendgraphic',
-                        'getmetadata',
-                        'describefeaturetype',
-                        'getfeature',
-                        'lockfeature',
-                        'transaction']
-    resource_type_name = 'workspace'
+    __mapper_args__ = {u'polymorphic_identity': u'workspace'}
+    permission_names = [u'getcapabilities',
+                        u'getmap',
+                        u'getfeatureinfo',
+                        u'getlegendgraphic',
+                        u'getmetadata',
+                        u'describefeaturetype',
+                        u'getfeature',
+                        u'lockfeature',
+                        u'transaction']
+    resource_type_name = u'workspace'
 
 
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
@@ -169,15 +171,16 @@ ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
 
 resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
 
-resource_type_dict = {'service': Service, 'directory': Directory, 'file': File, 'workspace': Workspace}
+resource_type_dict = {u'service': Service, u'directory': Directory, u'file': File, u'workspace': Workspace}
 
 
 def resource_factory(**kwargs):
-    try:
-        resource_type = kwargs['resource_type']
-    except Exception as e:
-        raise Exception(e.message)
-    return resource_type_dict[resource_type](**kwargs)
+    resource_type = evaluate_call(lambda: kwargs['resource_type'], httpError=HTTPInternalServerError,
+                                  msgOnFail="kwargs do not contain required `resource_type`",
+                                  content={u'kwargs': repr(kwargs)})
+    return evaluate_call(lambda: resource_type_dict[resource_type](**kwargs), httpError=HTTPInternalServerError,
+                         msgOnFail="kwargs unpacking failed from specified `resource_type` and `resource_type_dict`",
+                         content={u'kwargs': repr(kwargs), u'resource_type_dict': repr(resource_type_dict)})
 
 
 def get_all_resource_permission_names():

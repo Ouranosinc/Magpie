@@ -6,9 +6,9 @@ from management.service.resource import *
 
 def format_service(service, perms=[]):
     return {
-        u'service_url': service.url,
-        u'service_name': service.resource_name,
-        u'service_type': service.type,
+        u'service_url': str(service.url),
+        u'service_name': str(service.resource_name),
+        u'service_type': str(service.type),
         u'resource_id': service.resource_id,
         u'permission_names': perms
     }
@@ -53,10 +53,10 @@ def register_service(request):
     if not (service_name and service_url and service_type):
         raise HTTPBadRequest(detail="Bad entry: service_name:{0}, service_url:{1}, service_type:{2}".format(service_name, service_url, service_type))
     try:
-        service = models.Service(resource_name=unicode(service_name),
+        service = models.Service(resource_name=str(service_name),
                                  resource_type=u'service',
-                                 url=unicode(service_url),
-                                 type=unicode(service_type))
+                                 url=str(service_url),
+                                 type=str(service_type))
 
         db.add(service)
         

@@ -1,5 +1,4 @@
 from magpie import *
-import models
 from models import resource_type_dict
 from api_except import *
 from pyramid.interfaces import IAuthenticationPolicy

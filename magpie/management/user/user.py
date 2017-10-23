@@ -1,11 +1,9 @@
 from magpie import *
-import models
 from api_except import *
 from api_requests import *
 from services import service_type_dict
-from models import resource_type_dict
+from models import resource_type_dict, resource_tree_service
 from management.service.service import format_service, format_service_resources
-from models import resource_tree_service
 
 
 def rollback_delete(db, entry):

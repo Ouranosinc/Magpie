@@ -1,21 +1,28 @@
 from magpie import *
-import models
-from models import resource_tree_service, resource_type_dict
+from models import resource_type_dict, resource_tree_service, resource_factory
+from api_except import *
+from api_requests import *
 
 
-def format_resource(resource, perms=[]):
+def format_resource(resource, perms=None, basic_info=False):
+    if basic_info:
+        return {
+            u'resource_name': str(resource.resource_name),
+            u'resource_type': str(resource.resource_type),
+            u'resource_id': resource.resource_id
+        }
     return {
-        u'resource_name': resource.resource_name,
+        u'resource_name': str(resource.resource_name),
+        u'resource_type': str(resource.resource_type),
         u'resource_id': resource.resource_id,
         u'parent_id': resource.parent_id,
-        u'resource_type': resource.resource_type,
         u'children': {},
-        u'permission_names': perms
+        u'permission_names': list() if perms is None else perms
     }
 
 
-def format_resource_tree(children, db_session, resources_perms_dict={}):
-    formatted_resource_tree = {}
+def format_resource_tree(children, db_session, resources_perms_dict=None):
+    fmt_res_tree = {}
     for child_id, child_dict in children.items():
         resource = child_dict[u'node']
         new_children = child_dict[u'children']
@@ -23,12 +30,11 @@ def format_resource_tree(children, db_session, resources_perms_dict={}):
         if resource.resource_id in resources_perms_dict.keys():
             perms = resources_perms_dict[resource.resource_id]
 
-        formatted_resource_tree[child_id] = format_resource(resource, perms)
-        formatted_resource_tree[child_id][u'children'] = format_resource_tree(new_children,
-                                                                              db_session=db_session,
-                                                                              resources_perms_dict=resources_perms_dict)
+        resources_perms_dict = dict() if resources_perms_dict is None else resources_perms_dict
+        fmt_res_tree[child_id] = format_resource(resource, perms)
+        fmt_res_tree[child_id][u'children'] = format_resource_tree(new_children, db_session, resources_perms_dict)
 
-    return formatted_resource_tree
+    return fmt_res_tree
 
 
 def get_resource_children(resource, db_session):
@@ -53,7 +59,6 @@ def crop_tree_with_permission(children, resource_id_list):
         children_returned, resource_id_list = crop_tree_with_permission(new_children, resource_id_list)
         is_in_resource_id_list = child_id in resource_id_list
         if not is_in_resource_id_list and not children_returned:
-            a = children.keys()
             children.pop(child_id)
         elif is_in_resource_id_list:
             resource_id_list.remove(child_id)
@@ -65,131 +70,101 @@ def get_resource_path(resource_id, db_session):
     parent_path = ''
     for parent_resource in parent_resources:
         parent_path = '/' + parent_resource.resource_name + parent_path
-
     return parent_path
 
 
 @view_config(route_name='resource', request_method='GET')
 def get_resource_view(request):
-    resource_id = request.matchdict.get('resource_id')
-    db = request.db
-    try:
-        resource = ResourceService.by_resource_id(resource_id, db_session=db)
-    except Exception as e:
-        raise HTTPBadRequest(detail=getattr(e, 'message', repr(e)))
-    if not resource:
-        db.rollback()
-        raise HTTPNotFound(detail="This resource id does not exist")
-    json_response = format_resource_with_children(resource, db_session=db)
-    return HTTPOk(
-        body=json.dumps({resource.resource_id: json_response}),
-        content_type='application/json'
-    )
+    res = get_resource_matchdict_checked(request)
+    res_json = evaluate_call(lambda: format_resource_with_children(res, db_session=request.db),
+                             fallback=lambda: request.db.rollback(), httpError=HTTPInternalServerError,
+                             msgOnFail="Failed building resource children json formatted tree",
+                             content=format_resource(res, basic_info=True))
+    return valid_http(httpSuccess=HTTPOk, detail="Get resource successful", content={res.resource_id: res_json})
 
 
 def create_resource(resource_name, resource_type, parent_id, db_session):
-    db = db_session
-    try:
-        parent_resource = ResourceService.by_resource_id(parent_id, db_session=db_session)
-        if not parent_resource:
-            raise HTTPBadRequest(detail='parent_id not valid')
-    except Exception:
-        raise HTTPBadRequest(detail='parent_id not valid')
-    try:
-        new_resource = models.resource_factory(resource_type=resource_type,
-                                               resource_name=resource_name,
-                                               parent_id=parent_id)
-    except Exception as e:
-        db.rollback()
-        raise HTTPBadRequest(detail=getattr(e, 'message', repr(e)))
+    verify_param(resource_name, notNone=True, notEmpty=True,
+                 msgOnFail="Invalid `resource_name` '" + str(resource_name) + "' specified for child resource creation")
+    verify_param(resource_type, notNone=True, notEmpty=True,
+                 msgOnFail="Invalid `resource_type` '" + str(resource_type) + "' specified for child resource creation")
+    verify_param(parent_id, notNone=True, notEmpty=True,
+                 msgOnFail="Invalid `parent_id` '" + str(parent_id) + "' specified for child resource creation")
+    parent_resource = evaluate_call(lambda: ResourceService.by_resource_id(parent_id, db_session=db_session),
+                                    fallback=lambda: db_session.rollback(), httpError=HTTPNotFound,
+                                    msgOnFail="Could not find specified resource parent id",
+                                    content={u'parent_id': str(parent_id), u'resource_name': str(resource_name),
+                                             u'resource_type': str(resource_type)})
+    new_resource = resource_factory(resource_type=resource_type,
+                                    resource_name=resource_name,
+                                    parent_id=parent_resource.resource_id)
 
     # Two resources with the same parent can't have the same name !
-    tree_struct = resource_tree_service.from_parent_deeper(parent_id, limit_depth=1, db_session=db)
+    tree_struct = resource_tree_service.from_parent_deeper(parent_id, limit_depth=1, db_session=db_session)
     tree_struct_dict = resource_tree_service.build_subtree_strut(tree_struct)
     direct_children = tree_struct_dict[u'children']
-    if resource_name in [child_dict[u'node'].resource_name for child_dict in direct_children.values()]:
-        db.rollback()
-        raise HTTPConflict(detail='this resource name already exists at this tree level')
-    try:
-        db.add(new_resource)
-        
-        total_children = resource_tree_service.count_children(new_resource.parent_id, db_session=db)
-        resource_tree_service.set_position(resource_id=new_resource.resource_id,
-                                           to_position=total_children,
-                                           db_session=db)
-    except Exception as e:
-        db.rollback()
-        raise HTTPBadRequest(detail=getattr(e, 'message', repr(e)))
+    verify_param(resource_name, notIn=True, httpError=HTTPConflict,
+                 msgOnFail="Resource name already exists at requested tree level for creation",
+                 paramCompare=[child_dict[u'node'].resource_name for child_dict in direct_children.values()])
 
-    return HTTPCreated(body=json.dumps({u'resource_id': new_resource.resource_id}),
-                       content_type='application/json')
+    def add_resource_in_tree(new_res, db):
+        db_session.add(new_res)
+        total_children = resource_tree_service.count_children(new_res.parent_id, db_session=db)
+        resource_tree_service.set_position(resource_id=new_res.resource_id, to_position=total_children, db_session=db)
+
+    evaluate_call(lambda: add_resource_in_tree(new_resource, db_session),
+                  fallback=lambda: db_session.rollback(),
+                  httpError=HTTPBadRequest, msgOnFail="Failed to insert new resource in service tree using parent id")
+    return valid_http(httpSuccess=HTTPCreated, detail="Create resource successful",
+                      content=format_resource(new_resource, basic_info=True))
 
 
 @view_config(route_name='resources', request_method='POST')
 def create_resource_view(request):
-    """
-    Create a resource a place it somewhere
-    :param request: 
-    :return: 
-    """
     resource_name = get_multiformat_post(request, 'resource_name')
     resource_type = get_multiformat_post(request, 'resource_type')
     parent_id = get_multiformat_post(request, 'parent_id')
-    if not (resource_name and resource_type and parent_id):
-        raise HTTPBadRequest(detail='Bad request: resource_name={0}, resource_type={1}, parent_id={2}'
-                             .format(resource_name, resource_type, parent_id))
-
     return create_resource(resource_name, resource_type, parent_id, request.db)
 
 
 @view_config(route_name='service_resource', request_method='DELETE')
 @view_config(route_name='resource', request_method='DELETE')
 def delete_resources(request):
-    db = request.db
-    try:
-        resource_id = request.matchdict.get('resource_id')
-        resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db)
-        resource_tree_service.delete_branch(resource_id=resource_id, db_session=db)
-        db.delete(resource)
-    except Exception:
-        db.rollback()
-        raise HTTPNotFound('Bad resource id')
-    return HTTPOk()
+    res = get_resource_matchdict_checked(request)
+    res_content = format_resource(res, basic_info=True)
+    evaluate_call(lambda: resource_tree_service.delete_branch(resource_id=res.resource_id, db_session=request.db),
+                  fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                  msgOnFail="Failed to delete resource branch from tree service", content=res_content)
+    evaluate_call(lambda: request.db.delete(res), fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                  msgOnFail="Failed to delete resource from db", content=res_content)
+    return valid_http(httpSuccess=HTTPOk, detail="Delete resource successful", content=res_content)
 
 
 @view_config(route_name='resource', request_method='PUT')
 def update_resource(request):
-    resource_id = request.matchdict.get('resource_id')
-    new_name = get_multiformat_post(request, 'resource_name')
-    db = request.db
-    if new_name is None:
-        raise HTTPBadRequest(detail='the new resource_name is missing')
-    try:
-        resource = ResourceService.by_resource_id(resource_id, db_session=db)
-        resource.resource_name = new_name
-    except Exception:
-        db.rollback()
-        raise HTTPNotFound('incorrect resource id')
+    res = get_resource_matchdict_checked(request, 'resource_id')
+    res_old_name = res.resource_name
+    res_new_name = get_multiformat_post(request, 'resource_name')
+    verify_param(res_new_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid new resource name '" + str(res_new_name) + "'specified for update")
 
-    return HTTPOk()
+    def rename(r, n):
+        r.resource_name = n
+    evaluate_call(lambda: rename(res, res_new_name), fallback=lambda: request.db.rollback(),
+                  msgOnFail="Failed to update resource with new name",
+                  content={u'resource_id': res.resource_id, u'resource_name': res.resource_name,
+                           u'old_resource_name': res_old_name, u'new_resource_name': res_new_name})
+    return valid_http(httpSuccess=HTTPOk, detail="Update resource successful",
+                      content={u'resource_id': res.resource_id, u'resource_name': res.resource_name,
+                               u'old_resource_name': res_old_name, u'new_resource_name': res_new_name})
 
 
 @view_config(route_name='resource_permissions', request_method='GET')
 def get_resource_permissions(request):
-    resource_id = request.matchdict.get('resource_id')
-    db = request.db
-    resource = ResourceService.by_resource_id(resource_id, db_session=db)
-    if resource:
-        try:
-            resource_permissions = resource_type_dict[resource.resource_type].permission_names
-        except Exception:
-            db.rollback()
-            raise HTTPNotFound(detail="This type of resource is not implemented yet")
-    else:
-        db.rollback()
-        raise HTTPNotFound(detail="This resource does not exist")
-
-    return HTTPOk(
-        body=json.dumps({u'permission_names': resource_permissions}),
-        content_type='application/json'
-    )
+    res = get_resource_matchdict_checked(request, 'resource_id')
+    res_perm = evaluate_call(lambda: resource_type_dict[res.resource_type].permission_names,
+                             fallback=lambda: request.db.rollback(), httpError=HTTPNotAcceptable,
+                             msgOnFail="Invalid resource type to extract permissions",
+                             content=format_resource(res, basic_info=True))
+    return valid_http(httpSuccess=HTTPOk, detail="Get resource permissions successful",
+                      content={u'permission_names': res_perm})
