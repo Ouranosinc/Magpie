@@ -1,20 +1,23 @@
 from magpie import *
 import models
 from models import resource_tree_service
+from services import service_type_dict
 from management.service.resource import *
 
 
-def format_service(service, perms=[]):
+def format_service(service, perms=None):
     return {
         u'service_url': str(service.url),
         u'service_name': str(service.resource_name),
         u'service_type': str(service.type),
         u'resource_id': service.resource_id,
-        u'permission_names': perms
+        u'permission_names': list() if perms is None else perms
     }
 
 
 def get_services_by_type(service_type, db_session):
+    verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `service_type` value '" + str(service_type) + "' specified")
     services = db_session.query(models.Service).filter(models.Service.type == service_type)
     return services
 
@@ -35,10 +38,7 @@ def get_services_view(request):
         for service in services:
             json_response[service_type][service.resource_name] = format_service(service)
 
-    return HTTPOk(
-        body=json.dumps({u'services': json_response}),
-        content_type='application/json'
-    )
+    return valid_http(httpSuccess=HTTPOk, detail="Get services successful", content={u'services': json_response})
 
 
 @view_config(route_name='services', request_method='POST')
@@ -46,25 +46,26 @@ def register_service(request):
     service_name = get_multiformat_post(request, 'service_name')
     service_url = get_multiformat_post(request, 'service_url')
     service_type = get_multiformat_post(request, 'service_type')
-    db = request.db
-    if models.Service.by_service_name(service_name, db_session=db):
-        raise HTTPConflict(detail='This service name is already used')
+    verify_param(service_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `service_name` value '" + str(service_name) + "' specified for registration")
+    verify_param(service_url, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `service_url` value '" + str(service_url) + "' specified for registration")
+    verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `service_type` value '" + str(service_type) + "' specified for registration")
+    verify_param(service_type, isIn=True, httpError=HTTPNotAcceptable, paramCompare=service_type_dict.keys(),
+                 msgOnFail="Specified `service_type` value does not correspond to any of the available types")
+    verify_param(service_name, notIn=True, httpError=HTTPConflict,
+                 paramCompare=[models.Service.by_service_name(service_name, db_session=request.db)],
+                 msgOnFail="Specified `service_name` value '" + str(service_name) + "' already exists")
 
-    if not (service_name and service_url and service_type):
-        raise HTTPBadRequest(detail="Bad entry: service_name:{0}, service_url:{1}, service_type:{2}".format(service_name, service_url, service_type))
-    try:
-        service = models.Service(resource_name=str(service_name),
-                                 resource_type=u'service',
-                                 url=str(service_url),
-                                 type=str(service_type))
-
-        db.add(service)
-        
-    except Exception, e:
-        db.rollback()
-        raise HTTPConflict(detail=e.message)
-
-    return HTTPCreated()
+    service = models.Service(resource_name=str(service_name),
+                             resource_type=u'service',
+                             url=str(service_url),
+                             type=str(service_type))
+    evaluate_call(lambda: request.db.add(service), fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                  msgOnFail="Service registration forbidden by db", content=format_service(service))
+    return valid_http(httpSuccess=HTTPCreated, detail="Service registration to db successful",
+                      content=format_service(service))
 
 
 @view_config(route_name='service', request_method='GET')
@@ -116,7 +117,6 @@ def update_service(request):
     return HTTPOk()
 
 
-from services import service_type_dict
 @view_config(route_name='service_permissions', request_method='GET')
 def get_service_permissions(request):
     service_name = request.matchdict.get('service_name')
