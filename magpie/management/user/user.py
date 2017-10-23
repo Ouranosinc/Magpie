@@ -111,14 +111,39 @@ def get_user_matchdict_checked(request, user_name_key='user_name'):
 
 
 def get_resource_matchdict_checked(request, resource_name_key='resource_id'):
-    resource_id = request.matchdict.get(resource_name_key)
+    resource_id = get_value_matchdict_checked(request, resource_name_key)
     resource_id = evaluate_call(lambda: int(resource_id), httpError=HTTPNotAcceptable,
                                 msgOnFail="Resource ID is an invalid literal for `int` type")
-    resource = ResourceService.by_resource_id(resource_id, db_session=request.db)
+    resource = evaluate_call(lambda: ResourceService.by_resource_id(resource_id, db_session=request.db),
+                             fallback=lambda: request.db.rollback(),
+                             httpError=HTTPForbidden, msgOnFail="Resource query by id refused by db")
     verify_param(resource, notNone=True, httpError=HTTPNotFound, msgOnFail="Resource ID not found in db")
     verify_param(resource.resource_type, paramCompare=resource_type_dict, isIn=True,
                  httpError=HTTPNotAcceptable, msgOnFail="Resource type does not match any valid entry")
     return resource
+
+
+def get_service_matchdict_checked(request, service_name_key='service_name'):
+    service_name = get_value_matchdict_checked(request, service_name_key)
+    service = evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
+                            fallback=lambda: request.db.rollback(),
+                            httpError=HTTPForbidden, msgOnFail="Service query by name refused by db")
+    verify_param(service, notNone=True, httpError=HTTPNotFound, msgOnFail="Service name not found in db")
+    return service
+
+
+def get_permission_matchdict_checked(request, service_resource, permission_name_key='permission_name'):
+    if isinstance(service_resource, models.Service):
+        res_type_dict = resource_type_dict[service_resource.type]
+    elif isinstance(service_resource, models.Resource):
+        res_type_dict = resource_type_dict[service_resource.resource_type]
+    else:
+        raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
+                   content={'service_resource': repr(type(service_resource))})
+    perm_name = get_multiformat_post(request, permission_name_key)
+    verify_param(perm_name, paramCompare=res_type_dict.permission_names, isIn=True,
+                 httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that service/resource")
+    return perm_name
 
 
 def get_value_matchdict_checked(request, key):
@@ -256,10 +281,10 @@ def get_user_service_permissions(user, service, db_session):
 
 
 def get_user_resources_permissions_dict(user, db_session, resource_types=None, resource_ids=None):
-    db = db_session
-    if user is None:
-        raise HTTPBadRequest(detail='This user does not exist')
-    resource_permission_tuple = user.resources_with_possible_perms(resource_ids=resource_ids, resource_types=resource_types, db_session=db)
+    verify_param(user, notNone=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid user specified to obtain resource permissions")
+    resource_permission_tuple = user.resources_with_possible_perms(resource_ids=resource_ids,
+                                                                   resource_types=resource_types, db_session=db_session)
     resources_permissions_dict = {}
     for res_perm in resource_permission_tuple:
         if res_perm.resource.resource_id not in resources_permissions_dict:
@@ -271,7 +296,8 @@ def get_user_resources_permissions_dict(user, db_session, resource_types=None, r
 
 
 def get_user_service_resources_permissions_dict(user, service, db_session):
-    resources_under_service = resource_tree_service.from_parent_deeper(parent_id=service.resource_id, db_session=db_session)
+    resources_under_service = resource_tree_service.from_parent_deeper(parent_id=service.resource_id,
+                                                                       db_session=db_session)
     resource_ids = [resource.Resource.resource_id for resource in resources_under_service]
     return get_user_resources_permissions_dict(user, db_session, resource_types=None, resource_ids=resource_ids)
 
@@ -333,7 +359,7 @@ def create_user_resource_permission(permission_name, resource_id, user_id, db_se
 def create_user_resource_permission_view(request):
     user = get_user_matchdict_checked(request)
     res = get_resource_matchdict_checked(request)
-    perm_name = get_value_matchdict_checked(request, 'permission_name')
+    perm_name = get_permission_matchdict_checked(request, res)
     verify_param(perm_name, paramCompare=resource_type_dict[res.resource_type].permission_names, isIn=True,
                  httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that resource type")
     return create_user_resource_permission(perm_name, res.resource_id, user.id, request.db)
@@ -352,7 +378,7 @@ def delete_user_resource_permission(permission_name, resource_id, user_id, db_se
 def delete_user_resource_permission_view(request):
     user = get_user_matchdict_checked(request)
     res = get_resource_matchdict_checked(request)
-    perm_name = get_value_matchdict_checked(request, 'permission_name')
+    perm_name = get_permission_matchdict_checked(request, res)
     verify_param(perm_name, paramCompare=resource_type_dict[res.resource_type].permission_names, isIn=True,
                  httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that resource type")
     return delete_user_resource_permission(perm_name, res.resource_id, user.id, request.db)
@@ -360,129 +386,60 @@ def delete_user_resource_permission_view(request):
 
 @view_config(route_name='user_services', request_method='GET')
 def get_user_services_view(request):
-    user_name = request.matchdict.get('user_name')
-    db = request.db
-    # user = UserService.by_user_name(user_name=user_name, db_session=db)
-    user = get_user(request, user_name_or_token=user_name)
+    user = get_user_matchdict_checked(request)
+    res_perm_dict = get_user_resources_permissions_dict(user, resource_types=['service'], db_session=request.db)
 
-    json_response = {}
+    svc_json = {}
+    for resource_id, perms in res_perm_dict.items():
+        svc = models.Service.by_resource_id(resource_id=resource_id, db_session=request.db)
+        if svc.type not in svc_json:
+            svc_json[svc.type] = {}
+        svc_json[svc.type][svc.resource_name] = format_service(svc, perms)
 
-    resources_permissions_dict = get_user_resources_permissions_dict(user,
-                                                                     resource_types=['service'],
-                                                                     db_session=request.db)
-
-    for resource_id, perms in resources_permissions_dict.items():
-        curr_service = models.Service.by_resource_id(resource_id=resource_id, db_session=db)
-        service_type = curr_service.type
-        service_name = curr_service.resource_name
-        if service_type not in json_response:
-            json_response[service_type] = {}
-        json_response[service_type][service_name] = format_service(curr_service, perms)
-
-    return HTTPOk(
-        body=json.dumps({'services': json_response}),
-        content_type='application/json'
-    )
+    return valid_http(httpSuccess=HTTPOk, detail="Get user services successful",
+                      content={'resource_types': ['service'], 'user_id': user.id, 'services': svc_json})
 
 
 @view_config(route_name='user_service_permissions', request_method='GET')
 def get_user_service_permissions_view(request):
-    user_name = request.matchdict.get('user_name')
-    service_name = request.matchdict.get('service_name')
-
-    db = request.db
-    service = models.Service.by_service_name(service_name, db_session=db)
-    # user = UserService.by_user_name(user_name=user_name, db_session=db)
-    user = get_user(request, user_name_or_token=user_name)
-
-    if service is None or user is None:
-        raise HTTPNotFound(detail='this service/user does not exist')
-
-    permission_names = get_user_service_permissions(service=service, user=user, db_session=db)
-    json_response = {service.resource_name: format_service(service)}
-    json_response[service.resource_name]['permission_names'] = permission_names
-    return HTTPOk(
-        body=json.dumps(json_response),
-        content_type='application/json'
-    )
+    user = get_user_matchdict_checked(request)
+    service = get_service_matchdict_checked(request)
+    perm_names = get_user_service_permissions(service=service, user=user, db_session=request.db)
+    svc_json = {service.resource_name: format_service(service)}
+    svc_json[service.resource_name]['permission_names'] = perm_names
+    svc_json['user_id'] = user.id
+    svc_json['user_name'] = user.user_name
+    return valid_http(httpSuccess=HTTPOk, detail="Get user service permissions successful", content=svc_json)
 
 
 @view_config(route_name='user_service_permissions', request_method='POST')
 def create_user_service_permission(request):
-    user_name = request.matchdict.get('user_name')
-    service_name = request.matchdict.get('service_name')
-    permission_name = get_multiformat_post(request, 'permission_name')
-
-    db = request.db
-    service = models.Service.by_service_name(service_name, db_session=db)
-    # user = UserService.by_user_name(user_name=user_name, db_session=db)
-    user = get_user(request, user_name_or_token=user_name)
-
-    if service is None or user is None:
-        raise HTTPNotFound(detail='this service/user does not exist')
-    if permission_name not in service_type_dict[service.type].permission_names:
-        raise HTTPBadRequest(detail='This permission is not allowed for that service')
-
-    return create_user_resource_permission(permission_name=permission_name,
-                                           resource_id=service.resource_id,
-                                           user_id=user.id,
-                                           db_session=db)
+    user = get_user_matchdict_checked(request)
+    service = get_service_matchdict_checked(request)
+    perm_name = get_permission_matchdict_checked(request, service)
+    return create_user_resource_permission(perm_name, service.resource_id, user.id, request.db)
 
 
 @view_config(route_name='user_service_permission', request_method='DELETE')
 def delete_user_service_permission(request):
-    user_name = request.matchdict.get('user_name')
-    service_name = request.matchdict.get('service_name')
-    permission_name = request.matchdict.get('permission_name')
-
-    db = request.db
-    service = models.Service.by_service_name(service_name, db_session=db)
-    # user = UserService.by_user_name(user_name=user_name, db_session=db)
-    user = get_user(request, user_name_or_token=user_name)
-
-    if service is None or user is None:
-        raise HTTPNotFound(detail='this service/user does not exist')
-    if permission_name not in service_type_dict[service.type].permission_names:
-        raise HTTPBadRequest(detail='This permission is not allowed for that service')
-
-    return delete_user_resource_permission(permission_name,
-                                           service.resource_id,
-                                           user.id,
-                                           db)
+    user = get_user_matchdict_checked(request)
+    service = get_service_matchdict_checked(request)
+    perm_name = get_permission_matchdict_checked(request, service)
+    return delete_user_resource_permission(perm_name, service.resource_id, user.id, request.db)
 
 
 @view_config(route_name='user_service_resources', request_method='GET')
 def get_user_service_resources_view(request):
-    user_name = request.matchdict.get('user_name')
-    service_name = request.matchdict.get('service_name')
-    db = request.db
-    service = models.Service.by_service_name(service_name, db_session=db)
-    #user = UserService.by_user_name(user_name, db_session=db)
-    user = get_user(request, user_name_or_token=user_name)
-
-    if service is None or user is None:
-        raise HTTPNotFound(detail='this user/resource does not exist')
-
-    service_perms = get_user_service_permissions(user=user, service=service, db_session=db)
-
-    resources_perms_dict = get_user_service_resources_permissions_dict(user=user,
-                                                                       service=service,
-                                                                       db_session=db)
-    json_response = format_service_resources(
+    user = get_user_matchdict_checked(request)
+    service = get_service_matchdict_checked(request)
+    service_perms = get_user_service_permissions(user, service, db_session=request.db)
+    resources_perms_dict = get_user_service_resources_permissions_dict(user, service, db_session=request.db)
+    user_svc_res_json = format_service_resources(
         service=service,
-        db_session=db,
+        db_session=request.db,
         service_perms=service_perms,
         resources_perms_dict=resources_perms_dict,
         display_all=False
     )
-
-
-    return HTTPOk(
-        body=json.dumps({'service': json_response}),
-        content_type='application/json'
-    )
-
-
-
-
-
+    return valid_http(httpSuccess=HTTPOk, detail="Get user service resources successful",
+                      content={'service': user_svc_res_json})

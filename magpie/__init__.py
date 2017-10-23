@@ -57,5 +57,3 @@ def get_multiformat_post(request, key):
                              msgOnFail="Key " + repr(key) + " could not be extracted from multiformat POST")
     else:
         return request.POST.get(key)
-
-
