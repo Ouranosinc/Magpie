@@ -87,8 +87,6 @@ class ManagementViews(object):
             raise HTTPBadRequest(detail=e.message)
 
     def update_service_name(self, old_service_name, new_service_name):
-        print('old_service_name: ' + str(old_service_name))
-        print('new_service_name: ' + str(new_service_name))
         try:
             svc_data = self.get_service_data(old_service_name)
             svc_data['service_name'] = new_service_name
@@ -104,9 +102,7 @@ class ManagementViews(object):
             svc_data = self.get_service_data(service_name)
             svc_type = svc_data['service_type']
             svc_data['service_url'] = new_service_url
-            print(svc_data)
             res_put = requests.put(self.magpie_url + '/services/' + svc_type, data=svc_data)
-            print(res_put)
             check_res(res_put)
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
