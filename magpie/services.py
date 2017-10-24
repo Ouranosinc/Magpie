@@ -43,13 +43,13 @@ class ServiceI(object):
 
 class ServiceWPS(ServiceI):
 
-    permission_names = ['getcapabilities',
-                        'describeprocess',
-                        'execute']
+    permission_names = [u'getcapabilities',
+                        u'describeprocess',
+                        u'execute']
 
-    params_expected = ['service',
-                       'request',
-                       'version']
+    params_expected = [u'service',
+                       u'request',
+                       u'version']
 
     def __init__(self, service, request):
         super(ServiceWPS, self).__init__(service, request)
@@ -67,16 +67,16 @@ class ServiceWPS(ServiceI):
 
 
 class ServiceWMS(ServiceI):
-    permission_names = ['getcapabilities',
-                        'getmap',
-                        'getfeatureinfo',
-                        'getlegendgraphic',
-                        'getmetadata']
+    permission_names = [u'getcapabilities',
+                        u'getmap',
+                        u'getfeatureinfo',
+                        u'getlegendgraphic',
+                        u'getmetadata']
 
-    params_expected = ['service',
-                       'request',
-                       'version',
-                       'layers']
+    params_expected = [u'service',
+                       u'request',
+                       u'version',
+                       u'layers']
 
     resource_types = [models.Workspace.resource_type_name]
 
@@ -124,16 +124,16 @@ class ServiceWMS(ServiceI):
 
 
 class ServiceWFS(ServiceI):
-    permission_names = ['getcapabilities',
-                        'describefeaturetype',
-                        'getfeature',
-                        'lockfeature',
-                        'transaction']
+    permission_names = [u'getcapabilities',
+                        u'describefeaturetype',
+                        u'getfeature',
+                        u'lockfeature',
+                        u'transaction']
 
-    params_expected = ['service',
-                       'request',
-                       'version',
-                       'typenames']
+    params_expected = [u'service',
+                       u'request',
+                       u'version',
+                       u'typenames']
 
     resource_types = []
 
@@ -207,15 +207,15 @@ class ServiceTHREDDS(ServiceI):
         # /thredds/fileServer
         # /thredds/dods
         # /thredds/{access_method}
-        return 'download'
+        return u'download'
 
     pass
 
 
-service_type_dict = {'wps': ServiceWPS,
-                     'wms': ServiceWMS,
-                     'wfs': ServiceWFS,
-                     'thredds': ServiceTHREDDS}
+service_type_dict = {u'wps': ServiceWPS,
+                     u'wms': ServiceWMS,
+                     u'wfs': ServiceWFS,
+                     u'thredds': ServiceTHREDDS}
 
 
 def service_factory(service, request):
