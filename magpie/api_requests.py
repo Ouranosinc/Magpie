@@ -1,5 +1,6 @@
 from magpie import *
 from models import resource_type_dict
+from services import service_type_dict
 from api_except import *
 from pyramid.interfaces import IAuthenticationPolicy
 
@@ -11,6 +12,29 @@ def get_multiformat_post(request, key):
                              msgOnFail="Key " + repr(key) + " could not be extracted from multiformat POST")
     else:
         return request.POST.get(key)
+
+
+def get_permission_multiformat_post_checked(request, service_resource, permission_name_key='permission_name'):
+    if isinstance(service_resource, models.Service):
+        svc_res_type_dict = service_type_dict[service_resource.type]
+    elif isinstance(service_resource, models.Resource):
+        svc_res_type_dict = resource_type_dict[service_resource.resource_type]
+    else:
+        raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
+                   content={u'service_resource': repr(type(service_resource))})
+    perm_name = get_multiformat_post(request, permission_name_key)
+    verify_param(perm_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `permission_name` value '" + str(perm_name) + "' specified")
+    verify_param(perm_name, paramCompare=svc_res_type_dict.permission_names, isIn=True,
+                 httpError=HTTPForbidden, msgOnFail="Permission not allowed for that service/resource")
+    return perm_name
+
+
+def get_value_multiformat_post_checked(request, value_name_key):
+    value_name = get_multiformat_post(request, value_name_key)
+    verify_param(value_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `" + str(value_name_key) + "` value '" + str(value_name) + "' specified")
+    return value_name
 
 
 def get_userid_by_token(token, authn_policy):
@@ -90,20 +114,6 @@ def get_service_matchdict_checked(request, service_name_key='service_name'):
                             httpError=HTTPForbidden, msgOnFail="Service query by name refused by db")
     verify_param(service, notNone=True, httpError=HTTPNotFound, msgOnFail="Service name not found in db")
     return service
-
-
-def get_permission_matchdict_checked(request, service_resource, permission_name_key='permission_name'):
-    if isinstance(service_resource, models.Service):
-        res_type_dict = resource_type_dict[service_resource.type]
-    elif isinstance(service_resource, models.Resource):
-        res_type_dict = resource_type_dict[service_resource.resource_type]
-    else:
-        raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
-                   content={u'service_resource': repr(type(service_resource))})
-    perm_name = get_multiformat_post(request, permission_name_key)
-    verify_param(perm_name, paramCompare=res_type_dict.permission_names, isIn=True,
-                 httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that service/resource")
-    return perm_name
 
 
 def get_value_matchdict_checked(request, key):

@@ -153,9 +153,7 @@ def delete_resources(request):
 def update_resource(request):
     res = get_resource_matchdict_checked(request, 'resource_id')
     res_old_name = res.resource_name
-    res_new_name = get_multiformat_post(request, 'resource_name')
-    verify_param(res_new_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `resource_name` value '" + str(res_new_name) + "' specified for resource update")
+    res_new_name = get_value_multiformat_post_checked(request, 'resource_name')
 
     def rename(r, n):
         r.resource_name = n

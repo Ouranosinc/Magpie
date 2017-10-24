@@ -57,7 +57,7 @@ def get_services_by_type(service_type, db_session):
 @view_config(route_name='services_type', request_method='GET')
 @view_config(route_name='services', request_method='GET')
 def get_services_view(request):
-    service_type = get_multiformat_post(request, 'service_type')    # can be 'None' for 'all services'
+    service_type = get_multiformat_post(request, 'service_type')    # no check because None/empty is for 'all services'
     json_response = {}
     if not service_type:
         service_types = service_type_dict.keys()
@@ -78,15 +78,9 @@ def get_services_view(request):
 
 @view_config(route_name='services', request_method='POST')
 def register_service(request):
-    service_name = get_multiformat_post(request, 'service_name')
-    service_url = get_multiformat_post(request, 'service_url')
-    service_type = get_multiformat_post(request, 'service_type')
-    verify_param(service_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `service_name` value '" + str(service_name) + "' specified to register service")
-    verify_param(service_url, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `service_url` value '" + str(service_url) + "' specified to register service")
-    verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `service_name` value '" + str(service_type) + "' specified to register service")
+    service_name = get_value_multiformat_post_checked(request, 'service_name')
+    service_url = get_value_multiformat_post_checked(request, 'service_url')
+    service_type = get_value_multiformat_post_checked(request, 'service_type')
     verify_param(service_type, isIn=True, httpError=HTTPNotAcceptable, paramCompare=service_type_dict.keys(),
                  msgOnFail="Specified `service_type` value does not correspond to any of the available types")
     verify_param(service_name, notIn=True, httpError=HTTPConflict,
@@ -127,9 +121,7 @@ def unregister_service(request):
 @view_config(route_name='service', request_method='PUT')
 def update_service(request):
     service = get_service_matchdict_checked(request)
-    service_url = get_multiformat_post(request, 'service_url')
-    verify_param(service_url, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `service_url` value '" + str(service_url) + "' specified for service update")
+    service_url = get_value_multiformat_post_checked(request, 'service_url')
 
     def set_url(svc, url):
         svc.url = url
@@ -165,7 +157,7 @@ def create_service_direct_resource(request):
     service = get_service_matchdict_checked(request)
     resource_name = get_value_matchdict_checked(request, 'resource_name')
     resource_type = get_value_matchdict_checked(request, 'resource_type')
-    parent_id = get_multiformat_post(request, 'parent_id')
+    parent_id = get_multiformat_post(request, 'parent_id')  # no check because None/empty is allowed
     if not parent_id:
         parent_id = service.resource_id
     return create_resource(resource_name, resource_type, parent_id=parent_id, db_session=request.db)
