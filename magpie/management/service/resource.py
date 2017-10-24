@@ -27,10 +27,11 @@ def format_resource_tree(children, db_session, resources_perms_dict=None):
         resource = child_dict[u'node']
         new_children = child_dict[u'children']
         perms = []
+
+        resources_perms_dict = dict() if resources_perms_dict is None else resources_perms_dict
         if resource.resource_id in resources_perms_dict.keys():
             perms = resources_perms_dict[resource.resource_id]
 
-        resources_perms_dict = dict() if resources_perms_dict is None else resources_perms_dict
         fmt_res_tree[child_id] = format_resource(resource, perms)
         fmt_res_tree[child_id][u'children'] = format_resource_tree(new_children, db_session, resources_perms_dict)
 
@@ -121,9 +122,9 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
 
 @view_config(route_name='resources', request_method='POST')
 def create_resource_view(request):
-    resource_name = get_multiformat_post(request, 'resource_name')
-    resource_type = get_multiformat_post(request, 'resource_type')
-    parent_id = get_multiformat_post(request, 'parent_id')
+    resource_name = get_value_matchdict_checked(request, 'resource_name')
+    resource_type = get_value_matchdict_checked(request, 'resource_type')
+    parent_id = get_value_matchdict_checked(request, 'parent_id')
     return create_resource(resource_name, resource_type, parent_id, request.db)
 
 
@@ -144,9 +145,7 @@ def delete_resources(request):
 def update_resource(request):
     res = get_resource_matchdict_checked(request, 'resource_id')
     res_old_name = res.resource_name
-    res_new_name = get_multiformat_post(request, 'resource_name')
-    verify_param(res_new_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid new resource name '" + str(res_new_name) + "'specified for update")
+    res_new_name = get_value_matchdict_checked(request, 'resource_name')
 
     def rename(r, n):
         r.resource_name = n
