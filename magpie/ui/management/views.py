@@ -100,9 +100,8 @@ class ManagementViews(object):
     def update_service_url(self, service_name, new_service_url):
         try:
             svc_data = self.get_service_data(service_name)
-            svc_type = svc_data['service_type']
             svc_data['service_url'] = new_service_url
-            res_put = requests.put(self.magpie_url + '/services/' + svc_type, data=svc_data)
+            res_put = requests.put(self.magpie_url + '/services/' + service_name, data=svc_data)
             check_res(res_put)
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
@@ -248,16 +247,15 @@ class ManagementViews(object):
         members = self.get_group_users(group_name)
 
         if self.request.method == 'POST':
-            #self.request.session['edit_group_offset'] = window.pageYOffset
-
             if 'resource_id' in self.request.POST:
                 res_id = self.request.POST.get('resource_id')
 
                 try:
-                    res_perms = requests.get(self.magpie_url + '/groups/' + group_name + '/resources/{resource_id}/permissions'.format(resource_id=res_id))
+                    res_perms = requests.get(self.magpie_url + '/groups/' + group_name +
+                                             '/resources/{resource_id}/permissions'.format(resource_id=res_id))
                     perms = res_perms.json()['permission_names']
-                except:
-                    raise HTTPBadRequest(detail='Bad Json response')
+                except Exception as e:
+                    raise HTTPBadRequest(detail=repr(e))
 
                 new_perms_set = self.request.POST.getall('permission')
 
@@ -289,9 +287,6 @@ class ManagementViews(object):
                     check_res(requests.post(self.magpie_url+'/users/' + user + '/groups/' + group_name))
 
                 members = self.get_group_users(group_name)
-        #elif 'edit_group_offset' in self.request.session:
-        #    #window.scrollTo(0, self.request.session['edit_group_offset']);
-        #    self.request.session['edit_group_offset'] = 0
 
         try:
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
@@ -319,7 +314,7 @@ class ManagementViews(object):
                                           permission_names=self.default_get(permission, raw_resources['resource_id'], []),
                                           children=self.res_tree_parser(raw_resources['resources'], permission))
         except Exception as e:
-            raise HTTPBadRequest(detail='Bad Json response')
+            raise HTTPBadRequest(detail=repr(e))
 
         return add_template_data(self.request,
                                  {u'group_name': group_name,
@@ -342,7 +337,6 @@ class ManagementViews(object):
 
         if 'edit' in self.request.POST:
             service_name = self.request.POST.get('service_name')
-            service_url = self.get_service_data(service_name).get('service_url')
             return HTTPFound(self.request.route_url('edit_service',
                                                     service_name=service_name,
                                                     cur_svc_type=cur_svc_type))
@@ -397,6 +391,7 @@ class ManagementViews(object):
             # return directly to 'regenerate' the URL with the modified name
             return HTTPFound(self.request.route_url('edit_service',
                                                     service_name=service_name,
+                                                    service_url=service_url,
                                                     cur_svc_type=cur_svc_type))
 
         if 'edit_url' in self.request.POST:

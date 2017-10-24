@@ -247,8 +247,8 @@ def format_content_json_str(httpCode, detail, content, contentType):
         content[u'type'] = contentType
         json_body = json.dumps(content)
     except Exception as e:
-        msg = "Dumping json content [" + str(content) + \
-              "] resulted in exception [" + repr(e) + "]"
+        msg = "Dumping json content `" + str(content) + \
+              "` resulted in exception `" + repr(e) + "`"
         raise_http(httpError=HTTPInternalServerError, detail=msg,
                    contentType='application/json',
                    content={u'traceback': repr(exc_info()),

@@ -47,7 +47,6 @@ def format_service_resources(service, db_session, service_perms=None, resources_
     )
 
 
-
 def get_services_by_type(service_type, db_session):
     verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `service_type` value '" + str(service_type) + "' specified")
@@ -58,7 +57,7 @@ def get_services_by_type(service_type, db_session):
 @view_config(route_name='services_type', request_method='GET')
 @view_config(route_name='services', request_method='GET')
 def get_services_view(request):
-    service_type = request.matchdict.get('service_type')    # can be 'None' for 'all services'
+    service_type = get_multiformat_post(request, 'service_type')    # can be 'None' for 'all services'
     json_response = {}
     if not service_type:
         service_types = service_type_dict.keys()
@@ -79,9 +78,9 @@ def get_services_view(request):
 
 @view_config(route_name='services', request_method='POST')
 def register_service(request):
-    service_name = get_value_matchdict_checked(request, 'service_name')
-    service_url = get_value_matchdict_checked(request, 'service_url')
-    service_type = get_value_matchdict_checked(request, 'service_type')
+    service_name = get_multiformat_post(request, 'service_name')
+    service_url = get_multiformat_post(request, 'service_url')
+    service_type = get_multiformat_post(request, 'service_type')
     verify_param(service_type, isIn=True, httpError=HTTPNotAcceptable, paramCompare=service_type_dict.keys(),
                  msgOnFail="Specified `service_type` value does not correspond to any of the available types")
     verify_param(service_name, notIn=True, httpError=HTTPConflict,
@@ -103,7 +102,8 @@ def register_service(request):
 @view_config(route_name='service', request_method='GET')
 def get_service(request):
     service = get_service_matchdict_checked(request)
-    return valid_http(httpSuccess=HTTPOk, detail="Get service successful", content=format_service(service))
+    return valid_http(httpSuccess=HTTPOk, detail="Get service successful",
+                      content={str(service.resource_name): format_service(service)})
 
 
 @view_config(route_name='service', request_method='DELETE')
@@ -115,13 +115,13 @@ def unregister_service(request):
                   msgOnFail="Delete service from resource tree failed", content=svc_content)
     evaluate_call(lambda: request.db.delete(service), fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete service from db failed", content=svc_content)
-    return valid_http(httpSuccess=HTTPOk, detail="Delete service successful", content=svc_content)
+    return valid_http(httpSuccess=HTTPOk, detail="Delete service successful")
 
 
 @view_config(route_name='service', request_method='PUT')
 def update_service(request):
     service = get_service_matchdict_checked(request)
-    service_url = get_value_matchdict_checked(request, 'service_url')
+    service_url = get_multiformat_post(request, 'service_url')
     svc_content = format_service(service)
 
     def set_url(svc, url):

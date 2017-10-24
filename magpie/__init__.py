@@ -48,12 +48,3 @@ ANONYMOUS_USER = os.getenv('ANONYMOUS_USER', 'anonymous')
 ADMIN_PERM = NO_PERMISSION_REQUIRED
 
 LOGGED_USER = 'current'
-
-
-def get_multiformat_post(request, key):
-    if request.content_type == 'application/json':
-        return evaluate_call(lambda: request.json_body.get(key),
-                             httpError=HTTPInternalServerError,
-                             msgOnFail="Key " + repr(key) + " could not be extracted from multiformat POST")
-    else:
-        return request.POST.get(key)

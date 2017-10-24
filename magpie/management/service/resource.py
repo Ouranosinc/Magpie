@@ -146,14 +146,14 @@ def delete_resources(request):
                   msgOnFail="Delete resource branch from tree service failed", content=res_content)
     evaluate_call(lambda: request.db.delete(res), fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete resource from db failed", content=res_content)
-    return valid_http(httpSuccess=HTTPOk, detail="Delete resource successful", content=res_content)
+    return valid_http(httpSuccess=HTTPOk, detail="Delete resource successful")
 
 
 @view_config(route_name='resource', request_method='PUT')
 def update_resource(request):
     res = get_resource_matchdict_checked(request, 'resource_id')
     res_old_name = res.resource_name
-    res_new_name = get_value_matchdict_checked(request, 'resource_name')
+    res_new_name = get_multiformat_post(request, 'resource_name')
 
     def rename(r, n):
         r.resource_name = n
