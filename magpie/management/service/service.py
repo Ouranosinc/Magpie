@@ -81,6 +81,12 @@ def register_service(request):
     service_name = get_multiformat_post(request, 'service_name')
     service_url = get_multiformat_post(request, 'service_url')
     service_type = get_multiformat_post(request, 'service_type')
+    verify_param(service_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `service_name` value '" + str(service_name) + "' specified to register service")
+    verify_param(service_url, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `service_url` value '" + str(service_url) + "' specified to register service")
+    verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `service_name` value '" + str(service_type) + "' specified to register service")
     verify_param(service_type, isIn=True, httpError=HTTPNotAcceptable, paramCompare=service_type_dict.keys(),
                  msgOnFail="Specified `service_type` value does not correspond to any of the available types")
     verify_param(service_name, notIn=True, httpError=HTTPConflict,
@@ -122,10 +128,13 @@ def unregister_service(request):
 def update_service(request):
     service = get_service_matchdict_checked(request)
     service_url = get_multiformat_post(request, 'service_url')
-    svc_content = format_service(service)
+    verify_param(service_url, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `service_url` value '" + str(service_url) + "' specified for service update")
 
     def set_url(svc, url):
         svc.url = url
+
+    svc_content = format_service(service)
     evaluate_call(lambda: set_url(service, service_url), fallback=lambda: request.db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Update service failed during URL assignment",
                   content={u'service': svc_content, u'service_url': str(service_url)})
