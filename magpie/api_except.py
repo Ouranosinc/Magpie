@@ -165,7 +165,8 @@ def valid_http(httpSuccess=HTTPOk, httpKWArgs=None, detail="", content=None, con
     """
     content = dict() if content is None else content
     detail = repr(detail) if type(detail) is not str else detail
-    httpCode, detail, content = validate_params(httpSuccess, HTTPSuccessful, detail, content, contentType)
+    httpCode, detail, content = validate_params(httpSuccess, [HTTPSuccessful, HTTPRedirection],
+                                                detail, content, contentType)
     json_body = format_content_json_str(httpCode, detail, content, contentType)
     return output_http_format(httpSuccess, httpKWArgs, json_body, outputType=contentType, outputMode='return')
 
@@ -206,6 +207,12 @@ def validate_params(httpClass, httpBase, detail, content, contentType):
     """
     Validates parameter types and formats required by `valid_http` and `raise_http`.
 
+    :param httpClass: any derived class from base `HTTPException` to verify
+    :param httpBase: any derived sub-class(es) from base `HTTPException` as minimum requirement for `httpClass`
+        (ie: 2xx, 4xx, 5xx codes). Can be a single class of an iterable of possible requirements (any).
+    :param detail: additional message information (default: empty)
+    :param content: json formatted content to include
+    :param contentType: format in which to return the exception ('application/json', 'text/html' or 'text/plain')
     :raise `HTTPInternalServerError`: if any parameter is of invalid expected format
     :returns httpCode, detail, content: parameters with corrected and validated format if applicable
     """
@@ -224,6 +231,7 @@ def validate_params(httpClass, httpBase, detail, content, contentType):
     # if `httpClass` derives from `httpBase` (ex: `HTTPSuccessful` or `HTTPError`) it is of proper requested type
     # if it derives from `HTTPException`, it *could* be different than base (ex: 2xx instead of 4xx codes)
     # return 'unknown error' (520) if not of lowest level base `HTTPException`, otherwise use the available code
+    httpBase = tuple(httpBase if hasattr(httpBase, '__iter__') else [httpBase])
     httpCode = httpClass.code if issubclass(httpClass, httpBase) else \
                httpClass.code if issubclass(httpClass, HTTPException) else 520
     if not issubclass(httpClass, httpBase):
