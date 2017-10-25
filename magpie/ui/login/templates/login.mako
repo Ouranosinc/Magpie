@@ -21,7 +21,7 @@
         <tr>
             <td>Password:</td>
             <div class="input_container">
-                <td><input type="password" value="password" name="password" class="equal_width"></td>
+                <td><input type="password" name="password" class="equal_width"></td>
             </div>
         </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Sign In" name="submit" id="submit"></td></tr>
