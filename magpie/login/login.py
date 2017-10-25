@@ -94,7 +94,9 @@ def sign_out(request):
 
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
 def login_success_ziggu(request):
-    return HTTPOk(detail="Login successful", headers=request.context.headers)
+    return valid_http(httpSuccess=HTTPOk, detail="Login successful",
+                      httpKWArgs={'location': request.route_url('home'),
+                                  'headers': request.context.headers})
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):

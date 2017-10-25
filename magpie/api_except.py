@@ -8,7 +8,7 @@ RAISE_RECURSIVE_SAFEGUARD_MAX = 5
 RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 
 
-def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFail="",
+def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWArgs=None, msgOnFail="",
                  content=None, contentType='application/json',
                  notNone=False, notEmpty=False, notIn=False, isNone=False, isEmpty=False, isIn=False, ofType=None):
     """
@@ -22,6 +22,7 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
         other value(s) to test against, can be an iterable (single value resolved as iterable unless None)
         to test for None type, use `isNone`/`notNone` flags instead or `paramCompare`=[None]
     :param httpError: (HTTPError) derived exception to raise on test failure (default: `HTTPNotAcceptable`)
+    :param httpKWArgs: (dict) additional keyword arguments to pass to `httpError` if called in case of HTTP exception
     :param msgOnFail: (str) message details to return in HTTP exception if flag condition failed
     :param content: json formatted additional content to provide in case of exception
     :param contentType: format in which to return the exception ('application/json', 'text/html' or 'text/plain')
@@ -59,7 +60,8 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
     except Exception as e:
         content[u'traceback'] = repr(exc_info())
         content[u'exception'] = repr(e)
-        raise_http(httpError=HTTPInternalServerError, content=content, contentType=contentType,
+        raise_http(httpError=HTTPInternalServerError, httpKWArgs=httpKWArgs,
+                   content=content, contentType=contentType,
                    detail="Error occurred during parameter verification")
 
     # evaluate requested parameter combinations
@@ -80,10 +82,10 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
         status = status or (not type(param) == ofType)
     if status:
         content[u'param'] = repr(param)
-        raise_http(httpError, detail=msgOnFail, content=content, contentType=contentType)
+        raise_http(httpError, httpKWArgs=httpKWArgs, detail=msgOnFail, content=content, contentType=contentType)
 
 
-def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnFail="",
+def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, httpKWArgs=None, msgOnFail="",
                   content=None, contentType='application/json'):
     """
     Evaluates the specified `call` with a wrapped HTTP exception handling.
@@ -108,6 +110,7 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
     :param call: function to call, *MUST* be specified as `lambda: <function_call>`
     :param fallback: function to call (if any) when `call` failed, *MUST* be `lambda: <function_call>`
     :param httpError: (HTTPError) alternative exception to raise on `call` failure
+    :param httpKWArgs: (dict) additional keyword arguments to pass to `httpError` if called in case of HTTP exception
     :param msgOnFail: (str) message details to return in HTTP exception if `call` failed
     :param content: json formatted additional content to provide in case of exception
     :param contentType: format in which to return the exception ('application/json', 'text/html' or 'text/plain')
@@ -117,7 +120,7 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
     """
     msgOnFail = repr(msgOnFail) if type(msgOnFail) is not str else msgOnFail
     if not islambda(call):
-        raise_http(httpError=HTTPInternalServerError,
+        raise_http(httpError=HTTPInternalServerError, httpKWArgs=httpKWArgs,
                    detail="Input `call` is not a lambda expression",
                    content={u'call': {u'detail': msgOnFail, u'content': repr(content)}},
                    contentType=contentType)
@@ -125,7 +128,7 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
     # preemptively check fallback to avoid possible call exception without valid recovery
     if fallback is not None:
         if not islambda(fallback):
-            raise_http(httpError=HTTPInternalServerError,
+            raise_http(httpError=HTTPInternalServerError, httpKWArgs=httpKWArgs,
                        detail="Input `fallback`  is not a lambda expression, not attempting `call`",
                        content={u'call': {u'detail': msgOnFail, u'content': repr(content)}},
                        contentType=contentType)
@@ -138,22 +141,23 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnF
             fallback()
     except Exception as e:
         fe = repr(e)
-        raise_http(httpError=HTTPInternalServerError,
+        raise_http(httpError=HTTPInternalServerError, httpKWArgs=httpKWArgs,
                    detail="Exception occurred during `fallback` called after failing `call` exception",
                    content={u'call': {u'exception': ce, u'detail': msgOnFail, u'content': repr(content)},
                             u'fallback': {u'exception': fe}},
                    contentType=contentType)
-    raise_http(httpError, detail=msgOnFail,
+    raise_http(httpError, detail=msgOnFail, httpKWArgs=httpKWArgs,
                content={u'call': {u'exception': ce, u'content': repr(content)}},
                contentType=contentType)
 
 
-def valid_http(httpSuccess=HTTPOk, detail="", content=None, contentType='application/json'):
+def valid_http(httpSuccess=HTTPOk, httpKWArgs=None, detail="", content=None, contentType='application/json'):
     """
     Returns successful HTTP with standardized information formatted with content type.
     (see `valid_http` for HTTP error calls)
 
     :param httpSuccess: any derived class from base `HTTPSuccessful` (default: HTTPOk)
+    :param httpKWArgs: (dict) additional keyword arguments to pass to `httpSuccess` when called
     :param detail: additional message information (default: empty)
     :param content: json formatted content to include
     :param contentType: format in which to return the exception ('application/json', 'text/html' or 'text/plain')
@@ -163,10 +167,11 @@ def valid_http(httpSuccess=HTTPOk, detail="", content=None, contentType='applica
     detail = repr(detail) if type(detail) is not str else detail
     httpCode, detail, content = validate_params(httpSuccess, HTTPSuccessful, detail, content, contentType)
     json_body = format_content_json_str(httpCode, detail, content, contentType)
-    return output_http_format(httpSuccess, json_body, outputType=contentType, outputMode='return')
+    return output_http_format(httpSuccess, httpKWArgs, json_body, outputType=contentType, outputMode='return')
 
 
-def raise_http(httpError=HTTPInternalServerError, detail="", content=None, contentType='application/json'):
+def raise_http(httpError=HTTPInternalServerError, httpKWArgs=None,
+               detail="", content=None, contentType='application/json'):
     """
     Raises error HTTP with standardized information formatted with content type.
     (see `valid_http` for HTTP successful calls)
@@ -175,11 +180,13 @@ def raise_http(httpError=HTTPInternalServerError, detail="", content=None, conte
     optional specified additional json content (kwarg dict).
 
     :param httpError: any derived class from base `HTTPError` (default: HTTPInternalServerError)
+    :param httpKWArgs: (dict) additional keyword arguments to pass to `httpError` if called in case of HTTP exception
     :param detail: additional message information (default: empty)
     :param content: json formatted content to include
     :param contentType: format in which to return the exception ('application/json', 'text/html' or 'text/plain')
     :raises `HTTPError`: formatted raised exception with additional details and HTTP code
     """
+
     # fail-fast if recursion generates too many calls
     # this would happen only if a major programming error occurred within this function
     global RAISE_RECURSIVE_SAFEGUARD_MAX
@@ -192,7 +199,7 @@ def raise_http(httpError=HTTPInternalServerError, detail="", content=None, conte
     # content is added manually to avoid auto-format and suppression of fields by `HTTPException`
     httpCode, detail, content = validate_params(httpError, HTTPError, detail, content, contentType)
     json_body = format_content_json_str(httpError.code, detail, content, contentType)
-    output_http_format(httpError, json_body, outputType=contentType, outputMode='raise')
+    output_http_format(httpError, httpKWArgs, json_body, outputType=contentType, outputMode='raise')
 
 
 def validate_params(httpClass, httpBase, detail, content, contentType):
@@ -258,7 +265,7 @@ def format_content_json_str(httpCode, detail, content, contentType):
               "` resulted in exception `" + repr(e) + "`"
         raise_http(httpError=HTTPInternalServerError, detail=msg,
                    contentType='application/json',
-                   content={u'traceback': repr(exc_info()),
+                   content={u'traceback': repr(exc_info()), u'exception': repr(e),
                             u'caller': {u'content': repr(content),   # raw string to avoid recursive json.dumps error
                                         u'detail': detail,
                                         u'code': httpCode,
@@ -266,11 +273,12 @@ def format_content_json_str(httpCode, detail, content, contentType):
     return json_body
 
 
-def output_http_format(httpClass, jsonContent, outputType='text/plain', outputMode='raise'):
+def output_http_format(httpClass, httpKWArgs, jsonContent, outputType='text/plain', outputMode='raise'):
     """
     Formats the HTTP response output according to desired `outputType` using provided HTTP code and content.
 
     :param httpClass: HTTPException derived class to use for output (code, generic title/explanation, etc.)
+    :param httpKWArgs: (dict) additional keyword arguments to pass to `httpClass` when called
     :param jsonContent: (str) formatted json content providing additional details for the response cause
     :param outputType: {'application/json','text/html','text/plain'} (default: 'text/plain')
     :param outputMode: {'raise','return'} (default: 'raise')
@@ -280,26 +288,38 @@ def output_http_format(httpClass, jsonContent, outputType='text/plain', outputMo
     # content body is added manually to avoid auto-format and suppression of fields by `HTTPException`
     jsonContent = str(jsonContent) if not type(jsonContent) == str else jsonContent
 
-    # directly output json if asked with 'application/json'
-    if outputType == 'application/json':
-        if outputMode == 'return':
-            return httpClass(body=jsonContent, content_type='application/json')
-        raise httpClass(body=jsonContent, content_type='application/json')
+    # adjust additional keyword arguments and try building the http response class with them
+    httpKWArgs = dict() if httpKWArgs is None else httpKWArgs
+    try:
+        # directly output json if asked with 'application/json'
+        if outputType == 'application/json':
+            httpResponse = httpClass(body=jsonContent, content_type='application/json', **httpKWArgs)
 
-    # otherwise json is contained within the html <body> section
-    if outputType == 'text/html':
-        # add preformat <pre> section to output as is within the <body> section
-        htmlBody = httpClass.explanation + "<br><h2>Exception Details</h2>" + \
-                   "<pre style='word-wrap: break-word; white-space: pre-wrap;'>" + \
-                   jsonContent + "</pre>"
-        if outputMode == 'return':
-            return httpClass(body_template=htmlBody, content_type='text/html')
-        raise httpClass(body_template=htmlBody, content_type='text/html')
+        # otherwise json is contained within the html <body> section
+        elif outputType == 'text/html':
+            # add preformat <pre> section to output as is within the <body> section
+            htmlBody = httpClass.explanation + "<br><h2>Exception Details</h2>" + \
+                       "<pre style='word-wrap: break-word; white-space: pre-wrap;'>" + \
+                       jsonContent + "</pre>"
+            httpResponse = httpClass(body_template=htmlBody, content_type='text/html', **httpKWArgs)
 
-    # default back to 'text/plain'
+        # default back to 'text/plain'
+        else:
+            httpResponse = httpClass(body=jsonContent, content_type='text/plain', **httpKWArgs)
+
+    except Exception as e:
+        raise_http(httpError=HTTPInternalServerError, detail="Failed to build HTTP response",
+                   content={u'traceback': repr(exc_info()), u'exception': repr(e),
+                            u'caller': {u'httpKWArgs': repr(httpKWArgs), u'outputMode': str(outputMode),
+                                        u'httpClass': repr(httpClass), u'outputType': str(outputType)}})
+
+    # raise or return according to mode
     if outputMode == 'return':
-        return httpClass(body=jsonContent, content_type='text/plain')
-    raise httpClass(body=jsonContent, content_type='text/plain')
+        return httpResponse
+    elif outputMode == 'raise':
+        raise httpResponse
+    raise_http(httpError=HTTPInternalServerError, detail="Invalid `outputMode` specified",
+               content={u'outputMode': str(outputMode)})
 
 
 def islambda(func):
