@@ -10,5 +10,4 @@ def includeme(config):
     config.add_route('signout', '/signout')
     config.add_route('providers', '/providers')
     config.add_route('external_login', 'providers/{provider_name}/signin')
-    config.add_route('successful_operation', '/successful_operation')
     config.scan()

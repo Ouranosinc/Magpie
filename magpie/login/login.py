@@ -127,9 +127,11 @@ def login_success_external(request, external_user_name, external_id, email, prov
     headers = remember(request, user.id)
     # If redirection given
     if 'homepage_route' in request.cookies:
-        return HTTPFound(location=request.cookies['homepage_route'], headers=headers)
+        return valid_http(httpSuccess=HTTPFound, detail="External login homepage route found",
+                          content={u'homepage_route': str(request.cookies['homepage_route'])},
+                          httpKWArgs={'location': request.cookies['homepage_route'], 'headers': headers})
     else:
-        return HTTPOk()
+        return valid_http(httpSuccess=HTTPOk, detail="External login successful")
 
 
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
@@ -137,15 +139,9 @@ def login_failure(request, reason='not specified'):
     raise_http(httpError=HTTPBadRequest, detail="Login failure", content={u'reason': str(reason)})
 
 
-@view_config(route_name='successful_operation')
-def successful_operation(request):
-    return valid_http(httpSuccess=HTTPOk, detail="Successful operation")
-
-
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
 def sign_out_ziggu(request):
-    return HTTPFound(location=request.route_url('successful_operation'),
-                     headers=request.context.headers)
+    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful")
 
 
 @view_config(route_name='external_login', permission=NO_PERMISSION_REQUIRED)
