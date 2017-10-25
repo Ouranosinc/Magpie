@@ -5,6 +5,19 @@ from api_except import *
 from pyramid.interfaces import IAuthenticationPolicy
 
 
+def get_service_or_resource_types(service_resource):
+    if isinstance(service_resource, models.Service):
+        svc_res_type_dict = service_type_dict[service_resource.type]
+        svc_res_type_str = "service"
+    elif isinstance(service_resource, models.Resource):
+        svc_res_type_dict = resource_type_dict[service_resource.resource_type]
+        svc_res_type_str = "resource"
+    else:
+        raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
+                   content={u'service_resource': repr(type(service_resource))})
+    return svc_res_type_dict, svc_res_type_str
+
+
 def get_multiformat_post(request, key):
     if request.content_type == 'application/json':
         return evaluate_call(lambda: request.json_body.get(key),
@@ -15,18 +28,10 @@ def get_multiformat_post(request, key):
 
 
 def get_permission_multiformat_post_checked(request, service_resource, permission_name_key='permission_name'):
-    if isinstance(service_resource, models.Service):
-        svc_res_type_dict = service_type_dict[service_resource.type]
-    elif isinstance(service_resource, models.Resource):
-        svc_res_type_dict = resource_type_dict[service_resource.resource_type]
-    else:
-        raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
-                   content={u'service_resource': repr(type(service_resource))})
-    perm_name = get_multiformat_post(request, permission_name_key)
-    verify_param(perm_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `permission_name` value '" + str(perm_name) + "' specified")
+    svc_res_type_dict, svc_res_type_str = get_service_or_resource_types(service_resource)
+    perm_name = get_value_multiformat_post_checked(request, permission_name_key)
     verify_param(perm_name, paramCompare=svc_res_type_dict.permission_names, isIn=True,
-                 httpError=HTTPForbidden, msgOnFail="Permission not allowed for that service/resource")
+                 httpError=HTTPForbidden, msgOnFail="Permission not allowed for that " + str(svc_res_type_str))
     return perm_name
 
 
@@ -114,6 +119,14 @@ def get_service_matchdict_checked(request, service_name_key='service_name'):
                             httpError=HTTPForbidden, msgOnFail="Service query by name refused by db")
     verify_param(service, notNone=True, httpError=HTTPNotFound, msgOnFail="Service name not found in db")
     return service
+
+
+def get_permission_matchdict_checked(request, service_resource, permission_name_key='permission_name'):
+    svc_res_type_dict, svc_res_type_str = get_service_or_resource_types(service_resource)
+    perm_name = get_value_matchdict_checked(request, permission_name_key)
+    verify_param(perm_name, paramCompare=svc_res_type_dict.permission_names, isIn=True,
+                 httpError=HTTPForbidden, msgOnFail="Permission not allowed for that " + str(svc_res_type_str))
+    return perm_name
 
 
 def get_value_matchdict_checked(request, key):

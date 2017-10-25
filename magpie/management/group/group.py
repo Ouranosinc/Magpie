@@ -121,16 +121,16 @@ def get_group_service_permissions_view(request):
 def create_group_service_permission(request):
     group = get_group_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
-    permission_name = get_permission_multiformat_post_checked(request, service)
-    return create_group_resource_permission(permission_name, service.resource_id, group.id, db_session=request.db)
+    perm_name = get_permission_multiformat_post_checked(request, service)
+    return create_group_resource_permission(perm_name, service.resource_id, group.id, db_session=request.db)
 
 
 @view_config(route_name='group_service_permission', request_method='DELETE')
 def delete_group_service_permission(request):
     group = get_group_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
-    permission_name = get_permission_multiformat_post_checked(request, service)
-    return delete_group_resource_permission(permission_name, service.resource_id, group.id, db_session=request.db)
+    perm_name = get_permission_matchdict_checked(request, service)
+    return delete_group_resource_permission(perm_name, service.resource_id, group.id, db_session=request.db)
 
 
 def get_group_resources_permissions_dict(group, db_session, resource_ids=None, resource_types=None):
@@ -242,8 +242,8 @@ def create_group_resource_permission(permission_name, resource_id, group_id, db_
 def create_group_resource_permission_view(request):
     group = get_group_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
-    permission_name = get_permission_multiformat_post_checked(request, resource)
-    return create_group_resource_permission(permission_name, resource.resource_id, group.id, db_session=request.db)
+    perm_name = get_permission_multiformat_post_checked(request, resource)
+    return create_group_resource_permission(perm_name, resource.resource_id, group.id, db_session=request.db)
 
 
 def delete_group_resource_permission(permission_name, resource_id, group_id, db_session):
@@ -262,8 +262,8 @@ def delete_group_resource_permission(permission_name, resource_id, group_id, db_
 def delete_group_resource_permission_view(request):
     group = get_group_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
-    permission_name = get_permission_multiformat_post_checked(request, resource)
-    return delete_group_resource_permission(permission_name, resource.resource_id, group.id, db_session=request.db)
+    perm_name = get_permission_matchdict_checked(request, resource)
+    return delete_group_resource_permission(perm_name, resource.resource_id, group.id, db_session=request.db)
 
 
 @view_config(route_name='group_service_resources', request_method='GET')

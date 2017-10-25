@@ -139,7 +139,6 @@ class ManagementViews(object):
 
         if 'delete' in self.request.POST:
             user_name = self.request.POST.get('user_name')
-            #TODO: Magpie needs to remove the group automatically created with the user_name
             check_res(requests.delete(self.magpie_url + '/users/' + user_name))
 
         if 'edit' in self.request.POST:
@@ -266,6 +265,7 @@ class ManagementViews(object):
                     host=self.magpie_url,
                     group=group_name,
                     res_id=res_id)
+
                 for perm in removed_perms:
                     check_res(requests.delete(url + '/' + perm))
 
