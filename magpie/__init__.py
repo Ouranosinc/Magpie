@@ -8,6 +8,8 @@ __version__ = '0.2.0'
 import json
 import os
 from api_except import *
+from api_except import *
+from models import *
 from pyramid.httpexceptions import (
     HTTPFound,
     HTTPOk,

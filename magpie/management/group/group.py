@@ -1,7 +1,6 @@
 from magpie import *
 import models
-from models import resource_type_dict
-from models import resource_tree_service
+from models import resource_type_dict, resource_tree_service
 from management.service.service import format_service_resources, format_service
 from services import service_type_dict
 from api_requests import *
@@ -135,24 +134,27 @@ def delete_group_service_permission(request):
 
 
 def get_group_resources_permissions_dict(group, db_session, resource_ids=None, resource_types=None):
-    db = db_session
-    if group is None:
-        raise HTTPBadRequest(detail='This group does not exist')
-    resource_permission_tuple = group.resources_with_possible_perms(resource_ids=resource_ids, resource_types=resource_types, db_session=db)
-    resources_permissions_dict = {}
-    for tuple in resource_permission_tuple:
-        if tuple.resource.resource_id not in resources_permissions_dict:
-            resources_permissions_dict[tuple.resource.resource_id] = [tuple.perm_name]
-        else:
-            resources_permissions_dict[tuple.resource.resource_id].append(tuple.perm_name)
+    def get_grp_res_perm(grp, db, res_ids, res_types):
+        res_perms_tup = grp.resources_with_possible_perms(resource_ids=res_ids, resource_types=res_types, db_session=db)
+        res_perms_dict = {}
+        for res_perm in res_perms_tup:
+            if res_perm.resource.resource_id not in res_perms_dict:
+                res_perms_dict[res_perm.resource.resource_id] = [res_perm.perm_name]
+            else:
+                res_perms_dict[res_perm.resource.resource_id].append(res_perm.perm_name)
+        return res_perms_dict
 
-    return resources_permissions_dict
+    return evaluate_call(lambda: get_grp_res_perm(group, db_session, resource_ids, resource_types),
+                         fallback=lambda: db_session.rollback(),
+                         httpError=HTTPInternalServerError, msgOnFail="Failed to build group resources json tree",
+                         content={u'group': repr(group), u'resource_ids': repr(resource_ids),
+                                  u'resource_types': repr(resource_types)})
 
 
 def get_group_service_resources_permissions_dict(group, service, db_session):
-    resources_under_service = resource_tree_service.from_parent_deeper(parent_id=service.resource_id, db_session=db_session)
-    resource_ids = [resource.Resource.resource_id for resource in resources_under_service]
-    return get_group_resources_permissions_dict(group, db_session, resource_types=None, resource_ids=resource_ids)
+    res_under_svc = resource_tree_service.from_parent_deeper(parent_id=service.resource_id, db_session=db_session)
+    res_ids = [resource.Resource.resource_id for resource in res_under_svc]
+    return get_group_resources_permissions_dict(group, db_session, resource_types=None, resource_ids=res_ids)
 
 
 @view_config(route_name='group_resources', request_method='GET')
@@ -184,14 +186,19 @@ def get_group_resources_view(request):
 
 
 def get_group_resource_permissions(group, resource, db_session):
-    if resource.owner_group_id == group.id:
-        permission_names = resource_type_dict[resource.type].permission_names
-    else:
-        group_res_permission = db_session.query(models.GroupResourcePermission) \
-            .filter(models.GroupResourcePermission.resource_id == resource.resource_id) \
-            .filter(models.GroupResourcePermission.group_id == group.id)
-        permission_names = [permission.perm_name for permission in group_res_permission]
-    return permission_names
+    def get_grp_res_perms(grp, res, db):
+        if res.owner_group_id == grp.id:
+            perm_names = resource_type_dict[res.type].permission_names
+        else:
+            grp_res_perm = db.query(models.GroupResourcePermission) \
+                .filter(models.GroupResourcePermission.resource_id == res.resource_id) \
+                .filter(models.GroupResourcePermission.group_id == grp.id)
+            perm_names = [permission.perm_name for permission in grp_res_perm]
+        return perm_names
+
+    return evaluate_call(lambda: get_grp_res_perms(group, resource, db_session), httpError=HTTPInternalServerError,
+                         msgOnFail="Failed to obtain group resource permissions",
+                         content={u'group': repr(group), u'resource': repr(resource)})
 
 
 def get_group_service_permissions(group, service, db_session):
@@ -253,56 +260,24 @@ def delete_group_resource_permission(permission_name, resource_id, group_id, db_
 
 @view_config(route_name='group_resource_permission', request_method='DELETE')
 def delete_group_resource_permission_view(request):
-
-
-
-    group_name = request.matchdict.get('group_name')
-    resource_id = request.matchdict.get('resource_id')
-    permission_name = request.matchdict.get('permission_name')
-
-    db = request.db
-    resource = ResourceService.by_resource_id(resource_id, db_session=db)
-    group = GroupService.by_group_name(group_name=group_name, db_session=db)
-
-    if resource is None or group is None:
-        raise HTTPNotFound(detail='this service/group does not exist')
-
-    if resource.resource_type == models.Service.resource_type_name:
-        if permission_name not in service_type_dict[resource.type].permission_names:
-            raise HTTPBadRequest(detail='This permission is not allowed for that service')
-    elif permission_name not in resource_type_dict[resource.resource_type].permission_names:
-        raise HTTPBadRequest(detail='This permission is not allowed for that resource')
-
-    return delete_group_resource_permission(permission_name, resource.resource_id, group.id, db_session=db)
+    group = get_group_matchdict_checked(request)
+    resource = get_resource_matchdict_checked(request)
+    permission_name = get_permission_multiformat_post_checked(request, resource)
+    return delete_group_resource_permission(permission_name, resource.resource_id, group.id, db_session=request.db)
 
 
 @view_config(route_name='group_service_resources', request_method='GET')
 def get_group_service_resources_view(request):
-    service_name = request.matchdict.get('service_name')
-    group_name = request.matchdict.get('group_name')
-    db = request.db
-    service = models.Service.by_service_name(service_name, db_session=db)
-    group = GroupService.by_group_name(group_name=group_name, db_session=db)
-    if service is None or group is None:
-        raise HTTPNotFound(detail='this service/group does not exist')
-
-    service_perms = get_group_service_permissions(group=group, service=service, db_session=db)
-
-    resources_perms_dict = get_group_service_resources_permissions_dict(group=group,
-                                                                        service=service,
-                                                                        db_session=db)
-    json_response = format_service_resources(
+    group = get_group_matchdict_checked(request)
+    service = get_service_matchdict_checked(request)
+    svc_perms = get_group_service_permissions(group=group, service=service, db_session=request.db)
+    res_perms = get_group_service_resources_permissions_dict(group=group, service=service, db_session=request.db)
+    svc_res_json = format_service_resources(
         service=service,
-        db_session=db,
-        service_perms=service_perms,
-        resources_perms_dict=resources_perms_dict,
+        db_session=request.db,
+        service_perms=svc_perms,
+        resources_perms_dict=res_perms,
         display_all=False
     )
-
-    return HTTPOk(
-            body=json.dumps({'service': json_response}),
-            content_type='application/json'
-        )
-
-
-
+    return valid_http(httpSuccess=HTTPOk, detail="Get group service resources successful",
+                      content={u'service': svc_res_json})
