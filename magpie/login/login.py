@@ -1,7 +1,7 @@
 import json
 
 from authomatic.adapters import WebObAdapter
-from pyramid.httpexceptions import HTTPFound, HTTPOk, HTTPTemporaryRedirect, HTTPBadRequest
+from pyramid.httpexceptions import *
 from pyramid.interfaces import IAuthenticationPolicy
 from pyramid.response import Response
 from pyramid.security import NO_PERMISSION_REQUIRED, Authenticated
@@ -31,45 +31,60 @@ external_providers = [u'openid',
                       u'pcmdi',
                       u'smhi',
                       u'github']
+providers = internal_providers + external_providers
+
+
+def sign_in_internal(request, data):
+    """
+    redirection to ziggurat sign in
+    """
+    ziggu_url = request.route_url('ziggurat.routes.sign_in')
+    res = requests.post(ziggu_url, data=data, verify=False)
+    if issubclass(type(res), HTTPClientError):
+        pyr_res = Response(body=res.content)
+        for cookie in res.cookies:
+            pyr_res.set_cookie(name=cookie.name, value=cookie.value)
+        return pyr_res
+    else:
+        return HTTPUnauthorized(body=res.content)
+
+
+def sign_in_external(request, data):
+    if data['provider_name'] == 'openid':
+        query_field = dict(id=data['user_name'])
+    elif data['provider_name'] == 'github':
+        query_field = dict()
+    else:
+        query_field = dict(username=data['user_name'])
+
+    came_from = request.POST.get('came_from', '/')
+    request.response.set_cookie('homepage_route', came_from)
+    external_login_route = request.route_url('external_login', provider_name=data['provider_name'], _query=query_field)
+
+    return HTTPFound(location=external_login_route, headers=request.response.headers)
 
 
 @view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
-    provider_name = get_multiformat_post(request, 'provider_name')
-    user_name = get_multiformat_post(request, 'user_name')
-    password = get_multiformat_post(request, 'password')
+    provider_name = get_value_multiformat_post_checked(request, 'provider_name')
+    user_name = get_value_multiformat_post_checked(request, 'user_name')
+    password = get_value_multiformat_post_checked(request, 'password')
 
-    if provider_name == 'ziggurat':
-        # redirection to ziggurat sign in
-        data_to_send = {'user_name': user_name,
-                        'password': password}
-        #return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_in'))
+    verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `provider_name` not found within available providers",
+                 content={u'provider_name': str(provider_name), u'providers': providers})
 
-        ziggu_url = request.route_url('ziggurat.routes.sign_in')
-        res = requests.post(ziggu_url, data=data_to_send, verify=False)
-        if res.status_code < 400:
-            pyr_res = Response(body=res.content)
-            for cookie in res.cookies:
-                pyr_res.set_cookie(name=cookie.name, value=cookie.value)
-            return pyr_res
-        else:
-            return HTTPUnauthorized(body=res.content)
+    if provider_name in internal_providers:
+        return evaluate_call(lambda: sign_in_internal(request, {u'user_name': user_name, u'password': password}),
+                             httpError=HTTPInternalServerError, content={u'provider': provider_name},
+                             msgOnFail="Error occurred while signing in with internal provider")
 
     elif provider_name in external_providers:
-        if provider_name == 'openid':
-            query_field = dict(id=user_name)
-        elif provider_name == 'github':
-            query_field = dict()
-        else:
-            query_field = dict(username=user_name)
-
-        came_from = request.POST.get('came_from', '/')
-        request.response.set_cookie('homepage_route', came_from)
-        external_login_route = request.route_url('external_login', provider_name=provider_name, _query=query_field)
-
-        return HTTPFound(location=external_login_route, headers=request.response.headers)
-
-    return HTTPBadRequest(detail='Bad provider name')
+        return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
+                                                                u'password': password,
+                                                                u'provider_name': provider_name}),
+                             httpError=HTTPInternalServerError, content={u'provider': provider_name},
+                             msgOnFail="Error occurred while signing in with external provider")
 
 
 @view_config(route_name='signout', request_method='GET', permission=NO_PERMISSION_REQUIRED)
@@ -79,20 +94,17 @@ def sign_out(request):
 
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
 def login_success_ziggu(request):
-    #return HTTPFound(location=request.route_url('successful_operation'),
-    #                 headers=request.context.headers)
-    return HTTPOk(detail='login success', headers=request.context.headers)
+    return HTTPOk(detail="Login successful", headers=request.context.headers)
 
 
-def login_success_external(request, external_user_name, external_id, email, providername):
-
+def login_success_external(request, external_user_name, external_id, email, provider_name):
     # find user by external_id = login_id
     # replace user from mongodb by user ziggurat and connect to externalId
     db = request.db
-    user = ExternalIdentityService.user_by_external_id_and_provider(external_id, providername, db)
+    user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name, db)
     if user is None:
         # create new user with an External Identity
-        local_user_name = external_user_name+'_'+providername
+        local_user_name = external_user_name + '_' + provider_name
         local_user_name = local_user_name.replace(" ", '_')
         create_user(local_user_name, password=None, email=email, group_name=USER_GROUP, db_session=db)
 
@@ -100,12 +112,12 @@ def login_success_external(request, external_user_name, external_id, email, prov
             user = UserService.by_user_name(local_user_name, db_session=db)
             ex_identity = models.ExternalIdentity(external_id=external_id,
                                                   local_user_id=user.id,
-                                                  provider_name=providername,
+                                                  provider_name=provider_name,
                                                   external_user_name=external_user_name)
 
             db.add(ex_identity)
             user.external_identities.append(ex_identity)
-            
+
         except Exception, e:
             db.rollback()
             HTTPConflict(detail=e.message)
@@ -120,10 +132,9 @@ def login_success_external(request, external_user_name, external_id, email, prov
         return HTTPOk()
 
 
-
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
 def login_failure(request, message='login failure'):
-    #came_from_path = request.cookies['homepage_route']
+    # came_from_path = request.cookies['homepage_route']
 
     return HTTPBadRequest(detail=message)
 
@@ -160,14 +171,14 @@ def authomatic_login(request):
             if result.provider.name in ['openid', 'dkrz', 'ipsl', 'smhi', 'badc', 'pcmdi']:
                 # TODO: change login_id ... more infos ...
                 return login_success_external(request,
-                                     external_id=result.user.id,
-                                          email=result.user.email,
-                                          providername=result.provider.name,
-                                          external_user_name=result.user.name)
+                                              external_id=result.user.id,
+                                              email=result.user.email,
+                                              providername=result.provider.name,
+                                              external_user_name=result.user.name)
             elif result.provider.name == 'github':
                 # TODO: fix email ... get more infos ... which login_id?
                 login_id = "{0.username}@github.com".format(result.user)
-                #email = "{0.username}@github.com".format(result.user)
+                # email = "{0.username}@github.com".format(result.user)
                 # get extra info
                 if result.user.credentials:
                     pass
@@ -201,6 +212,6 @@ def get_session(request):
 @view_config(route_name='providers', request_method='GET')
 def get_providers(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get providers successful",
-                      content={u'provider_names': internal_providers + external_providers,
+                      content={u'provider_names': providers,
                                u'internal_providers': internal_providers,
                                u'external_providers': external_providers})
