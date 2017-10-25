@@ -15,20 +15,22 @@ from ziggurat_foundations.models.services.external_identity import ExternalIdent
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.ext.pyramid import get_user
 from security import authomatic
+from api_except import *
+from api_requests import *
 import requests
 import models
 
 from magpie import *
 from management.user.user import create_user
 
-
-external_provider = ['openid',
-                     'dkrz',
-                     'ipsl',
-                     'badc',
-                     'pcmdi',
-                     'smhi',
-                     'github']
+internal_providers = [u'ziggurat']
+external_providers = [u'openid',
+                      u'dkrz',
+                      u'ipsl',
+                      u'badc',
+                      u'pcmdi',
+                      u'smhi',
+                      u'github']
 
 
 @view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
@@ -53,7 +55,7 @@ def sign_in(request):
         else:
             return HTTPUnauthorized(body=res.content)
 
-    elif provider_name in external_provider:
+    elif provider_name in external_providers:
         if provider_name == 'openid':
             query_field = dict(id=user_name)
         elif provider_name == 'github':
@@ -80,7 +82,6 @@ def login_success_ziggu(request):
     #return HTTPFound(location=request.route_url('successful_operation'),
     #                 headers=request.context.headers)
     return HTTPOk(detail='login success', headers=request.context.headers)
-
 
 
 def login_success_external(request, external_user_name, external_id, email, providername):
@@ -196,15 +197,10 @@ def get_session(request):
         content_type='application/json'
     )
 
+
 @view_config(route_name='providers', request_method='GET')
 def get_providers(request):
-    provider_names = ['ziggurat', 'dkrz', 'ipsl', 'badc', 'pcmdi', 'smhi']
-    return HTTPOk(
-        body=json.dumps({'provider_names': provider_names}),
-        content_type='application/json'
-    )
-
-
-
-
-
+    return valid_http(httpSuccess=HTTPOk, detail="Get providers successful",
+                      content={u'provider_names': internal_providers + external_providers,
+                               u'internal_providers': internal_providers,
+                               u'external_providers': external_providers})
