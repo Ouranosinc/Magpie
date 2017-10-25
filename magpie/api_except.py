@@ -8,7 +8,8 @@ RAISE_RECURSIVE_SAFEGUARD_MAX = 5
 RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 
 
-def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFail="", contentType='application/json',
+def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFail="",
+                 content=None, contentType='application/json',
                  notNone=False, notEmpty=False, notIn=False, isNone=False, isEmpty=False, isIn=False, ofType=None):
     """
     Evaluate various parameter combinations given the requested flags.
@@ -22,6 +23,7 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
         to test for None type, use `isNone`/`notNone` flags instead or `paramCompare`=[None]
     :param httpError: (HTTPError) derived exception to raise on test failure (default: `HTTPNotAcceptable`)
     :param msgOnFail: (str) message details to return in HTTP exception if flag condition failed
+    :param content: json formatted additional content to provide in case of exception
     :param contentType: format in which to return the exception ('application/json', 'text/html' or 'text/plain')
     :param notNone: (bool) test that `param` is None type
     :param notEmpty: (bool) test that `param` is an empty string
@@ -34,6 +36,8 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
     :raises `HTTPInternalServerError`: for evaluation error
     :return: nothing if all tests passed
     """
+    content = {} if content is None else content
+
     # precondition evaluation of input parameters
     try:
         if type(notNone) is not bool:
@@ -53,8 +57,10 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
         if not hasattr(paramCompare, '__iter__'):
             paramCompare = [paramCompare]
     except Exception as e:
-        raise_http(httpError=HTTPInternalServerError, detail=repr(e),
-                   content={u'traceback': repr(exc_info())}, contentType=contentType)
+        content[u'traceback'] = repr(exc_info())
+        content[u'exception'] = repr(e)
+        raise_http(httpError=HTTPInternalServerError, content=content, contentType=contentType,
+                   detail="Error occurred during parameter verification")
 
     # evaluate requested parameter combinations
     status = False
@@ -73,7 +79,8 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, msgOnFai
     if ofType is not None:
         status = status or (not type(param) == ofType)
     if status:
-        raise_http(httpError, detail=msgOnFail, content={u'param': repr(param)}, contentType=contentType)
+        content[u'param'] = repr(param)
+        raise_http(httpError, detail=msgOnFail, content=content, contentType=contentType)
 
 
 def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, msgOnFail="",
