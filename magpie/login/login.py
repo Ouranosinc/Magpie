@@ -68,7 +68,7 @@ def sign_in_external(request, data):
 def sign_in(request):
     provider_name = get_value_multiformat_post_checked(request, 'provider_name')
     user_name = get_value_multiformat_post_checked(request, 'user_name')
-    password = get_value_multiformat_post_checked(request, 'password')
+    password = get_multiformat_post(request, 'password')   # no check since password is None for external login
 
     verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `provider_name` not found within available providers",
@@ -97,34 +97,32 @@ def login_success_ziggu(request):
     return HTTPOk(detail="Login successful", headers=request.context.headers)
 
 
+def new_user_external(external_user_name, external_id, email, provider_name, db_session):
+    """create new user with an External Identity"""
+    local_user_name = external_user_name + '_' + provider_name
+    local_user_name = local_user_name.replace(" ", '_')
+    create_user(local_user_name, password=None, email=email, group_name=USER_GROUP, db_session=db_session)
+
+    user = UserService.by_user_name(local_user_name, db_session=db_session)
+    ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
+                                          local_user_id=user.id, provider_name=provider_name)
+    evaluate_call(lambda: db_session.add(ex_identity), fallback=lambda: db_session.rollback(),
+                  httpError=HTTPConflict, msgOnFail="Add external user refused by db",
+                  content={u'provider_name': str(provider_name), u'local_user_name': str(local_user_name)})
+    user.external_identities.append(ex_identity)
+    return user
+
+
 def login_success_external(request, external_user_name, external_id, email, provider_name):
     # find user by external_id = login_id
     # replace user from mongodb by user ziggurat and connect to externalId
-    db = request.db
-    user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name, db)
+    user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name, request.db)
     if user is None:
         # create new user with an External Identity
-        local_user_name = external_user_name + '_' + provider_name
-        local_user_name = local_user_name.replace(" ", '_')
-        create_user(local_user_name, password=None, email=email, group_name=USER_GROUP, db_session=db)
-
-        try:
-            user = UserService.by_user_name(local_user_name, db_session=db)
-            ex_identity = models.ExternalIdentity(external_id=external_id,
-                                                  local_user_id=user.id,
-                                                  provider_name=provider_name,
-                                                  external_user_name=external_user_name)
-
-            db.add(ex_identity)
-            user.external_identities.append(ex_identity)
-
-        except Exception, e:
-            db.rollback()
-            HTTPConflict(detail=e.message)
-
+        user = new_user_external(external_user_name=external_user_name, external_id=external_id,
+                                 email=email, provider_name=provider_name, db_session=request.db)
     # set a header to remember (set-cookie) -> this is the important line
     headers = remember(request, user.id)
-
     # If redirection given
     if 'homepage_route' in request.cookies:
         return HTTPFound(location=request.cookies['homepage_route'], headers=headers)
@@ -133,15 +131,13 @@ def login_success_external(request, external_user_name, external_id, email, prov
 
 
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
-def login_failure(request, message='login failure'):
-    # came_from_path = request.cookies['homepage_route']
-
-    return HTTPBadRequest(detail=message)
+def login_failure(request, reason='not specified'):
+    raise_http(httpError=HTTPBadRequest, detail="Login failure", content={u'reason': str(reason)})
 
 
 @view_config(route_name='successful_operation')
 def successful_operation(request):
-    return HTTPOk()
+    return valid_http(httpSuccess=HTTPOk, detail="Successful operation")
 
 
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
@@ -163,7 +159,7 @@ def authomatic_login(request):
     if result:
         if result.error:
             # Login procedure finished with an error.
-            return login_failure(request, message=result.error.message)
+            return login_failure(request, reason=result.error.message)
         elif result.user:
             if not (result.user.name and result.user.id):
                 result.user.update()
@@ -173,7 +169,7 @@ def authomatic_login(request):
                 return login_success_external(request,
                                               external_id=result.user.id,
                                               email=result.user.email,
-                                              providername=result.provider.name,
+                                              provider_name=result.provider.name,
                                               external_user_name=result.user.name)
             elif result.provider.name == 'github':
                 # TODO: fix email ... get more infos ... which login_id?
@@ -185,7 +181,7 @@ def authomatic_login(request):
                 return login_success_external(request,
                                               external_id=login_id,
                                               email=login_id,
-                                              providername=result.provider.name,
+                                              provider_name=result.provider.name,
                                               external_user_name=result.user.name)
 
     return response
@@ -193,20 +189,22 @@ def authomatic_login(request):
 
 @view_config(route_name='session', permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
-    authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
-    principals = authn_policy.effective_principals(request)
-    if Authenticated in principals:
-        user = request.user
-        json_response = {'authenticated': True,
-                         'user_name': user.user_name,
-                         'user_email': user.email,
-                         'group_names': [group.group_name for group in user.groups]}
-    else:
-        json_response = {'authenticated': False}
-    return HTTPOk(
-        body=json.dumps(json_response),
-        content_type='application/json'
-    )
+    def _get_session(req):
+        authn_policy = req.registry.queryUtility(IAuthenticationPolicy)
+        principals = authn_policy.effective_principals(req)
+        if Authenticated in principals:
+            user = request.user
+            json_resp = {u'authenticated': True,
+                         u'user_name': user.user_name,
+                         u'user_email': user.email,
+                         u'group_names': [group.group_name for group in user.groups]}
+        else:
+            json_resp = {u'authenticated': False}
+        return json_resp
+
+    session_json = evaluate_call(lambda: _get_session(request), httpError=HTTPInternalServerError,
+                                 msgOnFail="Failed to get session details")
+    return valid_http(httpSuccess=HTTPOk, detail="Get session successful", content=session_json)
 
 
 @view_config(route_name='providers', request_method='GET')
