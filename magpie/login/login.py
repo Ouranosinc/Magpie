@@ -38,15 +38,23 @@ def sign_in_internal(request, data):
     """
     redirection to ziggurat sign in
     """
-    ziggu_url = request.route_url('ziggurat.routes.sign_in')
-    res = requests.post(ziggu_url, data=data, verify=False)
-    if issubclass(type(res), HTTPClientError):
-        pyr_res = Response(body=res.content)
-        for cookie in res.cookies:
-            pyr_res.set_cookie(name=cookie.name, value=cookie.value)
-        return pyr_res
-    else:
-        return HTTPUnauthorized(body=res.content)
+    def sign_in_intern(req, dat):
+        ziggu_url = req.route_url('ziggurat.routes.sign_in')
+        res = requests.post(ziggu_url, data=dat, verify=False)
+        # success login (HTTPOk response)
+        if res.status_code == HTTPOk.code:
+            pyr_res = Response(body=res.content)
+            for cookie in res.cookies:
+                pyr_res.set_cookie(name=cookie.name, value=cookie.value)
+            return pyr_res
+        # fail login (HTTPBadRequest response)
+        return None
+
+    res = evaluate_call(lambda: sign_in_intern(request, data),
+                        httpError=HTTPInternalServerError, content={u'provider_name': str(data.get('provider_name'))},
+                        msgOnFail="Error occurred while signing in with internal provider")
+    verify_param(res, notNone=True, httpError=HTTPUnauthorized, msgOnFail="Invalid login credentials")
+    return valid_http(httpSuccess=HTTPOk, detail="Internal login successful")
 
 
 def sign_in_external(request, data):
@@ -75,9 +83,7 @@ def sign_in(request):
                  content={u'provider_name': str(provider_name), u'providers': providers})
 
     if provider_name in internal_providers:
-        return evaluate_call(lambda: sign_in_internal(request, {u'user_name': user_name, u'password': password}),
-                             httpError=HTTPInternalServerError, content={u'provider': provider_name},
-                             msgOnFail="Error occurred while signing in with internal provider")
+        return sign_in_internal(request, {u'user_name': user_name, u'password': password})
 
     elif provider_name in external_providers:
         return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
@@ -89,14 +95,14 @@ def sign_in(request):
 
 @view_config(route_name='signout', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def sign_out(request):
-    return HTTPTemporaryRedirect(location=request.route_url('ziggurat.routes.sign_out'))
+    return valid_http(httpSuccess=HTTPTemporaryRedirect, detail="Local sign out redirect",
+                      httpKWArgs={'location': request.route_url('ziggurat.routes.sign_out')})
 
 
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
 def login_success_ziggu(request):
-    return valid_http(httpSuccess=HTTPOk, detail="Login successful",
-                      httpKWArgs={'location': request.route_url('home'),
-                                  'headers': request.context.headers})
+    # headers contains login authorization cookie
+    return valid_http(httpSuccess=HTTPOk, detail="Login successful", httpKWArgs={'headers': request.context.headers})
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):
