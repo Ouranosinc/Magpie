@@ -32,7 +32,7 @@ def get_groups(request):
 
 @view_config(route_name='groups', request_method='POST')
 def create_group(request):
-    group_name = get_multiformat_post(request, 'group_name')
+    group_name = get_value_multiformat_post_checked(request, 'group_name')
     new_group = evaluate_call(lambda: models.Group(group_name=group_name), fallback=lambda: request.db.rollback(),
                               httpError=HTTPForbidden, msgOnFail="Create new group by name refused by db",
                               content={u'group_name': str(group_name)})
