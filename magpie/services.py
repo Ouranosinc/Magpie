@@ -6,13 +6,15 @@ from pyramid.security import Everyone as EVERYONE
 
 class ServiceI(object):
     permission_names = []
-    param_values = []
+    params_expected = []    # derived services must have 'request' at least for 'permission_requested' method
     resource_types = []
 
     def __init__(self, service, request):
         self.service = service
         self.request = request
         self.acl = []
+        self.parser = ows_parser_factory(request)
+        self.parser.parse(self.params_expected)
 
     @property
     def __acl__(self):
@@ -38,7 +40,11 @@ class ServiceI(object):
                         self.acl.append((outcome, EVERYONE, perm_name,))
 
     def permission_requested(self):
-        raise NotImplementedError
+        try:
+            return self.parser.params[u'request']
+        except Exception as e:
+            # if 'ServiceI', 'params_expected' is empty and will raise a KeyError
+            raise NotImplementedError("Exception: [" + repr(e) + "]")
 
 
 class ServiceWPS(ServiceI):
@@ -53,20 +59,15 @@ class ServiceWPS(ServiceI):
 
     def __init__(self, service, request):
         super(ServiceWPS, self).__init__(service, request)
-        self.parser = ows_parser_factory(request)
-        self.parser.parse(self.params_expected)
 
     @property
     def __acl__(self):
         self.expand_acl(self.service, self.request.user)
         return self.acl
 
-    def permission_requested(self):
-        # should be in permission_types
-        return self.parser.params['request']
-
 
 class ServiceWMS(ServiceI):
+
     permission_names = [u'getcapabilities',
                         u'getmap',
                         u'getfeatureinfo',
@@ -82,8 +83,6 @@ class ServiceWMS(ServiceI):
 
     def __init__(self, service, request):
         super(ServiceWMS, self).__init__(service, request)
-        self.parser = ows_parser_factory(request)
-        self.parser.parse(self.params_expected)
 
     @property
     def __acl__(self):
@@ -97,7 +96,6 @@ class ServiceWMS(ServiceI):
         # localhost:8087/geoserver/WATERSHED/wms?request=getcapabilities (only for the workspace in the path)
         #here we need to check the workspace in the path
 
-
         request_type = self.permission_requested()
         if request_type == 'getcapabilities':
             path_elem = self.request.path.split('/')
@@ -110,7 +108,7 @@ class ServiceWMS(ServiceI):
             layer_name = self.parser.params['layers']
             workspace_name = layer_name.split(':')[0]
 
-        #load workspace resource from the database
+        # load workspace resource from the database
         workspace = find_children_by_name(name=workspace_name,
                                           parent_id=self.service.resource_id,
                                           db_session=self.request.db)
@@ -118,12 +116,9 @@ class ServiceWMS(ServiceI):
             self.expand_acl(workspace, self.request.user)
         return self.acl
 
-    def permission_requested(self):
-        # should be in permission_types
-        return self.parser.params['request']
-
 
 class ServiceWFS(ServiceI):
+
     permission_names = [u'getcapabilities',
                         u'describefeaturetype',
                         u'getfeature',
@@ -139,8 +134,6 @@ class ServiceWFS(ServiceI):
 
     def __init__(self, service, request):
         super(ServiceWFS, self).__init__(service, request)
-        self.parser = ows_parser_factory(request)
-        self.parser.parse(self.params_expected)
 
     @property
     def __acl__(self):
@@ -165,20 +158,18 @@ class ServiceWFS(ServiceI):
             self.expand_acl(workspace, self.request.user)
         return self.acl
 
-    def permission_requested(self):
-        # should be in permission_types
-        return self.parser.params['request']
-
 
 class ServiceTHREDDS(ServiceI):
+
     permission_names = models.File.permission_names
+
+    params_expected = [u'request']
 
     resource_types = [models.Directory.resource_type_name,
                       models.File.resource_type_name]
 
     def __init__(self, service, request):
         super(ServiceTHREDDS, self).__init__(service, request)
-
 
     @property
     def __acl__(self):
@@ -204,10 +195,7 @@ class ServiceTHREDDS(ServiceI):
         return self.acl
 
     def permission_requested(self):
-        # /thredds/fileServer
-        # /thredds/dods
-        # /thredds/{access_method}
-        return u'download'
+        return u'read'
 
     pass
 
@@ -222,8 +210,8 @@ def service_factory(service, request):
     try:
         service_specific = service_type_dict[service.type](service, request)
         return service_specific
-    except:
-        raise Exception('This type of service does not exist')
+    except Exception as e:
+        raise Exception("Failed to find requested service type. Exception: [" + repr(e) + "]")
 
 
 def get_all_service_permission_names():
