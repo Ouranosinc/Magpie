@@ -192,5 +192,6 @@ def get_all_resource_permission_names():
 
 def find_children_by_name(name, parent_id, db_session):
     tree_struct = resource_tree_service.from_parent_deeper(parent_id=parent_id, limit_depth=1, db_session=db_session)
-    child_found = node.Resource if name in [node.Resource.resource_name for node in tree_struct] else None
-    return child_found
+    tree_level_entries = [node for node in tree_struct]
+    tree_level_filtered = [node.Resource for node in tree_level_entries if node.Resource.resource_name == name]
+    return tree_level_filtered.pop() if len(tree_level_filtered) else None
