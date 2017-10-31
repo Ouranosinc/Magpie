@@ -130,9 +130,9 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
 
 @view_config(route_name='resources', request_method='POST')
 def create_resource_view(request):
-    resource_name = get_value_matchdict_checked(request, 'resource_name')
-    resource_type = get_value_matchdict_checked(request, 'resource_type')
-    parent_id = get_value_matchdict_checked(request, 'parent_id')
+    resource_name = get_value_multiformat_post_checked(request, 'resource_name')
+    resource_type = get_value_multiformat_post_checked(request, 'resource_type')
+    parent_id = get_value_multiformat_post_checked(request, 'parent_id')
     return create_resource(resource_name, resource_type, parent_id, request.db)
 
 
