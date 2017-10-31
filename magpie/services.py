@@ -31,7 +31,7 @@ class ServiceI(object):
             else:
                 user = UserService.by_user_name(ANONYMOUS_USER, db_session=self.request.db)
                 if user is None:
-                    raise Exception('No Anonymous user in the databse')
+                    raise Exception('No Anonymous user in the database')
                 else:
                     permissions = resource.perms_for_user(user)
                     for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
@@ -62,7 +62,7 @@ class ServiceWPS(ServiceI):
         return self.acl
 
     def permission_requested(self):
-        #should be in permission_types
+        # should be in permission_types
         return self.parser.params['request']
 
 

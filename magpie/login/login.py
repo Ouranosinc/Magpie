@@ -40,11 +40,11 @@ def sign_in_internal(request, data):
     """
     def sign_in_intern(req, dat):
         ziggu_url = req.route_url('ziggurat.routes.sign_in')
-        res = requests.post(ziggu_url, data=dat, verify=False)
+        ziggu_res = requests.post(ziggu_url, data=dat, verify=False)
         # success login (HTTPOk response)
-        if res.status_code == HTTPOk.code:
-            pyr_res = Response(body=res.content)
-            for cookie in res.cookies:
+        if ziggu_res.status_code == HTTPOk.code:
+            pyr_res = Response(body=ziggu_res.content)
+            for cookie in ziggu_res.cookies:
                 pyr_res.set_cookie(name=cookie.name, value=cookie.value)
             return pyr_res
         # fail login (HTTPBadRequest response)

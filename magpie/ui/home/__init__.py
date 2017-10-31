@@ -21,7 +21,7 @@ def add_template_data(request, data=None):
         pass
 
     if logged_user:
-        all_data.update({'logged_user': logged_user})
+        all_data.update({u'logged_user': logged_user})
     return all_data
 
 
