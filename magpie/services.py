@@ -181,6 +181,8 @@ class ServiceTHREDDS(ServiceI):
         elif 'dodsC' in elems:
             first_idx = elems.index('dodsC')
             elems[-1] = elems[-1].replace('.html', '')
+        elif 'catalog' in elems:
+            first_idx = elems.index('catalog')
         else:
             return self.acl
 
