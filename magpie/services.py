@@ -183,6 +183,8 @@ class ServiceTHREDDS(ServiceI):
             elems[-1] = elems[-1].replace('.html', '')
         elif 'catalog' in elems:
             first_idx = elems.index('catalog')
+        elif elems[-1] == 'catalog.html':
+            first_idx = elems.index(self.service.resource_name) - 1
         else:
             return self.acl
 
