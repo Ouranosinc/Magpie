@@ -28,12 +28,13 @@ def request_curl(url, params, msg='Response'):
 
 def phoenix_login(cookies):
     try:
+        phoenix_usr = os.getenv('PHOENIX_USER')
         phoenix_pwd = os.getenv('PHOENIX_PASSWORD')
     except Exception as e:
         raise Exception("Missing environment values [" + repr(e) + "]")
     phoenix_url = get_phoenix_url()
     login_url = phoenix_url + '/account/login/phoenix'
-    login_loop(login_url, cookies, 'phoenix', phoenix_pwd, 'submit=submit')
+    login_loop(login_url, cookies, phoenix_usr, phoenix_pwd, 'submit=submit')
 
 
 def phoenix_remove_services():
@@ -42,9 +43,10 @@ def phoenix_remove_services():
 
     phoenix_url = get_phoenix_url()
     remove_services_url = phoenix_url + '/clear_services'
-    request_curl(remove_services_url, '', 'Remove response')
+    success = request_curl(remove_services_url, '', 'Remove response')
 
     os.remove(phoenix_cookies)
+    return success
 
 
 def phoenix_register_services(services_dict):
@@ -56,9 +58,10 @@ def phoenix_register_services(services_dict):
     register_service_url = phoenix_url + '/services/register'
     wps_services_dict = [wps_service for wps_service in services_dict
                          if str(wps_service.get('type')).lower() == 'wps']
-    register_services(register_service_url, wps_services_dict, phoenix_cookies)
+    success = register_services(register_service_url, wps_services_dict, phoenix_cookies)
 
     os.remove(phoenix_cookies)
+    return success
 
 
 def get_phoenix_url():
@@ -80,21 +83,23 @@ def get_magpie_url():
 
 
 def register_services(register_service_url, services_dict, cookies):
+    success = True
     for service in services_dict:
         cfg = services_dict[service]
         url = os.path.expandvars(cfg['url'])
         public = 'true' if cfg['public'] else 'false'
-        params = '--cookie {cookie} ' \
-                 '--data "' \
-                 'service_name={name}&' \
-                 'service_url={url}&' \
-                 'service_title={cfg[title]}&' \
-                 'public={public}&' \
-                 'c4i={cfg[c4i]}&' \
-                 'service_type={cfg[type]}&' \
-                 'register=register"' \
-            .format(cookie=cookies, name=service, url=url, public=public, cfg=cfg)
-        request_curl(url, params, 'Register response')
+        params = '--cookie {cookie} '           \
+                 '--data "'                     \
+                 'service_name={name}&'         \
+                 'service_url={url}&'           \
+                 'service_title={cfg[title]}&'  \
+                 'public={public}&'             \
+                 'c4i={cfg[c4i]}&'              \
+                 'service_type={cfg[type]}&'    \
+                 'register=register"'           \
+                 .format(cookie=cookies, name=service, url=url, public=public, cfg=cfg)
+        success = success and request_curl(register_service_url, params, 'Register response')
+    return success
 
 
 def magpie_register_services():
@@ -118,6 +123,7 @@ def magpie_register_services():
 
     # Register services
     register_service_url = magpie_url + '/services'
-    register_services(register_service_url, services, cookie_fn)
+    success = register_services(register_service_url, services, cookie_fn)
 
     os.remove(cookie_fn)
+    return success
