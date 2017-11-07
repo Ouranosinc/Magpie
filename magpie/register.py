@@ -3,7 +3,7 @@ import time
 import yaml
 import sys
 
-LOGIN_ATTEMPS = 10
+LOGIN_ATTEMPT = 10
 LOGIN_TIMEOUT = 10
 
 
@@ -17,7 +17,7 @@ def login_loop(login_url, cookies, admin_name, admin_password, extra_data=''):
             break
         time.sleep(LOGIN_TIMEOUT)
         attempt += 1
-        if attempt >= LOGIN_ATTEMPS:
+        if attempt >= LOGIN_ATTEMPT:
             raise Exception('Cannot log in to {0}'.format(login_url))
 
 
