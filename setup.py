@@ -33,7 +33,7 @@ setup(
     long_description=README + '\n\n' + HISTORY,
     author=__author__,
     author_email=__email__,
-    url='https://github.com/fderue/magpie',
+    url='https://github.com/Ouranosinc/Magpie',
     platforms=['linux_x86_64'],
     license="ISCL",
     keywords='magpie',
