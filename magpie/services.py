@@ -191,6 +191,8 @@ class ServiceTHREDDS(ServiceI):
         new_child = self.service
         while new_child and elems:
             name = elems.pop(0)
+            if ".nc" in name:
+                name = name.split(".nc")[0]+".nc"  #in case there is more extension to discard such as .dds
             new_child = find_children_by_name(name, parent_id=new_child.resource_id, db_session=db)
             self.expand_acl(new_child, self.request.user)
 
