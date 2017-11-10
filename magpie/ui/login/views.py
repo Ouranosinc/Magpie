@@ -29,32 +29,34 @@ class ManagementViews(object):
     def login(self):
         try:
             if 'submit' in self.request.POST:
-                new_location = self.magpie_url + '/signin'
-                data_to_send = {}
-                for key in self.request.POST:
-                    data_to_send[key] = self.request.POST.get(key)
+                provider_name = self.request.POST.get('provider_name', 'ziggurat')
+                # Local login
+                if provider_name == 'ziggurat':
+                    new_location = self.magpie_url + '/signin'
+                    data_to_send = {}
+                    for key in self.request.POST:
+                        data_to_send[key] = self.request.POST.get(key)
 
-                res = requests.post(new_location, data=data_to_send, allow_redirects=True)
-
-                if res.status_code < 400:
-                    logged_url = res.url
-                    pyr_res = Response(body=res.content, headers=res.headers)
-                    for cookie in res.cookies:
-                        pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
-                    headers = pyr_res.headers
-
-                    # case of internal signin, new location was already signin
-                    # remember cookies of logged user and redirect to home
-                    if res.url == new_location:
-                        logged_url = self.magpie_url
-                        logged_user = get_user(self.request, data_to_send['user_name'])
-                        headers = remember(self.request, logged_user.id)
-                    return HTTPFound(location=logged_url, headers=headers)
-
-                elif res.status_code == 401:
-                    return HTTPFound(location=self.request.route_url('login', _query=dict(authentication='Failed')),)
+                    response = requests.post(new_location, data=data_to_send, allow_redirects=True)
+                    if response.status_code == 200:
+                        pyr_res = Response(body=response.content, headers=response.headers)
+                        for cookie in response.cookies:
+                            pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
+                            return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
+                    else:
+                        return Response(body=response.content, status=response.status_code, headers=response.headers)
                 else:
-                    return Response(body=res.content)
+                    # External login
+                    external_url = self.magpie_url + '/signin_external'
+                    data_to_send = {}
+                    for key in self.request.POST:
+                        data_to_send[key] = self.request.POST.get(key)
+                    response = requests.post(external_url, data=data_to_send, allow_redirects=True)
+                    pyr_res = Response(body=response.content, status=response.status_code, headers=response.headers)
+                    for cookie in response.cookies:
+                        pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
+                    return pyr_res
+
         except Exception as e:
             return HTTPInternalServerError(detail=repr(e))
 

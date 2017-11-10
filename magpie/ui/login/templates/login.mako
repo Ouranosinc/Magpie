@@ -7,7 +7,7 @@
 
 <h1>Log in</h1>
 
-<form class="new_item_form" action="${request.path}" method="post">
+<form class="new_item_form" action="${request.route_url('login')}" method="post">
     <h3>Magpie</h3>
     <input type="hidden" value="${request.route_url('home')}" name="came_from" id="came_from">
     <input type="hidden" value="ziggurat" name="provider_name">
