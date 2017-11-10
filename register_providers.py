@@ -1,5 +1,12 @@
 from magpie.register import magpie_register_services
+import sys
+from os import path as p
 
 
 if __name__ == "__main__":
-    magpie_register_services()
+    if len(sys.argv) < 2:
+        config_file_path = p.join(p.dirname(p.abspath(__file__)), "providers.cfg")
+        print("Using default file [" + config_file_path + "] since not provided as input")
+    else:
+        config_file_path = sys.argv[1]
+    magpie_register_services(config_file_path)

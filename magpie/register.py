@@ -1,7 +1,6 @@
 import os
 import time
 import yaml
-import sys
 
 LOGIN_ATTEMPT = 10
 LOGIN_TIMEOUT = 10
@@ -102,7 +101,7 @@ def register_services(register_service_url, services_dict, cookies):
     return success
 
 
-def magpie_register_services():
+def magpie_register_services(service_config_file_path):
     try:
         admin_name = os.getenv('ADMIN_USER')
         admin_password = os.getenv('ADMIN_PASSWORD')
@@ -110,7 +109,7 @@ def magpie_register_services():
         raise Exception("Missing environment values [" + repr(e) + "]")
 
     try:
-        services_cfg = yaml.load(open(sys.argv[1], 'r'))
+        services_cfg = yaml.load(open(service_config_file_path, 'r'))
         services = services_cfg['services']
     except Exception as e:
         raise Exception("Bad service file + [" + repr(e) + "]")
