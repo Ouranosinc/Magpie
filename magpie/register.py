@@ -1,16 +1,27 @@
 import os
 import time
 import yaml
+from distutils.dir_util import mkpath
 
 LOGIN_ATTEMPT = 10
 LOGIN_TIMEOUT = 10
-LOGIN_TMP_DIR = "~/tmp"
+LOGIN_TMP_DIR = "/tmp"
 
 
-def login_loop(login_url, cookies, admin_name, admin_password, extra_data='', message='Login response'):
+# alternative to 'makedirs' with 'exists_ok' parameter only available for python>3.5
+def make_dirs(path):
+    dir_path = os.path.dirname(path)
+    if not os.path.isfile(path) or not os.path.isdir(dir_path):
+        for subdir in mkpath(dir_path):
+            if not os.path.isdir(subdir):
+                os.mkdir(subdir)
+
+
+def login_loop(login_url, cookies_file, admin_name, admin_password, extra_data='', message='Login response'):
+    make_dirs(cookies_file)
     extra_data = '&' + str(extra_data) if extra_data is not None else ''
     params = '--cookie-jar {0} --data "user_name={1}&password={2}{3}"' \
-             .format(cookies, admin_name, admin_password, extra_data)
+             .format(cookies_file, admin_name, admin_password, extra_data)
     attempt = 0
     while True:
         if request_curl(login_url, params, message):
@@ -134,12 +145,13 @@ def magpie_register_services(service_config_file_path):
 
     # Need to login first as admin
     login_url = magpie_url + '/signin'
-    cookie_fn = os.path.join(LOGIN_TMP_DIR, 'login_cookie_magpie')
-    login_loop(login_url, cookie_fn, admin_usr, admin_pwd, 'provider_name=ziggurat', 'Magpie login response')
+    magpie_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_magpie')
+    login_loop(login_url, magpie_cookies, admin_usr, admin_pwd, 'provider_name=ziggurat', 'Magpie login response')
 
     # Register services
+    # Magpie will not overwrite existing services by default, 409 Conflict instead of 201 Created
     register_service_url = magpie_url + '/services'
-    success = register_services(register_service_url, services, cookie_fn, 'Magpie register service')
+    success = register_services(register_service_url, services, magpie_cookies, 'Magpie register service')
 
-    os.remove(cookie_fn)
+    os.remove(magpie_cookies)
     return success
