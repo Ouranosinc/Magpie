@@ -67,7 +67,7 @@ def main(global_config=None, **settings):
 
     hostname = os.getenv('HOSTNAME')
     if hostname:
-        settings['magpie.url'] = 'http://{hostname}:{port}'.format(hostname=hostname, port=settings['magpie.port'])
+        settings['magpie.url'] = 'http://{hostname}:{port}/magpie'.format(hostname=hostname, port=settings['magpie.port'])
 
     from pyramid.config import Configurator
 
