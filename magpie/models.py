@@ -141,7 +141,12 @@ class Service(Resource):
 class File(Resource):
     __mapper_args__ = {u'polymorphic_identity': u'file'}
     permission_names = [u'read',
-                        u'write']
+                        u'write',
+                        u'getcapabilities',
+                        u'getmap',
+                        u'getfeatureinfo',
+                        u'getlegendgraphic',
+                        u'getmetadata']
     resource_type_name = u'file'
 
 
