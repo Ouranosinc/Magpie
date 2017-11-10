@@ -114,7 +114,7 @@ def login_success_external(request, external_user_name, external_id, email, prov
 
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
 def login_failure(request, reason='not specified'):
-    raise_http(httpError=HTTPBadRequest, detail="Login failure", content={u'reason': str(reason)})
+    raise_http(httpError=HTTPUnauthorized, detail="Login failure", content={u'reason': str(reason)})
 
 
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)

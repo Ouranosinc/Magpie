@@ -141,7 +141,12 @@ class Service(Resource):
 class File(Resource):
     __mapper_args__ = {u'polymorphic_identity': u'file'}
     permission_names = [u'read',
-                        u'write']
+                        u'write',
+                        u'getcapabilities',
+                        u'getmap',
+                        u'getfeatureinfo',
+                        u'getlegendgraphic',
+                        u'getmetadata']
     resource_type_name = u'file'
 
 
@@ -193,5 +198,5 @@ def get_all_resource_permission_names():
 def find_children_by_name(name, parent_id, db_session):
     tree_struct = resource_tree_service.from_parent_deeper(parent_id=parent_id, limit_depth=1, db_session=db_session)
     tree_level_entries = [node for node in tree_struct]
-    tree_level_filtered = [node.Resource for node in tree_level_entries if node.Resource.resource_name == name]
+    tree_level_filtered = [node.Resource for node in tree_level_entries if node.Resource.resource_name.lower() == name.lower()]
     return tree_level_filtered.pop() if len(tree_level_filtered) else None

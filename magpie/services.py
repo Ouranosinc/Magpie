@@ -2,6 +2,7 @@ from magpie import *
 from owsrequest import *
 from models import find_children_by_name
 from pyramid.security import Everyone as EVERYONE
+from pyramid.security import Allow
 
 
 class ServiceI(object):
@@ -77,12 +78,69 @@ class ServiceWMS(ServiceI):
     params_expected = [u'service',
                        u'request',
                        u'version',
-                       u'layers']
+                       u'layers',
+                       u'layername',
+                       u'dataset']
 
     resource_types = [models.Workspace.resource_type_name]
 
     def __init__(self, service, request):
         super(ServiceWMS, self).__init__(service, request)
+
+
+class ServiceNCWMS2(ServiceWMS):
+    resource_types = [models.File.resource_type_name,
+                      models.Directory.resource_type_name]
+    def __init__(self, service, request):
+        super(ServiceNCWMS2, self).__init__(service, request)
+
+
+    @property
+    def __acl__(self):
+        self.expand_acl(self.service, self.request.user)
+
+        # According to the permission, the resource we want to authorize is not formatted the same way
+        permission_requested = self.permission_requested()
+        netcdf_file = None
+        if permission_requested == 'getcapabilities':
+            # https://colibri.crim.ca/twitcher/ows/proxy/ncWMS2/wms?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0&DATASET=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc
+            netcdf_file = self.parser.params['dataset']
+            # replace output/ with birdhouse/
+
+        elif permission_requested == 'getmap':
+            # https://colibri.crim.ca/ncWMS2/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image%2Fpng&TRANSPARENT=TRUE&ABOVEMAXCOLOR=extend&STYLES=default-scalar%2Fseq-Blues&LAYERS=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc/PCP&EPSG=4326
+            netcdf_file = self.parser.params['layers']
+            if netcdf_file:
+                netcdf_file = netcdf_file.rsplit('/', 1)[0]
+
+        elif permission_requested == 'getmetadata':
+            # https://colibri.crim.ca/ncWMS2/wms?request=GetMetadata&item=layerDetails&layerName=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc/PCP
+            netcdf_file = self.parser.params['layername']
+            if netcdf_file:
+                netcdf_file = netcdf_file.rsplit('/', 1)[0]
+
+        else:
+            return [(Allow, EVERYONE, permission_requested,)]
+
+        verify_param('outputs/', paramCompare=netcdf_file, httpError=HTTPNotFound,msgOnFail='outputs/ is not in path', notIn=True)
+        netcdf_file = netcdf_file.replace('outputs/', 'birdhouse/')
+
+        elems = netcdf_file.split('/')
+        db = self.request.db
+        new_child = self.service
+        while new_child and elems:
+            name = elems.pop(0)
+            new_child = find_children_by_name(name, parent_id=new_child.resource_id, db_session=db)
+            self.expand_acl(new_child, self.request.user)
+
+        return self.acl
+
+
+
+class ServiceGeoserver(ServiceWMS):
+
+    def __init__(self, service, request):
+        super(ServiceGeoserver, self).__init__(service, request)
 
     @property
     def __acl__(self):
@@ -115,6 +173,7 @@ class ServiceWMS(ServiceI):
         if workspace:
             self.expand_acl(workspace, self.request.user)
         return self.acl
+
 
 
 class ServiceWFS(ServiceI):
@@ -161,7 +220,8 @@ class ServiceWFS(ServiceI):
 
 class ServiceTHREDDS(ServiceI):
 
-    permission_names = models.File.permission_names
+    permission_names = ['read',
+                        'write']
 
     params_expected = [u'request']
 
@@ -207,7 +267,8 @@ class ServiceTHREDDS(ServiceI):
 
 
 service_type_dict = {u'wps': ServiceWPS,
-                     u'wms': ServiceWMS,
+                     u'ncwms': ServiceNCWMS2,
+                     u'geoserverwms': ServiceGeoserver,
                      u'wfs': ServiceWFS,
                      u'thredds': ServiceTHREDDS}
 
