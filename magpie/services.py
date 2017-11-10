@@ -140,7 +140,7 @@ class ServiceNCWMS2(ServiceWMS):
 class ServiceGeoserver(ServiceWMS):
 
     def __init__(self, service, request):
-        super(ServiceNCWMS2, self).__init__(service, request)
+        super(ServiceGeoserver, self).__init__(service, request)
 
     @property
     def __acl__(self):
