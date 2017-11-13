@@ -119,6 +119,10 @@ def get_magpie_url():
     return 'http://{0}:{1}'.format(hostname, magpie_port)
 
 
+def bool2str(value):
+    return 'true' if value in ['true', 'True', True] else 'false'
+
+
 def register_services(register_service_url, services_dict, cookies, message='Register response', where=SERVICES_MAGPIE):
     success = True
     if where == SERVICES_MAGPIE:
@@ -129,19 +133,19 @@ def register_services(register_service_url, services_dict, cookies, message='Reg
         raise ValueError("Unknown location for service registration", where)
     for service in services_dict:
         cfg = services_dict[service]
-        url = os.path.expandvars(cfg['url'])
-        public = 'true' if cfg['public'] else 'false'
+        cfg['url'] = os.path.expandvars(cfg['url'])
+        cfg['public'] = bool2str(cfg['public'])
+        cfg['c4i'] = bool2str(cfg['c4i'])
         params = '--cookie {cookie} '           \
                  '--data "'                     \
                  'service_name={name}&'         \
-                 '{svc_url}={url}&'             \
+                 '{svc_url}={cfg[url]}&'        \
                  'service_title={cfg[title]}&'  \
-                 'public={public}&'             \
+                 'public={cfg[public]}&'        \
                  'c4i={cfg[c4i]}&'              \
                  'service_type={cfg[type]}&'    \
                  'register=register"'           \
-                 .format(cookie=cookies, name=service, url=url, public=public, cfg=cfg, svc_url=svc_url_tag)
-        print(params)
+                 .format(cookie=cookies, name=service, cfg=cfg, svc_url=svc_url_tag)
         success = success and request_curl(register_service_url, params, message)
         time.sleep(CREATE_SERVICE_INTERVAL)
     return success
