@@ -8,6 +8,10 @@ LOGIN_TIMEOUT = 10              # delay (s) between each login attempt
 LOGIN_TMP_DIR = "/tmp"          # where to temporarily store login cookies
 CREATE_SERVICE_INTERVAL = 2     # delay (s) between creations to allow server to respond/process
 
+# controls
+SERVICES_MAGPIE  = 'MAGPIE'
+SERVICES_PHOENIX = 'PHOENIX'
+
 
 # alternative to 'makedirs' with 'exists_ok' parameter only available for python>3.5
 def make_dirs(path):
@@ -69,7 +73,8 @@ def phoenix_remove_services():
 
 
 def phoenix_register_services(services_dict, allowed_service_types=None):
-    allowed_service_types = ['wps'] if allowed_service_types is None else allowed_service_types
+    allowed_service_types = ['WPS', 'THREDDS'] if allowed_service_types is None else allowed_service_types
+    allowed_service_types = [svc.upper() for svc in allowed_service_types]
     phoenix_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_phoenix')
     phoenix_login(phoenix_cookies)
 
@@ -78,10 +83,11 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
     register_service_url = phoenix_url + '/services/register'
     filtered_services_dict = {}
     for svc in services_dict:
-        if str(services_dict[svc].get('type')).lower() in allowed_service_types:
+        if str(services_dict[svc].get('type')).upper() in allowed_service_types:
             filtered_services_dict[svc] = services_dict[svc]
+            filtered_services_dict[svc]['type'] = filtered_services_dict[svc]['type'].upper()
     success = register_services(register_service_url, filtered_services_dict,
-                                phoenix_cookies, 'Phoenix register service')
+                                phoenix_cookies, 'Phoenix register service', SERVICES_PHOENIX)
 
     os.remove(phoenix_cookies)
     return success
@@ -113,8 +119,14 @@ def get_magpie_url():
     return 'http://{0}:{1}'.format(hostname, magpie_port)
 
 
-def register_services(register_service_url, services_dict, cookies, message='Register response'):
+def register_services(register_service_url, services_dict, cookies, message='Register response', where=SERVICES_MAGPIE):
     success = True
+    if where == SERVICES_MAGPIE:
+        svc_url_tag = 'service_url'
+    elif where == SERVICES_PHOENIX:
+        svc_url_tag = 'url'
+    else:
+        raise ValueError("Unknown location for service registration", where)
     for service in services_dict:
         cfg = services_dict[service]
         url = os.path.expandvars(cfg['url'])
@@ -122,13 +134,14 @@ def register_services(register_service_url, services_dict, cookies, message='Reg
         params = '--cookie {cookie} '           \
                  '--data "'                     \
                  'service_name={name}&'         \
-                 'service_url={url}&'           \
+                 '{svc_url}={url}&'             \
                  'service_title={cfg[title]}&'  \
                  'public={public}&'             \
                  'c4i={cfg[c4i]}&'              \
                  'service_type={cfg[type]}&'    \
                  'register=register"'           \
-                 .format(cookie=cookies, name=service, url=url, public=public, cfg=cfg)
+                 .format(cookie=cookies, name=service, url=url, public=public, cfg=cfg, svc_url=svc_url_tag)
+        print(params)
         success = success and request_curl(register_service_url, params, message)
         time.sleep(CREATE_SERVICE_INTERVAL)
     return success
@@ -161,7 +174,8 @@ def magpie_register_services(service_config_file_path, push_to_phoenix=False):
     # Register services
     # Magpie will not overwrite existing services by default, 409 Conflict instead of 201 Created
     register_service_url = magpie_url + '/services'
-    success = register_services(register_service_url, services, magpie_cookies, 'Magpie register service')
+    success = register_services(register_service_url, services, magpie_cookies,
+                                'Magpie register service', SERVICES_MAGPIE)
 
     # Push updated services to Phoenix
     if push_to_phoenix:
