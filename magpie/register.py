@@ -18,11 +18,15 @@ def make_dirs(path):
                 os.mkdir(subdir)
 
 
-def login_loop(login_url, cookies_file, admin_name, admin_password, extra_data='', message='Login response'):
+def login_loop(login_url, cookies_file, data=None, message='Login response'):
     make_dirs(cookies_file)
-    extra_data = '&' + str(extra_data) if extra_data is not None else ''
-    params = '--cookie-jar {0} --data "user_name={1}&password={2}{3}"' \
-             .format(cookies_file, admin_name, admin_password, extra_data)
+    data_str = ''
+    if data is not None and type(data) is dict:
+        for key in data:
+            data_str = data_str + '&' + str(key) + '=' + str(data[key])
+    if type(data) is str:
+        data_str = data
+    params = '--cookie-jar {0} --data "{1}"'.format(cookies_file, data_str)
     attempt = 0
     while True:
         if request_curl(login_url, params, message):
@@ -34,23 +38,22 @@ def login_loop(login_url, cookies_file, admin_name, admin_password, extra_data='
 
 
 def request_curl(url, params, msg='Response'):
-    curl_cmd = 'curl -L -s -o /dev/null -w "{msg_out} : %{{http_code}}\\n" {params} {url}'
+    # arg -k allows to ignore insecure SSL errors, ie: access 'https' page not configured for it
+    curl_cmd = 'curl -k -L -s -o /dev/null -w "{msg_out} : %{{http_code}}\\n" {params} {url}'
     return os.system(curl_cmd.format(msg_out=msg, params=params, url=url)) == 0
 
 
 def phoenix_login(cookies):
     try:
-        phoenix_usr = os.getenv('PHOENIX_USER')
         phoenix_pwd = os.getenv('PHOENIX_PASSWORD')
-        if phoenix_usr is None:
-            raise ValueError("Environment variable was None", 'PHOENIX_USER')
         if phoenix_pwd is None:
             raise ValueError("Environment variable was None", 'PHOENIX_PASSWORD')
     except Exception as e:
         raise Exception("Missing environment values [" + repr(e) + "]")
     phoenix_url = get_phoenix_url()
     login_url = phoenix_url + '/account/login/phoenix'
-    login_loop(login_url, cookies, phoenix_usr, phoenix_pwd, 'submit=submit', 'Phoenix login response')
+    login_data = {'password': phoenix_pwd, 'submit': 'submit'}
+    login_loop(login_url, cookies, login_data, 'Phoenix login response')
 
 
 def phoenix_remove_services():
@@ -59,22 +62,26 @@ def phoenix_remove_services():
 
     phoenix_url = get_phoenix_url()
     remove_services_url = phoenix_url + '/clear_services'
-    success = request_curl(remove_services_url, '', 'Remove response')
+    success = request_curl(remove_services_url, '', 'Phoenix remove services')
 
     os.remove(phoenix_cookies)
     return success
 
 
-def phoenix_register_services(services_dict):
+def phoenix_register_services(services_dict, allowed_service_types=None):
+    allowed_service_types = ['wps'] if allowed_service_types is None else allowed_service_types
     phoenix_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_phoenix')
     phoenix_login(phoenix_cookies)
 
     # Register WPS services
     phoenix_url = get_phoenix_url()
     register_service_url = phoenix_url + '/services/register'
-    wps_services_dict = [wps_service for wps_service in services_dict
-                         if str(wps_service.get('type')).lower() == 'wps']
-    success = register_services(register_service_url, wps_services_dict, phoenix_cookies, 'Phoenix register service')
+    filtered_services_dict = {}
+    for svc in services_dict:
+        if str(services_dict[svc].get('type')).lower() in allowed_service_types:
+            filtered_services_dict[svc] = services_dict[svc]
+    success = register_services(register_service_url, filtered_services_dict,
+                                phoenix_cookies, 'Phoenix register service')
 
     os.remove(phoenix_cookies)
     return success
@@ -148,7 +155,8 @@ def magpie_register_services(service_config_file_path, push_to_phoenix=False):
     # Need to login first as admin
     login_url = magpie_url + '/signin'
     magpie_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_magpie')
-    login_loop(login_url, magpie_cookies, admin_usr, admin_pwd, 'provider_name=ziggurat', 'Magpie login response')
+    login_data = {'user_name': admin_usr, 'password': admin_pwd, 'provider_name': 'ziggurat'}
+    login_loop(login_url, magpie_cookies, login_data, 'Magpie login response')
 
     # Register services
     # Magpie will not overwrite existing services by default, 409 Conflict instead of 201 Created
@@ -158,7 +166,7 @@ def magpie_register_services(service_config_file_path, push_to_phoenix=False):
     # Push updated services to Phoenix
     if push_to_phoenix:
         phoenix_remove_services()
-        phoenix_register_services()
+        phoenix_register_services(services)
 
     os.remove(magpie_cookies)
     return success

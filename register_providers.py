@@ -1,18 +1,15 @@
 from magpie.register import magpie_register_services
 import sys
 from os import path as p
+import argparse
 
 
 if __name__ == "__main__":
-    """
-    >> python register_providers [<path_to_config_file> [<push_to_phoenix>(0|1)]]
-    """
-    if len(sys.argv) < 2:
-        config_file_path = p.join(p.dirname(p.abspath(__file__)), "providers.cfg")
-        print("Using default file [" + config_file_path + "] since not provided as input")
-    else:
-        config_file_path = sys.argv[1]
-
-    push_to_phoenix = bool(sys.argv[2]) if len(sys.argv) > 2 else False
-
-    magpie_register_services(config_file_path)
+    parser = argparse.ArgumentParser(description="Register service providers into Magpie and Phoenix")
+    parser.add_argument('-p', '--phoenix-push', type=bool, default=False, metavar='phoenix_push',
+                        help="push registered Mappie services to sync in Phoenix (default: %(default)s)")
+    parser.add_argument('-c', '--config-file', metavar='config_file',
+                        type=str, default=p.join(p.dirname(p.abspath(__file__)), "providers.cfg"),
+                        help="configuration file to employ for services registration (default: %(default)s)")
+    args = parser.parse_args()
+    magpie_register_services(args.config_file, args.phoenix_push)
