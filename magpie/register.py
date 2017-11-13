@@ -1,6 +1,7 @@
 import os
 import time
 import yaml
+import subprocess
 from distutils.dir_util import mkpath
 
 LOGIN_ATTEMPT = 10              # max attempts for login
@@ -30,10 +31,10 @@ def login_loop(login_url, cookies_file, data=None, message='Login response'):
             data_str = data_str + '&' + str(key) + '=' + str(data[key])
     if type(data) is str:
         data_str = data
-    params = '--cookie-jar {0} --data "{1}"'.format(cookies_file, data_str)
     attempt = 0
     while True:
-        if request_curl(login_url, params, message):
+        err, http = request_curl(login_url, cookies_file, data_str, message)
+        if not err and http == 200:
             break
         time.sleep(LOGIN_TIMEOUT)
         attempt += 1
@@ -41,10 +42,19 @@ def login_loop(login_url, cookies_file, data=None, message='Login response'):
             raise Exception('Cannot log in to {0}'.format(login_url))
 
 
-def request_curl(url, params, msg='Response'):
+def request_curl(url, cookie_jar, form_params, msg='Response'):
     # arg -k allows to ignore insecure SSL errors, ie: access 'https' page not configured for it
-    curl_cmd = 'curl -k -L -s -o /dev/null -w "{msg_out} : %{{http_code}}\\n" {params} {url}'
-    return os.system(curl_cmd.format(msg_out=msg, params=params, url=url)) == 0
+    ###curl_cmd = 'curl -k -L -s -o /dev/null -w "{msg_out} : %{{http_code}}\\n" {params} {url}'
+    ###curl_cmd = curl_cmd.format(msg_out=msg, params=params, url=url)
+    sep = ": "
+    curl_out = subprocess.Popen(['curl', '-i', '-k', '-L', '-s', '-o', '/dev/null',
+                                 '-w', msg + sep + '%{http_code}', '--cookie-jar', cookie_jar,
+                                 '--data', form_params, url], stdout=subprocess.PIPE)
+    curl_msg = curl_out.communicate()[0]
+    curl_err = curl_out.returncode
+    http_code = int(curl_msg.split(sep)[1])
+    print(curl_msg)
+    return curl_err, http_code
 
 
 def phoenix_login(cookies):
@@ -66,10 +76,10 @@ def phoenix_remove_services():
 
     phoenix_url = get_phoenix_url()
     remove_services_url = phoenix_url + '/clear_services'
-    success = request_curl(remove_services_url, '', 'Phoenix remove services')
+    error, http_code = request_curl(remove_services_url, phoenix_cookies, '', 'Phoenix remove services')
 
     os.remove(phoenix_cookies)
-    return success
+    return not error
 
 
 def phoenix_register_services(services_dict, allowed_service_types=None):
@@ -136,17 +146,17 @@ def register_services(register_service_url, services_dict, cookies, message='Reg
         cfg['url'] = os.path.expandvars(cfg['url'])
         cfg['public'] = bool2str(cfg['public'])
         cfg['c4i'] = bool2str(cfg['c4i'])
-        params = '--cookie {cookie} '           \
-                 '--data "'                     \
-                 'service_name={name}&'         \
+        params = 'service_name={name}&'         \
                  '{svc_url}={cfg[url]}&'        \
                  'service_title={cfg[title]}&'  \
                  'public={cfg[public]}&'        \
                  'c4i={cfg[c4i]}&'              \
                  'service_type={cfg[type]}&'    \
                  'register=register"'           \
-                 .format(cookie=cookies, name=service, cfg=cfg, svc_url=svc_url_tag)
-        success = success and request_curl(register_service_url, params, message)
+                 .format(name=service, cfg=cfg, svc_url=svc_url_tag)
+        error, http_code = request_curl(register_service_url, cookies, params, message)
+        success = success and not error and ((where == SERVICES_PHOENIX and http_code == 200) or
+                                             (where == SERVICES_MAGPIE and http_code == 201))
         time.sleep(CREATE_SERVICE_INTERVAL)
     return success
 
