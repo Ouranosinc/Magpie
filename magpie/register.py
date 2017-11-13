@@ -2,6 +2,7 @@ import os
 import time
 import yaml
 import subprocess
+import requests
 from distutils.dir_util import mkpath
 
 LOGIN_ATTEMPT = 10              # max attempts for login
@@ -96,11 +97,11 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
         if str(services_dict[svc].get('type')).upper() in allowed_service_types:
             filtered_services_dict[svc] = services_dict[svc]
             filtered_services_dict[svc]['type'] = filtered_services_dict[svc]['type'].upper()
-    success = register_services(register_service_url, filtered_services_dict,
-                                phoenix_cookies, 'Phoenix register service', SERVICES_PHOENIX)
+    success, statuses = register_services(register_service_url, filtered_services_dict,
+                                          phoenix_cookies, 'Phoenix register service', SERVICES_PHOENIX)
 
     os.remove(phoenix_cookies)
-    return success
+    return success, statuses
 
 
 def get_phoenix_url():
@@ -135,6 +136,7 @@ def bool2str(value):
 
 def register_services(register_service_url, services_dict, cookies, message='Register response', where=SERVICES_MAGPIE):
     success = True
+    statuses = {}
     if where == SERVICES_MAGPIE:
         svc_url_tag = 'service_url'
     elif where == SERVICES_PHOENIX:
@@ -155,10 +157,26 @@ def register_services(register_service_url, services_dict, cookies, message='Reg
                  'register=register"'           \
                  .format(name=service, cfg=cfg, svc_url=svc_url_tag)
         error, http_code = request_curl(register_service_url, cookies, params, message)
+        statuses[service] = http_code
         success = success and not error and ((where == SERVICES_PHOENIX and http_code == 200) or
                                              (where == SERVICES_MAGPIE and http_code == 201))
         time.sleep(CREATE_SERVICE_INTERVAL)
-    return success
+    return success, statuses
+
+
+def magpie_add_register_services_perms(services, statuses):
+    magpie_url = get_magpie_url()
+    for service, status in zip(services, statuses):
+        if status == 201:   # service just created
+            svc_available_perms_url = '{magpie}/services/{svc}/permissions' \
+                                      .format(magpie=magpie_url, svc=service)
+            resp_available_perms = requests.get(svc_available_perms_url)
+            available_perms = resp_available_perms.json().get('permission_names', [])
+            # add 'getcapabilities' permission if available for current service
+            if resp_available_perms.status_code and 'getcapabilities' in available_perms:
+                svc_anonym_add_perms_url = '{magpie}/groups/{grp}/services/{svc}/permissions' \
+                                           .format(magpie=magpie_url, grp='anonymous', svc=service)
+                requests.post(svc_anonym_add_perms_url, data={'permission_name': 'getcapabilities'})
 
 
 def magpie_register_services(service_config_file_path, push_to_phoenix=False):
@@ -188,8 +206,12 @@ def magpie_register_services(service_config_file_path, push_to_phoenix=False):
     # Register services
     # Magpie will not overwrite existing services by default, 409 Conflict instead of 201 Created
     register_service_url = magpie_url + '/services'
-    success = register_services(register_service_url, services, magpie_cookies,
-                                'Magpie register service', SERVICES_MAGPIE)
+    success, statuses = register_services(register_service_url, services, magpie_cookies,
+                                          'Magpie register service', SERVICES_MAGPIE)
+
+    # Add 'GetCapabilities' permissions on newly created services to allow 'ping' from Phoenix
+    # Phoenix doesn't register the service if it cannot be checked with this request
+    magpie_add_register_services_perms(services, statuses)
 
     # Push updated services to Phoenix
     if push_to_phoenix:
