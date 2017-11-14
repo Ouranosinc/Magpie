@@ -145,9 +145,9 @@ def register_services(register_service_url, services_dict, cookies, message='Reg
         raise ValueError("Unknown location for service registration", where)
     for service in services_dict:
         cfg = services_dict[service]
-        cfg['url'] = os.path.expandvars(cfg['url'])
-        cfg['public'] = bool2str(cfg['public'])
-        cfg['c4i'] = bool2str(cfg['c4i'])
+        cfg['url'] = os.path.expandvars(cfg.get('url'))
+        cfg['public'] = bool2str(cfg.get('public'))
+        cfg['c4i'] = bool2str(cfg.get('c4i'))
         params = 'service_name={name}&'         \
                  '{svc_url}={cfg[url]}&'        \
                  'service_title={cfg[title]}&'  \
