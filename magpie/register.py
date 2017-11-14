@@ -3,16 +3,26 @@ import time
 import yaml
 import subprocess
 import requests
+import logging
 from distutils.dir_util import mkpath
+
+LOGGER = logging.getLogger(__name__)
 
 LOGIN_ATTEMPT = 10              # max attempts for login
 LOGIN_TIMEOUT = 10              # delay (s) between each login attempt
 LOGIN_TMP_DIR = "/tmp"          # where to temporarily store login cookies
 CREATE_SERVICE_INTERVAL = 2     # delay (s) between creations to allow server to respond/process
+GETCAPABILITIES_INTERVAL = 60   # delay (s) between 'GetCapabilities' Phoenix calls to validate service registration
+GETCAPABILITIES_ATTEMPTS = 5    # max attempts for 'GetCapabilities' validations
 
 # controls
 SERVICES_MAGPIE  = 'MAGPIE'
 SERVICES_PHOENIX = 'PHOENIX'
+
+
+def print_log(msg):
+    print(msg)
+    LOGGER.debug(msg)
 
 
 # alternative to 'makedirs' with 'exists_ok' parameter only available for python>3.5
@@ -43,18 +53,22 @@ def login_loop(login_url, cookies_file, data=None, message='Login response'):
             raise Exception('Cannot log in to {0}'.format(login_url))
 
 
-def request_curl(url, cookie_jar, form_params, msg='Response'):
+def request_curl(url, cookie_jar=None, form_params=None, msg='Response'):
     # arg -k allows to ignore insecure SSL errors, ie: access 'https' page not configured for it
     ###curl_cmd = 'curl -k -L -s -o /dev/null -w "{msg_out} : %{{http_code}}\\n" {params} {url}'
     ###curl_cmd = curl_cmd.format(msg_out=msg, params=params, url=url)
     sep = ": "
-    curl_out = subprocess.Popen(['curl', '-i', '-k', '-L', '-s', '-o', '/dev/null',
-                                 '-w', msg + sep + '%{http_code}', '--cookie-jar', cookie_jar,
-                                 '--data', form_params, url], stdout=subprocess.PIPE)
+    params = ['curl', '-i', '-k', '-L', '-s', '-o', '/dev/null', '-w', msg + sep + '%{http_code}']
+    if cookie_jar is not None:
+        params.extend(['--cookie-jar', cookie_jar])
+    if form_params is not None:
+        params.extend(['--data', form_params])
+    params.extend([url])
+    curl_out = subprocess.Popen(params, stdout=subprocess.PIPE)
     curl_msg = curl_out.communicate()[0]
     curl_err = curl_out.returncode
     http_code = int(curl_msg.split(sep)[1])
-    print(curl_msg)
+    print_log("[{url}] {response}".format(response=curl_msg, url=url))
     return curl_err, http_code
 
 
@@ -77,7 +91,7 @@ def phoenix_remove_services():
 
     phoenix_url = get_phoenix_url()
     remove_services_url = phoenix_url + '/clear_services'
-    error, http_code = request_curl(remove_services_url, phoenix_cookies, '', 'Phoenix remove services')
+    error, http_code = request_curl(remove_services_url, cookie_jar=phoenix_cookies, msg='Phoenix remove services')
 
     os.remove(phoenix_cookies)
     return not error
@@ -89,14 +103,16 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
     phoenix_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_phoenix')
     phoenix_login(phoenix_cookies)
 
-    # Register WPS services
-    phoenix_url = get_phoenix_url()
-    register_service_url = phoenix_url + '/services/register'
+    # Filter specific services to push
     filtered_services_dict = {}
     for svc in services_dict:
         if str(services_dict[svc].get('type')).upper() in allowed_service_types:
             filtered_services_dict[svc] = services_dict[svc]
             filtered_services_dict[svc]['type'] = filtered_services_dict[svc]['type'].upper()
+
+    # Register services
+    phoenix_url = get_phoenix_url()
+    register_service_url = phoenix_url + '/services/register'
     success, statuses = register_services(register_service_url, filtered_services_dict,
                                           phoenix_cookies, 'Phoenix register service', SERVICES_PHOENIX)
 
@@ -154,9 +170,9 @@ def register_services(register_service_url, services_dict, cookies, message='Reg
                  'public={cfg[public]}&'        \
                  'c4i={cfg[c4i]}&'              \
                  'service_type={cfg[type]}&'    \
-                 'register=register"'           \
+                 'register=register'            \
                  .format(name=service, cfg=cfg, svc_url=svc_url_tag)
-        error, http_code = request_curl(register_service_url, cookies, params, message)
+        error, http_code = request_curl(register_service_url, cookie_jar=cookies, form_params=params, msg=message)
         statuses[service] = http_code
         success = success and not error and ((where == SERVICES_PHOENIX and http_code == 200) or
                                              (where == SERVICES_MAGPIE and http_code == 201))
@@ -166,17 +182,44 @@ def register_services(register_service_url, services_dict, cookies, message='Reg
 
 def magpie_add_register_services_perms(services, statuses):
     magpie_url = get_magpie_url()
-    for service, status in zip(services, statuses):
-        if status == 201:   # service just created
-            svc_available_perms_url = '{magpie}/services/{svc}/permissions' \
-                                      .format(magpie=magpie_url, svc=service)
-            resp_available_perms = requests.get(svc_available_perms_url)
-            available_perms = resp_available_perms.json().get('permission_names', [])
-            # add 'getcapabilities' permission if available for current service
-            if resp_available_perms.status_code and 'getcapabilities' in available_perms:
+    for service_name, status in zip(services, statuses):
+        svc_available_perms_url = '{magpie}/services/{svc}/permissions' \
+                                  .format(magpie=magpie_url, svc=service_name)
+        resp_available_perms = requests.get(svc_available_perms_url)
+        available_perms = resp_available_perms.json().get('permission_names', [])
+        # only applicable to services supporting 'GetCapabilities' request
+        if resp_available_perms.status_code and 'getcapabilities' in available_perms:
+
+            # add 'getcapabilities' permission if available for service just created
+            if status == 201:
                 svc_anonym_add_perms_url = '{magpie}/groups/{grp}/services/{svc}/permissions' \
-                                           .format(magpie=magpie_url, grp='anonymous', svc=service)
+                                           .format(magpie=magpie_url, grp='anonymous', svc=service_name)
                 requests.post(svc_anonym_add_perms_url, data={'permission_name': 'getcapabilities'})
+
+            # check service response so Phoenix doesn't refuse registration
+            # try with both the 'direct' URL and the 'GetCapabilities' URL
+            attempt = 0
+            service_info = '{magpie}/services/{svc}'.format(magpie=magpie_url, svc=service_name)
+            service_url = requests.get(service_info).json().get(service_name).get('service_url')
+            svc_getcap_url = '{svc_url}/wps?service=WPS&version=1.0.0&request=GetCapabilities' \
+                             .format(svc_url=service_url)
+            while True:
+                err, http = request_curl(service_url, msg="Service '{svc}' response".format(svc=service_name))
+                if not err and http == 200:
+                    break
+                err, http = request_curl(svc_getcap_url,
+                                         msg="Service '{svc}' response (GetCapabilities)".format(svc=service_name))
+                if not err and http == 200:
+                    break
+                print_log("[{url}] Bad response from service '{svc}' retrying after {sec}s..."
+                          .format(svc=service_name, url=service_url, sec=GETCAPABILITIES_INTERVAL))
+                time.sleep(GETCAPABILITIES_INTERVAL)
+                attempt += 1
+                if attempt >= GETCAPABILITIES_ATTEMPTS:
+                    msg = "[{url}] No response from service '{svc}' after {tries} attempts. Skipping..." \
+                          .format(svc=service_name, url=service_url, tries=attempt)
+                    print_log(msg)
+                    break
 
 
 def magpie_register_services(service_config_file_path, push_to_phoenix=False):
