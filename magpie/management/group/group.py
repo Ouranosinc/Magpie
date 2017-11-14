@@ -106,6 +106,8 @@ def get_group_service_permissions_view(request):
             perms_found = service_type_dict[svc.type].permission_names
         else:
             svc_perm_list = get_group_services_permissions(grp, db_session=db, resource_ids=[svc.resource_id])
+            if len(svc_perm_list) < 1:
+                return svc, list()
             svc_found, perms_found = svc_perm_list[0]
         return svc_found, perms_found
 
