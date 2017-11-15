@@ -91,36 +91,37 @@ def phoenix_login(cookies):
 
 def phoenix_remove_services():
     phoenix_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_phoenix')
-    phoenix_login(phoenix_cookies)
-
-    phoenix_url = get_phoenix_url()
-    remove_services_url = phoenix_url + '/clear_services'
-    error, http_code = request_curl(remove_services_url, cookies=phoenix_cookies, msg='Phoenix remove services')
-
-    os.remove(phoenix_cookies)
+    try:
+        phoenix_login(phoenix_cookies)
+        phoenix_url = get_phoenix_url()
+        remove_services_url = phoenix_url + '/clear_services'
+        error, http_code = request_curl(remove_services_url, cookies=phoenix_cookies, msg='Phoenix remove services')
+    finally:
+        os.remove(phoenix_cookies)
     return not error
 
 
 def phoenix_register_services(services_dict, allowed_service_types=None):
-    allowed_service_types = ['WPS', 'THREDDS'] if allowed_service_types is None else allowed_service_types
-    allowed_service_types = [svc.upper() for svc in allowed_service_types]
     phoenix_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_phoenix')
-    phoenix_login(phoenix_cookies)
+    try:
+        allowed_service_types = ['WPS', 'THREDDS'] if allowed_service_types is None else allowed_service_types
+        allowed_service_types = [svc.upper() for svc in allowed_service_types]
+        phoenix_login(phoenix_cookies)
 
-    # Filter specific services to push
-    filtered_services_dict = {}
-    for svc in services_dict:
-        if str(services_dict[svc].get('type')).upper() in allowed_service_types:
-            filtered_services_dict[svc] = services_dict[svc]
-            filtered_services_dict[svc]['type'] = filtered_services_dict[svc]['type'].upper()
+        # Filter specific services to push
+        filtered_services_dict = {}
+        for svc in services_dict:
+            if str(services_dict[svc].get('type')).upper() in allowed_service_types:
+                filtered_services_dict[svc] = services_dict[svc]
+                filtered_services_dict[svc]['type'] = filtered_services_dict[svc]['type'].upper()
 
-    # Register services
-    phoenix_url = get_phoenix_url()
-    register_service_url = phoenix_url + '/services/register'
-    success, statuses = register_services(register_service_url, filtered_services_dict,
-                                          phoenix_cookies, 'Phoenix register service', SERVICES_PHOENIX)
-
-    os.remove(phoenix_cookies)
+        # Register services
+        phoenix_url = get_phoenix_url()
+        register_service_url = phoenix_url + '/services/register'
+        success, statuses = register_services(register_service_url, filtered_services_dict,
+                                              phoenix_cookies, 'Phoenix register service', SERVICES_PHOENIX)
+    finally:
+        os.remove(phoenix_cookies)
     return success, statuses
 
 
@@ -245,28 +246,29 @@ def magpie_register_services(service_config_file_path, push_to_phoenix=False):
         services = services_cfg['providers']
     except Exception as e:
         raise Exception("Bad service file + [" + repr(e) + "]")
+
     magpie_url = get_magpie_url()
-
-    # Need to login first as admin
-    login_url = magpie_url + '/signin'
     magpie_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_magpie')
-    login_data = {'user_name': admin_usr, 'password': admin_pwd, 'provider_name': 'ziggurat'}
-    login_loop(login_url, magpie_cookies, login_data, 'Magpie login response')
+    try:
+        # Need to login first as admin
+        login_url = magpie_url + '/signin'
+        login_data = {'user_name': admin_usr, 'password': admin_pwd, 'provider_name': 'ziggurat'}
+        login_loop(login_url, magpie_cookies, login_data, 'Magpie login response')
 
-    # Register services
-    # Magpie will not overwrite existing services by default, 409 Conflict instead of 201 Created
-    register_service_url = magpie_url + '/services'
-    success, statuses = register_services(register_service_url, services, magpie_cookies,
-                                          'Magpie register service', SERVICES_MAGPIE)
+        # Register services
+        # Magpie will not overwrite existing services by default, 409 Conflict instead of 201 Created
+        register_service_url = magpie_url + '/services'
+        success, statuses = register_services(register_service_url, services, magpie_cookies,
+                                              'Magpie register service', SERVICES_MAGPIE)
 
-    # Add 'GetCapabilities' permissions on newly created services to allow 'ping' from Phoenix
-    # Phoenix doesn't register the service if it cannot be checked with this request
-    magpie_add_register_services_perms(services, statuses, magpie_cookies)
+        # Add 'GetCapabilities' permissions on newly created services to allow 'ping' from Phoenix
+        # Phoenix doesn't register the service if it cannot be checked with this request
+        magpie_add_register_services_perms(services, statuses, magpie_cookies)
 
-    # Push updated services to Phoenix
-    if push_to_phoenix:
-        phoenix_remove_services()
-        phoenix_register_services(services)
-
-    os.remove(magpie_cookies)
+        # Push updated services to Phoenix
+        if push_to_phoenix:
+            phoenix_remove_services()
+            phoenix_register_services(services)
+    finally:
+        os.remove(magpie_cookies)
     return success
