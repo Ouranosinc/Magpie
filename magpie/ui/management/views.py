@@ -92,6 +92,7 @@ class ManagementViews(object):
             svc_data = self.get_service_data(old_service_name)
             svc_data['service_name'] = new_service_name
             svc_data['resource_name'] = new_service_name
+            svc_data['service_push'] = True
             svc_id = str(svc_data['resource_id'])
             res_put = requests.put(self.magpie_url + '/resources/' + svc_id, data=svc_data)
             check_res(res_put)
@@ -102,6 +103,7 @@ class ManagementViews(object):
         try:
             svc_data = self.get_service_data(service_name)
             svc_data['service_url'] = new_service_url
+            svc_data['service_push'] = True
             res_put = requests.put(self.magpie_url + '/services/' + service_name, data=svc_data)
             check_res(res_put)
         except Exception as e:
@@ -328,8 +330,9 @@ class ManagementViews(object):
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
     def view_services(self):
         if 'delete' in self.request.POST:
+            service_data = {u'service_push': True}
             service_name = self.request.POST.get('service_name')
-            check_res(requests.delete(self.magpie_url + '/services/' + service_name))
+            check_res(requests.delete(self.magpie_url + '/services/' + service_name, data=service_data))
 
         cur_svc_type = self.request.matchdict['cur_svc_type']
         svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
@@ -406,9 +409,9 @@ class ManagementViews(object):
             edit_mode = u'no_edit'
 
         if 'delete' in self.request.POST:
-            check_res(requests.delete(self.magpie_url + '/services/' + service_name))
-            return HTTPFound(self.request.route_url('view_services',
-                                                    cur_svc_type=cur_svc_type))
+            service_data = {u'service_push': True}
+            check_res(requests.delete(self.magpie_url + '/services/' + service_name, data=service_data))
+            return HTTPFound(self.request.route_url('view_services', cur_svc_type=cur_svc_type))
 
         if 'delete_child' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
@@ -434,7 +437,7 @@ class ManagementViews(object):
             raw_resources_types = res_resources_types.json()['resource_types']
             raw_resources_id_type = self.get_resource_types()
         except Exception as e:
-            raise HTTPBadRequest(detail='Bad Json response [Exception: ' + e.message + ']')
+            raise HTTPBadRequest(detail='Bad Json response [Exception: ' + repr(e) + ']')
 
         return add_template_data(self.request,
                                  {u'edit_mode': edit_mode,

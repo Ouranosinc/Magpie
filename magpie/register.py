@@ -198,6 +198,15 @@ def register_services(register_service_url, services_dict, cookies,
     return success, statuses
 
 
+def sync_services_phoenix(services_object_list):
+    services_dict = {}
+    for svc in services_object_list:
+        services_dict[svc.resource_name] = {'url': svc.url, 'title': svc.resource_name,
+                                            'type': svc.type, 'c4i': False, 'public': True}
+    phoenix_remove_services()
+    phoenix_register_services(services_dict)
+
+
 def magpie_add_register_services_perms(services, statuses, cookies):
     magpie_url = get_magpie_url()
     for service_name, status in zip(services, statuses):

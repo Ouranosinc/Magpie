@@ -98,16 +98,10 @@ def register_service(request):
                             content={u'service_name': str(service_name), u'resource_type': u'service',
                                      u'service_url': str(service_url), u'service_type': str(service_type)})
 
-    def add_service_magpie_and_phoenix(svc_push, db):
-        db.add(service)
+    def add_service_magpie_and_phoenix(svc, svc_push, db):
+        db.add(svc)
         if svc_push:
-            services_dict = {}
-            services = db.query(models.Service)
-            for svc in services:
-                services_dict[svc.resource_name] = {'url': svc.url, 'title': svc.resource_name,
-                                                    'type': svc.type, 'c4i': False, 'public': True}
-            phoenix_remove_services()
-            phoenix_register_services(services_dict)
+            sync_services_phoenix(db.query(models.Service))
 
     evaluate_call(lambda: add_service_magpie_and_phoenix(service, service_push, request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
@@ -126,11 +120,19 @@ def get_service(request):
 @view_config(route_name='service', request_method='DELETE')
 def unregister_service(request):
     service = get_service_matchdict_checked(request)
+    service_push = str2bool(get_multiformat_post(request, 'service_push'))
     svc_content = format_service(service)
     evaluate_call(lambda: resource_tree_service.delete_branch(resource_id=service.resource_id, db_session=request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete service from resource tree failed", content=svc_content)
-    evaluate_call(lambda: request.db.delete(service), fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+
+    def remove_service_magpie_and_phoenix(svc, svc_push, db):
+        db.delete(svc)
+        if svc_push:
+            sync_services_phoenix(db.query(models.Service))
+
+    evaluate_call(lambda: remove_service_magpie_and_phoenix(service, service_push, request.db),
+                  fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete service from db failed", content=svc_content)
     return valid_http(httpSuccess=HTTPOk, detail="Delete service successful")
 
@@ -139,12 +141,16 @@ def unregister_service(request):
 def update_service(request):
     service = get_service_matchdict_checked(request)
     service_url = get_value_multiformat_post_checked(request, 'service_url')
+    service_push = str2bool(get_multiformat_post(request, 'service_push'))
 
-    def set_url(svc, url):
+    def update_service_magpie_and_phoenix(svc, url, svc_push, db):
         svc.url = url
+        if svc_push:
+            sync_services_phoenix(db.query(models.Service))
 
     svc_content = format_service(service)
-    evaluate_call(lambda: set_url(service, service_url), fallback=lambda: request.db.rollback(),
+    evaluate_call(lambda: update_service_magpie_and_phoenix(service, service_url, service_push, request.db),
+                  fallback=lambda: request.db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Update service failed during URL assignment",
                   content={u'service': svc_content, u'service_url': str(service_url)})
     return valid_http(httpSuccess=HTTPOk, detail="Update service successful", content=svc_content)
