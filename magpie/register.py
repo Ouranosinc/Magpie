@@ -44,7 +44,7 @@ def login_loop(login_url, cookies_file, data=None, message='Login response'):
         data_str = data
     attempt = 0
     while True:
-        err, http = request_curl(login_url, cookies_file, data_str, message)
+        err, http = request_curl(login_url, cookie_jar=cookies_file, form_params=data_str, msg=message)
         if not err and http == 200:
             break
         time.sleep(LOGIN_TIMEOUT)
@@ -53,21 +53,25 @@ def login_loop(login_url, cookies_file, data=None, message='Login response'):
             raise Exception('Cannot log in to {0}'.format(login_url))
 
 
-def request_curl(url, cookie_jar=None, form_params=None, msg='Response'):
+def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Response', debug=False):
     # arg -k allows to ignore insecure SSL errors, ie: access 'https' page not configured for it
     ###curl_cmd = 'curl -k -L -s -o /dev/null -w "{msg_out} : %{{http_code}}\\n" {params} {url}'
     ###curl_cmd = curl_cmd.format(msg_out=msg, params=params, url=url)
-    sep = ": "
-    params = ['curl', '-i', '-k', '-L', '-s', '-o', '/dev/null', '-w', msg + sep + '%{http_code}']
+    msg_sep = msg + ": "
+    params = ['curl', '-k', '-L', '-s', '-o', '/dev/null', '-w', msg_sep + '%{http_code}']
+    if cookie_jar is not None and cookies is not None:
+        raise ValueError("Cookies and Cookie_Jar cannot be both set simultaneously")
     if cookie_jar is not None:
-        params.extend(['--cookie-jar', cookie_jar])
+        params.extend(['--cookie-jar', cookie_jar])  # save cookies
+    if cookies is not None:
+        params.extend(['--cookie', cookies])         # use cookies
     if form_params is not None:
         params.extend(['--data', form_params])
     params.extend([url])
     curl_out = subprocess.Popen(params, stdout=subprocess.PIPE)
     curl_msg = curl_out.communicate()[0]
     curl_err = curl_out.returncode
-    http_code = int(curl_msg.split(sep)[1])
+    http_code = int(curl_msg.split(msg_sep)[1])
     print_log("[{url}] {response}".format(response=curl_msg, url=url))
     return curl_err, http_code
 
@@ -91,7 +95,7 @@ def phoenix_remove_services():
 
     phoenix_url = get_phoenix_url()
     remove_services_url = phoenix_url + '/clear_services'
-    error, http_code = request_curl(remove_services_url, cookie_jar=phoenix_cookies, msg='Phoenix remove services')
+    error, http_code = request_curl(remove_services_url, cookies=phoenix_cookies, msg='Phoenix remove services')
 
     os.remove(phoenix_cookies)
     return not error
@@ -150,7 +154,8 @@ def bool2str(value):
     return 'true' if value in ['true', 'True', True] else 'false'
 
 
-def register_services(register_service_url, services_dict, cookies, message='Register response', where=SERVICES_MAGPIE):
+def register_services(register_service_url, services_dict, cookies,
+                      message='Register response', where=SERVICES_MAGPIE):
     success = True
     statuses = {}
     if where == SERVICES_MAGPIE:
@@ -159,8 +164,8 @@ def register_services(register_service_url, services_dict, cookies, message='Reg
         svc_url_tag = 'url'
     else:
         raise ValueError("Unknown location for service registration", where)
-    for service in services_dict:
-        cfg = services_dict[service]
+    for service_name in services_dict:
+        cfg = services_dict[service_name]
         cfg['url'] = os.path.expandvars(cfg.get('url'))
         cfg['public'] = bool2str(cfg.get('public'))
         cfg['c4i'] = bool2str(cfg.get('c4i'))
@@ -171,16 +176,17 @@ def register_services(register_service_url, services_dict, cookies, message='Reg
                  'c4i={cfg[c4i]}&'              \
                  'service_type={cfg[type]}&'    \
                  'register=register'            \
-                 .format(name=service, cfg=cfg, svc_url=svc_url_tag)
-        error, http_code = request_curl(register_service_url, cookie_jar=cookies, form_params=params, msg=message)
-        statuses[service] = http_code
+                 .format(name=service_name, cfg=cfg, svc_url=svc_url_tag)
+        service_msg = '{msg} ({svc})'.format(msg=message, svc=service_name)
+        error, http_code = request_curl(register_service_url, cookies=cookies, form_params=params, msg=service_msg)
+        statuses[service_name] = http_code
         success = success and not error and ((where == SERVICES_PHOENIX and http_code == 200) or
                                              (where == SERVICES_MAGPIE and http_code == 201))
         time.sleep(CREATE_SERVICE_INTERVAL)
     return success, statuses
 
 
-def magpie_add_register_services_perms(services, statuses):
+def magpie_add_register_services_perms(services, statuses, cookies):
     magpie_url = get_magpie_url()
     for service_name, status in zip(services, statuses):
         svc_available_perms_url = '{magpie}/services/{svc}/permissions' \
@@ -204,11 +210,12 @@ def magpie_add_register_services_perms(services, statuses):
             svc_getcap_url = '{svc_url}/wps?service=WPS&version=1.0.0&request=GetCapabilities' \
                              .format(svc_url=service_url)
             while True:
-                err, http = request_curl(service_url, msg="Service '{svc}' response".format(svc=service_name))
+                service_msg_direct = "Service response ({svc})".format(svc=service_name)
+                service_msg_getcap = "Service response ({svc}, GetCapabilities)".format(svc=service_name)
+                err, http = request_curl(service_url, cookies=cookies, msg=service_msg_direct)
                 if not err and http == 200:
                     break
-                err, http = request_curl(svc_getcap_url,
-                                         msg="Service '{svc}' response (GetCapabilities)".format(svc=service_name))
+                err, http = request_curl(svc_getcap_url, cookies=cookies, msg=service_msg_getcap)
                 if not err and http == 200:
                     break
                 print_log("[{url}] Bad response from service '{svc}' retrying after {sec}s..."
@@ -254,7 +261,7 @@ def magpie_register_services(service_config_file_path, push_to_phoenix=False):
 
     # Add 'GetCapabilities' permissions on newly created services to allow 'ping' from Phoenix
     # Phoenix doesn't register the service if it cannot be checked with this request
-    magpie_add_register_services_perms(services, statuses)
+    magpie_add_register_services_perms(services, statuses, magpie_cookies)
 
     # Push updated services to Phoenix
     if push_to_phoenix:
