@@ -12,6 +12,7 @@ from pyramid.httpexceptions import (
 )
 from ui.management import check_res
 from ui.home import add_template_data
+import register
 
 
 class ManagementViews(object):
@@ -354,18 +355,18 @@ class ManagementViews(object):
             service_name = self.request.POST.get('service_name')
             service_url = self.request.POST.get('service_url')
             service_type = self.request.POST.get('service_type')
-
+            service_push = self.request.POST.get('service_push')
             data = {u'service_name': service_name,
                     u'service_url': service_url,
-                    u'service_type': service_type}
-
+                    u'service_type': service_type,
+                    u'service_push': service_push}
             check_res(requests.post(self.magpie_url+'/services', data=data))
-
             return HTTPFound(self.request.route_url('view_services', cur_svc_type=service_type))
 
         return add_template_data(self.request,
                                  {u'cur_svc_type': cur_svc_type,
-                                  u'service_types': svc_types})
+                                  u'service_types': svc_types,
+                                  u'services_phoenix': register.SERVICES_PHOENIX_ALLOWED})
 
     @view_config(route_name='edit_service', renderer='templates/edit_service.mako')
     def edit_service(self):

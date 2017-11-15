@@ -1,5 +1,4 @@
-from magpie.register import magpie_register_services
-import sys
+from magpie.register import *
 from os import path as p
 import argparse
 
@@ -12,4 +11,4 @@ if __name__ == "__main__":
                         type=str, default=p.join(p.dirname(p.abspath(__file__)), "providers.cfg"),
                         help="configuration file to employ for services registration (default: %(default)s)")
     args = parser.parse_args()
-    magpie_register_services(args.config_file, args.phoenix_push)
+    magpie_register_services_from_config(args.config_file, args.phoenix_push)

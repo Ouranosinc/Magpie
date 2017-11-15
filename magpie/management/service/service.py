@@ -5,6 +5,7 @@ from services import service_type_dict
 from resource import resource_type_dict
 from api_requests import *
 from api_except import *
+from register import *
 from management.service.resource import *
 
 
@@ -81,6 +82,7 @@ def register_service(request):
     service_name = get_value_multiformat_post_checked(request, 'service_name')
     service_url = get_value_multiformat_post_checked(request, 'service_url')
     service_type = get_value_multiformat_post_checked(request, 'service_type')
+    service_push = str2bool(get_multiformat_post(request, 'service_push'))
     verify_param(service_type, isIn=True, httpError=HTTPNotAcceptable, paramCompare=service_type_dict.keys(),
                  msgOnFail="Specified `service_type` value does not correspond to any of the available types")
 
@@ -95,7 +97,20 @@ def register_service(request):
                             msgOnFail="Service creation for registration failed",
                             content={u'service_name': str(service_name), u'resource_type': u'service',
                                      u'service_url': str(service_url), u'service_type': str(service_type)})
-    evaluate_call(lambda: request.db.add(service), fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+
+    def add_service_magpie_and_phoenix(svc_push, db):
+        db.add(service)
+        if svc_push:
+            services_dict = {}
+            services = db.query(models.Service)
+            for svc in services:
+                services_dict[svc.resource_name] = {'url': svc.url, 'title': svc.resource_name,
+                                                    'type': svc.type, 'c4i': False, 'public': True}
+            phoenix_remove_services()
+            phoenix_register_services(services_dict)
+
+    evaluate_call(lambda: add_service_magpie_and_phoenix(service, service_push, request.db),
+                  fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Service registration forbidden by db", content=format_service(service))
     return valid_http(httpSuccess=HTTPCreated, detail="Service registration to db successful",
                       content=format_service(service))

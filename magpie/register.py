@@ -12,17 +12,26 @@ LOGIN_ATTEMPT = 10              # max attempts for login
 LOGIN_TIMEOUT = 10              # delay (s) between each login attempt
 LOGIN_TMP_DIR = "/tmp"          # where to temporarily store login cookies
 CREATE_SERVICE_INTERVAL = 2     # delay (s) between creations to allow server to respond/process
-GETCAPABILITIES_INTERVAL = 60   # delay (s) between 'GetCapabilities' Phoenix calls to validate service registration
-GETCAPABILITIES_ATTEMPTS = 5    # max attempts for 'GetCapabilities' validations
+GETCAPABILITIES_INTERVAL = 10   # delay (s) between 'GetCapabilities' Phoenix calls to validate service registration
+GETCAPABILITIES_ATTEMPTS = 12   # max attempts for 'GetCapabilities' validations
 
 # controls
 SERVICES_MAGPIE  = 'MAGPIE'
 SERVICES_PHOENIX = 'PHOENIX'
+SERVICES_PHOENIX_ALLOWED = ['WPS']
 
 
 def print_log(msg):
     print(msg)
     LOGGER.debug(msg)
+
+
+def bool2str(value):
+    return 'true' if value in ['on', 'true', 'True', True] else 'false'
+
+
+def str2bool(value):
+    return True if value in ['on', 'true', 'True', True] else False
 
 
 # alternative to 'makedirs' with 'exists_ok' parameter only available for python>3.5
@@ -97,14 +106,15 @@ def phoenix_remove_services():
         remove_services_url = phoenix_url + '/clear_services'
         error, http_code = request_curl(remove_services_url, cookies=phoenix_cookies, msg='Phoenix remove services')
     finally:
-        os.remove(phoenix_cookies)
+        if os.path.isfile(phoenix_cookies):
+            os.remove(phoenix_cookies)
     return not error
 
 
 def phoenix_register_services(services_dict, allowed_service_types=None):
     phoenix_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_phoenix')
     try:
-        allowed_service_types = ['WPS', 'THREDDS'] if allowed_service_types is None else allowed_service_types
+        allowed_service_types = SERVICES_PHOENIX_ALLOWED if allowed_service_types is None else allowed_service_types
         allowed_service_types = [svc.upper() for svc in allowed_service_types]
         phoenix_login(phoenix_cookies)
 
@@ -121,7 +131,8 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
         success, statuses = register_services(register_service_url, filtered_services_dict,
                                               phoenix_cookies, 'Phoenix register service', SERVICES_PHOENIX)
     finally:
-        os.remove(phoenix_cookies)
+        if os.path.isfile(phoenix_cookies):
+            os.remove(phoenix_cookies)
     return success, statuses
 
 
@@ -133,9 +144,11 @@ def get_phoenix_url():
             raise ValueError("Environment variable was None", 'HOSTNAME')
         if phoenix_port is None:
             raise ValueError("Environment variable was None", 'PHOENIX_PORT')
+        if phoenix_port != '':
+            phoenix_port = ':{0}'.format(phoenix_port)
     except Exception as e:
         raise Exception("Missing environment values [" + repr(e) + "]")
-    return 'https://{0}:{1}'.format(hostname, phoenix_port)
+    return 'https://{0}{1}'.format(hostname, phoenix_port)
 
 
 def get_magpie_url():
@@ -146,13 +159,11 @@ def get_magpie_url():
             raise ValueError("Environment variable was None", 'HOSTNAME')
         if magpie_port is None:
             raise ValueError("Environment variable was None", 'MAGPIE_PORT')
+        if magpie_port != '':
+            magpie_port = ':{0}'.format(magpie_port)
     except Exception as e:
         raise Exception("Missing environment values [" + repr(e) + "]")
-    return 'http://{0}:{1}'.format(hostname, magpie_port)
-
-
-def bool2str(value):
-    return 'true' if value in ['true', 'True', True] else 'false'
+    return 'http://{0}{1}'.format(hostname, magpie_port)
 
 
 def register_services(register_service_url, services_dict, cookies,
@@ -230,7 +241,7 @@ def magpie_add_register_services_perms(services, statuses, cookies):
                     break
 
 
-def magpie_register_services(service_config_file_path, push_to_phoenix=False):
+def magpie_register_services_from_config(service_config_file_path, push_to_phoenix=False):
     try:
         admin_usr = os.getenv('ADMIN_USER')
         admin_pwd = os.getenv('ADMIN_PASSWORD')
@@ -246,29 +257,33 @@ def magpie_register_services(service_config_file_path, push_to_phoenix=False):
         services = services_cfg['providers']
     except Exception as e:
         raise Exception("Bad service file + [" + repr(e) + "]")
+    magpie_register_services(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat')
 
+
+def magpie_register_services(services_dict, push_to_phoenix, user, password, provider):
     magpie_url = get_magpie_url()
     magpie_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_magpie')
     try:
         # Need to login first as admin
         login_url = magpie_url + '/signin'
-        login_data = {'user_name': admin_usr, 'password': admin_pwd, 'provider_name': 'ziggurat'}
+        login_data = {'user_name': user, 'password': password, 'provider_name': provider}
         login_loop(login_url, magpie_cookies, login_data, 'Magpie login response')
 
         # Register services
         # Magpie will not overwrite existing services by default, 409 Conflict instead of 201 Created
         register_service_url = magpie_url + '/services'
-        success, statuses = register_services(register_service_url, services, magpie_cookies,
+        success, statuses = register_services(register_service_url, services_dict, magpie_cookies,
                                               'Magpie register service', SERVICES_MAGPIE)
 
         # Add 'GetCapabilities' permissions on newly created services to allow 'ping' from Phoenix
         # Phoenix doesn't register the service if it cannot be checked with this request
-        magpie_add_register_services_perms(services, statuses, magpie_cookies)
+        magpie_add_register_services_perms(services_dict, statuses, magpie_cookies)
 
         # Push updated services to Phoenix
         if push_to_phoenix:
             phoenix_remove_services()
-            phoenix_register_services(services)
+            phoenix_register_services(services_dict)
     finally:
-        os.remove(magpie_cookies)
+        if os.path.isfile(magpie_cookies):
+            os.remove(magpie_cookies)
     return success
