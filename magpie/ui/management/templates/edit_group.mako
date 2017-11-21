@@ -4,11 +4,22 @@
 <%def name="render_item(key, value, level)">
     %for perm in permissions:
         % if perm in value['permission_names']:
-        <div class="perm_checkbox"><input type="checkbox" value="${perm}" name="permission" onchange="document.getElementById('resource_${value['id']}').submit()" checked></div>
+            <div class="perm_checkbox">
+                <input type="checkbox" value="${perm}" name="permission"
+                       onchange="document.getElementById('resource_${value['id']}').submit()" checked>
+           </div>
         % else:
-        <div class="perm_checkbox"><input type="checkbox" value="${perm}" name="permission" onchange="document.getElementById('resource_${value['id']}').submit()"></div>
+            <div class="perm_checkbox">
+                <input type="checkbox" value="${perm}" name="permission"
+                       onchange="document.getElementById('resource_${value['id']}').submit()">
+            </div>
         % endif
     %endfor
+    % if level == 0:
+        <div class="tree_button">
+            <input type="submit" class="tree_button goto_service" value="Edit Service" name="goto_service">
+        </div>
+    % endif
 </%def>
 
 

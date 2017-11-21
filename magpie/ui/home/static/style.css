@@ -320,17 +320,22 @@ div.perm_title {
     -o-transform: rotate(-70deg); /* Opera */
 }
 
+.tree_button.goto_service {
+    margin: 0.1em 0 0 -4em;
+}
+
 div.perm_checkbox {
     width:3em;
     float:right;
     text-align: left;
+    margin: 0.1em 0 0 0;
 }
 
 div.tree_button {
     width:5em;
     float:right;
     text-align: center;
-    padding: 0 0 0 2em;
+    margin: 0.1em 0 0 0;
 }
 
 .clear {

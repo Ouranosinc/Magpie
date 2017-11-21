@@ -249,9 +249,21 @@ class ManagementViews(object):
         members = self.get_group_users(group_name)
 
         if self.request.method == 'POST':
-            if 'resource_id' in self.request.POST:
-                res_id = self.request.POST.get('resource_id')
+            res_id = self.request.POST.get('resource_id')
 
+            if 'goto_service' in self.request.POST:
+                try:
+                    res_json = requests.get('{url}/resources/{id}'.format(url=self.magpie_url, id=res_id)).json()
+                    svc_name = res_json[res_id]['resource_name']
+                    # get service type instead of 'cur_svc_type' in case of 'default' ('cur_svc_type' not set yet)
+                    res_json = requests.get('{url}/services/{svc}'.format(url=self.magpie_url, svc=svc_name)).json()
+                    svc_type = res_json[svc_name]['service_type']
+                    return HTTPFound(self.request.route_url('edit_service',
+                                                            service_name=svc_name,
+                                                            cur_svc_type=svc_type))
+                except Exception as e:
+                    raise HTTPBadRequest(detail=repr(e))
+            elif 'resource_id' in self.request.POST:
                 try:
                     res_perms = requests.get(self.magpie_url + '/groups/' + group_name +
                                              '/resources/{resource_id}/permissions'.format(resource_id=res_id))
