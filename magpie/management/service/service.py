@@ -155,7 +155,7 @@ def get_service(request):
 @view_config(route_name='service', request_method='DELETE')
 def unregister_service(request):
     service = get_service_matchdict_checked(request)
-    service_push = str2bool(get_multiformat_post(request, 'service_push'))
+    service_push = str2bool(get_multiformat_delete(request, 'service_push'))
     svc_content = format_service(service)
     evaluate_call(lambda: resource_tree_service.delete_branch(resource_id=service.resource_id, db_session=request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,

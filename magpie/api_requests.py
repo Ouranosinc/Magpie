@@ -23,8 +23,13 @@ def get_multiformat_post(request, key):
         return evaluate_call(lambda: request.json_body.get(key),
                              httpError=HTTPInternalServerError,
                              msgOnFail="Key " + repr(key) + " could not be extracted from multiformat POST")
-    else:
         return request.POST.get(key)
+
+
+def get_multiformat_delete(request, key):
+    return evaluate_call(lambda: request.json_body.get(key),
+                         httpError=HTTPInternalServerError,
+                         msgOnFail="Key " + repr(key) + " could not be extracted from multiformat DELETE")
 
 
 def get_permission_multiformat_post_checked(request, service_resource, permission_name_key='permission_name'):

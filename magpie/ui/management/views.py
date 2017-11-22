@@ -13,6 +13,7 @@ from pyramid.httpexceptions import (
 from ui.management import check_res
 from ui.home import add_template_data
 import register
+import json
 
 
 class ManagementViews(object):
@@ -330,9 +331,9 @@ class ManagementViews(object):
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
     def view_services(self):
         if 'delete' in self.request.POST:
-            service_data = {u'service_push': True}
             service_name = self.request.POST.get('service_name')
-            check_res(requests.delete(self.magpie_url + '/services/' + service_name, data=service_data))
+            service_data = {u'service_push': self.request.POST.get('service_push')}
+            check_res(requests.delete(self.magpie_url + '/services/' + service_name, data=json.dumps(service_data)))
 
         cur_svc_type = self.request.matchdict['cur_svc_type']
         svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
