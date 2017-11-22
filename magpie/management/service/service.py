@@ -139,9 +139,10 @@ def update_service(request):
             sync_services_phoenix(db.query(models.Service))
 
     evaluate_call(lambda: update_service_magpie_and_phoenix(service, svc_name, svc_url, service_push, request.db),
-                  fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                  msgOnFail="Service update forbidden by db", content=format_service(service))
-    return valid_http(httpSuccess=HTTPFound, detail="Service update in db successful", content=format_service(service))
+                  fallback=lambda: request.db.rollback(),
+                  httpError=HTTPForbidden, msgOnFail="Update service failed during value assignment",
+                  content={u'service': svc_content, u'service_url': str(service_url)})
+    return valid_http(httpSuccess=HTTPOk, detail="Update service successful", content=format_service(service))
 
 
 @view_config(route_name='service', request_method='GET')
@@ -169,25 +170,6 @@ def unregister_service(request):
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete service from db failed", content=svc_content)
     return valid_http(httpSuccess=HTTPOk, detail="Delete service successful")
-
-
-@view_config(route_name='service', request_method='PUT')
-def update_service(request):
-    service = get_service_matchdict_checked(request)
-    service_url = get_value_multiformat_post_checked(request, 'service_url')
-    service_push = str2bool(get_multiformat_post(request, 'service_push'))
-
-    def update_service_magpie_and_phoenix(svc, url, svc_push, db):
-        svc.url = url
-        if svc_push:
-            sync_services_phoenix(db.query(models.Service))
-
-    svc_content = format_service(service)
-    evaluate_call(lambda: update_service_magpie_and_phoenix(service, service_url, service_push, request.db),
-                  fallback=lambda: request.db.rollback(),
-                  httpError=HTTPForbidden, msgOnFail="Update service failed during URL assignment",
-                  content={u'service': svc_content, u'service_url': str(service_url)})
-    return valid_http(httpSuccess=HTTPOk, detail="Update service successful", content=svc_content)
 
 
 @view_config(route_name='service_permissions', request_method='GET')
