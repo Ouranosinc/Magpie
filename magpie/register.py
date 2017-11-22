@@ -62,7 +62,7 @@ def login_loop(login_url, cookies_file, data=None, message='Login response'):
             raise Exception('Cannot log in to {0}'.format(login_url))
 
 
-def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Response', debug=False):
+def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Response'):
     # arg -k allows to ignore insecure SSL errors, ie: access 'https' page not configured for it
     ###curl_cmd = 'curl -k -L -s -o /dev/null -w "{msg_out} : %{{http_code}}\\n" {params} {url}'
     ###curl_cmd = curl_cmd.format(msg_out=msg, params=params, url=url)
@@ -146,7 +146,7 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
 def get_phoenix_url():
     try:
         hostname = os.getenv('HOSTNAME')
-        phoenix_port = os.getenv('PHOENIX_PORT')
+        phoenix_port = os.environ.get('PHOENIX_PORT')
         if hostname is None:
             raise ValueError("Environment variable was None", 'HOSTNAME')
         if phoenix_port is None:
@@ -161,7 +161,7 @@ def get_phoenix_url():
 def get_magpie_url():
     try:
         hostname = os.getenv('HOSTNAME')
-        magpie_port = os.getenv('MAGPIE_PORT')
+        magpie_port = os.environ.get('MAGPIE_PORT')
         if hostname is None:
             raise ValueError("Environment variable was None", 'HOSTNAME')
         if magpie_port is None:
