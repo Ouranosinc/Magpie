@@ -257,6 +257,19 @@ def magpie_add_register_services_perms(services, statuses, cookies):
                     break
 
 
+def magpie_update_services_conflict(conflict_services, services_dict):
+    magpie_url = get_magpie_url()
+    for svc_name in conflict_services:
+        svc_url_new = services_dict[svc_name]['url']
+        svc_url_db = '{magpie}/services/{svc}'.format(magpie=magpie_url, svc=svc_name)
+        svc_info = requests.get(svc_url_db).json()
+        svc_url_old = svc_info['service_url']
+        svc_info['service_url'] = svc_url_new
+        res_svc_put = requests.put(svc_url_db, data=svc_info)
+        print_log("[{url_old}] => [{url_new}] Service URL update ({svc}): {resp}" \
+                  .format(svc=svc_name, url_old=svc_url_old, url_new=svc_url_new, resp=res_svc_put.status_code))
+
+
 def magpie_register_services_from_config(service_config_file_path, push_to_phoenix=False):
     try:
         admin_usr = os.getenv('ADMIN_USER')
@@ -273,10 +286,10 @@ def magpie_register_services_from_config(service_config_file_path, push_to_phoen
         services = services_cfg['providers']
     except Exception as e:
         raise Exception("Bad service file + [" + repr(e) + "]")
-    magpie_register_services(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat')
+    magpie_register_services(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat', force_update=True)
 
 
-def magpie_register_services(services_dict, push_to_phoenix, user, password, provider):
+def magpie_register_services(services_dict, push_to_phoenix, user, password, provider, force_update=False):
     magpie_url = get_magpie_url()
     magpie_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_magpie')
     success = False
@@ -291,6 +304,10 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
         register_service_url = magpie_url + '/services'
         success, statuses = register_services(register_service_url, services_dict, magpie_cookies,
                                               'Magpie register service', SERVICES_MAGPIE)
+        # Service URL update if conflicting and requested
+        if force_update and not success:
+            conflict_services = [svc_name for svc_name, http_code in statuses.items() if http_code == 409]
+            magpie_update_services_conflict(conflict_services, services_dict)
 
         # Add 'GetCapabilities' permissions on newly created services to allow 'ping' from Phoenix
         # Phoenix doesn't register the service if it cannot be checked with this request
