@@ -19,8 +19,8 @@
         <form action="${request.path}" method="post">
             <input type="hidden" value=${service} name="service_name">
             <div class="checkbox_align">
-                <label for="push_phoenix_checkbox">
-                    <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox"/>
+                <label for="push_phoenix_checkbox_warning">
+                    <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox_warning"/>
                     <span>Push to Phoenix?</span>
                 </label>
             </div>

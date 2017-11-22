@@ -40,8 +40,8 @@
     <p>Continue?</p>
     <form action="${request.path}" method="post">
         <div class="checkbox_align">
-            <label for="push_phoenix_checkbox">
-                <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox"/>
+            <label for="push_phoenix_checkbox_warning">
+                <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox_warning"/>
                 <span>Push to Phoenix?</span>
             </label>
         </div>
@@ -116,6 +116,12 @@
                         <span class="panel_entry">ID: </span>
                         <span class="panel_value">${service_id}</span>
                     </p>
+                    <div class="checkbox_align">
+                        <label for="push_phoenix_checkbox_details">
+                            <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox_details"/>
+                            <span>Push updates to Phoenix?</span>
+                        </label>
+                    </div>
                 </div>
             </div>
 

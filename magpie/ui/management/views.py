@@ -87,23 +87,23 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
 
-    def update_service_name(self, old_service_name, new_service_name):
+    def update_service_name(self, old_service_name, new_service_name, service_push):
         try:
             svc_data = self.get_service_data(old_service_name)
             svc_data['service_name'] = new_service_name
             svc_data['resource_name'] = new_service_name
-            svc_data['service_push'] = True
+            svc_data['service_push'] = service_push
             svc_id = str(svc_data['resource_id'])
             res_put = requests.put(self.magpie_url + '/resources/' + svc_id, data=svc_data)
             check_res(res_put)
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
 
-    def update_service_url(self, service_name, new_service_url):
+    def update_service_url(self, service_name, new_service_url, service_push):
         try:
             svc_data = self.get_service_data(service_name)
             svc_data['service_url'] = new_service_url
-            svc_data['service_push'] = True
+            svc_data['service_push'] = service_push
             res_put = requests.put(self.magpie_url + '/services/' + service_name, data=svc_data)
             check_res(res_put)
         except Exception as e:
@@ -387,8 +387,9 @@ class ManagementViews(object):
 
         if 'save_name' in self.request.POST:
             new_svc_name = self.request.POST.get('new_svc_name')
+            svc_push = self.request.POST.get('service_push')
             if service_name != new_svc_name and new_svc_name != "":
-                self.update_service_name(service_name, new_svc_name)
+                self.update_service_name(service_name, new_svc_name, svc_push)
                 service_name = new_svc_name
             edit_mode = u'no_edit'
             # return directly to 'regenerate' the URL with the modified name
@@ -403,8 +404,9 @@ class ManagementViews(object):
         if 'save_url' in self.request.POST:
             old_svc_url = self.request.POST.get('service_url')
             new_svc_url = self.request.POST.get('new_svc_url')
+            svc_push = self.request.POST.get('service_push')
             if old_svc_url != new_svc_url and new_svc_url != "":
-                self.update_service_url(service_name, new_svc_url)
+                self.update_service_url(service_name, new_svc_url, svc_push)
                 service_url = new_svc_url
             edit_mode = u'no_edit'
 
