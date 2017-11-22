@@ -100,6 +100,7 @@ def phoenix_login(cookies):
 
 def phoenix_remove_services():
     phoenix_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_phoenix')
+    error = True
     try:
         phoenix_login(phoenix_cookies)
         phoenix_url = get_phoenix_url()
@@ -115,6 +116,8 @@ def phoenix_remove_services():
 
 def phoenix_register_services(services_dict, allowed_service_types=None):
     phoenix_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_phoenix')
+    success = False
+    statuses = dict()
     try:
         allowed_service_types = SERVICES_PHOENIX_ALLOWED if allowed_service_types is None else allowed_service_types
         allowed_service_types = [svc.upper() for svc in allowed_service_types]
@@ -173,7 +176,7 @@ def get_magpie_url():
 def register_services(register_service_url, services_dict, cookies,
                       message='Register response', where=SERVICES_MAGPIE):
     success = True
-    statuses = {}
+    statuses = dict()
     if where == SERVICES_MAGPIE:
         svc_url_tag = 'service_url'
     elif where == SERVICES_PHOENIX:
@@ -276,6 +279,7 @@ def magpie_register_services_from_config(service_config_file_path, push_to_phoen
 def magpie_register_services(services_dict, push_to_phoenix, user, password, provider):
     magpie_url = get_magpie_url()
     magpie_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_magpie')
+    success = False
     try:
         # Need to login first as admin
         login_url = magpie_url + '/signin'
