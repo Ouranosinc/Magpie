@@ -105,6 +105,8 @@ def phoenix_remove_services():
         phoenix_url = get_phoenix_url()
         remove_services_url = phoenix_url + '/clear_services'
         error, http_code = request_curl(remove_services_url, cookies=phoenix_cookies, msg='Phoenix remove services')
+    except Exception as e:
+        print_log("Exception during phoenix remove services: [" + repr(e) + "]")
     finally:
         if os.path.isfile(phoenix_cookies):
             os.remove(phoenix_cookies)
@@ -130,6 +132,8 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
         register_service_url = phoenix_url + '/services/register'
         success, statuses = register_services(register_service_url, filtered_services_dict,
                                               phoenix_cookies, 'Phoenix register service', SERVICES_PHOENIX)
+    except Exception as e:
+        print_log("Exception during phoenix register services: [" + repr(e) + "]")
     finally:
         if os.path.isfile(phoenix_cookies):
             os.remove(phoenix_cookies)
@@ -292,6 +296,9 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
         if push_to_phoenix:
             phoenix_remove_services()
             phoenix_register_services(services_dict)
+
+    except Exception as e:
+        print_log("Exception during magpie register services: [" + repr(e) + "]")
     finally:
         if os.path.isfile(magpie_cookies):
             os.remove(magpie_cookies)
