@@ -10,7 +10,8 @@ RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 
 def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWArgs=None, msgOnFail="",
                  content=None, contentType='application/json',
-                 notNone=False, notEmpty=False, notIn=False, isNone=False, isEmpty=False, isIn=False, ofType=None):
+                 notNone=False, notEmpty=False, notIn=False, notEqual=False,
+                 isNone=False,  isEmpty=False,  isIn=False,  isEqual=False, ofType=None):
     """
     Evaluate various parameter combinations given the requested flags.
     Given a failing verification, directly raises the specified `httpError`.
@@ -29,9 +30,11 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
     :param notNone: (bool) test that `param` is None type
     :param notEmpty: (bool) test that `param` is an empty string
     :param notIn: (bool) test that `param` does not exist in `paramCompare` values
+    :param notEqual: (bool) test that `param` is not equal to `paramCompare` value
     :param isNone: (bool) test that `param` is None type
     :param isEmpty: (bool) test `param` for an empty string
     :param isIn: (bool) test that `param` exists in `paramCompare` values
+    :param isEqual: (bool) test that `param` equals `paramCompare` value
     :param ofType: (type) test that `param` is of same type as specified type by `ofType` (except NoneType)
     :raises `HTTPError`: if tests fail, specified exception is raised (default: `HTTPNotAcceptable`)
     :raises `HTTPInternalServerError`: for evaluation error
@@ -47,15 +50,21 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
             raise Exception("`notEmpty` is not a `bool`")
         if type(notIn) is not bool:
             raise Exception("`notIn` is not a `bool`")
+        if type(notEqual) is not bool:
+            raise Exception("`notEqual` is not a `bool`")
         if type(isNone) is not bool:
             raise Exception("`isNone` is not a `bool`")
         if type(isEmpty) is not bool:
             raise Exception("`isEmpty` is not a `bool`")
         if type(isIn) is not bool:
             raise Exception("`isIn` is not a `bool`")
-        if paramCompare is None and (isIn or notIn):
+        if type(isEqual) is not bool:
+            raise Exception("`isEqual` is not a `bool`")
+        if paramCompare is None and (isIn or notIn or isEqual or notEqual):
             raise Exception("`paramCompare` cannot be `None` with specified test flags")
-        if not hasattr(paramCompare, '__iter__'):
+        if not type(param) == type(paramCompare) and (isEqual or notEqual):
+            raise Exception("`paramCompare` cannot be of different type with specified test flags")
+        if not hasattr(paramCompare, '__iter__') and (isIn or notIn):
             paramCompare = [paramCompare]
     except Exception as e:
         content[u'traceback'] = repr(exc_info())
@@ -73,11 +82,15 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
     if notEmpty:
         status = status or (param == "")
     if isEmpty:
-        status = status or (not param == "")
+        status = status or (param != "")
     if notIn:
         status = status or (param in paramCompare)
     if isIn:
         status = status or (param not in paramCompare)
+    if notEqual:
+        status = status or (param != paramCompare)
+    if isEqual:
+        status = status or (param == paramCompare)
     if ofType is not None:
         status = status or (not type(param) == ofType)
     if status:
