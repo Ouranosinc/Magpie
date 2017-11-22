@@ -262,7 +262,7 @@ def magpie_update_services_conflict(conflict_services, services_dict):
     for svc_name in conflict_services:
         svc_url_new = services_dict[svc_name]['url']
         svc_url_db = '{magpie}/services/{svc}'.format(magpie=magpie_url, svc=svc_name)
-        svc_info = requests.get(svc_url_db).json()
+        svc_info = requests.get(svc_url_db).json().get(svc_name)
         svc_url_old = svc_info['service_url']
         svc_info['service_url'] = svc_url_new
         res_svc_put = requests.put(svc_url_db, data=svc_info)
