@@ -110,6 +110,40 @@ def register_service(request):
                       content=format_service(service))
 
 
+@view_config(route_name='service', request_method='PUT')
+def update_service(request):
+    service = get_service_matchdict_checked(request)
+    service_push = str2bool(get_multiformat_post(request, 'service_push'))
+
+    def select_update(new_value, old_value):
+        return new_value if new_value is not None and not new_value == '' else old_value
+
+    # None/Empty values are accepted in case of unspecified
+    svc_name = select_update(get_multiformat_post(request, 'service_name'), service.resource_name)
+    svc_url = select_update(get_multiformat_post(request, 'service_url'), service.url)
+    verify_param(svc_name == service.resource_name and svc_url == service.url, isEqual=True, paramCompare=True,
+                 httpError=HTTPBadRequest, msgOnFail="Current service values are already equal to update values")
+
+    if svc_name != service.resource_name:
+        all_svc_names = list()
+        for svc_type in service_type_dict:
+            for svc in get_services_by_type(svc_type, db_session=request.db):
+                all_svc_names.extend(svc.resource_name)
+        verify_param(svc_name, notIn=True, paramCompare=all_svc_names, httpError=HTTPConflict,
+                     msgOnFail="Specified `service_name` value '" + str(svc_name) + "' already exists")
+
+    def update_service_magpie_and_phoenix(svc, new_name, new_url, svc_push, db):
+        svc.resource_name = new_name
+        svc.url = new_url
+        if svc_push:
+            sync_services_phoenix(db.query(models.Service))
+
+    evaluate_call(lambda: update_service_magpie_and_phoenix(service, svc_name, svc_url, service_push, request.db),
+                  fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                  msgOnFail="Service update forbidden by db", content=format_service(service))
+    return valid_http(httpSuccess=HTTPFound, detail="Service update in db successful", content=format_service(service))
+
+
 @view_config(route_name='service', request_method='GET')
 def get_service(request):
     service = get_service_matchdict_checked(request)
