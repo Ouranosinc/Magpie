@@ -104,6 +104,21 @@ tr:nth-child(even) {
     /*background-color: #dddddd;*/
 }
 
+.checkbox_align label {
+  display: block;
+  /*float: left;*/
+  padding-right: 10px;
+  padding-bottom: 1em;
+  white-space: nowrap;
+}
+.checkbox_align input {
+  vertical-align: middle;
+}
+.checkbox_align label span {
+  vertical-align: middle;
+}
+
+
 /*---Panel Information Box---*/
 
 .panel_box {

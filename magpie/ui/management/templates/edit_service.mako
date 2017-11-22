@@ -31,15 +31,26 @@
 <div class="alert danger" id="EditService_DeleteAlert">
     <h3 class="alert_title danger">Danger!</h3>
     <p>
+        Delete: [${service_name}]
+    </p>
+    <p>
         This operation will remove the service and all its sub-resources.
         This operation is not reversible.
     </p>
     <p>Continue?</p>
     <form action="${request.path}" method="post">
-        <input type="submit" class="button delete" name="delete" value="Delete"
-               onclick="this.parentElement.style.display='none';">
-        <input type="submit" class="button cancel"name="cancel" value="Cancel"
-               onclick="this.parentElement.style.display='none';">
+        <div class="checkbox_align">
+            <label for="push_phoenix_checkbox">
+                <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox"/>
+                <span>Push to Phoenix?</span>
+            </label>
+        </div>
+        <div>
+            <input type="submit" class="button delete" name="delete" value="Delete"
+                   onclick="this.parentElement.style.display='none';">
+            <input type="submit" class="button cancel"name="cancel" value="Cancel"
+                   onclick="this.parentElement.style.display='none';">
+        </div>
     </form>
 </div>
 

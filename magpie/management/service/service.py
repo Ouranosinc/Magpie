@@ -83,7 +83,7 @@ def register_service(request):
     service_url = get_value_multiformat_post_checked(request, 'service_url')
     service_type = get_value_multiformat_post_checked(request, 'service_type')
     service_push = str2bool(get_multiformat_post(request, 'service_push'))
-    verify_param(service_type, isIn=True, httpError=HTTPNotAcceptable, paramCompare=service_type_dict.keys(),
+    verify_param(service_type, isIn=True, paramCompare=service_type_dict.keys(), httpError=HTTPNotAcceptable,
                  msgOnFail="Specified `service_type` value does not correspond to any of the available types")
 
     if models.Service.by_service_name(service_name, db_session=request.db):
