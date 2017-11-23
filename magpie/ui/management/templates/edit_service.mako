@@ -41,7 +41,7 @@
     <form action="${request.path}" method="post">
         <div class="checkbox_align">
             <label for="push_phoenix_checkbox_warning">
-                <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox_warning"/>
+                <input type="checkbox" name="service_push" id="push_phoenix_checkbox_warning" checked/>
                 <span>Push to Phoenix?</span>
             </label>
         </div>
@@ -62,6 +62,18 @@
         else
             x.size = 20;
     }
+</script>
+
+<!-- since checkbox 'not checked' state is not actually sent,
+     apply 'off' to force return of the checkbox's state on submit -->
+<script type="text/javascript">
+    $(document).ready(function() {
+        $("#form_edit_service").on('submit', function() {
+            $(this + 'input[type=checkbox]:not(:checked)').each(function () {
+                $(this).attr('checked', true).val(0);
+            });
+        })
+    })
 </script>
 
 <form action="${request.path}" method="post">
@@ -118,7 +130,14 @@
                     </p>
                     <div class="checkbox_align">
                         <label for="push_phoenix_checkbox_details">
-                            <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox_details"/>
+                            <input type="hidden" name="service_push" value="off"/>
+                            %if service_push:
+                                <input type="checkbox" name="service_push"
+                                       id="push_phoenix_checkbox_details" checked/>
+                            %else:
+                                <input type="checkbox" name="service_push"
+                                       id="push_phoenix_checkbox_details"/>
+                            %endif
                             <span>Push updates to Phoenix?</span>
                         </label>
                     </div>

@@ -392,6 +392,9 @@ class ManagementViews(object):
         service_url = service_data['service_url']
         service_perm = service_data['permission_names']
         service_id = service_data['resource_id']
+        # apply 'True' for default state if arriving on the page for the first time
+        # future editions on the page will transfer the last saved state
+        service_push = register.str2bool(self.request.POST.get('service_push', True))
 
         edit_mode = u'no_edit'
 
@@ -400,15 +403,15 @@ class ManagementViews(object):
 
         if 'save_name' in self.request.POST:
             new_svc_name = self.request.POST.get('new_svc_name')
-            svc_push = self.request.POST.get('service_push')
             if service_name != new_svc_name and new_svc_name != "":
-                self.update_service_name(service_name, new_svc_name, svc_push)
+                self.update_service_name(service_name, new_svc_name, service_push)
                 service_name = new_svc_name
             edit_mode = u'no_edit'
             # return directly to 'regenerate' the URL with the modified name
             return HTTPFound(self.request.route_url('edit_service',
                                                     service_name=service_name,
                                                     service_url=service_url,
+                                                    service_push=service_push,
                                                     cur_svc_type=cur_svc_type))
 
         if 'edit_url' in self.request.POST:
@@ -416,14 +419,13 @@ class ManagementViews(object):
 
         if 'save_url' in self.request.POST:
             new_svc_url = self.request.POST.get('new_svc_url')
-            svc_push = self.request.POST.get('service_push')
             if service_url != new_svc_url and new_svc_url != "":
-                self.update_service_url(service_name, new_svc_url, svc_push)
+                self.update_service_url(service_name, new_svc_url, service_push)
                 service_url = new_svc_url
             edit_mode = u'no_edit'
 
         if 'delete' in self.request.POST:
-            service_data = {u'service_push': self.request.POST.get('service_push')}
+            service_data = {u'service_push': service_push}
             check_res(requests.delete(self.magpie_url + '/services/' + service_name, data=service_data))
             return HTTPFound(self.request.route_url('view_services', cur_svc_type=cur_svc_type))
 
@@ -436,6 +438,7 @@ class ManagementViews(object):
             return HTTPFound(self.request.route_url('add_resource',
                                                     service_name=service_name,
                                                     cur_svc_type=cur_svc_type,
+                                                    service_push=service_push,
                                                     resource_id=resource_id))
 
         try:
@@ -459,6 +462,7 @@ class ManagementViews(object):
                                   u'service_url': service_url,
                                   u'service_perm': service_perm,
                                   u'service_id': service_id,
+                                  u'service_push': service_push,
                                   u'cur_svc_type': cur_svc_type,
                                   u'resources': resources,
                                   u'resources_types': raw_resources_types,

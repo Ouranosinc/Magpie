@@ -34,7 +34,7 @@
         <tr>
             <td>Push to Phoenix:</td>
             <div class="input_container">
-                <td><input type="checkbox" name="service_push" checked="true"></td>
+                <td><input type="checkbox" name="service_push" checked></td>
             </div>
         </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Register" name="register"></td></tr>
