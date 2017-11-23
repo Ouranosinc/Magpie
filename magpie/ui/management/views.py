@@ -415,10 +415,9 @@ class ManagementViews(object):
             edit_mode = u'edit_url'
 
         if 'save_url' in self.request.POST:
-            old_svc_url = self.request.POST.get('service_url')
             new_svc_url = self.request.POST.get('new_svc_url')
             svc_push = self.request.POST.get('service_push')
-            if old_svc_url != new_svc_url and new_svc_url != "":
+            if service_url != new_svc_url and new_svc_url != "":
                 self.update_service_url(service_name, new_svc_url, svc_push)
                 service_url = new_svc_url
             edit_mode = u'no_edit'

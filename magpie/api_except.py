@@ -62,7 +62,7 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
             raise Exception("`isEqual` is not a `bool`")
         if paramCompare is None and (isIn or notIn or isEqual or notEqual):
             raise Exception("`paramCompare` cannot be `None` with specified test flags")
-        if not type(param) == type(paramCompare) and (isEqual or notEqual):
+        if type(param) != type(paramCompare) and (isEqual or notEqual):
             raise Exception("`paramCompare` cannot be of different type with specified test flags")
         if not hasattr(paramCompare, '__iter__') and (isIn or notIn):
             paramCompare = [paramCompare]

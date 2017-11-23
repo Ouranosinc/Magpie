@@ -138,10 +138,12 @@ def update_service(request):
         if svc_push:
             sync_services_phoenix(db.query(models.Service))
 
+    old_svc_content = format_service(service)
+    err_svc_content = {u'service': old_svc_content, u'new_service_name': svc_name, u'new_service_url': svc_url}
     evaluate_call(lambda: update_service_magpie_and_phoenix(service, svc_name, svc_url, service_push, request.db),
                   fallback=lambda: request.db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Update service failed during value assignment",
-                  content={u'service': svc_content, u'service_url': str(service_url)})
+                  content=err_svc_content)
     return valid_http(httpSuccess=HTTPOk, detail="Update service successful", content=format_service(service))
 
 

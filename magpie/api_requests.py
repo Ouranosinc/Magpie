@@ -23,7 +23,7 @@ def get_multiformat_post(request, key):
         return evaluate_call(lambda: request.json_body.get(key),
                              httpError=HTTPInternalServerError,
                              msgOnFail="Key " + repr(key) + " could not be extracted from multiformat POST")
-        return request.POST.get(key)
+    return request.POST.get(key)
 
 
 def get_multiformat_delete(request, key):
