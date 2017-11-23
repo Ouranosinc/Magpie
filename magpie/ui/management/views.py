@@ -425,7 +425,7 @@ class ManagementViews(object):
             edit_mode = u'no_edit'
 
         if 'delete' in self.request.POST:
-            service_data = {u'service_push': service_push}
+            service_data = json.dumps({u'service_push': service_push})
             check_res(requests.delete(self.magpie_url + '/services/' + service_name, data=service_data))
             return HTTPFound(self.request.route_url('view_services', cur_svc_type=cur_svc_type))
 

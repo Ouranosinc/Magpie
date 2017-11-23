@@ -27,8 +27,7 @@ def get_multiformat_post(request, key):
 
 
 def get_multiformat_delete(request, key):
-    return evaluate_call(lambda: request.json_body.get(key),
-                         httpError=HTTPInternalServerError,
+    return evaluate_call(lambda: request.json_body.get(key), httpError=HTTPInternalServerError,
                          msgOnFail="Key " + repr(key) + " could not be extracted from multiformat DELETE")
 
 
