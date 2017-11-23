@@ -11,7 +11,7 @@ RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWArgs=None, msgOnFail="",
                  content=None, contentType='application/json',
                  notNone=False, notEmpty=False, notIn=False, notEqual=False,
-                 isNone=False,  isEmpty=False,  isIn=False,  isEqual=False, ofType=None):
+                 isNone=False,  isEmpty=False,  isIn=False,  isEqual=False, ofType=None, withParam=True):
     """
     Evaluate various parameter combinations given the requested flags.
     Given a failing verification, directly raises the specified `httpError`.
@@ -36,6 +36,7 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
     :param isIn: (bool) test that `param` exists in `paramCompare` values
     :param isEqual: (bool) test that `param` equals `paramCompare` value
     :param ofType: (type) test that `param` is of same type as specified type by `ofType` (except NoneType)
+    :param withParam: (bool) adds values of `param` and `paramCompare` as applicable to json on raise (default: True)
     :raises `HTTPError`: if tests fail, specified exception is raised (default: `HTTPNotAcceptable`)
     :raises `HTTPInternalServerError`: for evaluation error
     :return: nothing if all tests passed
@@ -94,7 +95,10 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
     if ofType is not None:
         status = status or (not type(param) == ofType)
     if status:
-        content[u'param'] = repr(param)
+        if withParam:
+            content[u'param'] = repr(param)
+            if paramCompare is not None:
+                content[u'paramCompare'] = repr(paramCompare)
         raise_http(httpError, httpKWArgs=httpKWArgs, detail=msgOnFail, content=content, contentType=contentType)
 
 

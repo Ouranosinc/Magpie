@@ -33,12 +33,16 @@ def get_groups(request):
 @view_config(route_name='groups', request_method='POST')
 def create_group(request):
     group_name = get_value_multiformat_post_checked(request, 'group_name')
+    group = GroupService.by_group_name(group_name, db_session=request.db)
+    group_content_error = {u'group_name': str(group_name)}
+    verify_param(group, isNone=True, httpError=HTTPConflict, withParam=False,
+                 msgOnFail="Group already exists with this name", content=group_content_error)
     new_group = evaluate_call(lambda: models.Group(group_name=group_name), fallback=lambda: request.db.rollback(),
                               httpError=HTTPForbidden, msgOnFail="Create new group by name refused by db",
-                              content={u'group_name': str(group_name)})
+                              content=group_content_error)
     evaluate_call(lambda: request.db.add(new_group), fallback=lambda: request.db.rollback(),
                   httpError=HTTPConflict, msgOnFail="Add new group by name refused by db",
-                  content={u'group_name': str(group_name)})
+                  content=group_content_error)
     return valid_http(httpSuccess=HTTPCreated, detail="Create group successful",
                       content={u'group': format_group(new_group)})
 
