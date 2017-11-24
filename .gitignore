@@ -3,5 +3,12 @@
 build/
 dist/
 env/
+magpieenv/
+magpie/bin/
+magpie/include/
+magpie/lib/
+magpie/local/
+magpie/pip-selfcheck.json
+magpie/share/
 docs/_build/
 magpie.egg-info/

@@ -9,16 +9,41 @@
     <div class="alert danger" id="ViewService_DeleteAlert_${service}">
         <h3 class="alert_title danger">Danger!</h3>
         <p>
+            Delete: [${service}]
+        </p>
+        <p>
             This operation will remove the service and all its sub-resources.
             This operation is not reversible.
         </p>
         <p>Continue?</p>
         <form action="${request.path}" method="post">
             <input type="hidden" value=${service} name="service_name">
-            <input type="submit" class="button delete" onclick="this.parentElement.style.display='none';" name="delete" value="Delete">
-            <input type="submit" class="button cancel" onclick="this.parentElement.style.display='none';" name="cancel" value="Cancel">
+            <div class="checkbox_align">
+                <label for="push_phoenix_checkbox_warning">
+                    <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox_warning"/>
+                    <span>Push to Phoenix?</span>
+                </label>
+            </div>
+            <div>
+                <input type="submit" class="button delete" name="delete" value="Delete"
+                       onclick="this.parentElement.style.display='none';" >
+                <input type="submit" class="button cancel" name="cancel" value="Cancel"
+                       onclick="this.parentElement.style.display='none';" >
+            </div>
         </form>
     </div>
+
+    <script>
+        function display_DeleteAlert_${service}() {
+            %for sub_service in service_names:
+                %if service == sub_service:
+                    document.getElementById("ViewService_DeleteAlert_${sub_service}").style.display = "block";
+                %else:
+                    document.getElementById("ViewService_DeleteAlert_${sub_service}").style.display = "none";
+                %endif
+            %endfor
+        }
+    </script>
 %endfor
 
 <h1>Services</h1>
@@ -53,7 +78,7 @@
                         </td>
                         <td style="white-space: nowrap">
                             <input type="submit" value="Edit" name="edit">
-                            <input type="button" value="Delete" onclick="$('#ViewService_DeleteAlert_${service}').show();" class="button delete">
+                            <input type="button" value="Delete" onclick="display_DeleteAlert_${service}()" class="button delete">
                         </td>
                     </tr>
                 </form>

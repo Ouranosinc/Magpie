@@ -12,6 +12,8 @@ from pyramid.httpexceptions import (
 )
 from ui.management import check_res
 from ui.home import add_template_data
+import register
+import json
 
 
 class ManagementViews(object):
@@ -86,21 +88,23 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
 
-    def update_service_name(self, old_service_name, new_service_name):
+    def update_service_name(self, old_service_name, new_service_name, service_push):
         try:
             svc_data = self.get_service_data(old_service_name)
             svc_data['service_name'] = new_service_name
             svc_data['resource_name'] = new_service_name
+            svc_data['service_push'] = service_push
             svc_id = str(svc_data['resource_id'])
             res_put = requests.put(self.magpie_url + '/resources/' + svc_id, data=svc_data)
             check_res(res_put)
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
 
-    def update_service_url(self, service_name, new_service_url):
+    def update_service_url(self, service_name, new_service_url, service_push):
         try:
             svc_data = self.get_service_data(service_name)
             svc_data['service_url'] = new_service_url
+            svc_data['service_push'] = service_push
             res_put = requests.put(self.magpie_url + '/services/' + service_name, data=svc_data)
             check_res(res_put)
         except Exception as e:
@@ -245,9 +249,21 @@ class ManagementViews(object):
         members = self.get_group_users(group_name)
 
         if self.request.method == 'POST':
-            if 'resource_id' in self.request.POST:
-                res_id = self.request.POST.get('resource_id')
+            res_id = self.request.POST.get('resource_id')
 
+            if 'goto_service' in self.request.POST:
+                try:
+                    res_json = requests.get('{url}/resources/{id}'.format(url=self.magpie_url, id=res_id)).json()
+                    svc_name = res_json[res_id]['resource_name']
+                    # get service type instead of 'cur_svc_type' in case of 'default' ('cur_svc_type' not set yet)
+                    res_json = requests.get('{url}/services/{svc}'.format(url=self.magpie_url, svc=svc_name)).json()
+                    svc_type = res_json[svc_name]['service_type']
+                    return HTTPFound(self.request.route_url('edit_service',
+                                                            service_name=svc_name,
+                                                            cur_svc_type=svc_type))
+                except Exception as e:
+                    raise HTTPBadRequest(detail=repr(e))
+            elif 'resource_id' in self.request.POST:
                 try:
                     res_perms = requests.get(self.magpie_url + '/groups/' + group_name +
                                              '/resources/{resource_id}/permissions'.format(resource_id=res_id))
@@ -328,7 +344,8 @@ class ManagementViews(object):
     def view_services(self):
         if 'delete' in self.request.POST:
             service_name = self.request.POST.get('service_name')
-            check_res(requests.delete(self.magpie_url + '/services/' + service_name))
+            service_data = {u'service_push': self.request.POST.get('service_push')}
+            check_res(requests.delete(self.magpie_url + '/services/' + service_name, data=json.dumps(service_data)))
 
         cur_svc_type = self.request.matchdict['cur_svc_type']
         svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
@@ -354,18 +371,18 @@ class ManagementViews(object):
             service_name = self.request.POST.get('service_name')
             service_url = self.request.POST.get('service_url')
             service_type = self.request.POST.get('service_type')
-
+            service_push = self.request.POST.get('service_push')
             data = {u'service_name': service_name,
                     u'service_url': service_url,
-                    u'service_type': service_type}
-
+                    u'service_type': service_type,
+                    u'service_push': service_push}
             check_res(requests.post(self.magpie_url+'/services', data=data))
-
             return HTTPFound(self.request.route_url('view_services', cur_svc_type=service_type))
 
         return add_template_data(self.request,
                                  {u'cur_svc_type': cur_svc_type,
-                                  u'service_types': svc_types})
+                                  u'service_types': svc_types,
+                                  u'services_phoenix': register.SERVICES_PHOENIX_ALLOWED})
 
     @view_config(route_name='edit_service', renderer='templates/edit_service.mako')
     def edit_service(self):
@@ -375,6 +392,9 @@ class ManagementViews(object):
         service_url = service_data['service_url']
         service_perm = service_data['permission_names']
         service_id = service_data['resource_id']
+        # apply 'True' for default state if arriving on the page for the first time
+        # future editions on the page will transfer the last saved state
+        service_push = register.str2bool(self.request.POST.get('service_push', True))
 
         edit_mode = u'no_edit'
 
@@ -384,30 +404,30 @@ class ManagementViews(object):
         if 'save_name' in self.request.POST:
             new_svc_name = self.request.POST.get('new_svc_name')
             if service_name != new_svc_name and new_svc_name != "":
-                self.update_service_name(service_name, new_svc_name)
+                self.update_service_name(service_name, new_svc_name, service_push)
                 service_name = new_svc_name
             edit_mode = u'no_edit'
             # return directly to 'regenerate' the URL with the modified name
             return HTTPFound(self.request.route_url('edit_service',
                                                     service_name=service_name,
                                                     service_url=service_url,
+                                                    service_push=service_push,
                                                     cur_svc_type=cur_svc_type))
 
         if 'edit_url' in self.request.POST:
             edit_mode = u'edit_url'
 
         if 'save_url' in self.request.POST:
-            old_svc_url = self.request.POST.get('service_url')
             new_svc_url = self.request.POST.get('new_svc_url')
-            if old_svc_url != new_svc_url and new_svc_url != "":
-                self.update_service_url(service_name, new_svc_url)
+            if service_url != new_svc_url and new_svc_url != "":
+                self.update_service_url(service_name, new_svc_url, service_push)
                 service_url = new_svc_url
             edit_mode = u'no_edit'
 
         if 'delete' in self.request.POST:
-            check_res(requests.delete(self.magpie_url + '/services/' + service_name))
-            return HTTPFound(self.request.route_url('view_services',
-                                                    cur_svc_type=cur_svc_type))
+            service_data = json.dumps({u'service_push': service_push})
+            check_res(requests.delete(self.magpie_url + '/services/' + service_name, data=service_data))
+            return HTTPFound(self.request.route_url('view_services', cur_svc_type=cur_svc_type))
 
         if 'delete_child' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
@@ -418,6 +438,7 @@ class ManagementViews(object):
             return HTTPFound(self.request.route_url('add_resource',
                                                     service_name=service_name,
                                                     cur_svc_type=cur_svc_type,
+                                                    service_push=service_push,
                                                     resource_id=resource_id))
 
         try:
@@ -433,7 +454,7 @@ class ManagementViews(object):
             raw_resources_types = res_resources_types.json()['resource_types']
             raw_resources_id_type = self.get_resource_types()
         except Exception as e:
-            raise HTTPBadRequest(detail='Bad Json response [Exception: ' + e.message + ']')
+            raise HTTPBadRequest(detail='Bad Json response [Exception: ' + repr(e) + ']')
 
         return add_template_data(self.request,
                                  {u'edit_mode': edit_mode,
@@ -441,6 +462,7 @@ class ManagementViews(object):
                                   u'service_url': service_url,
                                   u'service_perm': service_perm,
                                   u'service_id': service_id,
+                                  u'service_push': service_push,
                                   u'cur_svc_type': cur_svc_type,
                                   u'resources': resources,
                                   u'resources_types': raw_resources_types,

@@ -104,6 +104,22 @@ tr:nth-child(even) {
     /*background-color: #dddddd;*/
 }
 
+.checkbox_align label {
+  display: block;
+  /*float: left;*/
+  padding-left: 0.2em;
+  padding-right: 0.2em;
+  padding-bottom: 1em;
+  white-space: nowrap;
+}
+.checkbox_align input {
+  vertical-align: middle;
+}
+.checkbox_align label span {
+  vertical-align: middle;
+}
+
+
 /*---Panel Information Box---*/
 
 .panel_box {
@@ -305,17 +321,22 @@ div.perm_title {
     -o-transform: rotate(-70deg); /* Opera */
 }
 
+.tree_button.goto_service {
+    margin: 0.1em 0 0 -4em;
+}
+
 div.perm_checkbox {
     width:3em;
     float:right;
     text-align: left;
+    margin: 0.1em 0 0 0;
 }
 
 div.tree_button {
     width:5em;
     float:right;
     text-align: center;
-    padding: 0 0 0 2em;
+    margin: 0.1em 0 0 0;
 }
 
 .clear {
