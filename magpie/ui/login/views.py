@@ -3,11 +3,9 @@ from pyramid.view import view_config
 from pyramid.httpexceptions import *
 from pyramid.response import Response
 from pyramid.security import forget, remember
-from pyramid.request import Request
 
-from ui.management import check_res
+from ui.management import check_response
 from ui.home import add_template_data
-from api_requests import get_user
 
 
 class ManagementViews(object):
@@ -16,14 +14,14 @@ class ManagementViews(object):
         self.magpie_url = self.request.registry.settings['magpie.url']
 
     def get_internal_providers(self):
-        req = requests.get(self.magpie_url + '/providers')
-        check_res(req)
-        return req.json()['internal_providers']
+        resp = requests.get(self.magpie_url + '/providers')
+        check_response(resp)
+        return resp.json()['internal_providers']
 
     def get_external_providers(self):
-        req = requests.get(self.magpie_url + '/providers')
-        check_res(req)
-        return req.json()['external_providers']
+        resp = requests.get(self.magpie_url + '/providers')
+        check_response(resp)
+        return resp.json()['external_providers']
 
     @view_config(route_name='login', renderer='templates/login.mako')
     def login(self):
