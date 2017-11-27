@@ -13,7 +13,14 @@
     <table class="fields_table">
         <tr>
             <td>Group name:</td>
-            <td><input type="text" name="group_name"></td>
+            <td><input type="text" name="group_name" value="${group_name}"></td>
+            %if conflict_group_name:
+                <td>
+                    <p class="alert_conflict">
+                        <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Conflict
+                    </p>
+                </td>
+            %endif
         </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Add Group" name="create"></td></tr>
     </table>

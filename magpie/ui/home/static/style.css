@@ -264,6 +264,20 @@ tr:nth-child(even) {
     color: black;
 }
 
+.alert_conflict>img {
+    width: 1.5em;
+    height: 1.5em;
+    margin: -0.25em 0 0 0;
+}
+
+.alert_conflict {
+    color: red;
+    display: inline-flex;
+    float: right;
+    text-align: center;
+    margin: 0.25em 0 0 0;
+}
+
 /*---View users page ---*/
 
 .simple_list_table tr th:first-child,

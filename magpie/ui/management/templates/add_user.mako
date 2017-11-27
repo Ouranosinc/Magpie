@@ -15,18 +15,43 @@
             <div class="input_container">
                 <td><input type="text" name="user_name" class="equal_width"></td>
             </div>
+            %if invalid_user_name:
+                <td><p class="alert_conflict">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                </td>
+            %endif
+            %if conflict_user_name:
+                <td><p class="alert_conflict">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Conflict </p>
+                </td>
+            %endif
         </tr>
         <tr>
             <td>Email:</td>
             <div class="input_container">
                 <td><input type="text" name="email" class="equal_width"></td>
             </div>
+            %if invalid_email:
+                <td><p class="alert_conflict">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                </td>
+            %endif
+            %if conflict_email:
+                <td><p class="alert_conflict">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Conflict </p>
+                </td>
+            %endif
         </tr>
         <tr>
             <td>Password:</td>
             <div class="input_container">
                 <td><input type="password" name="password" class="equal_width"></td>
             </div>
+            %if invalid_password:
+                <td><p class="alert_conflict">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                </td>
+            %endif
         </tr>
         <tr>
             <td>User group:</td>
