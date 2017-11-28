@@ -1,9 +1,6 @@
 import logging
 logger = logging.getLogger(__name__)
 
-# above this value is considered a token, refuse longer username creation
-USER_NAME_MAX_LENGTH = 64
-
 
 def includeme(config):
 

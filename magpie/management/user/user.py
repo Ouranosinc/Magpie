@@ -4,7 +4,6 @@ from api_requests import *
 from services import service_type_dict
 from models import resource_type_dict, resource_tree_service
 from management.service.service import format_service, format_service_resources
-from management.user import USER_NAME_MAX_LENGTH
 
 
 def rollback_delete(db, entry):

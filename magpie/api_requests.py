@@ -3,7 +3,6 @@ from models import resource_type_dict
 from services import service_type_dict
 from api_except import *
 from pyramid.interfaces import IAuthenticationPolicy
-from management.user import USER_NAME_MAX_LENGTH
 
 
 def get_service_or_resource_types(service_resource):

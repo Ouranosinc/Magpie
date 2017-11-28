@@ -10,7 +10,7 @@ from pyramid.httpexceptions import (
     HTTPCreated,
     HTTPNotFound
 )
-from management.user import USER_NAME_MAX_LENGTH
+from magpie import USER_NAME_MAX_LENGTH
 from ui.management import check_response
 from ui.home import add_template_data
 import register
