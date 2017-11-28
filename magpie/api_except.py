@@ -193,7 +193,7 @@ def valid_http(httpSuccess=HTTPOk, httpKWArgs=None, detail="", content=None, con
 
 
 def raise_http(httpError=HTTPInternalServerError, httpKWArgs=None,
-               detail="", content=None, contentType='application/json'):
+               detail="", content=None, contentType='application/json', nothrow=False):
     """
     Raises error HTTP with standardized information formatted with content type.
     (see `valid_http` for HTTP successful calls)
@@ -206,7 +206,9 @@ def raise_http(httpError=HTTPInternalServerError, httpKWArgs=None,
     :param detail: additional message information (default: empty)
     :param content: json formatted content to include
     :param contentType: format in which to return the exception ('application/json', 'text/html' or 'text/plain')
+    :param nothrow: returns the error response instead of raising it automatically, but still handles execution errors
     :raises `HTTPError`: formatted raised exception with additional details and HTTP code
+    :return `HTTPError`: formatted exception with additional details and HTTP code only if `nothrow` is True
     """
 
     # fail-fast if recursion generates too many calls
@@ -226,6 +228,7 @@ def raise_http(httpError=HTTPInternalServerError, httpKWArgs=None,
     # reset counter for future calls (don't accumulate for different requests)
     # following raise is the last in the chain since it wasn't triggered by other functions
     RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
+    if nothrow: return resp
     raise resp
 
 

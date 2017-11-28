@@ -22,7 +22,7 @@ from ziggurat_foundations.models import groupfinder
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.session import SignedCookieSessionFactory
-from pyramid.view import notfound_view_config
+from pyramid.view import notfound_view_config, exception_view_config
 
 # -- Project specific --------------------------------------------------------
 from __meta__ import __version__
@@ -41,12 +41,16 @@ def get_version(request):
 
 @notfound_view_config()
 def not_found(request):
-    content_type = 'application/json'
-    content_json = format_content_json_str(HTTPNotFound.code, detail="The route resource could not be found.",
-                                           contentType=content_type,
-                                           content={u'route_name': str(request.upath_info),  u'url': str(request.url)})
-    return generate_response_http_format(HTTPNotFound, jsonContent=content_json,
-                                         httpKWArgs=None, outputType=content_type)
+    return raise_http(nothrow=True, httpError=HTTPNotFound, contentType='application/json',
+                      detail="The route resource could not be found.",
+                      content={u'route_name': str(request.upath_info), u'url': str(request.url)})
+
+
+@exception_view_config()
+def internal_server_error(request):
+    return raise_http(nothrow=True, httpError=HTTPInternalServerError, contentType='application/json',
+                      detail="Internal Server Error. Unhandled exception occurred.",
+                      content={u'route_name': str(request.upath_info), u'url': str(request.url)})
 
 
 def init_db():
