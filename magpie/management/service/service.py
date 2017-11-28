@@ -58,15 +58,15 @@ def get_services_by_type(service_type, db_session):
 @view_config(route_name='services_type', request_method='GET')
 @view_config(route_name='services', request_method='GET')
 def get_services_view(request):
-    service_type = get_multiformat_post(request, 'service_type')    # no check because None/empty is for 'all services'
+    service_type_filter = request.matchdict.get('service_type')  # no check because None/empty is for 'all services'
     json_response = {}
-    if not service_type:
+    if not service_type_filter:
         service_types = service_type_dict.keys()
     else:
-        verify_param(service_type, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotAcceptable,
-                     msgOnFail="Invalid `service_type` value '" + str(service_type) +
-                               "' does not correspond to any of the existing service types")
-        service_types = [service_type]
+        verify_param(service_type_filter, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotAcceptable,
+                     msgOnFail="Invalid `service_type` value does not correspond to any of the existing service types",
+                     content={u'service_type': str(service_type_filter)}, contentType='application/json')
+        service_types = [service_type_filter]
 
     for service_type in service_types:
         services = get_services_by_type(service_type, db_session=request.db)
