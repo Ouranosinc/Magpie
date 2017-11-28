@@ -1,6 +1,9 @@
 import logging
 logger = logging.getLogger(__name__)
 
+# above this value is considered a token, refuse longer username creation
+USER_NAME_MAX_LENGTH = 64
+
 
 def includeme(config):
 
@@ -19,7 +22,5 @@ def includeme(config):
     config.add_route('user_resources_type', '/users/{user_name}/resources/types/{resource_type}')
     config.add_route('user_resource_permissions', '/users/{user_name}/resources/{resource_id}/permissions')
     config.add_route('user_resource_permission', '/users/{user_name}/resources/{resource_id}/permissions/{permission_name}')
-
-
 
     config.scan()

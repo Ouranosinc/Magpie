@@ -10,6 +10,7 @@ from pyramid.httpexceptions import (
     HTTPCreated,
     HTTPNotFound
 )
+from management.user import USER_NAME_MAX_LENGTH
 from ui.management import check_response
 from ui.home import add_template_data
 import register
@@ -162,8 +163,9 @@ class ManagementViews(object):
 
     @view_config(route_name='add_user', renderer='templates/add_user.mako')
     def add_user(self):
-        return_data = {u'conflict_group_name': False, u'conflict_user_name': False, u'conflict_email': False,
-                       u'invalid_user_name': False, u'invalid_email': False, u'invalid_password': False,
+        return_data = {u'conflict_group_name': False, u'conflict_user_name': False, u'conflict_user_email': False,
+                       u'invalid_user_name': False, u'invalid_user_email': False, u'invalid_password': False,
+                       u'too_long_user_name': False, u'form_user_name': u'', u'form_user_email': u'',
                        u'user_groups': self.get_groups()}
         check_data = [u'conflict_group_name', u'conflict_user_name', u'conflict_email',
                       u'invalid_user_name', u'invalid_email', u'invalid_password']
@@ -172,8 +174,10 @@ class ManagementViews(object):
             groups = self.get_groups()
             user_name = self.request.POST.get('user_name')
             group_name = self.request.POST.get('group_name')
-            password = self.request.POST.get('password')
             user_email = self.request.POST.get('email')
+            password = self.request.POST.get('password')
+            return_data[u'form_user_name'] = user_name
+            return_data[u'form_user_email'] = user_email
 
             if group_name not in groups:
                 data = {u'group_name': group_name}
@@ -181,9 +185,11 @@ class ManagementViews(object):
                 if resp.status_code == HTTPConflict.code:
                     return_data[u'conflict_group_name'] = True
             if user_email in self.get_user_emails():
-                return_data[u'conflict_email'] = True
+                return_data[u'conflict_user_email'] = True
             if user_email == '':
-                return_data[u'invalid_email'] = True
+                return_data[u'invalid_user_email'] = True
+            if len(user_name) > USER_NAME_MAX_LENGTH:
+                return_data[u'too_long_user_name'] = True
             if user_name in self.get_user_names():
                 return_data[u'conflict_user_name'] = True
             if user_name == '':
@@ -191,8 +197,8 @@ class ManagementViews(object):
             if password == '':
                 return_data[u'invalid_password'] = True
 
-            for check in check_data:
-                if check:
+            for check_fail in check_data:
+                if check_fail:
                     return add_template_data(self.request, return_data)
 
             data = {u'user_name': user_name,
@@ -246,16 +252,25 @@ class ManagementViews(object):
 
     @view_config(route_name='add_group', renderer='templates/add_group.mako')
     def add_group(self):
+        return_data = {u'conflict_group_name': False, u'invalid_group_name': False, u'form_group_name': u''}
+
         if 'create' in self.request.POST:
             group_name = self.request.POST.get('group_name')
+            return_data[u'form_group_name'] = group_name
+            if group_name == '':
+                return_data[u'invalid_group_name'] = True
+                return add_template_data(self.request, return_data)
+
             data = {u'group_name': group_name}
             resp = requests.post(self.magpie_url + '/groups', data)
             if resp.status_code == HTTPConflict.code:
-                return add_template_data(self.request, {u'conflict_group_name': True, u'group_name': group_name})
+                return_data[u'conflict_group_name'] = True
+                return add_template_data(self.request, return_data)
+
             check_response(resp)  # check for any other exception than conflict
             return HTTPFound(self.request.route_url('view_groups'))
 
-        return add_template_data(self.request, {u'conflict_group_name': False, u'group_name': u''})
+        return add_template_data(self.request, return_data)
 
     def res_tree_parser(self, raw_resources_tree, permission):
         resources_tree = {}

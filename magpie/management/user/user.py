@@ -4,6 +4,7 @@ from api_requests import *
 from services import service_type_dict
 from models import resource_type_dict, resource_tree_service
 from management.service.service import format_service, format_service_resources
+from management.user import USER_NAME_MAX_LENGTH
 
 
 def rollback_delete(db, entry):
@@ -75,6 +76,10 @@ def create_user_view(request):
     group_name = get_multiformat_post(request, 'group_name')
     verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `user_name` value specified")
+    verify_param(user_name, isIn=True, httpError=HTTPNotAcceptable,
+                 paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
+                 msgOnFail="Invalid `user_name` length specified " +
+                           "(>{length} characters)".format(length=USER_NAME_MAX_LENGTH))
     verify_param(email, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `email` value specified")
     verify_param(password, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,

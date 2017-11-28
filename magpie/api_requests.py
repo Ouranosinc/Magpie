@@ -3,6 +3,7 @@ from models import resource_type_dict
 from services import service_type_dict
 from api_except import *
 from pyramid.interfaces import IAuthenticationPolicy
+from management.user import USER_NAME_MAX_LENGTH
 
 
 def get_service_or_resource_types(service_resource):
@@ -63,7 +64,7 @@ def get_userid_by_token(token, authn_policy):
 
 
 def get_user(request, user_name_or_token):
-    if len(user_name_or_token) > 20:
+    if len(user_name_or_token) > USER_NAME_MAX_LENGTH:
         authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
         user_id = get_userid_by_token(user_name_or_token, authn_policy)
         user = evaluate_call(lambda: UserService.by_id(user_id, db_session=request.db),
