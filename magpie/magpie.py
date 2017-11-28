@@ -22,6 +22,7 @@ from ziggurat_foundations.models import groupfinder
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.session import SignedCookieSessionFactory
+from pyramid.view import notfound_view_config
 
 # -- Project specific --------------------------------------------------------
 from __meta__ import __version__
@@ -36,6 +37,16 @@ THIS_DIR = os.path.dirname(__file__)
 def get_version(request):
     return valid_http(httpSuccess=HTTPOk, content={u'version': __version__},
                       detail="Get version successful", contentType='application/json')
+
+
+@notfound_view_config()
+def not_found(request):
+    content_type = 'application/json'
+    content_json = format_content_json_str(HTTPNotFound.code, detail="The route resource could not be found.",
+                                           contentType=content_type,
+                                           content={u'route_name': str(request.upath_info),  u'url': str(request.url)})
+    return generate_response_http_format(HTTPNotFound, jsonContent=content_json,
+                                         httpKWArgs=None, outputType=content_type)
 
 
 def init_db():
