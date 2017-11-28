@@ -24,20 +24,18 @@ from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.session import SignedCookieSessionFactory
 
 # -- Project specific --------------------------------------------------------
-from __meta__ import __version__ as __ver__
+from __meta__ import __version__
 from __init__ import *
 #from db import postgresdb
+import api_except
 import models
 THIS_DIR = os.path.dirname(__file__)
 
 
 @view_config(route_name='version')
 def get_version(request):
-    version = __ver__
-    return HTTPOk(
-        body=json.dumps({'version': version}),
-        content_type='application/json'
-    )
+    return valid_http(httpSuccess=HTTPOk, content={u'version': __version__},
+                      detail="Get version successful", contentType='application/json')
 
 
 def init_db():
