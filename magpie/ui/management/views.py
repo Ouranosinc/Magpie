@@ -414,7 +414,8 @@ class ManagementViews(object):
         return add_template_data(self.request,
                                  {u'cur_svc_type': cur_svc_type,
                                   u'svc_types': svc_types,
-                                  u'service_names': service_names})
+                                  u'service_names': service_names,
+                                  u'service_push_show': cur_svc_type in register.SERVICES_PHOENIX_ALLOWED})
 
     @view_config(route_name='add_service', renderer='templates/add_service.mako')
     def add_service(self):
@@ -450,9 +451,10 @@ class ManagementViews(object):
         service_url = service_data['service_url']
         service_perm = service_data['permission_names']
         service_id = service_data['resource_id']
-        # apply 'True' for default state if arriving on the page for the first time
+        # apply default state if arriving on the page for the first time
         # future editions on the page will transfer the last saved state
-        service_push = register.str2bool(self.request.POST.get('service_push', True))
+        service_push_show = cur_svc_type in register.SERVICES_PHOENIX_ALLOWED
+        service_push = register.str2bool(self.request.POST.get('service_push', service_push_show))
 
         edit_mode = u'no_edit'
 
@@ -467,10 +469,11 @@ class ManagementViews(object):
             edit_mode = u'no_edit'
             # return directly to 'regenerate' the URL with the modified name
             return HTTPFound(self.request.route_url('edit_service',
+                                                    cur_svc_type=cur_svc_type,
                                                     service_name=service_name,
                                                     service_url=service_url,
                                                     service_push=service_push,
-                                                    cur_svc_type=cur_svc_type))
+                                                    service_push_show=service_push_show))
 
         if 'edit_url' in self.request.POST:
             edit_mode = u'edit_url'
@@ -485,7 +488,9 @@ class ManagementViews(object):
         if 'delete' in self.request.POST:
             service_data = json.dumps({u'service_push': service_push})
             check_response(requests.delete(self.magpie_url + '/services/' + service_name, data=service_data))
-            return HTTPFound(self.request.route_url('view_services', cur_svc_type=cur_svc_type))
+            return HTTPFound(self.request.route_url('view_services',
+                                                    cur_svc_type=cur_svc_type,
+                                                    service_push_show=service_push_show))
 
         if 'delete_child' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
@@ -494,8 +499,8 @@ class ManagementViews(object):
         if 'add_child' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
             return HTTPFound(self.request.route_url('add_resource',
-                                                    service_name=service_name,
                                                     cur_svc_type=cur_svc_type,
+                                                    service_name=service_name,
                                                     service_push=service_push,
                                                     resource_id=resource_id))
 
@@ -521,6 +526,7 @@ class ManagementViews(object):
                                   u'service_perm': service_perm,
                                   u'service_id': service_id,
                                   u'service_push': service_push,
+                                  u'service_push_show': service_push_show,
                                   u'cur_svc_type': cur_svc_type,
                                   u'resources': resources,
                                   u'resources_types': raw_resources_types,

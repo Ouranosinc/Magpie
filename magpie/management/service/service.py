@@ -100,7 +100,7 @@ def register_service(request):
 
     def add_service_magpie_and_phoenix(svc, svc_push, db):
         db.add(svc)
-        if svc_push and svc.type in register.SERVICES_PHOENIX_ALLOWED:
+        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED:
             sync_services_phoenix(db.query(models.Service))
 
     evaluate_call(lambda: add_service_magpie_and_phoenix(service, service_push, request.db),
@@ -135,7 +135,7 @@ def update_service(request):
     def update_service_magpie_and_phoenix(svc, new_name, new_url, svc_push, db):
         svc.resource_name = new_name
         svc.url = new_url
-        if svc_push:
+        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED:
             sync_services_phoenix(db.query(models.Service))
 
     old_svc_content = format_service(service)
@@ -165,7 +165,7 @@ def unregister_service(request):
 
     def remove_service_magpie_and_phoenix(svc, svc_push, db):
         db.delete(svc)
-        if svc_push:
+        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED:
             sync_services_phoenix(db.query(models.Service))
 
     evaluate_call(lambda: remove_service_magpie_and_phoenix(service, service_push, request.db),
