@@ -213,7 +213,7 @@ def register_services(register_service_url, services_dict, cookies,
                  'service_type={cfg[type]}&'    \
                  'register=register'            \
                  .format(name=service_name, cfg=cfg, svc_url_tag=svc_url_tag, svc_url=svc_url)
-        service_msg = '{msg} ({svc})'.format(msg=message, svc=service_name)
+        service_msg = '{msg} ({svc}) [{url}]'.format(msg=message, svc=service_name, url=svc_url)
         error, http_code = request_curl(register_service_url, cookies=cookies, form_params=params, msg=service_msg)
         statuses[service_name] = http_code
         success = success and not error and ((where == SERVICES_PHOENIX and http_code == 200) or
