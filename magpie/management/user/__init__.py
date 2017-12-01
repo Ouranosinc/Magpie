@@ -20,6 +20,4 @@ def includeme(config):
     config.add_route('user_resource_permissions', '/users/{user_name}/resources/{resource_id}/permissions')
     config.add_route('user_resource_permission', '/users/{user_name}/resources/{resource_id}/permissions/{permission_name}')
 
-
-
     config.scan()

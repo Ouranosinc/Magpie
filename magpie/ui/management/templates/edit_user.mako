@@ -15,9 +15,17 @@
 %for group in groups:
 <tr>
     % if group in own_groups:
-    <td><input type="checkbox" value="${group}" name="member" checked onchange="document.getElementById('edit_membership').submit()">${group}</td>
+        <td>
+            <input type="checkbox" value="${group}" name="member" checked
+                   onchange="document.getElementById('edit_membership').submit()">
+            ${group}
+        </td>
     % else:
-    <td><input type="checkbox" value="${group}" name="member" onchange="document.getElementById('edit_membership').submit()">${group}</td>
+        <td>
+            <input type="checkbox" value="${group}" name="member"
+                   onchange="document.getElementById('edit_membership').submit()">
+            ${group}
+        </td>
     % endif
 </tr>
 %endfor

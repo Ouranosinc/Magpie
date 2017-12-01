@@ -13,20 +13,53 @@
         <tr>
             <td>User name:</td>
             <div class="input_container">
-                <td><input type="text" name="user_name" class="equal_width"></td>
+                <td><input type="text" name="user_name" value="${form_user_name}" class="equal_width"></td>
             </div>
+            %if too_long_user_name:
+                <td><p class="alert_form_error">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Too long </p>
+                </td>
+            %elif invalid_user_name:
+                <td><p class="alert_form_error">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                </td>
+            %elif conflict_user_name:
+                <td><p class="alert_form_error">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Conflict </p>
+                </td>
+            %else:
+                <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
+            %endif
         </tr>
         <tr>
             <td>Email:</td>
             <div class="input_container">
-                <td><input type="text" name="email" class="equal_width"></td>
+                <td><input type="text" name="email" value="${form_user_email}" class="equal_width"></td>
             </div>
+            %if invalid_user_email:
+                <td><p class="alert_form_error">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                </td>
+            %elif conflict_user_email:
+                <td><p class="alert_form_error">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Conflict </p>
+                </td>
+            %else:
+                <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
+            %endif
         </tr>
         <tr>
             <td>Password:</td>
             <div class="input_container">
-                <td><input type="password" name="password" class="equal_width"></td>
+                <td><input type="password" name="password" value="" class="equal_width"></td>
             </div>
+            %if invalid_password:
+                <td><p class="alert_form_error">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                </td>
+            %else:
+                <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
+            %endif
         </tr>
         <tr>
             <td>User group:</td>

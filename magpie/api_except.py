@@ -11,7 +11,7 @@ RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWArgs=None, msgOnFail="",
                  content=None, contentType='application/json',
                  notNone=False, notEmpty=False, notIn=False, notEqual=False,
-                 isNone=False,  isEmpty=False,  isIn=False,  isEqual=False, ofType=None):
+                 isNone=False,  isEmpty=False,  isIn=False,  isEqual=False, ofType=None, withParam=True):
     """
     Evaluate various parameter combinations given the requested flags.
     Given a failing verification, directly raises the specified `httpError`.
@@ -36,6 +36,7 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
     :param isIn: (bool) test that `param` exists in `paramCompare` values
     :param isEqual: (bool) test that `param` equals `paramCompare` value
     :param ofType: (type) test that `param` is of same type as specified type by `ofType` (except NoneType)
+    :param withParam: (bool) adds values of `param` and `paramCompare` as applicable to json on raise (default: True)
     :raises `HTTPError`: if tests fail, specified exception is raised (default: `HTTPNotAcceptable`)
     :raises `HTTPInternalServerError`: for evaluation error
     :return: nothing if all tests passed
@@ -94,7 +95,10 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
     if ofType is not None:
         status = status or (not type(param) == ofType)
     if status:
-        content[u'param'] = repr(param)
+        if withParam:
+            content[u'param'] = repr(param)
+            if paramCompare is not None:
+                content[u'paramCompare'] = repr(paramCompare)
         raise_http(httpError, httpKWArgs=httpKWArgs, detail=msgOnFail, content=content, contentType=contentType)
 
 
@@ -189,7 +193,7 @@ def valid_http(httpSuccess=HTTPOk, httpKWArgs=None, detail="", content=None, con
 
 
 def raise_http(httpError=HTTPInternalServerError, httpKWArgs=None,
-               detail="", content=None, contentType='application/json'):
+               detail="", content=None, contentType='application/json', nothrow=False):
     """
     Raises error HTTP with standardized information formatted with content type.
     (see `valid_http` for HTTP successful calls)
@@ -202,7 +206,9 @@ def raise_http(httpError=HTTPInternalServerError, httpKWArgs=None,
     :param detail: additional message information (default: empty)
     :param content: json formatted content to include
     :param contentType: format in which to return the exception ('application/json', 'text/html' or 'text/plain')
+    :param nothrow: returns the error response instead of raising it automatically, but still handles execution errors
     :raises `HTTPError`: formatted raised exception with additional details and HTTP code
+    :return `HTTPError`: formatted exception with additional details and HTTP code only if `nothrow` is True
     """
 
     # fail-fast if recursion generates too many calls
@@ -222,6 +228,7 @@ def raise_http(httpError=HTTPInternalServerError, httpKWArgs=None,
     # reset counter for future calls (don't accumulate for different requests)
     # following raise is the last in the chain since it wasn't triggered by other functions
     RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
+    if nothrow: return resp
     raise resp
 
 

@@ -75,6 +75,10 @@ def create_user_view(request):
     group_name = get_multiformat_post(request, 'group_name')
     verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `user_name` value specified")
+    verify_param(user_name, isIn=True, httpError=HTTPNotAcceptable,
+                 paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
+                 msgOnFail="Invalid `user_name` length specified " +
+                           "(>{length} characters)".format(length=USER_NAME_MAX_LENGTH))
     verify_param(email, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `email` value specified")
     verify_param(password, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
@@ -225,10 +229,7 @@ def get_user_resources_view(request):
                                  fallback=lambda: db.rollback(), httpError=HTTPNotFound,
                                  msgOnFail="Failed to populate user resources",
                                  content={u'user_name': user.user_name, u'resource_types': [u'service']})
-    return valid_http(httpSuccess=HTTPOk, detail="Get user resources successful",
-                      content={u'user_name': user.user_name,
-                               u'resource_types': [u'service'],
-                               u'resources': usr_res_dict})
+    return valid_http(httpSuccess=HTTPOk, detail="Get user resources successful", content={u'resources': usr_res_dict})
 
 
 @view_config(route_name='user_resource_permissions', request_method='GET')
@@ -237,22 +238,20 @@ def get_user_resource_permissions_view(request):
     res = get_resource_matchdict_checked(request, 'resource_id')
     perm_names = get_user_resource_permissions(resource=res, user=user, db_session=request.db)
     return valid_http(httpSuccess=HTTPOk, detail="Get user resources permissions successful",
-                      content={u'user_name': user.user_name,
-                               u'resource_id': res.resource_id,
-                               u'permission_names': perm_names})
+                      content={u'permission_names': perm_names})
 
 
 def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
     new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
     verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Failed to create permission using resource id '" + str(resource_id) +
-                           "' and user id '" + str(user_id) + "'")
+                 content={u'resource_id': str(resource_id), u'user_id': str(user_id)},
+                 msgOnFail="Failed to create permission using specified `resource_id` and `user_id`")
     new_perm.perm_name = permission_name
     evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                   httpError=HTTPConflict, msgOnFail="Permission already exist on service for user, cannot add to db",
                   content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
     return valid_http(httpSuccess=HTTPCreated, detail="Create user resource permission successful",
-                      content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
+                      content={u'resource_id': resource_id})
 
 
 @view_config(route_name='user_resource_permissions', request_method='POST')
@@ -270,8 +269,7 @@ def delete_user_resource_permission(permission_name, resource_id, user_id, db_se
     evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                   httpError=HTTPNotFound, msgOnFail="Could not find user resource permission to delete from db",
                   content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
-    return valid_http(httpSuccess=HTTPOk, detail="Delete user resource permission successful",
-                      content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
+    return valid_http(httpSuccess=HTTPOk, detail="Delete user resource permission successful")
 
 
 @view_config(route_name='user_resource_permission', request_method='DELETE')
@@ -296,20 +294,19 @@ def get_user_services_view(request):
             svc_json[svc.type] = {}
         svc_json[svc.type][svc.resource_name] = format_service(svc, perms)
 
-    return valid_http(httpSuccess=HTTPOk, detail="Get user services successful",
-                      content={u'resource_types': [u'service'], u'user_id': user.id, u'services': svc_json})
+    return valid_http(httpSuccess=HTTPOk, detail="Get user services successful", content={u'services': svc_json})
 
 
 @view_config(route_name='user_service_permissions', request_method='GET')
 def get_user_service_permissions_view(request):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
-    perm_names = get_user_service_permissions(service=service, user=user, db_session=request.db)
-    svc_json = {service.resource_name: format_service(service)}
-    svc_json[service.resource_name][u'permission_names'] = perm_names
-    svc_json[u'user_id'] = user.id
-    svc_json[u'user_name'] = user.user_name
-    return valid_http(httpSuccess=HTTPOk, detail="Get user service permissions successful", content=svc_json)
+    perms = evaluate_call(lambda: get_user_service_permissions(service=service, user=user, db_session=request.db),
+                          fallback=lambda: request.db.rollback(), httpError=HTTPNotFound,
+                          msgOnFail="Could not find permissions using specified `service_name` and `user_name`",
+                          content={u'service_name': str(service.resource_name), u'user_name': str(user.user_name)})
+    return valid_http(httpSuccess=HTTPOk, detail="Get user service permissions successful",
+                      content={u'permission_names': perms})
 
 
 @view_config(route_name='user_service_permissions', request_method='POST')

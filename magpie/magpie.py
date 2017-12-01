@@ -22,22 +22,35 @@ from ziggurat_foundations.models import groupfinder
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.session import SignedCookieSessionFactory
+from pyramid.view import notfound_view_config, exception_view_config
 
 # -- Project specific --------------------------------------------------------
-from __meta__ import __version__ as __ver__
+from __meta__ import __version__
 from __init__ import *
 #from db import postgresdb
+import api_except
 import models
 THIS_DIR = os.path.dirname(__file__)
 
 
 @view_config(route_name='version')
 def get_version(request):
-    version = __ver__
-    return HTTPOk(
-        body=json.dumps({'version': version}),
-        content_type='application/json'
-    )
+    return valid_http(httpSuccess=HTTPOk, content={u'version': __version__},
+                      detail="Get version successful", contentType='application/json')
+
+
+@notfound_view_config()
+def not_found(request):
+    return raise_http(nothrow=True, httpError=HTTPNotFound, contentType='application/json',
+                      detail="The route resource could not be found.",
+                      content={u'route_name': str(request.upath_info), u'url': str(request.url)})
+
+
+@exception_view_config()
+def internal_server_error(request):
+    return raise_http(nothrow=True, httpError=HTTPInternalServerError, contentType='application/json',
+                      detail="Internal Server Error. Unhandled exception occurred.",
+                      content={u'route_name': str(request.upath_info), u'url': str(request.url)})
 
 
 def init_db():
