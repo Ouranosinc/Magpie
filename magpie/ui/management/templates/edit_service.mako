@@ -112,7 +112,7 @@
                             <input type="submit" value="Save" name="save_url">
                             <input type="submit" value="Cancel" name="no_edit">
                         %else:
-                            <span class="panel_value">${service_url}</span>
+                            <a href="url" class="panel_value">${service_url}</a>
                             <input type="submit" value="Edit" name="edit_url">
                         %endif
                     </p>
