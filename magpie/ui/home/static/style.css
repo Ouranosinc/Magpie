@@ -14,6 +14,16 @@ html,body {
     margin: 1em 0em 1em;
 }
 
+a {
+    color: #337ab7;
+    text-decoration: none;
+}
+
+a:focus, a:hover {
+    color: #23527c;
+    text-decoration: underline;
+}
+
 input[type="submit"].button.disabled,
 input[type="submit"].button.disabled:hover,
 input[type="submit"].button.disabled:focus,
@@ -55,12 +65,13 @@ a.tab:visited,
 .img_button,
 .admin_button,
 input[type="submit"],
- input[type="submit"].button.normal {
+input[type="submit"].button.normal {
     border: 1px solid #2C8F30;
     background-color: #4CAF50;
-    color: white;
     vertical-align: center;
     cursor:pointer;
+    text-decoration: none;
+	color: #000000;
 }
 
 a.tab:hover, a.tab:active,
@@ -68,6 +79,8 @@ a.tab:hover, a.tab:active,
 .admin_button:hover, .admin_button:active,
 input[type="submit"]:hover, input[type="submit"]:focus {
 	background-color: #5CBF60;
+	text-decoration: none;
+	color: #000000;
 }
 
 .img_button,
@@ -117,16 +130,6 @@ tr:nth-child(even) {
 }
 .checkbox_align label span {
   vertical-align: middle;
-}
-
-a {
-    color: #337ab7;
-    text-decoration: none;
-}
-
-a:focus, a:hover {
-    color: #23527c;
-    text-decoration: underline;
 }
 
 /*---Panel Information Box---*/
