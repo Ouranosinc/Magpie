@@ -100,7 +100,7 @@ def register_service(request):
 
     def add_service_magpie_and_phoenix(svc, svc_push, db):
         db.add(svc)
-        if svc_push:
+        if svc_push and svc.type in register.SERVICES_PHOENIX_ALLOWED:
             sync_services_phoenix(db.query(models.Service))
 
     evaluate_call(lambda: add_service_magpie_and_phoenix(service, service_push, request.db),

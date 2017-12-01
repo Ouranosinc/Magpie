@@ -18,7 +18,7 @@ GETCAPABILITIES_ATTEMPTS = 12   # max attempts for 'GetCapabilities' validations
 # controls
 SERVICES_MAGPIE  = 'MAGPIE'
 SERVICES_PHOENIX = 'PHOENIX'
-SERVICES_PHOENIX_ALLOWED = ['WPS']
+SERVICES_PHOENIX_ALLOWED = ['wps']
 
 
 def print_log(msg):

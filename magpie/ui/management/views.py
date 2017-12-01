@@ -11,6 +11,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound
 )
 from magpie import USER_NAME_MAX_LENGTH
+from services import service_type_dict
 from ui.management import check_response
 from ui.home import add_template_data
 import register
@@ -432,10 +433,14 @@ class ManagementViews(object):
             check_response(requests.post(self.magpie_url+'/services', data=data))
             return HTTPFound(self.request.route_url('view_services', cur_svc_type=service_type))
 
+        services_keys_sorted = sorted(service_type_dict)
+        services_phoenix_indices = [(1 if services_keys_sorted[i] in register.SERVICES_PHOENIX_ALLOWED else 0)
+                                    for i in range(len(services_keys_sorted))]
         return add_template_data(self.request,
                                  {u'cur_svc_type': cur_svc_type,
                                   u'service_types': svc_types,
-                                  u'services_phoenix': register.SERVICES_PHOENIX_ALLOWED})
+                                  u'services_phoenix': register.SERVICES_PHOENIX_ALLOWED,
+                                  u'services_phoenix_indices': services_phoenix_indices})
 
     @view_config(route_name='edit_service', renderer='templates/edit_service.mako')
     def edit_service(self):
