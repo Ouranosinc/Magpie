@@ -176,12 +176,16 @@ def valid_http(httpSuccess=HTTPOk, httpKWArgs=None, detail="", content=None, con
     :param contentType: format in which to return the exception ('application/json', 'text/html' or 'text/plain')
     :return `HTTPSuccessful`: formatted successful with additional details and HTTP code
     """
+    global RAISE_RECURSIVE_SAFEGUARD_COUNT
+
     content = dict() if content is None else content
     detail = repr(detail) if type(detail) is not str else detail
     httpCode, detail, content = validate_params(httpSuccess, [HTTPSuccessful, HTTPRedirection],
                                                 detail, content, contentType)
     json_body = format_content_json_str(httpCode, detail, content, contentType)
-    return output_http_format(httpSuccess, httpKWArgs, json_body, outputType=contentType, outputMode='return')
+    resp = generate_response_http_format(httpSuccess, httpKWArgs, json_body, outputType=contentType)
+    RAISE_RECURSIVE_SAFEGUARD_COUNT = 0  # reset counter for future calls (don't accumulate for different requests)
+    return resp
 
 
 def raise_http(httpError=HTTPInternalServerError, httpKWArgs=None,
@@ -213,7 +217,12 @@ def raise_http(httpError=HTTPInternalServerError, httpKWArgs=None,
     # content is added manually to avoid auto-format and suppression of fields by `HTTPException`
     httpCode, detail, content = validate_params(httpError, HTTPError, detail, content, contentType)
     json_body = format_content_json_str(httpError.code, detail, content, contentType)
-    output_http_format(httpError, httpKWArgs, json_body, outputType=contentType, outputMode='raise')
+    resp = generate_response_http_format(httpError, httpKWArgs, json_body, outputType=contentType)
+
+    # reset counter for future calls (don't accumulate for different requests)
+    # following raise is the last in the chain since it wasn't triggered by other functions
+    RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
+    raise resp
 
 
 def validate_params(httpClass, httpBase, detail, content, contentType):
@@ -294,7 +303,7 @@ def format_content_json_str(httpCode, detail, content, contentType):
     return json_body
 
 
-def output_http_format(httpClass, httpKWArgs, jsonContent, outputType='text/plain', outputMode='raise'):
+def generate_response_http_format(httpClass, httpKWArgs, jsonContent, outputType='text/plain'):
     """
     Formats the HTTP response output according to desired `outputType` using provided HTTP code and content.
 
@@ -302,7 +311,6 @@ def output_http_format(httpClass, httpKWArgs, jsonContent, outputType='text/plai
     :param httpKWArgs: (dict) additional keyword arguments to pass to `httpClass` when called
     :param jsonContent: (str) formatted json content providing additional details for the response cause
     :param outputType: {'application/json','text/html','text/plain'} (default: 'text/plain')
-    :param outputMode: {'raise','return'} (default: 'raise')
     :return: modified HTTPException derived class with information and output type if `outputMode` is 'return'
     :raises: modified HTTPException derived class with information and output type if `outputMode` is 'raise'
     """
@@ -328,19 +336,13 @@ def output_http_format(httpClass, httpKWArgs, jsonContent, outputType='text/plai
         else:
             httpResponse = httpClass(body=jsonContent, content_type='text/plain', **httpKWArgs)
 
+        return httpResponse
     except Exception as e:
         raise_http(httpError=HTTPInternalServerError, detail="Failed to build HTTP response",
                    content={u'traceback': repr(exc_info()), u'exception': repr(e),
-                            u'caller': {u'httpKWArgs': repr(httpKWArgs), u'outputMode': str(outputMode),
-                                        u'httpClass': repr(httpClass), u'outputType': str(outputType)}})
-
-    # raise or return according to mode
-    if outputMode == 'return':
-        return httpResponse
-    elif outputMode == 'raise':
-        raise httpResponse
-    raise_http(httpError=HTTPInternalServerError, detail="Invalid `outputMode` specified",
-               content={u'outputMode': str(outputMode)})
+                            u'caller': {u'httpKWArgs': repr(httpKWArgs),
+                                        u'httpClass': repr(httpClass),
+                                        u'outputType': str(outputType)}})
 
 
 def islambda(func):
