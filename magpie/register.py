@@ -173,6 +173,19 @@ def get_magpie_url():
     return 'http://{0}{1}'.format(hostname, magpie_port)
 
 
+def get_twitcher_protected_service_url(magpie_service_name):
+    try:
+        hostname = os.getenv('HOSTNAME')
+        twitcher_proxy = os.getenv('TWITCHER_PROTECTED_PATH')
+        if hostname is None:
+            raise ValueError("Environment variable was None", 'HOSTNAME')
+        if twitcher_proxy is None:
+            raise ValueError("Environment variable was None", 'TWITCHER_PROTECTED_PATH')
+    except Exception as e:
+        raise Exception("Missing environment values [" + repr(e) + "]")
+    return "https://{0}{1}/{2}".format(hostname, twitcher_proxy, magpie_service_name)
+
+
 def register_services(register_service_url, services_dict, cookies,
                       message='Register response', where=SERVICES_MAGPIE):
     success = True
@@ -185,17 +198,21 @@ def register_services(register_service_url, services_dict, cookies,
         raise ValueError("Unknown location for service registration", where)
     for service_name in services_dict:
         cfg = services_dict[service_name]
-        cfg['url'] = os.path.expandvars(cfg.get('url'))
         cfg['public'] = bool2str(cfg.get('public'))
         cfg['c4i'] = bool2str(cfg.get('c4i'))
+        cfg['url'] = os.path.expandvars(cfg.get('url'))
+        if where == SERVICES_MAGPIE:
+            svc_url = cfg['url']
+        elif where == SERVICES_PHOENIX:
+            svc_url = get_twitcher_protected_service_url(service_name)
         params = 'service_name={name}&'         \
-                 '{svc_url}={cfg[url]}&'        \
+                 '{svc_url_tag}={svc_url}&'     \
                  'service_title={cfg[title]}&'  \
                  'public={cfg[public]}&'        \
                  'c4i={cfg[c4i]}&'              \
                  'service_type={cfg[type]}&'    \
                  'register=register'            \
-                 .format(name=service_name, cfg=cfg, svc_url=svc_url_tag)
+                 .format(name=service_name, cfg=cfg, svc_url_tag=svc_url_tag, svc_url=svc_url)
         service_msg = '{msg} ({svc})'.format(msg=message, svc=service_name)
         error, http_code = request_curl(register_service_url, cookies=cookies, form_params=params, msg=service_msg)
         statuses[service_name] = http_code
@@ -216,6 +233,11 @@ def sync_services_phoenix(services_object_list):
 
 def magpie_add_register_services_perms(services, statuses, cookies):
     magpie_url = get_magpie_url()
+    try:
+        login_grp = os.getenv('ANONYMOUS_USER')
+    except Exception as e:
+        raise Exception("Missing environment values [" + repr(e) + "]")
+
     for service_name, status in zip(services, statuses):
         svc_available_perms_url = '{magpie}/services/{svc}/permissions' \
                                   .format(magpie=magpie_url, svc=service_name)
@@ -227,7 +249,7 @@ def magpie_add_register_services_perms(services, statuses, cookies):
             # add 'getcapabilities' permission if available for service just created
             if status == 201:
                 svc_anonym_add_perms_url = '{magpie}/groups/{grp}/services/{svc}/permissions' \
-                                           .format(magpie=magpie_url, grp='anonymous', svc=service_name)
+                                           .format(magpie=magpie_url, grp=login_grp, svc=service_name)
                 requests.post(svc_anonym_add_perms_url, data={'permission_name': 'getcapabilities'})
 
             # check service response so Phoenix doesn't refuse registration
@@ -286,7 +308,7 @@ def magpie_register_services_from_config(service_config_file_path, push_to_phoen
         services = services_cfg['providers']
     except Exception as e:
         raise Exception("Bad service file + [" + repr(e) + "]")
-    magpie_register_services(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat', force_update=True)
+    magpie_register_services(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat', force_update=False)
 
 
 def magpie_register_services(services_dict, push_to_phoenix, user, password, provider, force_update=False):
