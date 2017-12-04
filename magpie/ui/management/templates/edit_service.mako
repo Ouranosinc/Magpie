@@ -107,7 +107,7 @@
                         %endif
                     </p>
                     <p class="panel_line">
-                        <span class="panel_entry">URL: </span>
+                        <span class="panel_entry">Protected URL: </span>
                         %if edit_mode == 'edit_url':
                             <input type="text" value="${service_url}" name="new_svc_url"
                                    id="input_url" onkeyup="adjustWidth('input_url')">
@@ -117,6 +117,10 @@
                             <a href="url" class="panel_value">${service_url}</a>
                             <input type="submit" value="Edit" name="edit_url">
                         %endif
+                    </p>
+                    <p class="panel_line">
+                        <span class="panel_entry">Public URL: </span>
+                        <a href="url" class="panel_value">${public_url}</a>
                     </p>
                     <p class="panel_line">
                         <span class="panel_entry">Type: </span>

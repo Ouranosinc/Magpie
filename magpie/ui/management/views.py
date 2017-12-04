@@ -456,82 +456,68 @@ class ManagementViews(object):
         service_push_show = cur_svc_type in register.SERVICES_PHOENIX_ALLOWED
         service_push = register.str2bool(self.request.POST.get('service_push', service_push_show))
 
-        edit_mode = u'no_edit'
+        service_info = {u'edit_mode': u'no_edit', u'service_name': service_name, u'service_url': service_url,
+                        u'public_url': register.get_twitcher_protected_service_url(service_name),
+                        u'service_perm': service_perm, u'service_id': service_id, u'service_push': service_push,
+                        u'service_push_show': service_push_show, u'cur_svc_type': cur_svc_type}
 
         if 'edit_name' in self.request.POST:
-            edit_mode = u'edit_name'
+            service_info['edit_mode'] = u'edit_name'
 
         if 'save_name' in self.request.POST:
             new_svc_name = self.request.POST.get('new_svc_name')
             if service_name != new_svc_name and new_svc_name != "":
                 self.update_service_name(service_name, new_svc_name, service_push)
-                service_name = new_svc_name
-            edit_mode = u'no_edit'
+                service_info['service_name'] = new_svc_name
+                service_info['public_url'] = register.get_twitcher_protected_service_url(new_svc_name),
+            service_info['edit_mode'] = u'no_edit'
             # return directly to 'regenerate' the URL with the modified name
-            return HTTPFound(self.request.route_url('edit_service',
-                                                    cur_svc_type=cur_svc_type,
-                                                    service_name=service_name,
-                                                    service_url=service_url,
-                                                    service_push=service_push,
-                                                    service_push_show=service_push_show))
+            return HTTPFound(self.request.route_url('edit_service', **service_info))
 
         if 'edit_url' in self.request.POST:
-            edit_mode = u'edit_url'
+            service_info['edit_mode'] = u'edit_url'
 
         if 'save_url' in self.request.POST:
             new_svc_url = self.request.POST.get('new_svc_url')
             if service_url != new_svc_url and new_svc_url != "":
                 self.update_service_url(service_name, new_svc_url, service_push)
-                service_url = new_svc_url
-            edit_mode = u'no_edit'
+                service_info['service_url'] = new_svc_url
+            service_info['edit_mode'] = u'no_edit'
 
         if 'delete' in self.request.POST:
             service_data = json.dumps({u'service_push': service_push})
             check_response(requests.delete(self.magpie_url + '/services/' + service_name, data=service_data))
-            return HTTPFound(self.request.route_url('view_services',
-                                                    cur_svc_type=cur_svc_type,
-                                                    service_push_show=service_push_show))
+            return HTTPFound(self.request.route_url('view_services', **service_info))
 
         if 'delete_child' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
             check_response(requests.delete(self.magpie_url + '/resources/' + resource_id))
 
         if 'add_child' in self.request.POST:
-            resource_id = self.request.POST.get('resource_id')
-            return HTTPFound(self.request.route_url('add_resource',
-                                                    cur_svc_type=cur_svc_type,
-                                                    service_name=service_name,
-                                                    service_push=service_push,
-                                                    resource_id=resource_id))
+            service_info['resource_id'] = self.request.POST.get('resource_id')
+            return HTTPFound(self.request.route_url('add_resource', **service_info))
 
         try:
             resources = {}
-            res_resources = check_response(requests.get(self.magpie_url + '/services/' + service_name + '/resources'))
+            url_resources = '{0}/services/{1}/resources'.format(self.magpie_url, service_name)
+            res_resources = check_response(requests.get(url_resources))
             raw_resources = res_resources.json()[service_name]
             resources[service_name] = dict(
                 id=raw_resources['resource_id'],
                 permission_names=[],
                 children=self.res_tree_parser(raw_resources['resources'], {}))
-            res_resources_types = check_response(requests.get(self.magpie_url + '/services/types/' +
-                                                              cur_svc_type + '/resources/types'))
+            url_resources_types = '{0}/services/types/{1}/resources/types'.format(self.magpie_url, cur_svc_type)
+            res_resources_types = check_response(requests.get(url_resources_types))
             raw_resources_types = res_resources_types.json()['resource_types']
             raw_resources_id_type = self.get_resource_types()
         except Exception as e:
             raise HTTPBadRequest(detail='Bad Json response [Exception: ' + repr(e) + ']')
 
-        return add_template_data(self.request,
-                                 {u'edit_mode': edit_mode,
-                                  u'service_name': service_name,
-                                  u'service_url': service_url,
-                                  u'service_perm': service_perm,
-                                  u'service_id': service_id,
-                                  u'service_push': service_push,
-                                  u'service_push_show': service_push_show,
-                                  u'cur_svc_type': cur_svc_type,
-                                  u'resources': resources,
-                                  u'resources_types': raw_resources_types,
-                                  u'resources_id_type': raw_resources_id_type,
-                                  u'resources_no_child': {u'file'}})
+        service_info['resources'] = resources
+        service_info['resources_types'] = raw_resources_types
+        service_info['resources_id_type'] = raw_resources_id_type
+        service_info['resources_no_child'] = {u'file'}
+        return add_template_data(self.request, service_info)
 
     @view_config(route_name='add_resource', renderer='templates/add_resource.mako')
     def add_resource(self):
