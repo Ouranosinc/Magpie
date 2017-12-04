@@ -71,7 +71,7 @@ input[type="submit"].button.normal {
     vertical-align: center;
     cursor:pointer;
     text-decoration: none;
-	color: #000000;
+    color: #FFFFFF;
 }
 
 a.tab:hover, a.tab:active,
@@ -80,7 +80,6 @@ a.tab:hover, a.tab:active,
 input[type="submit"]:hover, input[type="submit"]:focus {
 	background-color: #5CBF60;
 	text-decoration: none;
-	color: #000000;
 }
 
 .img_button,
@@ -446,6 +445,13 @@ ul.breadcrumb li a:hover {
 .admin_button {
     margin: auto;
     width: 100%;
+}
+
+.admin_button,
+.admin_button:focus,
+.admin_button:hover,
+.admin_button:active {
+    color: #000000;
 }
 
 .admin_button {
