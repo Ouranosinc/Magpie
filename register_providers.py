@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument('-g', '--no-getcapabilities-overwrite', default=False, action='store_true',
                         dest='no_getcapabilities',
                         help="disable overwriting 'GetCapabilities' permissions to applicable services when they "
-                             "already exist, ie: when conflicts during service creation (default: %(default)s)")
+                             "already exist, ie: when conflicts occur during service creation (default: %(default)s)")
     parser.add_argument('-p', '--phoenix-push', default=False, action='store_true', dest='phoenix_push',
                         help="push registered Magpie services to sync in Phoenix (default: %(default)s)")
     args = parser.parse_args()
