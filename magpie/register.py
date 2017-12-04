@@ -183,7 +183,13 @@ def get_twitcher_protected_service_url(magpie_service_name):
             raise ValueError("Environment variable was None", 'TWITCHER_PROTECTED_PATH')
     except Exception as e:
         raise Exception("Missing environment values [" + repr(e) + "]")
-    return "https://{0}/twitcher{1}/{2}".format(hostname, twitcher_proxy, magpie_service_name)
+    if not twitcher_proxy.endswith('/'):
+        twitcher_proxy = twitcher_proxy + '/'
+    if not twitcher_proxy.startswith('/'):
+        twitcher_proxy = '/' + twitcher_proxy
+    if not twitcher_proxy.startswith('/twitcher'):
+        twitcher_proxy = '/twitcher' + twitcher_proxy
+    return "https://{0}{1}{2}".format(hostname, twitcher_proxy, magpie_service_name)
 
 
 def register_services(register_service_url, services_dict, cookies,
