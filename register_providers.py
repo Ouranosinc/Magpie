@@ -12,7 +12,7 @@ if __name__ == "__main__":
                         help="enforce update of services URL if conflicting services are found (default: %(default)s)")
     parser.add_argument('-g', '--no-getcapabilities-overwrite', default=False, action='store_true',
                         dest='no_getcapabilities',
-                        help="disable overwriting 'GetCapabilities' permissions to applicable services when they"
+                        help="disable overwriting 'GetCapabilities' permissions to applicable services when they "
                              "already exist, ie: when conflicts during service creation (default: %(default)s)")
     parser.add_argument('-p', '--phoenix-push', default=False, action='store_true', dest='phoenix_push',
                         help="push registered Magpie services to sync in Phoenix (default: %(default)s)")
