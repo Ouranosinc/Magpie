@@ -231,14 +231,14 @@ def sync_services_phoenix(services_object_list):
     phoenix_register_services(services_dict)
 
 
-def magpie_add_register_services_perms(services, statuses, cookies):
+def magpie_add_register_services_perms(services, statuses, cookies, disable_get_capabilities):
     magpie_url = get_magpie_url()
     try:
         login_grp = os.getenv('ANONYMOUS_USER')
     except Exception as e:
         raise Exception("Missing environment values [" + repr(e) + "]")
 
-    for service_name, status in zip(services, statuses):
+    for service_name in services:
         svc_available_perms_url = '{magpie}/services/{svc}/permissions' \
                                   .format(magpie=magpie_url, svc=service_name)
         resp_available_perms = requests.get(svc_available_perms_url)
@@ -246,8 +246,10 @@ def magpie_add_register_services_perms(services, statuses, cookies):
         # only applicable to services supporting 'GetCapabilities' request
         if resp_available_perms.status_code and 'getcapabilities' in available_perms:
 
-            # add 'getcapabilities' permission if available for service just created
-            if status == 201:
+            # enforce 'getcapabilities' permission if available for service just updated (200) or created (201)
+            # update 'getcapabilities' permission when the service existed and it allowed
+            if (not disable_get_capabilities and statuses[service_name] == 409) \
+            or statuses[service_name] == 200 or statuses[service_name] == 201:
                 svc_anonym_add_perms_url = '{magpie}/groups/{grp}/services/{svc}/permissions' \
                                            .format(magpie=magpie_url, grp=login_grp, svc=service_name)
                 requests.post(svc_anonym_add_perms_url, data={'permission_name': 'getcapabilities'})
@@ -281,18 +283,24 @@ def magpie_add_register_services_perms(services, statuses, cookies):
 
 def magpie_update_services_conflict(conflict_services, services_dict):
     magpie_url = get_magpie_url()
+    statuses = dict()
     for svc_name in conflict_services:
+        statuses[svc_name] = 409
         svc_url_new = services_dict[svc_name]['url']
         svc_url_db = '{magpie}/services/{svc}'.format(magpie=magpie_url, svc=svc_name)
         svc_info = requests.get(svc_url_db).json().get(svc_name)
         svc_url_old = svc_info['service_url']
-        svc_info['service_url'] = svc_url_new
-        res_svc_put = requests.put(svc_url_db, data=svc_info)
-        print_log("[{url_old}] => [{url_new}] Service URL update ({svc}): {resp}" \
-                  .format(svc=svc_name, url_old=svc_url_old, url_new=svc_url_new, resp=res_svc_put.status_code))
+        if svc_url_old != svc_url_new:
+            svc_info['service_url'] = svc_url_new
+            res_svc_put = requests.put(svc_url_db, data=svc_info)
+            statuses[svc_name] = res_svc_put.status_code
+            print_log("[{url_old}] => [{url_new}] Service URL update ({svc}): {resp}" \
+                      .format(svc=svc_name, url_old=svc_url_old, url_new=svc_url_new, resp=res_svc_put.status_code))
+    return statuses
 
 
-def magpie_register_services_from_config(service_config_file_path, push_to_phoenix=False):
+def magpie_register_services_from_config(service_config_file_path, push_to_phoenix=False,
+                                         force_update=False, disable_get_capabilities=False):
     try:
         admin_usr = os.getenv('ADMIN_USER')
         admin_pwd = os.getenv('ADMIN_PASSWORD')
@@ -308,10 +316,12 @@ def magpie_register_services_from_config(service_config_file_path, push_to_phoen
         services = services_cfg['providers']
     except Exception as e:
         raise Exception("Bad service file + [" + repr(e) + "]")
-    magpie_register_services(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat', force_update=False)
+    magpie_register_services(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat',
+                             force_update=force_update, disable_get_capabilities=disable_get_capabilities)
 
 
-def magpie_register_services(services_dict, push_to_phoenix, user, password, provider, force_update=False):
+def magpie_register_services(services_dict, push_to_phoenix, user, password, provider,
+                             force_update=False, disable_get_capabilities=False):
     magpie_url = get_magpie_url()
     magpie_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_magpie')
     success = False
@@ -324,16 +334,17 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
         # Register services
         # Magpie will not overwrite existing services by default, 409 Conflict instead of 201 Created
         register_service_url = magpie_url + '/services'
-        success, statuses = register_services(register_service_url, services_dict, magpie_cookies,
-                                              'Magpie register service', SERVICES_MAGPIE)
+        success, statuses_register = register_services(register_service_url, services_dict, magpie_cookies,
+                                                       'Magpie register service', SERVICES_MAGPIE)
         # Service URL update if conflicting and requested
         if force_update and not success:
-            conflict_services = [svc_name for svc_name, http_code in statuses.items() if http_code == 409]
-            magpie_update_services_conflict(conflict_services, services_dict)
+            conflict_services = [svc_name for svc_name, http_code in statuses_register.items() if http_code == 409]
+            statuses_update = magpie_update_services_conflict(conflict_services, services_dict)
+            statuses_register.update(statuses_update)  # update previous statuses with new ones
 
         # Add 'GetCapabilities' permissions on newly created services to allow 'ping' from Phoenix
         # Phoenix doesn't register the service if it cannot be checked with this request
-        magpie_add_register_services_perms(services_dict, statuses, magpie_cookies)
+        magpie_add_register_services_perms(services_dict, statuses_register, magpie_cookies, disable_get_capabilities)
 
         # Push updated services to Phoenix
         if push_to_phoenix:
