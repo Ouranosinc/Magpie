@@ -42,15 +42,15 @@ def get_version(request):
 @notfound_view_config()
 def not_found(request):
     return raise_http(nothrow=True, httpError=HTTPNotFound, contentType='application/json',
-                      detail="The route resource could not be found.",
-                      content={u'route_name': str(request.upath_info), u'url': str(request.url)})
+                      detail="The route resource could not be found",
+                      content={u'route_name': str(request.upath_info), u'request_url': str(request.url)})
 
 
 @exception_view_config()
 def internal_server_error(request):
     return raise_http(nothrow=True, httpError=HTTPInternalServerError, contentType='application/json',
-                      detail="Internal Server Error. Unhandled exception occurred.",
-                      content={u'route_name': str(request.upath_info), u'url': str(request.url)})
+                      detail="Internal Server Error. Unhandled exception occurred",
+                      content={u'route_name': str(request.upath_info), u'request_url': str(request.url)})
 
 
 def init_db():
