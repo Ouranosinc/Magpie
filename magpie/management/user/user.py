@@ -94,7 +94,7 @@ def create_user_view(request):
 def get_users(request):
     user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
                                    fallback=lambda: request.db.rollback(),
-                                   httpError=HTTPForbidden, msgOnFail="Get user query refused by db")
+                                   httpError=HTTPForbidden, msgOnFail="Get users query refused by db")
     return valid_http(httpSuccess=HTTPOk, detail="Get users successful", content={u'user_names': user_name_list})
 
 
