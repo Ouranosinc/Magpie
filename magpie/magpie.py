@@ -41,16 +41,28 @@ def get_version(request):
 
 @notfound_view_config()
 def not_found(request):
+    content = get_request_info(request, default_msg="The route resource could not be found")
     return raise_http(nothrow=True, httpError=HTTPNotFound, contentType='application/json',
-                      detail="The route resource could not be found",
-                      content={u'route_name': str(request.upath_info), u'request_url': str(request.url)})
+                      detail=content['detail'], content=content)
 
 
 @exception_view_config()
 def internal_server_error(request):
+    content = get_request_info(request, default_msg="Internal Server Error. Unhandled exception occurred")
     return raise_http(nothrow=True, httpError=HTTPInternalServerError, contentType='application/json',
-                      detail="Internal Server Error. Unhandled exception occurred",
-                      content={u'route_name': str(request.upath_info), u'request_url': str(request.url)})
+                      detail=content['detail'], content=content)
+
+
+def get_request_info(request, default_msg="undefined"):
+    content = {u'route_name': str(request.upath_info), u'request_url': str(request.url), u'detail': default_msg}
+    if hasattr(request, 'exception'):
+        if hasattr(request.exception, 'json'):
+            if type(request.exception.json) is dict:
+                content.update(request.exception.json)
+    elif hasattr(request, 'matchdict'):
+        if request.matchdict is not None and request.matchdict != '':
+            content.update(request.matchdict)
+    return content
 
 
 def init_db():
