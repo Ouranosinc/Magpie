@@ -248,7 +248,7 @@ def validate_params(httpClass, httpBase, detail, content, contentType):
     # verify input arguments, raise `HTTPInternalServerError` with caller info if invalid
     # cannot be done within a try/except because it would always trigger with `raise_http`
     content = dict() if content is None else content
-    detail = repr(detail) if type(detail) is not str else detail
+    detail = repr(detail) if type(detail) not in [str, unicode] else detail
     if not isclass(httpClass):
         raise_http(httpError=HTTPInternalServerError,
                    detail="Object specified is not of type `HTTPError`",
