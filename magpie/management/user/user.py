@@ -237,7 +237,7 @@ def get_user_resource_permissions_view(request):
     user = get_user_matchdict_checked(request)
     res = get_resource_matchdict_checked(request, 'resource_id')
     perm_names = get_user_resource_permissions(resource=res, user=user, db_session=request.db)
-    return valid_http(httpSuccess=HTTPOk, detail="Get user resources permissions successful",
+    return valid_http(httpSuccess=HTTPOk, detail="Get user resource permissions successful",
                       content={u'permission_names': perm_names})
 
 
