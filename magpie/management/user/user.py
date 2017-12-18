@@ -94,7 +94,7 @@ def create_user_view(request):
 def get_users(request):
     user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
                                    fallback=lambda: request.db.rollback(),
-                                   httpError=HTTPForbidden, msgOnFail="Get user query refused by db")
+                                   httpError=HTTPForbidden, msgOnFail="Get users query refused by db")
     return valid_http(httpSuccess=HTTPOk, detail="Get users successful", content={u'user_names': user_name_list})
 
 
@@ -237,7 +237,7 @@ def get_user_resource_permissions_view(request):
     user = get_user_matchdict_checked(request)
     res = get_resource_matchdict_checked(request, 'resource_id')
     perm_names = get_user_resource_permissions(resource=res, user=user, db_session=request.db)
-    return valid_http(httpSuccess=HTTPOk, detail="Get user resources permissions successful",
+    return valid_http(httpSuccess=HTTPOk, detail="Get user resource permissions successful",
                       content={u'permission_names': perm_names})
 
 

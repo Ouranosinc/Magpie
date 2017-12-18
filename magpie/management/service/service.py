@@ -229,7 +229,7 @@ def get_resources_view(request):
         res_json[svc_type] = {}
         for svc in services:
             res_json[svc_type][svc.resource_name] = format_service_resources(svc, request.db, display_all=True)
-    res_json = {u'resource_types': resource_type_dict.keys(), u'resources': res_json}
+    res_json = {u'resources': res_json}
     return valid_http(httpSuccess=HTTPOk, detail="Get resources successful", content=res_json)
 
 
