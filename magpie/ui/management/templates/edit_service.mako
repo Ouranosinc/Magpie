@@ -39,12 +39,14 @@
     </p>
     <p>Continue?</p>
     <form action="${request.path}" method="post">
-        <div class="checkbox_align">
-            <label for="push_phoenix_checkbox_warning">
-                <input type="checkbox" name="service_push" id="push_phoenix_checkbox_warning" checked/>
-                <span>Push to Phoenix?</span>
-            </label>
-        </div>
+        %if service_push_show:
+            <div class="checkbox_align">
+                <label for="push_phoenix_checkbox_warning">
+                    <input type="checkbox" name="service_push" id="push_phoenix_checkbox_warning" checked/>
+                    <span>Push to Phoenix?</span>
+                </label>
+            </div>
+        %endif
         <div>
             <input type="submit" class="button delete" name="delete" value="Delete"
                    onclick="this.parentElement.style.display='none';">
@@ -105,16 +107,20 @@
                         %endif
                     </p>
                     <p class="panel_line">
-                        <span class="panel_entry">URL: </span>
+                        <span class="panel_entry">Protected URL: </span>
                         %if edit_mode == 'edit_url':
                             <input type="text" value="${service_url}" name="new_svc_url"
                                    id="input_url" onkeyup="adjustWidth('input_url')">
                             <input type="submit" value="Save" name="save_url">
                             <input type="submit" value="Cancel" name="no_edit">
                         %else:
-                            <a href="url" class="panel_value">${service_url}</a>
+                            <a href="${service_url}" class="panel_value">${service_url}</a>
                             <input type="submit" value="Edit" name="edit_url">
                         %endif
+                    </p>
+                    <p class="panel_line">
+                        <span class="panel_entry">Public URL: </span>
+                        <a href="${public_url}" class="panel_value">${public_url}</a>
                     </p>
                     <p class="panel_line">
                         <span class="panel_entry">Type: </span>
@@ -128,19 +134,21 @@
                         <span class="panel_entry">ID: </span>
                         <span class="panel_value">${service_id}</span>
                     </p>
-                    <div class="checkbox_align">
-                        <label for="push_phoenix_checkbox_details">
-                            <input type="hidden" name="service_push" value="off"/>
-                            %if service_push:
-                                <input type="checkbox" name="service_push"
-                                       id="push_phoenix_checkbox_details" checked/>
-                            %else:
-                                <input type="checkbox" name="service_push"
-                                       id="push_phoenix_checkbox_details"/>
-                            %endif
-                            <span>Push updates to Phoenix?</span>
-                        </label>
-                    </div>
+                    %if service_push_show:
+                        <div class="checkbox_align">
+                            <label for="push_phoenix_checkbox_details">
+                                <input type="hidden" name="service_push" value="off"/>
+                                %if service_push:
+                                    <input type="checkbox" name="service_push"
+                                           id="push_phoenix_checkbox_details" checked/>
+                                %else:
+                                    <input type="checkbox" name="service_push"
+                                           id="push_phoenix_checkbox_details"/>
+                                %endif
+                                <span>Push updates to Phoenix?</span>
+                            </label>
+                        </div>
+                    %endif
                 </div>
             </div>
 

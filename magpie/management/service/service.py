@@ -6,12 +6,14 @@ from resource import resource_type_dict
 from api_requests import *
 from api_except import *
 from register import *
+from management.group.group_utils import create_group_resource_permission
 from management.service.resource import *
 
 
 def format_service(service, permissions=None):
     def fmt_svc(svc, perms):
         return {
+            u'public_url': str(get_twitcher_protected_service_url(svc.resource_name)),
             u'service_url': str(svc.url),
             u'service_name': str(svc.resource_name),
             u'service_type': str(svc.type),
@@ -53,6 +55,18 @@ def get_services_by_type(service_type, db_session):
                  msgOnFail="Invalid `service_type` value '" + str(service_type) + "' specified")
     services = db_session.query(models.Service).filter(models.Service.type == service_type)
     return services
+
+
+def add_service_getcapabilities_perms(service, db_session, group_name=None):
+    if service.type in SERVICES_PHOENIX_ALLOWED \
+    and 'getcapabilities' in service_type_dict[service.type].permission_names:
+        if group_name is None:
+            group_name = os.getenv('ANONYMOUS_USER')
+        group = GroupService.by_group_name(group_name, db_session=db_session)
+        perm = ResourceService.perm_by_group_and_perm_name(service.resource_id, group.id,
+                                                           u'getcapabilities', db_session)
+        if perm is None:  # not set, create it
+            create_group_resource_permission(u'getcapabilities', service.resource_id, group.id, db_session)
 
 
 @view_config(route_name='services_type', request_method='GET')
@@ -100,7 +114,7 @@ def register_service(request):
 
     def add_service_magpie_and_phoenix(svc, svc_push, db):
         db.add(svc)
-        if svc_push:
+        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED:
             sync_services_phoenix(db.query(models.Service))
 
     evaluate_call(lambda: add_service_magpie_and_phoenix(service, service_push, request.db),
@@ -135,8 +149,11 @@ def update_service(request):
     def update_service_magpie_and_phoenix(svc, new_name, new_url, svc_push, db):
         svc.resource_name = new_name
         svc.url = new_url
-        if svc_push:
-            sync_services_phoenix(db.query(models.Service))
+        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED \
+        and 'getcapabilities' in service_type_dict[svc.type].permission_names:
+            # (re)apply getcapabilities to updated service to ensure updated push
+            add_service_getcapabilities_perms(svc, db)
+            sync_services_phoenix(db.query(models.Service))  # push all services
 
     old_svc_content = format_service(service)
     err_svc_content = {u'service': old_svc_content, u'new_service_name': svc_name, u'new_service_url': svc_url}
@@ -165,7 +182,7 @@ def unregister_service(request):
 
     def remove_service_magpie_and_phoenix(svc, svc_push, db):
         db.delete(svc)
-        if svc_push:
+        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED:
             sync_services_phoenix(db.query(models.Service))
 
     evaluate_call(lambda: remove_service_magpie_and_phoenix(service, service_push, request.db),

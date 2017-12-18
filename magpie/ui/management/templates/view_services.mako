@@ -18,12 +18,14 @@
         <p>Continue?</p>
         <form action="${request.path}" method="post">
             <input type="hidden" value=${service} name="service_name">
-            <div class="checkbox_align">
-                <label for="push_phoenix_checkbox_warning">
-                    <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox_warning"/>
-                    <span>Push to Phoenix?</span>
-                </label>
-            </div>
+            %if service_push_show:
+                <div class="checkbox_align">
+                    <label for="push_phoenix_checkbox_warning">
+                        <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox_warning"/>
+                        <span>Push to Phoenix?</span>
+                    </label>
+                </div>
+            %endif
             <div>
                 <input type="submit" class="button delete" name="delete" value="Delete"
                        onclick="this.parentElement.style.display='none';" >
