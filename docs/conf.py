@@ -30,7 +30,7 @@ PROJECT_ROOT = os.path.dirname(os.getcwd())
 # version is used.
 sys.path.insert(0, PROJECT_ROOT)
 
-from magpie import __version__
+from magpie.__meta__ import __version__
 
 # -- General configuration ---------------------------------------------
 
