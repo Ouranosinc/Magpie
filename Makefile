@@ -11,6 +11,8 @@ endef
 export BROWSER_PYSCRIPT
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
+CUR_DIR := $(abspath $(lastword $(MAKEFILE_LIST))/..)
+
 help:
 	@echo "clean - remove all build, test, coverage and Python artifacts"
 	@echo "clean-build - remove build artifacts"
@@ -61,12 +63,13 @@ coverage:
 	$(BROWSER) htmlcov/index.html
 
 docs:
-	rm -f docs/magpie.rst
-	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ magpie
-	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
-	$(BROWSER) docs/_build/html/index.html
+	echo $(CUR_DIR)
+	rm -f $(CUR_DIR)/docs/magpie.rst
+	rm -f $(CUR_DIR)/docs/modules.rst
+	sphinx-apidoc -o $(CUR_DIR)/docs/ $(CUR_DIR)/magpie
+	$(MAKE) -C $(CUR_DIR)/docs clean
+	$(MAKE) -C $(CUR_DIR)/docs html
+	$(BROWSER) $(CUR_DIR)/docs/_build/html/index.html
 
 servedocs: docs
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
