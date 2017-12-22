@@ -3,8 +3,10 @@
 History
 =======
 
-0.3.0 | `Magpie REST API 0.3.x documentation`_
+0.3.0
 ---------------------
+
+`Magpie REST API 0.3.x documentation`_
 
 * ncWMS support for getmap, getcapabilities, getmetadata on thredds resource
 * ncWMS2 added to default providers
@@ -18,19 +20,25 @@ History
 * fix bug during user creation against preemptive checks
 * bug fixes from 0.2.x series
 
-0.2.0 | `Magpie REST API 0.2.0 documentation`_
+0.2.0
 ---------------------
+
+`Magpie REST API 0.2.0 documentation`_
 
 * Revamp HTTP standard error output format, messages, values and general error/exception handling.
 * Update `Magpie REST API 0.2.0 documentation`_
 
-0.1.1 | `Magpie REST API 0.1.1 documentation`_
+0.1.1
 ---------------------
+
+`Magpie REST API 0.1.1 documentation`_
 
 * Add edition of service URL via PUT/{service_name}.
 
-0.1.0 | `Magpie REST API 0.1.0 documentation`_
+0.1.0
 ---------------------
+
+`Magpie REST API 0.1.0 documentation`_
 
 * First structured release.
 
