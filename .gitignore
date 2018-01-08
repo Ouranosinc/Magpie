@@ -2,6 +2,7 @@
 .idea
 build/
 dist/
+docs/_build/
 env/
 magpieenv/
 magpie/bin/
@@ -10,5 +11,4 @@ magpie/lib/
 magpie/local/
 magpie/pip-selfcheck.json
 magpie/share/
-docs/_build/
 magpie.egg-info/

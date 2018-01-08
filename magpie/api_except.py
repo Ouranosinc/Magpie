@@ -111,18 +111,18 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, httpKW
     Exceptions are generated using the standard output method formatted based on the specified `contentType`.
 
     Example:
-        normal call:
-            ```
+        normal call::
+
             try:
                 res = func(args)
             except Exception as e:
                 fb_func()
                 raise HTTPExcept(e.message)
-            ```
-        wrapped call:
-            ```
+
+        wrapped call::
+
             res = evaluate_call(lambda: func(args), fallback=lambda: fb_func(), httpError=HTTPExcept, msgOnFail="...")
-            ```
+
 
     :param call: function to call, *MUST* be specified as `lambda: <function_call>`
     :param fallback: function to call (if any) when `call` failed, *MUST* be `lambda: <function_call>`
