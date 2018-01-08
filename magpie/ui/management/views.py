@@ -199,7 +199,7 @@ class ManagementViews(object):
                 return_data[u'invalid_password'] = True
 
             for check_fail in check_data:
-                if check_fail:
+                if return_data.get(check_fail, False):
                     return add_template_data(self.request, return_data)
 
             data = {u'user_name': user_name,
