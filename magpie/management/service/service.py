@@ -5,12 +5,15 @@ from services import service_type_dict
 from resource import resource_type_dict
 from api_requests import *
 from api_except import *
+from register import *
+from management.group.group_utils import create_group_resource_permission
 from management.service.resource import *
 
 
 def format_service(service, permissions=None):
     def fmt_svc(svc, perms):
         return {
+            u'public_url': str(get_twitcher_protected_service_url(svc.resource_name)),
             u'service_url': str(svc.url),
             u'service_name': str(svc.resource_name),
             u'service_type': str(svc.type),
@@ -54,18 +57,30 @@ def get_services_by_type(service_type, db_session):
     return services
 
 
+def add_service_getcapabilities_perms(service, db_session, group_name=None):
+    if service.type in SERVICES_PHOENIX_ALLOWED \
+    and 'getcapabilities' in service_type_dict[service.type].permission_names:
+        if group_name is None:
+            group_name = os.getenv('ANONYMOUS_USER')
+        group = GroupService.by_group_name(group_name, db_session=db_session)
+        perm = ResourceService.perm_by_group_and_perm_name(service.resource_id, group.id,
+                                                           u'getcapabilities', db_session)
+        if perm is None:  # not set, create it
+            create_group_resource_permission(u'getcapabilities', service.resource_id, group.id, db_session)
+
+
 @view_config(route_name='services_type', request_method='GET')
 @view_config(route_name='services', request_method='GET')
 def get_services_view(request):
-    service_type = get_multiformat_post(request, 'service_type')    # no check because None/empty is for 'all services'
+    service_type_filter = request.matchdict.get('service_type')  # no check because None/empty is for 'all services'
     json_response = {}
-    if not service_type:
+    if not service_type_filter:
         service_types = service_type_dict.keys()
     else:
-        verify_param(service_type, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotAcceptable,
-                     msgOnFail="Invalid `service_type` value '" + str(service_type) +
-                               "' does not correspond to any of the existing service types")
-        service_types = [service_type]
+        verify_param(service_type_filter, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotAcceptable,
+                     msgOnFail="Invalid `service_type` value does not correspond to any of the existing service types",
+                     content={u'service_type': str(service_type_filter)}, contentType='application/json')
+        service_types = [service_type_filter]
 
     for service_type in service_types:
         services = get_services_by_type(service_type, db_session=request.db)
@@ -81,7 +96,8 @@ def register_service(request):
     service_name = get_value_multiformat_post_checked(request, 'service_name')
     service_url = get_value_multiformat_post_checked(request, 'service_url')
     service_type = get_value_multiformat_post_checked(request, 'service_type')
-    verify_param(service_type, isIn=True, httpError=HTTPNotAcceptable, paramCompare=service_type_dict.keys(),
+    service_push = str2bool(get_multiformat_post(request, 'service_push'))
+    verify_param(service_type, isIn=True, paramCompare=service_type_dict.keys(), httpError=HTTPNotAcceptable,
                  msgOnFail="Specified `service_type` value does not correspond to any of the available types")
 
     if models.Service.by_service_name(service_name, db_session=request.db):
@@ -95,10 +111,57 @@ def register_service(request):
                             msgOnFail="Service creation for registration failed",
                             content={u'service_name': str(service_name), u'resource_type': u'service',
                                      u'service_url': str(service_url), u'service_type': str(service_type)})
-    evaluate_call(lambda: request.db.add(service), fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+
+    def add_service_magpie_and_phoenix(svc, svc_push, db):
+        db.add(svc)
+        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED:
+            sync_services_phoenix(db.query(models.Service))
+
+    evaluate_call(lambda: add_service_magpie_and_phoenix(service, service_push, request.db),
+                  fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Service registration forbidden by db", content=format_service(service))
     return valid_http(httpSuccess=HTTPCreated, detail="Service registration to db successful",
                       content=format_service(service))
+
+
+@view_config(route_name='service', request_method='PUT')
+def update_service(request):
+    service = get_service_matchdict_checked(request)
+    service_push = str2bool(get_multiformat_post(request, 'service_push'))
+
+    def select_update(new_value, old_value):
+        return new_value if new_value is not None and not new_value == '' else old_value
+
+    # None/Empty values are accepted in case of unspecified
+    svc_name = select_update(get_multiformat_post(request, 'service_name'), service.resource_name)
+    svc_url = select_update(get_multiformat_post(request, 'service_url'), service.url)
+    verify_param(svc_name == service.resource_name and svc_url == service.url, isEqual=True, paramCompare=True,
+                 httpError=HTTPBadRequest, msgOnFail="Current service values are already equal to update values")
+
+    if svc_name != service.resource_name:
+        all_svc_names = list()
+        for svc_type in service_type_dict:
+            for svc in get_services_by_type(svc_type, db_session=request.db):
+                all_svc_names.extend(svc.resource_name)
+        verify_param(svc_name, notIn=True, paramCompare=all_svc_names, httpError=HTTPConflict,
+                     msgOnFail="Specified `service_name` value '" + str(svc_name) + "' already exists")
+
+    def update_service_magpie_and_phoenix(svc, new_name, new_url, svc_push, db):
+        svc.resource_name = new_name
+        svc.url = new_url
+        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED \
+        and 'getcapabilities' in service_type_dict[svc.type].permission_names:
+            # (re)apply getcapabilities to updated service to ensure updated push
+            add_service_getcapabilities_perms(svc, db)
+            sync_services_phoenix(db.query(models.Service))  # push all services
+
+    old_svc_content = format_service(service)
+    err_svc_content = {u'service': old_svc_content, u'new_service_name': svc_name, u'new_service_url': svc_url}
+    evaluate_call(lambda: update_service_magpie_and_phoenix(service, svc_name, svc_url, service_push, request.db),
+                  fallback=lambda: request.db.rollback(),
+                  httpError=HTTPForbidden, msgOnFail="Update service failed during value assignment",
+                  content=err_svc_content)
+    return valid_http(httpSuccess=HTTPOk, detail="Update service successful", content=format_service(service))
 
 
 @view_config(route_name='service', request_method='GET')
@@ -111,28 +174,21 @@ def get_service(request):
 @view_config(route_name='service', request_method='DELETE')
 def unregister_service(request):
     service = get_service_matchdict_checked(request)
+    service_push = str2bool(get_multiformat_delete(request, 'service_push'))
     svc_content = format_service(service)
     evaluate_call(lambda: resource_tree_service.delete_branch(resource_id=service.resource_id, db_session=request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete service from resource tree failed", content=svc_content)
-    evaluate_call(lambda: request.db.delete(service), fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+
+    def remove_service_magpie_and_phoenix(svc, svc_push, db):
+        db.delete(svc)
+        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED:
+            sync_services_phoenix(db.query(models.Service))
+
+    evaluate_call(lambda: remove_service_magpie_and_phoenix(service, service_push, request.db),
+                  fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete service from db failed", content=svc_content)
     return valid_http(httpSuccess=HTTPOk, detail="Delete service successful")
-
-
-@view_config(route_name='service', request_method='PUT')
-def update_service(request):
-    service = get_service_matchdict_checked(request)
-    service_url = get_value_multiformat_post_checked(request, 'service_url')
-
-    def set_url(svc, url):
-        svc.url = url
-
-    svc_content = format_service(service)
-    evaluate_call(lambda: set_url(service, service_url), fallback=lambda: request.db.rollback(),
-                  httpError=HTTPForbidden, msgOnFail="Update service failed during URL assignment",
-                  content={u'service': svc_content, u'service_url': str(service_url)})
-    return valid_http(httpSuccess=HTTPOk, detail="Update service successful", content=svc_content)
 
 
 @view_config(route_name='service_permissions', request_method='GET')
@@ -173,7 +229,7 @@ def get_resources_view(request):
         res_json[svc_type] = {}
         for svc in services:
             res_json[svc_type][svc.resource_name] = format_service_resources(svc, request.db, display_all=True)
-    res_json = {u'resource_types': resource_type_dict.keys(), u'resources': res_json}
+    res_json = {u'resources': res_json}
     return valid_http(httpSuccess=HTTPOk, detail="Get resources successful", content=res_json)
 
 

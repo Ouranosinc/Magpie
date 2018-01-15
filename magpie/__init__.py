@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 
-__author__ = 'Francois-Xavier'
-__email__ = 'francois-xavier.derue@crim.ca'
-__version__ = '0.2.0'
-
-
 import json
 import os
 from api_except import *
 from api_except import *
 from models import *
+from register import *
 from pyramid.httpexceptions import (
     HTTPFound,
     HTTPOk,
@@ -50,3 +46,14 @@ ANONYMOUS_USER = os.getenv('ANONYMOUS_USER', 'anonymous')
 ADMIN_PERM = NO_PERMISSION_REQUIRED
 
 LOGGED_USER = 'current'
+
+# above this length is considered a token,
+# refuse longer username creation
+USER_NAME_MAX_LENGTH = 64
+
+
+def includeme(config):
+    config.include('magpie.home')
+    config.include('magpie.login')
+    config.include('magpie.management')
+    config.include('magpie.ui')

@@ -31,15 +31,28 @@
 <div class="alert danger" id="EditService_DeleteAlert">
     <h3 class="alert_title danger">Danger!</h3>
     <p>
+        Delete: [${service_name}]
+    </p>
+    <p>
         This operation will remove the service and all its sub-resources.
         This operation is not reversible.
     </p>
     <p>Continue?</p>
     <form action="${request.path}" method="post">
-        <input type="submit" class="button delete" name="delete" value="Delete"
-               onclick="this.parentElement.style.display='none';">
-        <input type="submit" class="button cancel"name="cancel" value="Cancel"
-               onclick="this.parentElement.style.display='none';">
+        %if service_push_show:
+            <div class="checkbox_align">
+                <label for="push_phoenix_checkbox_warning">
+                    <input type="checkbox" name="service_push" id="push_phoenix_checkbox_warning" checked/>
+                    <span>Push to Phoenix?</span>
+                </label>
+            </div>
+        %endif
+        <div>
+            <input type="submit" class="button delete" name="delete" value="Delete"
+                   onclick="this.parentElement.style.display='none';">
+            <input type="submit" class="button cancel"name="cancel" value="Cancel"
+                   onclick="this.parentElement.style.display='none';">
+        </div>
     </form>
 </div>
 
@@ -51,6 +64,18 @@
         else
             x.size = 20;
     }
+</script>
+
+<!-- since checkbox 'not checked' state is not actually sent,
+     apply 'off' to force return of the checkbox's state on submit -->
+<script type="text/javascript">
+    $(document).ready(function() {
+        $("#form_edit_service").on('submit', function() {
+            $(this + 'input[type=checkbox]:not(:checked)').each(function () {
+                $(this).attr('checked', true).val(0);
+            });
+        })
+    })
 </script>
 
 <form action="${request.path}" method="post">
@@ -82,16 +107,20 @@
                         %endif
                     </p>
                     <p class="panel_line">
-                        <span class="panel_entry">URL: </span>
+                        <span class="panel_entry">Protected URL: </span>
                         %if edit_mode == 'edit_url':
                             <input type="text" value="${service_url}" name="new_svc_url"
                                    id="input_url" onkeyup="adjustWidth('input_url')">
                             <input type="submit" value="Save" name="save_url">
                             <input type="submit" value="Cancel" name="no_edit">
                         %else:
-                            <span class="panel_value">${service_url}</span>
+                            <a href="${service_url}" class="panel_value">${service_url}</a>
                             <input type="submit" value="Edit" name="edit_url">
                         %endif
+                    </p>
+                    <p class="panel_line">
+                        <span class="panel_entry">Public URL: </span>
+                        <a href="${public_url}" class="panel_value">${public_url}</a>
                     </p>
                     <p class="panel_line">
                         <span class="panel_entry">Type: </span>
@@ -105,6 +134,21 @@
                         <span class="panel_entry">ID: </span>
                         <span class="panel_value">${service_id}</span>
                     </p>
+                    %if service_push_show:
+                        <div class="checkbox_align">
+                            <label for="push_phoenix_checkbox_details">
+                                <input type="hidden" name="service_push" value="off"/>
+                                %if service_push:
+                                    <input type="checkbox" name="service_push"
+                                           id="push_phoenix_checkbox_details" checked/>
+                                %else:
+                                    <input type="checkbox" name="service_push"
+                                           id="push_phoenix_checkbox_details"/>
+                                %endif
+                                <span>Push updates to Phoenix?</span>
+                            </label>
+                        </div>
+                    %endif
                 </div>
             </div>
 

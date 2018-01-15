@@ -23,8 +23,12 @@ def get_multiformat_post(request, key):
         return evaluate_call(lambda: request.json_body.get(key),
                              httpError=HTTPInternalServerError,
                              msgOnFail="Key " + repr(key) + " could not be extracted from multiformat POST")
-    else:
-        return request.POST.get(key)
+    return request.POST.get(key)
+
+
+def get_multiformat_delete(request, key):
+    return evaluate_call(lambda: request.json_body.get(key), httpError=HTTPInternalServerError,
+                         msgOnFail="Key " + repr(key) + " could not be extracted from multiformat DELETE")
 
 
 def get_permission_multiformat_post_checked(request, service_resource, permission_name_key='permission_name'):
@@ -59,7 +63,7 @@ def get_userid_by_token(token, authn_policy):
 
 
 def get_user(request, user_name_or_token):
-    if len(user_name_or_token) > 20:
+    if len(user_name_or_token) > USER_NAME_MAX_LENGTH:
         authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
         user_id = get_userid_by_token(user_name_or_token, authn_policy)
         user = evaluate_call(lambda: UserService.by_id(user_id, db_session=request.db),
@@ -117,7 +121,9 @@ def get_service_matchdict_checked(request, service_name_key='service_name'):
     service = evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
                             fallback=lambda: request.db.rollback(),
                             httpError=HTTPForbidden, msgOnFail="Service query by name refused by db")
-    verify_param(service, notNone=True, httpError=HTTPNotFound, msgOnFail="Service name not found in db")
+    verify_param(service, notNone=True, httpError=HTTPNotFound,
+                 msgOnFail="Service name not found in db",
+                 content={u'service_name': service_name})
     return service
 
 

@@ -14,6 +14,16 @@ html,body {
     margin: 1em 0em 1em;
 }
 
+a {
+    color: #337ab7;
+    text-decoration: none;
+}
+
+a:focus, a:hover {
+    color: #23527c;
+    text-decoration: underline;
+}
+
 input[type="submit"].button.disabled,
 input[type="submit"].button.disabled:hover,
 input[type="submit"].button.disabled:focus,
@@ -55,12 +65,13 @@ a.tab:visited,
 .img_button,
 .admin_button,
 input[type="submit"],
- input[type="submit"].button.normal {
+input[type="submit"].button.normal {
     border: 1px solid #2C8F30;
     background-color: #4CAF50;
-    color: white;
     vertical-align: center;
     cursor:pointer;
+    text-decoration: none;
+    color: #FFFFFF;
 }
 
 a.tab:hover, a.tab:active,
@@ -68,6 +79,7 @@ a.tab:hover, a.tab:active,
 .admin_button:hover, .admin_button:active,
 input[type="submit"]:hover, input[type="submit"]:focus {
 	background-color: #5CBF60;
+	text-decoration: none;
 }
 
 .img_button,
@@ -102,6 +114,21 @@ td, th {
 
 tr:nth-child(even) {
     /*background-color: #dddddd;*/
+}
+
+.checkbox_align label {
+  display: block;
+  /*float: left;*/
+  padding-left: 0.2em;
+  padding-right: 0.2em;
+  padding-bottom: 1em;
+  white-space: nowrap;
+}
+.checkbox_align input {
+  vertical-align: middle;
+}
+.checkbox_align label span {
+  vertical-align: middle;
 }
 
 /*---Panel Information Box---*/
@@ -166,7 +193,7 @@ tr:nth-child(even) {
     white-space: nowrap;
     vertical-align: baseline;
     border-radius: .25em;
-    background-color: #5BC0DE; /*info default*/ 
+    background-color: #5BC0DE; /*info default*/
 }
 
 .label.danger {
@@ -188,7 +215,7 @@ tr:nth-child(even) {
 /*---Alerts---*/
 
 .alert {
-    padding: 20px;    
+    padding: 20px;
     color: white;
     opacity: 1;
     transition: opacity 0.6s;
@@ -248,6 +275,21 @@ tr:nth-child(even) {
     color: black;
 }
 
+.alert_form_error>img {
+    width: 1.5em;
+    height: 1.5em;
+    margin: -0.25em 0 0 0;
+}
+
+.alert_form_error {
+    width: 100px;
+    color: red;
+    display: inline-flex;
+    float: left;
+    text-align: center;
+    margin: 0.25em 0 0 0;
+}
+
 /*---View users page ---*/
 
 .simple_list_table tr th:first-child,
@@ -305,17 +347,22 @@ div.perm_title {
     -o-transform: rotate(-70deg); /* Opera */
 }
 
+.tree_button.goto_service {
+    margin: 0.1em 0 0 -4em;
+}
+
 div.perm_checkbox {
     width:3em;
     float:right;
     text-align: left;
+    margin: 0.1em 0 0 0;
 }
 
 div.tree_button {
     width:5em;
     float:right;
     text-align: center;
-    padding: 0 0 0 2em;
+    margin: 0.1em 0 0 0;
 }
 
 .clear {
@@ -398,6 +445,13 @@ ul.breadcrumb li a:hover {
 .admin_button {
     margin: auto;
     width: 100%;
+}
+
+.admin_button,
+.admin_button:focus,
+.admin_button:hover,
+.admin_button:active {
+    color: #000000;
 }
 
 .admin_button {
@@ -489,6 +543,7 @@ input.equal_width {
     /*-webkit-box-sizing: border-box;*/
        -moz-box-sizing: border-box;
             box-sizing: border-box;
+    float: left;
 }
 
 div.input_container {
