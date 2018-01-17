@@ -104,7 +104,8 @@ class ServiceNCWMS2(ServiceWMS):
         netcdf_file = None
         if permission_requested == 'getcapabilities':
             # https://colibri.crim.ca/twitcher/ows/proxy/ncWMS2/wms?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0&DATASET=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc
-            netcdf_file = self.parser.params['dataset']
+            if 'dataset' in self.parser.params.keys():
+                netcdf_file = self.parser.params['dataset']
             # replace output/ with birdhouse/
 
         elif permission_requested == 'getmap':
@@ -122,16 +123,17 @@ class ServiceNCWMS2(ServiceWMS):
         else:
             return [(Allow, EVERYONE, permission_requested,)]
 
-        verify_param('outputs/', paramCompare=netcdf_file, httpError=HTTPNotFound,msgOnFail='outputs/ is not in path', notIn=True)
-        netcdf_file = netcdf_file.replace('outputs/', 'birdhouse/')
+        if netcdf_file:
+            verify_param('outputs/', paramCompare=netcdf_file, httpError=HTTPNotFound,msgOnFail='outputs/ is not in path', notIn=True)
+            netcdf_file = netcdf_file.replace('outputs/', 'birdhouse/')
 
-        elems = netcdf_file.split('/')
-        db = self.request.db
-        new_child = self.service
-        while new_child and elems:
-            name = elems.pop(0)
-            new_child = find_children_by_name(name, parent_id=new_child.resource_id, db_session=db)
-            self.expand_acl(new_child, self.request.user)
+            elems = netcdf_file.split('/')
+            db = self.request.db
+            new_child = self.service
+            while new_child and elems:
+                name = elems.pop(0)
+                new_child = find_children_by_name(name, parent_id=new_child.resource_id, db_session=db)
+                self.expand_acl(new_child, self.request.user)
 
         return self.acl
 
