@@ -20,11 +20,11 @@ configure_mappers()
 
 def get_engine(settings, prefix='sqlalchemy.'):
    database_url = 'postgresql://' \
-                   + os.getenv('POSTGRES_USER') + \
-                   ':' + os.getenv('POSTGRES_PASSWORD') + \
-                   '@' + os.getenv('POSTGRES_HOST') + \
-                   ':' + os.getenv('POSTGRES_PORT') + \
-                   '/' + os.getenv('POSTGRES_DB')
+                   + os.getenv('POSTGRES_USER', 'postgres') + \
+                   ':' + os.getenv('POSTGRES_PASSWORD', 'postgres') + \
+                   '@' + os.getenv('POSTGRES_HOST', 'localhost') + \
+                   ':' + os.getenv('POSTGRES_PORT', '5432') + \
+                   '/' + os.getenv('POSTGRES_DB', 'magpiedb')
 
    settings[prefix+'url'] = database_url
    return engine_from_config(settings, prefix)

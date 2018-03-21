@@ -45,13 +45,17 @@ def init_admin(db_session):
                                  password=ADMIN_PASSWORD,
                                  db_session=db_session)
 
-        group = GroupService.by_group_name(ADMIN_GROUP, db_session=db_session)
-        new_group_permission = models.GroupPermission(perm_name=ADMIN_PERM, group_id=group.id)
+    # Check if ADMIN_GROUP has permission ADMIN_PERM
+    admin_group = GroupService.by_group_name(ADMIN_GROUP, db_session=db_session)
+    permission_names = [permission.perm_name for permission in admin_group.permissions]
+    if ADMIN_PERM not in permission_names:
+        new_group_permission = models.GroupPermission(perm_name=ADMIN_PERM, group_id=admin_group.id)
         try:
             db_session.add(new_group_permission)
         except Exception, e:
             db_session.rollback()
             raise e
+
 
 
 def init_user_group(db_session):
