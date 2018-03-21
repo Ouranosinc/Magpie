@@ -2,7 +2,7 @@ from magpie import *
 from models import resource_type_dict
 from services import service_type_dict
 from api_except import *
-from pyramid.interfaces import IAuthenticationPolicy
+from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy
 
 
 def get_service_or_resource_types(service_resource):
@@ -63,15 +63,7 @@ def get_userid_by_token(token, authn_policy):
 
 
 def get_user(request, user_name_or_token):
-    if len(user_name_or_token) > USER_NAME_MAX_LENGTH:
-        authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
-        user_id = get_userid_by_token(user_name_or_token, authn_policy)
-        user = evaluate_call(lambda: UserService.by_id(user_id, db_session=request.db),
-                             fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail="User id query refused by db")
-        verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User id not found in db")
-        return user
-    elif user_name_or_token == LOGGED_USER:
+    if user_name_or_token == LOGGED_USER:
         curr_user = request.user
         if curr_user:
             return curr_user
@@ -82,6 +74,12 @@ def get_user(request, user_name_or_token):
             verify_param(anonymous, notNone=True, httpError=HTTPNotFound, msgOnFail="Anonymous user not found in db")
             return anonymous
     else:
+        authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
+        principals = authn_policy.effective_principals(request)
+        admin_group = GroupService.by_group_name(ADMIN_GROUP, db_session=request.db)
+        admin_principal = 'group:{}'.format(admin_group.id)
+        if admin_principal not in principals:
+            raise HTTPForbidden()
         user = evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
                              fallback=lambda: request.db.rollback(),
                              httpError=HTTPForbidden, msgOnFail="User name query refused by db")

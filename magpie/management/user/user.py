@@ -98,7 +98,7 @@ def get_users(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get users successful", content={u'user_names': user_name_list})
 
 
-@view_config(route_name='user', request_method='GET')
+@view_config(route_name='user', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_view(request):
     user = get_user_matchdict_checked(request)
     json_response = {u'user_name': user.user_name,
@@ -129,7 +129,7 @@ def get_user_groups_checked(request, user):
     return group_names
 
 
-@view_config(route_name='user_groups', request_method='GET')
+@view_config(route_name='user_groups', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_groups(request):
     user = get_user_matchdict_checked(request)
     group_names = get_user_groups_checked(request, user)

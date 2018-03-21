@@ -183,7 +183,7 @@ def get_session(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get session successful", content=session_json)
 
 
-@view_config(route_name='providers', request_method='GET')
+@view_config(route_name='providers', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_providers(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get providers successful",
                       content={u'provider_names': providers,

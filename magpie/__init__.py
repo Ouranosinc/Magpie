@@ -42,8 +42,8 @@ USER_GROUP = os.getenv('USER_GROUP', 'user')
 
 ANONYMOUS_USER = os.getenv('ANONYMOUS_USER', 'anonymous')
 
-#ADMIN_PERM = 'edit'
-ADMIN_PERM = NO_PERMISSION_REQUIRED
+ADMIN_PERM = 'admin'
+#ADMIN_PERM = NO_PERMISSION_REQUIRED
 
 LOGGED_USER = 'current'
 

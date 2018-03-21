@@ -33,7 +33,7 @@ import models
 THIS_DIR = os.path.dirname(__file__)
 
 
-@view_config(route_name='version')
+@view_config(route_name='version', permission=NO_PERMISSION_REQUIRED)
 def get_version(request):
     return valid_http(httpSuccess=HTTPOk, content={u'version': __version__},
                       detail="Get version successful", contentType='application/json')

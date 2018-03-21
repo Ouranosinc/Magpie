@@ -2,7 +2,7 @@ import requests
 from pyramid.view import view_config
 from pyramid.httpexceptions import *
 from pyramid.response import Response
-from pyramid.security import forget, remember
+from pyramid.security import forget, remember, NO_PERMISSION_REQUIRED
 
 from ui.management import check_response
 from ui.home import add_template_data
@@ -23,7 +23,7 @@ class ManagementViews(object):
         check_response(resp)
         return resp.json()['external_providers']
 
-    @view_config(route_name='login', renderer='templates/login.mako')
+    @view_config(route_name='login', renderer='templates/login.mako', permission=NO_PERMISSION_REQUIRED)
     def login(self):
         try:
             if 'submit' in self.request.POST:
@@ -60,7 +60,7 @@ class ManagementViews(object):
 
         return add_template_data(self.request, {u'external_providers': self.get_external_providers()})
 
-    @view_config(route_name='logout', renderer='templates/login.mako')
+    @view_config(route_name='logout', renderer='templates/login.mako', permission=NO_PERMISSION_REQUIRED)
     def logout(self):
         # Flush cookies and return to home
         headers = forget(self.request)
