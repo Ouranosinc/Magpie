@@ -204,7 +204,7 @@ def get_user_service_resources_permissions_dict(user, service, db_session):
     return get_user_resources_permissions_dict(user, db_session, resource_types=None, resource_ids=resource_ids)
 
 
-@view_config(route_name='user_resources', request_method='GET')
+@view_config(route_name='user_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_resources_view(request):
     user = get_user_matchdict_checked(request)
     db = request.db
@@ -232,7 +232,7 @@ def get_user_resources_view(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get user resources successful", content={u'resources': usr_res_dict})
 
 
-@view_config(route_name='user_resource_permissions', request_method='GET')
+@view_config(route_name='user_resource_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_resource_permissions_view(request):
     user = get_user_matchdict_checked(request)
     res = get_resource_matchdict_checked(request, 'resource_id')
@@ -282,7 +282,7 @@ def delete_user_resource_permission_view(request):
     return delete_user_resource_permission(perm_name, res.resource_id, user.id, request.db)
 
 
-@view_config(route_name='user_services', request_method='GET')
+@view_config(route_name='user_services', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_services_view(request):
     user = get_user_matchdict_checked(request)
     res_perm_dict = get_user_resources_permissions_dict(user, resource_types=['service'], db_session=request.db)
@@ -297,7 +297,7 @@ def get_user_services_view(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get user services successful", content={u'services': svc_json})
 
 
-@view_config(route_name='user_service_permissions', request_method='GET')
+@view_config(route_name='user_service_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_permissions_view(request):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
@@ -325,7 +325,7 @@ def delete_user_service_permission(request):
     return delete_user_resource_permission(perm_name, service.resource_id, user.id, request.db)
 
 
-@view_config(route_name='user_service_resources', request_method='GET')
+@view_config(route_name='user_service_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_resources_view(request):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
