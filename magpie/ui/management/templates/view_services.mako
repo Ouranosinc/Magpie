@@ -54,6 +54,9 @@
     <img src="${request.static_url('ui.home:static/add.png')}">
     Add Service
 </button>
+%if service_push_show:
+<input type="submit" class="button warning" name="phoenix_push" value="Push to Phoenix" onclick="this.parentElement.style.display='none';" >
+%endif
 
 <div class="tabs_panel">
 
