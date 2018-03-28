@@ -53,6 +53,22 @@ input[type="submit"].button.delete:focus {
 	background-color: #EE6363;
 }
 
+input[type="button"].button.warning,
+input[type="submit"].button.warning {
+    border: 1px solid #8B3A3A;
+    background-color: #CD6600;
+    color: white;
+    vertical-align: center;
+    cursor:pointer;
+}
+
+input[type="button"].button.warning:hover,
+input[type="button"].button.warning:focus,
+input[type="submit"].button.warning:hover,
+input[type="submit"].button.warning:focus {
+	background-color: #FFAA33;
+}
+
 input[type="button"].button.cancel,
 input[type="submit"].button.cancel {
     border: 1px solid #808080;

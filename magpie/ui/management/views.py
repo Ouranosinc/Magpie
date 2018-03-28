@@ -405,6 +405,10 @@ class ManagementViews(object):
         svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
         service_names = services.keys()
 
+        if 'phoenix_push' in self.request.POST:
+            if cur_svc_type in register.SERVICES_PHOENIX_ALLOWED:
+                register.sync_services_phoenix(services)
+
         if 'edit' in self.request.POST:
             service_name = self.request.POST.get('service_name')
             return HTTPFound(self.request.route_url('edit_service',
