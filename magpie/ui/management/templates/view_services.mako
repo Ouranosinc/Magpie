@@ -55,7 +55,7 @@
     Add Service
 </button>
 %if service_push_show:
-<input type="submit" class="button warning" name="phoenix_push" value="Push to Phoenix" onclick="this.parentElement.style.display='none';" >
+<input type="submit" class="button warning" name="phoenix_push" value="Push to Phoenix">
 %endif
 
 <div class="tabs_panel">
