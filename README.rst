@@ -13,3 +13,9 @@ Magpie is service for AuthN/AuthZ accessible via a `RestAPI`_ implemented with t
 .. _RestAPI: https://swaggerhub.com/apis/fderue/magpie-rest_api
 .. _Authomatic: https://authomatic.github.io/authomatic/
 .. _Ziggurat-Foundations: https://github.com/ergo/ziggurat_foundations
+
+An administration interface is also provided:
+
+.. raw:: html
+
+    <img src="https://www.dropbox.com/s/pcyoxbo1hog3jzm/magpieDemo.gif?raw=1" width="1200px">
