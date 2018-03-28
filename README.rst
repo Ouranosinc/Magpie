@@ -18,4 +18,4 @@ An administration interface is also provided:
 
 .. raw:: html
 
-    <img src="https://www.dropbox.com/s/pcyoxbo1hog3jzm/magpieDemo.gif?raw=1" width="1200px">
+    <img src="https://www.dropbox.com/s/glhpg3amoblktyt/magpieDemo.gif?raw=1" width="1200px">
