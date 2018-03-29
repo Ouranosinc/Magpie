@@ -50,13 +50,16 @@
 
 <h1>Services</h1>
 
+
+%if service_push_show:
+<form>
+    <input type="submit" class="button warning" name="phoenix_push" value="Push to Phoenix">
+</form>
+%endif
 <button class="img_button" type="button" onclick="location.href='${request.route_url('add_service', cur_svc_type=cur_svc_type)}'">
     <img src="${request.static_url('ui.home:static/add.png')}">
     Add Service
 </button>
-%if service_push_show:
-<input type="submit" class="button warning" name="phoenix_push" value="Push to Phoenix">
-%endif
 
 <div class="tabs_panel">
 

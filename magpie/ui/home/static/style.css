@@ -24,6 +24,12 @@ a:focus, a:hover {
     text-decoration: underline;
 }
 
+input[type="submit"].img_button.disabled,
+input[type="submit"].img_button.disabled:hover,
+input[type="submit"].img_button.disabled:focus,
+input[type="button"].img_button.disabled,
+input[type="button"].img_button.disabled:hover,
+input[type="button"].img_button.disabled:focus,
 input[type="submit"].button.disabled,
 input[type="submit"].button.disabled:hover,
 input[type="submit"].button.disabled:focus,
@@ -37,6 +43,8 @@ input[type="button"].button.disabled:focus {
     cursor:not-allowed;
 }
 
+input[type="button"].img_button.delete,
+input[type="submit"].img_button.delete,
 input[type="button"].button.delete,
 input[type="submit"].button.delete {
     border: 1px solid #8B3A3A;
@@ -46,6 +54,10 @@ input[type="submit"].button.delete {
     cursor:pointer;
 }
 
+input[type="button"].img_button.delete:hover,
+input[type="button"].img_button.delete:focus,
+input[type="submit"].img_button.delete:hover,
+input[type="submit"].img_button.delete:focus,
 input[type="button"].button.delete:hover,
 input[type="button"].button.delete:focus,
 input[type="submit"].button.delete:hover,
@@ -53,6 +65,8 @@ input[type="submit"].button.delete:focus {
 	background-color: #EE6363;
 }
 
+input[type="button"].img_button.warning,
+input[type="submit"].img_button.warning,
 input[type="button"].button.warning,
 input[type="submit"].button.warning {
     border: 1px solid #8B3A3A;
@@ -62,6 +76,10 @@ input[type="submit"].button.warning {
     cursor:pointer;
 }
 
+input[type="button"].img_button.warning:hover,
+input[type="button"].img_button.warning:focus,
+input[type="submit"].img_button.warning:hover,
+input[type="submit"].img_button.warning:focus,
 input[type="button"].button.warning:hover,
 input[type="button"].button.warning:focus,
 input[type="submit"].button.warning:hover,
@@ -69,6 +87,8 @@ input[type="submit"].button.warning:focus {
 	background-color: #FFAA33;
 }
 
+input[type="button"].img_button.cancel,
+input[type="submit"].img_button.cancel,
 input[type="button"].button.cancel,
 input[type="submit"].button.cancel {
     border: 1px solid #808080;
