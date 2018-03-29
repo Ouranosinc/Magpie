@@ -52,7 +52,7 @@
 
 
 %if service_push_show:
-<form>
+<form action="${request.path}" method="post">
     <input type="submit" class="button warning" name="phoenix_push" value="Push to Phoenix">
 </form>
 %endif
