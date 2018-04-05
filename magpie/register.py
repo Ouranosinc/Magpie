@@ -228,11 +228,16 @@ def register_services(register_service_url, services_dict, cookies,
     return success, statuses
 
 
-def sync_services_phoenix(services_object_list):
+def sync_services_phoenix(services_object_list, services_as_dicts=False):
     services_dict = {}
     for svc in services_object_list:
-        services_dict[svc.resource_name] = {'url': svc.url, 'title': svc.resource_name,
-                                            'type': svc.type, 'c4i': False, 'public': True}
+        if services_as_dicts:
+            svc_dict = services_object_list[svc]
+            services_dict[svc] = {'url': svc_dict['public_url'], 'title': svc_dict['service_name'],
+                                  'type': svc_dict['service_type'], 'c4i': False, 'public': True}
+        else:
+            services_dict[svc.resource_name] = {'url': svc.url, 'title': svc.resource_name,
+                                                'type': svc.type, 'c4i': False, 'public': True}
     phoenix_remove_services()
     phoenix_register_services(services_dict)
 
