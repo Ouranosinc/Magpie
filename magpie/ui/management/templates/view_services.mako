@@ -52,9 +52,9 @@
 
 
 %if service_push_show:
-<form action="${request.path}" method="post">
-    <input type="submit" class="button warning" name="phoenix_push" value="Push to Phoenix">
-</form>
+    <form action="${request.path}" method="post">
+        <input type="submit" class="button warning" name="phoenix_push" value="Push to Phoenix">
+    </form>
 %endif
 <button class="img_button" type="button" onclick="location.href='${request.route_url('add_service', cur_svc_type=cur_svc_type)}'">
     <img src="${request.static_url('ui.home:static/add.png')}">
