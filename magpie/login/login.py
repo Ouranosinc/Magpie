@@ -3,7 +3,7 @@ import json
 from authomatic.adapters import WebObAdapter
 from pyramid.security import NO_PERMISSION_REQUIRED, Authenticated
 
-from pyramid.security import remember
+from pyramid.security import forget, remember
 from security import authomatic
 
 from api_requests import *
@@ -68,7 +68,8 @@ def sign_in(request):
 @view_config(route_name='signout', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def sign_out(request):
     return valid_http(httpSuccess=HTTPTemporaryRedirect, detail="Local sign out redirect",
-                      httpKWArgs={'location': request.route_url('ziggurat.routes.sign_out')})
+                      httpKWArgs={'location': request.route_url('ziggurat.routes.sign_out'),
+                                  'headers': forget(request)})
 
 
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
@@ -119,8 +120,8 @@ def login_failure(request, reason='not specified'):
 
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
 def sign_out_ziggu(request):
-    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful")
-
+    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful",
+                      httpKWArgs={'headers': forget(request)})
 
 @view_config(route_name='external_login', permission=NO_PERMISSION_REQUIRED)
 def authomatic_login(request):
