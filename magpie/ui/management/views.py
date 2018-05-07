@@ -405,9 +405,10 @@ class ManagementViews(object):
         svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
         service_names = services.keys()
 
+        success_sync = None
         if 'phoenix_push' in self.request.POST:
             if cur_svc_type in register.SERVICES_PHOENIX_ALLOWED:
-                register.sync_services_phoenix(services)
+                success_sync = register.sync_services_phoenix(services, services_as_dicts=True)
 
         if 'edit' in self.request.POST:
             service_name = self.request.POST.get('service_name')
@@ -419,7 +420,8 @@ class ManagementViews(object):
                                  {u'cur_svc_type': cur_svc_type,
                                   u'svc_types': svc_types,
                                   u'service_names': service_names,
-                                  u'service_push_show': cur_svc_type in register.SERVICES_PHOENIX_ALLOWED})
+                                  u'service_push_show': cur_svc_type in register.SERVICES_PHOENIX_ALLOWED,
+                                  u'service_push_success': success_sync})
 
     @view_config(route_name='add_service', renderer='templates/add_service.mako')
     def add_service(self):

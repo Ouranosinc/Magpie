@@ -96,13 +96,30 @@ def phoenix_login(cookies):
     login_url = phoenix_url + '/account/login/phoenix'
     login_data = {'password': phoenix_pwd, 'submit': 'submit'}
     login_loop(login_url, cookies, login_data, 'Phoenix login response')
+    return phoenix_login_check(cookies)
+
+
+def phoenix_login_check(cookies):
+    """
+    Since Phoenix always return 200, even on invalid login, 'hack' check unauthorized access.
+    :param cookies:
+    :return:
+    """
+    no_access_error = "<ExceptionText>Unauthorized: Services failed permission check</ExceptionText>"
+    svc_url = get_phoenix_url() + '/services'
+    curl_process = subprocess.Popen(['curl', '-s', '--cookie', cookies, svc_url], stdout=subprocess.PIPE)
+    curl_http_resp = curl_process.communicate()
+    has_access = no_access_error not in curl_http_resp[0]
+    return has_access
 
 
 def phoenix_remove_services():
     phoenix_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_phoenix')
-    error = True
+    error = 0
     try:
-        phoenix_login(phoenix_cookies)
+        if not phoenix_login(phoenix_cookies):
+            print_log("Login unsuccessful from post-login check, aborting...")
+            return False
         phoenix_url = get_phoenix_url()
         remove_services_url = phoenix_url + '/clear_services'
         error, http_code = request_curl(remove_services_url, cookies=phoenix_cookies, msg='Phoenix remove services')
@@ -111,7 +128,7 @@ def phoenix_remove_services():
     finally:
         if os.path.isfile(phoenix_cookies):
             os.remove(phoenix_cookies)
-    return not error
+    return error == 0
 
 
 def phoenix_register_services(services_dict, allowed_service_types=None):
@@ -121,7 +138,9 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
     try:
         allowed_service_types = SERVICES_PHOENIX_ALLOWED if allowed_service_types is None else allowed_service_types
         allowed_service_types = [svc.upper() for svc in allowed_service_types]
-        phoenix_login(phoenix_cookies)
+        if not phoenix_login(phoenix_cookies):
+            print_log("Login unsuccessful from post-login check, aborting...")
+            return False
 
         # Filter specific services to push
         filtered_services_dict = {}
@@ -228,18 +247,31 @@ def register_services(register_service_url, services_dict, cookies,
     return success, statuses
 
 
-def sync_services_phoenix(services_object_list, services_as_dicts=False):
+def sync_services_phoenix(services_object_dict, services_as_dicts=False):
+    """
+    Syncs Magpie services by pushing updates to Phoenix.
+    Services must be one of types specified in SERVICES_PHOENIX_ALLOWED.
+    :param services_object_dict: dictionary of {svc-name: models.Service} objects containing each service's information
+    :param services_as_dicts: alternatively specify `services_object_dict` as dict of {svc-name: {service-info}}
+    where {service-info} = {'public_url': <url>, 'service_name': <name>, 'service_type': <type>}
+    """
     services_dict = {}
-    for svc in services_object_list:
+    for svc in services_object_dict:
         if services_as_dicts:
-            svc_dict = services_object_list[svc]
+            svc_dict = services_object_dict[svc]
             services_dict[svc] = {'url': svc_dict['public_url'], 'title': svc_dict['service_name'],
                                   'type': svc_dict['service_type'], 'c4i': False, 'public': True}
         else:
             services_dict[svc.resource_name] = {'url': svc.url, 'title': svc.resource_name,
                                                 'type': svc.type, 'c4i': False, 'public': True}
-    phoenix_remove_services()
-    phoenix_register_services(services_dict)
+    if not phoenix_remove_services():
+        print_log("Could not remove services, aborting register sync services to Phoenix")
+        return False
+    if not phoenix_register_services(services_dict):
+        print_log("Failed services registration during Phoenix sync\n" +
+                  "[warning: services could have been removed but could not be re-added]")
+        return False
+    return True
 
 
 def magpie_add_register_services_perms(services, statuses, cookies, disable_get_capabilities):
@@ -359,8 +391,13 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
 
         # Push updated services to Phoenix
         if push_to_phoenix:
-            phoenix_remove_services()
-            phoenix_register_services(services_dict)
+            if not phoenix_remove_services():
+                print_log("Could not remove services, aborting register sync services to Phoenix")
+                return False
+            if not phoenix_register_services(services_dict):
+                print_log("Failed services registration from Magpie to Phoenix\n" +
+                          "[warning: services could have been removed but could not be re-added]")
+                return False
 
     except Exception as e:
         print_log("Exception during magpie register services: [" + repr(e) + "]")

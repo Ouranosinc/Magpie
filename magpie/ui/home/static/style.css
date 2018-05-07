@@ -276,6 +276,22 @@ tr:nth-child(even) {
     background-color: #4CAF50;
 }
 
+.alert.danger.visible {
+    display: block; /*override hidden default*/
+}
+
+.alert.warning.visible {
+    display: block; /*override hidden default*/
+}
+
+.alert.info.visible {
+    display: block; /*override hidden default*/
+}
+
+.alert.success.visible {
+    display: block; /*override hidden default*/
+}
+
 .alert_title {
     margin: 0;
 }
@@ -293,7 +309,7 @@ tr:nth-child(even) {
 }
 
 .alert_title.success {
-    color: #666600;
+    color: #FFFFFF;
 }
 
 .alert_button {

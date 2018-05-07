@@ -48,12 +48,56 @@
     </script>
 %endfor
 
+%if service_push_show:
+    <script>
+        function display_PushPhoenix() {
+            document.getElementById("ViewService_PushProcessingAlert").style.display = "block";
+            document.getElementById("ViewService_PushSuccessAlert").style.display = "none";
+            document.getElementById("ViewService_PushFailedAlert").style.display = "none";
+        }
+    </script>
+    <div class="alert info" id="ViewService_PushProcessingAlert">
+        <h3 class="alert_title info">Processing...</h3>
+        <p>
+            Syncing Phoenix services with Magpie services.
+            This operation could take some time...
+        </p>
+    </div>
+
+    %if service_push_success is not None:
+        %if service_push_success:
+           <div class="alert success visible" id="ViewService_PushSuccessAlert">
+                <h3 class="alert_title success">Push to Phoenix successful</h3>
+                <!-- <p>
+                    Success.
+                </p> -->
+            </div>
+        %else:
+            <div class="alert warning visible" id="ViewService_PushFailedAlert">
+                <h3 class="alert_title warning">Warning!</h3>
+                <p>
+                    Error occurred during Phoenix sync
+                </p>
+                <p> Common causes are:
+                    <ul>
+                    <li>Invalid login credentials</li>
+                    <li>Down service</li>
+                    <li>Error returned by GetCapabilities</li>
+                    </ul>
+                </p>
+            </div>
+        %endif
+    %endif
+%endif
+
 <h1>Services</h1>
 
 
 %if service_push_show:
-    <form action="${request.path}" method="post">
+    <form action="${request.path}" method="post" onsubmit="display_PushPhoenix()">
         <input type="submit" class="button warning" name="phoenix_push" value="Push to Phoenix">
+        <!-- <input type="button" class="button warning" onclick="displayPushPhoenix()" value="Push to Phoenix">
+        <input type="hidden" value="Submit">-->
     </form>
 %endif
 <button class="img_button" type="button" onclick="location.href='${request.route_url('add_service', cur_svc_type=cur_svc_type)}'">
