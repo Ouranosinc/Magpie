@@ -7,6 +7,14 @@ Magpie (the smart-bird)
 Magpie is service for AuthN/AuthZ accessible via a `RestAPI`_ implemented with the Pyramid web framework. It allows you to manage User/Group/Resource/permission with a postgres database. Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
 
+Build package
+=============
+
+    $ conda create -n magpie
+    $ source activate magpie
+    $ make install
+
+
 Installation
 ============
 
