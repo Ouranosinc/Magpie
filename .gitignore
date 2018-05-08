@@ -3,6 +3,13 @@
 build/
 dist/
 docs/_build/
+docs/magpie.esgf.rst
+docs/magpie.home.rst
+docs/magpie.local.rst
+docs/magpie.login.rst
+docs/magpie.management.rst
+docs/magpie.tests.rst
+docs/magpie.rst
 env/
 magpieenv/
 magpie/bin/
@@ -12,3 +19,4 @@ magpie/local/
 magpie/pip-selfcheck.json
 magpie/share/
 magpie.egg-info/
+share/
