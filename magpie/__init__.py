@@ -2,6 +2,10 @@
 
 import json
 import os
+import sys
+this_dir = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, this_dir)
+
 from api_except import *
 from api_except import *
 from models import *
