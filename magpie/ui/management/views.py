@@ -216,6 +216,36 @@ class ManagementViews(object):
         user_name = self.request.matchdict['user_name']
         own_groups = self.get_user_groups(user_name)
 
+        user_info = self.requests.get(self.magpie_url + '/users/{usr}'.format(usr=user_name),
+                                      cookies=self.request.cookies).json()
+        user_info[u'edit_mode'] = u'no_edit'
+        user_info[u'own_groups'] = own_groups
+        user_info[u'groups'] = self.get_groups()
+
+        if 'edit_password' in self.request.POST:
+            user_info['edit_mode'] = u'edit_password'
+        if 'edit_email' in self.request.POST:
+            user_info['edit_mode'] = u'edit_email'
+
+        if 'save_password' in self.request.POST:
+            user_info['user_password']
+            check_response(requests.put(self.magpie_url + '/users/' + user_name, data=user_info,
+                                        cookies=self.request.cookies))
+
+        user_info.pop('user_password', None)
+
+            new_user_password = self.request.POST.get('new_svc_name')
+            if service_name != new_svc_name and new_svc_name != "":
+                self.update_service_name(service_name, new_svc_name, service_push)
+                service_info['service_name'] = new_svc_name
+                service_info['public_url'] = register.get_twitcher_protected_service_url(new_svc_name),
+            user_info['edit_mode'] = u'no_edit'
+            # return directly to 'regenerate' the URL with the modified name
+            return HTTPFound(self.request.route_url('edit_service', **service_info))
+
+        if 'save_email' in self.request.POST:
+
+
         if self.request.method == 'POST':
             groups = self.request.POST.getall('member')
 

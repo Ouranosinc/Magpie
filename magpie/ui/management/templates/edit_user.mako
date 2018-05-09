@@ -11,7 +11,7 @@
 <h3>User Information</h3>
 
 
-<div class="panel_box">
+<form class="panel_box">
     <form id="edit_info" action="${request.path}" method="post">
         <div class="panel_heading">
             <span class="panel_title">User: </span>
@@ -19,7 +19,7 @@
             <span class="panel_heading_button">
                 <input type="submit" value="Delete" name="delete" class="button delete">
             </span>
-        </
+        </div>
         <div class="panel_body">
             <div class="panel_box">
                 <div class="panel_heading">
@@ -27,48 +27,41 @@
                 </div>
                 <div>
                     <p class="panel_line">
-                        <span class="panel_entry">Name: </span>
-                        %if edit_mode == 'edit_name':
-                            <input type="text" value="${service_name}" name="new_svc_name"
-                                   id="input_name" onkeyup="adjustWidth('input_name')">
-                            <input type="submit" value="Save" name="save_name">
+                        <span class="panel_entry">Username: </span>
+                        <a href="${user_name}" class="panel_value">${user_name}</a>
+                    </p>
+                    <p class="panel_line">
+                        <span class="panel_entry">Password: </span>
+                        %if edit_mode == 'edit_password':
+                            <input type="text" value="" name="new_user_password"
+                                   id="input_password" onkeyup="adjustWidth('input_name')">
+                            <input type="submit" value="Save" name="save_password">
                             <input type="submit" value="Cancel" name="no_edit">
                         %else:
-                            <span class="panel_value">${service_name}</span>
-                            <input type="submit" value="Edit" name="edit_name">
+                            <span class="panel_value">***</span>
+                            <input type="submit" value="Edit" name="edit_password">
                         %endif
                     </p>
                     <p class="panel_line">
-                        <span class="panel_entry">Protected URL: </span>
-                        %if edit_mode == 'edit_url':
-                            <input type="text" value="${service_url}" name="new_svc_url"
-                                   id="input_url" onkeyup="adjustWidth('input_url')">
-                            <input type="submit" value="Save" name="save_url">
+                        <span class="panel_entry">Email: </span>
+                        %if edit_mode == 'edit_email':
+                            <input type="text" value="${user_email}" name="new_user_email"
+                                   id="input_email" onkeyup="adjustWidth('input_url')">
+                            <input type="submit" value="Save" name="save_email">
                             <input type="submit" value="Cancel" name="no_edit">
                         %else:
-                            <a href="${service_url}" class="panel_value">${service_url}</a>
-                            <input type="submit" value="Edit" name="edit_url">
+                            <a href="${user_email}" class="panel_value">${user_email}</a>
+                            <input type="submit" value="Edit" name="edit_email">
                         %endif
                     </p>
-                    <p class="panel_line">
-                        <span class="panel_entry">Public URL: </span>
-                        <a href="${public_url}" class="panel_value">${public_url}</a>
-                    </p>
-                    <p class="panel_line">
-                        <span class="panel_entry">Type: </span>
-                        <span class="label info">${cur_svc_type}</span>
-                    </p>
-                    <p class="panel_line">
-                        <span class="panel_entry">Permissions: </span>
-                        <span class="panel_value">${service_perm}</span>
-                    </p>
-                    <p class="panel_line">
-                        <span class="panel_entry">ID: </span>
-                        <span class="panel_value">${service_id}</span>
-                    </p>
+                </div>
+            </div>
+        </div>
+    </form>
+</form>
 
 
-<h3>User Groups</h3>
+<h3>User Groups Membership</h3>
 
 <form id="edit_membership" action="${request.path}" method="post">
 <table>

@@ -83,11 +83,17 @@ def update_user_view(request):
     new_user_name = get_multiformat_post(request, 'user_name')
     new_email = get_multiformat_post(request, 'email')
     new_password = get_multiformat_post(request, 'password')
-    new_group_name = get_multiformat_post(request, 'group_name')
-    check_user_info(new_user_name, new_email, new_password, new_group_name)
+    check_user_info(new_user_name, new_email, new_password, group_name=new_user_name)
 
-    user.set_password(new_password)
-    user.regenerate_security_code()
+    if user.user_name != new_user_name:
+        user.user_name = new_user_name
+        old_user_group = models.GroupService.by_group_name(user.user_name, db_session=request.db)
+        old_user_group.group_name = new_user_name
+    if user.email != new_email:
+        user.email = new_email
+    if user.user_password != new_password:
+        user.set_password(new_password)
+        user.regenerate_security_code()
 
     return valid_http(httpSuccess=HTTPCreated, detail="Updated user information in db successful")
 
