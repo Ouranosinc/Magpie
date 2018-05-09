@@ -3,7 +3,17 @@
 History
 =======
 
-0.3.0
+0.4.x
+---------------------
+
+`Magpie REST API 0.4.x documentation`_
+
+* default admin permissions
+* block UI view permissions of all pages if not logged in
+* signout clear header to forget user
+* push to Phoenix adjustments and new push button option
+
+0.3.x
 ---------------------
 
 `Magpie REST API 0.3.x documentation`_
@@ -49,8 +59,10 @@ History
 .. _magpie_api_0.2.0: https://app.swaggerhub.com/apis/fderue/magpie-rest_api/0.2.0
 .. _magpie_api_0.2.x: https://app.swaggerhub.com/apis/fderue/magpie-rest_api/0.2.x
 .. _magpie_api_0.3.x: https://app.swaggerhub.com/apis/fderue/magpie-rest_api/0.3.x
+.. _magpie_api_0.4.x: https://app.swaggerhub.com/apis/fderue/magpie-rest_api/0.4.x
 .. _Magpie REST API 0.1.0 documentation: magpie_api_0.1.0_
 .. _Magpie REST API 0.1.1 documentation: magpie_api_0.1.1_
 .. _Magpie REST API 0.2.0 documentation: magpie_api_0.2.0_
 .. _Magpie REST API 0.2.x documentation: magpie_api_0.2.x_
 .. _Magpie REST API 0.3.x documentation: magpie_api_0.3.x_
+.. _Magpie REST API 0.4.x documentation: magpie_api_0.4.x_
