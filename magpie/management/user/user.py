@@ -83,15 +83,16 @@ def update_user_view(request):
     new_user_name = get_multiformat_post(request, 'user_name')
     new_email = get_multiformat_post(request, 'email')
     new_password = get_multiformat_post(request, 'password')
+    new_password = user.user_password if new_password is None else new_password
     check_user_info(new_user_name, new_email, new_password, group_name=new_user_name)
 
     if user.user_name != new_user_name:
-        user.user_name = new_user_name
-        old_user_group = models.GroupService.by_group_name(user.user_name, db_session=request.db)
+        old_user_group = models.Group.by_group_name(user.user_name, db_session=request.db)
         old_user_group.group_name = new_user_name
+        user.user_name = new_user_name  # edit last to preserve route with user_name required by previous GET
     if user.email != new_email:
         user.email = new_email
-    if user.user_password != new_password:
+    if user.user_password != new_password and new_password is not None:
         user.set_password(new_password)
         user.regenerate_security_code()
 

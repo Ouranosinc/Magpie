@@ -11,7 +11,7 @@
 <h3>User Information</h3>
 
 
-<form class="panel_box">
+<div class="panel_box">
     <form id="edit_info" action="${request.path}" method="post">
         <div class="panel_heading">
             <span class="panel_title">User: </span>
@@ -28,7 +28,15 @@
                 <div>
                     <p class="panel_line">
                         <span class="panel_entry">Username: </span>
-                        <a href="${user_name}" class="panel_value">${user_name}</a>
+                        %if edit_mode == 'edit_username':
+                            <input type="text" value="${user_name}" name="new_user_name"
+                                   id="input_username" onkeyup="adjustWidth('input_name')">
+                            <input type="submit" value="Save" name="save_username">
+                            <input type="submit" value="Cancel" name="no_edit">
+                        %else:
+                            <span class="panel_value">${user_name}</span>
+                            <input type="submit" value="Edit" name="edit_username">
+                        %endif
                     </p>
                     <p class="panel_line">
                         <span class="panel_entry">Password: </span>
@@ -45,12 +53,12 @@
                     <p class="panel_line">
                         <span class="panel_entry">Email: </span>
                         %if edit_mode == 'edit_email':
-                            <input type="text" value="${user_email}" name="new_user_email"
+                            <input type="text" value="${email}" name="new_user_email"
                                    id="input_email" onkeyup="adjustWidth('input_url')">
                             <input type="submit" value="Save" name="save_email">
                             <input type="submit" value="Cancel" name="no_edit">
                         %else:
-                            <a href="${user_email}" class="panel_value">${user_email}</a>
+                            <span class="panel_value">${email}</span>
                             <input type="submit" value="Edit" name="edit_email">
                         %endif
                     </p>
@@ -58,7 +66,7 @@
             </div>
         </div>
     </form>
-</form>
+</div>
 
 
 <h3>User Groups Membership</h3>

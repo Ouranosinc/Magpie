@@ -214,48 +214,71 @@ class ManagementViews(object):
     @view_config(route_name='edit_user', renderer='templates/edit_user.mako')
     def edit_user(self):
         user_name = self.request.matchdict['user_name']
+        user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
+        groups = self.get_groups()
 
-        user_info = self.request.get('{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name),
-                                     cookies=self.request.cookies).json()
+        user_resp = requests.get(user_url, cookies=self.request.cookies)
+        check_response(user_resp)
+        user_info = user_resp.json()
         user_info[u'edit_mode'] = u'no_edit'
         user_info[u'own_groups'] = own_groups
-        user_info[u'groups'] = self.get_groups()
+        user_info[u'groups'] = groups
 
+        # requests for edits are 'GET', update of form value submits are 'POST'
         if self.request.method == 'POST':
+            if u'delete' in self.request.POST:
+                check_response(requests.delete(user_url, cookies=self.request.cookies))
+                return HTTPFound(self.request.route_url('view_users'))
+
+            is_edit_user_info = False
+            if u'edit_username' in self.request.POST:
+                user_info[u'edit_mode'] = u'edit_username'
+                is_edit_user_info = True
             if u'edit_password' in self.request.POST:
                 user_info[u'edit_mode'] = u'edit_password'
+                is_edit_user_info = True
             if u'edit_email' in self.request.POST:
                 user_info[u'edit_mode'] = u'edit_email'
+                is_edit_user_info = True
 
-            isEdit = False
+            is_save_user_info = False
+            requires_update_name = False
+            if u'save_username' in self.request.POST:
+                user_info[u'user_name'] = self.request.POST.get(u'new_user_name')
+                is_save_user_info = True
+                requires_update_name = True
             if u'save_password' in self.request.POST:
-                user_info[u'user_password'] = self.request.POST.get('new_user_password')
-                isEdit = True
+                user_info[u'password'] = self.request.POST.get(u'new_user_password')
+                is_save_user_info = True
             if u'save_email' in self.request.POST:
-                user_info[u'user_email'] = self.request.POST.get('new_user_email')
-                isEdit = True
-            if isEdit:
-                check_response(requests.put('{url/users/{name}'.format(url=self.magpie_url, name=user_name),
-                                            data=user_info, cookies=self.request.cookies))
+                user_info[u'email'] = self.request.POST.get(u'new_user_email')
+                is_save_user_info = True
+            if is_save_user_info:
+                check_response(requests.put(user_url, data=user_info, cookies=self.request.cookies))
+
             # always remove password from output
-            user_info.pop('user_password', None)
-            if isEdit:
-                user_info[u'edit_mode'] = u'no_edit'
-                # return directly to 'regenerate' the URL with the modified name
+            user_info.pop(u'password', None)
+
+            if requires_update_name:
+                # re-fetch user groups as current user-group will have changed on new user_name
+                user_info[u'groups'] = self.get_groups()
+                user_info[u'own_groups'] = self.get_user_groups(user_info[u'user_name'])
+                # return immediately with updated URL to user with new name
                 return HTTPFound(self.request.route_url('edit_user', **user_info))
 
             # edits to groups checkboxes
-            groups = self.request.POST.getall('member')
-            removed_groups = list(set(own_groups) - set(groups))
-            new_groups = list(set(groups) - set(own_groups))
-            url_group = '{url}/users/{usr}/groups/{grp}'.format(url=self.magpie_url, usr=user_name, grp='{grp}')
-            for group in removed_groups:
-                check_response(requests.delete(url_group.format(grp=group), cookies=self.request.cookies))
-            for group in new_groups:
-                check_response(requests.post(url_group.format(grp=group), cookies=self.request.cookies))
-            user_info[u'groups'] = self.get_groups()
-            user_info[u'own_groups'] = self.get_user_groups(user_name)
+            if not is_edit_user_info and not is_save_user_info:
+                groups = self.request.POST.getall('member')
+                removed_groups = list(set(own_groups) - set(groups))
+                new_groups = list(set(groups) - set(own_groups))
+                url_group = '{url}/users/{usr}/groups/{grp}'.format(url=self.magpie_url, usr=user_name, grp='{grp}')
+                for group in removed_groups:
+                    check_response(requests.delete(url_group.format(grp=group), cookies=self.request.cookies))
+                for group in new_groups:
+                    check_response(requests.post(url_group.format(grp=group), cookies=self.request.cookies))
+                user_info[u'groups'] = self.get_groups()
+                user_info[u'own_groups'] = self.get_user_groups(user_name)
 
         return add_template_data(self.request, data=user_info)
 
