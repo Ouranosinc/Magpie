@@ -28,7 +28,7 @@ def sign_in_external(request):
     provider_name = get_value_multiformat_post_checked(request, 'provider_name')
     user_name = get_value_multiformat_post_checked(request, 'user_name')
     verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `provider_name` not found within available providers",
+                 msgOnFail="Invalid: `provider_name` not found within available providers.",
                  content={u'provider_name': str(provider_name), u'providers': providers})
     if provider_name == 'openid':
         query_field = dict(id=user_name)
@@ -67,7 +67,7 @@ def sign_in_external(request):
 
 @view_config(route_name='signout', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def sign_out(request):
-    return valid_http(httpSuccess=HTTPTemporaryRedirect, detail="Local sign out redirect",
+    return valid_http(httpSuccess=HTTPTemporaryRedirect, detail="Local sign out redirect.",
                       httpKWArgs={'location': request.route_url('ziggurat.routes.sign_out'),
                                   'headers': forget(request)})
 
@@ -118,24 +118,24 @@ def login_failure(request, reason=None):
     httpError = HTTPUnauthorized
     if reason is None:
         httpError = HTTPNotAcceptable
-        reason = 'undefined `user_name`'
+        reason = 'Undefined `user_name`.'
         user_name = request.POST.get('user_name')
         if user_name is None:
             httpError = HTTPBadRequest
-            reason = 'could not retrieve `user_name`'
+            reason = 'Could not retrieve `user_name`.'
         else:
             user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
                                            fallback=lambda: request.db.rollback(),
-                                           httpError=HTTPForbidden, msgOnFail="Get users query refused by db")
+                                           httpError=HTTPForbidden, msgOnFail="Get users query refused by db.")
             if user_name in user_name_list:
                 httpError = HTTPUnauthorized
-                reason = 'incorrect password'
+                reason = 'Incorrect password.'
     raise_http(httpError=httpError, detail="Login failure", content={u'reason': str(reason)})
 
 
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
 def sign_out_ziggu(request):
-    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful",
+    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful.",
                       httpKWArgs={'headers': forget(request)})
 
 
