@@ -10,6 +10,7 @@ Magpie is service for AuthN/AuthZ accessible via a `RestAPI`_ implemented with t
 Build package
 =============
 
+.. code-block:: shell
     $ conda create -n magpie
     $ source activate magpie
     $ make install
