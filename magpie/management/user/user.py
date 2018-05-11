@@ -73,6 +73,33 @@ def create_user_view(request):
     email = get_multiformat_post(request, 'email')
     password = get_multiformat_post(request, 'password')
     group_name = get_multiformat_post(request, 'group_name')
+    check_user_info(user_name, email, password, group_name)
+    return create_user(user_name, password, email, group_name, db_session=request.db)
+
+
+@view_config(route_name='user', request_method='PUT')
+def update_user_view(request):
+    user = get_user_matchdict_checked(request, user_name_key='user_name')
+    new_user_name = get_multiformat_post(request, 'user_name')
+    new_email = get_multiformat_post(request, 'email')
+    new_password = get_multiformat_post(request, 'password')
+    new_password = user.user_password if new_password is None else new_password
+    check_user_info(new_user_name, new_email, new_password, group_name=new_user_name)
+
+    if user.user_name != new_user_name:
+        old_user_group = models.Group.by_group_name(user.user_name, db_session=request.db)
+        old_user_group.group_name = new_user_name
+        user.user_name = new_user_name  # edit last to preserve route with user_name required by previous GET
+    if user.email != new_email:
+        user.email = new_email
+    if user.user_password != new_password and new_password is not None:
+        user.set_password(new_password)
+        user.regenerate_security_code()
+
+    return valid_http(httpSuccess=HTTPCreated, detail="Updated user information in db successful")
+
+
+def check_user_info(user_name, email, password, group_name):
     verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `user_name` value specified")
     verify_param(len(user_name), isIn=True, httpError=HTTPNotAcceptable,
@@ -87,7 +114,6 @@ def create_user_view(request):
                  msgOnFail="Invalid `group_name` value specified")
     verify_param(user_name, paramCompare=[LOGGED_USER], notIn=True, httpError=HTTPConflict,
                  msgOnFail="Invalid `user_name` already logged in")
-    return create_user(user_name, password, email, group_name, db_session=request.db)
 
 
 @view_config(route_name='users', request_method='GET')

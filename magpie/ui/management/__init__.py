@@ -11,7 +11,6 @@ def check_response(response):
 
 
 def includeme(config):
-
     logger.info('Adding management ...')
     config.add_route('view_groups', '/ui/groups')
     config.add_route('add_group', '/ui/groups/add')

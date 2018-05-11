@@ -214,26 +214,73 @@ class ManagementViews(object):
     @view_config(route_name='edit_user', renderer='templates/edit_user.mako')
     def edit_user(self):
         user_name = self.request.matchdict['user_name']
+        user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
+        groups = self.get_groups()
 
+        user_resp = requests.get(user_url, cookies=self.request.cookies)
+        check_response(user_resp)
+        user_info = user_resp.json()
+        user_info[u'edit_mode'] = u'no_edit'
+        user_info[u'own_groups'] = own_groups
+        user_info[u'groups'] = groups
+
+        # requests for edits are 'GET', update of form value submits are 'POST'
         if self.request.method == 'POST':
-            groups = self.request.POST.getall('member')
+            if u'delete' in self.request.POST:
+                check_response(requests.delete(user_url, cookies=self.request.cookies))
+                return HTTPFound(self.request.route_url('view_users'))
 
-            removed_groups = list(set(own_groups) - set(groups))
-            new_groups = list(set(groups) - set(own_groups))
+            is_edit_user_info = False
+            if u'edit_username' in self.request.POST:
+                user_info[u'edit_mode'] = u'edit_username'
+                is_edit_user_info = True
+            if u'edit_password' in self.request.POST:
+                user_info[u'edit_mode'] = u'edit_password'
+                is_edit_user_info = True
+            if u'edit_email' in self.request.POST:
+                user_info[u'edit_mode'] = u'edit_email'
+                is_edit_user_info = True
 
-            for group in removed_groups:
-                check_response(requests.delete(self.magpie_url + '/users/' + user_name + '/groups/' + group, cookies=self.request.cookies))
+            is_save_user_info = False
+            requires_update_name = False
+            if u'save_username' in self.request.POST:
+                user_info[u'user_name'] = self.request.POST.get(u'new_user_name')
+                is_save_user_info = True
+                requires_update_name = True
+            if u'save_password' in self.request.POST:
+                user_info[u'password'] = self.request.POST.get(u'new_user_password')
+                is_save_user_info = True
+            if u'save_email' in self.request.POST:
+                user_info[u'email'] = self.request.POST.get(u'new_user_email')
+                is_save_user_info = True
+            if is_save_user_info:
+                check_response(requests.put(user_url, data=user_info, cookies=self.request.cookies))
 
-            for group in new_groups:
-                check_response(requests.post(self.magpie_url+'/users/' + user_name + '/groups/' + group, cookies=self.request.cookies))
+            # always remove password from output
+            user_info.pop(u'password', None)
 
-            own_groups = self.get_user_groups(user_name)
+            if requires_update_name:
+                # re-fetch user groups as current user-group will have changed on new user_name
+                user_info[u'groups'] = self.get_groups()
+                user_info[u'own_groups'] = self.get_user_groups(user_info[u'user_name'])
+                # return immediately with updated URL to user with new name
+                return HTTPFound(self.request.route_url('edit_user', **user_info))
 
-        return add_template_data(self.request,
-                                 {u'user_name': user_name,
-                                  u'own_groups': own_groups,
-                                  u'groups': self.get_groups()})
+            # edits to groups checkboxes
+            if not is_edit_user_info and not is_save_user_info:
+                groups = self.request.POST.getall('member')
+                removed_groups = list(set(own_groups) - set(groups))
+                new_groups = list(set(groups) - set(own_groups))
+                url_group = '{url}/users/{usr}/groups/{grp}'.format(url=self.magpie_url, usr=user_name, grp='{grp}')
+                for group in removed_groups:
+                    check_response(requests.delete(url_group.format(grp=group), cookies=self.request.cookies))
+                for group in new_groups:
+                    check_response(requests.post(url_group.format(grp=group), cookies=self.request.cookies))
+                user_info[u'groups'] = self.get_groups()
+                user_info[u'own_groups'] = self.get_user_groups(user_name)
+
+        return add_template_data(self.request, data=user_info)
 
     @view_config(route_name='view_groups', renderer='templates/view_groups.mako')
     def view_groups(self):
@@ -306,10 +353,12 @@ class ManagementViews(object):
 
             if 'goto_service' in self.request.POST:
                 try:
-                    res_json = requests.get('{url}/resources/{id}'.format(url=self.magpie_url, id=res_id), cookies=self.request.cookies).json()
+                    res_json = requests.get('{url}/resources/{id}'.format(url=self.magpie_url, id=res_id),
+                                            cookies=self.request.cookies).json()
                     svc_name = res_json[res_id]['resource_name']
                     # get service type instead of 'cur_svc_type' in case of 'default' ('cur_svc_type' not set yet)
-                    res_json = requests.get('{url}/services/{svc}'.format(url=self.magpie_url, svc=svc_name), cookies=self.request.cookies).json()
+                    res_json = requests.get('{url}/services/{svc}'.format(url=self.magpie_url, svc=svc_name),
+                                            cookies=self.request.cookies).json()
                     svc_type = res_json[svc_name]['service_type']
                     return HTTPFound(self.request.route_url('edit_service',
                                                             service_name=svc_name,
@@ -318,8 +367,9 @@ class ManagementViews(object):
                     raise HTTPBadRequest(detail=repr(e))
             elif 'resource_id' in self.request.POST:
                 try:
-                    res_perms = requests.get(self.magpie_url + '/groups/' + group_name +
-                                             '/resources/{resource_id}/permissions'.format(resource_id=res_id), cookies=self.request.cookies)
+                    res_perms = requests.get('{url}/groups/{grp}/resources/{res_id}/permissions' \
+                                             .format(url=self.magpie_url, grp=group_name, res_id=res_id),
+                                             cookies=self.request.cookies)
                     perms = res_perms.json()['permission_names']
                 except Exception as e:
                     raise HTTPBadRequest(detail=repr(e))
@@ -329,13 +379,12 @@ class ManagementViews(object):
                 removed_perms = list(set(perms) - set(new_perms_set))
                 new_perms = list(set(new_perms_set) - set(perms))
 
-                url = '{host}/groups/{group}/resources/{res_id}/permissions'.format(
-                    host=self.magpie_url,
-                    group=group_name,
-                    res_id=res_id)
+                url = '{host}/groups/{group}/resources/{res_id}/permissions' \
+                      .format( host=self.magpie_url, group=group_name, res_id=res_id)
 
                 for perm in removed_perms:
-                    check_response(requests.delete(url + '/' + perm, cookies=self.request.cookies))
+                    check_response(requests.delete('{url}/{perm}'.format(url=url, perm=perm),
+                                                   cookies=self.request.cookies))
 
                 for perm in new_perms:
                     data = {u'permission_name': perm}
@@ -348,11 +397,11 @@ class ManagementViews(object):
                 removed_members = list(set(members) - set(new_members_set))
                 new_members = list(set(new_members_set) - set(members))
 
+                url_base = '{url}/users/{usr}/groups/{grp}'.format(url=self.magpie_url, usr='{usr}', grp=group_name)
                 for user in removed_members:
-                    check_response(requests.delete(self.magpie_url + '/users/' + user + '/groups/' + group_name, cookies=self.request.cookies))
-
+                    check_response(requests.delete(url_base.format(usr=user), cookies=self.request.cookies))
                 for user in new_members:
-                    check_response(requests.post(self.magpie_url+'/users/' + user + '/groups/' + group_name, cookies=self.request.cookies))
+                    check_response(requests.post(url_base.format(usr=user), cookies=self.request.cookies))
 
                 members = self.get_group_users(group_name)
 
@@ -364,10 +413,14 @@ class ManagementViews(object):
                 if not service:
                     continue
 
-                res_svc = check_response(requests.get(self.magpie_url + '/services/' + service + '/permissions', cookies=self.request.cookies))
+                res_svc = check_response(requests.get('{url}/services/{svc}/permissions' \
+                                                      .format(url=self.magpie_url, svc=service),
+                                                      cookies=self.request.cookies))
                 perms.update(set(res_svc.json()['permission_names']))
 
-                res_group_perms = check_response(requests.get(self.magpie_url + '/groups/' + group_name + '/resources', cookies=self.request.cookies))
+                res_group_perms = check_response(requests.get('{url}/groups/{grp}/resources' \
+                                                              .format(url=self.magpie_url, grp=group_name),
+                                                              cookies=self.request.cookies))
                 permission = {}
                 try:
                     raw_perms = res_group_perms.json()['resources'][cur_svc_type][service]
@@ -376,7 +429,9 @@ class ManagementViews(object):
                 except KeyError:
                     pass
 
-                res_resources = check_response(requests.get(self.magpie_url + '/services/' + service + '/resources', cookies=self.request.cookies))
+                res_resources = check_response(requests.get('{url}/services/{svc}/resources' \
+                                                            .format(url=self.magpie_url, svc=service),
+                                                            cookies=self.request.cookies))
                 raw_resources = res_resources.json()[service]
                 resources[service] = dict(id=raw_resources['resource_id'],
                                           permission_names=self.default_get(permission, raw_resources['resource_id'], []),
@@ -492,12 +547,14 @@ class ManagementViews(object):
 
         if 'delete' in self.request.POST:
             service_data = json.dumps({u'service_push': service_push})
-            check_response(requests.delete(self.magpie_url + '/services/' + service_name, data=service_data, cookies=self.request.cookies))
+            check_response(requests.delete('{url}/services/{svc}'.format(url=self.magpie_url, svc=service_name),
+                                           data=service_data, cookies=self.request.cookies))
             return HTTPFound(self.request.route_url('view_services', **service_info))
 
         if 'delete_child' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
-            check_response(requests.delete(self.magpie_url + '/resources/' + resource_id, cookies=self.request.cookies))
+            check_response(requests.delete('{url}/services/{res_id}'.format(url=self.magpie_url, res_id=resource_id),
+                                           cookies=self.request.cookies))
 
         if 'add_child' in self.request.POST:
             service_info['resource_id'] = self.request.POST.get('resource_id')
@@ -505,14 +562,14 @@ class ManagementViews(object):
 
         try:
             resources = {}
-            url_resources = '{0}/services/{1}/resources'.format(self.magpie_url, service_name)
+            url_resources = '{url}/services/{svc}/resources'.format(url=self.magpie_url, svc=service_name)
             res_resources = check_response(requests.get(url_resources, cookies=self.request.cookies))
             raw_resources = res_resources.json()[service_name]
             resources[service_name] = dict(
                 id=raw_resources['resource_id'],
                 permission_names=[],
                 children=self.res_tree_parser(raw_resources['resources'], {}))
-            url_resources_types = '{0}/services/types/{1}/resources/types'.format(self.magpie_url, cur_svc_type)
+            url_resources_types = '{url}/services/types/{type}/resources/types'.format(url=self.magpie_url, type=cur_svc_type)
             res_resources_types = check_response(requests.get(url_resources_types, cookies=self.request.cookies))
             raw_resources_types = res_resources_types.json()['resource_types']
             raw_resources_id_type = self.get_resource_types()
@@ -539,13 +596,15 @@ class ManagementViews(object):
                     u'resource_type': resource_type,
                     u'parent_id': resource_id}
 
-            check_response(requests.post(self.magpie_url + '/resources', data=data, cookies=self.request.cookies))
+            check_response(requests.post('{url}/resources'.format(url=self.magpie_url),
+                                         data=data, cookies=self.request.cookies))
 
             return HTTPFound(self.request.route_url('edit_service', service_name=service_name,
                                                     cur_svc_type=cur_svc_type))
 
-        cur_svc_res = check_response(requests.get(self.magpie_url + '/services/types/' +
-                                                  cur_svc_type + '/resources/types', cookies=self.request.cookies))
+        cur_svc_res = check_response(requests.get('{url}/services/types/{type}/resources/types' \
+                                                  .format(url=self.magpie_url, type=cur_svc_type),
+                                                  cookies=self.request.cookies))
         raw_svc_res = cur_svc_res.json()['resource_types']
 
         return add_template_data(self.request,

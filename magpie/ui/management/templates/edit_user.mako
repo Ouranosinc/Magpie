@@ -6,9 +6,70 @@
 <li><a href="${request.route_url('edit_user', user_name=user_name)}">User ${user_name}</a></li>
 </%block>
 
-<h1>User ${user_name}</h1>
+<h1>Edit User: ${user_name}</h1>
 
-<h3>Member of</h3>
+<h3>User Information</h3>
+
+
+<div class="panel_box">
+    <form id="edit_info" action="${request.path}" method="post">
+        <div class="panel_heading">
+            <span class="panel_title">User: </span>
+            <span class="panel_value">${user_name}</span>
+            <span class="panel_heading_button">
+                <input type="submit" value="Delete" name="delete" class="button delete">
+            </span>
+        </div>
+        <div class="panel_body">
+            <div class="panel_box">
+                <div class="panel_heading">
+                    <div class="panel_title">Details</div>
+                </div>
+                <div>
+                    <p class="panel_line">
+                        <span class="panel_entry">Username: </span>
+                        %if edit_mode == 'edit_username':
+                            <input type="text" value="${user_name}" name="new_user_name"
+                                   id="input_username" onkeyup="adjustWidth('input_name')">
+                            <input type="submit" value="Save" name="save_username">
+                            <input type="submit" value="Cancel" name="no_edit">
+                        %else:
+                            <span class="panel_value">${user_name}</span>
+                            <input type="submit" value="Edit" name="edit_username">
+                        %endif
+                    </p>
+                    <p class="panel_line">
+                        <span class="panel_entry">Password: </span>
+                        %if edit_mode == 'edit_password':
+                            <input type="text" value="" name="new_user_password"
+                                   id="input_password" onkeyup="adjustWidth('input_name')">
+                            <input type="submit" value="Save" name="save_password">
+                            <input type="submit" value="Cancel" name="no_edit">
+                        %else:
+                            <span class="panel_value">***</span>
+                            <input type="submit" value="Edit" name="edit_password">
+                        %endif
+                    </p>
+                    <p class="panel_line">
+                        <span class="panel_entry">Email: </span>
+                        %if edit_mode == 'edit_email':
+                            <input type="text" value="${email}" name="new_user_email"
+                                   id="input_email" onkeyup="adjustWidth('input_url')">
+                            <input type="submit" value="Save" name="save_email">
+                            <input type="submit" value="Cancel" name="no_edit">
+                        %else:
+                            <span class="panel_value">${email}</span>
+                            <input type="submit" value="Edit" name="edit_email">
+                        %endif
+                    </p>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+
+<h3>User Groups Membership</h3>
 
 <form id="edit_membership" action="${request.path}" method="post">
 <table>
