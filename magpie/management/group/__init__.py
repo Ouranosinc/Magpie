@@ -6,6 +6,8 @@ def includeme(config):
     logger.info('Adding group ...')
     # Add all the rest api routes
     config.add_route('groups', '/groups')
+    config.add_route('groups_standard', '/groups_standard')
+    config.add_route('groups_personal', '/groups_personal')
     config.add_route('group', '/groups/{group_name}')
     config.add_route('group_users', '/groups/{group_name}/users')
     config.add_route('group_services', '/groups/{group_name}/services')

@@ -11,6 +11,26 @@ def get_groups(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get groups successful", content={u'group_names': group_names})
 
 
+@view_config(route_name='groups_personal', request_method='GET')
+def get_personal_groups(request):
+    group_names = evaluate_call(lambda: [grp.group_name for grp in models.Group.all(db_session=request.db)],
+                                httpError=HTTPForbidden, msgOnFail="Obtain group names refused by db")
+    user_names = evaluate_call(lambda: [usr.user_name for usr in models.User.all(db_session=request.db)],
+                               httpError=HTTPForbidden, msgOnFail="Obtain user names refused by db")
+    groups = list(set(group_names) & set(user_names))
+    return valid_http(httpSuccess=HTTPOk, detail="Get personal groups successful", content={u'group_names': groups})
+
+
+@view_config(route_name='groups_standard', request_method='GET')
+def get_standard_groups(request):
+    group_names = evaluate_call(lambda: [grp.group_name for grp in models.Group.all(db_session=request.db)],
+                                httpError=HTTPForbidden, msgOnFail="Obtain group names refused by db")
+    user_names = evaluate_call(lambda: [usr.user_name for usr in models.User.all(db_session=request.db)],
+                               httpError=HTTPForbidden, msgOnFail="Obtain user names refused by db")
+    groups = list(set(group_names) - set(user_names))
+    return valid_http(httpSuccess=HTTPOk, detail="Get personal groups successful", content={u'group_names': groups})
+
+
 @view_config(route_name='groups', request_method='POST')
 def create_group(request):
     group_name = get_value_multiformat_post_checked(request, 'group_name')

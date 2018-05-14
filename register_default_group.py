@@ -1,11 +1,11 @@
-
 from magpie import *
 from magpie import models
+from magpie.db import get_tm_session, get_session_factory, get_engine, is_database_ready
 import transaction
 import logging
+import time
 
 LOGGER = logging.getLogger(__name__)
-
 
 
 def register_user_with_group(user_name, group_name, email, password, db_session):
@@ -52,10 +52,9 @@ def init_admin(db_session):
         new_group_permission = models.GroupPermission(perm_name=ADMIN_PERM, group_id=admin_group.id)
         try:
             db_session.add(new_group_permission)
-        except Exception, e:
+        except Exception as e:
             db_session.rollback()
             raise e
-
 
 
 def init_user_group(db_session):
@@ -66,10 +65,6 @@ def init_user_group(db_session):
     else:
         LOGGER.debug('group USER already initialized')
 
-
-
-import time
-from magpie.db import get_tm_session, get_session_factory, get_engine, is_database_ready
 
 if __name__ == '__main__':
     # Initialize database with default user: admin+anonymous
@@ -89,4 +84,3 @@ if __name__ == '__main__':
     init_user_group(db_session)
     transaction.commit()
     db_session.close()
-

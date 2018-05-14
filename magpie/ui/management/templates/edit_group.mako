@@ -29,7 +29,7 @@
 <li><a href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=cur_svc_type)}">Group ${group_name}</a></li>
 </%block>
 
-<h1>Group ${group_name}</h1>
+<h1>Edit Group: ${group_name}</h1>
 
 <h3>Members</h3>
 

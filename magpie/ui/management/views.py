@@ -11,7 +11,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPInternalServerError
 )
-from magpie import USER_NAME_MAX_LENGTH
+from magpie import USER_NAME_MAX_LENGTH, ANONYMOUS_USER
 from services import service_type_dict
 from ui.management import check_response
 from ui.home import add_template_data
@@ -24,33 +24,55 @@ class ManagementViews(object):
         self.request = request
         self.magpie_url = self.request.registry.settings['magpie.url']
 
-    def get_groups(self):
-        res_groups = requests.get(self.magpie_url + '/groups', cookies=self.request.cookies)
+    def get_all_groups(self):
+        resp_groups = requests.get('{url}/groups'.format(url=self.magpie_url), cookies=self.request.cookies)
         try:
-            return res_groups.json()['group_names']
+            return resp_groups.json()['group_names']
         except Exception:
             raise HTTPBadRequest(detail='Bad Json response')
 
+    def get_personal_groups(self):
+        resp_groups = requests.get('{url}/groups_personal'.format(url=self.magpie_url), cookies=self.request.cookies)
+        check_response(resp_groups)
+        try:
+            return resp_groups.json()['group_names']
+        except Exception:
+            raise HTTPBadRequest(detail='Bad Json response')
+
+    def get_standard_groups(self, first_default_group=None):
+        resp_groups = requests.get('{url}/groups_standard'.format(url=self.magpie_url), cookies=self.request.cookies)
+        check_response(resp_groups)
+        try:
+            groups = list(resp_groups.json()['group_names'])
+            if type(first_default_group) is str and first_default_group in groups:
+                groups.remove(first_default_group)
+                groups.insert(0, first_default_group)
+            return groups
+        except Exception as e:
+            raise HTTPBadRequest(detail=e.message)
+
     def get_group_users(self, group_name):
         try:
-            res_group_users = requests.get(self.magpie_url + '/groups/' + group_name + '/users', cookies=self.request.cookies)
-            check_response(res_group_users)
-            return res_group_users.json()['user_names']
+            resp_group_users = requests.get('{url}/groups/{grp}/users'.format(url=self.magpie_url, grp=group_name),
+                                            cookies=self.request.cookies)
+            check_response(resp_group_users)
+            return resp_group_users.json()['user_names']
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
 
     def get_user_groups(self, user_name):
         try:
-            res_user_groups = requests.get(self.magpie_url + '/users/' + user_name + '/groups', cookies=self.request.cookies)
-            check_response(res_user_groups)
-            return res_user_groups.json()['group_names']
+            resp_user_groups = requests.get('{url}/users/{usr}/groups'.format(url=self.magpie_url, usr=user_name),
+                                            cookies=self.request.cookies)
+            check_response(resp_user_groups)
+            return resp_user_groups.json()['group_names']
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
 
     def get_user_names(self):
-        res_users = requests.get(self.magpie_url + '/users', cookies=self.request.cookies)
+        resp_users = requests.get('{url}/users'.format(url=self.magpie_url), cookies=self.request.cookies)
         try:
-            return res_users.json()['user_names']
+            return resp_users.json()['user_names']
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
 
@@ -59,7 +81,10 @@ class ManagementViews(object):
         try:
             emails = list()
             for user in user_names:
-                user_email = requests.get(self.magpie_url + '/users/{usr}'.format(usr=user), cookies=self.request.cookies).json()['email']
+                resp_user = requests.get('{url}/users/{usr}'.format(url=self.magpie_url, usr=user),
+                                         cookies=self.request.cookies)
+                check_response(resp_user)
+                user_email = resp_user.json()['email']
                 emails.append(user_email)
             return emails
         except Exception as e:
@@ -70,18 +95,18 @@ class ManagementViews(object):
         :return: dictionary of all resources as {id: 'resource_type'}
         :rtype: dict
         """
-        all_res = requests.get(self.magpie_url + '/resources', cookies=self.request.cookies)
-        check_response(all_res)
-        res_dic = self.default_get(all_res.json(), 'resources', dict())
+        resp_resources = requests.get('{url}/resources'.format(url=self.magpie_url), cookies=self.request.cookies)
+        check_response(resp_resources)
+        res_dic = self.default_get(resp_resources.json(), 'resources', dict())
         res_ids = dict()
         self.flatten_tree_resource(res_dic, res_ids)
         return res_ids
 
     def get_services(self, cur_svc_type):
         try:
-            res_svcs = requests.get(self.magpie_url + '/services', cookies=self.request.cookies)
-            check_response(res_svcs)
-            all_services = res_svcs.json()['services']
+            resp_services = requests.get('{url}/services'.format(url=self.magpie_url), cookies=self.request.cookies)
+            check_response(resp_services)
+            all_services = resp_services.json()['services']
             svc_types = all_services.keys()
             if cur_svc_type not in svc_types:
                 cur_svc_type = svc_types[0]
@@ -92,7 +117,8 @@ class ManagementViews(object):
 
     def get_service_data(self, service_name):
         try:
-            svc_res = requests.get(self.magpie_url + '/services/' + service_name, cookies=self.request.cookies)
+            svc_res = requests.get('{url}/services/{svc}'.format(url=self.magpie_url, svc=service_name),
+                                   cookies=self.request.cookies)
             check_response(svc_res)
             return svc_res.json()[service_name]
         except Exception as e:
@@ -105,8 +131,9 @@ class ManagementViews(object):
             svc_data['resource_name'] = new_service_name
             svc_data['service_push'] = service_push
             svc_id = str(svc_data['resource_id'])
-            res_put = requests.put(self.magpie_url + '/resources/' + svc_id, data=svc_data, cookies=self.request.cookies)
-            check_response(res_put)
+            resp_put = requests.put('{url}/resources/{svc_id}'.format(url=self.magpie_url, svc_id=svc_id),
+                                    data=svc_data, cookies=self.request.cookies)
+            check_response(resp_put)
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
 
@@ -115,8 +142,9 @@ class ManagementViews(object):
             svc_data = self.get_service_data(service_name)
             svc_data['service_url'] = new_service_url
             svc_data['service_push'] = service_push
-            res_put = requests.put(self.magpie_url + '/services/' + service_name, data=svc_data, cookies=self.request.cookies)
-            check_response(res_put)
+            resp_put = requests.put('{url}/services/{svc}'.format(url=self.magpie_url, svc=service_name),
+                                    data=svc_data, cookies=self.request.cookies)
+            check_response(resp_put)
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
 
@@ -150,15 +178,16 @@ class ManagementViews(object):
 
     @view_config(route_name='add_user', renderer='templates/add_user.mako')
     def add_user(self):
+
         return_data = {u'conflict_group_name': False, u'conflict_user_name': False, u'conflict_user_email': False,
                        u'invalid_user_name': False, u'invalid_user_email': False, u'invalid_password': False,
                        u'too_long_user_name': False, u'form_user_name': u'', u'form_user_email': u'',
-                       u'user_groups': self.get_groups()}
+                       u'user_groups': self.get_standard_groups(first_default_group=ANONYMOUS_USER)}
         check_data = [u'conflict_group_name', u'conflict_user_name', u'conflict_email',
                       u'invalid_user_name', u'invalid_email', u'invalid_password']
 
         if 'create' in self.request.POST:
-            groups = self.get_groups()
+            groups = self.get_all_groups()
             user_name = self.request.POST.get('user_name')
             group_name = self.request.POST.get('group_name')
             user_email = self.request.POST.get('email')
@@ -168,7 +197,7 @@ class ManagementViews(object):
 
             if group_name not in groups:
                 data = {u'group_name': group_name}
-                resp = requests.post(self.magpie_url + '/groups', data, cookies=self.request.cookies)
+                resp = requests.post('{url}/groups'.format(url=self.magpie_url), data, cookies=self.request.cookies)
                 if resp.status_code == HTTPConflict.code:
                     return_data[u'conflict_group_name'] = True
             if user_email in self.get_user_emails():
@@ -202,7 +231,7 @@ class ManagementViews(object):
         user_name = self.request.matchdict['user_name']
         user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
-        groups = self.get_groups()
+        groups = self.get_standard_groups()
 
         user_resp = requests.get(user_url, cookies=self.request.cookies)
         check_response(user_resp)
@@ -248,22 +277,21 @@ class ManagementViews(object):
 
             if requires_update_name:
                 # re-fetch user groups as current user-group will have changed on new user_name
-                user_info[u'groups'] = self.get_groups()
                 user_info[u'own_groups'] = self.get_user_groups(user_info[u'user_name'])
                 # return immediately with updated URL to user with new name
                 return HTTPFound(self.request.route_url('edit_user', **user_info))
 
             # edits to groups checkboxes
             if not is_edit_user_info and not is_save_user_info:
-                groups = self.request.POST.getall('member')
-                removed_groups = list(set(own_groups) - set(groups))
-                new_groups = list(set(groups) - set(own_groups))
+                selected_groups = self.request.POST.getall('member')
+                personal_groups = self.get_personal_groups()
+                removed_groups = list(set(own_groups) - set(personal_groups) - set(selected_groups))
+                new_groups = list(set(selected_groups) - set(personal_groups) - set(own_groups))
                 url_group = '{url}/users/{usr}/groups/{grp}'.format(url=self.magpie_url, usr=user_name, grp='{grp}')
                 for group in removed_groups:
                     check_response(requests.delete(url_group.format(grp=group), cookies=self.request.cookies))
                 for group in new_groups:
                     check_response(requests.post(url_group.format(grp=group), cookies=self.request.cookies))
-                user_info[u'groups'] = self.get_groups()
                 user_info[u'own_groups'] = self.get_user_groups(user_name)
 
         return add_template_data(self.request, data=user_info)
@@ -272,14 +300,15 @@ class ManagementViews(object):
     def view_groups(self):
         if 'delete' in self.request.POST:
             group_name = self.request.POST.get('group_name')
-            check_response(requests.delete(self.magpie_url+'/groups/'+group_name, cookies=self.request.cookies))
+            check_response(requests.delete('{url}/groups/{grp}'.format(url=self.magpie_url, grp=group_name),
+                                           cookies=self.request.cookies))
 
         if 'edit' in self.request.POST:
             group_name = self.request.POST.get('group_name')
             return HTTPFound(self.request.route_url('edit_group', group_name=group_name, cur_svc_type='default'))
 
         groups_info = {}
-        groups = self.get_groups()
+        groups = self.get_standard_groups()
         [groups_info.setdefault(grp, {u'members': len(self.get_group_users(grp))}) for grp in groups if grp != u'']
 
         return add_template_data(self.request, {u'group_names': groups_info})
@@ -306,11 +335,11 @@ class ManagementViews(object):
 
         return add_template_data(self.request, return_data)
 
-    def res_tree_parser(self, raw_resources_tree, permission):
+    def resource_tree_parser(self, raw_resources_tree, permission):
         resources_tree = {}
         for r_id, resource in raw_resources_tree.items():
             perm_names = self.default_get(permission, r_id, [])
-            children = self.res_tree_parser(resource['children'], permission)
+            children = self.resource_tree_parser(resource['children'], permission)
             resources_tree[resource['resource_name']] = dict(id=r_id, permission_names=perm_names, children=children)
         return resources_tree
 
@@ -399,29 +428,29 @@ class ManagementViews(object):
                 if not service:
                     continue
 
-                res_svc = check_response(requests.get('{url}/services/{svc}/permissions' \
-                                                      .format(url=self.magpie_url, svc=service),
-                                                      cookies=self.request.cookies))
-                perms.update(set(res_svc.json()['permission_names']))
+                resp_svc = check_response(requests.get('{url}/services/{svc}/permissions' \
+                                                       .format(url=self.magpie_url, svc=service),
+                                                       cookies=self.request.cookies))
+                perms.update(set(resp_svc.json()['permission_names']))
 
-                res_group_perms = check_response(requests.get('{url}/groups/{grp}/resources' \
-                                                              .format(url=self.magpie_url, grp=group_name),
-                                                              cookies=self.request.cookies))
+                resp_group_perms = check_response(requests.get('{url}/groups/{grp}/resources' \
+                                                               .format(url=self.magpie_url, grp=group_name),
+                                                               cookies=self.request.cookies))
                 permission = {}
                 try:
-                    raw_perms = res_group_perms.json()['resources'][cur_svc_type][service]
+                    raw_perms = resp_group_perms.json()['resources'][cur_svc_type][service]
                     permission[raw_perms['resource_id']] = raw_perms['permission_names']
                     permission.update(self.perm_tree_parser(raw_perms['resources']))
                 except KeyError:
                     pass
 
-                res_resources = check_response(requests.get('{url}/services/{svc}/resources' \
-                                                            .format(url=self.magpie_url, svc=service),
-                                                            cookies=self.request.cookies))
-                raw_resources = res_resources.json()[service]
+                resp_resources = check_response(requests.get('{url}/services/{svc}/resources' \
+                                                             .format(url=self.magpie_url, svc=service),
+                                                             cookies=self.request.cookies))
+                raw_resources = resp_resources.json()[service]
                 resources[service] = dict(id=raw_resources['resource_id'],
                                           permission_names=self.default_get(permission, raw_resources['resource_id'], []),
-                                          children=self.res_tree_parser(raw_resources['resources'], permission))
+                                          children=self.resource_tree_parser(raw_resources['resources'], permission))
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
@@ -554,7 +583,7 @@ class ManagementViews(object):
             resources[service_name] = dict(
                 id=raw_resources['resource_id'],
                 permission_names=[],
-                children=self.res_tree_parser(raw_resources['resources'], {}))
+                children=self.resource_tree_parser(raw_resources['resources'], {}))
             url_resources_types = '{url}/services/types/{type}/resources/types'.format(url=self.magpie_url, type=cur_svc_type)
             res_resources_types = check_response(requests.get(url_resources_types, cookies=self.request.cookies))
             raw_resources_types = res_resources_types.json()['resource_types']
