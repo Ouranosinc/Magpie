@@ -25,6 +25,13 @@ class ManagementViews(object):
 
     @view_config(route_name='login', renderer='templates/login.mako', permission=NO_PERMISSION_REQUIRED)
     def login(self):
+        return_data = {
+            u'external_providers': self.get_external_providers(),
+            u'invalid_username': False,
+            u'invalid_password': False,
+            u'user_name': self.request.POST.get('user_name', u''),
+        }
+
         try:
             if 'submit' in self.request.POST:
                 provider_name = self.request.POST.get('provider_name', 'ziggurat')
@@ -36,13 +43,18 @@ class ManagementViews(object):
                         data_to_send[key] = self.request.POST.get(key)
 
                     response = requests.post(new_location, data=data_to_send, allow_redirects=True)
-                    if response.status_code == 200:
+                    if response.status_code == HTTPOk.code:
                         pyr_res = Response(body=response.content, headers=response.headers)
                         for cookie in response.cookies:
                             pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
                             return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
-                    else:
-                        return Response(body=response.content, status=response.status_code, headers=response.headers)
+                    elif response.status_code in [HTTPBadRequest.code, HTTPNotAcceptable.code]:
+                        return_data[u'invalid_username'] = True
+                        return add_template_data(self.request, return_data)
+                    elif response.status_code == HTTPUnauthorized.code:
+                        return_data[u'invalid_password'] = True
+                        return add_template_data(self.request, return_data)
+                        #return Response(body=response.content, status=response.status_code, headers=response.headers)
                 else:
                     # External login
                     external_url = self.magpie_url + '/signin_external'
@@ -58,7 +70,7 @@ class ManagementViews(object):
         except Exception as e:
             return HTTPInternalServerError(detail=repr(e))
 
-        return add_template_data(self.request, {u'external_providers': self.get_external_providers()})
+        return add_template_data(self.request, data=return_data)
 
     @view_config(route_name='logout', renderer='templates/login.mako', permission=NO_PERMISSION_REQUIRED)
     def logout(self):

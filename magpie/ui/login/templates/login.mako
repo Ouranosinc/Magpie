@@ -13,16 +13,30 @@
     <input type="hidden" value="ziggurat" name="provider_name">
     <table class="fields_table">
         <tr>
-            <td>User name:</td>
+            <td>Username:</td>
             <div class="input_container">
-                <td><input type="text" name="user_name" class="equal_width"></td>
+                <td><input type="text" name="user_name" value="${user_name}" class="equal_width"></td>
             </div>
+            %if invalid_username:
+                <td><p class="alert_form_error">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> unknown </p>
+                </td>
+            %else:
+                <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
+            %endif
         </tr>
         <tr>
             <td>Password:</td>
             <div class="input_container">
-                <td><input type="password" name="password" class="equal_width"></td>
+                <td><input type="password" name="password" value="" class="equal_width"></td>
             </div>
+            %if invalid_password:
+                <td><p class="alert_form_error">
+                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> incorrect </p>
+                </td>
+            %else:
+                <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
+            %endif
         </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Sign In" name="submit" id="submit"></td></tr>
     </table>
@@ -34,10 +48,11 @@
     <input type="hidden" value="${request.route_url('home')}" name="came_from">
     <table class="fields_table">
         <tr>
-            <td>User name:</td>
+            <td>Username:</td>
             <div class="input_container">
                 <td><input type="text" name="user_name" class="equal_width"></td>
             </div>
+            <td> <!-- padding --> </td>
         </tr>
         <tr>
             <td>Provider:</td>
@@ -48,6 +63,7 @@
                     %endfor
                 </select></td>
             </div>
+            <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Sign In" name="submit"></td></tr>
     </table>

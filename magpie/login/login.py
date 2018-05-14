@@ -28,7 +28,7 @@ def sign_in_external(request):
     provider_name = get_value_multiformat_post_checked(request, 'provider_name')
     user_name = get_value_multiformat_post_checked(request, 'user_name')
     verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `provider_name` not found within available providers",
+                 msgOnFail="Invalid: `provider_name` not found within available providers.",
                  content={u'provider_name': str(provider_name), u'providers': providers})
     if provider_name == 'openid':
         query_field = dict(id=user_name)
@@ -43,31 +43,31 @@ def sign_in_external(request):
 
     return HTTPFound(location=external_login_route, headers=request.response.headers)
 
-''''
-@view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
-def sign_in(request):
-    provider_name = get_value_multiformat_post_checked(request, 'provider_name')
-    user_name = get_value_multiformat_post_checked(request, 'user_name')
-    password = get_multiformat_post(request, 'password')   # no check since password is None for external login
 
-    verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `provider_name` not found within available providers",
-                 content={u'provider_name': str(provider_name), u'providers': providers})
+#@view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
+#def sign_in(request):
+#    provider_name = get_value_multiformat_post_checked(request, 'provider_name')
+#    user_name = get_value_multiformat_post_checked(request, 'user_name')
+#    password = get_multiformat_post(request, 'password')   # no check since password is None for external login#
+#
+#    verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
+#                 msgOnFail="Invalid `provider_name` not found within available providers",
+#                 content={u'provider_name': str(provider_name), u'providers': providers})
+#
+#    if provider_name in internal_providers:
+#        return sign_in_internal(request, {u'user_name': user_name, u'password': password})
+#
+#    elif provider_name in external_providers:
+#        return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
+#                                                                u'password': password,
+#                                                                u'provider_name': provider_name}),
+#                             httpError=HTTPInternalServerError, content={u'provider': provider_name},
+#                             msgOnFail="Error occurred while signing in with external provider")
 
-    if provider_name in internal_providers:
-        return sign_in_internal(request, {u'user_name': user_name, u'password': password})
-
-    elif provider_name in external_providers:
-        return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
-                                                                u'password': password,
-                                                                u'provider_name': provider_name}),
-                             httpError=HTTPInternalServerError, content={u'provider': provider_name},
-                             msgOnFail="Error occurred while signing in with external provider")
-'''
 
 @view_config(route_name='signout', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def sign_out(request):
-    return valid_http(httpSuccess=HTTPTemporaryRedirect, detail="Local sign out redirect",
+    return valid_http(httpSuccess=HTTPTemporaryRedirect, detail="Local sign out redirect.",
                       httpKWArgs={'location': request.route_url('ziggurat.routes.sign_out'),
                                   'headers': forget(request)})
 
@@ -114,14 +114,30 @@ def login_success_external(request, external_user_name, external_id, email, prov
 
 
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
-def login_failure(request, reason='not specified'):
-    raise_http(httpError=HTTPUnauthorized, detail="Login failure", content={u'reason': str(reason)})
+def login_failure(request, reason=None):
+    httpError = HTTPUnauthorized
+    if reason is None:
+        httpError = HTTPNotAcceptable
+        reason = 'Undefined `user_name`.'
+        user_name = request.POST.get('user_name')
+        if user_name is None:
+            httpError = HTTPBadRequest
+            reason = 'Could not retrieve `user_name`.'
+        else:
+            user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
+                                           fallback=lambda: request.db.rollback(),
+                                           httpError=HTTPForbidden, msgOnFail="Get users query refused by db.")
+            if user_name in user_name_list:
+                httpError = HTTPUnauthorized
+                reason = 'Incorrect password.'
+    raise_http(httpError=httpError, detail="Login failure", content={u'reason': str(reason)})
 
 
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
 def sign_out_ziggu(request):
-    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful",
+    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful.",
                       httpKWArgs={'headers': forget(request)})
+
 
 @view_config(route_name='external_login', permission=NO_PERMISSION_REQUIRED)
 def authomatic_login(request):
