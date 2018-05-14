@@ -8,7 +8,8 @@ from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
     HTTPCreated,
-    HTTPNotFound
+    HTTPNotFound,
+    HTTPInternalServerError
 )
 from magpie import USER_NAME_MAX_LENGTH
 from services import service_type_dict
@@ -137,21 +138,6 @@ class ManagementViews(object):
 
     @view_config(route_name='view_users', renderer='templates/view_users.mako')
     def view_users(self):
-        if 'create' in self.request.POST:
-            groups = self.get_groups()
-            user_name = self.request.POST.get('user_name')
-            group_name = self.request.POST.get('group_name')
-            if group_name not in groups:
-                resp = self.create_group(group_name)
-                if resp.status_code == HTTPConflict:
-                    print("YES")
-
-            data = {u'user_name': user_name,
-                    u'email': self.request.POST.get('email'),
-                    u'password': self.request.POST.get('password'),
-                    u'group_name': group_name}
-            check_response(requests.post(self.magpie_url+'/users', data, cookies=self.request.cookies))
-
         if 'delete' in self.request.POST:
             user_name = self.request.POST.get('user_name')
             check_response(requests.delete(self.magpie_url + '/users/' + user_name, cookies=self.request.cookies))
