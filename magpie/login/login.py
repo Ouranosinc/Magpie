@@ -126,7 +126,7 @@ def login_failure(request, reason=None):
         else:
             user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
                                            fallback=lambda: request.db.rollback(),
-                                           httpError=HTTPForbidden, msgOnFail="Get users query refused by db")
+                                           httpError=HTTPForbidden, msgOnFail="Could not verify `user_name`.")
             if user_name in user_name_list:
                 httpError = HTTPUnauthorized
                 reason = 'incorrect password'
