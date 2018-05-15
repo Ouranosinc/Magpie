@@ -148,6 +148,19 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=e.message)
 
+    def goto_service(self, resource_id):
+        try:
+            res_json = requests.get('{url}/resources/{id}'.format(url=self.magpie_url, id=resource_id),
+                                    cookies=self.request.cookies).json()
+            svc_name = res_json[resource_id]['resource_name']
+            # get service type instead of 'cur_svc_type' in case of 'default' ('cur_svc_type' not set yet)
+            res_json = requests.get('{url}/services/{svc}'.format(url=self.magpie_url, svc=svc_name),
+                                    cookies=self.request.cookies).json()
+            svc_type = res_json[svc_name]['service_type']
+            return HTTPFound(self.request.route_url('edit_service', service_name=svc_name, cur_svc_type=svc_type))
+        except Exception as e:
+            raise HTTPBadRequest(detail=repr(e))
+
     @staticmethod
     def flatten_tree_resource(resource_node, resource_dict):
         """
@@ -231,17 +244,22 @@ class ManagementViews(object):
         user_name = self.request.matchdict['user_name']
         user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
-        groups = self.get_standard_groups()
+        std_groups = self.get_standard_groups()
 
         user_resp = requests.get(user_url, cookies=self.request.cookies)
         check_response(user_resp)
         user_info = user_resp.json()
         user_info[u'edit_mode'] = u'no_edit'
         user_info[u'own_groups'] = own_groups
-        user_info[u'groups'] = groups
+        user_info[u'groups'] = std_groups
 
         # requests for edits are 'GET', update of form value submits are 'POST'
         if self.request.method == 'POST':
+            res_id = self.request.POST.get(u'resource_id')
+
+            if u'goto_service' in self.request.POST:
+                self.goto_service(res_id)
+
             if u'delete' in self.request.POST:
                 check_response(requests.delete(user_url, cookies=self.request.cookies))
                 return HTTPFound(self.request.route_url('view_users'))
@@ -357,100 +375,94 @@ class ManagementViews(object):
         except KeyError:
             return default
 
+    def edit_group_users(self, group_name):
+        current_members = self.get_group_users(group_name)
+        selected_members = self.request.POST.getall('member')
+        removed_members = list(set(current_members) - set(selected_members))
+        new_members = list(set(selected_members) - set(current_members))
+
+        url_base = '{url}/users/{usr}/groups/{grp}'.format(url=self.magpie_url, usr='{usr}', grp=group_name)
+        for user in removed_members:
+            check_response(requests.delete(url_base.format(usr=user), cookies=self.request.cookies))
+        for user in new_members:
+            check_response(requests.post(url_base.format(usr=user), cookies=self.request.cookies))
+
+    def edit_group_resource_permissions(self, group_name, resource_id):
+        try:
+            res_perms_url = '{url}/groups/{grp}/resources/{res_id}/permissions' \
+                            .format(url=self.magpie_url, grp=group_name, res_id=resource_id)
+            res_perms_resp = requests.get(res_perms_url, cookies=self.request.cookies)
+            res_perms = res_perms_resp.json()['permission_names']
+        except Exception as e:
+            raise HTTPBadRequest(detail=repr(e))
+
+        selected_perms = self.request.POST.getall('permission')
+        removed_perms = list(set(res_perms) - set(selected_perms))
+        new_perms = list(set(selected_perms) - set(res_perms))
+
+        url = '{host}/groups/{group}/resources/{res_id}/permissions' \
+              .format(host=self.magpie_url, group=group_name, res_id=resource_id)
+        for perm in removed_perms:
+            check_response(requests.delete('{url}/{perm}'.format(url=url, perm=perm), cookies=self.request.cookies))
+        for perm in new_perms:
+            data = {u'permission_name': perm}
+            check_response(requests.post(url, data=data, cookies=self.request.cookies))
+
+    def get_group_resources_permissions_dict(self, group_name, services, service_type):
+        resources_permission_names = set()
+        resources = {}
+        for service in services:
+            if not service:
+                continue
+
+            resp_svc = check_response(requests.get('{url}/services/{svc}/permissions' \
+                                                   .format(url=self.magpie_url, svc=service),
+                                                   cookies=self.request.cookies))
+            resources_permission_names.update(set(resp_svc.json()['permission_names']))
+
+            resp_group_perms = check_response(requests.get('{url}/groups/{grp}/resources' \
+                                                           .format(url=self.magpie_url, grp=group_name),
+                                                           cookies=self.request.cookies))
+            permission = {}
+            try:
+                raw_perms = resp_group_perms.json()['resources'][service_type][service]
+                permission[raw_perms['resource_id']] = raw_perms['permission_names']
+                permission.update(self.perm_tree_parser(raw_perms['resources']))
+            except KeyError:
+                pass
+
+            resp_resources = check_response(requests.get('{url}/services/{svc}/resources' \
+                                                         .format(url=self.magpie_url, svc=service),
+                                                         cookies=self.request.cookies))
+            raw_resources = resp_resources.json()[service]
+            resources[service] = dict(id=raw_resources['resource_id'],
+                                      permission_names=self.default_get(permission, raw_resources['resource_id'], []),
+                                      children=self.resource_tree_parser(raw_resources['resources'], permission))
+        return list(resources_permission_names), resources
+
     @view_config(route_name='edit_group', renderer='templates/edit_group.mako')
     def edit_group(self):
         group_name = self.request.matchdict['group_name']
         cur_svc_type = self.request.matchdict['cur_svc_type']
-        members = self.get_group_users(group_name)
 
+        # move to service or edit requested group/permission changes
         if self.request.method == 'POST':
             res_id = self.request.POST.get('resource_id')
 
             if 'goto_service' in self.request.POST:
-                try:
-                    res_json = requests.get('{url}/resources/{id}'.format(url=self.magpie_url, id=res_id),
-                                            cookies=self.request.cookies).json()
-                    svc_name = res_json[res_id]['resource_name']
-                    # get service type instead of 'cur_svc_type' in case of 'default' ('cur_svc_type' not set yet)
-                    res_json = requests.get('{url}/services/{svc}'.format(url=self.magpie_url, svc=svc_name),
-                                            cookies=self.request.cookies).json()
-                    svc_type = res_json[svc_name]['service_type']
-                    return HTTPFound(self.request.route_url('edit_service',
-                                                            service_name=svc_name,
-                                                            cur_svc_type=svc_type))
-                except Exception as e:
-                    raise HTTPBadRequest(detail=repr(e))
+                self.goto_service(res_id)
             elif 'resource_id' in self.request.POST:
-                try:
-                    res_perms = requests.get('{url}/groups/{grp}/resources/{res_id}/permissions' \
-                                             .format(url=self.magpie_url, grp=group_name, res_id=res_id),
-                                             cookies=self.request.cookies)
-                    perms = res_perms.json()['permission_names']
-                except Exception as e:
-                    raise HTTPBadRequest(detail=repr(e))
-
-                new_perms_set = self.request.POST.getall('permission')
-
-                removed_perms = list(set(perms) - set(new_perms_set))
-                new_perms = list(set(new_perms_set) - set(perms))
-
-                url = '{host}/groups/{group}/resources/{res_id}/permissions' \
-                      .format( host=self.magpie_url, group=group_name, res_id=res_id)
-
-                for perm in removed_perms:
-                    check_response(requests.delete('{url}/{perm}'.format(url=url, perm=perm),
-                                                   cookies=self.request.cookies))
-
-                for perm in new_perms:
-                    data = {u'permission_name': perm}
-                    check_response(requests.post(url, data=data, cookies=self.request.cookies))
-
-                members = self.get_group_users(group_name)
+                self.edit_group_resource_permissions(group_name, res_id)
             else:
-                new_members_set = self.request.POST.getall('member')
+                self.edit_group_users(group_name)
 
-                removed_members = list(set(members) - set(new_members_set))
-                new_members = list(set(new_members_set) - set(members))
+        # get updated group users
+        members = self.get_group_users(group_name)
 
-                url_base = '{url}/users/{usr}/groups/{grp}'.format(url=self.magpie_url, usr='{usr}', grp=group_name)
-                for user in removed_members:
-                    check_response(requests.delete(url_base.format(usr=user), cookies=self.request.cookies))
-                for user in new_members:
-                    check_response(requests.post(url_base.format(usr=user), cookies=self.request.cookies))
-
-                members = self.get_group_users(group_name)
-
+        # display resources permissions per service type tab
         try:
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-            perms = set()
-            resources = {}
-            for service in services:
-                if not service:
-                    continue
-
-                resp_svc = check_response(requests.get('{url}/services/{svc}/permissions' \
-                                                       .format(url=self.magpie_url, svc=service),
-                                                       cookies=self.request.cookies))
-                perms.update(set(resp_svc.json()['permission_names']))
-
-                resp_group_perms = check_response(requests.get('{url}/groups/{grp}/resources' \
-                                                               .format(url=self.magpie_url, grp=group_name),
-                                                               cookies=self.request.cookies))
-                permission = {}
-                try:
-                    raw_perms = resp_group_perms.json()['resources'][cur_svc_type][service]
-                    permission[raw_perms['resource_id']] = raw_perms['permission_names']
-                    permission.update(self.perm_tree_parser(raw_perms['resources']))
-                except KeyError:
-                    pass
-
-                resp_resources = check_response(requests.get('{url}/services/{svc}/resources' \
-                                                             .format(url=self.magpie_url, svc=service),
-                                                             cookies=self.request.cookies))
-                raw_resources = resp_resources.json()[service]
-                resources[service] = dict(id=raw_resources['resource_id'],
-                                          permission_names=self.default_get(permission, raw_resources['resource_id'], []),
-                                          children=self.resource_tree_parser(raw_resources['resources'], permission))
+            res_perm_names, res_perms = self.get_group_resources_permissions_dict(group_name, services, cur_svc_type)
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
@@ -460,8 +472,8 @@ class ManagementViews(object):
                                   u'members': members,
                                   u'svc_types': svc_types,
                                   u'cur_svc_type': cur_svc_type,
-                                  u'resources': resources,
-                                  u'permissions': list(perms)})
+                                  u'resources': res_perms,
+                                  u'permissions': res_perm_names})
 
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
     def view_services(self):
