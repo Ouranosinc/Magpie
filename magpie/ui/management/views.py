@@ -458,20 +458,29 @@ class ManagementViews(object):
     def edit_group(self):
         group_name = self.request.matchdict['group_name']
         cur_svc_type = self.request.matchdict['cur_svc_type']
+        group_info = {u'edit_mode': u'no_edit', u'group_name': group_name, u'cur_svc_type': cur_svc_type}
 
         # move to service or edit requested group/permission changes
         if self.request.method == 'POST':
             res_id = self.request.POST.get('resource_id')
+            group_url = '{url}/groups/{grp}'.format(url=self.magpie_url, grp=group_name)
 
-            if 'goto_service' in self.request.POST:
+            if u'delete' in self.request.POST:
+                check_response(requests.delete(group_url, cookies=self.request.cookies))
+                return HTTPFound(self.request.route_url('view_groups'))
+            elif u'edit_group_name' in self.request.POST:
+                group_info[u'edit_mode'] = u'edit_group_name'
+            elif u'save_group_name' in self.request.POST:
+                group_info[u'group_name'] = self.request.POST.get(u'new_group_name')
+                check_response(requests.put(group_url, data=group_info, cookies=self.request.cookies))
+                # return immediately with updated URL to group with new name
+                return HTTPFound(self.request.route_url('edit_group', **group_info))
+            elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
-            elif 'resource_id' in self.request.POST:
+            elif u'resource_id' in self.request.POST:
                 self.edit_group_resource_permissions(group_name, res_id)
             else:
                 self.edit_group_users(group_name)
-
-        # get updated group users
-        members = self.get_group_users(group_name)
 
         # display resources permissions per service type tab
         try:
@@ -480,14 +489,15 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        return add_template_data(self.request,
-                                 {u'group_name': group_name,
-                                  u'users': self.get_user_names(),
-                                  u'members': members,
-                                  u'svc_types': svc_types,
-                                  u'cur_svc_type': cur_svc_type,
-                                  u'resources': res_perms,
-                                  u'permissions': res_perm_names})
+        group_info[u'group_name'] = group_name
+        group_info[u'cur_svc_type'] = cur_svc_type
+        group_info[u'users'] = self.get_user_names()
+        group_info[u'members'] = self.get_group_users(group_name)
+        group_info[u'svc_types'] = svc_types
+        group_info[u'cur_svc_type'] = cur_svc_type
+        group_info[u'resources'] = res_perms
+        group_info[u'permissions'] = res_perm_names
+        return add_template_data(self.request, data=group_info)
 
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
     def view_services(self):

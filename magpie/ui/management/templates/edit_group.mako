@@ -31,6 +31,42 @@
 
 <h1>Edit Group: ${group_name}</h1>
 
+
+<h3>Group Information</h3>
+
+<div class="panel_box">
+    <form id="edit_info" action="${request.path}" method="post">
+        <div class="panel_heading">
+            <span class="panel_title">Group: </span>
+            <span class="panel_value">${group_name}</span>
+            <span class="panel_heading_button">
+                <input type="submit" value="Delete" name="delete" class="button delete">
+            </span>
+        </div>
+        <div class="panel_body">
+            <div class="panel_box">
+                <div class="panel_heading">
+                    <div class="panel_title">Details</div>
+                </div>
+                <div>
+                    <p class="panel_line">
+                        <span class="panel_entry">Name: </span>
+                        %if edit_mode == 'edit_group_name':
+                            <input type="text" value="${group_name}" name="new_group_name"
+                                   id="input_group_name" onkeyup="adjustWidth('input_name')">
+                            <input type="submit" value="Save" name="save_group_name">
+                            <input type="submit" value="Cancel" name="no_edit">
+                        %else:
+                            <span class="panel_value">${group_name}</span>
+                            <input type="submit" value="Edit" name="edit_group_name">
+                        %endif
+                    </p>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
 <h3>Members</h3>
 
 <form id="edit_members" action="${request.path}" method="post">

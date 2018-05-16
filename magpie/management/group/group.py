@@ -48,6 +48,22 @@ def create_group(request):
                       content={u'group': format_group(new_group)})
 
 
+@view_config(route_name='group', request_method='PUT')
+def edit_group(request):
+    group = get_group_matchdict_checked(request, group_name_key='group_name')
+    new_group_name = get_multiformat_post(request, 'group_name')
+    verify_param(new_group_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `group_name` value specified.")
+    verify_param(len(new_group_name), isIn=True, httpError=HTTPNotAcceptable,
+                 paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
+                 msgOnFail="Invalid `group_name` length specified " +
+                           "(>{length} characters).".format(length=USER_NAME_MAX_LENGTH))
+    verify_param(new_group_name, isEqual=True, httpError=HTTPNotAcceptable,
+                 paramCompare=group.group_name, msgOnFail="Invalid `group_name` must be different than current name.")
+    group.group_name = new_group_name
+    return valid_http(httpSuccess=HTTPOk, detail="Update group successful.")
+
+
 @view_config(route_name='group', request_method='DELETE')
 def delete_group(request):
     group = get_group_matchdict_checked(request)
