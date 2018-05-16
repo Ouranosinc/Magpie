@@ -27,7 +27,7 @@
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">Home</a></li>
 <li><a href="${request.route_url('view_users')}">Users</a></li>
-<li><a href="${request.route_url('edit_user', user_name=user_name)}">User ${user_name}</a></li>
+<li><a href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=cur_svc_type)}">User ${user_name}</a></li>
 </%block>
 
 <h1>Edit User: ${user_name}</h1>
@@ -123,9 +123,9 @@
 
     %for svc_type in svc_types:
         % if cur_svc_type == svc_type:
-            <a class="current_tab" href="${request.route_url('edit_users', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
+            <a class="current_tab" href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % else:
-            <a class="tab" href="${request.route_url('edit_users', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
+            <a class="tab" href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % endif
     %endfor
 

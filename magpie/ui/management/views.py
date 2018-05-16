@@ -185,7 +185,7 @@ class ManagementViews(object):
 
         if 'edit' in self.request.POST:
             user_name = self.request.POST.get('user_name')
-            return HTTPFound(self.request.route_url('edit_user', user_name=user_name))
+            return HTTPFound(self.request.route_url('edit_user', user_name=user_name, cur_svc_type='default'))
 
         return add_template_data(self.request, {'users': self.get_user_names()})
 
@@ -242,6 +242,9 @@ class ManagementViews(object):
     @view_config(route_name='edit_user', renderer='templates/edit_user.mako')
     def edit_user(self):
         user_name = self.request.matchdict['user_name']
+        cur_svc_type = self.request.matchdict['cur_svc_type']
+        group_name = user_name  # personal group
+
         user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
         std_groups = self.get_standard_groups()
@@ -253,42 +256,42 @@ class ManagementViews(object):
         user_info[u'own_groups'] = own_groups
         user_info[u'groups'] = std_groups
 
-        # requests for edits are 'GET', update of form value submits are 'POST'
         if self.request.method == 'POST':
             res_id = self.request.POST.get(u'resource_id')
-
-            if u'goto_service' in self.request.POST:
-                self.goto_service(res_id)
+            is_edit_user_info = False
+            is_save_user_info = False
+            requires_update_name = False
 
             if u'delete' in self.request.POST:
                 check_response(requests.delete(user_url, cookies=self.request.cookies))
                 return HTTPFound(self.request.route_url('view_users'))
+            elif u'goto_service' in self.request.POST:
+                self.goto_service(res_id)
+            elif 'resource_id' in self.request.POST:
+                self.edit_group_resource_permissions(group_name, res_id)
+            else:
+                if u'edit_username' in self.request.POST:
+                    user_info[u'edit_mode'] = u'edit_username'
+                    is_edit_user_info = True
+                if u'edit_password' in self.request.POST:
+                    user_info[u'edit_mode'] = u'edit_password'
+                    is_edit_user_info = True
+                if u'edit_email' in self.request.POST:
+                    user_info[u'edit_mode'] = u'edit_email'
+                    is_edit_user_info = True
 
-            is_edit_user_info = False
-            if u'edit_username' in self.request.POST:
-                user_info[u'edit_mode'] = u'edit_username'
-                is_edit_user_info = True
-            if u'edit_password' in self.request.POST:
-                user_info[u'edit_mode'] = u'edit_password'
-                is_edit_user_info = True
-            if u'edit_email' in self.request.POST:
-                user_info[u'edit_mode'] = u'edit_email'
-                is_edit_user_info = True
-
-            is_save_user_info = False
-            requires_update_name = False
-            if u'save_username' in self.request.POST:
-                user_info[u'user_name'] = self.request.POST.get(u'new_user_name')
-                is_save_user_info = True
-                requires_update_name = True
-            if u'save_password' in self.request.POST:
-                user_info[u'password'] = self.request.POST.get(u'new_user_password')
-                is_save_user_info = True
-            if u'save_email' in self.request.POST:
-                user_info[u'email'] = self.request.POST.get(u'new_user_email')
-                is_save_user_info = True
-            if is_save_user_info:
-                check_response(requests.put(user_url, data=user_info, cookies=self.request.cookies))
+                if u'save_username' in self.request.POST:
+                    user_info[u'user_name'] = self.request.POST.get(u'new_user_name')
+                    is_save_user_info = True
+                    requires_update_name = True
+                if u'save_password' in self.request.POST:
+                    user_info[u'password'] = self.request.POST.get(u'new_user_password')
+                    is_save_user_info = True
+                if u'save_email' in self.request.POST:
+                    user_info[u'email'] = self.request.POST.get(u'new_user_email')
+                    is_save_user_info = True
+                if is_save_user_info:
+                    check_response(requests.put(user_url, data=user_info, cookies=self.request.cookies))
 
             # always remove password from output
             user_info.pop(u'password', None)
@@ -311,6 +314,17 @@ class ManagementViews(object):
                 for group in new_groups:
                     check_response(requests.post(url_group.format(grp=group), cookies=self.request.cookies))
                 user_info[u'own_groups'] = self.get_user_groups(user_name)
+
+        # display resources permissions per service type tab
+        try:
+            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
+            res_perm_names, res_perms = self.get_group_resources_permissions_dict(group_name, services, cur_svc_type)
+            user_info[u'cur_svc_type'] = cur_svc_type
+            user_info[u'svc_types'] = svc_types
+            user_info[u'resources'] = res_perms
+            user_info[u'permissions'] = res_perm_names
+        except Exception as e:
+            raise HTTPBadRequest(detail=repr(e))
 
         return add_template_data(self.request, data=user_info)
 

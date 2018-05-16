@@ -38,9 +38,11 @@
 %for user in users:
 <tr>
     % if user in members:
-    <td><input type="checkbox" value="${user}" name="member" onchange="document.getElementById('edit_members').submit()"checked>${user}</td>
+    <td><input type="checkbox" value="${user}" name="member"
+               onchange="document.getElementById('edit_members').submit()"checked>${user}</td>
     % else:
-    <td><input type="checkbox" value="${user}" name="member" onchange="document.getElementById('edit_members').submit()">${user}</td>
+    <td><input type="checkbox" value="${user}" name="member"
+               onchange="document.getElementById('edit_members').submit()">${user}</td>
     % endif
 </tr>
 %endfor

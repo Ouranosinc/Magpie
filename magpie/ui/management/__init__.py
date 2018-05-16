@@ -17,7 +17,7 @@ def includeme(config):
     config.add_route('edit_group', '/ui/groups/{group_name}/{cur_svc_type}')
     config.add_route('view_users', '/ui/users')
     config.add_route('add_user', '/ui/users/add')
-    config.add_route('edit_user', '/ui/users/{user_name}')
+    config.add_route('edit_user', '/ui/users/{user_name}/{cur_svc_type}')
     config.add_route('view_services', '/ui/services/{cur_svc_type}')
     config.add_route('add_service', '/ui/services/{cur_svc_type}/add')
     config.add_route('edit_service', '/ui/services/{cur_svc_type}/{service_name}')
