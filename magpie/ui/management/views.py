@@ -266,7 +266,7 @@ class ManagementViews(object):
                 check_response(requests.delete(user_url, cookies=self.request.cookies))
                 return HTTPFound(self.request.route_url('view_users'))
             elif u'goto_service' in self.request.POST:
-                self.goto_service(res_id)
+                return self.goto_service(res_id)
             elif 'resource_id' in self.request.POST:
                 self.edit_group_resource_permissions(group_name, res_id)
             else:
@@ -464,7 +464,7 @@ class ManagementViews(object):
             res_id = self.request.POST.get('resource_id')
 
             if 'goto_service' in self.request.POST:
-                self.goto_service(res_id)
+                return self.goto_service(res_id)
             elif 'resource_id' in self.request.POST:
                 self.edit_group_resource_permissions(group_name, res_id)
             else:
