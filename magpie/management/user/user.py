@@ -96,7 +96,7 @@ def update_user_view(request):
         user.set_password(new_password)
         user.regenerate_security_code()
 
-    return valid_http(httpSuccess=HTTPCreated, detail="Updated user information in db successful")
+    return valid_http(httpSuccess=HTTPOk, detail="Update user successful.")
 
 
 def check_user_info(user_name, email, password, group_name):
