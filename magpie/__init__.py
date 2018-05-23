@@ -39,10 +39,10 @@ from ziggurat_foundations.models.services.resource_tree import ResourceTreeServi
 from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
 from pyramid.security import NO_PERMISSION_REQUIRED
 ADMIN_USER = os.getenv('ADMIN_USER', 'admin')
-ADMIN_GROUP = os.getenv('ADMIN_GROUP', 'admin')
+ADMIN_GROUP = os.getenv('ADMIN_GROUP', 'administrators')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin')
 
-USER_GROUP = os.getenv('USER_GROUP', 'user')
+USER_GROUP = os.getenv('USER_GROUP', 'users')
 
 ANONYMOUS_USER = os.getenv('ANONYMOUS_USER', 'anonymous')
 
