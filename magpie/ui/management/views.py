@@ -11,7 +11,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPInternalServerError
 )
-from magpie import USER_NAME_MAX_LENGTH, ANONYMOUS_USER
+from magpie import USER_NAME_MAX_LENGTH, ANONYMOUS_USER, USER_GROUP
 from services import service_type_dict
 from ui.management import check_response
 from ui.home import add_template_data
@@ -195,7 +195,7 @@ class ManagementViews(object):
         return_data = {u'conflict_group_name': False, u'conflict_user_name': False, u'conflict_user_email': False,
                        u'invalid_user_name': False, u'invalid_user_email': False, u'invalid_password': False,
                        u'too_long_user_name': False, u'form_user_name': u'', u'form_user_email': u'',
-                       u'user_groups': self.get_standard_groups(first_default_group=ANONYMOUS_USER)}
+                       u'user_groups': self.get_standard_groups(first_default_group=USER_GROUP)}
         check_data = [u'conflict_group_name', u'conflict_user_name', u'conflict_email',
                       u'invalid_user_name', u'invalid_email', u'invalid_password']
 
@@ -247,7 +247,7 @@ class ManagementViews(object):
 
         user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
-        std_groups = self.get_standard_groups()
+        std_groups = self.get_standard_groups(first_default_group=USER_GROUP)
 
         user_resp = requests.get(user_url, cookies=self.request.cookies)
         check_response(user_resp)
