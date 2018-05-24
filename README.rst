@@ -25,7 +25,7 @@ At the command line::
     $ pip install magpie
 
 
-.. _RestAPI: https://swaggerhub.com/apis/fderue/magpie-rest_api
+.. _RestAPI: https://swaggerhub.com/apis/CRIM/magpie-rest_api
 .. _Authomatic: https://authomatic.github.io/authomatic/
 .. _Ziggurat-Foundations: https://github.com/ergo/ziggurat_foundations
 
