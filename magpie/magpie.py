@@ -11,8 +11,6 @@ import argparse
 import os
 import time
 import logging
-import alembic.config
-from sqlalchemy.sql import select
 LOGGER = logging.getLogger(__name__)
 
 # -- Ziggurat_foundation ----
@@ -30,12 +28,15 @@ from __init__ import *
 #from db import postgresdb
 import api_except
 import models
+import db
 THIS_DIR = os.path.dirname(__file__)
+sys.path.insert(0, THIS_DIR)
 
 
 @view_config(route_name='version', permission=NO_PERMISSION_REQUIRED)
 def get_version(request):
-    return valid_http(httpSuccess=HTTPOk, content={u'version': __version__},
+    return valid_http(httpSuccess=HTTPOk,
+                      content={u'version': __version__, u'db_version': db.get_database_revision(request.db)},
                       detail="Get version successful", contentType='application/json')
 
 
@@ -65,28 +66,17 @@ def get_request_info(request, default_msg="undefined"):
     return content
 
 
-def init_db():
-    curr_path = os.path.dirname(os.path.abspath(__file__))
-    curr_path = os.path.dirname(curr_path)
-    alembic_ini_path = curr_path+'/alembic.ini'
-    alembic_args = ['-c'+alembic_ini_path, 'upgrade', 'heads']
-    alembic.config.main(argv=alembic_args)
-
-
-def get_database_revision(db_session):
-    s = select(['version_num'], from_obj='alembic_version')
-    result = db_session.execute(s).fetchone()
-    return result['version_num']
-
-
 def main(global_config=None, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
 
-    # Check is database is ready
-    from db import is_database_ready
-    if not is_database_ready():
+    # migrate db as required and check if database is ready
+    try:
+        db.run_database_migration()
+    except Exception as e:
+        print(e)
+    if not db.is_database_ready():
         time.sleep(2)
         raise Exception('Database not ready')
 
