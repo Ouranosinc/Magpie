@@ -62,6 +62,9 @@ coverage:
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
+migrate:
+	alembic upgrade head
+
 docs:
 	echo $(CUR_DIR)
 	rm -f $(CUR_DIR)/docs/magpie.rst

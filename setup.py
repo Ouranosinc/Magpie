@@ -15,10 +15,10 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     HISTORY = history_file.read().replace('.. :changelog:', '')
 
-REQUIREMENTS = [
-    "pyramid",
-    "ziggurat-foundations",
-]
+REQUIREMENTS = set([])  # use set to have unique packages by name
+with open('requirements.txt', 'r') as requirements_file:
+    [REQUIREMENTS.add(line.strip()) for line in requirements_file]
+REQUIREMENTS = list(REQUIREMENTS)
 
 TEST_REQUIREMENTS = [
     'nose',
