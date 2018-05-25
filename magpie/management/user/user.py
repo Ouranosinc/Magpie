@@ -137,7 +137,7 @@ def get_user_view(request):
     user = get_user_matchdict_checked(request)
     json_response = {u'user_name': user.user_name,
                      u'email': user.email,
-                     u'group_names': [group.group_name for group in filter_by_standard_groups(user.groups)]}
+                     u'group_names': filter_by_standard_groups([group.group_name for group in user.groups], request.db)}
     return valid_http(httpSuccess=HTTPOk, detail="Get user successful", content=json_response)
 
 
@@ -204,56 +204,73 @@ def delete_user_group(request):
     return valid_http(httpSuccess=HTTPOk, detail="Delete user-group successful")
 
 
-def get_user_resource_permissions(user, resource, db_session):
+def get_user_resource_permissions(user, resource, db_session, inherited_permissions=True):
     if resource.owner_user_id == user.id:
         permission_names = resource_type_dict[resource.type].permission_names
     else:
-        permission_names = [permission.perm_name for permission in resource.perms_for_user(user, db_session=db_session)]
-    return permission_names
+        res_perm_tuple_list = resource.perms_for_user(user, db_session=db_session)
+        if not inherited_permissions:
+            res_perm_tuple_list = filter(lambda perm: perm.group.group_name == user.user_name, res_perm_tuple_list)
+        permission_names = [permission.perm_name for permission in res_perm_tuple_list]
+    return list(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
 
-def get_user_service_permissions(user, service, db_session):
+def get_user_service_permissions(user, service, db_session, inherited_permissions=True):
     if service.owner_user_id == user.id:
         permission_names = service_type_dict[service.type].permission_names
     else:
-        permission_names = [permission.perm_name for permission in service.perms_for_user(user, db_session=db_session)]
-    return permission_names
+        svc_perm_tuple_list = service.perms_for_user(user, db_session=db_session)
+        if not inherited_permissions:
+            svc_perm_tuple_list = filter(lambda perm: perm.group.group_name == user.user_name, svc_perm_tuple_list)
+        permission_names = [permission.perm_name for permission in svc_perm_tuple_list]
+    return list(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
 
-def get_user_resources_permissions_dict(user, db_session, resource_types=None, resource_ids=None):
+def get_user_resources_permissions_dict(user, db_session, resource_types=None,
+                                        resource_ids=None, inherited_permissions=True):
     verify_param(user, notNone=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid user specified to obtain resource permissions")
-    resource_permission_tuple = user.resources_with_possible_perms(resource_ids=resource_ids,
-                                                                   resource_types=resource_types, db_session=db_session)
+    res_perm_tuple_list = user.resources_with_possible_perms(resource_ids=resource_ids,
+                                                             resource_types=resource_types, db_session=db_session)
+    if not inherited_permissions:
+        res_perm_tuple_list = filter(lambda perm: perm.group.group_name == user.user_name, res_perm_tuple_list)
+
     resources_permissions_dict = {}
-    for res_perm in resource_permission_tuple:
+    for res_perm in res_perm_tuple_list:
         if res_perm.resource.resource_id not in resources_permissions_dict:
             resources_permissions_dict[res_perm.resource.resource_id] = [res_perm.perm_name]
         else:
             resources_permissions_dict[res_perm.resource.resource_id].append(res_perm.perm_name)
 
+    # remove any duplicates that could be incorporated by multiple groups
+    for res_id in resources_permissions_dict:
+        resources_permissions_dict[res_id] = list(set(resources_permissions_dict[res_id]))
+
     return resources_permissions_dict
 
 
-def get_user_service_resources_permissions_dict(user, service, db_session):
+def get_user_service_resources_permissions_dict(user, service, db_session, inherited_permissions=True):
     resources_under_service = resource_tree_service.from_parent_deeper(parent_id=service.resource_id,
                                                                        db_session=db_session)
     resource_ids = [resource.Resource.resource_id for resource in resources_under_service]
-    return get_user_resources_permissions_dict(user, db_session, resource_types=None, resource_ids=resource_ids)
+    return get_user_resources_permissions_dict(user, db_session, resource_types=None, resource_ids=resource_ids,
+                                               inherited_permissions=inherited_permissions)
 
 
-@view_config(route_name='user_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_user_resources_view(request):
+def get_user_resources_runner(request, inherited_group_resources_permissions=True):
     user = get_user_matchdict_checked(request)
+    inherit_perms = inherited_group_resources_permissions
     db = request.db
 
     def build_json_user_resource_tree(usr):
         json_res = {}
         for svc in models.Service.all(db_session=db):
-            svc_perms = get_user_service_permissions(user=usr, service=svc, db_session=db)
+            svc_perms = get_user_service_permissions(user=usr, service=svc, db_session=db,
+                                                     inherited_permissions=inherit_perms)
             if svc.type not in json_res:
                 json_res[svc.type] = {}
-            res_perms_dict = get_user_service_resources_permissions_dict(user=usr, service=svc, db_session=db)
+            res_perms_dict = get_user_service_resources_permissions_dict(user=usr, service=svc, db_session=db,
+                                                                         inherited_permissions=inherit_perms)
             json_res[svc.type][svc.resource_name] = format_service_resources(
                 svc,
                 db_session=db,
@@ -270,13 +287,33 @@ def get_user_resources_view(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get user resources successful", content={u'resources': usr_res_dict})
 
 
-@view_config(route_name='user_resource_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_user_resource_permissions_view(request):
+@view_config(route_name='user_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_resources_view(request):
+    return get_user_resources_runner(request, inherited_group_resources_permissions=False)
+
+
+@view_config(route_name='user_inherited_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_resources_view(request):
+    return get_user_resources_runner(request, inherited_group_resources_permissions=True)
+
+
+def get_user_resource_permissions_runner(request, inherited_permissions=True):
     user = get_user_matchdict_checked(request)
     res = get_resource_matchdict_checked(request, 'resource_id')
-    perm_names = get_user_resource_permissions(resource=res, user=user, db_session=request.db)
+    perm_names = get_user_resource_permissions(resource=res, user=user, db_session=request.db,
+                                               inherited_permissions=inherited_permissions)
     return valid_http(httpSuccess=HTTPOk, detail="Get user resource permissions successful",
                       content={u'permission_names': perm_names})
+
+
+@view_config(route_name='user_resource_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_resource_permissions_view(request):
+    return get_user_resource_permissions_runner(request, inherited_permissions=False)
+
+
+@view_config(route_name='user_resource_inherited_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_resource_permissions_view(request):
+    return get_user_resource_permissions_runner(request, inherited_permissions=True)
 
 
 def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
@@ -320,10 +357,10 @@ def delete_user_resource_permission_view(request):
     return delete_user_resource_permission(perm_name, res.resource_id, user.id, request.db)
 
 
-@view_config(route_name='user_services', request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_user_services_view(request):
+def get_user_services_runner(request, inherited_group_services_permissions):
     user = get_user_matchdict_checked(request)
-    res_perm_dict = get_user_resources_permissions_dict(user, resource_types=['service'], db_session=request.db)
+    res_perm_dict = get_user_resources_permissions_dict(user, resource_types=['service'], db_session=request.db,
+                                                        inherited_permissions=inherited_group_services_permissions)
 
     svc_json = {}
     for resource_id, perms in res_perm_dict.items():
@@ -335,16 +372,37 @@ def get_user_services_view(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get user services successful", content={u'services': svc_json})
 
 
-@view_config(route_name='user_service_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_user_service_permissions_view(request):
+@view_config(route_name='user_services', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_services_view(request):
+    return get_user_services_runner(request, inherited_group_services_permissions=False)
+
+
+@view_config(route_name='user_inherited_services', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_inherited_services_view(request):
+    return get_user_services_runner(request, inherited_group_services_permissions=True)
+
+
+def get_user_service_permissions_runner(request, inherited_permissions):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
-    perms = evaluate_call(lambda: get_user_service_permissions(service=service, user=user, db_session=request.db),
+    perms = evaluate_call(lambda: get_user_service_permissions(service=service, user=user, db_session=request.db,
+                                                               inherited_permissions=inherited_permissions),
                           fallback=lambda: request.db.rollback(), httpError=HTTPNotFound,
                           msgOnFail="Could not find permissions using specified `service_name` and `user_name`",
                           content={u'service_name': str(service.resource_name), u'user_name': str(user.user_name)})
-    return valid_http(httpSuccess=HTTPOk, detail="Get user service permissions successful",
+    message_inherit = ' inherited ' if inherited_permissions else ' '
+    return valid_http(httpSuccess=HTTPOk, detail="Get user service{}permissions successful".format(message_inherit),
                       content={u'permission_names': perms})
+
+
+@view_config(route_name='user_service_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_service_permissions_view(request):
+    return get_user_service_permissions_runner(request, inherited_permissions=False)
+
+
+@view_config(route_name='user_service_inherited_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_service_inherited_permissions_view(request):
+    return get_user_service_permissions_runner(request, inherited_permissions=True)
 
 
 @view_config(route_name='user_service_permissions', request_method='POST')

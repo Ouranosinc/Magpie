@@ -267,7 +267,7 @@ class ManagementViews(object):
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
             elif 'resource_id' in self.request.POST:
-                self.edit_group_resource_permissions(group_name, res_id)
+                self.edit_group_resource_permissions(group_name, res_id, is_personal_user_group=True)
             else:
                 if u'edit_username' in self.request.POST:
                     user_info[u'edit_mode'] = u'edit_username'
@@ -317,7 +317,8 @@ class ManagementViews(object):
         # display resources permissions per service type tab
         try:
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-            res_perm_names, res_perms = self.get_group_resources_permissions_dict(group_name, services, cur_svc_type)
+            res_perm_names, res_perms = self.get_group_resources_permissions_dict(group_name, services, cur_svc_type,
+                                                                                  is_personal_user_group=True)
             user_info[u'cur_svc_type'] = cur_svc_type
             user_info[u'svc_types'] = svc_types
             user_info[u'resources'] = res_perms
@@ -400,10 +401,11 @@ class ManagementViews(object):
         for user in new_members:
             check_response(requests.post(url_base.format(usr=user), cookies=self.request.cookies))
 
-    def edit_group_resource_permissions(self, group_name, resource_id):
+    def edit_group_resource_permissions(self, group_name, resource_id, is_personal_user_group=False):
+        group_type = 'users' if is_personal_user_group else 'groups'
+        res_perms_url = '{url}/{grp_type}/{grp}/resources/{res_id}/permissions' \
+                        .format(url=self.magpie_url, grp_type=group_type, grp=group_name, res_id=resource_id)
         try:
-            res_perms_url = '{url}/groups/{grp}/resources/{res_id}/permissions' \
-                            .format(url=self.magpie_url, grp=group_name, res_id=resource_id)
             res_perms_resp = requests.get(res_perms_url, cookies=self.request.cookies)
             res_perms = res_perms_resp.json()['permission_names']
         except Exception as e:
@@ -413,29 +415,28 @@ class ManagementViews(object):
         removed_perms = list(set(res_perms) - set(selected_perms))
         new_perms = list(set(selected_perms) - set(res_perms))
 
-        url = '{host}/groups/{group}/resources/{res_id}/permissions' \
-              .format(host=self.magpie_url, group=group_name, res_id=resource_id)
         for perm in removed_perms:
-            check_response(requests.delete('{url}/{perm}'.format(url=url, perm=perm), cookies=self.request.cookies))
+            del_perm_url = '{url}/{perm}'.format(url=res_perms_url, perm=perm)
+            check_response(requests.delete(del_perm_url, cookies=self.request.cookies))
         for perm in new_perms:
             data = {u'permission_name': perm}
-            check_response(requests.post(url, data=data, cookies=self.request.cookies))
+            check_response(requests.post(res_perms_url, data=data, cookies=self.request.cookies))
 
-    def get_group_resources_permissions_dict(self, group_name, services, service_type):
+    def get_group_resources_permissions_dict(self, group_name, services, service_type, is_personal_user_group=False):
+        group_type = 'users' if is_personal_user_group else 'groups'
         resources_permission_names = set()
         resources = {}
         for service in services:
             if not service:
                 continue
 
-            resp_svc = check_response(requests.get('{url}/services/{svc}/permissions' \
-                                                   .format(url=self.magpie_url, svc=service),
-                                                   cookies=self.request.cookies))
+            svc_perm_url = '{url}/services/{svc}/permissions'.format(url=self.magpie_url, svc=service)
+            resp_svc = check_response(requests.get(svc_perm_url, cookies=self.request.cookies))
             resources_permission_names.update(set(resp_svc.json()['permission_names']))
 
-            resp_group_perms = check_response(requests.get('{url}/groups/{grp}/resources' \
-                                                           .format(url=self.magpie_url, grp=group_name),
-                                                           cookies=self.request.cookies))
+            group_perms_url = '{url}/{grp_type}/{grp}/resources' \
+                              .format(url=self.magpie_url, grp_type=group_type, grp=group_name)
+            resp_group_perms = check_response(requests.get(group_perms_url, cookies=self.request.cookies))
             permission = {}
             try:
                 raw_perms = resp_group_perms.json()['resources'][service_type][service]
@@ -477,14 +478,15 @@ class ManagementViews(object):
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
             elif u'resource_id' in self.request.POST:
-                self.edit_group_resource_permissions(group_name, res_id)
+                self.edit_group_resource_permissions(group_name, res_id, is_personal_user_group=False)
             else:
                 self.edit_group_users(group_name)
 
         # display resources permissions per service type tab
         try:
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-            res_perm_names, res_perms = self.get_group_resources_permissions_dict(group_name, services, cur_svc_type)
+            res_perm_names, res_perms = self.get_group_resources_permissions_dict(group_name, services, cur_svc_type,
+                                                                                  is_personal_user_group=False)
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
