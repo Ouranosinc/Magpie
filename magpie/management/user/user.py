@@ -4,7 +4,7 @@ from api_requests import *
 from services import service_type_dict
 from models import resource_type_dict, resource_tree_service
 from management.service.service import format_service, format_service_resources
-from management.group.group_utils import check_is_standard_group
+from management.group.group_utils import check_is_standard_group, filter_by_standard_groups
 
 
 def rollback_delete(db, entry):
@@ -137,7 +137,7 @@ def get_user_view(request):
     user = get_user_matchdict_checked(request)
     json_response = {u'user_name': user.user_name,
                      u'email': user.email,
-                     u'group_names': [group.group_name for group in user.groups]}
+                     u'group_names': [group.group_name for group in filter_by_standard_groups(user.groups)]}
     return valid_http(httpSuccess=HTTPOk, detail="Get user successful", content=json_response)
 
 
@@ -167,15 +167,18 @@ def get_user_groups_checked(request, user):
 def get_user_groups(request):
     user = get_user_matchdict_checked(request)
     group_names = get_user_groups_checked(request, user)
+    group_names = filter_by_standard_groups(group_names, request.db)
     return valid_http(httpSuccess=HTTPOk, detail="Get user groups successful", content={u'group_names': group_names})
 
 
 @view_config(route_name='user_group', request_method='POST')
 def assign_user_group(request):
+    db = request.db
     user = get_user_matchdict_checked(request)
     group = get_group_matchdict_checked(request)
+    check_is_standard_group(group, db)
     new_user_group = models.UserGroup(group_id=group.id, user_id=user.id)
-    db = request.db
+
     evaluate_call(lambda: db.add(new_user_group), fallback=lambda: db.rollback(),
                   httpError=HTTPConflict, msgOnFail="User already belongs to this group",
                   content={u'user_name': user.user_name, u'group_name': group.group_name})
@@ -184,9 +187,10 @@ def assign_user_group(request):
 
 @view_config(route_name='user_group', request_method='DELETE')
 def delete_user_group(request):
+    db = request.db
     user = get_user_matchdict_checked(request)
     group = get_group_matchdict_checked(request)
-    db = request.db
+    check_is_standard_group(group, db)
 
     def del_usr_grp(usr, grp):
         db.query(models.UserGroup) \
