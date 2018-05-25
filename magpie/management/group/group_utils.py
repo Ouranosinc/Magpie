@@ -18,6 +18,34 @@ def format_group(group):
     )
 
 
+def get_all_groups(db_session):
+    group_names = evaluate_call(lambda: [grp.group_name for grp in models.Group.all(db_session=db_session)],
+                                httpError=HTTPForbidden, msgOnFail="Obtain group names refused by db")
+    return group_names
+
+
+def get_personal_groups(db_session):
+    group_names = evaluate_call(lambda: [grp.group_name for grp in models.Group.all(db_session=db_session)],
+                                httpError=HTTPForbidden, msgOnFail="Obtain group names refused by db")
+    user_names = evaluate_call(lambda: [usr.user_name for usr in models.User.all(db_session=db_session)],
+                               httpError=HTTPForbidden, msgOnFail="Obtain user names refused by db")
+    return list(set(group_names) & set(user_names))
+
+
+def get_standard_groups(db_session):
+    group_names = evaluate_call(lambda: [grp.group_name for grp in models.Group.all(db_session=db_session)],
+                                httpError=HTTPForbidden, msgOnFail="Obtain group names refused by db")
+    user_names = evaluate_call(lambda: [usr.user_name for usr in models.User.all(db_session=db_session)],
+                               httpError=HTTPForbidden, msgOnFail="Obtain user names refused by db")
+    return list(set(group_names) - set(user_names))
+
+
+def check_is_standard_group(group, db_session):
+    std_groups = get_standard_groups(db_session)
+    verify_param(group.group_name, paramCompare=std_groups, isIn=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `group_name` value specified.")
+
+
 def create_group_resource_permission(permission_name, resource_id, group_id, db_session):
     perm_content = {u'permission_name': str(permission_name), u'resource_id': resource_id, u'group_id': group_id}
     new_perm = evaluate_call(lambda: models.GroupResourcePermission(resource_id=resource_id, group_id=group_id),

@@ -25,22 +25,21 @@ class ManagementViews(object):
         self.magpie_url = self.request.registry.settings['magpie.url']
 
     def get_all_groups(self):
-        resp_groups = requests.get('{url}/groups'.format(url=self.magpie_url), cookies=self.request.cookies)
         try:
-            return resp_groups.json()['group_names']
+            return self.get_personal_groups() + self.get_standard_groups()
         except Exception:
             raise HTTPBadRequest(detail='Bad Json response')
 
     def get_personal_groups(self):
-        resp_groups = requests.get('{url}/groups_personal'.format(url=self.magpie_url), cookies=self.request.cookies)
+        resp_groups = requests.get('{url}/users'.format(url=self.magpie_url), cookies=self.request.cookies)
         check_response(resp_groups)
         try:
-            return resp_groups.json()['group_names']
+            return resp_groups.json()['user_names']
         except Exception:
             raise HTTPBadRequest(detail='Bad Json response')
 
     def get_standard_groups(self, first_default_group=None):
-        resp_groups = requests.get('{url}/groups_standard'.format(url=self.magpie_url), cookies=self.request.cookies)
+        resp_groups = requests.get('{url}/groups'.format(url=self.magpie_url), cookies=self.request.cookies)
         check_response(resp_groups)
         try:
             groups = list(resp_groups.json()['group_names'])
