@@ -13,28 +13,32 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
     if not GroupService.by_group_name(group_name, db_session=db):
         new_group = models.Group(group_name=group_name)
         db.add(new_group)
+    registered_group = models.Group.by_group_name(group_name=group_name, db_session=db)
 
-    if not UserService.by_user_name(user_name, db_session=db):
+    registered_user = UserService.by_user_name(user_name, db_session=db)
+    if not registered_user:
         new_user = models.User(user_name=user_name, email=email)
         new_user.set_password(password)
         new_user.regenerate_security_code()
         db.add(new_user)
-        user_id = UserService.by_user_name(user_name, db_session=db).id
+        registered_user = UserService.by_user_name(user_name, db_session=db).id
 
         # add personal user-group and reference between user/personal user-group
         if not GroupService.by_group_name(user_name, db_session=db):
             new_group = models.Group(group_name=user_name)
             db.add(new_group)
             group_id = GroupService.by_group_name(user_name, db_session=db).id
-            group_entry = models.UserGroup(group_id=group_id, user_id=user_id)
+            group_entry = models.UserGroup(group_id=group_id, user_id=registered_user.id)
             db.add(group_entry)
-
-        # add reference between user/group
-        group_id = GroupService.by_group_name(user_name, db_session=db).id
-        group_entry = models.UserGroup(group_id=group_id, user_id=user_id)
-        db.add(group_entry)
     else:
         LOGGER.debug(user_name+' already exist')
+
+    try:
+        # ensure the reference between user/group exists (user joined the group)
+        group_entry = models.UserGroup(group_id=registered_group.id, user_id=registered_user.id)
+        db.add(group_entry)
+    except:  # in case reference already exists, avoid duplicate error
+        pass
 
 
 def init_anonymous(db_session):
@@ -72,7 +76,7 @@ def init_user_group(db_session):
         user_group = models.Group(group_name=USER_GROUP)
         db.add(user_group)
     else:
-        LOGGER.debug('group USER already initialized')
+        LOGGER.debug('USER_GROUP already initialized')
 
 
 if __name__ == '__main__':
