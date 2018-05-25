@@ -4,6 +4,7 @@ from api_requests import *
 from services import service_type_dict
 from models import resource_type_dict, resource_tree_service
 from management.service.service import format_service, format_service_resources
+from management.group.group_utils import check_is_standard_group
 
 
 def rollback_delete(db, entry):
@@ -28,10 +29,11 @@ def create_user(user_name, password, email, group_name, db_session):
     # Check if group already exist
     group = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db),
                           httpError=HTTPForbidden, msgOnFail="Group query was refused by db")
+    check_is_standard_group(group, db)
     verify_param(group, notNone=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Group for new user already exists")
 
-    # Create new_group associated to user
+    # Create user-group associated to user
     group_check = evaluate_call(lambda: GroupService.by_group_name(group_name=user_name, db_session=db),
                                 httpError=HTTPForbidden, msgOnFail="Group check query was refused by db")
     user_check = evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db),
@@ -87,9 +89,15 @@ def update_user_view(request):
     check_user_info(new_user_name, new_email, new_password, group_name=new_user_name)
 
     if user.user_name != new_user_name:
+        evaluate_call(lambda: models.Group.by_group_name(new_user_name, db_session=request.db),
+                      fallback=lambda: request.db.rollback(),
+                      httpError=HTTPConflict, msgOnFail="New name user-group already exists")
+        evaluate_call(lambda: models.User.by_user_name(new_user_name, db_session=request.db),
+                      fallback=lambda: request.db.rollback(),
+                      httpError=HTTPConflict, msgOnFail="New name user already exists")
         old_user_group = models.Group.by_group_name(user.user_name, db_session=request.db)
         old_user_group.group_name = new_user_name
-        user.user_name = new_user_name  # edit last to preserve route with user_name required by previous GET
+        user.user_name = new_user_name
     if user.email != new_email:
         user.email = new_email
     if user.user_password != new_password and new_password is not None:
