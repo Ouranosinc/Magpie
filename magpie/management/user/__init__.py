@@ -13,7 +13,7 @@ def includeme(config):
     config.add_route('user_services', '/users/{user_name}/services')
     config.add_route('user_service_permissions', '/users/{user_name}/services/{service_name}/permissions')
     config.add_route('user_service_permission', '/users/{user_name}/services/{service_name}/permissions/{permission_name}')
-    config.add_route('user_service_resources', '/users/{user_name}/services/{service_name}/resources')
+    #config.add_route('user_service_resources', '/users/{user_name}/services/{service_name}/resources')
 
     config.add_route('user_resources', '/users/{user_name}/resources')
     config.add_route('user_resources_type', '/users/{user_name}/resources/types/{resource_type}')

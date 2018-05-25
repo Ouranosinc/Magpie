@@ -363,18 +363,18 @@ def delete_user_service_permission(request):
     return delete_user_resource_permission(perm_name, service.resource_id, user.id, request.db)
 
 
-@view_config(route_name='user_service_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_user_service_resources_view(request):
-    user = get_user_matchdict_checked(request)
-    service = get_service_matchdict_checked(request)
-    service_perms = get_user_service_permissions(user, service, db_session=request.db)
-    resources_perms_dict = get_user_service_resources_permissions_dict(user, service, db_session=request.db)
-    user_svc_res_json = format_service_resources(
-        service=service,
-        db_session=request.db,
-        service_perms=service_perms,
-        resources_perms_dict=resources_perms_dict,
-        display_all=False
-    )
-    return valid_http(httpSuccess=HTTPOk, detail="Get user service resources successful",
-                      content={u'service': user_svc_res_json})
+#@view_config(route_name='user_service_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+#def get_user_service_resources_view(request):
+#    user = get_user_matchdict_checked(request)
+#    service = get_service_matchdict_checked(request)
+#    service_perms = get_user_service_permissions(user, service, db_session=request.db)
+#    resources_perms_dict = get_user_service_resources_permissions_dict(user, service, db_session=request.db)
+#    user_svc_res_json = format_service_resources(
+#        service=service,
+#        db_session=request.db,
+#        service_perms=service_perms,
+#        resources_perms_dict=resources_perms_dict,
+#        display_all=False
+#    )
+#    return valid_http(httpSuccess=HTTPOk, detail="Get user service resources successful",
+#                      content={u'service': user_svc_res_json})
