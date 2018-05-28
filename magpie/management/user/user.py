@@ -293,7 +293,7 @@ def get_user_resources_view(request):
 
 
 @view_config(route_name='user_inherited_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_user_resources_view(request):
+def get_user_inherited_resources_view(request):
     return get_user_resources_runner(request, inherited_group_resources_permissions=True)
 
 
@@ -312,7 +312,7 @@ def get_user_resource_permissions_view(request):
 
 
 @view_config(route_name='user_resource_inherited_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_user_resource_permissions_view(request):
+def get_user_resource_inherited_permissions_view(request):
     return get_user_resource_permissions_runner(request, inherited_permissions=True)
 
 

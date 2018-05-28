@@ -242,6 +242,7 @@ class ManagementViews(object):
     def edit_user(self):
         user_name = self.request.matchdict['user_name']
         cur_svc_type = self.request.matchdict['cur_svc_type']
+        inherited_permissions = self.request.matchdict.get('inherited_permissions', False)
         group_name = user_name  # personal group
 
         user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
@@ -254,6 +255,7 @@ class ManagementViews(object):
         user_info[u'edit_mode'] = u'no_edit'
         user_info[u'own_groups'] = own_groups
         user_info[u'groups'] = std_groups
+        user_info[u'inherited_permissions'] = inherited_permissions
 
         if self.request.method == 'POST':
             res_id = self.request.POST.get(u'resource_id')
@@ -264,10 +266,14 @@ class ManagementViews(object):
             if u'delete' in self.request.POST:
                 check_response(requests.delete(user_url, cookies=self.request.cookies))
                 return HTTPFound(self.request.route_url('view_users'))
+            elif u'toggle_inherited_permissions' in self.request.POST:
+                inherited_permissions = not register.str2bool(self.request.POST[u'toggle_inherited_permissions'])
+                user_info[u'inherited_permissions'] = inherited_permissions
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
-            elif 'resource_id' in self.request.POST:
-                self.edit_group_resource_permissions(group_name, res_id, is_personal_user_group=True)
+            elif u'resource_id' in self.request.POST:
+                self.edit_group_resource_permissions(group_name, res_id, is_personal_user_group=True,
+                                                     is_inherited_permissions=inherited_permissions)
             else:
                 if u'edit_username' in self.request.POST:
                     user_info[u'edit_mode'] = u'edit_username'
@@ -302,7 +308,7 @@ class ManagementViews(object):
                 return HTTPFound(self.request.route_url('edit_user', **user_info))
 
             # edits to groups checkboxes
-            if not is_edit_user_info and not is_save_user_info:
+            if not is_edit_user_info and not is_save_user_info and not inherited_permissions:
                 selected_groups = self.request.POST.getall('member')
                 personal_groups = self.get_personal_groups()
                 removed_groups = list(set(own_groups) - set(personal_groups) - set(selected_groups))
@@ -318,7 +324,8 @@ class ManagementViews(object):
         try:
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
             res_perm_names, res_perms = self.get_group_resources_permissions_dict(group_name, services, cur_svc_type,
-                                                                                  is_personal_user_group=True)
+                                                                                  is_personal_user_group=True,
+                                                                                  is_inherited_permissions=inherited_permissions)
             user_info[u'cur_svc_type'] = cur_svc_type
             user_info[u'svc_types'] = svc_types
             user_info[u'resources'] = res_perms
@@ -401,10 +408,13 @@ class ManagementViews(object):
         for user in new_members:
             check_response(requests.post(url_base.format(usr=user), cookies=self.request.cookies))
 
-    def edit_group_resource_permissions(self, group_name, resource_id, is_personal_user_group=False):
+    def edit_group_resource_permissions(self, group_name, resource_id,
+                                        is_personal_user_group=False, is_inherited_permissions=False):
         group_type = 'users' if is_personal_user_group else 'groups'
-        res_perms_url = '{url}/{grp_type}/{grp}/resources/{res_id}/permissions' \
-                        .format(url=self.magpie_url, grp_type=group_type, grp=group_name, res_id=resource_id)
+        inherit_type = 'inherit_' if is_personal_user_group and is_inherited_permissions else ''
+        res_perms_url = '{url}/{grp_type}/{grp}/resources/{res_id}/{inherit}permissions' \
+                        .format(url=self.magpie_url, grp_type=group_type, grp=group_name,
+                                res_id=resource_id, inherit=inherit_type)
         try:
             res_perms_resp = requests.get(res_perms_url, cookies=self.request.cookies)
             res_perms = res_perms_resp.json()['permission_names']
@@ -422,8 +432,10 @@ class ManagementViews(object):
             data = {u'permission_name': perm}
             check_response(requests.post(res_perms_url, data=data, cookies=self.request.cookies))
 
-    def get_group_resources_permissions_dict(self, group_name, services, service_type, is_personal_user_group=False):
+    def get_group_resources_permissions_dict(self, group_name, services, service_type,
+                                             is_personal_user_group=False, is_inherited_permissions=False):
         group_type = 'users' if is_personal_user_group else 'groups'
+        inherit_type = 'inherited_' if is_inherited_permissions and is_personal_user_group else ''
         resources_permission_names = set()
         resources = {}
         for service in services:
@@ -434,8 +446,8 @@ class ManagementViews(object):
             resp_svc = check_response(requests.get(svc_perm_url, cookies=self.request.cookies))
             resources_permission_names.update(set(resp_svc.json()['permission_names']))
 
-            group_perms_url = '{url}/{grp_type}/{grp}/resources' \
-                              .format(url=self.magpie_url, grp_type=group_type, grp=group_name)
+            group_perms_url = '{url}/{grp_type}/{grp}/{inherit}resources' \
+                              .format(url=self.magpie_url, grp_type=group_type, grp=group_name, inherit=inherit_type)
             resp_group_perms = check_response(requests.get(group_perms_url, cookies=self.request.cookies))
             permission = {}
             try:

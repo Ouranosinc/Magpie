@@ -7,12 +7,20 @@
         % if perm in value['permission_names']:
             <div class="perm_checkbox">
                 <input type="checkbox" value="${perm}" name="permission"
-                       onchange="document.getElementById('resource_${value['id']}').submit()" checked>
+                       onchange="document.getElementById('resource_${value['id']}').submit()" checked
+                %if inherited_permissions:
+                    disabled
+                %endif
+                >
            </div>
         % else:
             <div class="perm_checkbox">
                 <input type="checkbox" value="${perm}" name="permission"
-                       onchange="document.getElementById('resource_${value['id']}').submit()">
+                       onchange="document.getElementById('resource_${value['id']}').submit()"
+                %if inherited_permissions:
+                    disabled
+                %endif
+                >
             </div>
         % endif
     %endfor
@@ -118,6 +126,16 @@
 </form>
 
 <h3>Permissions</h3>
+
+<form id="toggle_visible_perms" action="${request.path}" method="post">
+    <input type="checkbox" value="${inherited_permissions}" name="toggle_inherited_permissions"
+           onchange="document.getElementById('toggle_visible_perms').submit()"
+    %if inherited_permissions:
+        checked
+    %endif
+    >
+    View inherited group permissions
+</form>
 
 <div class="tabs_panel">
 
