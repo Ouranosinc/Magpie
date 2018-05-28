@@ -104,25 +104,26 @@
 <h3>Groups Membership</h3>
 
 <form id="edit_membership" action="${request.path}" method="post">
-<table>
-%for group in groups:
-<tr>
-    % if group in own_groups:
-        <td>
-            <input type="checkbox" value="${group}" name="member" checked
-                   onchange="document.getElementById('edit_membership').submit()">
-            ${group}
-        </td>
-    % else:
-        <td>
-            <input type="checkbox" value="${group}" name="member"
-                   onchange="document.getElementById('edit_membership').submit()">
-            ${group}
-        </td>
-    % endif
-</tr>
-%endfor
-</table>
+    <input type="hidden" value="True" name="edit_group_membership"/>
+    <table>
+    %for group in groups:
+    <tr>
+        % if group in own_groups:
+            <td>
+                <input type="checkbox" value="${group}" name="member" checked
+                       onchange="document.getElementById('edit_membership').submit()">
+                ${group}
+            </td>
+        % else:
+            <td>
+                <input type="checkbox" value="${group}" name="member"
+                       onchange="document.getElementById('edit_membership').submit()">
+                ${group}
+            </td>
+        % endif
+    </tr>
+    %endfor
+    </table>
 </form>
 
 <h3>Permissions</h3>
@@ -131,9 +132,12 @@
     <input type="checkbox" value="${inherited_permissions}" name="toggle_inherited_permissions"
            onchange="document.getElementById('toggle_visible_perms').submit()"
     %if inherited_permissions:
-        checked
+        checked>
+        <input type="hidden" value="False" name="inherited_permissions"/>
+    %else:
+        >
+        <input type="hidden" value="True" name="inherited_permissions"/>
     %endif
-    >
     View inherited group permissions
 </form>
 

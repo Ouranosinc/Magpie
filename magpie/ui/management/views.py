@@ -259,21 +259,24 @@ class ManagementViews(object):
 
         if self.request.method == 'POST':
             res_id = self.request.POST.get(u'resource_id')
+            is_edit_group_membership = False
             is_edit_user_info = False
             is_save_user_info = False
             requires_update_name = False
 
+            if u'inherited_permissions' in self.request.POST:
+                inherited_permissions = register.str2bool(self.request.POST[u'inherited_permissions'])
+                user_info[u'inherited_permissions'] = inherited_permissions
+
             if u'delete' in self.request.POST:
                 check_response(requests.delete(user_url, cookies=self.request.cookies))
                 return HTTPFound(self.request.route_url('view_users'))
-            elif u'toggle_inherited_permissions' in self.request.POST:
-                inherited_permissions = not register.str2bool(self.request.POST[u'toggle_inherited_permissions'])
-                user_info[u'inherited_permissions'] = inherited_permissions
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
             elif u'resource_id' in self.request.POST:
-                self.edit_group_resource_permissions(group_name, res_id, is_personal_user_group=True,
-                                                     is_inherited_permissions=inherited_permissions)
+                self.edit_group_resource_permissions(group_name, res_id, is_personal_user_group=True)
+            elif u'is_edit_group_membership' in self.request.POST:
+                is_edit_group_membership = True
             else:
                 if u'edit_username' in self.request.POST:
                     user_info[u'edit_mode'] = u'edit_username'
@@ -308,7 +311,7 @@ class ManagementViews(object):
                 return HTTPFound(self.request.route_url('edit_user', **user_info))
 
             # edits to groups checkboxes
-            if not is_edit_user_info and not is_save_user_info and not inherited_permissions:
+            if is_edit_group_membership:
                 selected_groups = self.request.POST.getall('member')
                 personal_groups = self.get_personal_groups()
                 removed_groups = list(set(own_groups) - set(personal_groups) - set(selected_groups))
@@ -408,13 +411,10 @@ class ManagementViews(object):
         for user in new_members:
             check_response(requests.post(url_base.format(usr=user), cookies=self.request.cookies))
 
-    def edit_group_resource_permissions(self, group_name, resource_id,
-                                        is_personal_user_group=False, is_inherited_permissions=False):
+    def edit_group_resource_permissions(self, group_name, resource_id, is_personal_user_group=False):
         group_type = 'users' if is_personal_user_group else 'groups'
-        inherit_type = 'inherit_' if is_personal_user_group and is_inherited_permissions else ''
-        res_perms_url = '{url}/{grp_type}/{grp}/resources/{res_id}/{inherit}permissions' \
-                        .format(url=self.magpie_url, grp_type=group_type, grp=group_name,
-                                res_id=resource_id, inherit=inherit_type)
+        res_perms_url = '{url}/{grp_type}/{grp}/resources/{res_id}/permissions' \
+                        .format(url=self.magpie_url, grp_type=group_type, grp=group_name, res_id=resource_id)
         try:
             res_perms_resp = requests.get(res_perms_url, cookies=self.request.cookies)
             res_perms = res_perms_resp.json()['permission_names']
