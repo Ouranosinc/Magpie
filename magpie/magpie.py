@@ -21,6 +21,7 @@ from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.session import SignedCookieSessionFactory
 from pyramid.view import notfound_view_config, exception_view_config
+from pyramid.config import Configurator
 
 # -- Project specific --------------------------------------------------------
 from __meta__ import __version__
@@ -83,8 +84,6 @@ def main(global_config=None, **settings):
     hostname = os.getenv('HOSTNAME')
     if hostname:
         settings['magpie.url'] = 'http://{hostname}:{port}/magpie'.format(hostname=hostname, port=settings['magpie.port'])
-
-    from pyramid.config import Configurator
 
     magpie_secret = os.getenv('MAGPIE_SECRET')
     if magpie_secret is None:

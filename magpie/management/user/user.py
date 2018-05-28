@@ -4,7 +4,11 @@ from api_requests import *
 from services import service_type_dict
 from models import resource_type_dict, resource_tree_service
 from management.service.service import format_service, format_service_resources
-from management.group.group_utils import check_is_standard_group, filter_by_standard_groups
+from management.group.group_utils import (
+    check_is_standard_group,
+    filter_by_standard_groups,
+    check_valid_service_resource_permission
+)
 
 
 def rollback_delete(db, entry):
@@ -221,7 +225,8 @@ def get_user_service_permissions(user, service, db_session, inherited_permission
     else:
         svc_perm_tuple_list = service.perms_for_user(user, db_session=db_session)
         if not inherited_permissions:
-            svc_perm_tuple_list = filter(lambda perm: perm.group.group_name == user.user_name, svc_perm_tuple_list)
+            svc_perm_tuple_list = filter(lambda perm:
+                                         perm.group is None or perm.group.group_name == user.user_name, svc_perm_tuple_list)    # TMP replace by type='user'
         permission_names = [permission.perm_name for permission in svc_perm_tuple_list]
     return list(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
@@ -233,7 +238,8 @@ def get_user_resources_permissions_dict(user, db_session, resource_types=None,
     res_perm_tuple_list = user.resources_with_possible_perms(resource_ids=resource_ids,
                                                              resource_types=resource_types, db_session=db_session)
     if not inherited_permissions:
-        res_perm_tuple_list = filter(lambda perm: perm.group.group_name == user.user_name, res_perm_tuple_list)
+        res_perm_tuple_list = filter(lambda perm:
+                                     perm.group is None or perm.group.group_name == user.user_name, res_perm_tuple_list)    # TMP replace by type='user'
 
     resources_permissions_dict = {}
     for res_perm in res_perm_tuple_list:
@@ -299,8 +305,8 @@ def get_user_inherited_resources_view(request):
 
 def get_user_resource_permissions_runner(request, inherited_permissions=True):
     user = get_user_matchdict_checked(request)
-    res = get_resource_matchdict_checked(request, 'resource_id')
-    perm_names = get_user_resource_permissions(resource=res, user=user, db_session=request.db,
+    resource = get_resource_matchdict_checked(request, 'resource_id')
+    perm_names = get_user_resource_permissions(resource=resource, user=user, db_session=request.db,
                                                inherited_permissions=inherited_permissions)
     return valid_http(httpSuccess=HTTPOk, detail="Get user resource permissions successful",
                       content={u'permission_names': perm_names})
@@ -332,11 +338,10 @@ def create_user_resource_permission(permission_name, resource_id, user_id, db_se
 @view_config(route_name='user_resource_permissions', request_method='POST')
 def create_user_resource_permission_view(request):
     user = get_user_matchdict_checked(request)
-    res = get_resource_matchdict_checked(request)
-    perm_name = get_permission_matchdict_checked(request, res)
-    verify_param(perm_name, paramCompare=resource_type_dict[res.resource_type].permission_names, isIn=True,
-                 httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that resource type")
-    return create_user_resource_permission(perm_name, res.resource_id, user.id, request.db)
+    resource = get_resource_matchdict_checked(request)
+    perm_name = get_permission_multiformat_post_checked(request, resource)
+    check_valid_service_resource_permission(perm_name, resource)
+    return create_user_resource_permission(perm_name, resource.resource_id, user.id, request.db)
 
 
 def delete_user_resource_permission(permission_name, resource_id, user_id, db_session):
@@ -350,11 +355,10 @@ def delete_user_resource_permission(permission_name, resource_id, user_id, db_se
 @view_config(route_name='user_resource_permission', request_method='DELETE')
 def delete_user_resource_permission_view(request):
     user = get_user_matchdict_checked(request)
-    res = get_resource_matchdict_checked(request)
-    perm_name = get_permission_matchdict_checked(request, res)
-    verify_param(perm_name, paramCompare=resource_type_dict[res.resource_type].permission_names, isIn=True,
-                 httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that resource type")
-    return delete_user_resource_permission(perm_name, res.resource_id, user.id, request.db)
+    resource = get_resource_matchdict_checked(request)
+    perm_name = get_permission_matchdict_checked(request, resource)
+    check_valid_service_resource_permission(perm_name, resource)
+    return delete_user_resource_permission(perm_name, resource.resource_id, user.id, request.db)
 
 
 def get_user_services_runner(request, inherited_group_services_permissions):
@@ -409,7 +413,8 @@ def get_user_service_inherited_permissions_view(request):
 def create_user_service_permission(request):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
-    perm_name = get_permission_matchdict_checked(request, service)
+    perm_name = get_permission_multiformat_post_checked(request, service)
+    check_valid_service_resource_permission(perm_name, service)
     return create_user_resource_permission(perm_name, service.resource_id, user.id, request.db)
 
 
@@ -417,7 +422,8 @@ def create_user_service_permission(request):
 def delete_user_service_permission(request):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
-    perm_name = get_permission_matchdict_checked(request, service)
+    perm_name = get_permission_multiformat_post_checked(request, service)
+    check_valid_service_resource_permission(perm_name, service)
     return delete_user_resource_permission(perm_name, service.resource_id, user.id, request.db)
 
 

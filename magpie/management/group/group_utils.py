@@ -50,6 +50,15 @@ def filter_by_standard_groups(group_names, db_session):
     return list(set(get_standard_groups(db_session)) & set(group_names))
 
 
+def check_valid_service_resource_permission(permission_name, service_resource):
+    if service_resource.resource_type == u'service':
+        verify_param(permission_name, paramCompare=service_type_dict[service_resource.resource_name].permission_names,
+                     isIn=True, httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that service type")
+    else:
+        verify_param(permission_name, paramCompare=resource_type_dict[service_resource.resource_type].permission_names,
+                     isIn=True, httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that resource type")
+
+
 def create_group_resource_permission(permission_name, resource_id, group_id, db_session):
     perm_content = {u'permission_name': str(permission_name), u'resource_id': resource_id, u'group_id': group_id}
     new_perm = evaluate_call(lambda: models.GroupResourcePermission(resource_id=resource_id, group_id=group_id),
