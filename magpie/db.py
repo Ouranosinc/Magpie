@@ -65,11 +65,14 @@ def get_tm_session(session_factory, transaction_manager):
     return dbsession
 
 
-def run_database_migration():
+def get_alembic_ini_path():
     curr_path = os.path.dirname(os.path.abspath(__file__))
     curr_path = os.path.dirname(curr_path)
-    alembic_ini_path = '{path}/alembic.ini'.format(path=curr_path)
-    alembic_args = ['-c', alembic_ini_path, 'upgrade', 'head']
+    return '{path}/alembic.ini'.format(path=curr_path)
+
+
+def run_database_migration():
+    alembic_args = ['-c', get_alembic_ini_path(), 'upgrade', 'heads']
     alembic.config.main(argv=alembic_args)
 
 

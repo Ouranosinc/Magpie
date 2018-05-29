@@ -76,6 +76,8 @@ def main(global_config=None, **settings):
     # migrate db as required and check if database is ready
     try:
         db.run_database_migration()
+    except ImportError:
+        pass
     except Exception as e:
         raise Exception('Database migration failed [{}]'.format(str(e)))
     if not db.is_database_ready():

@@ -1,4 +1,5 @@
-from management.group.group_utils import create_group_resource_permission, SERVICES_PHOENIX_ALLOWED
+from management.group.group_utils import create_group_resource_permission
+from register import SERVICES_PHOENIX_ALLOWED
 from ziggurat_definitions import *
 from api_except import *
 from services import service_type_dict
