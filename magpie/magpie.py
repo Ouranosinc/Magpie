@@ -77,7 +77,7 @@ def main(global_config=None, **settings):
     try:
         db.run_database_migration()
     except Exception as e:
-        print(e)
+        raise Exception('Database migration failed [{}]'.format(str(e)))
     if not db.is_database_ready():
         time.sleep(2)
         raise Exception('Database not ready')
