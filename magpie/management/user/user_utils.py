@@ -5,11 +5,6 @@ import models
 from ziggurat_definitions import *
 
 
-def rollback_delete(db, entry):
-    db.rollback()
-    entry.delete(db_session=db)
-
-
 def create_user(user_name, password, email, group_name, db_session):
     db = db_session
 

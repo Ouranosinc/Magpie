@@ -66,11 +66,6 @@ def delete_user(request):
     db = request.db
     evaluate_call(lambda: db.delete(user), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Delete user by name refused by db")
-    user_group = evaluate_call(lambda: GroupService.by_group_name(user.user_name, db_session=db),
-                               fallback=lambda: db.rollback(),
-                               httpError=HTTPNotFound, msgOnFail="Could not find user-group in db")
-    evaluate_call(lambda: db.delete(user_group), fallback=lambda: db.rollback(),
-                  httpError=HTTPForbidden, msgOnFail="Delete user-group refused by db")
     return valid_http(httpSuccess=HTTPOk, detail="Delete user successful")
 
 
