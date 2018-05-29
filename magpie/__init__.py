@@ -5,25 +5,6 @@ import sys
 this_dir = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, this_dir)
 
-#from api_except import *
-#from api_except import *
-#from models import *
-from register import *
-#from pyramid.httpexceptions import (
-#    HTTPFound,
-#    HTTPOk,
-#    HTTPTemporaryRedirect,
-#    HTTPBadRequest,
-#    HTTPConflict,
-#    HTTPCreated,
-#    HTTPNotFound,
-#    HTTPUnauthorized,
-#    HTTPAccepted,
-#    HTTPNoContent,
-#)
-#from pyramid.security import ALL_PERMISSIONS
-#from pyramid.view import view_config
-
 ADMIN_USER = os.getenv('ADMIN_USER', 'admin')
 ADMIN_GROUP = os.getenv('ADMIN_GROUP', 'administrators')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin')

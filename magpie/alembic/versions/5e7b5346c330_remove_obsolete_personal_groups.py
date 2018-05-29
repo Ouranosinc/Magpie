@@ -5,8 +5,6 @@ Revises: 2a6c63397399
 Create Date: 2018-05-29 16:04:20.724597
 
 """
-from alembic import op
-import sqlalchemy as sa
 
 import os, sys
 cur_file = os.path.abspath(__file__)
@@ -20,8 +18,7 @@ from alembic import op
 from alembic.context import get_context
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm import sessionmaker
-from magpie import models
-from magpie import ANONYMOUS_USER, ADMIN_GROUP, USER_GROUP
+from magpie import models, ANONYMOUS_USER, ADMIN_GROUP, USER_GROUP
 from ziggurat_definitions import *
 
 Session = sessionmaker()
@@ -51,7 +48,7 @@ def upgrade():
             if group_name in user_names and group_name not in ignore_groups:
 
                 # get the real user
-                user = models.User.by_user_name(user_name=group_name, db_session=session)
+                user = UserService.by_user_name(user_name=group_name, db_session=session)
 
                 # transfer permissions from 'personal' group to user
                 user_perms = GroupService.resources_with_possible_perms(group, db_session=session)

@@ -69,7 +69,7 @@ def run_database_migration():
     curr_path = os.path.dirname(os.path.abspath(__file__))
     curr_path = os.path.dirname(curr_path)
     alembic_ini_path = '{path}/alembic.ini'.format(path=curr_path)
-    alembic_args = ['-c', alembic_ini_path, 'upgrade', 'heads']
+    alembic_args = ['-c', alembic_ini_path, 'upgrade', 'head']
     alembic.config.main(argv=alembic_args)
 
 

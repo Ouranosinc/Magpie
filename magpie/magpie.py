@@ -28,11 +28,11 @@ from pyramid.config import Configurator
 from __meta__ import __version__
 from __init__ import *
 #from db import postgresdb
+THIS_DIR = os.path.dirname(__file__)
+sys.path.insert(0, THIS_DIR)
 from api_except import *
 import models
 import db
-THIS_DIR = os.path.dirname(__file__)
-sys.path.insert(0, THIS_DIR)
 
 
 @view_config(route_name='version', permission=NO_PERMISSION_REQUIRED)
