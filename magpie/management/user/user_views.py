@@ -1,8 +1,8 @@
 from api_requests import *
 from user_utils import *
 from ziggurat_definitions import *
-from management.service.service_utils import format_service, format_service_resources
-from management.group.group_utils import filter_by_standard_groups, check_valid_service_resource_permission
+from management.service.service_formats import format_service, format_service_resources
+from management.group.group_utils import check_valid_service_resource_permission
 
 
 @view_config(route_name='users', request_method='POST')
@@ -56,7 +56,7 @@ def get_user_view(request):
     user = get_user_matchdict_checked(request)
     json_response = {u'user_name': user.user_name,
                      u'email': user.email,
-                     u'group_names': filter_by_standard_groups([group.group_name for group in user.groups], request.db)}
+                     u'group_names': [group.group_name for group in user.groups]}
     return valid_http(httpSuccess=HTTPOk, detail="Get user successful", content=json_response)
 
 
@@ -74,19 +74,10 @@ def delete_user(request):
     return valid_http(httpSuccess=HTTPOk, detail="Delete user successful")
 
 
-def get_user_groups_checked(request, user):
-    verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db")
-    db = request.db
-    group_names = evaluate_call(lambda: [group.group_name for group in user.groups], fallback=lambda: db.rollback(),
-                                httpError=HTTPInternalServerError, msgOnFail="Failed to obtain groups of user")
-    return group_names
-
-
 @view_config(route_name='user_groups', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_groups(request):
     user = get_user_matchdict_checked(request)
     group_names = get_user_groups_checked(request, user)
-    group_names = filter_by_standard_groups(group_names, request.db)
     return valid_http(httpSuccess=HTTPOk, detail="Get user groups successful", content={u'group_names': group_names})
 
 
@@ -95,7 +86,6 @@ def assign_user_group(request):
     db = request.db
     user = get_user_matchdict_checked(request)
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, db)
     new_user_group = models.UserGroup(group_id=group.id, user_id=user.id)
 
     evaluate_call(lambda: db.add(new_user_group), fallback=lambda: db.rollback(),
@@ -109,7 +99,6 @@ def delete_user_group(request):
     db = request.db
     user = get_user_matchdict_checked(request)
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, db)
 
     def del_usr_grp(usr, grp):
         db.query(models.UserGroup) \
@@ -180,19 +169,6 @@ def get_user_resource_permissions_view(request):
 @view_config(route_name='user_resource_inherited_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_resource_inherited_permissions_view(request):
     return get_user_resource_permissions_runner(request, inherited_permissions=True)
-
-
-def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
-    new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
-    verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
-                 content={u'resource_id': str(resource_id), u'user_id': str(user_id)},
-                 msgOnFail="Failed to create permission using specified `resource_id` and `user_id`")
-    new_perm.perm_name = permission_name
-    evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
-                  httpError=HTTPConflict, msgOnFail="Permission already exist on service for user, cannot add to db",
-                  content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
-    return valid_http(httpSuccess=HTTPCreated, detail="Create user resource permission successful",
-                      content={u'resource_id': resource_id})
 
 
 @view_config(route_name='user_resource_permissions', request_method='POST')
@@ -285,20 +261,3 @@ def delete_user_service_permission(request):
     perm_name = get_permission_multiformat_post_checked(request, service)
     check_valid_service_resource_permission(perm_name, service)
     return delete_user_resource_permission(perm_name, service.resource_id, user.id, request.db)
-
-
-#@view_config(route_name='user_service_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
-#def get_user_service_resources_view(request):
-#    user = get_user_matchdict_checked(request)
-#    service = get_service_matchdict_checked(request)
-#    service_perms = get_user_service_permissions(user, service, db_session=request.db)
-#    resources_perms_dict = get_user_service_resources_permissions_dict(user, service, db_session=request.db)
-#    user_svc_res_json = format_service_resources(
-#        service=service,
-#        db_session=request.db,
-#        service_perms=service_perms,
-#        resources_perms_dict=resources_perms_dict,
-#        display_all=False
-#    )
-#    return valid_http(httpSuccess=HTTPOk, detail="Get user service resources successful",
-#                      content={u'service': user_svc_res_json})

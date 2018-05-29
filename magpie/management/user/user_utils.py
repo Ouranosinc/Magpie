@@ -1,8 +1,7 @@
 from magpie import *
 from api_except import *
 from services import service_type_dict
-from models import resource_type_dict, resource_tree_service
-from management.group.group_utils import check_is_standard_group
+import models
 from ziggurat_definitions import *
 
 
@@ -12,69 +11,62 @@ def rollback_delete(db, entry):
 
 
 def create_user(user_name, password, email, group_name, db_session):
-    """
-    When a user is created, he is automatically assigned to a group with the same name.
-    He is also added to a default group specified by group_name.
-    It is then easier to check permission on resource a user has:
-    Check all permission inherited from group: GET /users/user_name/permissions
-    Check direct permission of user: GET /groups/user_name/permissions
-
-    :return: `HTTPCreated` if successful
-    :raise `HTTPNotAcceptable`:
-    :raise `HTTPConflict`:
-    :raise `HTTPForbidden`:
-    """
     db = db_session
-    # Check if group already exist
-    group = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db),
-                          httpError=HTTPForbidden, msgOnFail="Group query was refused by db")
-    check_is_standard_group(group, db)
-    verify_param(group, notNone=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Group for new user already exists")
 
-    # Create user-group associated to user
-    group_check = evaluate_call(lambda: GroupService.by_group_name(group_name=user_name, db_session=db),
-                                httpError=HTTPForbidden, msgOnFail="Group check query was refused by db")
+    # Check that group already exists
+    group_check = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db),
+                                httpError=HTTPForbidden, msgOnFail="Group query was refused by db")
+    verify_param(group_check, notNone=True, httpError=HTTPNotAcceptable, msgOnFail="Group for new user doesn't exist")
+
+    # Check if user already exists
     user_check = evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db),
                                httpError=HTTPForbidden, msgOnFail="User check query was refused by db")
-    verify_param(group_check, isNone=True, httpError=HTTPConflict,
-                 msgOnFail="User name matches an already existing group name")
     verify_param(user_check, isNone=True, httpError=HTTPConflict,
                  msgOnFail="User name matches an already existing user name")
-    group_model = models.Group(group_name=user_name)
-    evaluate_call(lambda: db.add(group_model), fallback=lambda: rollback_delete(db, group_model),
-                  httpError=HTTPForbidden, msgOnFail="Failed to add group to db")
 
-    # Create user with specified name and newly created group
+    # Create user with specified name and group to assign
     user_model = models.User(user_name=user_name, email=email)
     if password:
         user_model.set_password(password)
         user_model.regenerate_security_code()
-    evaluate_call(lambda: db.add(user_model), fallback=lambda: rollback_delete(db, group_model),
+    evaluate_call(lambda: db.add(user_model), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Failed to add user to db")
 
     # Assign user to default group and own group
     new_user = evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db),
                              httpError=HTTPForbidden, msgOnFail="New user query was refused by db")
-    group_entry = models.UserGroup(group_id=group.id, user_id=new_user.id)
+    group_entry = models.UserGroup(group_id=group_check.id, user_id=new_user.id)
     evaluate_call(lambda: db.add(group_entry), fallback=lambda: db.rollback(),
-                  httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
-    new_group = evaluate_call(lambda: GroupService.by_group_name(user_name, db_session=db),
-                              httpError=HTTPForbidden, msgOnFail="New group query was refused by db")
-    new_group_entry = models.UserGroup(group_id=new_group.id, user_id=new_user.id)
-    evaluate_call(lambda: db.add(new_group_entry), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
 
     return valid_http(httpSuccess=HTTPCreated, detail="Add user to db successful")
 
 
+def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
+    new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
+    verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
+                 content={u'resource_id': str(resource_id), u'user_id': str(user_id)},
+                 msgOnFail="Failed to create permission using specified `resource_id` and `user_id`")
+    new_perm.perm_name = permission_name
+    evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
+                  httpError=HTTPConflict, msgOnFail="Permission already exist on service for user, cannot add to db",
+                  content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
+    return valid_http(httpSuccess=HTTPCreated, detail="Create user resource permission successful",
+                      content={u'resource_id': resource_id})
+
+
+def filter_user_permission(resource_permission_tuple_list, user):
+    return filter(lambda perm: perm.group is None and perm.type == u'user' and perm.user.user_name == user.user_name,
+                  resource_permission_tuple_list)
+
+
 def get_user_resource_permissions(user, resource, db_session, inherited_permissions=True):
     if resource.owner_user_id == user.id:
-        permission_names = resource_type_dict[resource.type].permission_names
+        permission_names = models.resource_type_dict[resource.type].permission_names
     else:
         res_perm_tuple_list = resource.perms_for_user(user, db_session=db_session)
         if not inherited_permissions:
-            res_perm_tuple_list = filter(lambda perm: perm.group.group_name == user.user_name, res_perm_tuple_list)
+            res_perm_tuple_list = filter_user_permission(res_perm_tuple_list, user)
         permission_names = [permission.perm_name for permission in res_perm_tuple_list]
     return list(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
@@ -85,8 +77,7 @@ def get_user_service_permissions(user, service, db_session, inherited_permission
     else:
         svc_perm_tuple_list = service.perms_for_user(user, db_session=db_session)
         if not inherited_permissions:
-            svc_perm_tuple_list = filter(lambda perm:
-                                         perm.group is None and perm.user.user_name == user.user_name, svc_perm_tuple_list)
+            svc_perm_tuple_list = filter_user_permission(svc_perm_tuple_list, user)
         permission_names = [permission.perm_name for permission in svc_perm_tuple_list]
     return list(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
@@ -98,9 +89,7 @@ def get_user_resources_permissions_dict(user, db_session, resource_types=None,
     res_perm_tuple_list = user.resources_with_possible_perms(resource_ids=resource_ids,
                                                              resource_types=resource_types, db_session=db_session)
     if not inherited_permissions:
-        res_perm_tuple_list = filter(lambda perm:
-                                     perm.group is None or perm.group.group_name == user.user_name, res_perm_tuple_list)    # TMP replace by type='user'
-
+        res_perm_tuple_list = filter_user_permission(res_perm_tuple_list, user)
     resources_permissions_dict = {}
     for res_perm in res_perm_tuple_list:
         if res_perm.resource.resource_id not in resources_permissions_dict:
@@ -116,8 +105,8 @@ def get_user_resources_permissions_dict(user, db_session, resource_types=None,
 
 
 def get_user_service_resources_permissions_dict(user, service, db_session, inherited_permissions=True):
-    resources_under_service = resource_tree_service.from_parent_deeper(parent_id=service.resource_id,
-                                                                       db_session=db_session)
+    resources_under_service = models.resource_tree_service.from_parent_deeper(parent_id=service.resource_id,
+                                                                              db_session=db_session)
     resource_ids = [resource.Resource.resource_id for resource in resources_under_service]
     return get_user_resources_permissions_dict(user, db_session, resource_types=None, resource_ids=resource_ids,
                                                inherited_permissions=inherited_permissions)
@@ -138,3 +127,11 @@ def check_user_info(user_name, email, password, group_name):
                  msgOnFail="Invalid `group_name` value specified")
     verify_param(user_name, paramCompare=[LOGGED_USER], notIn=True, httpError=HTTPConflict,
                  msgOnFail="Invalid `user_name` already logged in")
+
+
+def get_user_groups_checked(request, user):
+    verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db")
+    db = request.db
+    group_names = evaluate_call(lambda: [group.group_name for group in user.groups], fallback=lambda: db.rollback(),
+                                httpError=HTTPInternalServerError, msgOnFail="Failed to obtain groups of user")
+    return group_names

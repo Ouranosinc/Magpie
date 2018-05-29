@@ -1,11 +1,10 @@
-from management.service.service_utils import format_service_resources, format_service
 from group_utils import *
 from ziggurat_definitions import *
 
 
 @view_config(route_name='groups', request_method='GET')
 def get_groups(request):
-    group_names = get_standard_groups(request.db)
+    group_names = get_all_groups(request.db)
     return valid_http(httpSuccess=HTTPOk, detail="Get groups successful", content={u'group_names': group_names})
 
 
@@ -29,7 +28,6 @@ def create_group(request):
 @view_config(route_name='group', request_method='PUT')
 def edit_group(request):
     group = get_group_matchdict_checked(request, group_name_key='group_name')
-    check_is_standard_group(group, request.db)
     new_group_name = get_multiformat_post(request, 'group_name')
     verify_param(new_group_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `group_name` value specified.")
@@ -48,7 +46,6 @@ def edit_group(request):
 @view_config(route_name='group', request_method='DELETE')
 def delete_group(request):
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, request.db)
     evaluate_call(lambda: request.db.delete(group), fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete group forbidden by db")
     return valid_http(httpSuccess=HTTPOk, detail="Delete group successful")
@@ -57,7 +54,6 @@ def delete_group(request):
 @view_config(route_name='group_users', request_method='GET')
 def get_group_users(request):
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, request.db)
     user_names = evaluate_call(lambda: [user.user_name for user in group.users],
                                httpError=HTTPForbidden, msgOnFail="Failed to obtain group user names from db")
     return valid_http(httpSuccess=HTTPOk, detail="Get group users successful", content={u'user_names': user_names})
@@ -66,55 +62,28 @@ def get_group_users(request):
 @view_config(route_name='group_services', request_method='GET')
 def get_group_services_view(request):
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, request.db)
     res_perm_dict = get_group_resources_permissions_dict(group, resource_types=[u'service'], db_session=request.db)
-
-    def get_grp_svc(res_perm):
-        grp_svc_dict = {}
-        for res_id, perms in res_perm.items():
-            svc = models.Service.by_resource_id(resource_id=res_id, db_session=request.db)
-            svc_type = str(svc.type)
-            svc_name = str(svc.resource_name)
-            if svc_type not in grp_svc_dict:
-                grp_svc_dict[svc_type] = {}
-            grp_svc_dict[svc_type][svc_name] = format_service(svc, perms)
-        return grp_svc_dict
-
-    grp_svc_json = evaluate_call(lambda: get_grp_svc(res_perm_dict), httpError=HTTPInternalServerError,
-                                 msgOnFail="Failed to populate group services", content={u'group': format_group(group)})
+    grp_svc_json = evaluate_call(lambda: get_group_services(res_perm_dict, request.db),
+                                 httpError=HTTPInternalServerError, msgOnFail="Failed to populate group services",
+                                 content={u'group': format_group(group)})
     return valid_http(httpSuccess=HTTPOk, detail="Get group services successful", content={u'services': grp_svc_json})
 
 
 @view_config(route_name='group_service_permissions', request_method='GET')
 def get_group_service_permissions_view(request):
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, request.db)
     service = get_service_matchdict_checked(request)
-
-    def get_grp_svc_perms(grp, svc, db):
-        if svc.owner_group_id == grp.id:
-            svc_found = svc
-            perms_found = service_type_dict[svc.type].permission_names
-        else:
-            svc_perm_list = get_group_services_permissions(grp, db_session=db, resource_ids=[svc.resource_id])
-            if len(svc_perm_list) < 1:
-                return svc, list()
-            svc_found, perms_found = svc_perm_list[0]
-        return svc_found, perms_found
-
-    svc_perms_found = evaluate_call(lambda: get_grp_svc_perms(group, service, request.db),
+    svc_perms_found = evaluate_call(lambda: get_group_service_permissions(group, service, request.db),
                                     httpError=HTTPInternalServerError,
                                     msgOnFail="Failed to extract permissions names from group-service",
                                     content={u'group': format_group(group), u'service': format_service(service)})
-    _, permission_names = svc_perms_found
     return valid_http(httpSuccess=HTTPOk, detail="Get group service permissions successful",
-                      content={u'permission_names': permission_names})
+                      content={u'permission_names': svc_perms_found})
 
 
 @view_config(route_name='group_service_permissions', request_method='POST')
 def create_group_service_permission(request):
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, request.db)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, service)
     return create_group_resource_permission(perm_name, service.resource_id, group.id, db_session=request.db)
@@ -123,7 +92,6 @@ def create_group_service_permission(request):
 @view_config(route_name='group_service_permission', request_method='DELETE')
 def delete_group_service_permission(request):
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, request.db)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_matchdict_checked(request, service)
     return delete_group_resource_permission(perm_name, service.resource_id, group.id, db_session=request.db)
@@ -132,27 +100,7 @@ def delete_group_service_permission(request):
 @view_config(route_name='group_resources', request_method='GET')
 def get_group_resources_view(request):
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, request.db)
-
-    def get_grp_res(grp, db):
-        json_response = {}
-        for svc in models.Service.all(db_session=db):
-            svc_perms = get_group_service_permissions(group=grp, service=svc, db_session=db)
-            svc_name = str(svc.resource_name)
-            svc_type = str(svc.type)
-            if svc_type not in json_response:
-                json_response[svc_type] = {}
-            res_perm_dict = get_group_service_resources_permissions_dict(group=grp, service=svc, db_session=db)
-            json_response[svc_type][svc_name] = format_service_resources(
-                svc,
-                db_session=db,
-                service_perms=svc_perms,
-                resources_perms_dict=res_perm_dict,
-                display_all=False
-            )
-        return json_response
-
-    grp_res_json = evaluate_call(lambda: get_grp_res(group, request.db), fallback=lambda: request.db.rollback(),
+    grp_res_json = evaluate_call(lambda: get_group_resources(group, request.db), fallback=lambda: request.db.rollback(),
                                  httpError=HTTPInternalServerError, content={u'group': repr(group)},
                                  msgOnFail="Failed to build group resources json tree")
     return valid_http(httpSuccess=HTTPOk, detail="Get group resources successful", content={u'resources': grp_res_json})
@@ -161,7 +109,6 @@ def get_group_resources_view(request):
 @view_config(route_name='group_resource_permissions', request_method='GET')
 def get_group_resource_permissions_view(request):
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, request.db)
     resource = get_resource_matchdict_checked(request)
     perm_names = get_group_resource_permissions(group, resource, db_session=request.db)
     return valid_http(httpSuccess=HTTPOk, detail="Get group resource permissions successful",
@@ -171,7 +118,6 @@ def get_group_resource_permissions_view(request):
 @view_config(route_name='group_resource_permissions', request_method='POST')
 def create_group_resource_permission_view(request):
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, request.db)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, resource)
     return create_group_resource_permission(perm_name, resource.resource_id, group.id, db_session=request.db)
@@ -180,7 +126,6 @@ def create_group_resource_permission_view(request):
 @view_config(route_name='group_resource_permission', request_method='DELETE')
 def delete_group_resource_permission_view(request):
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, request.db)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_matchdict_checked(request, resource)
     return delete_group_resource_permission(perm_name, resource.resource_id, group.id, db_session=request.db)
@@ -189,7 +134,6 @@ def delete_group_resource_permission_view(request):
 @view_config(route_name='group_service_resources', request_method='GET')
 def get_group_service_resources_view(request):
     group = get_group_matchdict_checked(request)
-    check_is_standard_group(group, request.db)
     service = get_service_matchdict_checked(request)
     svc_perms = get_group_service_permissions(group=group, service=service, db_session=request.db)
     res_perms = get_group_service_resources_permissions_dict(group=group, service=service, db_session=request.db)
