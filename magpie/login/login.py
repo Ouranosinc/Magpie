@@ -1,16 +1,13 @@
-import json
-
 from authomatic.adapters import WebObAdapter
 from pyramid.security import NO_PERMISSION_REQUIRED, Authenticated
-
 from pyramid.security import forget, remember
+from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInBadAuth, ZigguratSignInSuccess, ZigguratSignOut
+from ziggurat_definitions import *
 from security import authomatic
-
 from api_requests import *
-
-
 from magpie import *
-from management.user.user import create_user
+from management.user.user_utils import create_user
+
 
 internal_providers = [u'ziggurat']
 external_providers = [u'openid',

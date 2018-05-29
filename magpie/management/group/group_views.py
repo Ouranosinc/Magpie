@@ -1,7 +1,6 @@
-from management.service.service import format_service_resources, format_service
-from api_requests import *
-from api_except import *
+from management.service.service_utils import format_service_resources, format_service
 from group_utils import *
+from ziggurat_definitions import *
 
 
 @view_config(route_name='groups', request_method='GET')

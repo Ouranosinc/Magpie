@@ -20,14 +20,15 @@ from ziggurat_foundations.models import groupfinder
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.session import SignedCookieSessionFactory
-from pyramid.view import notfound_view_config, exception_view_config
+from pyramid.view import view_config, notfound_view_config, exception_view_config
+from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.config import Configurator
 
 # -- Project specific --------------------------------------------------------
 from __meta__ import __version__
 from __init__ import *
 #from db import postgresdb
-import api_except
+from api_except import *
 import models
 import db
 THIS_DIR = os.path.dirname(__file__)

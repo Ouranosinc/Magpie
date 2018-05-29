@@ -14,8 +14,4 @@ def includeme(config):
     config.add_route('service_resource', '/services/{service_name}/resources/{resource_id}')
     config.add_route('service_type_resource_types', '/services/types/{service_type}/resources/types')
 
-    config.add_route('resources', '/resources')
-    config.add_route('resource', '/resources/{resource_id}')
-    config.add_route('resource_permissions', '/resources/{resource_id}/permissions')
-
     config.scan()

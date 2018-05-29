@@ -245,13 +245,6 @@ class ManagementViews(object):
         inherited_permissions = self.request.matchdict.get('inherited_permissions', False)
         group_name = user_name  # personal group
 
-        from magpie import *
-        user = UserService.by_user_name('francis', db_session=self.request.db)
-        res = ResourceService.by_resource_id(43, db_session=self.request.db)
-        perms = ResourceService.perms_for_user(res, user, db_session=self.request.db)
-        uperms = ResourceService.direct_perms_for_user(res, user, db_session=self.request.db)
-        gperms = ResourceService.group_perms_for_user(res, user, db_session=self.request.db)
-
         user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
         std_groups = self.get_standard_groups(first_default_group=USER_GROUP)
