@@ -24,31 +24,20 @@ class ManagementViews(object):
         self.request = request
         self.magpie_url = self.request.registry.settings['magpie.url']
 
-    def get_all_groups(self):
+    def get_all_groups(self, first_default_group=None):
         try:
-            return self.get_personal_groups() + self.get_standard_groups()
+            resp_groups = requests.get('{url}/groups'.format(url=self.magpie_url), cookies=self.request.cookies)
         except Exception:
             raise HTTPBadRequest(detail='Bad Json response')
-
-#!!!!!    def get_personal_groups(self):
-#!!!!!       resp_groups = requests.get('{url}/users'.format(url=self.magpie_url), cookies=self.request.cookies)
-#!!!!!       check_response(resp_groups)
-#!!!!!       try:
-#!!!!!           return resp_groups.json()['user_names']
-#!!!!!       except Exception:
-#!!!!!            raise HTTPBadRequest(detail='Bad Json response')
-
-#!!!!!    def get_standard_groups(self, first_default_group=None):
-#!!!!!        resp_groups = requests.get('{url}/groups'.format(url=self.magpie_url), cookies=self.request.cookies)
-#!!!!!        check_response(resp_groups)
-#!!!!!        try:
-#!!!!!            groups = list(resp_groups.json()['group_names'])
-#!!!!!            if type(first_default_group) is str and first_default_group in groups:
-#!!!!!                groups.remove(first_default_group)
-#!!!!!               groups.insert(0, first_default_group)
-#!!!!!           return groups
-#!!!!!       except Exception as e:
-#!!!!!           raise HTTPBadRequest(detail=e.message)
+        check_response(resp_groups)
+        try:
+            groups = list(resp_groups.json()['group_names'])
+            if type(first_default_group) is str and first_default_group in groups:
+                groups.remove(first_default_group)
+                groups.insert(0, first_default_group)
+            return groups
+        except Exception as e:
+            raise HTTPBadRequest(detail=e.message)
 
     def get_group_users(self, group_name):
         try:
@@ -350,7 +339,7 @@ class ManagementViews(object):
             return HTTPFound(self.request.route_url('edit_group', group_name=group_name, cur_svc_type='default'))
 
         groups_info = {}
-        groups = self.get_standard_groups()
+        groups = self.get_all_groups()
         [groups_info.setdefault(grp, {u'members': len(self.get_group_users(grp))}) for grp in groups if grp != u'']
 
         return add_template_data(self.request, {u'group_names': groups_info})
