@@ -50,6 +50,14 @@ def create_user_resource_permission(permission_name, resource_id, user_id, db_se
                       content={u'resource_id': resource_id})
 
 
+def delete_user_resource_permission(permission_name, resource_id, user_id, db_session):
+    del_perm = UserResourcePermissionService.get(user_id, resource_id, permission_name, db_session)
+    evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
+                  httpError=HTTPNotFound, msgOnFail="Could not find user resource permission to delete from db",
+                  content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
+    return valid_http(httpSuccess=HTTPOk, detail="Delete user resource permission successful")
+
+
 def filter_user_permission(resource_permission_tuple_list, user):
     return filter(lambda perm: perm.group is None and perm.type == u'user' and perm.user.user_name == user.user_name,
                   resource_permission_tuple_list)

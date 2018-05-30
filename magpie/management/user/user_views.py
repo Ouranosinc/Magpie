@@ -171,16 +171,8 @@ def create_user_resource_permission_view(request):
     user = get_user_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, resource)
-    check_valid_service_resource_permission(perm_name, resource)
+    check_valid_service_resource_permission(perm_name, resource, request.db)
     return create_user_resource_permission(perm_name, resource.resource_id, user.id, request.db)
-
-
-def delete_user_resource_permission(permission_name, resource_id, user_id, db_session):
-    del_perm = UserResourcePermissionService.get(user_id, resource_id, permission_name, db_session)
-    evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
-                  httpError=HTTPNotFound, msgOnFail="Could not find user resource permission to delete from db",
-                  content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
-    return valid_http(httpSuccess=HTTPOk, detail="Delete user resource permission successful")
 
 
 @view_config(route_name='user_resource_permission', request_method='DELETE')
@@ -188,7 +180,7 @@ def delete_user_resource_permission_view(request):
     user = get_user_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_matchdict_checked(request, resource)
-    check_valid_service_resource_permission(perm_name, resource)
+    check_valid_service_resource_permission(perm_name, resource, request.db)
     return delete_user_resource_permission(perm_name, resource.resource_id, user.id, request.db)
 
 
@@ -245,7 +237,7 @@ def create_user_service_permission(request):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, service)
-    check_valid_service_resource_permission(perm_name, service)
+    check_valid_service_resource_permission(perm_name, service, request.db)
     return create_user_resource_permission(perm_name, service.resource_id, user.id, request.db)
 
 
@@ -254,5 +246,5 @@ def delete_user_service_permission(request):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, service)
-    check_valid_service_resource_permission(perm_name, service)
+    check_valid_service_resource_permission(perm_name, service, request.db)
     return delete_user_resource_permission(perm_name, service.resource_id, user.id, request.db)
