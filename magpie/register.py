@@ -3,8 +3,7 @@ import time
 import yaml
 import subprocess
 import requests
-import logging
-from distutils.dir_util import mkpath
+from common import *
 
 LOGGER = logging.getLogger(__name__)
 
@@ -19,28 +18,6 @@ GETCAPABILITIES_ATTEMPTS = 12   # max attempts for 'GetCapabilities' validations
 SERVICES_MAGPIE  = 'MAGPIE'
 SERVICES_PHOENIX = 'PHOENIX'
 SERVICES_PHOENIX_ALLOWED = ['wps']
-
-
-def print_log(msg):
-    print(msg)
-    LOGGER.debug(msg)
-
-
-def bool2str(value):
-    return 'true' if value in ['on', 'true', 'True', True] else 'false'
-
-
-def str2bool(value):
-    return True if value in ['on', 'true', 'True', True] else False
-
-
-# alternative to 'makedirs' with 'exists_ok' parameter only available for python>3.5
-def make_dirs(path):
-    dir_path = os.path.dirname(path)
-    if not os.path.isfile(path) or not os.path.isdir(dir_path):
-        for subdir in mkpath(dir_path):
-            if not os.path.isdir(subdir):
-                os.mkdir(subdir)
 
 
 def login_loop(login_url, cookies_file, data=None, message='Login response'):

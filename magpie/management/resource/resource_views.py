@@ -1,5 +1,7 @@
 from api_requests import *
 from resource_utils import *
+from common import str2bool
+from register import sync_services_phoenix
 
 
 @view_config(route_name='resource', request_method='GET')

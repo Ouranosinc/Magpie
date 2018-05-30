@@ -30,25 +30,25 @@ class ManagementViews(object):
         except Exception:
             raise HTTPBadRequest(detail='Bad Json response')
 
-    def get_personal_groups(self):
-        resp_groups = requests.get('{url}/users'.format(url=self.magpie_url), cookies=self.request.cookies)
-        check_response(resp_groups)
-        try:
-            return resp_groups.json()['user_names']
-        except Exception:
-            raise HTTPBadRequest(detail='Bad Json response')
+#!!!!!    def get_personal_groups(self):
+#!!!!!       resp_groups = requests.get('{url}/users'.format(url=self.magpie_url), cookies=self.request.cookies)
+#!!!!!       check_response(resp_groups)
+#!!!!!       try:
+#!!!!!           return resp_groups.json()['user_names']
+#!!!!!       except Exception:
+#!!!!!            raise HTTPBadRequest(detail='Bad Json response')
 
-    def get_standard_groups(self, first_default_group=None):
-        resp_groups = requests.get('{url}/groups'.format(url=self.magpie_url), cookies=self.request.cookies)
-        check_response(resp_groups)
-        try:
-            groups = list(resp_groups.json()['group_names'])
-            if type(first_default_group) is str and first_default_group in groups:
-                groups.remove(first_default_group)
-                groups.insert(0, first_default_group)
-            return groups
-        except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+#!!!!!    def get_standard_groups(self, first_default_group=None):
+#!!!!!        resp_groups = requests.get('{url}/groups'.format(url=self.magpie_url), cookies=self.request.cookies)
+#!!!!!        check_response(resp_groups)
+#!!!!!        try:
+#!!!!!            groups = list(resp_groups.json()['group_names'])
+#!!!!!            if type(first_default_group) is str and first_default_group in groups:
+#!!!!!                groups.remove(first_default_group)
+#!!!!!               groups.insert(0, first_default_group)
+#!!!!!           return groups
+#!!!!!       except Exception as e:
+#!!!!!           raise HTTPBadRequest(detail=e.message)
 
     def get_group_users(self, group_name):
         try:
