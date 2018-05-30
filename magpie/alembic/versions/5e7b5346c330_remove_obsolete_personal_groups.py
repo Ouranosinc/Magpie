@@ -38,9 +38,8 @@ def upgrade():
         all_groups = session.query(models.Group)
         all_user_group_refs = models.UserGroup.all(db_session=session)
 
-        ignore_users = {ANONYMOUS_USER}
         ignore_groups = {ADMIN_GROUP, USER_GROUP}
-        user_names = {usr.user_name for usr in all_users} - ignore_users
+        user_names = {usr.user_name for usr in all_users}
 
         # parse through 'personal' groups matching an existing user
         for group in all_groups:
