@@ -11,7 +11,7 @@ def get_services_by_type(service_type, db_session):
     verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `service_type` value '" + str(service_type) + "' specified")
     services = db_session.query(models.Service).filter(models.Service.type == service_type)
-    return services
+    return sorted(services)
 
 
 def add_service_getcapabilities_perms(service, db_session, group_name=None):
