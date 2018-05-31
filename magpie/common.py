@@ -1,5 +1,6 @@
 from distutils.dir_util import mkpath
 import logging
+import os
 
 LOGGER = logging.getLogger(__name__)
 
@@ -7,6 +8,11 @@ LOGGER = logging.getLogger(__name__)
 def print_log(msg):
     print(msg)
     LOGGER.debug(msg)
+
+
+def raise_log(msg, exception=Exception):
+    LOGGER.debug(msg)
+    raise exception(msg)
 
 
 def bool2str(value):

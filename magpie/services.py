@@ -267,11 +267,36 @@ class ServiceTHREDDS(ServiceI):
     pass
 
 
+class ServiceProjectAPI(ServiceI):
+
+    permission_names = ['read',
+                        'write']
+
+    params_expected = [u'request']
+
+    resource_types = [models.Directory.resource_type_name,
+                      models.File.resource_type_name]
+
+    def __init__(self, service, request):
+        super(ServiceProjectAPI, self).__init__(service, request)
+
+    @property
+    def __acl__(self):
+        self.expand_acl(self.service, self.request.user)
+        return self.acl
+
+    def permission_requested(self):
+        return u'read'
+
+    pass
+
+
 service_type_dict = {u'wps': ServiceWPS,
                      u'ncwms': ServiceNCWMS2,
                      u'geoserverwms': ServiceGeoserver,
                      u'wfs': ServiceWFS,
-                     u'thredds': ServiceTHREDDS}
+                     u'thredds': ServiceTHREDDS,
+                     u'project-api': ServiceProjectAPI}
 
 
 def service_factory(service, request):

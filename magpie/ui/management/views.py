@@ -95,8 +95,7 @@ class ManagementViews(object):
             resp_services = requests.get('{url}/services'.format(url=self.magpie_url), cookies=self.request.cookies)
             check_response(resp_services)
             all_services = resp_services.json()['services']
-            svc_types = all_services.keys()
-            svc_types = all_services.keys()
+            svc_types = sorted(all_services.keys())
             if cur_svc_type not in svc_types:
                 cur_svc_type = svc_types[0]
             services = all_services[cur_svc_type]
