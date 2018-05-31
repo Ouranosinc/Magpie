@@ -10,6 +10,11 @@ def print_log(msg):
     LOGGER.debug(msg)
 
 
+def raise_log(msg, exception=Exception):
+    LOGGER.debug(msg)
+    raise exception(msg)
+
+
 def bool2str(value):
     return 'true' if value in ['on', 'true', 'True', True] else 'false'
 
