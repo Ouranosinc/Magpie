@@ -1,8 +1,11 @@
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import configure_mappers
+from sqlalchemy.sql import select
+from sqlalchemy.engine.reflection import Inspector
+import inspect
+import alembic.config
 import zope.sqlalchemy
-import logging
 import os
 from magpie import models
 import logging
@@ -19,22 +22,21 @@ configure_mappers()
 
 
 def get_engine(settings, prefix='sqlalchemy.'):
-   database_url = 'postgresql://' \
+    database_url = 'postgresql://' \
                    + os.getenv('POSTGRES_USER', 'postgres') + \
                    ':' + os.getenv('POSTGRES_PASSWORD', 'postgres') + \
                    '@' + os.getenv('POSTGRES_HOST', 'localhost') + \
                    ':' + os.getenv('POSTGRES_PORT', '5432') + \
                    '/' + os.getenv('POSTGRES_DB', 'magpiedb')
 
-   settings[prefix+'url'] = database_url
-   return engine_from_config(settings, prefix)
+    settings[prefix+'url'] = database_url
+    return engine_from_config(settings, prefix)
 
 
 def get_session_factory(engine):
     factory = sessionmaker()
     factory.configure(bind=engine)
     return factory
-
 
 
 def get_tm_session(session_factory, transaction_manager):
@@ -63,8 +65,22 @@ def get_tm_session(session_factory, transaction_manager):
     return dbsession
 
 
-from sqlalchemy.engine.reflection import Inspector
-import inspect
+def get_alembic_ini_path():
+    curr_path = os.path.dirname(os.path.abspath(__file__))
+    curr_path = os.path.dirname(curr_path)
+    return '{path}/alembic.ini'.format(path=curr_path)
+
+
+def run_database_migration():
+    alembic_args = ['-c', get_alembic_ini_path(), 'upgrade', 'heads']
+    alembic.config.main(argv=alembic_args)
+
+
+def get_database_revision(db_session):
+    s = select(['version_num'], from_obj='alembic_version')
+    result = db_session.execute(s).fetchone()
+    return result['version_num']
+
 
 def is_database_ready():
     inspector = Inspector.from_engine(get_engine(dict()))
@@ -79,6 +95,7 @@ def is_database_ready():
             except:
                 continue
     return True
+
 
 def includeme(config):
     """

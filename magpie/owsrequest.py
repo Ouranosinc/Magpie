@@ -6,12 +6,10 @@ The OWSRequest is based on pywps code:
 """
 
 import lxml.etree
-
 from pyramid.httpexceptions import HTTPBadRequest
-
-
 import logging
 logger = logging.getLogger(__name__)
+
 
 def ows_parser_factory(request):
     if request.method == 'GET':

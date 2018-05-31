@@ -41,6 +41,7 @@ def get_url():
         os.getenv("POSTGRES_DB", "pavics"),
     )
 
+
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
 
@@ -75,7 +76,6 @@ def run_migrations_online():
     #    poolclass=pool.NullPool)
     connectable = create_engine(get_url())
 
-
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
@@ -89,6 +89,7 @@ def run_migrations_online():
                 context.run_migrations()
         finally:
             connection.close()
+
 
 if context.is_offline_mode():
     run_migrations_offline()

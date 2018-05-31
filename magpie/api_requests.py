@@ -1,7 +1,8 @@
 from magpie import *
+from api_except import *
+from ziggurat_definitions import *
 from models import resource_type_dict
 from services import service_type_dict
-from api_except import *
 from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy
 
 

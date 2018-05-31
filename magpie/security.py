@@ -5,6 +5,7 @@ import os
 import logging
 logger = logging.getLogger(__name__)
 
+
 def authomatic(request):
     return Authomatic(
         config=authomatic_config(request),
@@ -65,8 +66,6 @@ def authomatic_config(request):
             },
         },
     }
-
-
 
     # Concatenate the configs.
     config = {}

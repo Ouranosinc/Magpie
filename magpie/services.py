@@ -1,5 +1,6 @@
 from magpie import *
 from owsrequest import *
+from ziggurat_definitions import *
 from models import find_children_by_name
 from pyramid.security import Everyone as EVERYONE
 from pyramid.security import Allow
@@ -91,9 +92,9 @@ class ServiceWMS(ServiceI):
 class ServiceNCWMS2(ServiceWMS):
     resource_types = [models.File.resource_type_name,
                       models.Directory.resource_type_name]
+
     def __init__(self, service, request):
         super(ServiceNCWMS2, self).__init__(service, request)
-
 
     @property
     def __acl__(self):
@@ -138,7 +139,6 @@ class ServiceNCWMS2(ServiceWMS):
         return self.acl
 
 
-
 class ServiceGeoserver(ServiceWMS):
 
     def __init__(self, service, request):
@@ -175,7 +175,6 @@ class ServiceGeoserver(ServiceWMS):
         if workspace:
             self.expand_acl(workspace, self.request.user)
         return self.acl
-
 
 
 class ServiceWFS(ServiceI):
