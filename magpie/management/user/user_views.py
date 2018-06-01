@@ -2,7 +2,7 @@ from api_requests import *
 from user_utils import *
 from ziggurat_definitions import *
 from management.service.service_formats import format_service, format_service_resources
-from management.group.group_utils import check_valid_service_resource_permission
+from management.resource.resource_utils import check_valid_service_resource_permission
 
 
 @view_config(route_name='users', request_method='POST')
@@ -171,7 +171,7 @@ def create_user_resource_permission_view(request):
     user = get_user_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, resource)
-    check_valid_service_resource_permission(perm_name, resource, request.db)
+    check_valid_service_resource_permission(perm_name, resource)
     return create_user_resource_permission(perm_name, resource.resource_id, user.id, request.db)
 
 
@@ -180,7 +180,7 @@ def delete_user_resource_permission_view(request):
     user = get_user_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_matchdict_checked(request, resource)
-    check_valid_service_resource_permission(perm_name, resource, request.db)
+    check_valid_service_resource_permission(perm_name, resource)
     return delete_user_resource_permission(perm_name, resource.resource_id, user.id, request.db)
 
 
@@ -237,7 +237,7 @@ def create_user_service_permission(request):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, service)
-    check_valid_service_resource_permission(perm_name, service, request.db)
+    check_valid_service_resource_permission(perm_name, service)
     return create_user_resource_permission(perm_name, service.resource_id, user.id, request.db)
 
 
@@ -246,5 +246,5 @@ def delete_user_service_permission(request):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, service)
-    check_valid_service_resource_permission(perm_name, service, request.db)
+    check_valid_service_resource_permission(perm_name, service)
     return delete_user_resource_permission(perm_name, service.resource_id, user.id, request.db)

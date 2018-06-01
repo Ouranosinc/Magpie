@@ -12,16 +12,6 @@ def get_all_groups(db_session):
     return group_names
 
 
-def check_valid_service_resource_permission(permission_name, service_resource, db_session):
-    if service_resource.resource_type == u'service':
-        resource = models.Resource.by_resource_id(service_resource.resource_id, db_session)
-        verify_param(permission_name, paramCompare=service_type_dict[resource.type].permission_names,
-                     isIn=True, httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that service type")
-    else:
-        verify_param(permission_name, paramCompare=resource_type_dict[service_resource.resource_type].permission_names,
-                     isIn=True, httpError=HTTPBadRequest, msgOnFail="Permission not allowed for that resource type")
-
-
 def get_group_resources(group, db_session):
     json_response = {}
     for svc in models.Service.all(db_session=db_session):

@@ -1,4 +1,5 @@
 from api_requests import *
+from models import resource_tree_service
 
 
 def format_resource(resource, permissions=None, basic_info=False):
@@ -41,3 +42,19 @@ def format_resource_tree(children, db_session, resources_perms_dict=None):
         fmt_res_tree[child_id][u'children'] = format_resource_tree(new_children, db_session, resources_perms_dict)
 
     return fmt_res_tree
+
+
+def get_resource_children(resource, db_session):
+    query = resource_tree_service.from_parent_deeper(resource.resource_id, db_session=db_session)
+    tree_struct_dict = resource_tree_service.build_subtree_strut(query)
+    return tree_struct_dict[u'children']
+
+
+def format_resource_with_children(resource, db_session):
+    resource_formatted = format_resource(resource)
+
+    resource_formatted[u'children'] = format_resource_tree(
+        get_resource_children(resource, db_session),
+        db_session=db_session
+    )
+    return resource_formatted

@@ -8,15 +8,15 @@ from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy
 
 def get_service_or_resource_types(service_resource):
     if isinstance(service_resource, models.Service):
-        svc_res_type_dict = service_type_dict[service_resource.type]
-        svc_res_type_str = "service"
+        svc_res_type_obj = service_type_dict[service_resource.type]
+        svc_res_type_str = u"service"
     elif isinstance(service_resource, models.Resource):
-        svc_res_type_dict = resource_type_dict[service_resource.resource_type]
-        svc_res_type_str = "resource"
+        svc_res_type_obj = resource_type_dict[service_resource.resource_type]
+        svc_res_type_str = u"resource"
     else:
         raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
                    content={u'service_resource': repr(type(service_resource))})
-    return svc_res_type_dict, svc_res_type_str
+    return svc_res_type_obj, svc_res_type_str
 
 
 def get_multiformat_post(request, key):
@@ -33,9 +33,9 @@ def get_multiformat_delete(request, key):
 
 
 def get_permission_multiformat_post_checked(request, service_resource, permission_name_key='permission_name'):
-    svc_res_type_dict, svc_res_type_str = get_service_or_resource_types(service_resource)
+    svc_res_type_obj, svc_res_type_str = get_service_or_resource_types(service_resource)
     perm_name = get_value_multiformat_post_checked(request, permission_name_key)
-    verify_param(perm_name, paramCompare=svc_res_type_dict.permission_names, isIn=True,
+    verify_param(perm_name, paramCompare=svc_res_type_obj.permission_names, isIn=True,
                  httpError=HTTPForbidden, msgOnFail="Permission not allowed for that " + str(svc_res_type_str))
     return perm_name
 
@@ -127,9 +127,9 @@ def get_service_matchdict_checked(request, service_name_key='service_name'):
 
 
 def get_permission_matchdict_checked(request, service_resource, permission_name_key='permission_name'):
-    svc_res_type_dict, svc_res_type_str = get_service_or_resource_types(service_resource)
+    svc_res_type_obj, svc_res_type_str = get_service_or_resource_types(service_resource)
     perm_name = get_value_matchdict_checked(request, permission_name_key)
-    verify_param(perm_name, paramCompare=svc_res_type_dict.permission_names, isIn=True,
+    verify_param(perm_name, paramCompare=svc_res_type_obj.permission_names, isIn=True,
                  httpError=HTTPForbidden, msgOnFail="Permission not allowed for that " + str(svc_res_type_str))
     return perm_name
 

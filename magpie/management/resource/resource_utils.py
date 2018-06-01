@@ -1,23 +1,20 @@
-from models import resource_type_dict, resource_tree_service, resource_factory
+from models import resource_factory
 from resource_formats import *
 from ziggurat_definitions import *
 from api_except import *
+from api_requests import get_service_or_resource_types
 
 
-def get_resource_children(resource, db_session):
-    query = resource_tree_service.from_parent_deeper(resource.resource_id, db_session=db_session)
-    tree_struct_dict = resource_tree_service.build_subtree_strut(query)
-    return tree_struct_dict[u'children']
+def check_valid_service_resource_permission(permission_name, service_resource):
+    svc_res_obj, svc_res_type = get_service_or_resource_types(service_resource)
+    verify_param(permission_name, paramCompare=svc_res_obj.permission_names,
+                 isIn=True, httpError=HTTPBadRequest,
+                 msgOnFail="Permission not allowed for that {} type".format(svc_res_type))
 
 
-def format_resource_with_children(resource, db_session):
-    resource_formatted = format_resource(resource)
-
-    resource_formatted[u'children'] = format_resource_tree(
-        get_resource_children(resource, db_session),
-        db_session=db_session
-    )
-    return resource_formatted
+def get_specific_service_resource_permissions(service_resource):
+    svc_res_obj, svc_res_type = get_service_or_resource_types(service_resource)
+    return svc_res_obj.permission_names
 
 
 def crop_tree_with_permission(children, resource_id_list):
