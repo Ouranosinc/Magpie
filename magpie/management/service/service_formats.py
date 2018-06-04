@@ -28,7 +28,6 @@ def format_service(service, permissions=None):
 
 def format_service_resources(service, db_session, service_perms=None, resources_perms_dict=None, display_all=False):
     service_perms = list() if service_perms is None else service_perms
-    resources_perms_dict = dict() if resources_perms_dict is None else resources_perms_dict
 
     def fmt_svc_res(svc, db, svc_perms, res_perms, show_all):
         tree = get_resource_children(svc, db)

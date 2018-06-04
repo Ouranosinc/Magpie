@@ -28,19 +28,50 @@ def format_resource(resource, permissions=None, basic_info=False):
     )
 
 
-def format_resource_tree(children, db_session, resources_perms_dict=None):
+def format_resource_tree(children, db_session, resources_perms_dict=None, internal_svc_res_perm_dict=None):
+    """
+
+    :param children:
+    :param db_session:
+    :param resources_perms_dict: any pre-established user- or group-specific permissions. Only those are shown if given
+    :param internal_svc_res_perm_dict: *for this function's use only*,
+    avoid re-fetch of already obtained permissions for corresponding resources
+    :return:
+    """
+    internal_svc_res_perm_dict = dict() if internal_svc_res_perm_dict is None else internal_svc_res_perm_dict
+
     fmt_res_tree = {}
     for child_id, child_dict in children.items():
         resource = child_dict[u'node']
         new_children = child_dict[u'children']
         perms = []
 
-        resources_perms_dict = dict() if resources_perms_dict is None else resources_perms_dict
-        if resource.resource_id in resources_perms_dict.keys():
-            perms = resources_perms_dict[resource.resource_id]
+        # case of pre-specified user/group-specific permissions
+        if resources_perms_dict is not None:
+            if resource.resource_id in resources_perms_dict.keys():
+                perms = resources_perms_dict[resource.resource_id]
+
+        # case of full fetch (permitted resource permissions)
+        else:
+            # directly access the resource if it is a service
+            if resource.root_service_id is None:
+                service = resource
+                service_id = resource.resource_id
+                # add to dict only if not already added
+                if service_id not in internal_svc_res_perm_dict:
+                    internal_svc_res_perm_dict[service_id] = service_type_dict[service.type].resource_types_permissions
+            # obtain corresponding top-level service resource if not already available
+            else:
+                service_id = resource.root_service_id
+                if service_id not in internal_svc_res_perm_dict:
+                    service = models.Service.by_resource_id(service_id, db_session=db_session)
+                    internal_svc_res_perm_dict[service_id] = service_type_dict[service.type].resource_types_permissions
+
+            perms = internal_svc_res_perm_dict[service_id][resource.resource_type]
 
         fmt_res_tree[child_id] = format_resource(resource, perms)
-        fmt_res_tree[child_id][u'children'] = format_resource_tree(new_children, db_session, resources_perms_dict)
+        fmt_res_tree[child_id][u'children'] = format_resource_tree(new_children, db_session,
+                                                                   resources_perms_dict, internal_svc_res_perm_dict)
 
     return fmt_res_tree
 
