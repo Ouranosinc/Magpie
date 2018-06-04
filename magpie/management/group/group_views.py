@@ -35,7 +35,7 @@ def edit_group(request):
                  paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
                  msgOnFail="Invalid `group_name` length specified " +
                            "(>{length} characters).".format(length=USER_NAME_MAX_LENGTH))
-    verify_param(new_group_name, isEqual=True, httpError=HTTPNotAcceptable,
+    verify_param(new_group_name, notEqual=True, httpError=HTTPNotAcceptable,
                  paramCompare=group.group_name, msgOnFail="Invalid `group_name` must be different than current name.")
     verify_param(models.Group.by_group_name(new_group_name, db_session=request.db), isNone=True, httpError=HTTPConflict,
                  msgOnFail="Group name already exists.")

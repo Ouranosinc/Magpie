@@ -37,6 +37,22 @@ def get_resource_path(resource_id, db_session):
     return parent_path
 
 
+def get_resource_root_service(resource, db_session):
+    """
+    Recursively rewinds back through the top of the resource tree up to the top-level service-resource.
+
+    :param resource: initial resource where to start searching upwards the tree
+    :param db_session:
+    :return: resource-tree root service as a resource object
+    """
+    if resource is not None:
+        if resource.parent_id is None:
+            return resource
+        parent_resource = ResourceService.by_resource_id(resource.parent_id, db_session=db_session)
+        return get_resource_root_service(parent_resource, db_session=db_session)
+    return None
+
+
 def create_resource(resource_name, resource_type, parent_id, db_session):
     verify_param(resource_name, notNone=True, notEmpty=True,
                  msgOnFail="Invalid `resource_name` '" + str(resource_name) + "' specified for child resource creation")
@@ -49,8 +65,20 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
                                     msgOnFail="Could not find specified resource parent id",
                                     content={u'parent_id': str(parent_id), u'resource_name': str(resource_name),
                                              u'resource_type': str(resource_type)})
+
+    # verify for valid permissions from top-level service-specific corresponding resources permissions
+    root_service = get_resource_root_service(parent_resource, db_session=db_session)
+    verify_param(root_service, notNone=True, httpError=HTTPInternalServerError,
+                 msgOnFail="Failed retrieving `root_service` from db")
+    verify_param(root_service.resource_type, isEqual=True, httpError=HTTPInternalServerError, paramCompare=u'service',
+                 msgOnFail="Invalid `root_service` retrieved from db is not a service")
+    verify_param(resource_type, isIn=True, httpError=HTTPNotAcceptable,
+                 paramCompare=service_type_dict[root_service.type].resource_types,
+                 msgOnFail="Invalid `resource_type` specified for service type `{}`".format(root_service.type))
+
     new_resource = resource_factory(resource_type=resource_type,
                                     resource_name=resource_name,
+                                    root_service_id=root_service.resource_id,
                                     parent_id=parent_resource.resource_id)
 
     # Two resources with the same parent can't have the same name !

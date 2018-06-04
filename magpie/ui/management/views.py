@@ -600,7 +600,7 @@ class ManagementViews(object):
 
         if 'delete_child' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
-            check_response(requests.delete('{url}/services/{res_id}'.format(url=self.magpie_url, res_id=resource_id),
+            check_response(requests.delete('{url}/resources/{res_id}'.format(url=self.magpie_url, res_id=resource_id),
                                            cookies=self.request.cookies))
 
         if 'add_child' in self.request.POST:

@@ -74,7 +74,7 @@ def update_service(request):
     # None/Empty values are accepted in case of unspecified
     svc_name = select_update(get_multiformat_post(request, 'service_name'), service.resource_name)
     svc_url = select_update(get_multiformat_post(request, 'service_url'), service.url)
-    verify_param(svc_name == service.resource_name and svc_url == service.url, isEqual=True, paramCompare=True,
+    verify_param(svc_name == service.resource_name and svc_url == service.url, notEqual=True, paramCompare=True,
                  httpError=HTTPBadRequest, msgOnFail="Current service values are already equal to update values")
 
     if svc_name != service.resource_name:
@@ -158,18 +158,6 @@ def create_service_direct_resource(request):
     if not parent_id:
         parent_id = service.resource_id
     return create_resource(resource_name, resource_type, parent_id=parent_id, db_session=request.db)
-
-
-@view_config(route_name='resources', request_method='GET')
-def get_resources_view(request):
-    res_json = {}
-    for svc_type in service_type_dict.keys():
-        services = get_services_by_type(svc_type, db_session=request.db)
-        res_json[svc_type] = {}
-        for svc in services:
-            res_json[svc_type][svc.resource_name] = format_service_resources(svc, request.db, display_all=True)
-    res_json = {u'resources': res_json}
-    return valid_http(httpSuccess=HTTPOk, detail="Get resources successful", content=res_json)
 
 
 @view_config(route_name='service_type_resource_types', request_method='GET')

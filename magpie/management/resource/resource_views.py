@@ -2,6 +2,20 @@ from api_requests import *
 from resource_utils import *
 from common import str2bool
 from register import sync_services_phoenix
+from management.service.service_utils import get_services_by_type
+from management.service.service_formats import format_service_resources
+
+
+@view_config(route_name='resources', request_method='GET')
+def get_resources_view(request):
+    res_json = {}
+    for svc_type in service_type_dict.keys():
+        services = get_services_by_type(svc_type, db_session=request.db)
+        res_json[svc_type] = {}
+        for svc in services:
+            res_json[svc_type][svc.resource_name] = format_service_resources(svc, request.db, display_all=True)
+    res_json = {u'resources': res_json}
+    return valid_http(httpSuccess=HTTPOk, detail="Get resources successful", content=res_json)
 
 
 @view_config(route_name='resource', request_method='GET')

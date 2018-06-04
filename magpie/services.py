@@ -11,9 +11,11 @@ class ServiceI(object):
     params_expected = []    # derived services must have 'request' at least for 'permission_requested' method
     resource_types_permissions = {}     # dict of list for each corresponding allowed resource permissions
 
-    @property
-    def resource_types(self):  # allowed resources types under the service
-        return self.resource_types_permissions.keys()
+    # make 'property' getter from derived classes
+    class __metaclass__(type):
+        @property
+        def resource_types(cls):  # allowed resources types under the service
+            return cls.resource_types_permissions.keys()
 
     def __init__(self, service, request):
         self.service = service

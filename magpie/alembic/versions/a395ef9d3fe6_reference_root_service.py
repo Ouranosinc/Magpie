@@ -19,8 +19,8 @@ from alembic.context import get_context
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import reflection
-from magpie import models, ANONYMOUS_USER
-from ziggurat_definitions import *
+from magpie import models
+from magpie.management.resource.resource_utils import get_resource_root_service
 
 Session = sessionmaker()
 
@@ -30,15 +30,6 @@ revision = 'a395ef9d3fe6'
 down_revision = 'ae1a3c8c7860'
 branch_labels = None
 depends_on = None
-
-
-def get_resource_top_parent(resource, db_session):
-    if resource is not None:
-        if resource.parent_id is None:
-            return resource
-        parent_resource = ResourceService.by_resource_id(resource.parent_id, db_session=db_session)
-        return get_resource_top_parent(parent_resource, db_session=db_session)
-    return None
 
 
 def upgrade():
@@ -66,7 +57,7 @@ def upgrade():
         # add existing resource references to their root service, loop through reference tree chain
         all_resources = session.query(models.Resource)
         for resource in all_resources:
-            service_resource = get_resource_top_parent(resource, session)
+            service_resource = get_resource_root_service(resource, session)
             if service_resource.resource_id != resource.resource_id:
                 resource.root_service_id = service_resource.resource_id
         session.commit()
