@@ -54,11 +54,11 @@ def get_resource_root_service(resource, db_session):
 
 
 def create_resource(resource_name, resource_type, parent_id, db_session):
-    verify_param(resource_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+    verify_param(resource_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `resource_name` '" + str(resource_name) + "' specified for child resource creation")
-    verify_param(resource_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+    verify_param(resource_type, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `resource_type` '" + str(resource_type) + "' specified for child resource creation")
-    verify_param(parent_id, notNone=True, notEmpty=True, httpError=HTTPNotFound,
+    verify_param(parent_id, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `parent_id` '" + str(parent_id) + "' specified for child resource creation")
     parent_resource = evaluate_call(lambda: ResourceService.by_resource_id(parent_id, db_session=db_session),
                                     fallback=lambda: db_session.rollback(), httpError=HTTPNotFound,
@@ -96,6 +96,6 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
 
     evaluate_call(lambda: add_resource_in_tree(new_resource, db_session),
                   fallback=lambda: db_session.rollback(),
-                  httpError=HTTPBadRequest, msgOnFail="Failed to insert new resource in service tree using parent id")
+                  httpError=HTTPForbidden, msgOnFail="Failed to insert new resource in service tree using parent id")
     return valid_http(httpSuccess=HTTPCreated, detail="Create resource successful",
                       content=format_resource(new_resource, basic_info=True))
