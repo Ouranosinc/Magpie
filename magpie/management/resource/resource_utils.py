@@ -54,11 +54,11 @@ def get_resource_root_service(resource, db_session):
 
 
 def create_resource(resource_name, resource_type, parent_id, db_session):
-    verify_param(resource_name, notNone=True, notEmpty=True,
+    verify_param(resource_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `resource_name` '" + str(resource_name) + "' specified for child resource creation")
-    verify_param(resource_type, notNone=True, notEmpty=True,
+    verify_param(resource_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `resource_type` '" + str(resource_type) + "' specified for child resource creation")
-    verify_param(parent_id, notNone=True, notEmpty=True,
+    verify_param(parent_id, notNone=True, notEmpty=True, httpError=HTTPNotFound,
                  msgOnFail="Invalid `parent_id` '" + str(parent_id) + "' specified for child resource creation")
     parent_resource = evaluate_call(lambda: ResourceService.by_resource_id(parent_id, db_session=db_session),
                                     fallback=lambda: db_session.rollback(), httpError=HTTPNotFound,
