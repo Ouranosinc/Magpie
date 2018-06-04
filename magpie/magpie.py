@@ -20,7 +20,7 @@ from ziggurat_foundations.models import groupfinder
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.session import SignedCookieSessionFactory
-from pyramid.view import view_config, notfound_view_config, exception_view_config
+from pyramid.view import *
 from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.config import Configurator
 
@@ -44,15 +44,26 @@ def get_version(request):
 
 @notfound_view_config()
 def not_found(request):
-    content = get_request_info(request, default_msg="The route resource could not be found")
+    content = get_request_info(request, default_msg="The route resource could not be found.")
     return raise_http(nothrow=True, httpError=HTTPNotFound, contentType='application/json',
                       detail=content['detail'], content=content)
 
 
 @exception_view_config()
 def internal_server_error(request):
-    content = get_request_info(request, default_msg="Internal Server Error. Unhandled exception occurred")
+    content = get_request_info(request, default_msg="Internal Server Error. Unhandled exception occurred.")
     return raise_http(nothrow=True, httpError=HTTPInternalServerError, contentType='application/json',
+                      detail=content['detail'], content=content)
+
+
+@forbidden_view_config()
+def unauthorized_access(request):
+    # if not overridden, default is HTTPForbidden [403], which is for a slightly different situation
+    # this better reflects the HTTPUnauthorized [401] user access with specified AuthZ headers
+    # [http://www.restapitutorial.com/httpstatuscodes.html]
+    msg = "Unauthorized. Insufficient user privileges or missing authentication headers."
+    content = get_request_info(request, default_msg=msg)
+    return raise_http(nothrow=True, httpError=HTTPUnauthorized, contentType='application/json',
                       detail=content['detail'], content=content)
 
 

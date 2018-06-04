@@ -262,7 +262,7 @@ def magpie_add_register_services_perms(services, statuses, curl_cookies, request
         svc_available_perms_url = '{magpie}/services/{svc}/permissions' \
                                   .format(magpie=magpie_url, svc=service_name)
         resp_available_perms = requests.get(svc_available_perms_url, cookies=request_cookies)
-        if resp_available_perms.status_code == 403:
+        if resp_available_perms.status_code == 401:
             raise_log("Invalid credentials, cannot update service permissions")
 
         available_perms = resp_available_perms.json().get('permission_names', [])
