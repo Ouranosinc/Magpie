@@ -37,6 +37,22 @@ def get_resource_path(resource_id, db_session):
     return parent_path
 
 
+def get_resource_permissions(resource, db_session):
+    verify_param(resource, notNone=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `resource` specified for resource permission retrieval")
+    if resource.root_service_id is None:  # directly access the service resource
+        service = resource
+    else:
+        service = models.Service.by_resource_id(resource.root_service_id, db_session=db_session)
+    verify_param(service.resource_type, isEqual=True, paramCompare=u'service', httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `root_service` specified for resource permission retrieval")
+    service_obj = service_type_dict[service.type]
+    verify_param(resource.resource_type, isIn=True, paramCompare=service_obj.resource_types,
+                 httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `resource_type` for corresponding service resource permission retrieval")
+    return service_obj.resource_types_permissions[resource.resource_type]
+
+
 def get_resource_root_service(resource, db_session):
     """
     Recursively rewinds back through the top of the resource tree up to the top-level service-resource.

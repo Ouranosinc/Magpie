@@ -15,6 +15,7 @@ def format_resource(resource, permissions=None, basic_info=False):
             u'resource_type': str(res.resource_type),
             u'resource_id': res.resource_id,
             u'parent_id': res.parent_id,
+            u'root_service_id': res.root_service_id,
             u'children': {},
             u'permission_names': list() if perms is None else perms
         }
