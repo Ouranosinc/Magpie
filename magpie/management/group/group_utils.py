@@ -35,7 +35,7 @@ def get_group_resources(group, db_session):
 
 def create_group_resource_permission(permission_name, resource, group_id, db_session):
     resource_id = resource.resource_id
-    check_valid_service_resource_permission(permission_name, resource_id, db_session)
+    check_valid_service_resource_permission(permission_name, resource, db_session)
     perm_content = {u'permission_name': str(permission_name), u'resource_id': resource_id, u'group_id': group_id}
     new_perm = evaluate_call(lambda: models.GroupResourcePermission(resource_id=resource_id, group_id=group_id),
                              fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
