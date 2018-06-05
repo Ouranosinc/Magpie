@@ -5,6 +5,7 @@ from api_requests import *
 from common import str2bool
 from register import sync_services_phoenix
 from models import resource_tree_service
+from services import service_type_dict
 from pyramid.view import view_config
 
 

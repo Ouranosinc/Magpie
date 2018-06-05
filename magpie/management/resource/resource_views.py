@@ -2,6 +2,7 @@ from api_requests import *
 from resource_utils import *
 from common import str2bool
 from register import sync_services_phoenix
+from services import service_type_dict
 from management.service.service_utils import get_services_by_type
 from management.service.service_formats import format_service_resources
 
@@ -20,12 +21,12 @@ def get_resources_view(request):
 
 @view_config(route_name='resource', request_method='GET')
 def get_resource_view(request):
-    res = get_resource_matchdict_checked(request)
-    res_json = evaluate_call(lambda: format_resource_with_children(res, db_session=request.db),
+    resource = get_resource_matchdict_checked(request)
+    res_json = evaluate_call(lambda: format_resource_with_children(resource, db_session=request.db),
                              fallback=lambda: request.db.rollback(), httpError=HTTPInternalServerError,
                              msgOnFail="Failed building resource children json formatted tree",
-                             content=format_resource(res, basic_info=True))
-    return valid_http(httpSuccess=HTTPOk, detail="Get resource successful", content={res.resource_id: res_json})
+                             content=format_resource(resource, basic_info=True))
+    return valid_http(httpSuccess=HTTPOk, detail="Get resource successful", content={resource.resource_id: res_json})
 
 
 @view_config(route_name='resources', request_method='POST')

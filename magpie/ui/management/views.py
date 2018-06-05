@@ -232,7 +232,6 @@ class ManagementViews(object):
         user_name = self.request.matchdict['user_name']
         cur_svc_type = self.request.matchdict['cur_svc_type']
         inherited_permissions = self.request.matchdict.get('inherited_permissions', False)
-        group_name = user_name  # personal group
 
         user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
@@ -262,7 +261,7 @@ class ManagementViews(object):
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
             elif u'resource_id' in self.request.POST:
-                self.edit_group_resource_permissions(group_name, res_id, is_personal_user_group=True)
+                self.edit_user_or_group_resource_permissions(user_name, res_id, is_user=True)
             elif u'edit_group_membership' in self.request.POST:
                 is_edit_group_membership = True
             elif u'edit_username' in self.request.POST:
@@ -309,8 +308,8 @@ class ManagementViews(object):
         # display resources permissions per service type tab
         try:
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-            res_perm_names, res_perms = self.get_user_group_resources_permissions_dict(
-                group_name, services, cur_svc_type, is_user=True, is_inherited_permissions=inherited_permissions)
+            res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(
+                user_name, services, cur_svc_type, is_user=True, is_inherited_permissions=inherited_permissions)
             user_info[u'cur_svc_type'] = cur_svc_type
             user_info[u'svc_types'] = svc_types
             user_info[u'resources'] = res_perms
@@ -393,10 +392,10 @@ class ManagementViews(object):
         for user in new_members:
             check_response(requests.post(url_base.format(usr=user), cookies=self.request.cookies))
 
-    def edit_group_resource_permissions(self, group_name, resource_id, is_personal_user_group=False):
-        group_type = 'users' if is_personal_user_group else 'groups'
+    def edit_user_or_group_resource_permissions(self, user_or_group_name, resource_id, is_user=False):
+        usr_grp_type = 'users' if is_user else 'groups'
         res_perms_url = '{url}/{grp_type}/{grp}/resources/{res_id}/permissions' \
-                        .format(url=self.magpie_url, grp_type=group_type, grp=group_name, res_id=resource_id)
+                        .format(url=self.magpie_url, grp_type=usr_grp_type, grp=user_or_group_name, res_id=resource_id)
         try:
             res_perms_resp = requests.get(res_perms_url, cookies=self.request.cookies)
             res_perms = res_perms_resp.json()['permission_names']
@@ -414,8 +413,8 @@ class ManagementViews(object):
             data = {u'permission_name': perm}
             check_response(requests.post(res_perms_url, data=data, cookies=self.request.cookies))
 
-    def get_user_group_resources_permissions_dict(self, user_or_group_name, services, service_type,
-                                                  is_user=False, is_inherited_permissions=False):
+    def get_user_or_group_resources_permissions_dict(self, user_or_group_name, services, service_type,
+                                                     is_user=False, is_inherited_permissions=False):
         user_or_group_type = 'users' if is_user else 'groups'
         inherit_type = 'inherited_' if is_inherited_permissions and is_user else ''
         resources_permission_names = set()
@@ -473,15 +472,15 @@ class ManagementViews(object):
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
             elif u'resource_id' in self.request.POST:
-                self.edit_group_resource_permissions(group_name, res_id, is_personal_user_group=False)
+                self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
             else:
                 self.edit_group_users(group_name)
 
         # display resources permissions per service type tab
         try:
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-            res_perm_names, res_perms = self.get_user_group_resources_permissions_dict(group_name, services,
-                                                                                       cur_svc_type, is_user=False)
+            res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(group_name, services,
+                                                                                          cur_svc_type, is_user=False)
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 

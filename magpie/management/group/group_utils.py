@@ -1,6 +1,8 @@
 from api_requests import *
 from api_except import *
-from models import resource_tree_service
+from models import resource_tree_service, resource_type_dict
+from services import service_type_dict
+from management.resource.resource_utils import check_valid_service_resource_permission
 from management.service.service_formats import format_service_resources, format_service
 from group_formats import *
 from ziggurat_definitions import *
@@ -31,7 +33,9 @@ def get_group_resources(group, db_session):
     return json_response
 
 
-def create_group_resource_permission(permission_name, resource_id, group_id, db_session):
+def create_group_resource_permission(permission_name, resource, group_id, db_session):
+    resource_id = resource.resource_id
+    check_valid_service_resource_permission(permission_name, resource_id, db_session)
     perm_content = {u'permission_name': str(permission_name), u'resource_id': resource_id, u'group_id': group_id}
     new_perm = evaluate_call(lambda: models.GroupResourcePermission(resource_id=resource_id, group_id=group_id),
                              fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
@@ -77,7 +81,9 @@ def get_group_resource_permissions(group, resource, db_session):
                          content={u'group': repr(group), u'resource': repr(resource)})
 
 
-def delete_group_resource_permission(permission_name, resource_id, group_id, db_session):
+def delete_group_resource_permission(permission_name, resource, group_id, db_session):
+    resource_id = resource.resource_id
+    check_valid_service_resource_permission(permission_name, resource_id, db_session)
     perm_content = {u'permission_name': str(permission_name), u'resource_id': resource_id, u'group_id': group_id}
     del_perm = evaluate_call(
         lambda: GroupResourcePermissionService.get(group_id, resource_id, permission_name, db_session=db_session),

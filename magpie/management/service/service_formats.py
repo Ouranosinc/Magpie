@@ -1,5 +1,6 @@
 from api_requests import *
 from register import get_twitcher_protected_service_url
+from services import service_type_dict
 from management.resource.resource_utils import (
     get_resource_children,
     format_resource_tree,
@@ -29,7 +30,7 @@ def format_service(service, permissions=None):
 def format_service_resources(service, db_session, service_perms=None, resources_perms_dict=None, display_all=False):
     def fmt_svc_res(svc, db, svc_perms, res_perms, show_all):
         tree = get_resource_children(svc, db)
-        if not show_all:            
+        if not show_all:
             tree, resource_id_list_remain = crop_tree_with_permission(tree, res_perms.keys())
 
         svc_perms = service_type_dict[svc.type].permission_names if svc_perms is None else svc_perms

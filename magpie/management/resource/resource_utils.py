@@ -2,19 +2,44 @@ from models import resource_factory
 from resource_formats import *
 from ziggurat_definitions import *
 from api_except import *
-from api_requests import get_service_or_resource_types
+from services import service_type_dict
+from models import resource_type_dict
 
 
-def check_valid_service_resource_permission(permission_name, service_resource):
-    svc_res_obj, svc_res_type = get_service_or_resource_types(service_resource)
-    verify_param(permission_name, paramCompare=svc_res_obj.permission_names,
-                 isIn=True, httpError=HTTPBadRequest,
-                 msgOnFail="Permission not allowed for that {} type".format(svc_res_type))
+def check_valid_service_resource_permission(permission_name, service_resource, db_session):
+    """
+    Checks if a permission is valid to be applied to a specific service or a resource under a specific service.
+    :param permission_name: permission to apply
+    :param service_resource: resource item corresponding to either a Service or a Resource
+    :param db_session:
+    :return:
+    """
+    svc_res_perms = get_resource_permissions(service_resource, db_session=db_session)
+    svc_res_type = service_resource.resource_type
+    svc_res_name = service_resource.resource_name
+    verify_param(permission_name, paramCompare=svc_res_perms, isIn=True, httpError=HTTPBadRequest,
+                 msgOnFail="Permission not allowed for {0} `{1}`".format(svc_res_type, svc_res_name))
 
 
-def get_specific_service_resource_permissions(service_resource):
-    svc_res_obj, svc_res_type = get_service_or_resource_types(service_resource)
-    return svc_res_obj.permission_names
+def check_valid_service_resource(parent_resource, resource_type, db_session):
+    """
+    Checks if a new Resource can be contained under a parent Resource given the requested type and
+    the corresponding Service under which the parent Resource is already assigned.
+
+    :param parent_resource: Resource under which the new Resource of `resource_type` must be placed
+    :param resource_type: desired Resource type
+    :param db_session:
+    :return: root Service if all checks were successful
+    """
+    root_service = get_resource_root_service(parent_resource, db_session=db_session)
+    verify_param(root_service, notNone=True, httpError=HTTPInternalServerError,
+                 msgOnFail="Failed retrieving `root_service` from db")
+    verify_param(root_service.resource_type, isEqual=True, httpError=HTTPInternalServerError, paramCompare=u'service',
+                 msgOnFail="Invalid `root_service` retrieved from db is not a service")
+    verify_param(resource_type, isIn=True, httpError=HTTPNotAcceptable,
+                 paramCompare=service_type_dict[root_service.type].resource_types,
+                 msgOnFail="Invalid `resource_type` specified for service type `{}`".format(root_service.type))
+    return root_service
 
 
 def crop_tree_with_permission(children, resource_id_list):
@@ -37,13 +62,29 @@ def get_resource_path(resource_id, db_session):
     return parent_path
 
 
+def get_service_or_resource_types(service_resource):
+    if isinstance(service_resource, models.Service):
+        svc_res_type_obj = service_type_dict[service_resource.type]
+        svc_res_type_str = u"service"
+    elif isinstance(service_resource, models.Resource):
+        svc_res_type_obj = resource_type_dict[service_resource.resource_type]
+        svc_res_type_str = u"resource"
+    else:
+        raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
+                   content={u'service_resource': repr(type(service_resource))})
+    return svc_res_type_obj, svc_res_type_str
+
+
 def get_resource_permissions(resource, db_session):
     verify_param(resource, notNone=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `resource` specified for resource permission retrieval")
-    if resource.root_service_id is None:  # directly access the service resource
+    # directly access the service resource
+    if resource.root_service_id is None:
         service = resource
-    else:
-        service = models.Service.by_resource_id(resource.root_service_id, db_session=db_session)
+        return service_type_dict[service.type].permission_names
+
+    # otherwise obtain root level service to infer sub-resource permissions
+    service = models.Service.by_resource_id(resource.root_service_id, db_session=db_session)
     verify_param(service.resource_type, isEqual=True, paramCompare=u'service', httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `root_service` specified for resource permission retrieval")
     service_obj = service_type_dict[service.type]
@@ -83,15 +124,7 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
                                              u'resource_type': str(resource_type)})
 
     # verify for valid permissions from top-level service-specific corresponding resources permissions
-    root_service = get_resource_root_service(parent_resource, db_session=db_session)
-    verify_param(root_service, notNone=True, httpError=HTTPInternalServerError,
-                 msgOnFail="Failed retrieving `root_service` from db")
-    verify_param(root_service.resource_type, isEqual=True, httpError=HTTPInternalServerError, paramCompare=u'service',
-                 msgOnFail="Invalid `root_service` retrieved from db is not a service")
-    verify_param(resource_type, isIn=True, httpError=HTTPNotAcceptable,
-                 paramCompare=service_type_dict[root_service.type].resource_types,
-                 msgOnFail="Invalid `resource_type` specified for service type `{}`".format(root_service.type))
-
+    root_service = check_valid_service_resource(parent_resource, resource_type, db_session)
     new_resource = resource_factory(resource_type=resource_type,
                                     resource_name=resource_name,
                                     root_service_id=root_service.resource_id,

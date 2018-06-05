@@ -1,5 +1,6 @@
 from api_requests import *
 from models import resource_tree_service
+from services import service_type_dict
 
 
 def format_resource(resource, permissions=None, basic_info=False):
