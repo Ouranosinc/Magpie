@@ -1,6 +1,7 @@
 from pyramid.security import Allow, Everyone
 from pyramid.security import ALL_PERMISSIONS
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
+from sqlalchemy.orm import relationship
 import sqlalchemy as sa
 from ziggurat_definitions import *
 from api_except import *
@@ -42,6 +43,15 @@ class Resource(ResourceMixin, Base):
 
     # example implementation of ACLS for pyramid application
     permission_names = []
+
+    # reference to top-most service under which the resource is nested
+    # if the resource is the service, id is None (NULL)
+    @declared_attr
+    def root_service_id(self):
+        return sa.Column(sa.Integer,
+                         sa.ForeignKey('services.resource_id',
+                                       onupdate='CASCADE',
+                                       ondelete='SET NULL'), index=True)
 
     @property
     def __acl__(self):
@@ -90,13 +100,14 @@ class Service(Resource):
     """
 
     __tablename__ = u'services'
-    __mapper_args__ = {u'polymorphic_identity': u'service'}
 
     resource_id = sa.Column(sa.Integer(),
                             sa.ForeignKey('resources.resource_id',
                                           onupdate='CASCADE',
                                           ondelete='CASCADE', ),
                             primary_key=True, )
+
+    __mapper_args__ = {u'polymorphic_identity': u'service', u'inherit_condition': resource_id == Resource.resource_id}
 
     # ... your own properties....
     url = sa.Column(sa.UnicodeText(), unique=True)  # http://localhost:8083

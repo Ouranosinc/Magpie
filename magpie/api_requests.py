@@ -1,22 +1,8 @@
 from magpie import *
 from api_except import *
 from ziggurat_definitions import *
-from models import resource_type_dict
-from services import service_type_dict
 from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy
-
-
-def get_service_or_resource_types(service_resource):
-    if isinstance(service_resource, models.Service):
-        svc_res_type_dict = service_type_dict[service_resource.type]
-        svc_res_type_str = "service"
-    elif isinstance(service_resource, models.Resource):
-        svc_res_type_dict = resource_type_dict[service_resource.resource_type]
-        svc_res_type_str = "resource"
-    else:
-        raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
-                   content={u'service_resource': repr(type(service_resource))})
-    return svc_res_type_dict, svc_res_type_str
+from management.resource.resource_utils import check_valid_service_resource_permission
 
 
 def get_multiformat_post(request, key):
@@ -33,10 +19,8 @@ def get_multiformat_delete(request, key):
 
 
 def get_permission_multiformat_post_checked(request, service_resource, permission_name_key='permission_name'):
-    svc_res_type_dict, svc_res_type_str = get_service_or_resource_types(service_resource)
     perm_name = get_value_multiformat_post_checked(request, permission_name_key)
-    verify_param(perm_name, paramCompare=svc_res_type_dict.permission_names, isIn=True,
-                 httpError=HTTPForbidden, msgOnFail="Permission not allowed for that " + str(svc_res_type_str))
+    check_valid_service_resource_permission(perm_name, service_resource, request.db)
     return perm_name
 
 
@@ -110,8 +94,6 @@ def get_resource_matchdict_checked(request, resource_name_key='resource_id'):
                              fallback=lambda: request.db.rollback(),
                              httpError=HTTPForbidden, msgOnFail="Resource query by id refused by db")
     verify_param(resource, notNone=True, httpError=HTTPNotFound, msgOnFail="Resource ID not found in db")
-    verify_param(resource.resource_type, paramCompare=resource_type_dict, isIn=True,
-                 httpError=HTTPNotAcceptable, msgOnFail="Resource type does not match any valid entry")
     return resource
 
 
@@ -127,10 +109,8 @@ def get_service_matchdict_checked(request, service_name_key='service_name'):
 
 
 def get_permission_matchdict_checked(request, service_resource, permission_name_key='permission_name'):
-    svc_res_type_dict, svc_res_type_str = get_service_or_resource_types(service_resource)
     perm_name = get_value_matchdict_checked(request, permission_name_key)
-    verify_param(perm_name, paramCompare=svc_res_type_dict.permission_names, isIn=True,
-                 httpError=HTTPForbidden, msgOnFail="Permission not allowed for that " + str(svc_res_type_str))
+    check_valid_service_resource_permission(perm_name, service_resource, request.db)
     return perm_name
 
 

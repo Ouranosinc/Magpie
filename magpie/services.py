@@ -7,9 +7,15 @@ from pyramid.security import Allow
 
 
 class ServiceI(object):
-    permission_names = []
+    permission_names = []   # global permissions allowed for the service (top-level resource)
     params_expected = []    # derived services must have 'request' at least for 'permission_requested' method
-    resource_types = []
+    resource_types_permissions = {}     # dict of list for each corresponding allowed resource permissions
+
+    # make 'property' getter from derived classes
+    class __metaclass__(type):
+        @property
+        def resource_types(cls):  # allowed resources types under the service
+            return cls.resource_types_permissions.keys()
 
     def __init__(self, service, request):
         self.service = service
@@ -51,13 +57,19 @@ class ServiceI(object):
 
 class ServiceWPS(ServiceI):
 
-    permission_names = [u'getcapabilities',
-                        u'describeprocess',
-                        u'execute']
+    permission_names = [
+        u'getcapabilities',
+        u'describeprocess',
+        u'execute'
+    ]
 
-    params_expected = [u'service',
-                       u'request',
-                       u'version']
+    params_expected = [
+        u'service',
+        u'request',
+        u'version'
+    ]
+
+    resource_types_permissions = {}
 
     def __init__(self, service, request):
         super(ServiceWPS, self).__init__(service, request)
@@ -70,28 +82,59 @@ class ServiceWPS(ServiceI):
 
 class ServiceWMS(ServiceI):
 
-    permission_names = [u'getcapabilities',
-                        u'getmap',
-                        u'getfeatureinfo',
-                        u'getlegendgraphic',
-                        u'getmetadata']
+    permission_names = [
+        u'getcapabilities',
+        u'getmap',
+        u'getfeatureinfo',
+        u'getlegendgraphic',
+        u'getmetadata'
+    ]
 
-    params_expected = [u'service',
-                       u'request',
-                       u'version',
-                       u'layers',
-                       u'layername',
-                       u'dataset']
+    params_expected = [
+        u'service',
+        u'request',
+        u'version',
+        u'layers',
+        u'layername',
+        u'dataset'
+    ]
 
-    resource_types = [models.Workspace.resource_type_name]
+    resource_types_permissions = {
+        models.Workspace.resource_type_name: [
+            u'getcapabilities',
+            u'getmap',
+            u'getfeatureinfo',
+            u'getlegendgraphic',
+            u'getmetadata'
+        ]
+    }
 
     def __init__(self, service, request):
         super(ServiceWMS, self).__init__(service, request)
 
+    @property
+    def __acl__(self):
+        raise NotImplementedError
+
 
 class ServiceNCWMS2(ServiceWMS):
-    resource_types = [models.File.resource_type_name,
-                      models.Directory.resource_type_name]
+
+    resource_types_permissions = {
+        models.File.resource_type_name: [
+            u'getcapabilities',
+            u'getmap',
+            u'getfeatureinfo',
+            u'getlegendgraphic',
+            u'getmetadata'
+        ],
+        models.Directory.resource_type_name: [
+            u'getcapabilities',
+            u'getmap',
+            u'getfeatureinfo',
+            u'getlegendgraphic',
+            u'getmetadata'
+        ]
+    }
 
     def __init__(self, service, request):
         super(ServiceNCWMS2, self).__init__(service, request)
@@ -179,18 +222,22 @@ class ServiceGeoserver(ServiceWMS):
 
 class ServiceWFS(ServiceI):
 
-    permission_names = [u'getcapabilities',
-                        u'describefeaturetype',
-                        u'getfeature',
-                        u'lockfeature',
-                        u'transaction']
+    permission_names = [
+        u'getcapabilities',
+        u'describefeaturetype',
+        u'getfeature',
+        u'lockfeature',
+        u'transaction'
+    ]
 
-    params_expected = [u'service',
-                       u'request',
-                       u'version',
-                       u'typenames']
+    params_expected = [
+        u'service',
+        u'request',
+        u'version',
+        u'typenames'
+    ]
 
-    resource_types = []
+    resource_types_permissions = {}
 
     def __init__(self, service, request):
         super(ServiceWFS, self).__init__(service, request)
@@ -221,13 +268,25 @@ class ServiceWFS(ServiceI):
 
 class ServiceTHREDDS(ServiceI):
 
-    permission_names = ['read',
-                        'write']
+    permission_names = [
+        u'read',
+        u'write'
+    ]
 
-    params_expected = [u'request']
+    params_expected = [
+        u'request'
+    ]
 
-    resource_types = [models.Directory.resource_type_name,
-                      models.File.resource_type_name]
+    resource_types_permissions = {
+        models.Directory.resource_type_name: [
+            u'read',
+            u'write'
+        ],
+        models.File.resource_type_name: [
+            u'read',
+            u'write'
+        ],
+    }
 
     def __init__(self, service, request):
         super(ServiceTHREDDS, self).__init__(service, request)
@@ -269,13 +328,25 @@ class ServiceTHREDDS(ServiceI):
 
 class ServiceProjectAPI(ServiceI):
 
-    permission_names = ['read',
-                        'write']
+    permission_names = [
+        u'read',
+        u'write'
+    ]
 
-    params_expected = [u'request']
+    params_expected = [
+        u'request'
+    ]
 
-    resource_types = [models.Directory.resource_type_name,
-                      models.File.resource_type_name]
+    resource_types_permissions = {
+        models.Directory.resource_type_name: [
+            u'read',
+            u'write'
+        ],
+        models.File.resource_type_name: [
+            u'read',
+            u'write'
+        ],
+    }
 
     def __init__(self, service, request):
         super(ServiceProjectAPI, self).__init__(service, request)
@@ -291,12 +362,14 @@ class ServiceProjectAPI(ServiceI):
     pass
 
 
-service_type_dict = {u'wps': ServiceWPS,
-                     u'ncwms': ServiceNCWMS2,
-                     u'geoserverwms': ServiceGeoserver,
-                     u'wfs': ServiceWFS,
-                     u'thredds': ServiceTHREDDS,
-                     u'project-api': ServiceProjectAPI}
+service_type_dict = {
+    u'wps':             ServiceWPS,
+    u'ncwms':           ServiceNCWMS2,
+    u'geoserverwms':    ServiceGeoserver,
+    u'wfs':             ServiceWFS,
+    u'thredds':         ServiceTHREDDS,
+    u'project-api':     ServiceProjectAPI
+}
 
 
 def service_factory(service, request):

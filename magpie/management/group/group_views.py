@@ -35,7 +35,7 @@ def edit_group(request):
                  paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
                  msgOnFail="Invalid `group_name` length specified " +
                            "(>{length} characters).".format(length=USER_NAME_MAX_LENGTH))
-    verify_param(new_group_name, isEqual=True, httpError=HTTPNotAcceptable,
+    verify_param(new_group_name, notEqual=True, httpError=HTTPNotAcceptable,
                  paramCompare=group.group_name, msgOnFail="Invalid `group_name` must be different than current name.")
     verify_param(models.Group.by_group_name(new_group_name, db_session=request.db), isNone=True, httpError=HTTPConflict,
                  msgOnFail="Group name already exists.")
@@ -86,7 +86,7 @@ def create_group_service_permission(request):
     group = get_group_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, service)
-    return create_group_resource_permission(perm_name, service.resource_id, group.id, db_session=request.db)
+    return create_group_resource_permission(perm_name, service, group.id, db_session=request.db)
 
 
 @view_config(route_name='group_service_permission', request_method='DELETE')
@@ -94,7 +94,7 @@ def delete_group_service_permission(request):
     group = get_group_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_matchdict_checked(request, service)
-    return delete_group_resource_permission(perm_name, service.resource_id, group.id, db_session=request.db)
+    return delete_group_resource_permission(perm_name, service, group.id, db_session=request.db)
 
 
 @view_config(route_name='group_resources', request_method='GET')
@@ -120,7 +120,7 @@ def create_group_resource_permission_view(request):
     group = get_group_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, resource)
-    return create_group_resource_permission(perm_name, resource.resource_id, group.id, db_session=request.db)
+    return create_group_resource_permission(perm_name, resource, group.id, db_session=request.db)
 
 
 @view_config(route_name='group_resource_permission', request_method='DELETE')
@@ -128,7 +128,7 @@ def delete_group_resource_permission_view(request):
     group = get_group_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_matchdict_checked(request, resource)
-    return delete_group_resource_permission(perm_name, resource.resource_id, group.id, db_session=request.db)
+    return delete_group_resource_permission(perm_name, resource, group.id, db_session=request.db)
 
 
 @view_config(route_name='group_service_resources', request_method='GET')

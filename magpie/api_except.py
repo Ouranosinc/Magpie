@@ -89,9 +89,9 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
     if isIn:
         status = status or (param not in paramCompare)
     if notEqual:
-        status = status or (param != paramCompare)
-    if isEqual:
         status = status or (param == paramCompare)
+    if isEqual:
+        status = status or (param != paramCompare)
     if ofType is not None:
         status = status or (not type(param) == ofType)
     if status:

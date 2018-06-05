@@ -1,6 +1,7 @@
 from magpie import *
 from api_except import *
 from services import service_type_dict
+from management.resource.resource_utils import check_valid_service_resource_permission
 import models
 from ziggurat_definitions import *
 
@@ -37,7 +38,9 @@ def create_user(user_name, password, email, group_name, db_session):
     return valid_http(httpSuccess=HTTPCreated, detail="Add user to db successful")
 
 
-def create_user_resource_permission(permission_name, resource_id, user_id, db_session):
+def create_user_resource_permission(permission_name, resource, user_id, db_session):
+    check_valid_service_resource_permission(permission_name, resource, db_session)
+    resource_id = resource.resource_id
     new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
     verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
                  content={u'resource_id': str(resource_id), u'user_id': str(user_id)},
@@ -50,7 +53,9 @@ def create_user_resource_permission(permission_name, resource_id, user_id, db_se
                       content={u'resource_id': resource_id})
 
 
-def delete_user_resource_permission(permission_name, resource_id, user_id, db_session):
+def delete_user_resource_permission(permission_name, resource, user_id, db_session):
+    check_valid_service_resource_permission(permission_name, resource, db_session)
+    resource_id = resource.resource_id
     del_perm = UserResourcePermissionService.get(user_id, resource_id, permission_name, db_session)
     evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                   httpError=HTTPNotFound, msgOnFail="Could not find user resource permission to delete from db",
