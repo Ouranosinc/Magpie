@@ -75,5 +75,5 @@ class ManagementViews(object):
     @view_config(route_name='logout', renderer='templates/login.mako', permission=NO_PERMISSION_REQUIRED)
     def logout(self):
         # Flush cookies and return to home
-        headers = forget(self.request)
-        return HTTPFound(location=self.request.route_url('home'), headers=headers)
+        resp = requests.get('{url}/signout'.format(url=self.magpie_url))
+        return HTTPFound(location=self.request.route_url('home'), headers=resp.headers)
