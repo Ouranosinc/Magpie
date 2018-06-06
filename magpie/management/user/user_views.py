@@ -24,14 +24,9 @@ def update_user_view(request):
     check_user_info(new_user_name, new_email, new_password, group_name=new_user_name)
 
     if user.user_name != new_user_name:
-        evaluate_call(lambda: models.Group.by_group_name(new_user_name, db_session=request.db),
-                      fallback=lambda: request.db.rollback(),
-                      httpError=HTTPConflict, msgOnFail="New name user-group already exists")
         evaluate_call(lambda: models.User.by_user_name(new_user_name, db_session=request.db),
                       fallback=lambda: request.db.rollback(),
                       httpError=HTTPConflict, msgOnFail="New name user already exists")
-        old_user_group = models.Group.by_group_name(user.user_name, db_session=request.db)
-        old_user_group.group_name = new_user_name
         user.user_name = new_user_name
     if user.email != new_email:
         user.email = new_email

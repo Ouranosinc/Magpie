@@ -121,17 +121,17 @@ def get_user_service_resources_permissions_dict(user, service, db_session, inher
 
 
 def check_user_info(user_name, email, password, group_name):
-    verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+    verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `user_name` value specified")
-    verify_param(len(user_name), isIn=True, httpError=HTTPNotAcceptable,
+    verify_param(len(user_name), isIn=True, httpError=HTTPBadRequest,
                  paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
                  msgOnFail="Invalid `user_name` length specified " +
                            "(>{length} characters)".format(length=USER_NAME_MAX_LENGTH))
-    verify_param(email, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+    verify_param(email, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `email` value specified")
-    verify_param(password, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+    verify_param(password, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `password` value specified")
-    verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+    verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `group_name` value specified")
     verify_param(user_name, paramCompare=[LOGGED_USER], notIn=True, httpError=HTTPConflict,
                  msgOnFail="Invalid `user_name` already logged in")
