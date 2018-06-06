@@ -37,13 +37,13 @@ def register_service(request):
     service_url = get_value_multiformat_post_checked(request, 'service_url')
     service_type = get_value_multiformat_post_checked(request, 'service_type')
     service_push = str2bool(get_multiformat_post(request, 'service_push'))
-    verify_param(service_type, isIn=True, paramCompare=service_type_dict.keys(), httpError=HTTPNotAcceptable,
-                 msgOnFail="Specified `service_type` value does not correspond to any of the available types")
+    verify_param(service_type, isIn=True, paramCompare=service_type_dict.keys(), httpError=HTTPBadRequest,
+                 msgOnFail="Specified `service_type` value does not correspond to any of the available types.")
 
     if models.Service.by_service_name(service_name, db_session=request.db):
         verify_param(service_name, notIn=True, httpError=HTTPConflict,
                      paramCompare=[models.Service.by_service_name(service_name, db_session=request.db).resource_name],
-                     msgOnFail="Specified `service_name` value '" + str(service_name) + "' already exists")
+                     msgOnFail="Specified `service_name` value '" + str(service_name) + "' already exists.")
 
     service = evaluate_call(lambda: models.Service(resource_name=str(service_name), resource_type=u'service',
                                                    url=str(service_url), type=str(service_type)),

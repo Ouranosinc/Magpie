@@ -243,3 +243,36 @@ def delete_user_service_permission(request):
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, service)
     return delete_user_resource_permission(perm_name, service, user.id, request.db)
+
+
+def get_user_service_resource_permissions_runner(request, inherited_permissions):
+    """
+    Resource permissions a user as on a specific service
+
+    :param request:
+    :param inherited_permissions: only direct permissions if False, else resolve permissions with user and its groups.
+    :return:
+    """
+    user = get_user_matchdict_checked(request)
+    service = get_service_matchdict_checked(request)
+    service_perms = get_user_service_permissions(user, service, db_session=request.db)
+    resources_perms_dict = get_user_service_resources_permissions_dict(user, service, db_session=request.db)
+    user_svc_res_json = format_service_resources(
+        service=service,
+        db_session=request.db,
+        service_perms=service_perms,
+        resources_perms_dict=resources_perms_dict,
+        display_all=False
+    )
+    return valid_http(httpSuccess=HTTPOk, detail="Get user service resources successful",
+                      content={u'service': user_svc_res_json})
+
+
+@view_config(route_name='user_service_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_service_resources_view(request):
+    return get_user_service_resource_permissions_runner(request, inherited_permissions=False)
+
+
+@view_config(route_name='user_service_inherited_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_service_inherited_resources_view(request):
+    return get_user_service_resource_permissions_runner(request, inherited_permissions=True)

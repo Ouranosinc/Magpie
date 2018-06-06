@@ -24,11 +24,11 @@ def get_permission_multiformat_post_checked(request, service_resource, permissio
     return perm_name
 
 
-def get_value_multiformat_post_checked(request, value_name_key):
-    value_name = get_multiformat_post(request, value_name_key)
-    verify_param(value_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `" + str(value_name_key) + "` value '" + str(value_name) + "' specified")
-    return value_name
+def get_value_multiformat_post_checked(request, key):
+    val = get_multiformat_post(request, key)
+    verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
+                 content={str(key): str(val)}, msgOnFail="Invalid value specified.")
+    return val
 
 
 def get_userid_by_token(token, authn_policy):
@@ -116,6 +116,6 @@ def get_permission_matchdict_checked(request, service_resource, permission_name_
 
 def get_value_matchdict_checked(request, key):
     val = request.matchdict.get(key)
-    verify_param(val, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid value '" + str(val) + "' specified using key '" + str(key) + "'")
+    verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
+                 content={str(key): str(val)}, msgOnFail="Invalid value specified")
     return val
