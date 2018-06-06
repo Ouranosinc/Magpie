@@ -255,8 +255,10 @@ def get_user_service_resource_permissions_runner(request, inherited_permissions)
     """
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
-    service_perms = get_user_service_permissions(user, service, db_session=request.db)
-    resources_perms_dict = get_user_service_resources_permissions_dict(user, service, db_session=request.db)
+    service_perms = get_user_service_permissions(user, service, db_session=request.db,
+                                                 inherited_permissions=inherited_permissions)
+    resources_perms_dict = get_user_service_resources_permissions_dict(user, service, db_session=request.db,
+                                                                       inherited_permissions=inherited_permissions)
     user_svc_res_json = format_service_resources(
         service=service,
         db_session=request.db,
