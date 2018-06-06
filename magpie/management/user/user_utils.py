@@ -92,7 +92,7 @@ def get_user_service_permissions(user, service, db_session, inherited_permission
 
 def get_user_resources_permissions_dict(user, db_session, resource_types=None,
                                         resource_ids=None, inherited_permissions=True):
-    verify_param(user, notNone=True, httpError=HTTPNotAcceptable,
+    verify_param(user, notNone=True, httpError=HTTPNotFound,
                  msgOnFail="Invalid user specified to obtain resource permissions")
     res_perm_tuple_list = user.resources_with_possible_perms(resource_ids=resource_ids,
                                                              resource_types=resource_types, db_session=db_session)
