@@ -5,17 +5,24 @@ from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy
 from management.resource.resource_utils import check_valid_service_resource_permission
 
 
-def get_multiformat_post(request, key):
+def get_multiformat_any(request, key):
+    msg = "Key `{key}` could not be extracted from {method} of type `{type}`" \
+          .format(key=repr(key), method=request.method, type=request.content_type)
     if request.content_type == 'application/json':
-        return evaluate_call(lambda: request.json_body.get(key),
-                             httpError=HTTPInternalServerError,
-                             msgOnFail="Key " + repr(key) + " could not be extracted from multiformat POST")
-    return request.POST.get(key)
+        return evaluate_call(lambda: request.json.get(key), httpError=HTTPInternalServerError, msgOnFail=msg)
+    return evaluate_call(getattr(request, request.method).get(key), httpError=HTTPInternalServerError, msgOnFail=msg)
+
+
+def get_multiformat_post(request, key):
+    return get_multiformat_any(request, key)
+
+
+def get_multiformat_put(request, key):
+    return get_multiformat_any(request, key)
 
 
 def get_multiformat_delete(request, key):
-    return evaluate_call(lambda: request.json_body.get(key), httpError=HTTPInternalServerError,
-                         msgOnFail="Key " + repr(key) + " could not be extracted from multiformat DELETE")
+    return get_multiformat_any(request, key)
 
 
 def get_permission_multiformat_post_checked(request, service_resource, permission_name_key='permission_name'):
@@ -25,7 +32,7 @@ def get_permission_multiformat_post_checked(request, service_resource, permissio
 
 
 def get_value_multiformat_post_checked(request, key):
-    val = get_multiformat_post(request, key)
+    val = get_multiformat_any(request, key)
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
                  content={str(key): str(val)}, msgOnFail="Invalid value specified.")
     return val

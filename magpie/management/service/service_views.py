@@ -153,8 +153,8 @@ def get_service_resources_view(request):
 @view_config(route_name='service_resources', request_method='POST')
 def create_service_direct_resource(request):
     service = get_service_matchdict_checked(request)
-    resource_name = get_value_matchdict_checked(request, 'resource_name')
-    resource_type = get_value_matchdict_checked(request, 'resource_type')
+    resource_name = get_multiformat_post(request, 'resource_name')
+    resource_type = get_multiformat_post(request, 'resource_type')
     parent_id = get_multiformat_post(request, 'parent_id')  # no check because None/empty is allowed
     if not parent_id:
         parent_id = service.resource_id
