@@ -96,7 +96,7 @@ def delete_user_group(request):
             .delete()
 
     evaluate_call(lambda: del_usr_grp(user, group), fallback=lambda: db.rollback(),
-                  httpError=HTTPNotAcceptable, msgOnFail="Invalid user-group combination for delete",
+                  httpError=HTTPNotFound, msgOnFail="Invalid user-group combination for delete",
                   content={u'user_name': user.user_name, u'group_name': group.group_name})
     return valid_http(httpSuccess=HTTPOk, detail="Delete user-group successful")
 

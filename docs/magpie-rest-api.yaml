@@ -5,8 +5,8 @@ info:
   version: "0.5.x"
   title: 'Magpie Rest API'
   contact:
-    name: David Byrns
-    email: david.byrns@crim.ca
+    name: Francois-Xavier
+    email: francois-xavier.derue@crim.ca
 servers:
   - url: 'https://{bird_hostname}.crim.ca/magpie'
     description: Magpie Admin
@@ -704,12 +704,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/responses/User_PUT_404'
-        '406':
-          description: 'Invalid required parameter format received'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_PUT_406'
         '409':
           description: 'Conflict, this user already exists (or any sub-dependency)'
           content:
@@ -825,13 +819,24 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/UserGroup_DELETE_200'
-        '406':
+                $ref: '#/components/responses/UserGroup_DELETE_201'
+        '400':
           description: user does not belong to group
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/UserGroup_DELETE_406'
+                oneOf:
+                  - $ref: '#/components/responses/User_MatchDictCheck_400'
+                  - $ref: '#/components/responses/Group_MatchDictCheck_400'
+        '404':
+          description: user does not belong to group
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/responses/UserGroup_DELETE_404'
+                  - $ref: '#/components/responses/User_MatchDictCheck_404'
+                  - $ref: '#/components/responses/Group_MatchDictCheck_404'
   '/users/{user_name}/inherited_resources':
     get:
       tags:
@@ -3153,6 +3158,16 @@ components:
             detail:
               oneOf:
                 - "Could not find group in db"
+    Group_PUT_406:
+      description: different group name required for update
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Base'
+          example:
+            code: 406
+            type: application/json
+            detail: "Invalid `group_name` must be different than current name."
     Group_PUT_409:
       description: conflicting group name for update
       content:
