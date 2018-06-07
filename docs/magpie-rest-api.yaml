@@ -5,8 +5,8 @@ info:
   version: "0.5.x"
   title: 'Magpie Rest API'
   contact:
-    name: Francois-Xavier
-    email: francois-xavier.derue@crim.ca
+    name: David Byrns
+    email: david.byrns@crim.ca
 servers:
   - url: 'https://{bird_hostname}.crim.ca/magpie'
     description: Magpie Admin
@@ -95,7 +95,7 @@ paths:
     get:
       tags:
         - Login
-      summary: Logs out current logged in user sesion
+      summary: Logs out currently logged in user sesion
       description: Remove auth_tkt from header
       operationId: signout
       responses:
@@ -642,7 +642,7 @@ paths:
     get:
       tags:
         - User
-      summary: Get user information
+      summary: Get user information by name
       parameters:
         - name: user_name
           description: name of user to get information from
@@ -1201,6 +1201,465 @@ paths:
           required: true
           schema:
             type: string
+        - name: service_name
+          description: name of the service
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: list of service resources the user has permission on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserServiceResources_GET_200'
+        '400':
+          description: invalid inputs
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/responses/User_MatchDictCheck_400'
+        '403':
+          description: forbidden service obtention
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/responses/Service_MatchDictCheck_403'
+        '404':
+          description: service name not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/responses/Service_MatchDictCheck_404'
+  '/users/current':
+    get:
+      tags:
+        - Current User
+      summary: Get currently logged in user information (anonymous if none logged in)
+      responses:
+        '200':
+          description: found user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/User_GET_200'
+        '403':
+          description: get user information forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/User_MatchDictCheck_403'
+    put:
+      tags:
+        - Current User
+      summary: Update currently logged in user information
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBodyEdit'
+      responses:
+        '200':
+          description: user updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/User_PUT_200'
+        '403':
+          description: 'Forbidden access for user edition'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/User_PUT_403'
+        '404':
+          description: 'User not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/User_PUT_404'
+        '409':
+          description: 'Conflict, this user already exists (or any sub-dependency)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/User_PUT_409'
+    delete:
+      tags:
+        - Current User
+      summary: Delete currently logged in user
+      responses:
+        '200':
+          description: user deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/User_DELETE_200'
+        '404':
+          description: user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/NotFound_404'
+  '/users/current/groups':
+    get:
+      tags:
+        - Current User
+      summary: List all groups the currently logged in user belongs to
+      responses:
+        '200':
+          description: list of groups the user belongs to
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserGroups_GET_200'
+        '404':
+          description: user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/NotFound_404'
+    post:
+      tags:
+        - Current User
+      summary: Assign the currently logged in user to a group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupBody'
+      responses:
+        '201':
+          description: User Group relation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserGroup_POST_201'
+        '404':
+          description: user name does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/User_MatchDictCheck_404'
+        '409':
+          description: 'conflict, user already belongs to that group'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserGroup_POST_409'
+  '/users/current/groups/{group_name}':
+    delete:
+      tags:
+        - Current User
+      summary: Remove the currently logged in user from a group
+      parameters:
+        - name: group_name
+          description: Name of the group
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: user removed from group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserGroup_DELETE_201'
+        '400':
+          description: user does not belong to group
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/responses/User_MatchDictCheck_400'
+                  - $ref: '#/components/responses/Group_MatchDictCheck_400'
+        '404':
+          description: user does not belong to group
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/responses/UserGroup_DELETE_404'
+                  - $ref: '#/components/responses/User_MatchDictCheck_404'
+                  - $ref: '#/components/responses/Group_MatchDictCheck_404'
+  '/users/current/inherited_resources':
+    get:
+      tags:
+        - Current User
+      summary: List all resources the currently logged in user has permission on with his inherited user and groups permissions
+      responses:
+        '200':
+          description: list of inherited resources permissions of the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserResources_GET_200'
+        '404':
+          description: could not find user name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/NotFound_404'
+  '/users/current/resources':
+    get:
+      tags:
+        - Current User
+      summary: List all resources the currently logged in user has direct permission on (not including his groups permissions)
+      responses:
+        '200':
+          description: list of direct resources permissions of the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserResources_GET_200'
+        '404':
+          description: could not find user name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/NotFound_404'
+  '/users/current/resources/{resource_id}/inherited_permissions':
+    get:
+      tags:
+        - Current User
+      summary: List all permissions the currently logged in user has on a specific resource with his inherited user and groups permissions
+      parameters:
+        - name: resource_id
+          schema:
+            type: integer
+          description: Id of the resource
+          in: path
+          required: true
+      responses:
+        '200':
+          description: list of all permissions the user has for a specific resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserResourcePermissions_GET_200'
+  '/users/current/resources/{resource_id}/permissions':
+    get:
+      tags:
+        - Current User
+      summary: List all direct permissions the currently logged in user has on a specific resource (not including his groups permissions)
+      parameters:
+        - name: resource_id
+          schema:
+            type: integer
+          description: Id of the resource
+          in: path
+          required: true
+      responses:
+        '200':
+          description: list of all permissions the user has for a specific resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserResourcePermissions_GET_200'
+    post:
+      tags:
+        - Current User
+      summary: Create a permission on specific resource for the currently logged in user
+      parameters:
+        - name: resource_id
+          schema:
+            type: integer
+          description: Id of the resource
+          in: path
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionBodyCreate'
+      responses:
+        '201':
+          description: permission created
+        '409':
+          description: >-
+            Conflict, this permission on that resource already exist for that
+            user
+  '/users/current/resources/{resource_id}/permissions/{permission_name}':
+    delete:
+      tags:
+        - Current User
+      summary: Delete a permission on a resource for the currently logged in user
+      parameters:
+        - name: permission_name
+          description: name of the permission
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: resource_id
+          description: id of the resource
+          in: path
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: permission deleted
+        '400':
+          description: permission not found
+  '/users/current/inherited_services':
+    get:
+      tags:
+        - Current User
+      summary: List all services the currently logged in user has permission on with his inherited user and groups permissions
+      responses:
+        '200':
+          description: list of services the user has permission on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserServices_GET_200'
+  '/users/current/services':
+    get:
+      tags:
+        - Current User
+      summary: List all services the currently logged in user has direct permission on (not including his groups permissions)
+      responses:
+        '200':
+          description: list of services the user has permission on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserServices_GET_200'
+  '/users/current/services/{service_name}/inherited_permissions':
+    get:
+      tags:
+        - Current User
+      summary: List all permissions the currently logged in user has on a service using all his inherited user and groups permissions
+      parameters:
+        - name: service_name
+          schema:
+            type: string
+          description: Name of the service
+          in: path
+          required: true
+      responses:
+        '200':
+          description: list of permissions the user has on a specific service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserServicePermissions_GET_200'
+  '/users/current/services/{service_name}/permissions':
+    get:
+      tags:
+        - Current User
+      summary: List all direct permissions the currently logged in user has on a service (not including his groups permissions)
+      parameters:
+        - name: service_name
+          schema:
+            type: string
+          description: Name of the service
+          in: path
+          required: true
+      responses:
+        '200':
+          description: list of permissions the user has on a specific service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserServicePermissions_GET_200'
+    post:
+      tags:
+        - Current User
+      summary: Create a permission on a service for the currently logged in user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionBodyCreate'
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '201':
+          description: permission created for user on a specific service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserServicePermissions_POST_201'
+  '/users/current/services/{service_name}/permissions/{permission_name}':
+    delete:
+      tags:
+        - Current User
+      summary: Delete a permission on a service for the currently logged in user
+      parameters:
+        - name: permission_name
+          description: name of the permission
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: service_name
+          description: name of the service
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: permission deleted
+        '400':
+          description: permission not found
+  '/users/current/services/{service_name}/inherited_resources':
+    get:
+      tags:
+        - Current User
+      summary: List all resources under a service the currently logged in user has permission on using all his inherited user and groups permissions
+      parameters:
+        - name: service_name
+          description: name of the service
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: list of service resources the user has inherited permission on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UserServiceResources_GET_200'
+        '400':
+          description: invalid inputs
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/responses/User_MatchDictCheck_400'
+        '403':
+          description: forbidden service obtention
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/responses/Service_MatchDictCheck_403'
+        '404':
+          description: service name not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/responses/Service_MatchDictCheck_404'
+  '/users/current/services/{service_name}/resources':
+    get:
+      tags:
+        - Current User
+      summary: List all resources under a service a user has direct permission on (not including his groups permissions)
+      parameters:
         - name: service_name
           description: name of the service
           in: path
@@ -3717,7 +4176,6 @@ components:
             detail:
               oneOf:
                 - Update user by name refused by db
-                - Update user-group refused by db
     User_PUT_404:
       description: user not found for update
       content:
@@ -3765,16 +4223,6 @@ components:
             detail:
               oneOf:
                 - Delete user by name refused by db
-    User_DELETE_404:
-      description: user name not found for deletion
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 404
-            type: application/json
-            detail: Could not find user-group in db
     UserResources_GET_200:
       description: resources a user has permissions on
       content:
@@ -4096,7 +4544,7 @@ components:
             detail: Get session successful
             authenticated: false
     Version_GET_200:
-      description: current Magpie Rest API version
+      description: current Magpie Rest API and database versions
       content:
         application/json:
           schema:
