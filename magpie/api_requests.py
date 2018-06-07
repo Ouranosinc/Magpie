@@ -9,8 +9,10 @@ def get_multiformat_any(request, key):
     msg = "Key `{key}` could not be extracted from {method} of type `{type}`" \
           .format(key=repr(key), method=request.method, type=request.content_type)
     if request.content_type == 'application/json':
-        return evaluate_call(lambda: request.json.get(key), httpError=HTTPInternalServerError, msgOnFail=msg)
-    return evaluate_call(getattr(request, request.method).get(key), httpError=HTTPInternalServerError, msgOnFail=msg)
+        return evaluate_call(lambda: request.json.get(key),
+                             httpError=HTTPInternalServerError, msgOnFail=msg)
+    return evaluate_call(lambda: getattr(request, request.method).get(key),
+                         httpError=HTTPInternalServerError, msgOnFail=msg)
 
 
 def get_multiformat_post(request, key):
