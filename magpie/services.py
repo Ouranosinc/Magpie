@@ -4,6 +4,7 @@ from ziggurat_definitions import *
 from models import find_children_by_name
 from pyramid.security import Everyone as EVERYONE
 from pyramid.security import Allow
+from api_except import *
 
 
 class ServiceI(object):
@@ -373,11 +374,14 @@ service_type_dict = {
 
 
 def service_factory(service, request):
-    try:
-        service_specific = service_type_dict[service.type](service, request)
-        return service_specific
-    except Exception as e:
-        raise Exception("Failed to find requested service type. Exception: [" + repr(e) + "]")
+    verify_param(service, ofType=models.Service, httpError=HTTPBadRequest, content={u'service': repr(service)},
+                 msgOnFail="Cannot process invalid service object")
+    service_type = evaluate_call(lambda: service.type, httpError=HTTPInternalServerError,
+                                 msgOnFail="Cannot retrieve service type from object")
+    verify_param(service_type, isIn=True, paramCompare=service_type_dict.keys(), httpError=HTTPNotImplemented,
+                 msgOnFail="Undefined service type mapping to service object", content={u'service_type': service_type})
+    return evaluate_call(lambda: service_type_dict[service_type](service, request), httpError=HTTPInternalServerError,
+                         msgOnFail="Failed to find requested service type.")
 
 
 def get_all_service_permission_names():
