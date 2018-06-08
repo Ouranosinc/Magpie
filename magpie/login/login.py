@@ -30,7 +30,7 @@ def sign_in_external(request):
     if provider_name == 'openid':
         query_field = dict(id=user_name)
     elif provider_name == 'github':
-        query_field = dict()
+        query_field = dict(login_field=user_name)
     else:
         query_field = dict(username=user_name)
 
@@ -41,25 +41,31 @@ def sign_in_external(request):
     return HTTPFound(location=external_login_route, headers=request.response.headers)
 
 
-#@view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
-#def sign_in(request):
-#    provider_name = get_value_multiformat_post_checked(request, 'provider_name')
-#    user_name = get_value_multiformat_post_checked(request, 'user_name')
-#    password = get_multiformat_post(request, 'password')   # no check since password is None for external login#
-#
-#    verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
-#                 msgOnFail="Invalid `provider_name` not found within available providers",
-#                 content={u'provider_name': str(provider_name), u'providers': providers})
-#
-#    if provider_name in internal_providers:
-#        return sign_in_internal(request, {u'user_name': user_name, u'password': password})
-#
-#    elif provider_name in external_providers:
-#        return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
-#                                                                u'password': password,
-#                                                                u'provider_name': provider_name}),
-#                             httpError=HTTPInternalServerError, content={u'provider': provider_name},
-#                             msgOnFail="Error occurred while signing in with external provider")
+@view_config(route_name='signin_internal', request_method='POST', permission=NO_PERMISSION_REQUIRED)
+def sign_in_internal(request):
+    # special route 'ziggurat_foundations.ext.pyramid.sign_in'
+    return request.route_url('sign_in')
+
+
+@view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
+def sign_in(request):
+    provider_name = get_value_multiformat_post_checked(request, 'provider_name')
+    user_name = get_value_multiformat_post_checked(request, 'user_name')
+    password = get_multiformat_post(request, 'password')   # no check since password is None for external login#
+
+    verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `provider_name` not found within available providers",
+                 content={u'provider_name': str(provider_name), u'providers': providers})
+
+    if provider_name in internal_providers:
+        return request.route_url('signin_internal', user_name=user_name, password=password)
+
+    elif provider_name in external_providers:
+        return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
+                                                                u'password': password,
+                                                                u'provider_name': provider_name}),
+                             httpError=HTTPInternalServerError, content={u'provider': provider_name},
+                             msgOnFail="Error occurred while signing in with external provider")
 
 
 @view_config(route_name='signout', request_method='GET', permission=NO_PERMISSION_REQUIRED)
