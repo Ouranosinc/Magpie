@@ -7,6 +7,7 @@ from security import authomatic
 from api_requests import *
 from magpie import *
 from management.user.user_utils import create_user
+import requests
 
 
 internal_providers = [u'ziggurat']
@@ -44,7 +45,7 @@ def sign_in_external(request):
 @view_config(route_name='signin_internal', request_method='POST', permission=NO_PERMISSION_REQUIRED)
 def sign_in_internal(request):
     # special route 'ziggurat_foundations.ext.pyramid.sign_in'
-    return request.route_url('sign_in')
+    return request.route_url('sign_in', **request.json())
 
 
 @view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
@@ -58,7 +59,7 @@ def sign_in(request):
                  content={u'provider_name': str(provider_name), u'providers': providers})
 
     if provider_name in internal_providers:
-        return request.route_url('signin_internal', user_name=user_name, password=password)
+        return requests.post('signin_internal', data={u'user_name': user_name, u'password': password}, allow_redirects=True)
 
     elif provider_name in external_providers:
         return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
