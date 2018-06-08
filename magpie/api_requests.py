@@ -6,6 +6,7 @@ from management.resource.resource_utils import check_valid_service_resource_perm
 
 
 def get_request_method_content(request):
+    # 'request' object stores GET content into 'GET' property, while other methods are in 'POST' property
     method_property = 'GET' if request.method == 'GET' else 'POST'
     return getattr(request, method_property)
 
