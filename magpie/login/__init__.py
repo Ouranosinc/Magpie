@@ -6,7 +6,7 @@ def includeme(config):
     logger.info('Adding login ...')
     # Add all the rest api routes
     config.add_route('session', '/session')
-    config.add_route('signin_internal', '/signin_internal')
+    #config.add_route('signin_internal', '/signin_internal')
     config.add_route('signin_external', '/signin_external')
     config.add_route('signin', '/signin')
     config.add_route('signout', '/signout')

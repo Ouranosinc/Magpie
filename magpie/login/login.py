@@ -42,10 +42,10 @@ def sign_in_external(request):
     return HTTPFound(location=external_login_route, headers=request.response.headers)
 
 
-@view_config(route_name='signin_internal', request_method='POST', permission=NO_PERMISSION_REQUIRED)
-def sign_in_internal(request):
-    # special route 'ziggurat_foundations.ext.pyramid.sign_in'
-    return request.route_url('sign_in', **request.json())
+#@view_config(route_name='signin_internal', request_method='POST', permission=NO_PERMISSION_REQUIRED)
+#def sign_in_internal(request):
+#    # special route 'ziggurat_foundations.ext.pyramid.sign_in'
+#    return request.route_url('sign_in', **request.json())
 
 
 @view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
@@ -59,7 +59,15 @@ def sign_in(request):
                  content={u'provider_name': str(provider_name), u'providers': providers})
 
     if provider_name in internal_providers:
-        return requests.post('signin_internal', data={u'user_name': user_name, u'password': password}, allow_redirects=True)
+        try:
+            resp = evaluate_call(lambda: requests.post('{}/sign_in'.format(request.application_url),
+                                                       data={u'user_name': user_name, u'password': password}),
+                                 httpError=HTTPBadRequest, msgOnFail="Invalid credentials.")
+            if resp.status_code == HTTPOk.code:
+                return valid_http(httpSuccess=HTTPOk, detail="Login successful.")
+            raise_http(httpError=HTTPBadRequest, detail="Failed login.")
+        except Exception as e:
+            print(e)
 
     elif provider_name in external_providers:
         return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
@@ -79,7 +87,10 @@ def sign_out(request):
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
 def login_success_ziggu(request):
     # headers contains login authorization cookie
-    return valid_http(httpSuccess=HTTPOk, detail="Login successful", httpKWArgs={'headers': request.context.headers})
+    try:
+        return valid_http(httpSuccess=HTTPOk, detail="Login successful", httpKWArgs={'headers': request.context.headers})
+    except Exception as e:
+        print(e)
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):
