@@ -60,12 +60,15 @@ def sign_in(request):
 
     if provider_name in internal_providers:
         try:
-            resp = evaluate_call(lambda: requests.post('{}/sign_in'.format(request.application_url),
-                                                       data={u'user_name': user_name, u'password': password}),
-                                 httpError=HTTPBadRequest, msgOnFail="Invalid credentials.")
-            if resp.status_code == HTTPOk.code:
-                return valid_http(httpSuccess=HTTPOk, detail="Login successful.")
-            raise_http(httpError=HTTPBadRequest, detail="Failed login.")
+            signin_internal_url = '{}/signin_internal'.format(request.application_url)
+            signin_internal_data = {u'user_name': user_name, u'password': password}
+            return requests.post(signin_internal_url, data=signin_internal_data, allow_redirects=True)
+            #resp = evaluate_call(lambda: requests.post('{}/sign_in'.format(request.application_url),
+            #                                           data={u'user_name': user_name, u'password': password}),
+            #                     httpError=HTTPBadRequest, msgOnFail="Invalid credentials.")
+            #if resp.status_code == HTTPOk.code:
+            #    return valid_http(httpSuccess=HTTPOk, detail="Login successful.")
+            #raise_http(httpError=HTTPBadRequest, detail="Failed login.")
         except Exception as e:
             print(e)
 
