@@ -1,4 +1,6 @@
 from authomatic.adapters import WebObAdapter
+from authomatic.providers import oauth1, oauth2, openid
+from authomatic import Authomatic
 from pyramid.security import NO_PERMISSION_REQUIRED, Authenticated
 from pyramid.security import forget, remember
 from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInBadAuth, ZigguratSignInSuccess, ZigguratSignOut
@@ -10,14 +12,51 @@ from management.user.user_utils import create_user
 import requests
 
 
+external_providers_config = {
+
+    #'tw': { # Your internal provider name
+
+        # Provider class
+    #    'class_': oauth1.Twitter,
+
+        # Twitter is an AuthorizationProvider so we need to set several other properties too:
+    #    'consumer_key': '########################',
+    #    'consumer_secret': '########################',
+    #},
+
+    #'fb': {
+
+    #    'class_': oauth2.Facebook,
+
+        # Facebook is an AuthorizationProvider too.
+    #    'consumer_key': '########################',
+    #    'consumer_secret': '########################',
+
+        # But it is also an OAuth 2.0 provider and it needs scope.
+    #    'scope': ['user_about_me', 'email', 'publish_stream'],
+    #},
+
+    'openid': {
+        'class_': openid.OpenID,    # OpenID provider dependent on the python-openid package.
+    },
+    'github': {
+        'class_': oauth2.GitHub,
+    },
+    'dkrz': {
+    },
+    'ipsl': {
+    },
+    'badc': {
+    },
+    'pcmdi': {
+    },
+    'smhi': {
+    },
+}
+
+external_providers_authomatic = Authomatic(config=external_providers_config, secret=os.getenv('MAGPIE_SECRET'))
+external_providers = external_providers_config.keys()
 internal_providers = [u'ziggurat']
-external_providers = [u'openid',
-                      u'dkrz',
-                      u'ipsl',
-                      u'badc',
-                      u'pcmdi',
-                      u'smhi',
-                      u'github']
 providers = internal_providers + external_providers
 
 
@@ -175,13 +214,14 @@ def sign_out_ziggu(request):
 
 @view_config(route_name='external_login', permission=NO_PERMISSION_REQUIRED)
 def authomatic_login(request):
-    _authomatic = authomatic(request)
+    #_authomatic = authomatic(request)
     open_id_provider_name = request.matchdict.get('provider_name')
 
     # Start the login procedure.
 
     response = Response()
-    result = _authomatic.login(WebObAdapter(request, response), open_id_provider_name)
+    result = external_providers_authomatic.login(WebObAdapter(request, response), open_id_provider_name)
+    #result = _authomatic.login(WebObAdapter(request, response), open_id_provider_name)
 
     if result:
         if result.error:
