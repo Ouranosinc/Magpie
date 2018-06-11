@@ -47,7 +47,7 @@ class ManagementViews(object):
                         pyr_res = Response(body=response.content, headers=response.headers)
                         for cookie in response.cookies:
                             pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
-                            return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
+                        return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
                     elif response.status_code in [HTTPBadRequest.code, HTTPNotAcceptable.code]:
                         return_data[u'invalid_username'] = True
                         return add_template_data(self.request, return_data)

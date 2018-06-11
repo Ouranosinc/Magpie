@@ -59,18 +59,34 @@ def sign_in(request):
                  content={u'provider_name': str(provider_name), u'providers': providers})
 
     if provider_name in internal_providers:
-        try:
-            signin_internal_url = '{}/signin_internal'.format(request.application_url)
-            signin_internal_data = {u'user_name': user_name, u'password': password}
-            return requests.post(signin_internal_url, data=signin_internal_data, allow_redirects=True)
+        #try:
+        signin_internal_url = '{}/signin_internal'.format(request.application_url)
+        signin_internal_data = {u'user_name': user_name, u'password': password}
+        signin_response = requests.post(signin_internal_url, data=signin_internal_data, allow_redirects=True)
+
+        if signin_response.status_code == HTTPOk.code:
+            pyr_res = Response(body=signin_response.content, headers=signin_response.headers)
+            for cookie in signin_response.cookies:
+                pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
+            return valid_http(httpSuccess=HTTPOk, detail="Login successful.",
+                              httpKWArgs={u'headers': pyr_res.headers})
+        raise_http(httpError=HTTPBadRequest, detail="Login failure.")
+
+            #elif signin_response.status_code in [HTTPBadRequest.code, HTTPNotAcceptable.code]:
+            #    return_data[u'invalid_username'] = True
+            #    return add_template_data(self.request, return_data)
+            #elif response.status_code == HTTPUnauthorized.code:
+            #    return_data[u'invalid_password'] = True
+            #    return add_template_data(self.request, return_data)
+
             #resp = evaluate_call(lambda: requests.post('{}/sign_in'.format(request.application_url),
             #                                           data={u'user_name': user_name, u'password': password}),
             #                     httpError=HTTPBadRequest, msgOnFail="Invalid credentials.")
             #if resp.status_code == HTTPOk.code:
             #    return valid_http(httpSuccess=HTTPOk, detail="Login successful.")
             #raise_http(httpError=HTTPBadRequest, detail="Failed login.")
-        except Exception as e:
-            print(e)
+        #except Exception as e:
+        #    print(e)
 
     elif provider_name in external_providers:
         return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
