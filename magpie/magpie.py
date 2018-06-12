@@ -24,6 +24,13 @@ from pyramid.view import *
 from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.config import Configurator
 
+# -- Cornice (display swagger REST API docs)
+import colander
+from cornice import Service
+from cornice.service import get_services
+from cornice.validators import colander_body_validator
+from cornice_swagger.swagger import CorniceSwagger
+
 # -- Project specific --------------------------------------------------------
 from __meta__ import __version__
 from __init__ import *
@@ -79,6 +86,34 @@ def get_request_info(request, default_msg="undefined"):
     return content
 
 
+api_users = Service(name='Users', path='/users/{user}', description="Cornice Demo")
+def UserAPI(object):
+    @api_users.get(tags=['users'])
+    def get_value(request):
+        return {u'username': u'dummy'}
+
+
+api_swagger = Service(name='Magpie REST API', path='__api__', description="Magpie REST API documentation")
+@api_swagger.get()
+def openapi_spec(request):
+    my_generator = CorniceSwagger(get_services())
+    my_spec = my_generator('Magpie REST API', '0.5.x')
+    return my_spec
+
+
+class CorniceSwaggerPredicate(object):
+    """Predicate to add simple information to Cornice Swagger."""
+
+    def __init__(self, schema, config):
+        self.schema = schema
+
+    def phash(self):
+        return str(self.schema)
+
+    def __call__(self, context, request):
+        return self.schema
+
+
 def main(global_config=None, **settings):
     """
     This function returns a Pyramid WSGI application.
@@ -97,7 +132,8 @@ def main(global_config=None, **settings):
 
     hostname = os.getenv('HOSTNAME')
     if hostname:
-        settings['magpie.url'] = 'http://{hostname}:{port}/magpie'.format(hostname=hostname, port=settings['magpie.port'])
+        magpie_url = 'http://{hostname}:{port}/magpie'
+        settings['magpie.url'] = magpie_url.format(hostname=hostname, port=settings['magpie.port'])
 
     magpie_secret = os.getenv('MAGPIE_SECRET')
     if magpie_secret is None:
@@ -116,10 +152,27 @@ def main(global_config=None, **settings):
         authentication_policy=authn_policy,
         authorization_policy=authz_policy
     )
-    # include magpie components (all the file which define includeme)
 
+    # include api views
+    magpie_api_path = '{}/__api__'.format(settings['magpie.url'])
+    magpie_api_view = '{}/api-explorer'.format(settings['magpie.url'])
+    print(magpie_api_path)
+    print(magpie_api_view)
+    config.include('cornice')
+    config.include('cornice_swagger')
+    config.cornice_enable_openapi_view(
+        api_path=magpie_api_path,
+        title='Magpie REST API',
+        description="OpenAPI documentation",
+        version='1.0.0'
+    )
+    config.cornice_enable_openapi_explorer(api_explorer_path=magpie_api_view)
+    #config.register_swagger_ui(swagger_ui_path=magpie_api_path)
+
+    # include magpie components (all the file which define includeme)
     config.include('pyramid_chameleon')
     config.include('pyramid_mako')
+    config.include('api')
     config.include('login')
     config.include('home')
     config.include('db')

@@ -24,6 +24,7 @@ USER_NAME_MAX_LENGTH = 64
 
 
 def includeme(config):
+    config.include('magpie.api')
     config.include('magpie.home')
     config.include('magpie.login')
     config.include('magpie.management')
