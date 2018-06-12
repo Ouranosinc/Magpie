@@ -33,35 +33,20 @@ class ManagementViews(object):
 
         try:
             if 'submit' in self.request.POST:
-                provider_name = self.request.POST.get('provider_name', 'ziggurat')
-                # Local login
-                if provider_name == 'ziggurat':
-                    new_location = self.magpie_url + '/signin'
-                    data_to_send = {}
-                    for key in self.request.POST:
-                        data_to_send[key] = self.request.POST.get(key)
+                signin_url = '{}/signin'.format(self.magpie_url)
+                data_to_send = {}
+                for key in self.request.POST:
+                    data_to_send[key] = self.request.POST.get(key)
 
-                    response = requests.post(new_location, data=data_to_send, allow_redirects=True)
-                    if response.status_code == HTTPOk.code:
-                        pyr_res = Response(body=response.content, headers=response.headers)
-                        for cookie in response.cookies:
-                            pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
-                        return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
-                    else:
-                        return_data[u'invalid_credentials'] = True
-                        return add_template_data(self.request, return_data)
-                else:
-                    # External login
-                    external_url = self.magpie_url + '/signin_external'
-                    data_to_send = {}
-                    for key in self.request.POST:
-                        data_to_send[key] = self.request.POST.get(key)
-                    response = requests.post(external_url, data=data_to_send, allow_redirects=True)
-                    pyr_res = Response(body=response.content, status=response.status_code, headers=response.headers)
+                response = requests.post(signin_url, data=data_to_send, allow_redirects=True)
+                if response.status_code == HTTPOk.code:
+                    pyr_res = Response(body=response.content, headers=response.headers)
                     for cookie in response.cookies:
                         pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
-                    return pyr_res
-
+                    return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
+                else:
+                    return_data[u'invalid_credentials'] = True
+                    return add_template_data(self.request, return_data)
         except Exception as e:
             return HTTPInternalServerError(detail=repr(e))
 
