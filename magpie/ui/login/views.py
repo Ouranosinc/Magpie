@@ -27,8 +27,7 @@ class ManagementViews(object):
     def login(self):
         return_data = {
             u'external_providers': self.get_external_providers(),
-            u'invalid_username': False,
-            u'invalid_password': False,
+            u'invalid_credentials': False,
             u'user_name': self.request.POST.get('user_name', u''),
         }
 
@@ -48,13 +47,9 @@ class ManagementViews(object):
                         for cookie in response.cookies:
                             pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
                         return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
-                    elif response.status_code in [HTTPBadRequest.code, HTTPNotAcceptable.code]:
-                        return_data[u'invalid_username'] = True
+                    else:
+                        return_data[u'invalid_credentials'] = True
                         return add_template_data(self.request, return_data)
-                    elif response.status_code == HTTPUnauthorized.code:
-                        return_data[u'invalid_password'] = True
-                        return add_template_data(self.request, return_data)
-                        #return Response(body=response.content, status=response.status_code, headers=response.headers)
                 else:
                     # External login
                     external_url = self.magpie_url + '/signin_external'

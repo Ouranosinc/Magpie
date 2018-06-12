@@ -15,29 +15,6 @@ import requests
 
 
 external_providers_config = {
-
-    #'tw': { # Your internal provider name
-
-        # Provider class
-    #    'class_': oauth1.Twitter,
-
-        # Twitter is an AuthorizationProvider so we need to set several other properties too:
-    #    'consumer_key': '########################',
-    #    'consumer_secret': '########################',
-    #},
-
-    #'fb': {
-
-    #    'class_': oauth2.Facebook,
-
-        # Facebook is an AuthorizationProvider too.
-    #    'consumer_key': '########################',
-    #    'consumer_secret': '########################',
-
-        # But it is also an OAuth 2.0 provider and it needs scope.
-    #    'scope': ['user_about_me', 'email', 'publish_stream'],
-    #},
-
     'openid': {
         'class_': openid.OpenID,    # OpenID provider dependent on the python-openid package.
     },
@@ -91,12 +68,6 @@ def sign_in_external(request):
     return HTTPFound(location=external_login_route, headers=request.response.headers)
 
 
-#@view_config(route_name='signin_internal', request_method='POST', permission=NO_PERMISSION_REQUIRED)
-#def sign_in_internal(request):
-#    # special route 'ziggurat_foundations.ext.pyramid.sign_in'
-#    return request.route_url('sign_in', **request.json())
-
-
 @view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
     provider_name = get_value_multiformat_post_checked(request, 'provider_name')
@@ -108,7 +79,6 @@ def sign_in(request):
                  content={u'provider_name': str(provider_name), u'providers': providers})
 
     if provider_name in internal_providers:
-        #try:
         signin_internal_url = '{}/signin_internal'.format(request.application_url)
         signin_internal_data = {u'user_name': user_name, u'password': password}
         signin_response = requests.post(signin_internal_url, data=signin_internal_data, allow_redirects=True)
@@ -118,23 +88,7 @@ def sign_in(request):
             for cookie in signin_response.cookies:
                 pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
             return pyramid_response
-        raise_http(httpError=HTTPBadRequest, detail="Login failure.")
-
-            #elif signin_response.status_code in [HTTPBadRequest.code, HTTPNotAcceptable.code]:
-            #    return_data[u'invalid_username'] = True
-            #    return add_template_data(self.request, return_data)
-            #elif response.status_code == HTTPUnauthorized.code:
-            #    return_data[u'invalid_password'] = True
-            #    return add_template_data(self.request, return_data)
-
-            #resp = evaluate_call(lambda: requests.post('{}/sign_in'.format(request.application_url),
-            #                                           data={u'user_name': user_name, u'password': password}),
-            #                     httpError=HTTPBadRequest, msgOnFail="Invalid credentials.")
-            #if resp.status_code == HTTPOk.code:
-            #    return valid_http(httpSuccess=HTTPOk, detail="Login successful.")
-            #raise_http(httpError=HTTPBadRequest, detail="Failed login.")
-        #except Exception as e:
-        #    print(e)
+        raise_http(httpError=HTTPUnauthorized, detail="Login failure.")
 
     elif provider_name in external_providers:
         return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
@@ -152,12 +106,9 @@ def sign_out(request):
 
 
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
-def login_success_ziggu(request):
+def login_success_ziggurat(request):
     # headers contains login authorization cookie
-    try:
-        return valid_http(httpSuccess=HTTPOk, detail="Login successful", httpKWArgs={'headers': request.context.headers})
-    except Exception as e:
-        print(e)
+    return valid_http(httpSuccess=HTTPOk, detail="Login successful.", httpKWArgs={'headers': request.context.headers})
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):
@@ -216,9 +167,8 @@ def login_failure(request, reason=None):
 
 
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
-def sign_out_ziggu(request):
-    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful.",
-                      httpKWArgs={'headers': forget(request)})
+def sign_out_ziggurat(request):
+    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful.", httpKWArgs={'headers': forget(request)})
 
 
 @view_config(route_name='external_login', permission=NO_PERMISSION_REQUIRED)
