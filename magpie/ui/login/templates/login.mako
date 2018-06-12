@@ -5,6 +5,19 @@
 <li><a href="${request.route_url('login')}">Log in</a></li>
 </%block>
 
+%if invalid_credentials:
+<div class="alert danger visible" id="Login_CredentialsAlert">
+    <h3 class="alert_title danger">Invalid Credentials!</h3>
+    <p>
+        Incorrect username or password.
+    </p>
+    <form action="${request.path}" method="post">
+        <input type="submit" class="button cancel" name="close" value="Close"
+               onclick="this.parentElement.style.display='none';">
+    </form>
+</div>
+%endif
+
 <h1>Log in</h1>
 
 <form class="new_item_form" action="${request.route_url('login')}" method="post">
@@ -17,26 +30,14 @@
             <div class="input_container">
                 <td><input type="text" name="user_name" value="${user_name}" class="equal_width"></td>
             </div>
-            %if invalid_username:
-                <td><p class="alert_form_error">
-                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> unknown </p>
-                </td>
-            %else:
-                <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
-            %endif
+            <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
         <tr>
             <td>Password:</td>
             <div class="input_container">
                 <td><input type="password" name="password" value="" class="equal_width"></td>
             </div>
-            %if invalid_password:
-                <td><p class="alert_form_error">
-                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> incorrect </p>
-                </td>
-            %else:
-                <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
-            %endif
+            <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Sign In" name="submit" id="submit"></td></tr>
     </table>
@@ -52,7 +53,7 @@
             <div class="input_container">
                 <td><input type="text" name="user_name" class="equal_width"></td>
             </div>
-            <td> <!-- padding --> </td>
+            <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
         <tr>
             <td>Provider:</td>
