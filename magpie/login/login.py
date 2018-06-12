@@ -1,6 +1,8 @@
 from authomatic.adapters import WebObAdapter
 from authomatic.providers import oauth1, oauth2, openid
-from authomatic import Authomatic
+from authomatic import Authomatic, provider_id
+import authomatic
+
 from pyramid.security import NO_PERMISSION_REQUIRED, Authenticated
 from pyramid.security import forget, remember
 from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInBadAuth, ZigguratSignInSuccess, ZigguratSignOut
@@ -41,6 +43,14 @@ external_providers_config = {
     },
     'github': {
         'class_': oauth2.GitHub,
+        'consumer_key': '##########',
+        'consumer_secret': '##########',
+        'id': provider_id(),
+        'scope': oauth2.GitHub.user_info_scope,
+        '_apis': {
+            'Get your events': ('GET', 'https://api.github.com/users/{user.username}/events'),
+            'Get your watched repos': ('GET', 'https://api.github.com/user/subscriptions'),
+        },
     },
     'dkrz': {
     },
@@ -104,11 +114,10 @@ def sign_in(request):
         signin_response = requests.post(signin_internal_url, data=signin_internal_data, allow_redirects=True)
 
         if signin_response.status_code == HTTPOk.code:
-            pyr_res = Response(body=signin_response.content, headers=signin_response.headers)
+            pyramid_response = Response(body=signin_response.content, headers=signin_response.headers)
             for cookie in signin_response.cookies:
-                pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
-            return valid_http(httpSuccess=HTTPOk, detail="Login successful.",
-                              httpKWArgs={u'headers': pyr_res.headers})
+                pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
+            return pyramid_response
         raise_http(httpError=HTTPBadRequest, detail="Login failure.")
 
             #elif signin_response.status_code in [HTTPBadRequest.code, HTTPNotAcceptable.code]:
