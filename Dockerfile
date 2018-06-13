@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --upgrade pip setuptools
 RUN pip install gunicorn
 
+RUN git clone https://github.com/Cornices/cornice.ext.swagger cornice_swagger
+RUN python cornice_swagger/setup.py install
+
 COPY requirements.txt /opt/local/src/magpie/requirements.txt
 RUN pip install -r /opt/local/src/magpie/requirements.txt
 COPY ./ /opt/local/src/magpie/
