@@ -221,6 +221,26 @@ class ServiceGeoserver(ServiceWMS):
         return self.acl
 
 
+class ServiceGeoserverAPI(ServiceI):
+
+    permission_names = []
+
+    params_expected = []
+
+    resource_types_permissions = {}
+
+    def __init__(self, service, request):
+        super(ServiceGeoserverAPI, self).__init__(service, request)
+
+    @property
+    def __acl__(self):
+        self.expand_acl(self.service, self.request.user)
+        return self.acl
+
+    def permission_requested(self):
+        return u'read'
+
+
 class ServiceWFS(ServiceI):
 
     permission_names = [
@@ -359,8 +379,6 @@ class ServiceProjectAPI(ServiceI):
 
     def permission_requested(self):
         return u'read'
-
-    pass
 
 
 service_type_dict = {
