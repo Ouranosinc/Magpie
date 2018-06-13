@@ -22,4 +22,6 @@ magpie/local/
 magpie/pip-selfcheck.json
 magpie/share/
 magpie.egg-info/
+magpie/api_docs/
+magpie/api_test/
 share/
