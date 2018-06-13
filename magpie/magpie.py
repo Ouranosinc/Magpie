@@ -30,6 +30,10 @@ from cornice import Service
 from cornice.service import get_services
 from cornice.validators import colander_body_validator
 from cornice_swagger.swagger import CorniceSwagger
+#from flask import Flask, jsonify
+#from flasgger import Swagger
+from server import DirectoryServer
+from threading import Thread
 
 # -- Project specific --------------------------------------------------------
 from __meta__ import __version__
@@ -114,6 +118,11 @@ class CorniceSwaggerPredicate(object):
         return self.schema
 
 
+def api_docs_server(**settings):
+    api_server = DirectoryServer(settings['magpie.api.dir'], settings['magpie.api.port'])
+    api_server.serve_forever()
+
+
 def main(global_config=None, **settings):
     """
     This function returns a Pyramid WSGI application.
@@ -130,10 +139,10 @@ def main(global_config=None, **settings):
         time.sleep(2)
         raise Exception('Database not ready')
 
+    magpie_url_template = 'http://{hostname}:{port}/magpie'
     hostname = os.getenv('HOSTNAME')
     if hostname:
-        magpie_url = 'http://{hostname}:{port}/magpie'
-        settings['magpie.url'] = magpie_url.format(hostname=hostname, port=settings['magpie.port'])
+        settings['magpie.url'] = magpie_url_template.format(hostname=hostname, port=settings['magpie.port'])
 
     magpie_secret = os.getenv('MAGPIE_SECRET')
     if magpie_secret is None:
@@ -172,7 +181,6 @@ def main(global_config=None, **settings):
     # include magpie components (all the file which define includeme)
     config.include('pyramid_chameleon')
     config.include('pyramid_mako')
-    config.include('api')
     config.include('login')
     config.include('home')
     config.include('db')
@@ -184,7 +192,22 @@ def main(global_config=None, **settings):
 
     config.set_default_permission(ADMIN_PERM)
 
-    return config.make_wsgi_app()
+    # app = Flask(__name__)
+    # swagger = Swagger(app)
+    # app.run(port='2003')
+
+    #api_handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+    #api_server = SocketServer.TCPServer(("", int(settings['magpie.api.port'])), api_handler)
+    #api_server.serve_forever()
+
+    settings['magpie.api.url'] = magpie_url_template.format(hostname=hostname, port=settings['magpie.api.port'])
+    settings['magpie.api.dir'] = os.path.abspath(os.path.join(os.path.dirname(__file__), 'api'))
+    print(settings['magpie.api.dir'])
+    api_thread = Thread(target=api_docs_server, kwargs=settings)
+    api_thread.start()
+
+    wsgi_app = config.make_wsgi_app()
+    return wsgi_app
 
 
 if __name__ == '__main__':

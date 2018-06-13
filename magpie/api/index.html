@@ -1,48 +1,61 @@
+<!-- HTML for static distribution bundle build -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Swagger UI</title>
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700|Source+Code+Pro:300,600|Titillium+Web:400,600,700" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="./swagger-ui.css" >
+    <link rel="icon" type="image/png" href="./favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="./favicon-16x16.png" sizes="16x16" />
+    <style>
+      html
+      {
+        box-sizing: border-box;
+        overflow: -moz-scrollbars-vertical;
+        overflow-y: scroll;
+      }
 
-<head>
-    <!-- swagger -->
-    <link href="${request.static_url('api:swagger-ui/dist/css/typography.css')}"
-    type='text/css' rel="stylesheet" />
-    <link href="${request.static_url('api:swagger-ui/dist/css/reset.css')}"
-    type='text/css' rel="stylesheet" />
-    <link href="${request.static_url('api:swagger-ui/dist/css/screen.css')}"
-    type='text/css' rel="stylesheet" />
-    <script src="${request.static_url('api:swagger-ui/lib/object-assign-pollyfill.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/jquery-1.8.0.min.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/jquery.slideto.min.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/jquery.wiggle.min.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/jquery.ba-bbq.min.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/handlebars-2.0.0.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/lodash.min.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/backbone-min.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/dist/swagger-ui.min.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/highlight.9.1.0.pack.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/highlight.9.1.0.pack_extended.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/jsoneditor.min.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/js-yaml.min.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/marked.js')}"></script>
-    <script src="${request.static_url('api:swagger-ui/lib/swagger-oauth.js')}"></script>
-</head>
+      *,
+      *:before,
+      *:after
+      {
+        box-sizing: inherit;
+      }
 
-<body>
-    <div class="swagger-section container">
-        <div id="swagger-ui-container" class="swagger-ui-wrap"></div>
-    </div>
-    <script type="text/javascript">
-        $(function()
-        {
-            var swaggerUi = new SwaggerUi(
-            {
-                url: "${request.route_url('swagger_json')}",
-                dom_id: "swagger-ui-container",
-                validatorUrl: null,
-                docExpansion: "list"
-            });
-            swaggerUi.load();
-        });
-    </script>
-</body>
+      body
+      {
+        margin:0;
+        background: #fafafa;
+      }
+    </style>
+  </head>
 
+  <body>
+    <div id="swagger-ui"></div>
+
+    <script src="./swagger-ui-bundle.js"> </script>
+    <script src="./swagger-ui-standalone-preset.js"> </script>
+    <script>
+    window.onload = function() {
+
+      // Build a system
+      const ui = SwaggerUIBundle({
+        url: "magpie-rest-api.yaml",
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout"
+      })
+
+      window.ui = ui
+    }
+  </script>
+  </body>
 </html>
