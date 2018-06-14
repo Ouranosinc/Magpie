@@ -13,16 +13,11 @@ import time
 import logging
 LOGGER = logging.getLogger(__name__)
 
-# -- Ziggurat_foundation ----
-from ziggurat_foundations.models import groupfinder
-
-# -- Pyramid ----
-from pyramid.authentication import AuthTktAuthenticationPolicy
-from pyramid.authorization import ACLAuthorizationPolicy
-from pyramid.session import SignedCookieSessionFactory
-from pyramid.view import *
-from pyramid.security import NO_PERMISSION_REQUIRED
-from pyramid.config import Configurator
+# -- Definitions
+from definitions.alembic_definitions import *
+from definitions.pyramid_definitions import *
+from definitions.sqlalchemy_definitions import *
+from definitions.ziggurat_definitions import *
 
 # -- Cornice (display swagger REST API docs)
 import colander
@@ -41,7 +36,7 @@ from __init__ import *
 #from db import postgresdb
 THIS_DIR = os.path.dirname(__file__)
 sys.path.insert(0, THIS_DIR)
-from api_except import *
+from api.api_except import *
 import models
 import db
 
@@ -181,10 +176,11 @@ def main(global_config=None, **settings):
     # include magpie components (all the file which define includeme)
     config.include('pyramid_chameleon')
     config.include('pyramid_mako')
-    config.include('login')
-    config.include('home')
+    config.include('api.esgf')
+    config.include('api.home')
+    config.include('api.login')
+    config.include('api.management')
     config.include('db')
-    config.include('management')
     config.include('ui')
 
     config.add_route('version', '/version')

@@ -1,16 +1,5 @@
 import requests
-from pyramid.view import view_config
-from pyramid.httpexceptions import exception_response
-from pyramid.httpexceptions import (
-    HTTPFound,
-    HTTPOk,
-    HTTPTemporaryRedirect,
-    HTTPBadRequest,
-    HTTPConflict,
-    HTTPCreated,
-    HTTPNotFound,
-    HTTPInternalServerError
-)
+from definitions.pyramid_definitions import *
 from magpie import USER_NAME_MAX_LENGTH, ANONYMOUS_USER, USER_GROUP
 from services import service_type_dict
 from ui.management import check_response

@@ -12,11 +12,8 @@ from __future__ import unicode_literals
 revision = '438c27ec1c9'
 down_revision = '439766f6104d'
 
-from alembic import op
-import sqlalchemy as sa
-from alembic.context import get_context
-from sqlalchemy.dialects.postgresql.base import PGDialect
-from sqlalchemy.engine.reflection import Inspector
+from definitions.alembic import *
+from definitions.sqlalchemy_definitions import *
 
 
 # correct keys for pre 0.5.6 naming convention

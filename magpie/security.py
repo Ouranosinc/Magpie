@@ -1,6 +1,6 @@
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
-from esgf import esgfopenid
+from api.esgf import esgfopenid
 import os
 import logging
 logger = logging.getLogger(__name__)

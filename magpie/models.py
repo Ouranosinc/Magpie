@@ -1,14 +1,10 @@
-from pyramid.security import Allow, Everyone
-from pyramid.security import ALL_PERMISSIONS
-from sqlalchemy.ext.declarative import declarative_base, declared_attr
-from sqlalchemy.orm import relationship
-import sqlalchemy as sa
-from ziggurat_definitions import *
-from api_except import *
+from definitions.pyramid_definitions import *
+from definitions.ziggurat_definitions import *
+from definitions.sqlalchemy_definitions import *
+from api.api_except import *
 
 
 Base = declarative_base()
-group_finder = gf
 
 
 def get_session_callable(request):
@@ -58,10 +54,10 @@ class Resource(ResourceMixin, Base):
         acls = []
 
         if self.owner_user_id:
-            acls.extend([(Allow, self.owner_user_id, ALL_PERMISSIONS,), ])
+            acls.extend([(ALLOW, self.owner_user_id, ALL_PERMISSIONS,), ])
 
         if self.owner_group_id:
-            acls.extend([(Allow, "group:%s" % self.owner_group_id,
+            acls.extend([(ALLOW, "group:%s" % self.owner_group_id,
                           ALL_PERMISSIONS,), ])
         return acls
 

@@ -15,8 +15,7 @@ sys.path.insert(0, root_dir)
 
 from alembic import op
 from alembic.context import get_context
-from sqlalchemy.dialects.postgresql.base import PGDialect
-from sqlalchemy.orm import sessionmaker
+from definitions.sqlalchemy_definitions import *
 from magpie import models
 import register_default_group as def_grp
 

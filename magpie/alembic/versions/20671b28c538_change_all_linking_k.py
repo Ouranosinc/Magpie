@@ -12,10 +12,8 @@ revision = '20671b28c538'
 down_revision = '4c10d97c509'
 
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.mysql.base import MySQLDialect
 from alembic.context import get_context
-from sqlalchemy.engine.reflection import Inspector
+from definitions.sqlalchemy_definitions import *
 
 
 def upgrade():

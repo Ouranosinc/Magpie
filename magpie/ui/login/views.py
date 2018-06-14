@@ -1,9 +1,5 @@
 import requests
-from pyramid.view import view_config
-from pyramid.httpexceptions import *
-from pyramid.response import Response
-from pyramid.security import forget, remember, NO_PERMISSION_REQUIRED
-
+from definitions.pyramid_definitions import *
 from ui.management import check_response
 from ui.home import add_template_data
 

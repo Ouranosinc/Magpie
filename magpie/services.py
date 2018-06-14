@@ -1,10 +1,10 @@
 from magpie import *
 from owsrequest import *
-from ziggurat_definitions import *
+from definitions.ziggurat_definitions import *
 from models import find_children_by_name
 from pyramid.security import Everyone as EVERYONE
 from pyramid.security import Allow
-from api_except import *
+from api.api_except import *
 
 
 class ServiceI(object):

@@ -19,7 +19,7 @@ from alembic.context import get_context
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm import sessionmaker
 from magpie import models, ANONYMOUS_USER, ADMIN_GROUP, USER_GROUP
-from ziggurat_definitions import *
+from definitions.ziggurat_definitions import *
 
 Session = sessionmaker()
 
