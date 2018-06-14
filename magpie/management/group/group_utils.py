@@ -5,7 +5,7 @@ from services import service_type_dict
 from management.resource.resource_utils import check_valid_service_resource_permission
 from management.resource.resource_formats import format_resource
 from management.service.service_formats import format_service_resources, format_service
-from group_formats import *
+from management.group.group_formats import *
 from ziggurat_definitions import *
 
 
