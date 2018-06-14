@@ -23,4 +23,4 @@ def add_service_getcapabilities_perms(service, db_session, group_name=None):
         perm = ResourceService.perm_by_group_and_perm_name(service.resource_id, group.id,
                                                            u'getcapabilities', db_session)
         if perm is None:  # not set, create it
-            create_group_resource_permission(u'getcapabilities', service, group.id, db_session)
+            create_group_resource_permission(u'getcapabilities', service, group, db_session)
