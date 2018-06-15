@@ -3,8 +3,9 @@ from api_except import *
 from models import resource_tree_service, resource_type_dict
 from services import service_type_dict
 from management.resource.resource_utils import check_valid_service_resource_permission
+from management.resource.resource_formats import format_resource
 from management.service.service_formats import format_service_resources, format_service
-from group_formats import *
+from management.group.group_formats import *
 from ziggurat_definitions import *
 
 
@@ -33,16 +34,25 @@ def get_group_resources(group, db_session):
     return json_response
 
 
-def create_group_resource_permission(permission_name, resource, group_id, db_session):
+def create_group_resource_permission(permission_name, resource, group, db_session):
     resource_id = resource.resource_id
     check_valid_service_resource_permission(permission_name, resource, db_session)
-    perm_content = {u'permission_name': str(permission_name), u'resource_id': resource_id, u'group_id': group_id}
-    new_perm = evaluate_call(lambda: models.GroupResourcePermission(resource_id=resource_id, group_id=group_id),
+    perm_content = {u'permission_name': str(permission_name),
+                    u'resource': format_resource(resource, basic_info=True),
+                    u'group': format_group(group, basic_info=True)}
+    create_perm = evaluate_call(
+        lambda: GroupResourcePermissionService.get(group.id, resource_id, permission_name, db_session=db_session),
+        fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
+        msgOnFail="Get group resource permission failed", content=perm_content
+    )
+    verify_param(create_perm, isNone=True, httpError=HTTPConflict,
+                 msgOnFail="Group resource permission already exists.", content=perm_content)
+    new_perm = evaluate_call(lambda: models.GroupResourcePermission(resource_id=resource_id, group_id=group.id),
                              fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
                              msgOnFail="Create group resource permission failed", content=perm_content)
     new_perm.perm_name = permission_name
-    evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(), httpError=HTTPConflict,
-                  msgOnFail="Add group resource permission refused by db", content=perm_content)
+    evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
+                  msgOnFail="Add group resource permission refused by db.", content=perm_content)
     return valid_http(httpSuccess=HTTPCreated, detail="Create group resource permission successful",
                       content=perm_content)
 
@@ -81,15 +91,19 @@ def get_group_resource_permissions(group, resource, db_session):
                          content={u'group': repr(group), u'resource': repr(resource)})
 
 
-def delete_group_resource_permission(permission_name, resource, group_id, db_session):
+def delete_group_resource_permission(permission_name, resource, group, db_session):
     resource_id = resource.resource_id
-    check_valid_service_resource_permission(permission_name, resource_id, db_session)
-    perm_content = {u'permission_name': str(permission_name), u'resource_id': resource_id, u'group_id': group_id}
+    check_valid_service_resource_permission(permission_name, resource, db_session)
+    perm_content = {u'permission_name': str(permission_name),
+                    u'resource': format_resource(resource, basic_info=True),
+                    u'group': format_group(group, basic_info=True)}
     del_perm = evaluate_call(
-        lambda: GroupResourcePermissionService.get(group_id, resource_id, permission_name, db_session=db_session),
+        lambda: GroupResourcePermissionService.get(group.id, resource_id, permission_name, db_session=db_session),
         fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
         msgOnFail="Get group resource permission failed", content=perm_content
     )
+    verify_param(del_perm, notNone=True, httpError=HTTPNotFound,  content=perm_content,
+                 msgOnFail="Permission not found for corresponding group and resource.")
     evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete group resource permission refused by db", content=perm_content)
     return valid_http(httpSuccess=HTTPOk, detail="Delete group resource permission successful")
