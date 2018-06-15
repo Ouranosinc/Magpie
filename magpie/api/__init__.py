@@ -11,3 +11,5 @@ def includeme(config):
     config.include('api.login')
     config.include('api.management')
 
+    config.add_route('version', '/version')
+    config.scan()

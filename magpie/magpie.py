@@ -19,28 +19,21 @@ from definitions.pyramid_definitions import *
 from definitions.sqlalchemy_definitions import *
 from definitions.ziggurat_definitions import *
 
-# -- Cornice (display swagger REST API docs)
-import colander
-from cornice import Service
-from cornice.service import get_services
-from cornice.validators import colander_body_validator
-from cornice_swagger.swagger import CorniceSwagger
-
 # -- Project specific --------------------------------------------------------
-from __meta__ import __version__
 from __init__ import *
-#from db import postgresdb
-THIS_DIR = os.path.dirname(__file__)
-sys.path.insert(0, THIS_DIR)
 from api.api_except import *
+from api.api_rest_schemas import *
 import models
 import db
+import __meta__
+THIS_DIR = os.path.dirname(__file__)
+sys.path.insert(0, THIS_DIR)
 
 
 @view_config(route_name='version', permission=NO_PERMISSION_REQUIRED)
 def get_version(request):
     return valid_http(httpSuccess=HTTPOk,
-                      content={u'version': __version__, u'db_version': db.get_database_revision(request.db)},
+                      content={u'version': __meta__.__version__, u'db_version': db.get_database_revision(request.db)},
                       detail="Get version successful", contentType='application/json')
 
 
@@ -79,34 +72,6 @@ def get_request_info(request, default_msg="undefined"):
         if request.matchdict is not None and request.matchdict != '':
             content.update(request.matchdict)
     return content
-
-
-api_users = Service(name='Users', path='/users/{user}', description="Cornice Demo")
-def UserAPI(object):
-    @api_users.get(tags=['users'])
-    def get_value(request):
-        return {u'username': u'dummy'}
-
-
-api_swagger = Service(name='Magpie REST API', path='__api__', description="Magpie REST API documentation")
-@api_swagger.get()
-def openapi_spec(request):
-    my_generator = CorniceSwagger(get_services())
-    my_spec = my_generator('Magpie REST API', '0.5.x')
-    return my_spec
-
-
-class CorniceSwaggerPredicate(object):
-    """Predicate to add simple information to Cornice Swagger."""
-
-    def __init__(self, schema, config):
-        self.schema = schema
-
-    def phash(self):
-        return str(self.schema)
-
-    def __call__(self, context, request):
-        return self.schema
 
 
 def main(global_config=None, **settings):
@@ -159,7 +124,7 @@ def main(global_config=None, **settings):
         api_path=magpie_api_path,
         title='Magpie REST API',
         description="OpenAPI documentation",
-        version='1.0.0'
+        version=__meta__.__version__
     )
     config.cornice_enable_openapi_explorer(api_explorer_path=magpie_api_view)
     #config.register_swagger_ui(swagger_ui_path=magpie_api_path)
@@ -167,14 +132,11 @@ def main(global_config=None, **settings):
     # include magpie components (all the file which define includeme)
     config.include('pyramid_chameleon')
     config.include('pyramid_mako')
-    config.include('api.esgf')
-    config.include('api.home')
-    config.include('api.login')
-    config.include('api.management')
+    config.include('definitions')
+    config.include('api')
     config.include('db')
     config.include('ui')
 
-    config.add_route('version', '/version')
     config.scan('magpie')
 
     config.set_default_permission(ADMIN_PERM)

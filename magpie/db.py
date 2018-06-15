@@ -1,6 +1,6 @@
 from definitions.alembic_definitions import *
 from definitions.sqlalchemy_definitions import *
-from magpie import models
+import models
 import inspect
 import zope.sqlalchemy
 import os
