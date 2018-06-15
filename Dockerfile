@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --upgrade pip setuptools
 RUN pip install gunicorn
 
+# change in 'cornice-swagger==0.6.1.dev0' required but not yet deployed as package
+# TODO: remove this operation and move to 'requirements.txt' when available
 RUN git clone https://github.com/Cornices/cornice.ext.swagger cornice_swagger
 RUN python cornice_swagger/setup.py install
 

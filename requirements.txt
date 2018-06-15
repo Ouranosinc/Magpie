@@ -27,5 +27,3 @@ paste
 cornice_swagger
 cornice
 colander
-flask
-flasgger

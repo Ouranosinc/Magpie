@@ -25,10 +25,6 @@ from cornice import Service
 from cornice.service import get_services
 from cornice.validators import colander_body_validator
 from cornice_swagger.swagger import CorniceSwagger
-#from flask import Flask, jsonify
-#from flasgger import Swagger
-from server import DirectoryServer
-from threading import Thread
 
 # -- Project specific --------------------------------------------------------
 from __meta__ import __version__
@@ -113,11 +109,6 @@ class CorniceSwaggerPredicate(object):
         return self.schema
 
 
-#def api_ui_server(**settings):
-#    api_server = DirectoryServer(settings['magpie.api.dir'], settings['magpie.api.port'])
-#    api_server.serve_forever()
-
-
 def main(global_config=None, **settings):
     """
     This function returns a Pyramid WSGI application.
@@ -187,20 +178,6 @@ def main(global_config=None, **settings):
     config.scan('magpie')
 
     config.set_default_permission(ADMIN_PERM)
-
-    # app = Flask(__name__)
-    # swagger = Swagger(app)
-    # app.run(port='2003')
-
-    #api_handler = SimpleHTTPServer.SimpleHTTPRequestHandler
-    #api_server = SocketServer.TCPServer(("", int(settings['magpie.api.port'])), api_handler)
-    #api_server.serve_forever()
-
-    #settings['magpie.api.url'] = 'http://{hostname}:{port}'.format(hostname=hostname, port=settings['magpie.api.port'])
-    #settings['magpie.api.dir'] = os.path.abspath(os.path.join(os.path.dirname(__file__), 'ui/api/swagger-ui'))
-    #print(settings['magpie.api.dir'])
-    #api_thread = Thread(target=api_ui_server, kwargs=settings)
-    #api_thread.start()
 
     wsgi_app = config.make_wsgi_app()
     return wsgi_app
