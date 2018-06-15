@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   description: |
     Magpie Rest API Documentation
-  version: "0.6.x"
+  version: "0.5.x"
   title: 'Magpie Rest API'
   contact:
     name: David Byrns
@@ -192,7 +192,7 @@ paths:
         - name: group_name
           in: path
           required: true
-          schema:
+          schema: 
             type: string
           description: name of group to update
       responses:
@@ -623,7 +623,7 @@ paths:
       summary: List all users registered
       responses:
         '200':
-          description: list of registered user
+          description: list of registered user 
           content:
             application/json:
               schema:
@@ -716,10 +716,10 @@ paths:
           schema:
             type: string
           required: true
-      requestBody:
+      requestBody: 
         content:
           application/json:
-            schema:
+            schema: 
               $ref: '#/components/schemas/UserBodyEdit'
       responses:
         '200':
@@ -943,7 +943,7 @@ paths:
         - User
       summary: List all permissions a user has on a specific resource with his inherited user and groups permissions
       parameters:
-
+      
         - name: user_name
           description: Name of the user
           in: path
@@ -971,7 +971,7 @@ paths:
         - User
       summary: List all direct permissions a user has on a specific resource (not including his groups permissions)
       parameters:
-
+      
         - name: user_name
           description: Name of the user
           in: path
@@ -1175,7 +1175,7 @@ paths:
           required: true
       responses:
         '201':
-          description: permission created for user on a specific service
+          description: permission created for user on a specific service 
           content:
             application/json:
               schema:
@@ -1236,7 +1236,7 @@ paths:
           description: list of service resources the user has inherited permission on
           content:
             application/json:
-              schema:
+              schema: 
                 $ref: '#/components/responses/UserServiceResources_GET_200'
         '400':
           description: invalid inputs
@@ -1284,7 +1284,7 @@ paths:
           description: list of service resources the user has permission on
           content:
             application/json:
-              schema:
+              schema: 
                 $ref: '#/components/responses/UserServiceResources_GET_200'
         '400':
           description: invalid inputs
@@ -1329,10 +1329,10 @@ paths:
       tags:
         - Current User
       summary: Update currently logged in user information
-      requestBody:
+      requestBody: 
         content:
           application/json:
-            schema:
+            schema: 
               $ref: '#/components/schemas/UserBodyEdit'
       responses:
         '200':
@@ -1658,7 +1658,7 @@ paths:
           required: true
       responses:
         '201':
-          description: permission created for user on a specific service
+          description: permission created for user on a specific service 
           content:
             application/json:
               schema:
@@ -1703,7 +1703,7 @@ paths:
           description: list of service resources the user has inherited permission on
           content:
             application/json:
-              schema:
+              schema: 
                 $ref: '#/components/responses/UserServiceResources_GET_200'
         '400':
           description: invalid inputs
@@ -1743,7 +1743,7 @@ paths:
           description: list of service resources the user has permission on
           content:
             application/json:
-              schema:
+              schema: 
                 $ref: '#/components/responses/UserServiceResources_GET_200'
         '400':
           description: invalid inputs
@@ -1800,37 +1800,37 @@ paths:
                 $ref: '#/components/responses/Resources_POST_201'
         '400':
           description: invalid format for required resource inputs
-          content:
+          content: 
             application/json:
               schema:
                 $ref: '#/components/responses/Resources_POST_403'
         '403':
           description: resource creation refused by db
-          content:
+          content: 
             application/json:
               schema:
                 $ref: '#/components/responses/Resources_POST_403'
         '404':
           description: parent resource not found
-          content:
+          content: 
             application/json:
               schema:
                 $ref: '#/components/responses/Resources_POST_404'
         '406':
-          description: not acceptable service/resource types for creation
-          content:
+          description: not acceptable service/resource types for creation 
+          content: 
             application/json:
               schema:
                 $ref: '#/components/responses/Resources_POST_406'
         '409':
           description: resource name conflict at corresponding tree level
-          content:
+          content: 
             application/json:
               schema:
                 $ref: '#/components/responses/Resources_POST_409'
         '500':
           description: error obtaining root service
-          content:
+          content: 
             application/json:
               schema:
                 $ref: '#/components/responses/Resources_POST_500'
@@ -1881,15 +1881,15 @@ paths:
       summary: Rename resource
       parameters:
         - name: resource_id
-          description: id of resource to edit
+          description: id of resource to edit 
           in: path
-          schema:
+          schema: 
             type: integer
           required: true
-      requestBody:
+      requestBody: 
         content:
           application/json:
-            schema:
+            schema: 
               $ref: '#/components/schemas/ResourceBodyEdit'
       responses:
         '403':
@@ -2004,7 +2004,7 @@ paths:
       responses:
         '200':
           description: get services information
-          content:
+          content:  
             application/json:
               schema:
                 $ref: '#/components/responses/Resources_GET_200'
@@ -2061,7 +2061,7 @@ paths:
       responses:
         '200':
           description: get service filtered by a specific service type
-          content:
+          content:  
             application/json:
               schema:
                 $ref: '#/components/responses/ServicesFilteredType_GET_200'
@@ -2082,7 +2082,7 @@ paths:
       responses:
         '200':
           description: get service information
-          content:
+          content:  
             application/json:
               schema:
                 $ref: '#/components/responses/Service_GET_200'
@@ -2110,31 +2110,31 @@ paths:
       responses:
         '200':
           description: service updated
-          content:
+          content:  
             application/json:
               schema:
                 $ref: '#/components/responses/Service_PUT_200'
         '400':
           description: service not found
-          content:
+          content:  
             application/json:
               schema:
                 $ref: '#/components/responses/Service_PUT_400'
         '403':
           description: service not found
-          content:
+          content:  
             application/json:
               schema:
                 $ref: '#/components/responses/Service_PUT_403'
         '404':
           description: service not found
-          content:
+          content:  
             application/json:
               schema:
                 $ref: '#/components/responses/Service_MatchDictCheck_404'
         '409':
           description: service not found
-          content:
+          content:  
             application/json:
               schema:
                 $ref: '#/components/responses/Service_PUT_409'
@@ -2192,7 +2192,7 @@ paths:
       summary: Register a new resource directly under a service
       requestBody:
         content:
-          application/json:
+          application/json: 
             schema:
               $ref: '#/components/schemas/ResourceBodyCreate'
       parameters:
@@ -2238,19 +2238,19 @@ paths:
       responses:
         '200':
           description: get service permissions
-          content:
+          content:  
             application/json:
               schema:
                 $ref: '#/components/responses/ServicePermissions_GET_200'
         '404':
           description: service does not exist
-          content:
+          content:  
             application/json:
               schema:
                 $ref: '#/components/responses/Service_MatchDictCheck_404'
         '406':
           description: failed to retrieve permissions with corresponding service type
-          content:
+          content:  
             application/json:
               schema:
                 $ref: '#/components/responses/ServicePermissions_GET_406'
@@ -2303,7 +2303,7 @@ components:
           type: string
     AuthHeaders:
       type: string
-      example: auth_tkt=abcde12345; Path=/
+      example: auth_tkt=abcde12345; Path=/; HttpOnly
     ErrorDetail:
       type: object
       required:
@@ -2332,11 +2332,11 @@ components:
       properties:
         user_name:
           type: string
-        password:
+        password: 
           type: string
-        provider_name:
-          type: string
-          enum:
+        provider_name: 
+          type: string 
+          enum: 
             - ziggurat
             - openid
             - dkrz
@@ -2359,7 +2359,7 @@ components:
         member_count:
           type: integer
         group_name:
-          type: string
+          type: string        
     GroupBody:
       type: object
       required:
@@ -2476,7 +2476,7 @@ components:
         resource_type:
           type: string
         resource_id:
-          type: integer
+          type: integer      
     Resource:
       type: object
       required:
@@ -2566,7 +2566,7 @@ components:
       type: object
       properties:
         wps:
-          $ref: '#/components/schemas/Service'
+          $ref: '#/components/schemas/Service'          
     Service:
       type: object
       required:
@@ -2637,7 +2637,7 @@ components:
       properties:
         service_url:
           description: New URL to apply to the service
-          type: string
+          type: string      
     ServiceBodyEdit_NameAndURL:
       type: object
       required:
@@ -2649,7 +2649,7 @@ components:
           type: string
         service_url:
           description: New URL to apply to the service
-          type: string
+          type: string      
     PermissionBodyCreate:
       type: object
       required:
@@ -2659,13 +2659,13 @@ components:
           type: string
     Permissions:
       type: object
-      required:
+      required: 
         - permission_names
       properties:
         permission_names:
           type: array
           uniqueItems: true
-          items:
+          items: 
             type: string
     Providers:
       type: object
@@ -2769,7 +2769,7 @@ components:
           example:
             code: 422
             type: application/json
-            detail: Invalid value specified.
+            detail: Invalid value specified.            
     Providers_GET_200:
       description: login providers
       content:
@@ -2869,7 +2869,7 @@ components:
       description: sign in not found user
       content:
         application/json:
-          schema:
+          schema:  
             allOf:
               - $ref: '#/components/schemas/Base'
               - type: object
@@ -3071,7 +3071,7 @@ components:
           example:
             code: 200
             type: application/json
-            detail: "Get service successful"
+            detail: "Get service successful"            
             thredds:
               service_type: thredds
               service_name: thredds
@@ -3088,7 +3088,7 @@ components:
           example:
             code: 403
             type: application/json
-            detail: "Service query by name refused by db"
+            detail: "Service query by name refused by db"             
     Service_GET_404:
       description: serivce not found
       content:
@@ -3126,7 +3126,7 @@ components:
           example:
             code: 400
             type: application/json
-            detail: "Current service values are already equal to update values"
+            detail: "Current service values are already equal to update values" 
     Service_PUT_403:
       description: forbidden update service
       content:
@@ -3158,7 +3158,7 @@ components:
           example:
             code: 409
             type: application/json
-            detail: "Specified `service_name` value 'thredds' already exists"
+            detail: "Specified `service_name` value 'thredds' already exists" 
     ServicePermissions_GET_200:
       description: permissions of corresponding service type
       content:
@@ -3370,7 +3370,7 @@ components:
             code: 201
             type: application/json
             detail: Create resource successful
-            resource:
+            resource: 
               resource_name: "my_new_awesome_resource"
               resource_type: "wps"
               resource_id: 9000
@@ -3383,8 +3383,8 @@ components:
           example:
             code: 400
             type: application/json
-            detail:
-              oneOf:
+            detail: 
+              oneOf: 
                 - "Invalid `resource_name` specified for child resource creation"
                 - "Invalid `resource_type` specified for child resource creation"
                 - "Invalid `parent_id` specified for child resource creation"
@@ -3437,12 +3437,12 @@ components:
           example:
             code: 500
             type: application/json
-            detail:
-              oneOf:
+            detail: 
+              oneOf: 
                 - "Failed retrieving `root_service` from db"
                 - "Invalid `root_service` retrieved from db is not a service"
     Resource_MatchDictCheck_403:
-      description: forbidden resource operation
+      description: forbidden resource operation 
       content:
         application/json:
           schema:
@@ -3462,7 +3462,7 @@ components:
             type: application/json
             detail: Resource ID not found in db
     Resource_MatchDictCheck_406:
-      description: invalid type for resource id
+      description: invalid type for resource id 
       content:
         application/json:
           schema:
@@ -3472,7 +3472,7 @@ components:
             type: application/json
             detail: Resource ID is an invalid literal for `int` type
     Resource_GET_200:
-      description: get resource information and its children resources
+      description: get resource information and its children resources 
       content:
         application/json:
           schema:
@@ -3726,7 +3726,7 @@ components:
           example:
             code: 404
             type: application/json
-            detail:
+            detail: 
               oneOf:
                 - "Could not find group in db"
     Group_PUT_406:
@@ -4067,7 +4067,7 @@ components:
                 properties:
                   group_names:
                     type: array
-                    items:
+                    items: 
                       type: string
           example:
             code: 200
@@ -4154,7 +4154,7 @@ components:
               - wario
               - waluigi
     Users_GET_403:
-      description: forbidden fetch of user list
+      description: forbidden fetch of user list 
       content:
         application/json:
           schema:
@@ -4182,8 +4182,8 @@ components:
           example:
             code: 403
             type: application/json
-            detail:
-              oneOf:
+            detail: 
+              oneOf: 
                 - "Group query was refused by db"
                 - "Group check query was refused by db"
                 - "User check query was refused by db"
@@ -4223,7 +4223,7 @@ components:
                 - Anonymous user query refused by db
                 - User name query refused by db
     User_MatchDictCheck_404:
-      description: user not found
+      description: user not found 
       content:
         application/json:
           schema:
@@ -4267,7 +4267,7 @@ components:
               - stars
               - special_forces
     User_PUT_200:
-      description: update user information successful
+      description: update user information successful 
       content:
         application/json:
           schema:
@@ -4290,14 +4290,14 @@ components:
                 - Update user by name refused by db
     User_PUT_404:
       description: user not found for update
-      content:
+      content: 
         application/json:
           schema:
             $ref: '#/components/schemas/Base'
           example:
             code: 404
             type: application/json
-            detail:
+            detail: 
               oneOf:
                 - Could not find user in db
     User_PUT_409:
@@ -4324,7 +4324,7 @@ components:
             type: application/json
             detail: Delete user successful
     User_DELETE_403:
-      description: forbidden user deletion
+      description: forbidden user deletion 
       content:
         application/json:
           schema:
@@ -4509,7 +4509,7 @@ components:
             param: 'None'
             service_name: "foobar"
             request_url: https://outarde.crim.ca/magpie/services/foobar/resources
-            route_name: "/services/foobar/resources"
+            route_name: "/services/foobar/resources"  
     ServiceResources_GET_200:
       description: all resources under a specific service
       content:
@@ -4547,7 +4547,7 @@ components:
             param: 'None'
             service_name: "foobar"
             request_url: https://outarde.crim.ca/magpie/services/foobar/resources
-            route_name: "/services/foobar/resources"
+            route_name: "/services/foobar/resources"    
     UserServices_GET_200:
       description: services the user has permissions on
       content:
@@ -4555,7 +4555,7 @@ components:
           schema:
             allOf:
               - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Services'
+              - $ref: '#/components/schemas/Services'  
           example:
             code: 200
             type: application/json
@@ -4620,9 +4620,9 @@ components:
               - $ref: '#/components/schemas/ResourceTypes'
           example:
             code: 200
-            type: application/json
+            type: application/json            
             detail: Get service type resource types successful
-            resource_types:
+            resource_types: 
               - directory
               - file
     ServiceTypeResourceTypes_GET_404:
@@ -4670,5 +4670,5 @@ components:
             code: 200
             type: application/json
             detail: Get version successful
-            version: "0.6.0"
+            version: "0.5.3"
             db_version: "a395ef9d3fe6"

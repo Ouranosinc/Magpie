@@ -2,11 +2,11 @@ openapi: 3.0.0
 info:
   description: |
     Magpie Rest API Documentation
-  version: "0.6.x"
+  version: "0.3.x"
   title: 'Magpie Rest API'
   contact:
-    name: David Byrns
-    email: david.byrns@crim.ca
+    name: Francois-Xavier
+    email: francois-xavier.derue@crim.ca
 servers:
   - url: 'https://{bird_hostname}.crim.ca/magpie'
     description: Magpie Admin
@@ -48,7 +48,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Version_GET_200'
+                $ref: '#/components/responses/version/get/200'
   /signin:
     post:
       tags:
@@ -62,49 +62,33 @@ paths:
               $ref: '#/components/schemas/SigninCredentials'
       responses:
         '200':
-          description: 'Internal/External login successful'
+          description: Internal/External login successful
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Signin_POST_200'
-        '400':
-          description: 'Missing required information (login failed)'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Signin_POST_400'
+                $ref: '#/components/responses/signin/post/200'
         '401':
           description: 'Unauthorized access (wrong credentials, login failed)'
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Signin_POST_401'
-        '403':
-          description: 'Failed user name vefication (login failed)'
+                $ref: '#/components/responses/signin/post/401'
+        '406':
+          description: Invalid login credential values (login failed)
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Signin_POST_403'
-        '404':
-          description: 'Invalid login credential values (login failed)'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Signin_POST_404'
+                $ref: '#/components/responses/signin/post/406'
   /signout:
     get:
       tags:
         - Login
-      summary: Logs out currently logged in user sesion
+      summary: Logs out current logged in user sesion
       description: Remove auth_tkt from header
       operationId: signout
       responses:
         '200':
-          description: Sign out successful
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Signout_POST_200'
+          description: logout successful
   /session:
     get:
       tags:
@@ -118,7 +102,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Session_GET_200'
+                $ref: '#/components/responses/session/get/200'
   /providers:
     get:
       tags:
@@ -130,11 +114,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Providers_GET_200'
+                $ref: '#/components/responses/providers/get/200'
   /groups:
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: Get list of group names
@@ -144,16 +126,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Groups_GET_200'
+                $ref: '#/components/responses/groups/get/200'
         '403':
           description: access to group names forbidden
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Groups_GET_403'
+                $ref: '#/components/responses/groups/get/403'
     post:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: Create a group
@@ -168,67 +148,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Group_POST_201'
+                $ref: '#/components/responses/group/post/201'
         '403':
           description: '[Forbidden] Group creation refused'
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Group_POST_409'
+                $ref: '#/components/responses/group/post/409'
         '409':
           description: '[Conflict] Group already exists'
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Group_POST_409'
+                $ref: '#/components/responses/group/post/409'
   '/groups/{group_name}':
-    put:
-      security:
-        - cookieAuth: []
-      tags:
-        - Group
-      summary: Update a group by name
-      parameters:
-        - name: group_name
-          in: path
-          required: true
-          schema:
-            type: string
-          description: name of group to update
-      responses:
-        '200':
-          description: user updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Group_PUT_200'
-        '403':
-          description: 'Forbidden access for group edition'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Group_PUT_403'
-        '404':
-          description: 'Group not found'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Group_PUT_404'
-        '406':
-          description: 'Invalid required parameter format received'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Group_PUT_406'
-        '409':
-          description: 'Conflict, this group already exists (or any sub-dependency)'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Group_PUT_409'
     delete:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: Delete a group by name
@@ -245,31 +179,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Group_DELETE_200'
-        '400':
-          description: invalid group name
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Group_MatchDictCheck_400'
+                $ref: '#/components/responses/group/delete/200'
         '403':
           description: group deletion forbidden
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Group_DELETE_403'
+                $ref: '#/components/responses/group/delete/403'
         '404':
           description: group not found
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/responses/Group_MatchDictCheck_404'
-                  - $ref: '#/components/responses/NotFound_404'
+                  - $ref: '#/components/responses/group/matchdict_check/404'
+                  - $ref: '#/components/responses/generic/404'
   '/groups/{group_name}/users':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: List all user from group
@@ -286,32 +212,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/GroupUsers_GET_200'
+                $ref: '#/components/responses/group_users/get/200'
   '/groups/{group_name}/resources':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: List all resources a group has permission on
-      parameters:
-        - name: group_name
-          in: path
-          description: name of the group
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           description: group resources permissions found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/GroupResources_GET_200'
+                $ref: '#/components/responses/group_resources/get/200'
   '/groups/{group_name}/resources/{resource_id}/permissions':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: List all permissions a group has on a specific resource
@@ -334,44 +249,29 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/GroupResourceOrServicePermissions_GET_200'
+                $ref: '#/components/responses/group_resource_or_service_permissions/get/200'
         '403':
           description: resource id query forbidden by db
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_403'
+                $ref: '#/components/responses/resource/matchdict_check/403'
         '404':
           description: resource id not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_404'
+                $ref: '#/components/responses/resource/matchdict_check/404'
         '406':
           description: invalid resource id (format/type)
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_406'
+                $ref: '#/components/responses/resource/matchdict_check/406'
     post:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: Create a permission on a specific resource for that group
-      parameters:
-        - name: group_name
-          description: Name of the group
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: resource_id
-          description: Id of the resource
-          in: path
-          required: true
-          schema:
-            type: integer
       requestBody:
         content:
           application/json:
@@ -383,35 +283,33 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/GroupResourceOrServicePermission_POST_201'
+                $ref: '#/components/responses/group_resource_or_service_permission/post/201'
         '403':
           description: permission creation forbidden by db
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/GroupResourceOrServicePermission_POST_403'
+                $ref: '#/components/responses/group_resource_or_service_permission/post/403'
         '404':
           description: resource id not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_404'
+                $ref: '#/components/responses/resource/matchdict_check/404'
         '406':
           description: invalid resource id (format/type)
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_406'
+                $ref: '#/components/responses/resource/matchdict_check/406'
         '409':
           description: conflict with existing permission for corresponding group and resource
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/GroupResourceOrServicePermission_POST_409'
+                $ref: '#/components/responses/group_resource_or_service_permission/post/409'
   '/groups/{group_name}/resources/{resource_id}/permissions/{permission_name}':
     delete:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: Delete a permission on a resource for a group
@@ -443,17 +341,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/GroupResourceOrServicePermission_DELETE_200'
+                $ref: '#/components/responses/group_resource_or_service_permission/delete/200'
         '404':
           description: 'group, resource or permission not found'
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/NotFound_404'
+                $ref: '#/components/responses/generic/404'
   '/groups/{group_name}/services':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: List all services a group has permission on
@@ -470,11 +366,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/GroupServices_GET_200'
+                $ref: '#/components/responses/group_services/get/200'
   '/groups/{group_name}/services/{service_name}/permissions':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: List all permissions a group has on a specific service
@@ -497,32 +391,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/GroupResourceOrServicePermissions_GET_200'
+                $ref: '#/components/responses/group_resource_or_service_permissions/get/200'
         '404':
           description: service or group not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/NotFound_404'
+                $ref: '#/components/responses/generic/404'
     post:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: Create a permission on a service for a group
-      parameters:
-        - name: group_name
-          in: path
-          description: Name of the group
-          required: true
-          schema:
-            type: string
-        - name: service_name
-          in: path
-          description: Name of the service
-          required: true
-          schema:
-            type: string
       requestBody:
         content:
           application/json:
@@ -534,17 +413,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/GroupResourceOrServicePermission_POST_201'
+                $ref: '#/components/responses/group_resource_or_service_permission/post/201'
         '404':
           description: service or group not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/NotFound_404'
+                $ref: '#/components/responses/generic/404'
   '/groups/{group_name}/services/{service_name}/permissions/{permission_name}':
     delete:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: Delete a permission on a service for a group
@@ -574,17 +451,15 @@ paths:
             application/json:
               schema:
                 $ref: >-
-                  #/components/responses/GroupResourceOrServicePermission_DELETE_200
+                  #/components/responses/group_resource_or_service_permission/delete/200
         '404':
           description: service or permission not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/NotFound_404'
+                $ref: '#/components/responses/generic/404'
   '/groups/{group_name}/services/{service_name}/resources':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Group
       summary: List all resources under a service a group has permission on
@@ -607,36 +482,32 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/GroupServiceResources_GET_200'
+                $ref: '#/components/responses/group_service_resources/get/200'
         '400':
           description: group or service not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/NotFound_404'
+                $ref: '#/components/responses/generic/404'
   /users:
     get:
-      security:
-        - cookieAuth: []
       tags:
         - User
       summary: List all users registered
       responses:
         '200':
-          description: list of registered user
+          description: list of registered user 
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Users_GET_200'
+                $ref: '#/components/responses/users/get/200'
         '403':
           description: get list forbidden
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Users_GET_403'
+                $ref: '#/components/responses/users/get/403'
     post:
-      security:
-        - cookieAuth: []
       tags:
         - User
       summary: Create a new user
@@ -651,32 +522,30 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Users_POST_201'
-        '400':
+                $ref: '#/components/responses/users/post/201'
+        '403':
+          description: 'Forbidden access for user creation'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/users/post/403'
+        '406':
           description: 'Invalid required parameter received'
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/User_MatchDictCheck_400'
-        '401':
-          description: 'Unauthorized access for user creation'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Unauthorized_401'
+                $ref: '#/components/responses/users/post/406'
         '409':
           description: 'Conflict, this user already exists (or any sub-dependency)'
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/User_MatchDictCheck_409'
+                $ref: '#/components/responses/users/post/409'
   '/users/{user_name}':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - User
-      summary: Get user information by name
+      summary: Get user information
       parameters:
         - name: user_name
           description: name of user to get information from
@@ -690,65 +559,20 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/User_GET_200'
+                $ref: '#/components/responses/user/get/200'
         '403':
           description: get user information forbidden
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/User_MatchDictCheck_403'
+                $ref: '#/components/responses/user/matchdict_check/403'
         '404':
           description: user not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/NotFound_404'
-    put:
-      security:
-        - cookieAuth: []
-      tags:
-        - User
-      summary: Update user informations by user name
-      parameters:
-        - name: user_name
-          description: Name of the user
-          in: path
-          schema:
-            type: string
-          required: true
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserBodyEdit'
-      responses:
-        '200':
-          description: user updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_PUT_200'
-        '403':
-          description: 'Forbidden access for user edition'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_PUT_403'
-        '404':
-          description: 'User or user-group not found'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_PUT_404'
-        '409':
-          description: 'Conflict, this user already exists (or any sub-dependency)'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_PUT_409'
+                $ref: '#/components/responses/generic/404'
     delete:
-      security:
-        - cookieAuth: []
       tags:
         - User
       summary: Delete a user by name
@@ -765,17 +589,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/User_DELETE_200'
+                $ref: '#/components/responses/user/delete/200'
         '404':
           description: user not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/NotFound_404'
+                $ref: '#/components/responses/generic/404'
   '/users/{user_name}/groups':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - User
       summary: List all groups a user belongs to
@@ -793,16 +615,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/UserGroups_GET_200'
+                $ref: '#/components/responses/user_groups/get/200'
         '404':
           description: user not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/NotFound_404'
+                $ref: '#/components/responses/generic/404'
     post:
-      security:
-        - cookieAuth: []
       tags:
         - User
       summary: Assign a user to a group
@@ -824,23 +644,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/UserGroup_POST_201'
+                $ref: '#/components/responses/user_group/post/201'
         '404':
           description: user name does not exist
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/User_MatchDictCheck_404'
+                $ref: '#/components/responses/user/matchdict_check/404'
         '409':
           description: 'conflict, user already belongs to that group'
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/UserGroup_POST_409'
+                $ref: '#/components/responses/user_group/post/409'
   '/users/{user_name}/groups/{group_name}':
     delete:
-      security:
-        - cookieAuth: []
       tags:
         - User
       summary: Remove user from a group
@@ -863,58 +681,18 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/UserGroup_DELETE_201'
-        '400':
+                $ref: '#/components/responses/user_group/delete/200'
+        '406':
           description: user does not belong to group
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/responses/User_MatchDictCheck_400'
-                  - $ref: '#/components/responses/Group_MatchDictCheck_400'
-        '404':
-          description: user does not belong to group
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/UserGroup_DELETE_404'
-                  - $ref: '#/components/responses/User_MatchDictCheck_404'
-                  - $ref: '#/components/responses/Group_MatchDictCheck_404'
-  '/users/{user_name}/inherited_resources':
-    get:
-      security:
-        - cookieAuth: []
-      tags:
-        - User
-      summary: List all resources a user has permission on with his inherited user and groups permissions
-      parameters:
-        - name: user_name
-          description: Name of the user
-          in: path
-          schema:
-            type: string
-          required: true
-      responses:
-        '200':
-          description: list of inherited resources permissions of the user
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserResources_GET_200'
-        '404':
-          description: could not find user name
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/NotFound_404'
+                $ref: '#/components/responses/user_group/delete/406'
   '/users/{user_name}/resources':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - User
-      summary: List all resources a user has direct permission on (not including his groups permissions)
+      summary: List all resources a user has permission on
       parameters:
         - name: user_name
           description: Name of the user
@@ -924,54 +702,24 @@ paths:
           required: true
       responses:
         '200':
-          description: list of direct resources permissions of the user
+          description: list of all resources the user has permission on
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/UserResources_GET_200'
+                $ref: '#/components/responses/user_resources/get/200'
         '404':
           description: could not find user name
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/NotFound_404'
-  '/users/{user_name}/resources/{resource_id}/inherited_permissions':
-    get:
-      security:
-        - cookieAuth: []
-      tags:
-        - User
-      summary: List all permissions a user has on a specific resource with his inherited user and groups permissions
-      parameters:
-
-        - name: user_name
-          description: Name of the user
-          in: path
-          schema:
-            type: string
-          required: true
-        - name: resource_id
-          schema:
-            type: integer
-          description: Id of the resource
-          in: path
-          required: true
-      responses:
-        '200':
-          description: list of all permissions the user has for a specific resource
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserResourcePermissions_GET_200'
+                $ref: '#/components/responses/generic/404'
   '/users/{user_name}/resources/{resource_id}/permissions':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - User
-      summary: List all direct permissions a user has on a specific resource (not including his groups permissions)
+      summary: List all permissions a user has on a specific resource
       parameters:
-
+      
         - name: user_name
           description: Name of the user
           in: path
@@ -990,10 +738,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/UserResourcePermissions_GET_200'
+                $ref: '#/components/responses/user_resource_permissions/get/200'
     post:
-      security:
-        - cookieAuth: []
       tags:
         - User
       summary: Create a permission on specific resource for a user
@@ -1024,8 +770,6 @@ paths:
             user
   '/users/{user_name}/resources/{resource_id}/permissions/{permission_name}':
     delete:
-      security:
-        - cookieAuth: []
       tags:
         - User
       summary: Delete a permission on a resource for a user
@@ -1053,34 +797,11 @@ paths:
           description: permission deleted
         '400':
           description: permission not found
-  '/users/{user_name}/inherited_services':
-    get:
-      security:
-        - cookieAuth: []
-      tags:
-        - User
-      summary: List all services a user has permission on with his inherited user and groups permissions
-      parameters:
-        - name: user_name
-          description: Name of the user
-          in: path
-          schema:
-            type: string
-          required: true
-      responses:
-        '200':
-          description: list of services the user has permission on
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserServices_GET_200'
   '/users/{user_name}/services':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - User
-      summary: List all services a user has direct permission on (not including his groups permissions)
+      summary: List all services a user has permission on
       parameters:
         - name: user_name
           description: Name of the user
@@ -1094,41 +815,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/UserServices_GET_200'
-  '/users/{user_name}/services/{service_name}/inherited_permissions':
-    get:
-      security:
-        - cookieAuth: []
-      tags:
-        - User
-      summary: List all permissions a user has on a service using all his inherited user and groups permissions
-      parameters:
-        - name: user_name
-          description: Name of the user
-          schema:
-            type: string
-          in: path
-          required: true
-        - name: service_name
-          schema:
-            type: string
-          description: Name of the service
-          in: path
-          required: true
-      responses:
-        '200':
-          description: list of permissions the user has on a specific service
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserServicePermissions_GET_200'
+                $ref: '#/components/responses/user_services/get/200'
   '/users/{user_name}/services/{service_name}/permissions':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - User
-      summary: List all direct permissions a user has on a service (not including his groups permissions)
+      summary: List all permissions a user has on a service
       parameters:
         - name: user_name
           description: Name of the user
@@ -1148,10 +840,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/UserServicePermissions_GET_200'
+                $ref: '#/components/responses/user_service_permissions/get/200'
     post:
-      security:
-        - cookieAuth: []
       tags:
         - User
       summary: Create a permission on a service for a user
@@ -1175,15 +865,13 @@ paths:
           required: true
       responses:
         '201':
-          description: permission created for user on a specific service
+          description: permission created for user on a specific service 
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/UserServicePermissions_POST_201'
+                $ref: '#/components/responses/user_service_permissions/post/201'
   '/users/{user_name}/services/{service_name}/permissions/{permission_name}':
     delete:
-      security:
-        - cookieAuth: []
       tags:
         - User
       summary: Delete a permission on a service for a user
@@ -1211,61 +899,11 @@ paths:
           description: permission deleted
         '400':
           description: permission not found
-  '/users/{user_name}/services/{service_name}/inherited_resources':
-    get:
-      security:
-        - cookieAuth: []
-      tags:
-        - User
-      summary: List all resources under a service a user has permission on using all his inherited user and groups permissions
-      parameters:
-        - name: user_name
-          description: name of the group
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: service_name
-          description: name of the service
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: list of service resources the user has inherited permission on
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserServiceResources_GET_200'
-        '400':
-          description: invalid inputs
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/User_MatchDictCheck_400'
-        '403':
-          description: forbidden service obtention
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/Service_MatchDictCheck_403'
-        '404':
-          description: service name not found
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/Service_MatchDictCheck_404'
   '/users/{user_name}/services/{service_name}/resources':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - User
-      summary: List all resources under a service a user has direct permission on (not including his groups permissions)
+      summary: List all resources under a service a user has permission on
       parameters:
         - name: user_name
           description: name of the group
@@ -1284,492 +922,10 @@ paths:
           description: list of service resources the user has permission on
           content:
             application/json:
-              schema:
-                $ref: '#/components/responses/UserServiceResources_GET_200'
-        '400':
-          description: invalid inputs
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/User_MatchDictCheck_400'
-        '403':
-          description: forbidden service obtention
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/Service_MatchDictCheck_403'
-        '404':
-          description: service name not found
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/Service_MatchDictCheck_404'
-  '/users/current':
-    get:
-      tags:
-        - Current User
-      summary: Get currently logged in user information (anonymous if none logged in)
-      responses:
-        '200':
-          description: found user information
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_GET_200'
-        '403':
-          description: get user information forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_MatchDictCheck_403'
-    put:
-      tags:
-        - Current User
-      summary: Update currently logged in user information
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserBodyEdit'
-      responses:
-        '200':
-          description: user updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_PUT_200'
-        '403':
-          description: 'Forbidden access for user edition'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_PUT_403'
-        '404':
-          description: 'User not found'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_PUT_404'
-        '409':
-          description: 'Conflict, this user already exists (or any sub-dependency)'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_PUT_409'
-    delete:
-      tags:
-        - Current User
-      summary: Delete currently logged in user
-      responses:
-        '200':
-          description: user deleted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_DELETE_200'
-        '404':
-          description: user not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/NotFound_404'
-  '/users/current/groups':
-    get:
-      tags:
-        - Current User
-      summary: List all groups the currently logged in user belongs to
-      responses:
-        '200':
-          description: list of groups the user belongs to
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserGroups_GET_200'
-        '404':
-          description: user not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/NotFound_404'
-    post:
-      tags:
-        - Current User
-      summary: Assign the currently logged in user to a group
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GroupBody'
-      responses:
-        '201':
-          description: User Group relation created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserGroup_POST_201'
-        '404':
-          description: user name does not exist
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/User_MatchDictCheck_404'
-        '409':
-          description: 'conflict, user already belongs to that group'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserGroup_POST_409'
-  '/users/current/groups/{group_name}':
-    delete:
-      tags:
-        - Current User
-      summary: Remove the currently logged in user from a group
-      parameters:
-        - name: group_name
-          description: Name of the group
-          in: path
-          schema:
-            type: string
-          required: true
-      responses:
-        '200':
-          description: user removed from group
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserGroup_DELETE_201'
-        '400':
-          description: user does not belong to group
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/User_MatchDictCheck_400'
-                  - $ref: '#/components/responses/Group_MatchDictCheck_400'
-        '404':
-          description: user does not belong to group
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/UserGroup_DELETE_404'
-                  - $ref: '#/components/responses/User_MatchDictCheck_404'
-                  - $ref: '#/components/responses/Group_MatchDictCheck_404'
-  '/users/current/inherited_resources':
-    get:
-      tags:
-        - Current User
-      summary: List all resources the currently logged in user has permission on with his inherited user and groups permissions
-      responses:
-        '200':
-          description: list of inherited resources permissions of the user
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserResources_GET_200'
-        '404':
-          description: could not find user name
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/NotFound_404'
-  '/users/current/resources':
-    get:
-      tags:
-        - Current User
-      summary: List all resources the currently logged in user has direct permission on (not including his groups permissions)
-      responses:
-        '200':
-          description: list of direct resources permissions of the user
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserResources_GET_200'
-        '404':
-          description: could not find user name
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/NotFound_404'
-  '/users/current/resources/{resource_id}/inherited_permissions':
-    get:
-      tags:
-        - Current User
-      summary: List all permissions the currently logged in user has on a specific resource with his inherited user and groups permissions
-      parameters:
-        - name: resource_id
-          schema:
-            type: integer
-          description: Id of the resource
-          in: path
-          required: true
-      responses:
-        '200':
-          description: list of all permissions the user has for a specific resource
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserResourcePermissions_GET_200'
-  '/users/current/resources/{resource_id}/permissions':
-    get:
-      tags:
-        - Current User
-      summary: List all direct permissions the currently logged in user has on a specific resource (not including his groups permissions)
-      parameters:
-        - name: resource_id
-          schema:
-            type: integer
-          description: Id of the resource
-          in: path
-          required: true
-      responses:
-        '200':
-          description: list of all permissions the user has for a specific resource
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserResourcePermissions_GET_200'
-    post:
-      tags:
-        - Current User
-      summary: Create a permission on specific resource for the currently logged in user
-      parameters:
-        - name: resource_id
-          schema:
-            type: integer
-          description: Id of the resource
-          in: path
-          required: true
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PermissionBodyCreate'
-      responses:
-        '201':
-          description: permission created
-        '409':
-          description: >-
-            Conflict, this permission on that resource already exist for that
-            user
-  '/users/current/resources/{resource_id}/permissions/{permission_name}':
-    delete:
-      tags:
-        - Current User
-      summary: Delete a permission on a resource for the currently logged in user
-      parameters:
-        - name: permission_name
-          description: name of the permission
-          in: path
-          schema:
-            type: string
-          required: true
-        - name: resource_id
-          description: id of the resource
-          in: path
-          schema:
-            type: integer
-          required: true
-      responses:
-        '200':
-          description: permission deleted
-        '400':
-          description: permission not found
-  '/users/current/inherited_services':
-    get:
-      tags:
-        - Current User
-      summary: List all services the currently logged in user has permission on with his inherited user and groups permissions
-      responses:
-        '200':
-          description: list of services the user has permission on
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserServices_GET_200'
-  '/users/current/services':
-    get:
-      tags:
-        - Current User
-      summary: List all services the currently logged in user has direct permission on (not including his groups permissions)
-      responses:
-        '200':
-          description: list of services the user has permission on
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserServices_GET_200'
-  '/users/current/services/{service_name}/inherited_permissions':
-    get:
-      tags:
-        - Current User
-      summary: List all permissions the currently logged in user has on a service using all his inherited user and groups permissions
-      parameters:
-        - name: service_name
-          schema:
-            type: string
-          description: Name of the service
-          in: path
-          required: true
-      responses:
-        '200':
-          description: list of permissions the user has on a specific service
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserServicePermissions_GET_200'
-  '/users/current/services/{service_name}/permissions':
-    get:
-      tags:
-        - Current User
-      summary: List all direct permissions the currently logged in user has on a service (not including his groups permissions)
-      parameters:
-        - name: service_name
-          schema:
-            type: string
-          description: Name of the service
-          in: path
-          required: true
-      responses:
-        '200':
-          description: list of permissions the user has on a specific service
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserServicePermissions_GET_200'
-    post:
-      tags:
-        - Current User
-      summary: Create a permission on a service for the currently logged in user
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PermissionBodyCreate'
-      parameters:
-        - name: service_name
-          description: Name of the service
-          in: path
-          schema:
-            type: string
-          required: true
-      responses:
-        '201':
-          description: permission created for user on a specific service
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserServicePermissions_POST_201'
-  '/users/current/services/{service_name}/permissions/{permission_name}':
-    delete:
-      tags:
-        - Current User
-      summary: Delete a permission on a service for the currently logged in user
-      parameters:
-        - name: permission_name
-          description: name of the permission
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: service_name
-          description: name of the service
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: permission deleted
-        '400':
-          description: permission not found
-  '/users/current/services/{service_name}/inherited_resources':
-    get:
-      tags:
-        - Current User
-      summary: List all resources under a service the currently logged in user has permission on using all his inherited user and groups permissions
-      parameters:
-        - name: service_name
-          description: name of the service
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: list of service resources the user has inherited permission on
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserServiceResources_GET_200'
-        '400':
-          description: invalid inputs
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/User_MatchDictCheck_400'
-        '403':
-          description: forbidden service obtention
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/Service_MatchDictCheck_403'
-        '404':
-          description: service name not found
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/Service_MatchDictCheck_404'
-  '/users/current/services/{service_name}/resources':
-    get:
-      tags:
-        - Current User
-      summary: List all resources under a service a user has direct permission on (not including his groups permissions)
-      parameters:
-        - name: service_name
-          description: name of the service
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: list of service resources the user has permission on
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/UserServiceResources_GET_200'
-        '400':
-          description: invalid inputs
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/User_MatchDictCheck_400'
-        '403':
-          description: forbidden service obtention
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/Service_MatchDictCheck_403'
-        '404':
-          description: service name not found
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/responses/Service_MatchDictCheck_404'
+              schema: 
+                $ref: '#/components/responses/user_service_resources/get/200'
   /resources:
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Resource
       summary: List all resources registered in the database
@@ -1779,10 +935,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resources_GET_200'
+                $ref: '#/components/responses/resources/get/200'
     post:
-      security:
-        - cookieAuth: []
       tags:
         - Resource
       summary: Register a new resource
@@ -1797,47 +951,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resources_POST_201'
-        '400':
-          description: invalid format for required resource inputs
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Resources_POST_403'
-        '403':
-          description: resource creation refused by db
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Resources_POST_403'
-        '404':
-          description: parent resource not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Resources_POST_404'
-        '406':
-          description: not acceptable service/resource types for creation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Resources_POST_406'
-        '409':
-          description: resource name conflict at corresponding tree level
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Resources_POST_409'
-        '500':
-          description: error obtaining root service
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Resources_POST_500'
+                $ref: '#/components/responses/resources/post/201'     
   '/resources/{resource_id}':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Resource
       summary: Get resource info
@@ -1854,42 +970,40 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_GET_200'
+                $ref: '#/components/responses/resource/get/200'
         '403':
           description: resource id query forbidden by db
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_403'
+                $ref: '#/components/responses/resource/matchdict_check/403'
         '404':
           description: resource id not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_404'
+                $ref: '#/components/responses/resource/matchdict_check/404'
         '406':
           description: invalid resource id (format/type)
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_406'
+                $ref: '#/components/responses/resource/matchdict_check/406'
     put:
-      security:
-        - cookieAuth: []
       tags:
         - Resource
       summary: Rename resource
       parameters:
         - name: resource_id
-          description: id of resource to edit
+          description: id of resource to edit 
           in: path
-          schema:
+          schema: 
             type: integer
           required: true
-      requestBody:
+      requestBody: 
         content:
           application/json:
-            schema:
+            schema: 
               $ref: '#/components/schemas/ResourceBodyEdit'
       responses:
         '403':
@@ -1897,22 +1011,20 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_403'
+                $ref: '#/components/responses/resource/matchdict_check/403'
         '404':
           description: resource id not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_404'
+                $ref: '#/components/responses/resource/matchdict_check/404'
         '406':
           description: invalid resource id (format/type)
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_406'
+                $ref: '#/components/responses/resource/matchdict_check/406'
     delete:
-      security:
-        - cookieAuth: []
       tags:
         - Resource
       summary: Unregister resource from the database
@@ -1929,29 +1041,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_DELETE_200'
+                $ref: '#/components/responses/resource/delete/200'
         '403':
           description: resource deletion forbidden by db
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_DELETE_403'
+                $ref: '#/components/responses/resource/delete/403'
         '404':
           description: resource id not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_404'
+                $ref: '#/components/responses/resource/matchdict_check/404'
         '406':
           description: invalid resource id (format/type)
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_406'
+                $ref: '#/components/responses/resource/matchdict_check/406'
   '/resources/{resource_id}/permissions':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Resource
       summary: List all possible permissions for a resource
@@ -1968,29 +1078,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/ResourcePermissions_GET_200'
+                $ref: '#/components/responses/resource_permissions/get/200'
         '403':
           description: resource id query forbidden by db
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_403'
+                $ref: '#/components/responses/resource/matchdict_check/403'
         '404':
           description: resource id not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_404'
+                $ref: '#/components/responses/resource/matchdict_check/404'
         '406':
           description: invalid resource id (format/type)
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resource_MatchDictCheck_406'
+                $ref: '#/components/responses/resource/matchdict_check/406'
   /services:
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Service
       summary: List all services registered
@@ -2004,13 +1112,11 @@ paths:
       responses:
         '200':
           description: get services information
-          content:
+          content:  
             application/json:
               schema:
-                $ref: '#/components/responses/Resources_GET_200'
+                $ref: '#/components/responses/resources/get/200'
     post:
-      security:
-        - cookieAuth: []
       tags:
         - Service
       summary: Register a new service
@@ -2025,29 +1131,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Services_POST_201'
-        '400':
-          description: service type does not exist
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Services_POST_400'
+                $ref: '#/components/responses/services/post/201'
         '409':
           description: service with this name already exists
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Services_POST_409'
-        '422':
-          description: cannot process input value
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/responses/Matchdict_422'
+                $ref: '#/components/responses/services/post/409'
   '/services/types/{service_type}':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Service
       summary: List all a service filtered by type
@@ -2061,14 +1153,12 @@ paths:
       responses:
         '200':
           description: get service filtered by a specific service type
-          content:
+          content:  
             application/json:
               schema:
-                $ref: '#/components/responses/ServicesFilteredType_GET_200'
+                $ref: '#/components/responses/services_filtered_type/get/200'
   '/services/{service_name}':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Service
       summary: Get service info
@@ -2082,13 +1172,11 @@ paths:
       responses:
         '200':
           description: get service information
-          content:
+          content:  
             application/json:
               schema:
-                $ref: '#/components/responses/Service_GET_200'
+                $ref: '#/components/responses/service/get/200'
     put:
-      security:
-        - cookieAuth: []
       tags:
         - Service
       summary: Update service information (name or URL)
@@ -2110,37 +1198,35 @@ paths:
       responses:
         '200':
           description: service updated
-          content:
+          content:  
             application/json:
               schema:
-                $ref: '#/components/responses/Service_PUT_200'
+                $ref: '#/components/responses/service/put/200'
         '400':
           description: service not found
-          content:
+          content:  
             application/json:
               schema:
-                $ref: '#/components/responses/Service_PUT_400'
+                $ref: '#/components/responses/service/put/400'
         '403':
           description: service not found
-          content:
+          content:  
             application/json:
               schema:
-                $ref: '#/components/responses/Service_PUT_403'
+                $ref: '#/components/responses/service/put/403'
         '404':
           description: service not found
-          content:
+          content:  
             application/json:
               schema:
-                $ref: '#/components/responses/Service_MatchDictCheck_404'
+                $ref: '#/components/responses/service/matchdict_check/404'
         '409':
           description: service not found
-          content:
+          content:  
             application/json:
               schema:
-                $ref: '#/components/responses/Service_PUT_409'
+                $ref: '#/components/responses/service/put/409'
     delete:
-      security:
-        - cookieAuth: []
       tags:
         - Service
       summary: Unregister a service from the database
@@ -2158,8 +1244,6 @@ paths:
           description: service not found
   '/services/{service_name}/resources':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Service
       summary: List all resources registered under a service
@@ -2176,23 +1260,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/ServiceResources_GET_200'
+                $ref: '#/components/responses/service_resources/get/200'
         '404':
           description: Service not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/ServiceResources_GET_404'
+                $ref: '#/components/responses/service_resources/get/404'
     post:
-      security:
-        - cookieAuth: []
       tags:
         - Resource
         - Service
       summary: Register a new resource directly under a service
       requestBody:
         content:
-          application/json:
+          application/json: 
             schema:
               $ref: '#/components/schemas/ResourceBodyCreate'
       parameters:
@@ -2208,23 +1290,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Resources_POST_201'
+                $ref: '#/components/responses/resources/post/201'
         '404':
           description: Service not found
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Service_MatchDictCheck_404'
+                $ref: '#/components/responses/service/matchdict_check/404'
         '409':
           description: 'Conflict, this resource already exists under that service'
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/Services_POST_409'
+                $ref: '#/components/responses/services/post/409'
   '/services/{service_name}/permissions':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Service
       summary: List all possible permissions for a service
@@ -2238,26 +1318,24 @@ paths:
       responses:
         '200':
           description: get service permissions
-          content:
+          content:  
             application/json:
               schema:
-                $ref: '#/components/responses/ServicePermissions_GET_200'
+                $ref: '#/components/responses/service_permissions/get/200'
         '404':
           description: service does not exist
-          content:
+          content:  
             application/json:
               schema:
-                $ref: '#/components/responses/Service_MatchDictCheck_404'
+                $ref: '#/components/responses/service/matchdict_check/404'
         '406':
           description: failed to retrieve permissions with corresponding service type
-          content:
+          content:  
             application/json:
               schema:
-                $ref: '#/components/responses/ServicePermissions_GET_406'
+                $ref: '#/components/responses/service_permissions/get/406'
   '/services/types/{service_type}/resources/types':
     get:
-      security:
-        - cookieAuth: []
       tags:
         - Service
       summary: List all resource type for a specific service type
@@ -2274,21 +1352,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/ServiceTypeResourceTypes_GET_200'
+                $ref: '#/components/responses/service_type_resource_types/get/200'
         '404':
           description: could not find service type
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/ServiceTypeResourceTypes_GET_404'
+                $ref: '#/components/responses/service_type_resource_types/get/404'
 components:
-  securitySchemes:
-    cookieAuth:
-      type: apiKey
-      in: cookie
-      name: auth_tkt
   schemas:
-    Base:
+    base:
       type: object
       required:
         - code
@@ -2301,19 +1374,12 @@ components:
           type: string
         type:
           type: string
-    AuthHeaders:
-      type: string
-      example: auth_tkt=abcde12345; Path=/
-    ErrorDetail:
-      type: object
-      required:
-        - detail
-    NotFound:
+    notfound:
       required:
         - route_name
         - request_url
       allOf:
-        - $ref: '#/components/schemas/Base'
+        - $ref: '#/components/schemas/base'
         - type: object
           properties:
             route_name:
@@ -2329,14 +1395,15 @@ components:
       required:
         - user_name
         - password
+        - provider_name
       properties:
         user_name:
           type: string
-        password:
+        password: 
           type: string
-        provider_name:
-          type: string
-          enum:
+        provider_name: 
+          type: string 
+          enum: 
             - ziggurat
             - openid
             - dkrz
@@ -2345,7 +1412,7 @@ components:
             - pcmdi
             - smhi
             - github
-    Group:
+    group:
       type: object
       properties:
         users:
@@ -2359,7 +1426,7 @@ components:
         member_count:
           type: integer
         group_name:
-          type: string
+          type: string        
     GroupBody:
       type: object
       required:
@@ -2377,7 +1444,7 @@ components:
               type: string
             service_name:
               type: string
-    GroupResourcePermission:
+    group_resource_permission:
       type: object
       properties:
         permission_name:
@@ -2386,7 +1453,7 @@ components:
           type: integer
         group_id:
           type: integer
-    GroupServicePermission:
+    group_service_permission:
       type: object
       properties:
         permission_name:
@@ -2395,7 +1462,7 @@ components:
           type: string
         group_id:
           type: integer
-    User:
+    user:
       type: object
       required:
         - user_name
@@ -2427,26 +1494,7 @@ components:
           type: string
         group_name:
           type: string
-    UserBodyEdit:
-      type: object
-      properties:
-        user_name:
-          description: new user name to apply if specified
-          type: string
-        email:
-          description: new email to apply if specified
-          type: string
-        password:
-          description: new password to apply if specified
-          type: string
-    UserGroup:
-      type: object
-      properties:
-        user_name:
-          type: string
-        group_name:
-          type: string
-    Resources:
+    resources:
       type: object
       required:
         - resources
@@ -2455,16 +1503,16 @@ components:
           type: object
           properties:
             thredds:
-              $ref: '#/components/schemas/Service'
+              $ref: '#/components/schemas/service'
             wfs:
-              $ref: '#/components/schemas/Service'
+              $ref: '#/components/schemas/service'
             wps:
-              $ref: '#/components/schemas/Service'
+              $ref: '#/components/schemas/service'
             ncwms:
-              $ref: '#/components/schemas/Service'
+              $ref: '#/components/schemas/service'
             geoserverwms:
-              $ref: '#/components/schemas/Service'
-    ResourceBasic:
+              $ref: '#/components/schemas/service'
+    resource_basic:
       type: object
       required:
         - resource_name
@@ -2476,8 +1524,8 @@ components:
         resource_type:
           type: string
         resource_id:
-          type: integer
-    Resource:
+          type: integer      
+    resource:
       type: object
       required:
         - resource_name
@@ -2503,10 +1551,10 @@ components:
             type: string
         children:
           oneOf:
-            - $ref: '#/components/schemas/Resource'
+            - $ref: '#/components/schemas/resource'
             - type: object
               maxProperties: 0
-    ResourceTypes:
+    resource_types:
       type: object
       required:
         - resource_types
@@ -2521,16 +1569,11 @@ components:
       required:
         - resource_name
         - resource_type
-        - parent_id
       properties:
         resource_name:
           type: string
         resource_type:
           type: string
-        service_id:
-          type: integer
-        parent_id:
-          type: integer
     ResourceBodyEdit:
       type: object
       required:
@@ -2542,32 +1585,32 @@ components:
         service_push:
           type: string
           description: push renamed resource to Phoenix
-    ServiceThredds:
+    service_thredds:
       type: object
       properties:
         thredds:
-          $ref: '#/components/schemas/Service'
-    ServiceGeoserverWMS:
+          $ref: '#/components/schemas/service'
+    service_geoserverwms:
       type: object
       properties:
         geoserverwms:
-          $ref: '#/components/schemas/Service'
-    ServiceNCWMS:
+          $ref: '#/components/schemas/service'
+    service_ncwms:
       type: object
       properties:
         ncwms:
-          $ref: '#/components/schemas/Service'
-    ServiceWFS:
+          $ref: '#/components/schemas/service'
+    service_wfs:
       type: object
       properties:
         wfs:
-          $ref: '#/components/schemas/Service'
-    ServiceWPS:
+          $ref: '#/components/schemas/service'
+    service_wps:
       type: object
       properties:
         wps:
-          $ref: '#/components/schemas/Service'
-    Service:
+          $ref: '#/components/schemas/service'          
+    service:
       type: object
       required:
         - service_name
@@ -2586,12 +1629,12 @@ components:
         public_url:
           type: string
         permission_names:
-          $ref: '#/components/schemas/Permissions/properties/permission_names'
+          $ref: '#/components/schemas/permissions/properties/permission_names'
         resource_id:
           type: integer
         resources:
-          $ref: '#/components/schemas/Resource'
-    Services:
+          $ref: '#/components/schemas/resource'
+    services:
       type: object
       required:
         - services
@@ -2600,15 +1643,15 @@ components:
           type: object
           properties:
             thredds:
-              $ref: '#/components/schemas/Service'
+              $ref: '#/components/schemas/service'
             wfs:
-              $ref: '#/components/schemas/Service'
+              $ref: '#/components/schemas/service'
             wps:
-              $ref: '#/components/schemas/Service'
+              $ref: '#/components/schemas/service'
             ncwms:
-              $ref: '#/components/schemas/Service'
+              $ref: '#/components/schemas/service'
             geoserverwms:
-              $ref: '#/components/schemas/Service'
+              $ref: '#/components/schemas/service'
     ServiceBodyCreate:
       type: object
       required:
@@ -2637,7 +1680,7 @@ components:
       properties:
         service_url:
           description: New URL to apply to the service
-          type: string
+          type: string      
     ServiceBodyEdit_NameAndURL:
       type: object
       required:
@@ -2649,7 +1692,7 @@ components:
           type: string
         service_url:
           description: New URL to apply to the service
-          type: string
+          type: string      
     PermissionBodyCreate:
       type: object
       required:
@@ -2657,127 +1700,75 @@ components:
       properties:
         permission_name:
           type: string
-    Permissions:
+    permissions:
       type: object
-      required:
+      required: 
         - permission_names
       properties:
         permission_names:
           type: array
           uniqueItems: true
-          items:
-            type: string
-    Providers:
-      type: object
-      properties:
-        internal_providers:
-          type: array
-          items:
-            type: string
-        external_providers:
-          type: array
-          items:
-            type: string
-        provider_names:
-          type: array
-          items:
+          items: 
             type: string
   responses:
-    OK_200:
-      description: HTTP 200 response (OK)
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 200
-            type: application/json
-            detail: OK
-    Unauthorized_401:
-      description: HTTP 401 response (Unauthorized)
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  request_url:
-                    type: string
-                  route_name:
-                    type: string
-          example:
-            code: 401
-            type: application/json
-            detail: Unauthorized. Insufficient user privileges or missing authentication headers.
-            request_url: '{bird_hostname}/magpie/{resquest_path}'
-            route_name: '{resquest_path}'
-    NotFound_404:
-      description: HTTP 404 response (NotFound)
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  request_url:
-                    type: string
-                  route_name:
-                    type: string
-          example:
-            code: 404
-            type: application/json
-            detail: The route resource could not be found
-            request_url: '{bird_hostname}/magpie/{resquest_path}'
-            route_name: '{resquest_path}'
-    Error_500:
-      description: HTTP 500 response (InternalServerError)
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  request_url:
-                    type: string
-                  route_name:
-                    type: string
-          example:
-            code: 500
-            type: application/json
-            detail: Internal Server Error. Unhandled exception occurred
-            request_url: '{bird_hostname}/magpie/{resquest_path}'
-            route_name: '{resquest_path}'
-    Matchdict_400:
-      description: HTTP 400 response (BadRequest)
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 400
-            type: application/json
-            detail: Invalid value specified.
-    Matchdict_422:
-      description: HTTP 422 response (UnprocessableEntry)
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 422
-            type: application/json
-            detail: Invalid value specified.
-    Providers_GET_200:
+    generic:
+      '200':
+        schema:
+          $ref: '#/components/schemas/base'
+        example:
+          code: 200
+          type: application/json
+          detail: OK
+      '404':
+        allOf:
+          - $ref: '#/components/schemas/base'
+          - type: object
+            properties:
+              request_url:
+                type: string
+              route_name:
+                type: string
+        example:
+          code: 404
+          type: application/json
+          detail: The route resource could not be found
+          request_url: '{bird_hostname}/magpie/{resquest_path}'
+          route_name: '{resquest_path}'
+      '500':
+        allOf:
+          - $ref: '#/components/schemas/base'
+          - type: object
+            properties:
+              request_url:
+                type: string
+              route_name:
+                type: string
+        example:
+          code: 500
+          type: application/json
+          detail: Internal Server Error. Unhandled exception occurred
+          request_url: '{bird_hostname}/magpie/{resquest_path}'
+          route_name: '{resquest_path}'
+    providers:
       description: login providers
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Providers'
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                internal_providers:
+                  type: array
+                  items:
+                    type: string
+                external_providers:
+                  type: array
+                  items:
+                    type: string
+                provider_names:
+                  type: array
+                  items:
+                    type: string
           example:
             code: 200
             detail: Get providers successful
@@ -2801,104 +1792,61 @@ components:
               - pcmdi
               - smhi
               - github
-    Signin_POST_200:
-      description: sign in success
-      headers:
-        Set-Cookie:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/AuthHeaders'
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
+    signin:
+      description: sign in
+      post:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                headers:
+                  type: string
           example:
             code: 200
             type: application/json
             detail: Login successful
-    Signin_POST_400:
-      description: sign in invalid input
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  reason:
-                    type: string
-          example:
-            code: 400
-            type: application/json
-            detail: Login failure
-            reason: could not retrieve `user_name`
-    Signin_POST_401:
-      description: sign in invalid credentials
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  reason:
-                    type: string
+            headers: <login headers>
+        '401':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                reason:
+                  type: string
           example:
             code: 401
             type: application/json
             detail: Login failure
-            reason: incorrect password
-    Signin_POST_403:
-      description: sign in forbidden operation
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  reason:
-                    type: string
+            reason: not specified
+        '406':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                reason:
+                  type: string
           example:
-            code: 403
+            code: 406
             type: application/json
             detail: Login failure
-            reason: could not verify `user_name`
-    Signin_POST_404:
-      description: sign in not found user
-      content:
-        application/json:
+            reason: not specified
+    signout:
+      description: sign out
+      post:
+        '200':
           schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  reason:
-                    type: string
-          example:
-            code: 404
-            type: application/json
-            detail: Login failure
-            reason: undefined `user_name`
-    Signout_POST_200:
-      description: sign out success, cookie headers cleared
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 200
             type: application/json
             detail: Sign out successful
-    Services_GET_200:
-      description: OK
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Services'
+    services:
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
           example:
             code: 200
             type: application/json
@@ -2958,44 +1906,28 @@ components:
                   public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/geoserverwms'
                   permission_names: []
                   resource_id: 8
-    Services_POST_201:
-      description: service created
-      content:
-        application/json:
+      post:
+        '201':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 201
             type: application/json
             detail: "Create resource successful"
-    Services_POST_400:
-      description: not found service type
-      content:
-        application/json:
+        '409':
           schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 400
-            type: application/json
-            detail: "Specified `service_type` value does not correspond to any of the available types."
-    Services_POST_409:
-      description: conflict service for creation
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 409
             type: application/json
-            detail: "Specified `service_name` value '<value>' already exists."
-    ServicesFilteredType_GET_200:
+            detail: "Resource name already exists at requested tree level for creation"
+    services_filtered_type:
       description: filtered services by specific type
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Services'
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
           example:
             services:
               wps:
@@ -3020,58 +1952,37 @@ components:
                   public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/lb_catalog'
                   permission_names: []
                   resource_id: 3
-    Service_MatchDictCheck_400:
-      description: invalid inputs for service
-      content:
-        application/json:
+    service:
+      matchdict_check:
+        '403':
           schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-          example:
-            code: 400
-            type: application/json
-            detail:
-              oneOf:
-                - "Invalid `service_name` value specified."
-    Service_MatchDictCheck_403:
-      description: forbidden service operation
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 403
             type: application/json
             detail: Service query by name refused by db
-    Service_MatchDictCheck_404:
-      description: service not found
-      content:
-        application/json:
+        '404':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 404
             type: application/json
             detail: Service name not found in db
             service_name: "<name_of_not_found_service>"
-    Service_GET_200:
-      description: get service succesful
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-            oneOf:
-              - $ref: '#/components/schemas/ServiceThredds'
-              - $ref: '#/components/schemas/ServiceGeoserverWMS'
-              - $ref: '#/components/schemas/ServiceNCWMS'
-              - $ref: '#/components/schemas/ServiceWFS'
-              - $ref: '#/components/schemas/ServiceWPS'
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+          oneOf:
+            - $ref: '#/components/schemas/service_thredds'
+            - $ref: '#/components/schemas/service_geoserverwms'
+            - $ref: '#/components/schemas/service_ncwms'
+            - $ref: '#/components/schemas/service_wfs'
+            - $ref: '#/components/schemas/service_wps'
           example:
             code: 200
             type: application/json
-            detail: "Get service successful"
+            detail: "Get service successful"            
             thredds:
               service_type: thredds
               service_name: thredds
@@ -3079,62 +1990,44 @@ components:
               public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/thredds'
               permission_names: []
               resource_id: 5
-    Service_GET_403:
-      description: forbidden get service
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
           example:
             code: 403
             type: application/json
-            detail: "Service query by name refused by db"
-    Service_GET_404:
-      description: serivce not found
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  service_name:
-                    type: string
+            detail: "Service query by name refused by db"             
+        '404':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                service_name:
+                  type: string
           example:
             code: 404
             type: application/json
             detail: "Service name not found in db"
             service_name: "service_does_not_exist"
-    Service_PUT_200:
-      description: service update successful
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
+      put:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
           example:
             code: 200
             type: application/json
             detail: "Update service successful"
-    Service_PUT_400:
-      description: invalid inputs for service update
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
+        '400':
+          allOf:
+            - $ref: '#/components/schemas/base'
           example:
             code: 400
             type: application/json
-            detail: "Current service values are already equal to update values"
-    Service_PUT_403:
-      description: forbidden update service
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Service'
+            detail: "Current service values are already equal to update values" 
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/service'
           example:
             code: 403
             type: application/json
@@ -3148,25 +2041,20 @@ components:
               resource_id: 5
             new_service_name: "some_new_name_for_thredds"
             new_service_url: "some_new_url_for_thredds"
-    Service_PUT_409:
-      description: conflict during service update (rename)
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
+        '409':
+          allOf:
+            - $ref: '#/components/schemas/base'
           example:
             code: 409
             type: application/json
-            detail: "Specified `service_name` value 'thredds' already exists"
-    ServicePermissions_GET_200:
+            detail: "Specified `service_name` value 'thredds' already exists" 
+    service_permissions:
       description: permissions of corresponding service type
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Permissions'
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/permissions'
           example:
             code: 200
             type: application/json
@@ -3175,14 +2063,10 @@ components:
               - getcapabilities
               - describeprocess
               - execute
-    ServicePermissions_GET_406:
-      description: invalid service type
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Service'
+        '406':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/service'
           example:
             code: 406
             type: application/json
@@ -3194,14 +2078,12 @@ components:
               public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/thredds'
               permission_names: []
               resource_id: 5
-    Resources_GET_200:
-      description: get list of all resources
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Resources'
+    resources:
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/resources'
           example:
             code: 200
             type: application/json
@@ -3355,134 +2237,51 @@ components:
                       parent_id: 5
                       children: {}
                       resource_type: directory
-    Resources_POST_201:
-      description: create new resource successful
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  resource:
-                    $ref: '#/components/schemas/ResourceBasic'
+      post:
+        '201':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                resource:
+                  $ref: '#/components/schemas/resource_basic'
           example:
             code: 201
             type: application/json
             detail: Create resource successful
-            resource:
+            resource: 
               resource_name: "my_new_awesome_resource"
               resource_type: "wps"
               resource_id: 9000
-    Resources_POST_400:
-      description: invalid inputs for resource creation
-      content:
-        application/json:
+    resource:
+      matchdict_check:
+        '403':
           schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 400
-            type: application/json
-            detail:
-              oneOf:
-                - "Invalid `resource_name` specified for child resource creation"
-                - "Invalid `resource_type` specified for child resource creation"
-                - "Invalid `parent_id` specified for child resource creation"
-    Resources_POST_403:
-      description: forbidden resource creation
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 403
-            type: application/json
-            detail: "Failed to insert new resource in service tree using parent id"
-    Resources_POST_404:
-      description: parent resource id not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 404
-            type: application/json
-            detail: "Could not find specified resource parent id"
-    Resources_POST_406:
-      description: invalid inputs
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 406
-            type: application/json
-            detail: "Invalid `resource_type` specified for service type `<service_type>`"
-    Resources_POST_409:
-      description: conflicting resource name at corresponding tree level
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 409
-            type: application/json
-            detail: "Resource name already exists at requested tree level for creation"
-    Resources_POST_500:
-      description: error occured during resource root-service definition
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 500
-            type: application/json
-            detail:
-              oneOf:
-                - "Failed retrieving `root_service` from db"
-                - "Invalid `root_service` retrieved from db is not a service"
-    Resource_MatchDictCheck_403:
-      description: forbidden resource operation
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 403
             type: application/json
             detail: Resource query by id refused by db
-    Resource_MatchDictCheck_404:
-      description: resource id not found
-      content:
-        application/json:
+        '404':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 404
             type: application/json
             detail: Resource ID not found in db
-    Resource_MatchDictCheck_406:
-      description: invalid type for resource id
-      content:
-        application/json:
+        '406':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 406
             type: application/json
             detail: Resource ID is an invalid literal for `int` type
-    Resource_GET_200:
-      description: get resource information and its children resources
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Resource'
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/resource'
           example:
-            type: "application/json"
-            code: 200
-            detail: "Get resource successful"
             '14':
               resource_name: cmip5
               resource_id: 14
@@ -3532,24 +2331,18 @@ components:
                       resource_type: directory
                   resource_type: directory
               resource_type: directory
-    Resource_DELETE_200:
-      description: delete resource by id successful
-      content:
-        application/json:
+      delete:
+        '200':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 200
             type: application/json
             detail: "Delete resource successful"
-    Resource_DELETE_403:
-      description: delete resource forbidden
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Resource'
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/resource'
           example:
             code: 403
             type: application/json
@@ -3557,14 +2350,13 @@ components:
             resource_name: lb_flyingpigeon
             resource_type: wps
             resource_id: 101
-    ResourcePermissions_GET_200:
+    resource_permissions:
       description: available permissions for a specific resource
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Permissions'
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/permissions'
           example:
             code: 200
             type: application/json
@@ -3573,53 +2365,18 @@ components:
               - getcapabilities
               - describeprocess
               - execute
-    Group_MatchDictCheck_400:
-      description: input `group_name` failed validation
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 400
-            type: application/json
-            detail:
-              oneOf:
-                - "Invalid `group_name` value specified."
-                - "Invalid `group_name` length specified (>64 characters)."
-                - "Invalid `group_name` must be different than current name."
-    Group_MatchDictCheck_403:
-      description: forbidden get group by name
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 403
-            type: application/json
-            detail: Group query by name refused by db
-    Group_MatchDictCheck_404:
-      description: group name not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 404
-            type: application/json
-            detail: Group name not found in db
-    Groups_GET_200:
+    groups:
       description: list of all groups
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  group_names:
-                    type: array
-                    items:
-                      type: string
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                group_names:
+                  type: array
+                  items:
+                    type: string
           example:
             code: 200
             type: application/json
@@ -3632,27 +2389,37 @@ components:
               - David_Byrns_pcmdi
               - renaud
               - francis
-    Groups_GET_403:
-      description: forbidden fetch of group list
-      content:
-        application/json:
+        '403':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 403
             type: application/json
-            detail: "Obtain group names refused by db"
-    Group_POST_201:
-      description: group creation successful
-      content:
-        application/json:
+            detail: "Obtain group names refused by db"                
+    group:
+      matchdict_check:
+        '403':
           schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  group:
-                    $ref: '#/components/schemas/GroupBody'
+            $ref: '#/components/schemas/base'
+          example:
+            code: 403
+            type: application/json
+            detail: Group query by name refused by db
+        '404':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 404
+            type: application/json
+            detail: Group name not found in db
+      post:
+        '201':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                group:
+                  $ref: '#/components/schemas/GroupBody'
           example:
             code: 201
             type: application/json
@@ -3663,127 +2430,57 @@ components:
               description: None
               member_count: null
               group_name: my_new_group
-    Group_POST_403:
-      description: forbbiden group creation
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  group_name:
-                    type: string
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                group_name:
+                  type: string
           example:
             code: 403
             type: application/json
             detail: Create new group by name refused by db
             group_name: my_new_group
-    Group_POST_409:
-      description: conflicting group name for creation
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  group_name:
-                    type: string
+        '409':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                group_name:
+                  type: string
           example:
             code: 409
             type: application/json
             detail: Group already exists with this name
             group_name: my_new_group
-    Group_PUT_200:
-      description: update group name successful
-      content:
-        application/json:
+      delete:
+        '200':
           schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 200
-            type: application/json
-            detail: "Update group successful."
-    Group_PUT_403:
-      description: forbidden group name update
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 403
-            type: application/json
-            detail:
-              oneOf:
-                - "Update group by name refused by db"
-    Group_PUT_404:
-      description: group name not found for update
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 404
-            type: application/json
-            detail:
-              oneOf:
-                - "Could not find group in db"
-    Group_PUT_406:
-      description: different group name required for update
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 406
-            type: application/json
-            detail: "Invalid `group_name` must be different than current name."
-    Group_PUT_409:
-      description: conflicting group name for update
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 409
-            type: application/json
-            detail:
-              oneOf:
-                - "Group name already exists."
-    Group_DELETE_200:
-      description: delete group successful
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 200
             type: application/json
             detail: Delete group successful
-    Group_DELETE_403:
-      description: forbidden group deletion
-      content:
-        application/json:
+        '403':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 403
             type: application/json
             detail: Delete group forbidden by db
-    GroupUsers_GET_200:
+    group_users:
       description: users that are part of the group
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  user_names:
-                    type: array
-                    items:
-                      type: string
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                user_names:
+                  type: array
+                  items:
+                    type: string
           example:
             code: 200
             type: application/json
@@ -3791,14 +2488,13 @@ components:
             user_names:
               - David_Byrns_pcmdi
               - Francois-Xavier_Derue_dkrz
-    GroupResources_GET_200:
+    group_resources:
       description: all resources a group has permissions on
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Services'
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
           example:
             code: 200
             type: application/json
@@ -3838,14 +2534,13 @@ components:
                     service_url: 'http://hirondelle.crim.ca:8083/thredds'
                     service_type: thredds
                     resources: {}
-    GroupResourceOrServicePermissions_GET_200:
+    group_resource_or_service_permissions:
       description: resource/service a group has permissions on
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Permissions'
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/permissions'
           example:
             code: 200
             type: application/json
@@ -3853,32 +2548,27 @@ components:
             permission_names:
               - getcapabilities
               - describeprocess
-    GroupResourceOrServicePermission_POST_201:
-      description: group resource permission creation succesful
-      content:
-        application/json:
+    group_resource_or_service_permission:
+      post:
+        '201':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 201
             type: application/json
             detail: Create group resource permission successful
-    GroupResourceOrServicePermission_POST_403:
-      description: forbidden group resource/service permission creation
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  call:
-                    type: object
-                    properties:
-                      exception:
-                        type: string
-                      content:
-                        $ref: '#/components/schemas/GroupResourcePermission'
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                call:
+                  type: object
+                  properties:
+                    exception:
+                      type: string
+                    content:
+                      $ref: '#/components/schemas/group_resource_permission'
           example:
             code: 403
             type: application/json
@@ -3889,22 +2579,18 @@ components:
                 permission_name: getcapabilities
                 resource_id: 50
                 group_id: 10
-    GroupResourceOrServicePermission_POST_409:
-      description: conflicting group resource/service permission creation (relation already exists)
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  call:
-                    type: object
-                    properties:
-                      exception:
-                        type: string
-                      content:
-                        $ref: '#/components/schemas/GroupResourcePermission'
+        '409':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                call:
+                  type: object
+                  properties:
+                    exception:
+                      type: string
+                    content:
+                      $ref: '#/components/schemas/group_resource_permission'
           example:
             code: 409
             type: application/json
@@ -3915,32 +2601,26 @@ components:
                 permission_name: getcapabilities
                 resource_id: 50
                 group_id: 10
-    GroupResourceOrServicePermission_DELETE_200:
-      description: group permission deleted
-      content:
-        application/json:
+      delete:
+        '200':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 200
             type: application/json
             detail: Delete group resource permission successful
-    GroupResourceOrServicePermission_DELETE_403:
-      description: forbidden group resource/service permission deletion
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  call:
-                    type: object
-                    properties:
-                      exception:
-                        type: string
-                      content:
-                        $ref: '#/components/schemas/GroupResourcePermission'
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                call:
+                  type: object
+                  properties:
+                    exception:
+                      type: string
+                    content:
+                      $ref: '#/components/schemas/group_resource_permission'
           example:
             code: 403
             type: application/json
@@ -3951,14 +2631,13 @@ components:
                 permission_name: getcapabilities
                 resource_id: 50
                 group_id: 10
-    GroupServices_GET_200:
+    group_services:
       description: services a group has permissions on
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Services'
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
           example:
             code: 200
             type: application/json
@@ -3988,17 +2667,16 @@ components:
                     - execute
                     - getcapabilities
                   resource_id: 2
-    GroupServiceResources_GET_200:
+    group_service_resources:
       description: resources of service a group has permissions on
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  service:
-                    $ref: '#/components/schemas/Service'
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                service:
+                  $ref: '#/components/schemas/service'
           example:
             code: 200
             type: application/json
@@ -4056,19 +2734,18 @@ components:
                           resource_type: directory
                       resource_type: directory
                   resource_type: directory
-    UserGroups_GET_200:
+    user_groups:
       description: groups a user is member of
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  group_names:
-                    type: array
-                    items:
-                      type: string
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                group_names:
+                  type: array
+                  items: 
+                    type: string
           example:
             code: 200
             type: application/json
@@ -4076,72 +2753,65 @@ components:
             group_names:
               - users
               - mario bros
-    UserGroup_POST_201:
-      description: create user group successful
-      content:
-        application/json:
+    user_group:
+      description: create/delete user group
+      post:
+        '201':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 201
             type: application/json
             detail: Create user-group assignation successful
-    UserGroup_POST_409:
-      description: conflict while creating user group
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  user_name:
-                    type: string
-                  group_name:
-                    type: string
+        '409':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                user_name:
+                  type: string
+                group_name:
+                  type: string
           example:
             code: 409
             type: application/json
             detail: User already belongs to this group
             user_name: grandmaster
             group_name: admin
-    UserGroup_DELETE_201:
-      description: delete user group successful
-      content:
-        application/json:
+      delete:
+        '200':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 200
             type: application/json
             detail: Delete user-group successful
-    UserGroup_DELETE_404:
-      description: user group to delete not found
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/UserGroup'
+        '406':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                user_name:
+                  type: string
+                group_name:
+                  type: string
           example:
-            code: 404
+            code: 406
             type: application/json
             detail: Invalid user-group combination for delete
             user_name: basicuser
             group_name: admins
-    Users_GET_200:
-      description: list of users
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  user_names:
-                    type: array
-                    items:
-                      type: string
+    users:
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                user_names:
+                  type: array
+                  items:
+                    type: string
           example:
             code: 200
             type: application/json
@@ -4153,37 +2823,29 @@ components:
               - luigi
               - wario
               - waluigi
-    Users_GET_403:
-      description: forbidden fetch of user list
-      content:
-        application/json:
+        '403':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 403
             type: application/json
             detail: Get user query refused by db
-    Users_POST_201:
-      description: user creation successful
-      content:
-        application/json:
+      post:
+        '201':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 201
             type: application/json
             detail: "Add user to db successful"
-    Users_POST_403:
-      description: forbidden user creation
-      content:
-        application/json:
+        '403': 
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 403
             type: application/json
-            detail:
-              oneOf:
+            detail: 
+              oneOf: 
                 - "Group query was refused by db"
                 - "Group check query was refused by db"
                 - "User check query was refused by db"
@@ -4192,28 +2854,36 @@ components:
                 - "New user query was refused by db"
                 - "Failed to add user-group to db"
                 - "New group query was refused by db"
-    User_MatchDictCheck_400:
-      description: invalid inputs for user
-      content:
-        application/json:
+        '406':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
-            code: 400
+            code: 406
             type: application/json
             detail:
               oneOf:
                 - "Invalid `user_name` value specified"
-                - "Invalid `user_name` length specified (>{length} characters)"
+                - "Invalid `user_name` length specified (>64 characters)"
                 - "Invalid `email` value specified"
                 - "Invalid `password` value specified"
                 - "Invalid `group_name` value specified"
-    User_MatchDictCheck_403:
-      description: forbidden operation for user
-      content:
-        application/json:
+                - "Group for new user already exists"
+        '409':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
+          example:
+            code: 409
+            type: application/json
+            detail:
+              oneOf:
+                - "Invalid `user_name` already logged in"
+                - "User name matches an already existing group name"
+                - "User name matches an already existing user name"
+    user:
+      matchdict_check:
+        '403':
+          schema:
+            $ref: '#/components/schemas/base'
           example:
             code: 403
             type: application/json
@@ -4222,12 +2892,9 @@ components:
                 - User id query refused by db
                 - Anonymous user query refused by db
                 - User name query refused by db
-    User_MatchDictCheck_404:
-      description: user not found
-      content:
-        application/json:
+        '404':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 404
             type: application/json
@@ -4236,27 +2903,11 @@ components:
                 - User id not found in db
                 - Anonymous user not found in db
                 - User name not found in db
-    User_MatchDictCheck_409:
-      description: conflicting user name
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 409
-            type: application/json
-            detail:
-              oneOf:
-                - "Invalid `user_name` already logged in"
-                - "User name matches an already existing user name"
-    User_GET_200:
-      description: get user information successful
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/User'
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/user'
           example:
             code: 200
             type: application/json
@@ -4266,83 +2917,38 @@ components:
             group_names:
               - stars
               - special_forces
-    User_PUT_200:
-      description: update user information successful
-      content:
-        application/json:
+      delete:
+        '200':
           schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 200
-            type: application/json
-            detail: Update user successful.
-    User_PUT_403:
-      description: forbidden user information update
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 403
-            type: application/json
-            detail:
-              oneOf:
-                - Update user by name refused by db
-    User_PUT_404:
-      description: user not found for update
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 404
-            type: application/json
-            detail:
-              oneOf:
-                - Could not find user in db
-    User_PUT_409:
-      description: conflicting user name for update
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
-          example:
-            code: 409
-            type: application/json
-            detail:
-              oneOf:
-                - "Invalid `user_name` already logged in"
-                - "User name matches an already existing user name"
-    User_DELETE_200:
-      description: user deletion successful
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 200
             type: application/json
             detail: Delete user successful
-    User_DELETE_403:
-      description: forbidden user deletion
-      content:
-        application/json:
+        '403':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 403
             type: application/json
             detail:
               oneOf:
                 - Delete user by name refused by db
-    UserResources_GET_200:
-      description: resources a user has permissions on
-      content:
-        application/json:
+                - Delete user-group refused by db
+        '404':
           schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Services'
+            $ref: '#/components/schemas/base'
+          example:
+            code: 404
+            type: application/json
+            detail: Could not find user-group in db
+    user_resources:
+      description: resources a user has permissions on
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
           example:
             resources:
               thredds:
@@ -4411,14 +3017,13 @@ components:
                   service_url: 'http://outarde.crim.ca:58086/pywps'
                   service_type: wps
                   resources: {}
-    UserResourcePermissions_GET_200:
+    user_resource_permissions:
       description: permissions the user has on a specific resource
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/ResourceTypes'
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/resource_types'
           example:
             code: 200
             type: application/json
@@ -4426,14 +3031,13 @@ components:
             permission_names:
               - getcapabilities
               - getmap
-    UserServiceResources_GET_200:
+    user_service_resources:
       description: resources of a service the user has permissions on
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Services'
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
           example:
             code: 200
             type: application/json
@@ -4491,33 +3095,13 @@ components:
                           resource_type: directory
                       resource_type: directory
                   resource_type: directory
-    UserServiceResources_GET_404:
-      description: resources of a service the user has permissions on
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/NotFound'
-              - type: object
-                properties:
-                  service_name:
-                    type: string
-          example:
-            code: 404
-            type: application/json
-            detail: "Service name not found in db"
-            param: 'None'
-            service_name: "foobar"
-            request_url: https://outarde.crim.ca/magpie/services/foobar/resources
-            route_name: "/services/foobar/resources"
-    ServiceResources_GET_200:
+    service_resources:
       description: all resources under a specific service
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Services'
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
           example:
             code: 200
             type: application/json
@@ -4529,17 +3113,13 @@ components:
               service_url: 'http://outarde.crim.ca:8087/geoserverwms'
               service_type: geoserverwms
               resources: {}
-    ServiceResources_GET_404:
-      description: all resources under a specific service
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/NotFound'
-              - type: object
-                properties:
-                  service_name:
-                    type: string
+        '404':
+          allOf:
+            - $ref: '#/components/schemas/notfound'
+            - type: object
+              properties:
+                service_name:
+                  type: string
           example:
             code: 404
             type: application/json
@@ -4547,15 +3127,14 @@ components:
             param: 'None'
             service_name: "foobar"
             request_url: https://outarde.crim.ca/magpie/services/foobar/resources
-            route_name: "/services/foobar/resources"
-    UserServices_GET_200:
+            route_name: "/services/foobar/resources"    
+    user_services:
       description: services the user has permissions on
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Services'
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'  
           example:
             code: 200
             type: application/json
@@ -4585,14 +3164,12 @@ components:
                     - execute
                     - getcapabilities
                   resource_id: 2
-    UserServicePermissions_GET_200:
-      description: list
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/Permissions'
+    user_service_permissions:
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/permissions'
           example:
             code: 200
             type: application/json
@@ -4600,37 +3177,31 @@ components:
             permission_names:
               - getcapabilities
               - getmap
-    UserServicePermissions_POST_201:
-      description: user resource permission creation successful
-      content:
-        application/json:
+      post:
+        '201':
           schema:
-            $ref: '#/components/schemas/Base'
+            $ref: '#/components/schemas/base'
           example:
             code: 201
             type: application/json
             detail: "Create user resource permission successful"
-    ServiceTypeResourceTypes_GET_200:
+    service_type_resource_types:
       description: available resource types under a specific service type
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - $ref: '#/components/schemas/ResourceTypes'
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/resource_types'
           example:
             code: 200
-            type: application/json
+            type: application/json            
             detail: Get service type resource types successful
-            resource_types:
+            resource_types: 
               - directory
               - file
-    ServiceTypeResourceTypes_GET_404:
-      description: available resource types under a specific service type
-      content:
-        application/json:
+        '404':
           schema:
-            $ref: '#/components/schemas/NotFound'
+            $ref: '#/components/schemas/notfound'
           example:
             code: 404
             type: application/json
@@ -4639,36 +3210,34 @@ components:
             paramCompare: "[u'thredds', u'geoserverwms', u'wfs', u'ncwms', u'wps']"
             request_url: https://outarde.crim.ca/magpie/services/types/blah/resources/types
             route_name: "/services/types/blah/resources/types"
-    Session_GET_200:
+    session:
       description: current user session
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  authenticated:
-                    type: boolean
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                authenticated:
+                  type: boolean
           example:
             code: 200
             type: application/json
             detail: Get session successful
             authenticated: false
-    Version_GET_200:
-      description: current Magpie Rest API and database versions
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  version:
-                    type: string
+    version:
+      description: current Magpie Rest API version
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                version:
+                  type: string
           example:
-            code: 200
-            type: application/json
-            detail: Get version successful
-            version: "0.6.0"
-            db_version: "a395ef9d3fe6"
+            version_get_200:
+              code: 200
+              type: application/json
+              detail: Get version successful
+              version: 0.2.7

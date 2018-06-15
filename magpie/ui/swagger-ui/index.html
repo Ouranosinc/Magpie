@@ -39,8 +39,52 @@
     <script>
     window.onload = function() {
 
+      var api_urls = [
+        {
+          url: 'magpie-rest-api-0.1.0.yaml',
+          name: '0.1.0'
+        },
+        {
+          url: 'magpie-rest-api-0.1.1.yaml',
+          name: '0.1.1'
+        },
+        {
+          url: 'magpie-rest-api-0.2.0.yaml',
+          name: '0.2.0'
+        },
+        {
+          url: 'magpie-rest-api-0.2.x.yaml',
+          name: '0.2.x'
+        },
+        {
+          url: 'magpie-rest-api-0.3.x.yaml',
+          name: '0.3.x'
+        },
+        {
+          url: 'magpie-rest-api-0.4.x.yaml',
+          name: '0.4.x'
+        },
+        {
+          url: 'magpie-rest-api-0.5.x.yaml',
+          name: '0.5.x'
+        },
+        {
+          url: 'magpie-rest-api.yaml',
+          name: '0.6.x'
+        },
+        {
+          url: 'magpie-rest-api.yaml',
+          name: 'latest'
+        },
+        {
+          url: 'magpie-rest-api.json',
+          name: 'generated'
+        }
+      ];
+
       // Build a system
       const ui = SwaggerUIBundle({
+        urls: api_urls,
         url: "magpie-rest-api.yaml",
         dom_id: '#swagger-ui',
         deepLinking: true,

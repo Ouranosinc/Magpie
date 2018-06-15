@@ -3,6 +3,16 @@
 History
 =======
 
+0.6.x
+---------------------
+
+`Magpie REST API 0.6.x documentation`_
+
+* add `/magpie/api/` route to locally display the Magpie REST API documentation
+* move many source files around to regroup by API/UI functionality
+* auto-generation of swagger REST API documentation
+* unit tests
+
 0.5.x
 ---------------------
 
@@ -65,14 +75,15 @@ History
 * First structured release.
 
 
-.. _magpie_api_tagged: https://app.swaggerhub.com/apis/CRIM/magpie-rest_api
-.. _magpie_api_0.1.0: https://app.swaggerhub.com/apis/CRIM/magpie-rest_api/0.1.0
-.. _magpie_api_0.1.1: https://app.swaggerhub.com/apis/CRIM/magpie-rest_api/0.1.1
-.. _magpie_api_0.2.0: https://app.swaggerhub.com/apis/CRIM/magpie-rest_api/0.2.0
-.. _magpie_api_0.2.x: https://app.swaggerhub.com/apis/CRIM/magpie-rest_api/0.2.x
-.. _magpie_api_0.3.x: https://app.swaggerhub.com/apis/CRIM/magpie-rest_api/0.3.x
-.. _magpie_api_0.4.x: https://app.swaggerhub.com/apis/CRIM/magpie-rest_api/0.4.x
-.. _magpie_api_0.5.x: https://app.swaggerhub.com/apis/CRIM/magpie-rest_api/0.5.x
+.. _magpie_api_latest: https://colibri.crim.ca/magpie/api/?urls.primaryName=latest
+.. _magpie_api_0.1.0: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.1.0
+.. _magpie_api_0.1.1: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.1.1
+.. _magpie_api_0.2.0: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.2.0
+.. _magpie_api_0.2.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.2.x
+.. _magpie_api_0.3.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.3.x
+.. _magpie_api_0.4.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.4.x
+.. _magpie_api_0.5.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.5.x
+.. _magpie_api_0.6.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.6.x
 .. _Magpie REST API 0.1.0 documentation: magpie_api_0.1.0_
 .. _Magpie REST API 0.1.1 documentation: magpie_api_0.1.1_
 .. _Magpie REST API 0.2.0 documentation: magpie_api_0.2.0_
@@ -80,3 +91,4 @@ History
 .. _Magpie REST API 0.3.x documentation: magpie_api_0.3.x_
 .. _Magpie REST API 0.4.x documentation: magpie_api_0.4.x_
 .. _Magpie REST API 0.5.x documentation: magpie_api_0.5.x_
+.. _Magpie REST API 0.6.x documentation: magpie_api_0.6.x_
