@@ -41,6 +41,14 @@
 
       var api_urls = [
         {
+          url: 'magpie-rest-api.yaml',
+          name: 'latest'
+        },
+        {
+          url: 'magpie-rest-api.json',
+          name: 'generated'
+        },
+        {
           url: 'magpie-rest-api-0.1.0.yaml',
           name: '0.1.0'
         },
@@ -71,21 +79,15 @@
         {
           url: 'magpie-rest-api.yaml',
           name: '0.6.x'
-        },
-        {
-          url: 'magpie-rest-api.yaml',
-          name: 'latest'
-        },
-        {
-          url: 'magpie-rest-api.json',
-          name: 'generated'
         }
       ];
 
       // Build a system
       const ui = SwaggerUIBundle({
-        urls: api_urls,
+        name: "latest",
+        primaryName: "latest",
         url: "magpie-rest-api.yaml",
+        urls: api_urls,
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
@@ -96,7 +98,7 @@
           SwaggerUIBundle.plugins.DownloadUrl
         ],
         layout: "StandaloneLayout"
-      })
+      });
 
       window.ui = ui
     }
