@@ -113,9 +113,9 @@ class CorniceSwaggerPredicate(object):
         return self.schema
 
 
-def api_docs_server(**settings):
-    api_server = DirectoryServer(settings['magpie.api.dir'], settings['magpie.api.port'])
-    api_server.serve_forever()
+#def api_ui_server(**settings):
+#    api_server = DirectoryServer(settings['magpie.api.dir'], settings['magpie.api.port'])
+#    api_server.serve_forever()
 
 
 def main(global_config=None, **settings):
@@ -196,11 +196,11 @@ def main(global_config=None, **settings):
     #api_server = SocketServer.TCPServer(("", int(settings['magpie.api.port'])), api_handler)
     #api_server.serve_forever()
 
-    settings['magpie.api.url'] = magpie_url_template.format(hostname=hostname, port=settings['magpie.api.port'])
-    settings['magpie.api.dir'] = os.path.abspath(os.path.join(os.path.dirname(__file__), 'api'))
-    print(settings['magpie.api.dir'])
-    api_thread = Thread(target=api_docs_server, kwargs=settings)
-    api_thread.start()
+    #settings['magpie.api.url'] = 'http://{hostname}:{port}'.format(hostname=hostname, port=settings['magpie.api.port'])
+    #settings['magpie.api.dir'] = os.path.abspath(os.path.join(os.path.dirname(__file__), 'ui/api/swagger-ui'))
+    #print(settings['magpie.api.dir'])
+    #api_thread = Thread(target=api_ui_server, kwargs=settings)
+    #api_thread.start()
 
     wsgi_app = config.make_wsgi_app()
     return wsgi_app

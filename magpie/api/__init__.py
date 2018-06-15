@@ -11,5 +11,3 @@ def includeme(config):
     config.include('api.login')
     config.include('api.management')
 
-    config.add_route('api_ui', '/api')
-    config.scan()
