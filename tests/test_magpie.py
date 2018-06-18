@@ -15,24 +15,32 @@ import ConfigParser
 import pyramid.testing
 from webtest import TestApp
 from magpie import magpie
+MAGPIE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+
+
+def config_setup_from_ini(config_ini_file_path, ini_main_section_name):
+    parser = ConfigParser.ConfigParser()
+    parser.read([config_ini_file_path])
+    settings = dict(parser.items(ini_main_section_name))
+    config = pyramid.testing.setUp(settings=settings)
+    return config
 
 
 @pytest.mark.online
 class TestMagpie(unittest.TestCase):
 
     def setUp(self):
-        base_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-        config_uri = '{}/magpie/magpie.ini'.format(base_path)
-        parser = ConfigParser.ConfigParser()
-        parser.read([config_uri])
-        self.json_headers = [('Content-Type', 'application/json')]
-        self.settings = dict(parser.items('app:magpie_app'))
-        self.magpie_url = self.settings['magpie.url']
-        self.config = pyramid.testing.setUp(settings=self.settings)
+        # parse settings from ini file to pass them to the application
+        magpie_ini = '{}/magpie/magpie.ini'.format(MAGPIE_DIR)
+        self.config = config_setup_from_ini(magpie_ini, 'app:magpie_app')
+        # required redefinition because root models' location is not the same from within this test file
         self.config.add_settings({'ziggurat_foundations.model_locations.User': 'magpie.models:User'})
+        # scan dependencies
         self.config.include('magpie')
         self.config.scan('magpie')
+        # create the test application
         self.app = TestApp(magpie.main({}, **self.config.registry.settings))
+        self.json_headers = [('Content-Type', 'application/json')]
 
     def tearDown(self):
         pyramid.testing.tearDown()
