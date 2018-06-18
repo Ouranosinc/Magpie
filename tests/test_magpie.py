@@ -10,54 +10,81 @@ Tests for `magpie` module.
 
 import unittest
 import pytest
-import os
-import ConfigParser
 import pyramid.testing
-from webtest import TestApp
 from magpie import magpie
-MAGPIE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-
-
-def config_setup_from_ini(config_ini_file_path, ini_main_section_name):
-    parser = ConfigParser.ConfigParser()
-    parser.read([config_ini_file_path])
-    settings = dict(parser.items(ini_main_section_name))
-    config = pyramid.testing.setUp(settings=settings)
-    return config
+from test_utils import *
 
 
 @pytest.mark.online
-class TestMagpie(unittest.TestCase):
+class TestMagpieNoAuth(unittest.TestCase):
+    """
+    Test any operation that do not require user AuthN/AuthZ.
+    """
 
-    def setUp(self):
-        # parse settings from ini file to pass them to the application
-        magpie_ini = '{}/magpie/magpie.ini'.format(MAGPIE_DIR)
-        self.config = config_setup_from_ini(magpie_ini, 'app:magpie_app')
-        # required redefinition because root models' location is not the same from within this test file
-        self.config.add_settings({'ziggurat_foundations.model_locations.User': 'magpie.models:User'})
-        # scan dependencies
-        self.config.include('magpie')
-        self.config.scan('magpie')
-        # create the test application
-        self.app = TestApp(magpie.main({}, **self.config.registry.settings))
-        self.json_headers = [('Content-Type', 'application/json')]
+    @classmethod
+    def setUpClass(cls):
+        cls.app = get_test_magpie_app()
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         pyramid.testing.tearDown()
 
-    def test_Home_Success(self):
-        resp = self.app.get('/', headers=self.json_headers)
+    def test_Home_valid(self):
+        resp = self.app.get('/', headers=json_headers)
         assert resp.status_int == 200
         assert resp.content_type == 'text/html'
         resp.mustcontain("Magpie Administration")
 
-    def test_GetService_Success(self):
-        resp = self.app.get('/version', headers=self.json_headers)
+    def test_GetVersion_valid(self):
+        resp = self.app.get('/version', headers=json_headers)
         assert resp.status_int == 200
         assert resp.content_type == 'application/json'
         assert resp.json['version'] == magpie.__meta__.__version__
 
 
+@pytest.mark.online
+class TestMagpieWithUsersAuth(unittest.TestCase):
+    """
+    Test any operation that require at least 'Users' group AuthN/AuthZ.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = get_test_magpie_app()
+
+    @classmethod
+    def tearDownClass(cls):
+        pyramid.testing.tearDown()
+
+
+@pytest.mark.online
+class TestMagpieWithAdminAuth(unittest.TestCase):
+    """
+    Test any operation that require at least 'Administrator' group AuthN/AuthZ.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = get_test_magpie_app()
+        cls.usr = os.getenv('MAGPIE_TEST_ADMIN_USERNAME')
+        cls.pwd = os.getenv('MAGPIE_TEST_ADMIN_PASSWORD')
+        assert cls.usr is not None and cls.pwd is not None, "cannot login with unspecified username/password"
+        cls.headers = check_or_try_login_user(cls.app, cls.usr, cls.pwd)
+        assert cls.headers is not None, "cannot run tests without logged in 'administrator' user"
+
+    @classmethod
+    def tearDownClass(cls):
+        pyramid.testing.tearDown()
+
+
+    #@pytest.mark.skip(reason='No way to test this now')
+    def test_GetAPI_valid(self):
+        self.failUnless(check_or_try_login_user())
+
+        resp = self.app.get('/__api__', headers=json_headers)
+        assert resp.status_int == 200
+        assert resp.content_type == 'application/json'
+        assert resp.json['version'] == magpie.__meta__.__version__
 
 
 if __name__ == '__main__':
