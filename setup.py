@@ -22,6 +22,8 @@ REQUIREMENTS = list(REQUIREMENTS)
 
 TEST_REQUIREMENTS = [
     'nose',
+    'webtest',
+    'pytest'
     # TODO: put package test requirements here
 ]
 

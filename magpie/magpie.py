@@ -30,13 +30,17 @@ THIS_DIR = os.path.dirname(__file__)
 sys.path.insert(0, THIS_DIR)
 
 
-@view_config(route_name='version', permission=NO_PERMISSION_REQUIRED)
+@VersionAPI.get(schema=Version_GET_Schema(), tags=[APITag], response_schemas={
+    '200': Version_GET_OkResponseSchema(description="Get version successful.")})
+@view_config(route_name='version', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_version(request):
     return valid_http(httpSuccess=HTTPOk,
                       content={u'version': __meta__.__version__, u'db_version': db.get_database_revision(request.db)},
-                      detail="Get version successful", contentType='application/json')
+                      detail="Get version successful.", contentType='application/json')
 
 
+#@NotFoundAPI.get(schema=NotFoundResponseSchema(), response_schemas={
+#    '404': NotFoundResponseSchema(description="Route not found")})
 @notfound_view_config()
 def not_found(request):
     content = get_request_info(request, default_msg="The route resource could not be found.")
@@ -113,13 +117,11 @@ def main(global_config=None, **settings):
         authorization_policy=authz_policy
     )
 
+    config.include('magpie')
+
     # include api views
     magpie_api_path = '{}/__api__'.format(settings['magpie.url'])
     magpie_api_view = '{}/api-explorer'.format(settings['magpie.url'])
-    print(magpie_api_path)
-    print(magpie_api_view)
-    config.include('cornice')
-    config.include('cornice_swagger')
     config.cornice_enable_openapi_view(
         api_path=magpie_api_path,
         title='Magpie REST API',
@@ -129,16 +131,7 @@ def main(global_config=None, **settings):
     config.cornice_enable_openapi_explorer(api_explorer_path=magpie_api_view)
     #config.register_swagger_ui(swagger_ui_path=magpie_api_path)
 
-    # include magpie components (all the file which define includeme)
-    config.include('pyramid_chameleon')
-    config.include('pyramid_mako')
-    config.include('definitions')
-    config.include('api')
-    config.include('db')
-    config.include('ui')
-
     config.scan('magpie')
-
     config.set_default_permission(ADMIN_PERM)
 
     wsgi_app = config.make_wsgi_app()

@@ -24,6 +24,12 @@ USER_NAME_MAX_LENGTH = 64
 
 
 def includeme(config):
-    config.include('magpie.definitions')
-    config.include('magpie.api')
-    config.include('magpie.ui')
+    # include magpie components (all the file which define includeme)
+    config.include('cornice')
+    config.include('cornice_swagger')
+    config.include('pyramid_chameleon')
+    config.include('pyramid_mako')
+    config.include('definitions')
+    config.include('api')
+    config.include('db')
+    config.include('ui')
