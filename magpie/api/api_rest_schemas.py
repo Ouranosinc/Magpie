@@ -125,7 +125,7 @@ class Version_GET_OkResponseSchema(colander.MappingSchema):
 #    body = BaseSchema()
 
 
-# return JSON Swagger specifications of Magpie REST API on route '/magpie/api/json'
+# return JSON Swagger specifications of Magpie REST API on route '/magpie/__api__'
 # using all Cornice Services and Schemas
 @SwaggerAPI.get(tags=[APITag])
 def api_spec(request):
