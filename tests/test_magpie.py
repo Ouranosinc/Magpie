@@ -70,7 +70,8 @@ class TestMagpieWithAdminAuth(unittest.TestCase):
         cls.pwd = os.getenv('MAGPIE_TEST_ADMIN_PASSWORD')
         assert cls.usr is not None and cls.pwd is not None, "cannot login with unspecified username/password"
         cls.headers = check_or_try_login_user(cls.app, cls.usr, cls.pwd)
-        assert cls.headers is not None, "cannot run tests without logged in 'administrator' user"
+        cls.require = "cannot run tests without logged in 'administrator' user"
+        assert cls.headers is not None, cls.require
 
     @classmethod
     def tearDownClass(cls):
@@ -79,9 +80,9 @@ class TestMagpieWithAdminAuth(unittest.TestCase):
 
     #@pytest.mark.skip(reason='No way to test this now')
     def test_GetAPI_valid(self):
-        self.failUnless(check_or_try_login_user())
-
-        resp = self.app.get('/__api__', headers=json_headers)
+        assert check_or_try_login_user(self.app, self.usr, self.pwd) is not None, self.require
+        assert self.headers is not None, self.require
+        resp = self.app.get('/__api__', headers=json_headers + self.headers)
         assert resp.status_int == 200
         assert resp.content_type == 'application/json'
         assert resp.json['version'] == magpie.__meta__.__version__

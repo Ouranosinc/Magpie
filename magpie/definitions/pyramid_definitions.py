@@ -14,6 +14,13 @@ from pyramid.httpexceptions import (
     HTTPInternalServerError
 )
 from pyramid.interfaces import IAuthenticationPolicy
+from pyramid.response import Response
+from pyramid.view import (
+    view_config,
+    notfound_view_config,
+    exception_view_config,
+    forbidden_view_config
+)
 from pyramid.security import (
     Authenticated,
     Allow as ALLOW,
@@ -23,5 +30,3 @@ from pyramid.security import (
     forget,
     remember
 )
-from pyramid.response import Response
-from pyramid.view import view_config, notfound_view_config, exception_view_config, forbidden_view_config

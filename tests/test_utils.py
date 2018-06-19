@@ -1,4 +1,5 @@
 import os
+import json
 import ConfigParser
 import pyramid
 from webtest import TestApp
@@ -49,8 +50,8 @@ def check_or_try_login_user(app, username=None, password=None):
     if auth is False and username is None:
         return None
     if auth is False and username is not None:
-        data = {u'user_name': username, u'password': password, u'provider_name': u'ziggurat'}
-        resp = app.post_json('/signin', data)
+        data = {'user_name': username, 'password': password, 'provider_name': 'ziggurat'}
+        resp = app.post_json('/signin', data, headers=json_headers)
         if resp.status_int == 200:
             return resp.json['headers']
         return None
