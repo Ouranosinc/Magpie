@@ -1,6 +1,6 @@
 from __future__ import with_statement
 from alembic import context
-from definitions.sqlalchemy_definitions import engine_from_config, pool, create_engine
+from magpie.definitions.sqlalchemy_definitions import engine_from_config, pool, create_engine
 from logging.config import fileConfig
 from sqlalchemy.schema import MetaData
 import os

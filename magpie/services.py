@@ -223,11 +223,13 @@ class ServiceGeoserver(ServiceWMS):
 
 class ServiceGeoserverAPI(ServiceI):
 
-    permission_names = []
+    permission_names = models.Route.permission_names
 
     params_expected = []
 
-    resource_types_permissions = {}
+    resource_types_permissions = {
+        models.Route.resource_type_name: models.Route.permission_names
+    }
 
     def __init__(self, service, request):
         super(ServiceGeoserverAPI, self).__init__(service, request)
@@ -349,24 +351,12 @@ class ServiceTHREDDS(ServiceI):
 
 class ServiceProjectAPI(ServiceI):
 
-    permission_names = [
-        u'read',
-        u'write'
-    ]
+    permission_names = models.Route.permission_names
 
-    params_expected = [
-        u'request'
-    ]
+    params_expected = []
 
     resource_types_permissions = {
-        models.Directory.resource_type_name: [
-            u'read',
-            u'write'
-        ],
-        models.File.resource_type_name: [
-            u'read',
-            u'write'
-        ],
+        models.Route.resource_type_name: models.Route.permission_names
     }
 
     def __init__(self, service, request):
@@ -385,6 +375,7 @@ service_type_dict = {
     u'wps':             ServiceWPS,
     u'ncwms':           ServiceNCWMS2,
     u'geoserverwms':    ServiceGeoserver,
+    u'geoserver-api':    ServiceGeoserverAPI,
     u'wfs':             ServiceWFS,
     u'thredds':         ServiceTHREDDS,
     u'project-api':     ServiceProjectAPI
