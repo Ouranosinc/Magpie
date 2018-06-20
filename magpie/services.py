@@ -221,8 +221,7 @@ class ServiceGeoserver(ServiceWMS):
         return self.acl
 
 
-class ServiceGeoserverAPI(ServiceI):
-
+class ServiceAPI(ServiceI):
     permission_names = models.Route.permission_names
 
     params_expected = []
@@ -232,7 +231,7 @@ class ServiceGeoserverAPI(ServiceI):
     }
 
     def __init__(self, service, request):
-        super(ServiceGeoserverAPI, self).__init__(service, request)
+        super(ServiceAPI, self).__init__(service, request)
 
     @property
     def __acl__(self):
@@ -240,7 +239,18 @@ class ServiceGeoserverAPI(ServiceI):
         return self.acl
 
     def permission_requested(self):
+        self.request
         return u'read'
+
+
+class ServiceGeoserverAPI(ServiceAPI):
+    def __init__(self, service, request):
+        super(ServiceGeoserverAPI, self).__init__(service, request)
+
+
+class ServiceProjectAPI(ServiceAPI):
+    def __init__(self, service, request):
+        super(ServiceProjectAPI, self).__init__(service, request)
 
 
 class ServiceWFS(ServiceI):
@@ -346,39 +356,15 @@ class ServiceTHREDDS(ServiceI):
     def permission_requested(self):
         return u'read'
 
-    pass
-
-
-class ServiceProjectAPI(ServiceI):
-
-    permission_names = models.Route.permission_names
-
-    params_expected = []
-
-    resource_types_permissions = {
-        models.Route.resource_type_name: models.Route.permission_names
-    }
-
-    def __init__(self, service, request):
-        super(ServiceProjectAPI, self).__init__(service, request)
-
-    @property
-    def __acl__(self):
-        self.expand_acl(self.service, self.request.user)
-        return self.acl
-
-    def permission_requested(self):
-        return u'read'
-
 
 service_type_dict = {
-    u'wps':             ServiceWPS,
-    u'ncwms':           ServiceNCWMS2,
+    u'geoserver-api':   ServiceGeoserverAPI,
     u'geoserverwms':    ServiceGeoserver,
-    u'geoserver-api':    ServiceGeoserverAPI,
-    u'wfs':             ServiceWFS,
+    u'ncwms':           ServiceNCWMS2,
+    u'project-api':     ServiceProjectAPI,
     u'thredds':         ServiceTHREDDS,
-    u'project-api':     ServiceProjectAPI
+    u'wfs':             ServiceWFS,
+    u'wps':             ServiceWPS,
 }
 
 
