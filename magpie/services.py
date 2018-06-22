@@ -239,6 +239,8 @@ class ServiceAPI(ServiceI):
 
     @property
     def route_acl(self, sub_api_route=None):
+        self.expand_acl(self.service, self.request.user)
+
         route_parts = self.request.path.split('/')
         route_api_base = self.service.resource_name if sub_api_route is None else sub_api_route
 
