@@ -95,13 +95,6 @@ def sign_in(request):
                              msgOnFail="Error occurred while signing in with external provider")
 
 
-@view_config(route_name='signout', request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def sign_out(request):
-    return valid_http(httpSuccess=HTTPTemporaryRedirect, detail="Local sign out redirect.",
-                      httpKWArgs={'location': request.route_url('ziggurat.routes.sign_out'),
-                                  'headers': forget(request)})
-
-
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
 def login_success_ziggurat(request):
     # headers contains login authorization cookie
