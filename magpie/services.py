@@ -235,22 +235,48 @@ class ServiceAPI(ServiceI):
 
     @property
     def __acl__(self):
-        self.expand_acl(self.service, self.request.user)
+        raise NotImplementedError
+
+    @property
+    def route_acl(self, sub_api_route=None):
+        route_parts = self.request.path.split('/')
+        route_api_base = self.service.resource_name if sub_api_route is None else sub_api_route
+
+        if self.service.resource_name in route_parts and route_api_base in route_parts:
+            api_idx = route_parts.index(route_api_base)
+            # keep only parts after api base route to process it
+            if len(route_parts) - 1 > api_idx:
+                route_parts = route_parts[api_idx + 1::]
+                route_child = self.service
+                while route_child and route_parts:
+                    part_name = route_parts.pop(0)
+                    route_res_id = route_child.resource_id
+                    route_child = find_children_by_name(part_name, parent_id=route_res_id, db_session=self.request.db)
+                    self.expand_acl(route_child, self.request.user)
         return self.acl
 
     def permission_requested(self):
-        self.request
-        return u'read'
+        if self.request.method == 'GET':
+            return u'read'
+        return u'write'
 
 
 class ServiceGeoserverAPI(ServiceAPI):
     def __init__(self, service, request):
         super(ServiceGeoserverAPI, self).__init__(service, request)
 
+    @property
+    def __acl__(self):
+        return ServiceAPI.route_acl.fget(self)
+
 
 class ServiceProjectAPI(ServiceAPI):
     def __init__(self, service, request):
         super(ServiceProjectAPI, self).__init__(service, request)
+
+    @property
+    def __acl__(self):
+        return ServiceAPI.route_acl.fget(self, sub_api_route='api')
 
 
 class ServiceWFS(ServiceI):

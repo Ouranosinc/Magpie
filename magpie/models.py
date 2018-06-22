@@ -174,7 +174,8 @@ ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
 
 resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
 
-resource_type_dict = {u'service': Service, u'directory': Directory, u'file': File, u'workspace': Workspace}
+resource_type_dict = {u'service': Service, u'directory': Directory, u'file': File, u'workspace': Workspace,
+                      u'route': Route}
 
 
 def resource_factory(**kwargs):
