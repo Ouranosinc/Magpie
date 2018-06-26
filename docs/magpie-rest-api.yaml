@@ -133,6 +133,8 @@ paths:
                 $ref: '#/components/responses/Providers_GET_200'
   /groups:
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: Get list of group names
@@ -150,6 +152,8 @@ paths:
               schema:
                 $ref: '#/components/responses/Groups_GET_403'
     post:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: Create a group
@@ -179,6 +183,8 @@ paths:
                 $ref: '#/components/responses/Group_POST_409'
   '/groups/{group_name}':
     put:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: Update a group by name
@@ -221,6 +227,8 @@ paths:
               schema:
                 $ref: '#/components/responses/Group_PUT_409'
     delete:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: Delete a group by name
@@ -260,6 +268,8 @@ paths:
                   - $ref: '#/components/responses/NotFound_404'
   '/groups/{group_name}/users':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: List all user from group
@@ -279,6 +289,8 @@ paths:
                 $ref: '#/components/responses/GroupUsers_GET_200'
   '/groups/{group_name}/resources':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: List all resources a group has permission on
@@ -298,6 +310,8 @@ paths:
                 $ref: '#/components/responses/GroupResources_GET_200'
   '/groups/{group_name}/resources/{resource_id}/permissions':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: List all permissions a group has on a specific resource
@@ -340,6 +354,8 @@ paths:
               schema:
                 $ref: '#/components/responses/Resource_MatchDictCheck_406'
     post:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: Create a permission on a specific resource for that group
@@ -394,6 +410,8 @@ paths:
                 $ref: '#/components/responses/GroupResourceOrServicePermission_POST_409'
   '/groups/{group_name}/resources/{resource_id}/permissions/{permission_name}':
     delete:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: Delete a permission on a resource for a group
@@ -434,6 +452,8 @@ paths:
                 $ref: '#/components/responses/NotFound_404'
   '/groups/{group_name}/services':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: List all services a group has permission on
@@ -453,6 +473,8 @@ paths:
                 $ref: '#/components/responses/GroupServices_GET_200'
   '/groups/{group_name}/services/{service_name}/permissions':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: List all permissions a group has on a specific service
@@ -483,6 +505,8 @@ paths:
               schema:
                 $ref: '#/components/responses/NotFound_404'
     post:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: Create a permission on a service for a group
@@ -519,6 +543,8 @@ paths:
                 $ref: '#/components/responses/NotFound_404'
   '/groups/{group_name}/services/{service_name}/permissions/{permission_name}':
     delete:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: Delete a permission on a service for a group
@@ -557,6 +583,8 @@ paths:
                 $ref: '#/components/responses/NotFound_404'
   '/groups/{group_name}/services/{service_name}/resources':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Group
       summary: List all resources under a service a group has permission on
@@ -588,6 +616,8 @@ paths:
                 $ref: '#/components/responses/NotFound_404'
   /users:
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all users registered
@@ -605,6 +635,8 @@ paths:
               schema:
                 $ref: '#/components/responses/Users_GET_403'
     post:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: Create a new user
@@ -640,6 +672,8 @@ paths:
                 $ref: '#/components/responses/User_MatchDictCheck_409'
   '/users/{user_name}':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: Get user information by name
@@ -670,6 +704,8 @@ paths:
               schema:
                 $ref: '#/components/responses/NotFound_404'
     put:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: Update user informations by user name
@@ -711,6 +747,8 @@ paths:
               schema:
                 $ref: '#/components/responses/User_PUT_409'
     delete:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: Delete a user by name
@@ -736,6 +774,8 @@ paths:
                 $ref: '#/components/responses/NotFound_404'
   '/users/{user_name}/groups':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all groups a user belongs to
@@ -761,6 +801,8 @@ paths:
               schema:
                 $ref: '#/components/responses/NotFound_404'
     post:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: Assign a user to a group
@@ -797,6 +839,8 @@ paths:
                 $ref: '#/components/responses/UserGroup_POST_409'
   '/users/{user_name}/groups/{group_name}':
     delete:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: Remove user from a group
@@ -839,6 +883,8 @@ paths:
                   - $ref: '#/components/responses/Group_MatchDictCheck_404'
   '/users/{user_name}/inherited_resources':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all resources a user has permission on with his inherited user and groups permissions
@@ -864,6 +910,8 @@ paths:
                 $ref: '#/components/responses/NotFound_404'
   '/users/{user_name}/resources':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all resources a user has direct permission on (not including his groups permissions)
@@ -889,6 +937,8 @@ paths:
                 $ref: '#/components/responses/NotFound_404'
   '/users/{user_name}/resources/{resource_id}/inherited_permissions':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all permissions a user has on a specific resource with his inherited user and groups permissions
@@ -915,6 +965,8 @@ paths:
                 $ref: '#/components/responses/UserResourcePermissions_GET_200'
   '/users/{user_name}/resources/{resource_id}/permissions':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all direct permissions a user has on a specific resource (not including his groups permissions)
@@ -940,6 +992,8 @@ paths:
               schema:
                 $ref: '#/components/responses/UserResourcePermissions_GET_200'
     post:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: Create a permission on specific resource for a user
@@ -970,6 +1024,8 @@ paths:
             user
   '/users/{user_name}/resources/{resource_id}/permissions/{permission_name}':
     delete:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: Delete a permission on a resource for a user
@@ -999,6 +1055,8 @@ paths:
           description: permission not found
   '/users/{user_name}/inherited_services':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all services a user has permission on with his inherited user and groups permissions
@@ -1018,6 +1076,8 @@ paths:
                 $ref: '#/components/responses/UserServices_GET_200'
   '/users/{user_name}/services':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all services a user has direct permission on (not including his groups permissions)
@@ -1037,6 +1097,8 @@ paths:
                 $ref: '#/components/responses/UserServices_GET_200'
   '/users/{user_name}/services/{service_name}/inherited_permissions':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all permissions a user has on a service using all his inherited user and groups permissions
@@ -1062,6 +1124,8 @@ paths:
                 $ref: '#/components/responses/UserServicePermissions_GET_200'
   '/users/{user_name}/services/{service_name}/permissions':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all direct permissions a user has on a service (not including his groups permissions)
@@ -1086,6 +1150,8 @@ paths:
               schema:
                 $ref: '#/components/responses/UserServicePermissions_GET_200'
     post:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: Create a permission on a service for a user
@@ -1116,6 +1182,8 @@ paths:
                 $ref: '#/components/responses/UserServicePermissions_POST_201'
   '/users/{user_name}/services/{service_name}/permissions/{permission_name}':
     delete:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: Delete a permission on a service for a user
@@ -1145,6 +1213,8 @@ paths:
           description: permission not found
   '/users/{user_name}/services/{service_name}/inherited_resources':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all resources under a service a user has permission on using all his inherited user and groups permissions
@@ -1191,6 +1261,8 @@ paths:
                   - $ref: '#/components/responses/Service_MatchDictCheck_404'
   '/users/{user_name}/services/{service_name}/resources':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - User
       summary: List all resources under a service a user has direct permission on (not including his groups permissions)
@@ -1696,6 +1768,8 @@ paths:
                   - $ref: '#/components/responses/Service_MatchDictCheck_404'
   /resources:
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Resource
       summary: List all resources registered in the database
@@ -1707,6 +1781,8 @@ paths:
               schema:
                 $ref: '#/components/responses/Resources_GET_200'
     post:
+      security:
+        - cookieAuth: []
       tags:
         - Resource
       summary: Register a new resource
@@ -1760,6 +1836,8 @@ paths:
                 $ref: '#/components/responses/Resources_POST_500'
   '/resources/{resource_id}':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Resource
       summary: Get resource info
@@ -1796,6 +1874,8 @@ paths:
               schema:
                 $ref: '#/components/responses/Resource_MatchDictCheck_406'
     put:
+      security:
+        - cookieAuth: []
       tags:
         - Resource
       summary: Rename resource
@@ -1831,6 +1911,8 @@ paths:
               schema:
                 $ref: '#/components/responses/Resource_MatchDictCheck_406'
     delete:
+      security:
+        - cookieAuth: []
       tags:
         - Resource
       summary: Unregister resource from the database
@@ -1868,6 +1950,8 @@ paths:
                 $ref: '#/components/responses/Resource_MatchDictCheck_406'
   '/resources/{resource_id}/permissions':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Resource
       summary: List all possible permissions for a resource
@@ -1905,6 +1989,8 @@ paths:
                 $ref: '#/components/responses/Resource_MatchDictCheck_406'
   /services:
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Service
       summary: List all services registered
@@ -1923,6 +2009,8 @@ paths:
               schema:
                 $ref: '#/components/responses/Resources_GET_200'
     post:
+      security:
+        - cookieAuth: []
       tags:
         - Service
       summary: Register a new service
@@ -1958,6 +2046,8 @@ paths:
                 $ref: '#/components/responses/Matchdict_422'
   '/services/types/{service_type}':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Service
       summary: List all a service filtered by type
@@ -1977,6 +2067,8 @@ paths:
                 $ref: '#/components/responses/ServicesFilteredType_GET_200'
   '/services/{service_name}':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Service
       summary: Get service info
@@ -1995,6 +2087,8 @@ paths:
               schema:
                 $ref: '#/components/responses/Service_GET_200'
     put:
+      security:
+        - cookieAuth: []
       tags:
         - Service
       summary: Update service information (name or URL)
@@ -2045,6 +2139,8 @@ paths:
               schema:
                 $ref: '#/components/responses/Service_PUT_409'
     delete:
+      security:
+        - cookieAuth: []
       tags:
         - Service
       summary: Unregister a service from the database
@@ -2062,6 +2158,8 @@ paths:
           description: service not found
   '/services/{service_name}/resources':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Service
       summary: List all resources registered under a service
@@ -2086,6 +2184,8 @@ paths:
               schema:
                 $ref: '#/components/responses/ServiceResources_GET_404'
     post:
+      security:
+        - cookieAuth: []
       tags:
         - Resource
         - Service
@@ -2123,6 +2223,8 @@ paths:
                 $ref: '#/components/responses/Services_POST_409'
   '/services/{service_name}/permissions':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Service
       summary: List all possible permissions for a service
@@ -2154,6 +2256,8 @@ paths:
                 $ref: '#/components/responses/ServicePermissions_GET_406'
   '/services/types/{service_type}/resources/types':
     get:
+      security:
+        - cookieAuth: []
       tags:
         - Service
       summary: List all resource type for a specific service type
@@ -2178,6 +2282,11 @@ paths:
               schema:
                 $ref: '#/components/responses/ServiceTypeResourceTypes_GET_404'
 components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: auth_tkt
   schemas:
     Base:
       type: object
@@ -2192,6 +2301,9 @@ components:
           type: string
         type:
           type: string
+    AuthHeaders:
+      type: string
+      example: auth_tkt=abcde12345; Path=/
     ErrorDetail:
       type: object
       required:
@@ -2691,20 +2803,20 @@ components:
               - github
     Signin_POST_200:
       description: sign in success
+      headers:
+        Set-Cookie:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/AuthHeaders'
       content:
         application/json:
           schema:
             allOf:
               - $ref: '#/components/schemas/Base'
-              - type: object
-                properties:
-                  headers:
-                    type: string
           example:
             code: 200
             type: application/json
             detail: Login successful
-            headers: <login headers>
     Signin_POST_400:
       description: sign in invalid input
       content:
@@ -4558,5 +4670,5 @@ components:
             code: 200
             type: application/json
             detail: Get version successful
-            version: "0.5.3"
+            version: "0.5.4"
             db_version: "a395ef9d3fe6"

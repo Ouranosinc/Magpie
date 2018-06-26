@@ -1,4 +1,8 @@
 from authomatic.adapters import WebObAdapter
+from authomatic.providers import oauth1, oauth2, openid
+from authomatic import Authomatic, provider_id
+import authomatic
+
 from pyramid.security import NO_PERMISSION_REQUIRED, Authenticated
 from pyramid.security import forget, remember
 from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInBadAuth, ZigguratSignInSuccess, ZigguratSignOut
@@ -7,16 +11,39 @@ from security import authomatic
 from api_requests import *
 from magpie import *
 from management.user.user_utils import create_user
+import requests
 
 
+external_providers_config = {
+    'openid': {
+        'class_': openid.OpenID,    # OpenID provider dependent on the python-openid package.
+    },
+    'github': {
+        'class_': oauth2.GitHub,
+        'consumer_key': '##########',
+        'consumer_secret': '##########',
+        'id': provider_id(),
+        'scope': oauth2.GitHub.user_info_scope,
+        '_apis': {
+            'Get your events': ('GET', 'https://api.github.com/users/{user.username}/events'),
+            'Get your watched repos': ('GET', 'https://api.github.com/user/subscriptions'),
+        },
+    },
+    'dkrz': {
+    },
+    'ipsl': {
+    },
+    'badc': {
+    },
+    'pcmdi': {
+    },
+    'smhi': {
+    },
+}
+
+external_providers_authomatic = Authomatic(config=external_providers_config, secret=os.getenv('MAGPIE_SECRET'))
+external_providers = external_providers_config.keys()
 internal_providers = [u'ziggurat']
-external_providers = [u'openid',
-                      u'dkrz',
-                      u'ipsl',
-                      u'badc',
-                      u'pcmdi',
-                      u'smhi',
-                      u'github']
 providers = internal_providers + external_providers
 
 
@@ -30,7 +57,7 @@ def sign_in_external(request):
     if provider_name == 'openid':
         query_field = dict(id=user_name)
     elif provider_name == 'github':
-        query_field = dict()
+        query_field = dict(login_field=user_name)
     else:
         query_field = dict(username=user_name)
 
@@ -41,25 +68,34 @@ def sign_in_external(request):
     return HTTPFound(location=external_login_route, headers=request.response.headers)
 
 
-#@view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
-#def sign_in(request):
-#    provider_name = get_value_multiformat_post_checked(request, 'provider_name')
-#    user_name = get_value_multiformat_post_checked(request, 'user_name')
-#    password = get_multiformat_post(request, 'password')   # no check since password is None for external login#
-#
-#    verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
-#                 msgOnFail="Invalid `provider_name` not found within available providers",
-#                 content={u'provider_name': str(provider_name), u'providers': providers})
-#
-#    if provider_name in internal_providers:
-#        return sign_in_internal(request, {u'user_name': user_name, u'password': password})
-#
-#    elif provider_name in external_providers:
-#        return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
-#                                                                u'password': password,
-#                                                                u'provider_name': provider_name}),
-#                             httpError=HTTPInternalServerError, content={u'provider': provider_name},
-#                             msgOnFail="Error occurred while signing in with external provider")
+@view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
+def sign_in(request):
+    provider_name = get_value_multiformat_post_checked(request, 'provider_name')
+    user_name = get_value_multiformat_post_checked(request, 'user_name')
+    password = get_multiformat_post(request, 'password')   # no check since password is None for external login#
+
+    verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Invalid `provider_name` not found within available providers",
+                 content={u'provider_name': str(provider_name), u'providers': providers})
+
+    if provider_name in internal_providers:
+        signin_internal_url = '{}/signin_internal'.format(request.application_url)
+        signin_internal_data = {u'user_name': user_name, u'password': password}
+        signin_response = requests.post(signin_internal_url, data=signin_internal_data, allow_redirects=True)
+
+        if signin_response.status_code == HTTPOk.code:
+            pyramid_response = Response(body=signin_response.content, headers=signin_response.headers)
+            for cookie in signin_response.cookies:
+                pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
+            return pyramid_response
+        raise_http(httpError=HTTPUnauthorized, detail="Login failure.")
+
+    elif provider_name in external_providers:
+        return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
+                                                                u'password': password,
+                                                                u'provider_name': provider_name}),
+                             httpError=HTTPInternalServerError, content={u'provider': provider_name},
+                             msgOnFail="Error occurred while signing in with external provider")
 
 
 @view_config(route_name='signout', request_method='GET', permission=NO_PERMISSION_REQUIRED)
@@ -70,9 +106,9 @@ def sign_out(request):
 
 
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
-def login_success_ziggu(request):
+def login_success_ziggurat(request):
     # headers contains login authorization cookie
-    return valid_http(httpSuccess=HTTPOk, detail="Login successful", httpKWArgs={'headers': request.context.headers})
+    return valid_http(httpSuccess=HTTPOk, detail="Login successful.", httpKWArgs={'headers': request.context.headers})
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):
@@ -131,20 +167,20 @@ def login_failure(request, reason=None):
 
 
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
-def sign_out_ziggu(request):
-    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful.",
-                      httpKWArgs={'headers': forget(request)})
+def sign_out_ziggurat(request):
+    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful.", httpKWArgs={'headers': forget(request)})
 
 
 @view_config(route_name='external_login', permission=NO_PERMISSION_REQUIRED)
 def authomatic_login(request):
-    _authomatic = authomatic(request)
+    #_authomatic = authomatic(request)
     open_id_provider_name = request.matchdict.get('provider_name')
 
     # Start the login procedure.
 
     response = Response()
-    result = _authomatic.login(WebObAdapter(request, response), open_id_provider_name)
+    result = external_providers_authomatic.login(WebObAdapter(request, response), open_id_provider_name)
+    #result = _authomatic.login(WebObAdapter(request, response), open_id_provider_name)
 
     if result:
         if result.error:
