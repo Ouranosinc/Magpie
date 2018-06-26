@@ -222,6 +222,27 @@ class ServiceGeoserver(ServiceWMS):
         return self.acl
 
 
+class ServiceAccess(ServiceI):
+    permission_names = models.Route.permission_names
+    params_expected = []
+    resource_types_permissions = {
+        models.Route.resource_type_name: models.Route.permission_names
+    }
+
+    def __init__(self, service, request):
+        super(ServiceAccess, self).__init__(service, request)
+
+    @property
+    def __acl__(self):
+        self.expand_acl(self.service, self.request.user)
+        return self.acl
+
+    def permission_requested(self):
+        if self.request.method == 'GET':
+            return u'read'
+        return u'write'
+
+
 class ServiceAPI(ServiceI):
     permission_names = models.Route.permission_names
 
@@ -388,6 +409,7 @@ class ServiceTHREDDS(ServiceI):
 
 
 service_type_dict = {
+    u'access':          ServiceAccess,
     u'geoserver-api':   ServiceGeoserverAPI,
     u'geoserverwms':    ServiceGeoserver,
     u'ncwms':           ServiceNCWMS2,
