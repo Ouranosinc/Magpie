@@ -161,13 +161,21 @@ class Workspace(Resource):
     resource_type_name = u'workspace'
 
 
+class Route(Resource):
+    __mapper_args__ = {u'polymorphic_identity': u'route'}
+    permission_names = [u'read',
+                        u'write']
+    resource_type_name = u'route'
+
+
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
                     UserResourcePermission, GroupResourcePermission, Resource,
                     ExternalIdentity, passwordmanager=None)
 
 resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
 
-resource_type_dict = {u'service': Service, u'directory': Directory, u'file': File, u'workspace': Workspace}
+resource_type_dict = {u'service': Service, u'directory': Directory, u'file': File, u'workspace': Workspace,
+                      u'route': Route}
 
 
 def resource_factory(**kwargs):

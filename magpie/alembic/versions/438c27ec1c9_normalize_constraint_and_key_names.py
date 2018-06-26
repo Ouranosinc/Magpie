@@ -8,13 +8,20 @@ Create Date: 2015-06-13 21:16:32.358778
 """
 from __future__ import unicode_literals
 
+import os, sys
+cur_file = os.path.abspath(__file__)
+root_dir = os.path.dirname(cur_file)    # version
+root_dir = os.path.dirname(root_dir)    # alembic
+root_dir = os.path.dirname(root_dir)    # magpie
+root_dir = os.path.dirname(root_dir)    # root
+sys.path.insert(0, root_dir)
+
+from magpie.definitions.alembic_definitions import *
+from magpie.definitions.sqlalchemy_definitions import *
+
 # revision identifiers, used by Alembic.
 revision = '438c27ec1c9'
 down_revision = '439766f6104d'
-
-from definitions.alembic import *
-from definitions.sqlalchemy_definitions import *
-
 
 # correct keys for pre 0.5.6 naming convention
 

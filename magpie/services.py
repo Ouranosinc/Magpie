@@ -221,24 +221,64 @@ class ServiceGeoserver(ServiceWMS):
         return self.acl
 
 
-class ServiceGeoserverAPI(ServiceI):
-
-    permission_names = []
+class ServiceAPI(ServiceI):
+    permission_names = models.Route.permission_names
 
     params_expected = []
 
-    resource_types_permissions = {}
+    resource_types_permissions = {
+        models.Route.resource_type_name: models.Route.permission_names
+    }
 
+    def __init__(self, service, request):
+        super(ServiceAPI, self).__init__(service, request)
+
+    @property
+    def __acl__(self):
+        raise NotImplementedError
+
+    @property
+    def route_acl(self, sub_api_route=None):
+        self.expand_acl(self.service, self.request.user)
+
+        route_parts = self.request.path.split('/')
+        route_api_base = self.service.resource_name if sub_api_route is None else sub_api_route
+
+        if self.service.resource_name in route_parts and route_api_base in route_parts:
+            api_idx = route_parts.index(route_api_base)
+            # keep only parts after api base route to process it
+            if len(route_parts) - 1 > api_idx:
+                route_parts = route_parts[api_idx + 1::]
+                route_child = self.service
+                while route_child and route_parts:
+                    part_name = route_parts.pop(0)
+                    route_res_id = route_child.resource_id
+                    route_child = find_children_by_name(part_name, parent_id=route_res_id, db_session=self.request.db)
+                    self.expand_acl(route_child, self.request.user)
+        return self.acl
+
+    def permission_requested(self):
+        if self.request.method == 'GET':
+            return u'read'
+        return u'write'
+
+
+class ServiceGeoserverAPI(ServiceAPI):
     def __init__(self, service, request):
         super(ServiceGeoserverAPI, self).__init__(service, request)
 
     @property
     def __acl__(self):
-        self.expand_acl(self.service, self.request.user)
-        return self.acl
+        return ServiceAPI.route_acl.fget(self)
 
-    def permission_requested(self):
-        return u'read'
+
+class ServiceProjectAPI(ServiceAPI):
+    def __init__(self, service, request):
+        super(ServiceProjectAPI, self).__init__(service, request)
+
+    @property
+    def __acl__(self):
+        return ServiceAPI.route_acl.fget(self, sub_api_route='api')
 
 
 class ServiceWFS(ServiceI):
@@ -344,50 +384,15 @@ class ServiceTHREDDS(ServiceI):
     def permission_requested(self):
         return u'read'
 
-    pass
-
-
-class ServiceProjectAPI(ServiceI):
-
-    permission_names = [
-        u'read',
-        u'write'
-    ]
-
-    params_expected = [
-        u'request'
-    ]
-
-    resource_types_permissions = {
-        models.Directory.resource_type_name: [
-            u'read',
-            u'write'
-        ],
-        models.File.resource_type_name: [
-            u'read',
-            u'write'
-        ],
-    }
-
-    def __init__(self, service, request):
-        super(ServiceProjectAPI, self).__init__(service, request)
-
-    @property
-    def __acl__(self):
-        self.expand_acl(self.service, self.request.user)
-        return self.acl
-
-    def permission_requested(self):
-        return u'read'
-
 
 service_type_dict = {
-    u'wps':             ServiceWPS,
-    u'ncwms':           ServiceNCWMS2,
+    u'geoserver-api':   ServiceGeoserverAPI,
     u'geoserverwms':    ServiceGeoserver,
-    u'wfs':             ServiceWFS,
+    u'ncwms':           ServiceNCWMS2,
+    u'project-api':     ServiceProjectAPI,
     u'thredds':         ServiceTHREDDS,
-    u'project-api':     ServiceProjectAPI
+    u'wfs':             ServiceWFS,
+    u'wps':             ServiceWPS,
 }
 
 
