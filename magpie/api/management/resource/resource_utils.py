@@ -32,11 +32,18 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
     :param db_session:
     :return: root Service if all checks were successful
     """
+    parent_type = parent_resource.resource_type_name
+    verify_param(resource_type_dict[parent_type].child_resource_allowed, isEqual=True,
+                 paramCompare=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Child resource not allowed for specified parent resource type `{}`".format(parent_type))
     root_service = get_resource_root_service(parent_resource, db_session=db_session)
     verify_param(root_service, notNone=True, httpError=HTTPInternalServerError,
                  msgOnFail="Failed retrieving `root_service` from db")
     verify_param(root_service.resource_type, isEqual=True, httpError=HTTPInternalServerError, paramCompare=u'service',
                  msgOnFail="Invalid `root_service` retrieved from db is not a service")
+    verify_param(service_type_dict[root_service.type].child_resource_allowed, isEqual=True,
+                 paramCompare=True, httpError=HTTPNotAcceptable,
+                 msgOnFail="Child resource not allowed for specified service type `{}`".format(root_service.type))
     verify_param(resource_type, isIn=True, httpError=HTTPNotAcceptable,
                  paramCompare=service_type_dict[root_service.type].resource_types,
                  msgOnFail="Invalid `resource_type` specified for service type `{}`".format(root_service.type))

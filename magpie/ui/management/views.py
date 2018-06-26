@@ -2,6 +2,7 @@ import requests
 from definitions.pyramid_definitions import *
 from magpie import USER_NAME_MAX_LENGTH, ANONYMOUS_USER, USER_GROUP
 from services import service_type_dict
+from models import resource_type_dict
 from ui.management import check_response
 from ui.home import add_template_data
 import register
@@ -610,18 +611,15 @@ class ManagementViews(object):
                 id=raw_resources['resource_id'],
                 permission_names=[],
                 children=self.resource_tree_parser(raw_resources['resources'], {}))
-            url_resources_types = '{url}/services/types/{type}/resources/types' \
-                                  .format(url=self.magpie_url, type=cur_svc_type)
-            res_resources_types = check_response(requests.get(url_resources_types, cookies=self.request.cookies))
-            raw_resources_types = res_resources_types.json()['resource_types']
             raw_resources_id_type = self.get_resource_types()
         except Exception as e:
             raise HTTPBadRequest(detail='Bad Json response [Exception: ' + repr(e) + ']')
 
         service_info['resources'] = resources
-        service_info['resources_types'] = raw_resources_types
         service_info['resources_id_type'] = raw_resources_id_type
-        service_info['resources_no_child'] = {u'file'}
+        service_info['resources_no_child'] = [res for res in resource_type_dict
+                                              if not resource_type_dict[res].child_resource_allowed]
+        service_info['service_no_child'] = not service_type_dict[cur_svc_type].child_resource_allowed
         return add_template_data(self.request, service_info)
 
     @view_config(route_name='add_resource', renderer='templates/add_resource.mako')

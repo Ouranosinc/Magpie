@@ -39,6 +39,7 @@ class Resource(ResourceMixin, Base):
 
     # example implementation of ACLS for pyramid application
     permission_names = []
+    child_resource_allowed = True
 
     # reference to top-most service under which the resource is nested
     # if the resource is the service, id is None (NULL)
@@ -139,6 +140,7 @@ class File(Resource):
                         u'getlegendgraphic',
                         u'getmetadata']
     resource_type_name = u'file'
+    child_resource_allowed = False
 
 
 class Directory(Resource):
@@ -174,8 +176,13 @@ ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
 
 resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
 
-resource_type_dict = {u'service': Service, u'directory': Directory, u'file': File, u'workspace': Workspace,
-                      u'route': Route}
+resource_type_dict = {
+    Service.resource_type_name:     Service,
+    Directory.resource_type_name:   Directory,
+    File.resource_type_name:        File,
+    Workspace.resource_type_name:   Workspace,
+    Route.resource_type_name:       Route,
+}
 
 
 def resource_factory(**kwargs):

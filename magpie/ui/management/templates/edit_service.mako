@@ -14,7 +14,7 @@
             % else:
                 <div class="tree_button"><input type="submit" value="Add child" name="add_child" class="button disabled" disabled></div>
             % endif
-        % elif len(resources_types) > 0:
+        % elif not service_no_child:
             <div class="tree_button"><input type="submit" value="Add child" name="add_child"></div>
         % else:
             <div class="tree_button"><input type="submit" value="Add child" name="add_child" class="button disabled" disabled></div>
