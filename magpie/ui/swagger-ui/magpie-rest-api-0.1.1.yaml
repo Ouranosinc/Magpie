@@ -1,0 +1,1823 @@
+swagger: '2.0'
+info:
+  description: |
+    Magpie Rest API Documentation
+  version: "0.1.1"
+  title: Magpie Rest API
+schemes:
+  - https
+paths:
+
+  /version:
+    get:
+      summary: Get version
+      produces:
+        - application/json
+      responses:
+        200:
+          example:
+            version: 0.1.1
+
+  /signin:
+    post:
+      tags:
+        - Login
+      summary: Logs user into the system
+      consumes:
+        - application/xml
+      parameters:
+        - name: "Credentials"
+          description: Body of Credentials
+          in: body
+          required: True
+          schema: 
+            $ref: "#/definitions/Credentials"
+       
+      responses:
+        200:
+          description: login successful
+
+        400:
+          description: Invalid user_name/password/provider_name
+          
+  /signout:
+    get:
+      tags:
+        - Login
+      summary: Logs out current logged in user sesion
+      description: Remove auth_tkt from header
+      operationId: signout
+      responses:
+        '200':
+          description: logout successful 
+          
+  /session:
+    get:
+      tags:
+        - Login
+      summary: get info about current session
+      description: Get info about current session
+      operationId: session
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: 'user_name, user_email, group_name'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  user_name: tiger
+                  user_email: tiger@mail.com
+                  group_names:
+                    - admin
+                    - CMIP5
+              
+  /providers:
+    get:
+      tags:
+        - Login
+      summary: Get list of providers
+      produces:
+        - application/json
+      responses:
+        200:
+          example:
+            provider_names:
+              - ziggurat
+              - dkrz
+              - ipsl
+              - badc
+              - pcmdi
+              - smhi
+              
+#---------------------- Groups ----------------------------------
+              
+  /groups:
+    get:
+      tags:
+        - Group
+      summary: Get list of group names
+      description: Get list of group names
+      operationId: groups
+      produces:
+        - application/json
+      responses:
+        200:
+          description: list of group names
+          example:
+            group_names:
+              - admin
+              - CMIP5
+              
+    post:
+      tags:
+        - Group
+      summary: Create a group
+      consumes:
+        - application/xml
+      parameters:
+        - name: GroupBody
+          description: The name of the group should be unique
+          in: body
+          schema:
+            $ref: "#/definitions/Group"
+            
+      responses:
+        201:
+          description: 'group created'
+        409:
+          description: 'Conflict, this group already exists'
+              
+            
+  /groups/{group_name}:
+    delete:
+      tags:
+        - Group
+      summary: Delete a group by group_name
+      parameters:
+        - name: group_name
+          description: name of the group
+          in: path
+          type: string
+          required: true
+          example: admin
+      responses:
+        200:
+          description: 'group deleted'
+        400:
+          description: 'group not found'
+          
+  /groups/{group_name}/users:
+    get:
+      tags:
+        - Group
+      summary: List all user from group
+      parameters:
+        - name: group_name
+          in: path
+          
+      produces:
+        - application/json
+      responses:
+        200:
+          example:
+            user_names:
+              - tiger
+              - turtle
+              - simpleUser
+              
+  /groups/{group_name}/resources:
+    get:
+      tags:
+        - Group
+      summary: List all resources a group has permission on
+      produces:
+        - applicatin/json
+      
+      responses:
+        200:
+          example:
+            resources:
+              thredds:
+                thredds_cat1:
+                  resource_id: 5
+                  permission_names:
+                    - download
+                  service_name: thredds_cat1
+                  service_url: 'http://outarde.crim.ca:8083'
+                  service_type: thredds
+                  resources:
+                    '7':
+                      resource_name: birdhouse
+                      resource_id: 7
+                      permission_names: []
+                      parent_id: 5
+                      children:
+                        '8':
+                          resource_name: nrcan
+                          resource_id: 8
+                          permission_names:
+                            - download
+                          parent_id: 7
+                          children:
+                            '9':
+                              resource_name: nrcan_pr_3.nc
+                              resource_id: 9
+                              permission_names:
+                                - download
+                              parent_id: 8
+                              children: {}
+                              resource_type: file
+                          resource_type: directory
+                        '14':
+                          resource_name: cmip5
+                          resource_id: 14
+                          permission_names: []
+                          parent_id: 7
+                          children:
+                            '15':
+                              resource_name: ccma
+                              resource_id: 15
+                              permission_names: []
+                              parent_id: 14
+                              children:
+                                '16':
+                                  resource_name: canesm2
+                                  resource_id: 16
+                                  permission_names:
+                                    - download
+                                  parent_id: 15
+                                  children: {}
+                                  resource_type: directory
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+              wps:
+                lb_malleefowl:
+                  resource_id: 1
+                  permission_names:
+                    - getcapabilities
+                  service_name: lb_malleefowl
+                  service_url: 'http://:58091'
+                  service_type: wps
+                  resources: {}
+                lb_flyingpigeon:
+                  resource_id: 2
+                  permission_names:
+                    - execute
+                    - getcapabilities
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://:58093'
+                  service_type: wps
+                  resources: {}
+                lb_catalog:
+                  resource_id: 3
+                  permission_names: []
+                  service_name: lb_catalog
+                  service_url: 'http://:58086'
+                  service_type: wps
+                  resources: {}
+            
+
+        
+        
+  /groups/{group_name}/resources/{resource_id}/permissions}:
+    get:
+      tags:
+        - Group
+      summary: List all permissions a group has on a specific resource
+      parameters:
+        - name: group_name
+          description: Name of the group
+          in: path
+        - name: resource_id
+          type: int
+          description: Id of the resource
+          in: path
+      produces:
+        - application/json
+      responses:
+        200:
+          example:
+            permission_names:
+              - getcapabilities
+              - getmap
+      
+    post:
+      tags:
+        - Group
+      summary: Create a permission on a specific resource for that group
+      consumes:
+        - application/xml
+      parameters:
+        - name: PermissionBody
+          description: 
+          in: body
+          schema:
+            $ref: "#/definitions/Permission"
+            
+      responses:
+        201:
+          description: 'permission created'
+        409:
+          description: 'Conflict, this permission on that resource already exist for that group'
+      
+      
+  /groups/{group_name}/resources/{resource_id}/permissions/{permission_name}:
+    delete:
+      tags:
+        - Group
+      summary: Delete a permission on a resource for a group
+      parameters:
+        - name: group_name
+          description: name of the group
+          in: path
+          type: string
+          required: true
+          example: admin
+        - name: permission_name
+          description: name of the permission
+          in: path
+          type: string
+          required: true
+          example: getcapabilities
+        - name: resource_id
+          description: id of the resource
+          in: path
+          type: int
+          required: true
+          example: 44
+      responses:
+        200:
+          description: 'permission deleted'
+        400:
+          description: 'permission not found'
+      
+  
+  /groups/{group_name}/services:
+    get:
+      tags:
+        - Group
+      summary: List all services a group has permission on
+      parameters:
+        - name: group_name
+          description: name of the group
+          in: path
+          type: string
+          required: true
+          example: admin
+          
+      responses:
+        200:
+          example:
+            services:
+              thredds:
+                thredds_cat1:
+                  service_type: thredds
+                  service_name: thredds_cat1
+                  service_url: 'http://outarde.crim.ca:8083'
+                  permission_names:
+                    - download
+                  resource_id: 5
+              wps:
+                lb_malleefowl:
+                  service_type: wps
+                  service_name: lb_malleefowl
+                  service_url: 'http://:58091'
+                  permission_names:
+                    - getcapabilities
+                  resource_id: 1
+                lb_flyingpigeon:
+                  service_type: wps
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://:58093'
+                  permission_names:
+                    - execute
+                    - getcapabilities
+                  resource_id: 2
+            
+        
+          
+      
+  /groups/{group_name}/services/{service_name}/permissions:
+    get:
+      tags:
+        - Group
+      summary: List all permissions a group has on a specific service
+      parameters:
+        - name: group_name
+          description: Name of the group
+          in: path
+        - name: service_name
+          type: string
+          description: Name of the service
+          in: path
+      produces:
+        - applicatin/json
+      responses:
+        200:
+          example:
+            permission_names:
+              - getcapabilities
+              - getmap
+    
+    post:
+      tags:
+        - Group
+      summary: Create a permission on a service for a group
+      consumes:
+        - application/xml
+      parameters:
+        - name: group_name
+          description: Name of the group
+          in: path
+        - name: service_name
+          type: string
+          description: Name of the service
+          in: path
+        - name: PermissionBody
+          in: body
+          schema:
+            $ref: "#/definitions/Permission"
+      
+      
+  /groups/{group_name}/services/{service_name}/permissions/{permission_name}:
+    delete:
+      tags:
+        - Group
+      summary: Delete a permission on a service for a group
+      parameters:
+        - name: group_name
+          description: name of the group
+          in: path
+          type: string
+          required: true
+          example: admin
+        - name: permission_name
+          description: name of the permission
+          in: path
+          type: string
+          required: true
+          example: getcapabilities
+        - name: service_name
+          description: name of the service
+          in: path
+          type: string
+          required: true
+          example: emu
+      responses:
+        200:
+          description: 'permission deleted'
+        400:
+          description: 'permission not found'
+      
+      
+      
+  /groups/{group_name}/services/{service_name}/resources:
+    get:
+      tags:
+        - Group
+      summary: List all resources under a service a group has permission on
+      parameters:
+        - name: group_name
+          description: name of the group
+          in: path
+          type: string
+          required: true
+          example: admin
+        - name: service_name
+          description: name of the service
+          in: path
+          type: string
+          required: true
+          example: geoserver
+          
+      responses:
+        200:
+          example:
+            service:
+              resource_id: 5
+              permission_names:
+                - download
+              service_name: thredds_cat1
+              service_url: 'http://outarde.crim.ca:8083'
+              service_type: thredds
+              resources:
+                '7':
+                  resource_name: birdhouse
+                  resource_id: 7
+                  permission_names: []
+                  parent_id: 5
+                  children:
+                    '8':
+                      resource_name: nrcan
+                      resource_id: 8
+                      permission_names:
+                        - download
+                      parent_id: 7
+                      children:
+                        '9':
+                          resource_name: nrcan_pr_3.nc
+                          resource_id: 9
+                          permission_names:
+                            - download
+                          parent_id: 8
+                          children: {}
+                          resource_type: file
+                      resource_type: directory
+                    '14':
+                      resource_name: cmip5
+                      resource_id: 14
+                      permission_names: []
+                      parent_id: 7
+                      children:
+                        '15':
+                          resource_name: ccma
+                          resource_id: 15
+                          permission_names: []
+                          parent_id: 14
+                          children:
+                            '16':
+                              resource_name: canesm2
+                              resource_id: 16
+                              permission_names:
+                                - download
+                              parent_id: 15
+                              children: {}
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+                  resource_type: directory
+            
+            
+          
+      
+      
+      
+      
+      
+      
+#----------------------------- USER -------------------------------------------
+
+  /users:
+    get:
+      tags:
+        - User
+      summary: List all users registered
+      responses:
+        200:
+          example:
+            user_names:
+              - admin
+              - anonymous
+              - tiger
+              - turtle
+              - david
+            
+            
+  
+    post:
+      tags:
+        - User
+      summary: Create a new user
+      consumes:
+        - application/xml
+      parameters:
+        - name: UserBody
+          in: body
+          schema:
+            $ref: "#/definitions/User"
+            
+      responses:
+        201:
+          description: 'User created'
+        409:
+          description: 'Conflict, this user already exists'
+      
+      
+  /users/{user_name}:
+    delete:
+      tags:
+        - User
+      summary: Delete a user by user_name
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          type: string
+          required: true
+          example: simpleusername
+        
+      responses:
+        200:
+          description: 'user deleted'
+        400:
+          description: 'user not found'
+      
+      
+  /users/{user_name}/groups:
+    get:
+      tags:
+        - User
+      summary: List all groups a user belongs to
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          type: string
+          required: true
+          example: simpleusername
+        
+      responses:
+        200:
+          description: 'List of groups user belongs to'
+          example:
+            group_names:
+              - user
+              - cmip5
+        400:
+          description: 'user not found'
+      
+    post:
+      tags:
+        - User
+      summary: Assign a user to a group
+      consumes:
+        - application/xml
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          type: string
+          required: true
+          example: simpleusername
+        - name: GroupBody
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/Group"
+            
+      responses:
+        201:
+          description: 'User Group relation created'
+        409:
+          description: 'Conflict, this user already belongs to that group'
+        404: 'This user/group does not exist'
+          
+      
+      
+  /users/{user_name}/groups/{group_name}:
+    delete:
+      tags:
+        - User
+      summary: Remove user from a group
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          type: string
+          required: true
+          example: simpleusername
+        - name: group_name
+          description: Name of the group
+          in: path
+          type: string
+          required: true
+          example: admin
+          
+      responses:
+        200:
+          description: 'user removed from group'
+        400:
+          description: 'user does not belong to group'
+      
+      
+      
+      
+  /users/{user_name}/resources:
+    get:
+      tags:
+        - User
+      summary: List all resources a user has permission on
+      produces:
+        - applicatin/json
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          type: string
+          required: true
+          example: simpleusername
+          
+      responses:
+        200:
+          example:
+            resources:
+              thredds:
+                thredds_cat1:
+                  resource_id: 5
+                  permission_names: []
+                  service_name: thredds_cat1
+                  service_url: 'http://outarde.crim.ca:8083'
+                  service_type: thredds
+                  resources:
+                    '7':
+                      resource_name: birdhouse
+                      resource_id: 7
+                      permission_names: []
+                      parent_id: 5
+                      children:
+                        '14':
+                          resource_name: cmip5
+                          resource_id: 14
+                          permission_names: []
+                          parent_id: 7
+                          children:
+                            '15':
+                              resource_name: ccma
+                              resource_id: 15
+                              permission_names: []
+                              parent_id: 14
+                              children:
+                                '16':
+                                  resource_name: canesm2
+                                  resource_id: 16
+                                  permission_names: []
+                                  parent_id: 15
+                                  children:
+                                    '17':
+                                      resource_name: rcp85
+                                      resource_id: 17
+                                      permission_names:
+                                        - upload
+                                      parent_id: 16
+                                      children: {}
+                                      resource_type: directory
+                                  resource_type: directory
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+              wps:
+                lb_malleefowl:
+                  resource_id: 1
+                  permission_names: []
+                  service_name: lb_malleefowl
+                  service_url: 'http://:58091'
+                  service_type: wps
+                  resources: {}
+                lb_flyingpigeon:
+                  resource_id: 2
+                  permission_names: []
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://:58093'
+                  service_type: wps
+                  resources: {}
+                lb_catalog:
+                  resource_id: 3
+                  permission_names: []
+                  service_name: lb_catalog
+                  service_url: 'http://:58086'
+                  service_type: wps
+                  resources: {}
+            
+      
+      
+      
+  
+  /users/{user_name}/resources/{resource_id}/permissions:
+    get:
+      tags:
+        - User
+      summary: List all permissions a user has on a specific resource
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+        - name: resource_id
+          type: int
+          description: Id of the resource
+          in: path
+      produces:
+        - application/json
+      responses:
+        200:
+          example:
+            permission_names:
+              - getcapabilities
+              - getmap
+      
+      
+    post:
+      tags:
+        - User
+      summary: Create a permission on specific resource for a user
+      consumes:
+        - application/xml
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+        - name: resource_id
+          type: int
+          description: Id of the resource
+          in: path
+        - name: PermissionBody
+          description: 
+          in: body
+          schema:
+            $ref: "#/definitions/Permission"
+            
+      responses:
+        201:
+          description: 'permission created'
+        409:
+          description: 'Conflict, this permission on that resource already exist for that user'
+      
+      
+  
+  /users/{user_name}/resources/{resource_id}/permissions/{permission_name}:
+    delete:
+      tags:
+        - User
+      summary: Delete a permission on a resource for a user
+      parameters:
+        - name: user_name
+          description: name of the group
+          in: path
+          type: string
+          required: true
+          example: admin
+        - name: permission_name
+          description: name of the permission
+          in: path
+          type: string
+          required: true
+          example: getcapabilities
+        - name: resource_id
+          description: id of the resource
+          in: path
+          type: int
+          required: true
+          example: 44
+      responses:
+        200:
+          description: 'permission deleted'
+        400:
+          description: 'permission not found'
+      
+      
+      
+  /users/{user_name}/services:
+    get:
+      tags:
+        - User
+      summary: List all services a user has permission on
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          type: string
+          required: true
+          example: simpleuser
+          
+      responses:
+        200:
+          example:
+            services:
+              thredds:
+                thredds_cat1:
+                  service_type: thredds
+                  service_name: thredds_cat1
+                  service_url: 'http://outarde.crim.ca:8083'
+                  permission_names:
+                    - download
+                  resource_id: 5
+              wps:
+                lb_malleefowl:
+                  service_type: wps
+                  service_name: lb_malleefowl
+                  service_url: 'http://:58091'
+                  permission_names:
+                    - getcapabilities
+                  resource_id: 1
+                lb_flyingpigeon:
+                  service_type: wps
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://:58093'
+                  permission_names:
+                    - execute
+                    - getcapabilities
+                  resource_id: 2
+            
+      
+      
+  /users/{user_name}/services/{service_name}/permissions:
+    get:
+      tags:
+        - User
+      summary: List all permissions a user has on a service
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+        - name: service_name
+          type: string
+          description: Name of the service
+          in: path
+      produces:
+        - application/json
+      responses:
+        200:
+          example:
+            permission_names:
+              - getcapabilities
+              - getmap
+      
+    post:
+      tags:
+        - User
+      summary: Create a permission on a service for a user
+      consumes:
+        - application/xml
+      parameters:
+        - name: user_name
+          description: Name of the group
+          in: path
+        - name: service_name
+          type: string
+          description: Name of the service
+          in: path
+        - name: PermissionBody
+          in: body
+          schema:
+            $ref: "#/definitions/Permission"
+      
+  /users/{user_name}/services/{service_name}/permissions/{permission_name}:
+    delete:
+      tags:
+        - User
+      summary: Delete a permission on a service for a user
+      parameters:
+        - name: user_name
+          description: name of the group
+          in: path
+          type: string
+          required: true
+          example: admin
+        - name: permission_name
+          description: name of the permission
+          in: path
+          type: string
+          required: true
+          example: getcapabilities
+        - name: service_name
+          description: name of the service
+          in: path
+          type: string
+          required: true
+          example: emu
+      responses:
+        200:
+          description: 'permission deleted'
+        400:
+          description: 'permission not found'
+      
+  
+      
+  /users/{user_name}/services/{service_name}/resources:
+    get:
+      tags:
+        - User
+      summary: List all resources under a service a user has permission on
+      parameters:
+        - name: user_name
+          description: name of the group
+          in: path
+          type: string
+          required: true
+          example: admin
+        - name: service_name
+          description: name of the service
+          in: path
+          type: string
+          required: true
+          example: geoserver
+          
+      responses:
+        200:
+          example:
+            service:
+              resource_id: 5
+              permission_names:
+                - download
+              service_name: thredds_cat1
+              service_url: 'http://outarde.crim.ca:8083'
+              service_type: thredds
+              resources:
+                '7':
+                  resource_name: birdhouse
+                  resource_id: 7
+                  permission_names: []
+                  parent_id: 5
+                  children:
+                    '8':
+                      resource_name: nrcan
+                      resource_id: 8
+                      permission_names:
+                        - download
+                      parent_id: 7
+                      children:
+                        '9':
+                          resource_name: nrcan_pr_3.nc
+                          resource_id: 9
+                          permission_names:
+                            - download
+                          parent_id: 8
+                          children: {}
+                          resource_type: file
+                      resource_type: directory
+                    '14':
+                      resource_name: cmip5
+                      resource_id: 14
+                      permission_names: []
+                      parent_id: 7
+                      children:
+                        '15':
+                          resource_name: ccma
+                          resource_id: 15
+                          permission_names: []
+                          parent_id: 14
+                          children:
+                            '16':
+                              resource_name: canesm2
+                              resource_id: 16
+                              permission_names:
+                                - download
+                              parent_id: 15
+                              children: {}
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+                  resource_type: directory
+            
+      
+      
+      
+#------------------ Resource --------------------------
+
+  /resources:
+    get:
+      tags:
+        - Resource
+      summary: List all resources registered in the database
+      produces:
+        - application/json
+      responses:
+        200:
+          example:
+            resource_types:
+              - directory
+              - workspace
+              - file
+              - service
+            resources:
+              wms: {}
+              wfs: {}
+              wps:
+                lb_malleefowl:
+                  resource_id: 1
+                  permission_names: []
+                  service_name: lb_malleefowl
+                  service_url: 'http://:58091'
+                  service_type: wps
+                  resources: {}
+                lb_flyingpigeon:
+                  resource_id: 2
+                  permission_names: []
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://:58093'
+                  service_type: wps
+                  resources: {}
+                lb_catalog:
+                  resource_id: 3
+                  permission_names: []
+                  service_name: lb_catalog
+                  service_url: 'http://:58086'
+                  service_type: wps
+                  resources: {}
+              thredds:
+                thredds_cat1:
+                  resource_id: 5
+                  permission_names: []
+                  service_name: thredds_cat1
+                  service_url: 'http://outarde.crim.ca:8083'
+                  service_type: thredds
+                  resources:
+                    '7':
+                      resource_name: birdhouse
+                      resource_id: 7
+                      permission_names: []
+                      parent_id: 5
+                      children:
+                        '8':
+                          resource_name: nrcan
+                          resource_id: 8
+                          permission_names: []
+                          parent_id: 7
+                          children:
+                            '9':
+                              resource_name: nrcan_pr_3.nc
+                              resource_id: 9
+                              permission_names: []
+                              parent_id: 8
+                              children: {}
+                              resource_type: file
+                            '10':
+                              resource_name: nrcan_pr_5.nc
+                              resource_id: 10
+                              permission_names: []
+                              parent_id: 8
+                              children: {}
+                              resource_type: file
+                            '11':
+                              resource_name: nrcan_pr_10.nc
+                              resource_id: 11
+                              permission_names: []
+                              parent_id: 8
+                              children: {}
+                              resource_type: file
+                          resource_type: directory
+                        '12':
+                          resource_name: ouranos
+                          resource_id: 12
+                          permission_names: []
+                          parent_id: 7
+                          children:
+                            '20':
+                              resource_name: ouranos_pr_34.nc
+                              resource_id: 20
+                              permission_names: []
+                              parent_id: 12
+                              children: {}
+                              resource_type: file
+                            '22':
+                              resource_name: nimportequioi
+                              resource_id: 22
+                              permission_names: []
+                              parent_id: 12
+                              children: {}
+                              resource_type: directory
+                          resource_type: directory
+                        '13':
+                          resource_name: ec
+                          resource_id: 13
+                          permission_names: []
+                          parent_id: 7
+                          children: {}
+                          resource_type: directory
+                        '14':
+                          resource_name: cmip5
+                          resource_id: 14
+                          permission_names: []
+                          parent_id: 7
+                          children:
+                            '15':
+                              resource_name: ccma
+                              resource_id: 15
+                              permission_names: []
+                              parent_id: 14
+                              children:
+                                '16':
+                                  resource_name: canesm2
+                                  resource_id: 16
+                                  permission_names: []
+                                  parent_id: 15
+                                  children:
+                                    '17':
+                                      resource_name: rcp85
+                                      resource_id: 17
+                                      permission_names: []
+                                      parent_id: 16
+                                      children:
+                                        '18':
+                                          resource_name: day
+                                          resource_id: 18
+                                          permission_names: []
+                                          parent_id: 17
+                                          children:
+                                            '19':
+                                              resource_name: pr_23.nc
+                                              resource_id: 19
+                                              permission_names: []
+                                              parent_id: 18
+                                              children: {}
+                                              resource_type: file
+                                            '23':
+                                              resource_name: test_with_service_resource_direct
+                                              resource_id: 23
+                                              permission_names: []
+                                              parent_id: 18
+                                              children: {}
+                                              resource_type: file
+                                          resource_type: directory
+                                      resource_type: directory
+                                  resource_type: directory
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+                    '21':
+                      resource_name: nimportequioi
+                      resource_id: 21
+                      permission_names: []
+                      parent_id: 5
+                      children: {}
+                      resource_type: directory
+            
+              
+      
+    post:
+      tags:
+        - Resource
+      summary: Register a new resource
+      consumes:
+        - application/xml
+      parameters:
+        - name: ResourceBody
+          in: body
+          schema:
+            $ref: '#/definitions/Resource'
+      
+  /resources/{resource_id}:
+    get:
+      tags:
+        - Resource
+      summary: Get resource info
+      parameters:
+        - name: resource_id
+          description: Id of the resource
+          in: path
+          type: integer
+          required: true
+          example: 45
+      responses:
+        200:
+          example:
+            '14':
+              resource_name: cmip5
+              resource_id: 14
+              permission_names: []
+              parent_id: 7
+              children:
+                '15':
+                  resource_name: ccma
+                  resource_id: 15
+                  permission_names: []
+                  parent_id: 14
+                  children:
+                    '16':
+                      resource_name: canesm2
+                      resource_id: 16
+                      permission_names: []
+                      parent_id: 15
+                      children:
+                        '17':
+                          resource_name: rcp85
+                          resource_id: 17
+                          permission_names: []
+                          parent_id: 16
+                          children:
+                            '18':
+                              resource_name: day
+                              resource_id: 18
+                              permission_names: []
+                              parent_id: 17
+                              children:
+                                '19':
+                                  resource_name: pr_23.nc
+                                  resource_id: 19
+                                  permission_names: []
+                                  parent_id: 18
+                                  children: {}
+                                  resource_type: file
+                                '23':
+                                  resource_name: test_with_service_resource_direct
+                                  resource_id: 23
+                                  permission_names: []
+                                  parent_id: 18
+                                  children: {}
+                                  resource_type: file
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+                  resource_type: directory
+              resource_type: directory
+            
+    put:
+      tags:
+        - Resource
+      summary: Rename resource
+      parameters:
+        - 
+      
+      
+    delete:
+      tags:
+        - Resource
+      summary: Unregister resource from the database
+      parameters:
+        - name: resource_id
+          description: Id of the resource
+          in: path
+          type: integer
+          required: true
+          example: 45
+          
+      responses:
+        200:
+          description: 'resource deleted'
+        400:
+          description: 'resource not found'
+          
+    
+
+  /resources/{resource_id}/permissions:
+    get:
+      tags:
+        - Resource
+      summary: List all possible permissions for a resource
+      parameters:
+        - name: resource_id
+          description: Id of the resource
+          in: path
+          type: integer
+          required: true
+          example: 45
+          
+      produces:
+        - application/json
+      responses:
+        200:
+          example:
+            permission_names:
+              - getcapabilities
+              - describeprocess
+              - execute
+        400:
+          description: 'resource not found'
+      
+      
+  /services:
+    get:
+      tags:
+        - Resource
+      summary: List all services registered
+      parameters:
+        - name: service_name
+          description: name of service
+          in: path
+          type: string
+          required: true
+          example: emu
+      responses:
+        200:
+        
+          example:
+            services:
+              wms: {}
+              wfs: {}
+              wps:
+                lb_malleefowl:
+                  service_type: wps
+                  service_name: lb_malleefowl
+                  service_url: 'http://:58091'
+                  permission_names: []
+                  resource_id: 1
+                lb_flyingpigeon:
+                  service_type: wps
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://:58093'
+                  permission_names: []
+                  resource_id: 2
+                lb_catalog:
+                  service_type: wps
+                  service_name: lb_catalog
+                  service_url: 'http://:58086'
+                  permission_names: []
+                  resource_id: 3
+              thredds:
+                thredds_cat1:
+                  service_type: thredds
+                  service_name: thredds_cat1
+                  service_url: 'http://outarde.crim.ca:8083'
+                  permission_names: []
+                  resource_id: 5
+            
+              
+      
+    post:
+      tags:
+        - Resource
+      summary: Register a new service
+      consumes:
+        - application/xml
+      parameters:
+        - name: ServiceBody
+          in: body
+          schema:
+            $ref: '#/definitions/Service'
+            
+      responses:
+        201:
+          description: 'Service registered'
+        409:
+          description: 'This service name already exists'
+          
+  /services/types/{service_type}:
+    get:
+      tags:
+        - Resource
+      summary: List all a service filtered by type
+      parameters:
+        - name: service_type
+          description: type of service
+          in: path
+          type: string
+          required: true
+          example: wps
+      responses:
+        200:
+          example:
+            services:
+              wps:
+                lb_malleefowl:
+                  service_type: wps
+                  service_name: lb_malleefowl
+                  service_url: 'http://:58091'
+                  permission_names: []
+                  resource_id: 1
+                lb_flyingpigeon:
+                  service_type: wps
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://:58093'
+                  permission_names: []
+                  resource_id: 2
+                lb_catalog:
+                  service_type: wps
+                  service_name: lb_catalog
+                  service_url: 'http://:58086'
+                  permission_names: []
+                  resource_id: 3
+            
+            
+
+
+  /services/{service_name}:
+    get:
+      tags:
+        - Resource
+      summary: get service info
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          type: string
+          required: true
+          example: emu
+          
+      responses:
+        200:
+          example:
+            thredds_cat1:
+              service_type: thredds
+              service_name: thredds_cat1
+              service_url: 'http://outarde.crim.ca:8083'
+              permission_names: []
+              resource_id: 5
+            
+    
+    put:
+      tags:
+        - Service
+      summary: update service URL
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          type: string
+          required: true
+          example: 'http://outarde.crim.ca:8083'
+        - name: service_url
+          description: New URL to apply to the service
+          in: formData
+          type: string
+          required: true
+          example: emu
+      
+      responses:
+        200:
+          description: 'service update success'
+        400:
+          description: 'service not found'
+          
+    delete:
+      tags:
+        - Resource
+      summary: Unregister a service from the database
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          type: string
+          required: true
+          example: emu
+          
+      responses:
+        200:
+          description: 'service unregistered success'
+        400:
+          description: 'service not found'
+      
+      
+  /services/{service_name}/resources:
+    get:
+      tags:
+        - Resource
+      summary: List all resources registered under a service
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          type: string
+          required: true
+          example: geoserver
+          
+      produces:
+        - application/json
+        
+      responses:
+        200:
+          example:
+            thredds_cat1:
+              resource_id: 5
+              permission_names: []
+              service_name: thredds_cat1
+              service_url: 'http://outarde.crim.ca:8083'
+              service_type: thredds
+              resources:
+                '7':
+                  resource_name: birdhouse
+                  resource_id: 7
+                  permission_names: []
+                  parent_id: 5
+                  children:
+                    '8':
+                      resource_name: nrcan
+                      resource_id: 8
+                      permission_names: []
+                      parent_id: 7
+                      children:
+                        '9':
+                          resource_name: nrcan_pr_3.nc
+                          resource_id: 9
+                          permission_names: []
+                          parent_id: 8
+                          children: {}
+                          resource_type: file
+                        '10':
+                          resource_name: nrcan_pr_5.nc
+                          resource_id: 10
+                          permission_names: []
+                          parent_id: 8
+                          children: {}
+                          resource_type: file
+                        '11':
+                          resource_name: nrcan_pr_10.nc
+                          resource_id: 11
+                          permission_names: []
+                          parent_id: 8
+                          children: {}
+                          resource_type: file
+                      resource_type: directory
+                    '12':
+                      resource_name: ouranos
+                      resource_id: 12
+                      permission_names: []
+                      parent_id: 7
+                      children:
+                        '20':
+                          resource_name: ouranos_pr_34.nc
+                          resource_id: 20
+                          permission_names: []
+                          parent_id: 12
+                          children: {}
+                          resource_type: file
+                        '22':
+                          resource_name: nimportequioi
+                          resource_id: 22
+                          permission_names: []
+                          parent_id: 12
+                          children: {}
+                          resource_type: directory
+                      resource_type: directory
+                    '13':
+                      resource_name: ec
+                      resource_id: 13
+                      permission_names: []
+                      parent_id: 7
+                      children: {}
+                      resource_type: directory
+                    '14':
+                      resource_name: cmip5
+                      resource_id: 14
+                      permission_names: []
+                      parent_id: 7
+                      children:
+                        '15':
+                          resource_name: ccma
+                          resource_id: 15
+                          permission_names: []
+                          parent_id: 14
+                          children:
+                            '16':
+                              resource_name: canesm2
+                              resource_id: 16
+                              permission_names: []
+                              parent_id: 15
+                              children:
+                                '17':
+                                  resource_name: rcp85
+                                  resource_id: 17
+                                  permission_names: []
+                                  parent_id: 16
+                                  children:
+                                    '18':
+                                      resource_name: day
+                                      resource_id: 18
+                                      permission_names: []
+                                      parent_id: 17
+                                      children:
+                                        '19':
+                                          resource_name: pr_23.nc
+                                          resource_id: 19
+                                          permission_names: []
+                                          parent_id: 18
+                                          children: {}
+                                          resource_type: file
+                                        '23':
+                                          resource_name: test_with_service_resource_direct
+                                          resource_id: 23
+                                          permission_names: []
+                                          parent_id: 18
+                                          children: {}
+                                          resource_type: file
+                                      resource_type: directory
+                                  resource_type: directory
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+                  resource_type: directory
+                '21':
+                  resource_name: nimportequioi
+                  resource_id: 21
+                  permission_names: []
+                  parent_id: 5
+                  children: {}
+                  resource_type: directory
+            
+            
+              
+        400:
+          description: 'Service not found'
+          
+      
+    post:
+      tags:
+        - Resource
+      summary: Register a new resource directly under a service
+      consumes:
+        - application/xml
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          type: string
+          required: true
+          example: geoserver
+        - name: ResourceBody
+          in: body
+          schema:
+            $ref: '#/definitions/Resource'
+            
+      responses:
+        201:
+          description: 'Resource registered success'
+        409:
+          description: 'Conflict, this resource already exists under that service'
+              
+        400:
+          description: 'Service not found'
+            
+        
+      
+      
+  /services/{service_name}/permissions:
+    get:
+      tags:
+        - Resource
+      summary: List all possible permissions for a service
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          example: emu
+      produces:
+        - application/json
+      responses:
+        200:
+          example:
+            permission_names:
+              - getcapabilities
+              - describeprocess
+              - execute
+        400:
+          description: 'This service does not exist'
+          
+  /services/types/{type_name}/resources/types:
+    get:
+      tags:
+        - Resource
+      summary: List all resource type for a specific service type
+      parameters:
+        - name: type_name
+          description: Name of the service
+          in: path
+          example: thredds
+      produces:
+        - application/json
+      responses:
+        200:
+          example:
+            resource_types:
+              - directory
+              - file
+        400:
+              
+    
+      
+#---------------------------- Schema ---------------------
+definitions:
+  Credentials:
+    type: "object"
+    required:
+      - "user_name"
+      - "provider_name"
+    properties:
+      user_name:
+        type: string
+      password:
+        type: string
+      provider_name:
+        type: string
+        
+  Group:
+    type: "object"
+    required:
+      - "group_name"
+    properties:
+      group_name:
+        type: string
+        
+  User:
+    type: "object"
+    required:
+      - "user_name"
+      - "email"
+      - "password"
+      - "group_name"
+    properties:
+      user_name:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+      group_name:
+        type: string
+        
+  Resource:
+    type: "object"
+    required:
+      - "resource_name"
+      - "resource_type"
+      - "parent_id"
+    properties:
+      resource_name:
+        type: string
+      resource_type:
+        type: string
+      parent_id:
+        type: integer
+        
+  Service:
+    type: "object"
+    required:
+      - "service_name"
+      - "service_type"
+      - "service_url"
+    properties:
+      service_name:
+        type: string
+      service_type:
+        type: string
+      service_url:
+        type: string
+        
+  Permission:
+    type: "object"
+    required: 
+      - "permission_name"
+    properties:
+      permission_name:
+        type: string

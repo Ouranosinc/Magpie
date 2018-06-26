@@ -13,35 +13,34 @@ import time
 import logging
 LOGGER = logging.getLogger(__name__)
 
-# -- Ziggurat_foundation ----
-from ziggurat_foundations.models import groupfinder
-
-# -- Pyramid ----
-from pyramid.authentication import AuthTktAuthenticationPolicy
-from pyramid.authorization import ACLAuthorizationPolicy
-from pyramid.session import SignedCookieSessionFactory
-from pyramid.view import *
-from pyramid.security import NO_PERMISSION_REQUIRED
-from pyramid.config import Configurator
+# -- Definitions
+from definitions.alembic_definitions import *
+from definitions.pyramid_definitions import *
+from definitions.sqlalchemy_definitions import *
+from definitions.ziggurat_definitions import *
 
 # -- Project specific --------------------------------------------------------
-from __meta__ import __version__
 from __init__ import *
-#from db import postgresdb
-THIS_DIR = os.path.dirname(__file__)
-sys.path.insert(0, THIS_DIR)
-from api_except import *
+from api.api_except import *
+from api.api_rest_schemas import *
 import models
 import db
+import __meta__
+THIS_DIR = os.path.dirname(__file__)
+sys.path.insert(0, THIS_DIR)
 
 
-@view_config(route_name='version', permission=NO_PERMISSION_REQUIRED)
+@VersionAPI.get(schema=Version_GET_Schema(), tags=[APITag], response_schemas={
+    '200': Version_GET_OkResponseSchema(description="Get version successful.")})
+@view_config(route_name='version', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_version(request):
     return valid_http(httpSuccess=HTTPOk,
-                      content={u'version': __version__, u'db_version': db.get_database_revision(request.db)},
-                      detail="Get version successful", contentType='application/json')
+                      content={u'version': __meta__.__version__, u'db_version': db.get_database_revision(request.db)},
+                      detail="Get version successful.", contentType='application/json')
 
 
+#@NotFoundAPI.get(schema=NotFoundResponseSchema(), response_schemas={
+#    '404': NotFoundResponseSchema(description="Route not found")})
 @notfound_view_config()
 def not_found(request):
     content = get_request_info(request, default_msg="The route resource could not be found.")
@@ -95,9 +94,10 @@ def main(global_config=None, **settings):
         time.sleep(2)
         raise Exception('Database not ready')
 
+    magpie_url_template = 'http://{hostname}:{port}/magpie'
     hostname = os.getenv('HOSTNAME')
     if hostname:
-        settings['magpie.url'] = 'http://{hostname}:{port}/magpie'.format(hostname=hostname, port=settings['magpie.port'])
+        settings['magpie.url'] = magpie_url_template.format(hostname=hostname, port=settings['magpie.port'])
 
     magpie_secret = os.getenv('MAGPIE_SECRET')
     if magpie_secret is None:
@@ -116,22 +116,26 @@ def main(global_config=None, **settings):
         authentication_policy=authn_policy,
         authorization_policy=authz_policy
     )
-    # include magpie components (all the file which define includeme)
 
-    config.include('pyramid_chameleon')
-    config.include('pyramid_mako')
-    config.include('login')
-    config.include('home')
-    config.include('db')
-    config.include('management')
-    config.include('ui')
+    config.include('magpie')
 
-    config.add_route('version', '/version')
+    # include api views
+    magpie_api_path = '{}/__api__'.format(settings['magpie.url'])
+    magpie_api_view = '{}/api-explorer'.format(settings['magpie.url'])
+    config.cornice_enable_openapi_view(
+        api_path=magpie_api_path,
+        title='Magpie REST API',
+        description="OpenAPI documentation",
+        version=__meta__.__version__
+    )
+    config.cornice_enable_openapi_explorer(api_explorer_path=magpie_api_view)
+    #config.register_swagger_ui(swagger_ui_path=magpie_api_path)
+
     config.scan('magpie')
-
     config.set_default_permission(ADMIN_PERM)
 
-    return config.make_wsgi_app()
+    wsgi_app = config.make_wsgi_app()
+    return wsgi_app
 
 
 if __name__ == '__main__':

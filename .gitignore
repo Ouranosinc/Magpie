@@ -1,6 +1,8 @@
+__pycache__/
 *.pyc
 .idea/
 .eggs/
+.pytest_cache/
 build/
 dist/
 docs/_build/
@@ -13,6 +15,8 @@ docs/magpie.tests.rst
 docs/magpie.rst
 env/
 magpieenv/
+magpie/api_docs/
+magpie/api_test/
 magpie/bin/
 magpie/include/
 magpie/lib/

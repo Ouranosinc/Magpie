@@ -1,0 +1,3243 @@
+openapi: 3.0.0
+info:
+  description: |
+    Magpie Rest API Documentation
+  version: "0.3.x"
+  title: 'Magpie Rest API'
+  contact:
+    name: Francois-Xavier
+    email: francois-xavier.derue@crim.ca
+servers:
+  - url: 'https://{bird_hostname}.crim.ca/magpie'
+    description: Magpie Admin
+    variables:
+      bird_hostname:
+        enum:
+          - pluvier
+          - outarde
+          - hirondelle
+          - colibri
+        default: pluvier
+  - url: 'http://{bird_hostname}.crim.ca:2001'
+    description: Magpie Admin
+    variables:
+      bird_hostname:
+        enum:
+          - pluvier
+          - outarde
+          - hirondelle
+          - colibri
+        default: pluvier
+  - url: 'https://{bird_hostname}.crim.ca:28001'
+    description: Magpie Admin
+    variables:
+      bird_hostname:
+        enum:
+          - pluvier
+          - outarde
+          - hirondelle
+          - colibri
+        default: pluvier
+paths:
+  /version:
+    get:
+      summary: Get API version
+      responses:
+        '200':
+          description: version successfully returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/version/get/200'
+  /signin:
+    post:
+      tags:
+        - Login
+      summary: Logs user into the system
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SigninCredentials'
+      responses:
+        '200':
+          description: Internal/External login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/signin/post/200'
+        '401':
+          description: 'Unauthorized access (wrong credentials, login failed)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/signin/post/401'
+        '406':
+          description: Invalid login credential values (login failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/signin/post/406'
+  /signout:
+    get:
+      tags:
+        - Login
+      summary: Logs out current logged in user sesion
+      description: Remove auth_tkt from header
+      operationId: signout
+      responses:
+        '200':
+          description: logout successful
+  /session:
+    get:
+      tags:
+        - Login
+      summary: get info about current session
+      description: Get info about current session
+      operationId: session
+      responses:
+        '200':
+          description: 'user_name, user_email, group_name'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/session/get/200'
+  /providers:
+    get:
+      tags:
+        - Login
+      summary: Get list of providers
+      responses:
+        '200':
+          description: providers successfully returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/providers/get/200'
+  /groups:
+    get:
+      tags:
+        - Group
+      summary: Get list of group names
+      responses:
+        '200':
+          description: list of group names
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/groups/get/200'
+        '403':
+          description: access to group names forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/groups/get/403'
+    post:
+      tags:
+        - Group
+      summary: Create a group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupBody'
+      responses:
+        '201':
+          description: group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group/post/201'
+        '403':
+          description: '[Forbidden] Group creation refused'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group/post/409'
+        '409':
+          description: '[Conflict] Group already exists'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group/post/409'
+  '/groups/{group_name}':
+    delete:
+      tags:
+        - Group
+      summary: Delete a group by name
+      parameters:
+        - name: group_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: name of group to delete
+      responses:
+        '200':
+          description: group deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group/delete/200'
+        '403':
+          description: group deletion forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group/delete/403'
+        '404':
+          description: group not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/responses/group/matchdict_check/404'
+                  - $ref: '#/components/responses/generic/404'
+  '/groups/{group_name}/users':
+    get:
+      tags:
+        - Group
+      summary: List all user from group
+      parameters:
+        - name: group_name
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: group name
+      responses:
+        '200':
+          description: group users found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group_users/get/200'
+  '/groups/{group_name}/resources':
+    get:
+      tags:
+        - Group
+      summary: List all resources a group has permission on
+      responses:
+        '200':
+          description: group resources permissions found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group_resources/get/200'
+  '/groups/{group_name}/resources/{resource_id}/permissions':
+    get:
+      tags:
+        - Group
+      summary: List all permissions a group has on a specific resource
+      parameters:
+        - name: group_name
+          description: Name of the group
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: resource_id
+          description: Id of the resource
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: list of group permissions on a specific resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group_resource_or_service_permissions/get/200'
+        '403':
+          description: resource id query forbidden by db
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/403'
+        '404':
+          description: resource id not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/404'
+        '406':
+          description: invalid resource id (format/type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/406'
+    post:
+      tags:
+        - Group
+      summary: Create a permission on a specific resource for that group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionBodyCreate'
+      responses:
+        '201':
+          description: permission created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group_resource_or_service_permission/post/201'
+        '403':
+          description: permission creation forbidden by db
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group_resource_or_service_permission/post/403'
+        '404':
+          description: resource id not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/404'
+        '406':
+          description: invalid resource id (format/type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/406'
+        '409':
+          description: conflict with existing permission for corresponding group and resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group_resource_or_service_permission/post/409'
+  '/groups/{group_name}/resources/{resource_id}/permissions/{permission_name}':
+    delete:
+      tags:
+        - Group
+      summary: Delete a permission on a resource for a group
+      parameters:
+        - name: group_name
+          description: name of the group
+          in: path
+          schema:
+            type: string
+          required: true
+          example: admin
+        - name: permission_name
+          description: name of the permission
+          in: path
+          schema:
+            type: string
+          required: true
+          example: getcapabilities
+        - name: resource_id
+          description: id of the resource
+          in: path
+          schema:
+            type: integer
+          required: true
+          example: 44
+      responses:
+        '200':
+          description: permission deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group_resource_or_service_permission/delete/200'
+        '404':
+          description: 'group, resource or permission not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/generic/404'
+  '/groups/{group_name}/services':
+    get:
+      tags:
+        - Group
+      summary: List all services a group has permission on
+      parameters:
+        - name: group_name
+          description: name of the group
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: list of all services a group has permissions on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group_services/get/200'
+  '/groups/{group_name}/services/{service_name}/permissions':
+    get:
+      tags:
+        - Group
+      summary: List all permissions a group has on a specific service
+      parameters:
+        - name: group_name
+          in: path
+          description: Name of the group
+          required: true
+          schema:
+            type: string
+        - name: service_name
+          in: path
+          description: Name of the service
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: list of group permissions on a specific service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group_resource_or_service_permissions/get/200'
+        '404':
+          description: service or group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/generic/404'
+    post:
+      tags:
+        - Group
+      summary: Create a permission on a service for a group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupServicePermissionBodyCreate'
+      responses:
+        '201':
+          description: group service permission created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group_resource_or_service_permission/post/201'
+        '404':
+          description: service or group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/generic/404'
+  '/groups/{group_name}/services/{service_name}/permissions/{permission_name}':
+    delete:
+      tags:
+        - Group
+      summary: Delete a permission on a service for a group
+      parameters:
+        - name: group_name
+          description: name of the group
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: permission_name
+          description: name of the permission
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: service_name
+          description: name of the service
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: user not found
+          content:
+            application/json:
+              schema:
+                $ref: >-
+                  #/components/responses/group_resource_or_service_permission/delete/200
+        '404':
+          description: service or permission not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/generic/404'
+  '/groups/{group_name}/services/{service_name}/resources':
+    get:
+      tags:
+        - Group
+      summary: List all resources under a service a group has permission on
+      parameters:
+        - name: group_name
+          description: name of the group
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: service_name
+          description: name of the service
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: list of resources under the service the group has permission on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/group_service_resources/get/200'
+        '400':
+          description: group or service not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/generic/404'
+  /users:
+    get:
+      tags:
+        - User
+      summary: List all users registered
+      responses:
+        '200':
+          description: list of registered user 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/users/get/200'
+        '403':
+          description: get list forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/users/get/403'
+    post:
+      tags:
+        - User
+      summary: Create a new user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBodyCreate'
+      responses:
+        '201':
+          description: user created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/users/post/201'
+        '403':
+          description: 'Forbidden access for user creation'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/users/post/403'
+        '406':
+          description: 'Invalid required parameter received'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/users/post/406'
+        '409':
+          description: 'Conflict, this user already exists (or any sub-dependency)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/users/post/409'
+  '/users/{user_name}':
+    get:
+      tags:
+        - User
+      summary: Get user information
+      parameters:
+        - name: user_name
+          description: name of user to get information from
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: found user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user/get/200'
+        '403':
+          description: get user information forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user/matchdict_check/403'
+        '404':
+          description: user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/generic/404'
+    delete:
+      tags:
+        - User
+      summary: Delete a user by name
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: user deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user/delete/200'
+        '404':
+          description: user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/generic/404'
+  '/users/{user_name}/groups':
+    get:
+      tags:
+        - User
+      summary: List all groups a user belongs to
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          schema:
+            type: string
+          required: true
+          example: simpleusername
+      responses:
+        '200':
+          description: list of groups the user belongs to
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user_groups/get/200'
+        '404':
+          description: user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/generic/404'
+    post:
+      tags:
+        - User
+      summary: Assign a user to a group
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          schema:
+            type: string
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupBody'
+      responses:
+        '201':
+          description: User Group relation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user_group/post/201'
+        '404':
+          description: user name does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user/matchdict_check/404'
+        '409':
+          description: 'conflict, user already belongs to that group'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user_group/post/409'
+  '/users/{user_name}/groups/{group_name}':
+    delete:
+      tags:
+        - User
+      summary: Remove user from a group
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: group_name
+          description: Name of the group
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: user removed from group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user_group/delete/200'
+        '406':
+          description: user does not belong to group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user_group/delete/406'
+  '/users/{user_name}/resources':
+    get:
+      tags:
+        - User
+      summary: List all resources a user has permission on
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: list of all resources the user has permission on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user_resources/get/200'
+        '404':
+          description: could not find user name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/generic/404'
+  '/users/{user_name}/resources/{resource_id}/permissions':
+    get:
+      tags:
+        - User
+      summary: List all permissions a user has on a specific resource
+      parameters:
+      
+        - name: user_name
+          description: Name of the user
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: resource_id
+          schema:
+            type: integer
+          description: Id of the resource
+          in: path
+          required: true
+      responses:
+        '200':
+          description: list of all permissions the user has for a specific resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user_resource_permissions/get/200'
+    post:
+      tags:
+        - User
+      summary: Create a permission on specific resource for a user
+      parameters:
+        - name: user_name
+          description: Name of the user
+          schema:
+            type: string
+          in: path
+          required: true
+        - name: resource_id
+          schema:
+            type: integer
+          description: Id of the resource
+          in: path
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionBodyCreate'
+      responses:
+        '201':
+          description: permission created
+        '409':
+          description: >-
+            Conflict, this permission on that resource already exist for that
+            user
+  '/users/{user_name}/resources/{resource_id}/permissions/{permission_name}':
+    delete:
+      tags:
+        - User
+      summary: Delete a permission on a resource for a user
+      parameters:
+        - name: user_name
+          description: name of the group
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: permission_name
+          description: name of the permission
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: resource_id
+          description: id of the resource
+          in: path
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: permission deleted
+        '400':
+          description: permission not found
+  '/users/{user_name}/services':
+    get:
+      tags:
+        - User
+      summary: List all services a user has permission on
+      parameters:
+        - name: user_name
+          description: Name of the user
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: list of services the user has permission on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user_services/get/200'
+  '/users/{user_name}/services/{service_name}/permissions':
+    get:
+      tags:
+        - User
+      summary: List all permissions a user has on a service
+      parameters:
+        - name: user_name
+          description: Name of the user
+          schema:
+            type: string
+          in: path
+          required: true
+        - name: service_name
+          schema:
+            type: string
+          description: Name of the service
+          in: path
+          required: true
+      responses:
+        '200':
+          description: list of permissions the user has on a specific service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user_service_permissions/get/200'
+    post:
+      tags:
+        - User
+      summary: Create a permission on a service for a user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionBodyCreate'
+      parameters:
+        - name: user_name
+          description: Name of the group
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: service_name
+          description: Name of the service
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '201':
+          description: permission created for user on a specific service 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/user_service_permissions/post/201'
+  '/users/{user_name}/services/{service_name}/permissions/{permission_name}':
+    delete:
+      tags:
+        - User
+      summary: Delete a permission on a service for a user
+      parameters:
+        - name: user_name
+          description: name of the group
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: permission_name
+          description: name of the permission
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: service_name
+          description: name of the service
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: permission deleted
+        '400':
+          description: permission not found
+  '/users/{user_name}/services/{service_name}/resources':
+    get:
+      tags:
+        - User
+      summary: List all resources under a service a user has permission on
+      parameters:
+        - name: user_name
+          description: name of the group
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: service_name
+          description: name of the service
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: list of service resources the user has permission on
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/responses/user_service_resources/get/200'
+  /resources:
+    get:
+      tags:
+        - Resource
+      summary: List all resources registered in the database
+      responses:
+        '200':
+          description: list of all resources with corresponding information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resources/get/200'
+    post:
+      tags:
+        - Resource
+      summary: Register a new resource
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceBodyCreate'
+      responses:
+        '201':
+          description: resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resources/post/201'     
+  '/resources/{resource_id}':
+    get:
+      tags:
+        - Resource
+      summary: Get resource info
+      parameters:
+        - name: resource_id
+          description: Id of the resource
+          in: path
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: 'list of resource information and its children tree (recursive information)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/get/200'
+        '403':
+          description: resource id query forbidden by db
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/403'
+        '404':
+          description: resource id not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/404'
+        '406':
+          description: invalid resource id (format/type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/406'
+    put:
+      tags:
+        - Resource
+      summary: Rename resource
+      parameters:
+        - name: resource_id
+          description: id of resource to edit 
+          in: path
+          schema: 
+            type: integer
+          required: true
+      requestBody: 
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/ResourceBodyEdit'
+      responses:
+        '403':
+          description: resource id query forbidden by db
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/403'
+        '404':
+          description: resource id not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/404'
+        '406':
+          description: invalid resource id (format/type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/406'
+    delete:
+      tags:
+        - Resource
+      summary: Unregister resource from the database
+      parameters:
+        - name: resource_id
+          description: id of the resource
+          in: path
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: resource deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/delete/200'
+        '403':
+          description: resource deletion forbidden by db
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/delete/403'
+        '404':
+          description: resource id not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/404'
+        '406':
+          description: invalid resource id (format/type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/406'
+  '/resources/{resource_id}/permissions':
+    get:
+      tags:
+        - Resource
+      summary: List all possible permissions for a resource
+      parameters:
+        - name: resource_id
+          description: Id of the resource
+          in: path
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: get available permissions of resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource_permissions/get/200'
+        '403':
+          description: resource id query forbidden by db
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/403'
+        '404':
+          description: resource id not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/404'
+        '406':
+          description: invalid resource id (format/type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resource/matchdict_check/406'
+  /services:
+    get:
+      tags:
+        - Service
+      summary: List all services registered
+      parameters:
+        - name: service_name
+          description: name of service
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: get services information
+          content:  
+            application/json:
+              schema:
+                $ref: '#/components/responses/resources/get/200'
+    post:
+      tags:
+        - Service
+      summary: Register a new service
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceBodyCreate'
+      responses:
+        '201':
+          description: Service registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/services/post/201'
+        '409':
+          description: service with this name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/services/post/409'
+  '/services/types/{service_type}':
+    get:
+      tags:
+        - Service
+      summary: List all a service filtered by type
+      parameters:
+        - name: service_type
+          description: type of service
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: get service filtered by a specific service type
+          content:  
+            application/json:
+              schema:
+                $ref: '#/components/responses/services_filtered_type/get/200'
+  '/services/{service_name}':
+    get:
+      tags:
+        - Service
+      summary: Get service info
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: get service information
+          content:  
+            application/json:
+              schema:
+                $ref: '#/components/responses/service/get/200'
+    put:
+      tags:
+        - Service
+      summary: Update service information (name or URL)
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          schema:
+            type: string
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/ServiceBodyEdit_NameAndURL'
+                - $ref: '#/components/schemas/ServiceBodyEdit_Name'
+                - $ref: '#/components/schemas/ServiceBodyEdit_URL'
+      responses:
+        '200':
+          description: service updated
+          content:  
+            application/json:
+              schema:
+                $ref: '#/components/responses/service/put/200'
+        '400':
+          description: service not found
+          content:  
+            application/json:
+              schema:
+                $ref: '#/components/responses/service/put/400'
+        '403':
+          description: service not found
+          content:  
+            application/json:
+              schema:
+                $ref: '#/components/responses/service/put/403'
+        '404':
+          description: service not found
+          content:  
+            application/json:
+              schema:
+                $ref: '#/components/responses/service/matchdict_check/404'
+        '409':
+          description: service not found
+          content:  
+            application/json:
+              schema:
+                $ref: '#/components/responses/service/put/409'
+    delete:
+      tags:
+        - Service
+      summary: Unregister a service from the database
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: service unregistered success
+        '400':
+          description: service not found
+  '/services/{service_name}/resources':
+    get:
+      tags:
+        - Service
+      summary: List all resources registered under a service
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: list of registered resources under the service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/service_resources/get/200'
+        '404':
+          description: Service not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/service_resources/get/404'
+    post:
+      tags:
+        - Resource
+        - Service
+      summary: Register a new resource directly under a service
+      requestBody:
+        content:
+          application/json: 
+            schema:
+              $ref: '#/components/schemas/ResourceBodyCreate'
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '201':
+          description: Resource registered success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/resources/post/201'
+        '404':
+          description: Service not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/service/matchdict_check/404'
+        '409':
+          description: 'Conflict, this resource already exists under that service'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/services/post/409'
+  '/services/{service_name}/permissions':
+    get:
+      tags:
+        - Service
+      summary: List all possible permissions for a service
+      parameters:
+        - name: service_name
+          description: Name of the service
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: get service permissions
+          content:  
+            application/json:
+              schema:
+                $ref: '#/components/responses/service_permissions/get/200'
+        '404':
+          description: service does not exist
+          content:  
+            application/json:
+              schema:
+                $ref: '#/components/responses/service/matchdict_check/404'
+        '406':
+          description: failed to retrieve permissions with corresponding service type
+          content:  
+            application/json:
+              schema:
+                $ref: '#/components/responses/service_permissions/get/406'
+  '/services/types/{service_type}/resources/types':
+    get:
+      tags:
+        - Service
+      summary: List all resource type for a specific service type
+      parameters:
+        - name: service_type
+          description: Name of the service type
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: list of all resources the user has permission on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/service_type_resource_types/get/200'
+        '404':
+          description: could not find service type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/service_type_resource_types/get/404'
+components:
+  schemas:
+    base:
+      type: object
+      required:
+        - code
+        - detail
+        - type
+      properties:
+        code:
+          type: integer
+        detail:
+          type: string
+        type:
+          type: string
+    notfound:
+      required:
+        - route_name
+        - request_url
+      allOf:
+        - $ref: '#/components/schemas/base'
+        - type: object
+          properties:
+            route_name:
+              type: string
+            request_url:
+              type: string
+            paramCompare:
+              type: string
+            param:
+              type: string
+    SigninCredentials:
+      type: object
+      required:
+        - user_name
+        - password
+        - provider_name
+      properties:
+        user_name:
+          type: string
+        password: 
+          type: string
+        provider_name: 
+          type: string 
+          enum: 
+            - ziggurat
+            - openid
+            - dkrz
+            - ipsl
+            - badc
+            - pcmdi
+            - smhi
+            - github
+    group:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            type: string
+        group_id:
+          type: integer
+        description:
+          type: string
+        member_count:
+          type: integer
+        group_name:
+          type: string        
+    GroupBody:
+      type: object
+      required:
+        - group_name
+      properties:
+        group_name:
+          description: The name of the group should be unique
+          type: string
+    GroupServicePermissionBodyCreate:
+      allOf:
+        - $ref: '#/components/schemas/PermissionBodyCreate'
+        - type: object
+          properties:
+            group_name:
+              type: string
+            service_name:
+              type: string
+    group_resource_permission:
+      type: object
+      properties:
+        permission_name:
+          type: string
+        resource_id:
+          type: integer
+        group_id:
+          type: integer
+    group_service_permission:
+      type: object
+      properties:
+        permission_name:
+          type: string
+        service_name:
+          type: string
+        group_id:
+          type: integer
+    user:
+      type: object
+      required:
+        - user_name
+        - email
+        - group_names
+      properties:
+        user_name:
+          type: string
+        email:
+          type: string
+        group_names:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+    UserBodyCreate:
+      type: object
+      required:
+        - user_name
+        - email
+        - password
+        - group_name
+      properties:
+        user_name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        group_name:
+          type: string
+    resources:
+      type: object
+      required:
+        - resources
+      properties:
+        resources:
+          type: object
+          properties:
+            thredds:
+              $ref: '#/components/schemas/service'
+            wfs:
+              $ref: '#/components/schemas/service'
+            wps:
+              $ref: '#/components/schemas/service'
+            ncwms:
+              $ref: '#/components/schemas/service'
+            geoserverwms:
+              $ref: '#/components/schemas/service'
+    resource_basic:
+      type: object
+      required:
+        - resource_name
+        - resource_type
+        - resource_id
+      properties:
+        resource_name:
+          type: string
+        resource_type:
+          type: string
+        resource_id:
+          type: integer      
+    resource:
+      type: object
+      required:
+        - resource_name
+        - resource_type
+        - resource_id
+        - parent_id
+        - permission_names
+        - children
+      properties:
+        resource_name:
+          type: string
+        resource_type:
+          type: string
+        resource_id:
+          type: integer
+        parent_id:
+          type: integer
+          nullable: true
+        permission_names:
+          uniqueItems: true
+          type: array
+          items:
+            type: string
+        children:
+          oneOf:
+            - $ref: '#/components/schemas/resource'
+            - type: object
+              maxProperties: 0
+    resource_types:
+      type: object
+      required:
+        - resource_types
+      properties:
+        resource_types:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+    ResourceBodyCreate:
+      type: object
+      required:
+        - resource_name
+        - resource_type
+      properties:
+        resource_name:
+          type: string
+        resource_type:
+          type: string
+    ResourceBodyEdit:
+      type: object
+      required:
+        - resource_name
+      properties:
+        resource_name:
+          type: string
+          description: new name to apply to the resource
+        service_push:
+          type: string
+          description: push renamed resource to Phoenix
+    service_thredds:
+      type: object
+      properties:
+        thredds:
+          $ref: '#/components/schemas/service'
+    service_geoserverwms:
+      type: object
+      properties:
+        geoserverwms:
+          $ref: '#/components/schemas/service'
+    service_ncwms:
+      type: object
+      properties:
+        ncwms:
+          $ref: '#/components/schemas/service'
+    service_wfs:
+      type: object
+      properties:
+        wfs:
+          $ref: '#/components/schemas/service'
+    service_wps:
+      type: object
+      properties:
+        wps:
+          $ref: '#/components/schemas/service'          
+    service:
+      type: object
+      required:
+        - service_name
+        - service_type
+        - service_url
+        - public_url
+        - permission_names
+        - resource_id
+      properties:
+        service_name:
+          type: string
+        service_type:
+          type: string
+        service_url:
+          type: string
+        public_url:
+          type: string
+        permission_names:
+          $ref: '#/components/schemas/permissions/properties/permission_names'
+        resource_id:
+          type: integer
+        resources:
+          $ref: '#/components/schemas/resource'
+    services:
+      type: object
+      required:
+        - services
+      properties:
+        services:
+          type: object
+          properties:
+            thredds:
+              $ref: '#/components/schemas/service'
+            wfs:
+              $ref: '#/components/schemas/service'
+            wps:
+              $ref: '#/components/schemas/service'
+            ncwms:
+              $ref: '#/components/schemas/service'
+            geoserverwms:
+              $ref: '#/components/schemas/service'
+    ServiceBodyCreate:
+      type: object
+      required:
+        - service_name
+        - service_type
+        - service_url
+      properties:
+        service_name:
+          type: string
+        service_type:
+          type: string
+        service_url:
+          type: string
+    ServiceBodyEdit_Name:
+      type: object
+      required:
+        - service_name
+      properties:
+        service_name:
+          description: New name to apply to the service
+          type: string
+    ServiceBodyEdit_URL:
+      type: object
+      required:
+        - service_url
+      properties:
+        service_url:
+          description: New URL to apply to the service
+          type: string      
+    ServiceBodyEdit_NameAndURL:
+      type: object
+      required:
+        - service_name
+        - service_url
+      properties:
+        service_name:
+          description: New name to apply to the service
+          type: string
+        service_url:
+          description: New URL to apply to the service
+          type: string      
+    PermissionBodyCreate:
+      type: object
+      required:
+        - permission_name
+      properties:
+        permission_name:
+          type: string
+    permissions:
+      type: object
+      required: 
+        - permission_names
+      properties:
+        permission_names:
+          type: array
+          uniqueItems: true
+          items: 
+            type: string
+  responses:
+    generic:
+      '200':
+        schema:
+          $ref: '#/components/schemas/base'
+        example:
+          code: 200
+          type: application/json
+          detail: OK
+      '404':
+        allOf:
+          - $ref: '#/components/schemas/base'
+          - type: object
+            properties:
+              request_url:
+                type: string
+              route_name:
+                type: string
+        example:
+          code: 404
+          type: application/json
+          detail: The route resource could not be found
+          request_url: '{bird_hostname}/magpie/{resquest_path}'
+          route_name: '{resquest_path}'
+      '500':
+        allOf:
+          - $ref: '#/components/schemas/base'
+          - type: object
+            properties:
+              request_url:
+                type: string
+              route_name:
+                type: string
+        example:
+          code: 500
+          type: application/json
+          detail: Internal Server Error. Unhandled exception occurred
+          request_url: '{bird_hostname}/magpie/{resquest_path}'
+          route_name: '{resquest_path}'
+    providers:
+      description: login providers
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                internal_providers:
+                  type: array
+                  items:
+                    type: string
+                external_providers:
+                  type: array
+                  items:
+                    type: string
+                provider_names:
+                  type: array
+                  items:
+                    type: string
+          example:
+            code: 200
+            detail: Get providers successful
+            type: application/json
+            internal_providers:
+              - ziggurat
+            external_providers:
+              - openid
+              - dkrz
+              - ipsl
+              - badc
+              - pcmdi
+              - smhi
+              - github
+            provider_names:
+              - ziggurat
+              - openid
+              - dkrz
+              - ipsl
+              - badc
+              - pcmdi
+              - smhi
+              - github
+    signin:
+      description: sign in
+      post:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                headers:
+                  type: string
+          example:
+            code: 200
+            type: application/json
+            detail: Login successful
+            headers: <login headers>
+        '401':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                reason:
+                  type: string
+          example:
+            code: 401
+            type: application/json
+            detail: Login failure
+            reason: not specified
+        '406':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                reason:
+                  type: string
+          example:
+            code: 406
+            type: application/json
+            detail: Login failure
+            reason: not specified
+    signout:
+      description: sign out
+      post:
+        '200':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 200
+            type: application/json
+            detail: Sign out successful
+    services:
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
+          example:
+            code: 200
+            type: application/json
+            detail: Get services successful
+            services:
+              wps:
+                malleefowl:
+                  service_type: wps
+                  service_name: malleefowl
+                  service_url: 'http://outarde.crim.ca:8091'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/malleefowl'
+                  permission_names: []
+                  resource_id: 1
+                lb_flyingpigeon:
+                  service_type: wps
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://outarde.crim.ca:58093/wps'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/lb_flyingpigeon'
+                  permission_names: []
+                  resource_id: 2
+                catalog:
+                  service_type: wps
+                  service_name: catalog
+                  service_url: 'http://outarde.crim.ca:8086/pywps'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/catalog'
+                  permission_names: []
+                  resource_id: 3
+              thredds:
+                thredds:
+                  service_type: thredds
+                  service_name: thredds
+                  service_url: 'http://outarde.crim.ca:8083/thredds'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/thredds'
+                  permission_names: []
+                  resource_id: 5
+              wfs:
+                geoserver:
+                  service_type: wfs
+                  service_name: geoserver
+                  service_url: 'http://outarde.crim.ca:8087/geoserver'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/thredds'
+                  permission_names: []
+                  resource_id: 6
+              ncwms:
+                ncWMS2:
+                  service_type: ncwms
+                  service_name: ncWMS2
+                  service_url: 'http://outarde.crim.ca:8080/ncWMS2'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/ncWMS2'
+                  permission_names: []
+                  resource_id: 7
+              geoserverwms:
+                geoserverwms:
+                  service_type: geoserverwms
+                  service_name: geoserverwms
+                  service_url: 'http://outarde.crim.ca:8087/geoserverwms'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/geoserverwms'
+                  permission_names: []
+                  resource_id: 8
+      post:
+        '201':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 201
+            type: application/json
+            detail: "Create resource successful"
+        '409':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 409
+            type: application/json
+            detail: "Resource name already exists at requested tree level for creation"
+    services_filtered_type:
+      description: filtered services by specific type
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
+          example:
+            services:
+              wps:
+                lb_malleefowl:
+                  service_type: wps
+                  service_name: lb_malleefowl
+                  service_url: 'http://outarde.crim.ca:58091/wps'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/lb_malleefowl'
+                  permission_names: []
+                  resource_id: 1
+                lb_flyingpigeon:
+                  service_type: wps
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://outarde.crim.ca:58093/wps'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/lb_flyingpigeon'
+                  permission_names: []
+                  resource_id: 2
+                lb_catalog:
+                  service_type: wps
+                  service_name: lb_catalog
+                  service_url: 'http://outarde.crim.ca:58086/pywps'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/lb_catalog'
+                  permission_names: []
+                  resource_id: 3
+    service:
+      matchdict_check:
+        '403':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 403
+            type: application/json
+            detail: Service query by name refused by db
+        '404':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 404
+            type: application/json
+            detail: Service name not found in db
+            service_name: "<name_of_not_found_service>"
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+          oneOf:
+            - $ref: '#/components/schemas/service_thredds'
+            - $ref: '#/components/schemas/service_geoserverwms'
+            - $ref: '#/components/schemas/service_ncwms'
+            - $ref: '#/components/schemas/service_wfs'
+            - $ref: '#/components/schemas/service_wps'
+          example:
+            code: 200
+            type: application/json
+            detail: "Get service successful"            
+            thredds:
+              service_type: thredds
+              service_name: thredds
+              service_url: 'http://outarde.crim.ca:8083/thredds'
+              public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/thredds'
+              permission_names: []
+              resource_id: 5
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
+          example:
+            code: 403
+            type: application/json
+            detail: "Service query by name refused by db"             
+        '404':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                service_name:
+                  type: string
+          example:
+            code: 404
+            type: application/json
+            detail: "Service name not found in db"
+            service_name: "service_does_not_exist"
+      put:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+          example:
+            code: 200
+            type: application/json
+            detail: "Update service successful"
+        '400':
+          allOf:
+            - $ref: '#/components/schemas/base'
+          example:
+            code: 400
+            type: application/json
+            detail: "Current service values are already equal to update values" 
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/service'
+          example:
+            code: 403
+            type: application/json
+            detail: "Update service failed during value assignment"
+            service:
+              service_name: "thredds"
+              serivce_type: "thredds"
+              service_url: 'http://outarde.crim.ca:8083/thredds'
+              public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/thredds'
+              permission_names: []
+              resource_id: 5
+            new_service_name: "some_new_name_for_thredds"
+            new_service_url: "some_new_url_for_thredds"
+        '409':
+          allOf:
+            - $ref: '#/components/schemas/base'
+          example:
+            code: 409
+            type: application/json
+            detail: "Specified `service_name` value 'thredds' already exists" 
+    service_permissions:
+      description: permissions of corresponding service type
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/permissions'
+          example:
+            code: 200
+            type: application/json
+            detail: Get service permissions successful
+            permission_names:
+              - getcapabilities
+              - describeprocess
+              - execute
+        '406':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/service'
+          example:
+            code: 406
+            type: application/json
+            detail: Invalid service type specified by service
+            service:
+              service_name: "thredds"
+              serivce_type: "thredds"
+              service_url: 'http://outarde.crim.ca:8083/thredds'
+              public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/thredds'
+              permission_names: []
+              resource_id: 5
+    resources:
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/resources'
+          example:
+            code: 200
+            type: application/json
+            detail: "Get resources successful"
+            resources:
+              wms: {}
+              wfs: {}
+              wps:
+                lb_malleefowl:
+                  resource_id: 1
+                  permission_names: []
+                  service_name: lb_malleefowl
+                  service_url: 'http://outarde.crim.ca:58091/wps'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/lb_malleefowl'
+                  service_type: wps
+                  resources: {}
+                lb_flyingpigeon:
+                  resource_id: 2
+                  permission_names: []
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://outarde.crim.ca:58093/wps'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/lb_flyingpigeon'
+                  service_type: wps
+                  resources: {}
+                lb_catalog:
+                  resource_id: 3
+                  permission_names: []
+                  service_name: lb_catalog
+                  service_url: 'http://outarde.crim.ca:58086/pywps'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/lb_catalog'
+                  service_type: wps
+                  resources: {}
+              thredds:
+                thredds:
+                  resource_id: 5
+                  permission_names: []
+                  service_name: thredds
+                  service_url: 'http://outarde.crim.ca:8083/thredds'
+                  public_url: 'https://outarde.crim.ca/twitcher/ows/proxy/thredds'
+                  service_type: thredds
+                  resources:
+                    '7':
+                      resource_name: birdhouse
+                      resource_id: 7
+                      permission_names: []
+                      parent_id: 5
+                      children:
+                        '8':
+                          resource_name: nrcan
+                          resource_id: 8
+                          permission_names: []
+                          parent_id: 7
+                          children:
+                            '9':
+                              resource_name: nrcan_pr_3.nc
+                              resource_id: 9
+                              permission_names: []
+                              parent_id: 8
+                              children: {}
+                              resource_type: file
+                            '10':
+                              resource_name: nrcan_pr_5.nc
+                              resource_id: 10
+                              permission_names: []
+                              parent_id: 8
+                              children: {}
+                              resource_type: file
+                            '11':
+                              resource_name: nrcan_pr_10.nc
+                              resource_id: 11
+                              permission_names: []
+                              parent_id: 8
+                              children: {}
+                              resource_type: file
+                          resource_type: directory
+                        '12':
+                          resource_name: ouranos
+                          resource_id: 12
+                          permission_names: []
+                          parent_id: 7
+                          children:
+                            '20':
+                              resource_name: ouranos_pr_34.nc
+                              resource_id: 20
+                              permission_names: []
+                              parent_id: 12
+                              children: {}
+                              resource_type: file
+                            '22':
+                              resource_name: nimportequioi
+                              resource_id: 22
+                              permission_names: []
+                              parent_id: 12
+                              children: {}
+                              resource_type: directory
+                          resource_type: directory
+                        '13':
+                          resource_name: ec
+                          resource_id: 13
+                          permission_names: []
+                          parent_id: 7
+                          children: {}
+                          resource_type: directory
+                        '14':
+                          resource_name: cmip5
+                          resource_id: 14
+                          permission_names: []
+                          parent_id: 7
+                          children:
+                            '15':
+                              resource_name: ccma
+                              resource_id: 15
+                              permission_names: []
+                              parent_id: 14
+                              children:
+                                '16':
+                                  resource_name: canesm2
+                                  resource_id: 16
+                                  permission_names: []
+                                  parent_id: 15
+                                  children:
+                                    '17':
+                                      resource_name: rcp85
+                                      resource_id: 17
+                                      permission_names: []
+                                      parent_id: 16
+                                      children:
+                                        '18':
+                                          resource_name: day
+                                          resource_id: 18
+                                          permission_names: []
+                                          parent_id: 17
+                                          children:
+                                            '19':
+                                              resource_name: pr_23.nc
+                                              resource_id: 19
+                                              permission_names: []
+                                              parent_id: 18
+                                              children: {}
+                                              resource_type: file
+                                          resource_type: directory
+                                      resource_type: directory
+                                  resource_type: directory
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+                    '21':
+                      resource_name: nimportequioi
+                      resource_id: 21
+                      permission_names: []
+                      parent_id: 5
+                      children: {}
+                      resource_type: directory
+      post:
+        '201':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                resource:
+                  $ref: '#/components/schemas/resource_basic'
+          example:
+            code: 201
+            type: application/json
+            detail: Create resource successful
+            resource: 
+              resource_name: "my_new_awesome_resource"
+              resource_type: "wps"
+              resource_id: 9000
+    resource:
+      matchdict_check:
+        '403':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 403
+            type: application/json
+            detail: Resource query by id refused by db
+        '404':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 404
+            type: application/json
+            detail: Resource ID not found in db
+        '406':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 406
+            type: application/json
+            detail: Resource ID is an invalid literal for `int` type
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/resource'
+          example:
+            '14':
+              resource_name: cmip5
+              resource_id: 14
+              permission_names: []
+              parent_id: 7
+              children:
+                '15':
+                  resource_name: ccma
+                  resource_id: 15
+                  permission_names: []
+                  parent_id: 14
+                  children:
+                    '16':
+                      resource_name: canesm2
+                      resource_id: 16
+                      permission_names: []
+                      parent_id: 15
+                      children:
+                        '17':
+                          resource_name: rcp85
+                          resource_id: 17
+                          permission_names: []
+                          parent_id: 16
+                          children:
+                            '18':
+                              resource_name: day
+                              resource_id: 18
+                              permission_names: []
+                              parent_id: 17
+                              children:
+                                '19':
+                                  resource_name: pr_23.nc
+                                  resource_id: 19
+                                  permission_names: []
+                                  parent_id: 18
+                                  children: {}
+                                  resource_type: file
+                                '23':
+                                  resource_name: test_with_service_resource_direct
+                                  resource_id: 23
+                                  permission_names: []
+                                  parent_id: 18
+                                  children: {}
+                                  resource_type: file
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+                  resource_type: directory
+              resource_type: directory
+      delete:
+        '200':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 200
+            type: application/json
+            detail: "Delete resource successful"
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/resource'
+          example:
+            code: 403
+            type: application/json
+            detail: "Delete resource branch from tree service failed"
+            resource_name: lb_flyingpigeon
+            resource_type: wps
+            resource_id: 101
+    resource_permissions:
+      description: available permissions for a specific resource
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/permissions'
+          example:
+            code: 200
+            type: application/json
+            detail: Get resource permissions successful
+            permission_names:
+              - getcapabilities
+              - describeprocess
+              - execute
+    groups:
+      description: list of all groups
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                group_names:
+                  type: array
+                  items:
+                    type: string
+          example:
+            code: 200
+            type: application/json
+            detail: Get groups successful
+            group_names:
+              - admin
+              - anonymous
+              - user
+              - Francois-Xavier_Derue_dkrz
+              - David_Byrns_pcmdi
+              - renaud
+              - francis
+        '403':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 403
+            type: application/json
+            detail: "Obtain group names refused by db"                
+    group:
+      matchdict_check:
+        '403':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 403
+            type: application/json
+            detail: Group query by name refused by db
+        '404':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 404
+            type: application/json
+            detail: Group name not found in db
+      post:
+        '201':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                group:
+                  $ref: '#/components/schemas/GroupBody'
+          example:
+            code: 201
+            type: application/json
+            detail: Create group successful
+            group:
+              users: []
+              group_id: null
+              description: None
+              member_count: null
+              group_name: my_new_group
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                group_name:
+                  type: string
+          example:
+            code: 403
+            type: application/json
+            detail: Create new group by name refused by db
+            group_name: my_new_group
+        '409':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                group_name:
+                  type: string
+          example:
+            code: 409
+            type: application/json
+            detail: Group already exists with this name
+            group_name: my_new_group
+      delete:
+        '200':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 200
+            type: application/json
+            detail: Delete group successful
+        '403':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 403
+            type: application/json
+            detail: Delete group forbidden by db
+    group_users:
+      description: users that are part of the group
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                user_names:
+                  type: array
+                  items:
+                    type: string
+          example:
+            code: 200
+            type: application/json
+            detail: Get group users successful
+            user_names:
+              - David_Byrns_pcmdi
+              - Francois-Xavier_Derue_dkrz
+    group_resources:
+      description: all resources a group has permissions on
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
+          example:
+            code: 200
+            type: application/json
+            detail: Get group resources successful
+            resources:
+              type: object
+              properties:
+                wms:
+                  ncWMS2:
+                    resource_id: 21
+                    permission_names: []
+                    service_name: ncWMS2
+                    service_url: 'http://hirondelle.crim.ca:8080/ncWMS2'
+                    service_type: wms
+                    resources: {}
+                wfs:
+                  geoserver:
+                    resource_id: 22
+                    permission_names: []
+                    service_name: geoserver
+                    service_url: 'http://hirondelle.crim.ca:8087/geoserver'
+                    service_type: wfs
+                    resources: {}
+                wps:
+                  malleefowl:
+                    resource_id: 33
+                    permission_names: []
+                    service_name: mallefowl
+                    service_url: 'http://hirondelle.crim.ca:58091/wps'
+                    service_type: wps
+                    resources: {}
+                thredds:
+                  thredds:
+                    resource_id: 12
+                    permission_names: []
+                    service_name: thredds
+                    service_url: 'http://hirondelle.crim.ca:8083/thredds'
+                    service_type: thredds
+                    resources: {}
+    group_resource_or_service_permissions:
+      description: resource/service a group has permissions on
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/permissions'
+          example:
+            code: 200
+            type: application/json
+            detail: Get group resource permissions successful
+            permission_names:
+              - getcapabilities
+              - describeprocess
+    group_resource_or_service_permission:
+      post:
+        '201':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 201
+            type: application/json
+            detail: Create group resource permission successful
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                call:
+                  type: object
+                  properties:
+                    exception:
+                      type: string
+                    content:
+                      $ref: '#/components/schemas/group_resource_permission'
+          example:
+            code: 403
+            type: application/json
+            detail: Create group resource permission failed
+            call:
+              exception: <traceback or description of the exception at cause>
+              content:
+                permission_name: getcapabilities
+                resource_id: 50
+                group_id: 10
+        '409':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                call:
+                  type: object
+                  properties:
+                    exception:
+                      type: string
+                    content:
+                      $ref: '#/components/schemas/group_resource_permission'
+          example:
+            code: 409
+            type: application/json
+            detail: Add group resource permission refused by db
+            call:
+              exception: <traceback or description of the exception at cause>
+              content:
+                permission_name: getcapabilities
+                resource_id: 50
+                group_id: 10
+      delete:
+        '200':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 200
+            type: application/json
+            detail: Delete group resource permission successful
+        '403':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                call:
+                  type: object
+                  properties:
+                    exception:
+                      type: string
+                    content:
+                      $ref: '#/components/schemas/group_resource_permission'
+          example:
+            code: 403
+            type: application/json
+            detail: Delete group resource permission refused by db
+            call:
+              exception: <traceback or description of the exception at cause>
+              content:
+                permission_name: getcapabilities
+                resource_id: 50
+                group_id: 10
+    group_services:
+      description: services a group has permissions on
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
+          example:
+            code: 200
+            type: application/json
+            detail: Get group services successful
+            services:
+              thredds:
+                thredds:
+                  service_type: thredds
+                  service_name: thredds
+                  service_url: 'http://outarde.crim.ca:8083/thredds'
+                  permission_names:
+                    - read
+                  resource_id: 5
+              wps:
+                lb_malleefowl:
+                  service_type: wps
+                  service_name: lb_malleefowl
+                  service_url: 'http://outarde.crim.ca:58091/wps'
+                  permission_names:
+                    - getcapabilities
+                  resource_id: 1
+                lb_flyingpigeon:
+                  service_type: wps
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://outarde.crim.ca:58093/wps'
+                  permission_names:
+                    - execute
+                    - getcapabilities
+                  resource_id: 2
+    group_service_resources:
+      description: resources of service a group has permissions on
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                service:
+                  $ref: '#/components/schemas/service'
+          example:
+            code: 200
+            type: application/json
+            detail: Get group service resources successful
+            service:
+              resource_id: 5
+              permission_names:
+                - read
+              service_name: thredds
+              service_url: 'http://outarde.crim.ca:8083/thredds'
+              service_type: thredds
+              resources:
+                '7':
+                  resource_name: birdhouse
+                  resource_id: 7
+                  permission_names: []
+                  parent_id: 5
+                  children:
+                    '8':
+                      resource_name: nrcan
+                      resource_id: 8
+                      permission_names:
+                        - read
+                      parent_id: 7
+                      children:
+                        '9':
+                          resource_name: nrcan_pr_3.nc
+                          resource_id: 9
+                          permission_names:
+                            - read
+                          parent_id: 8
+                          children: {}
+                          resource_type: file
+                      resource_type: directory
+                    '14':
+                      resource_name: cmip5
+                      resource_id: 14
+                      permission_names: []
+                      parent_id: 7
+                      children:
+                        '15':
+                          resource_name: ccma
+                          resource_id: 15
+                          permission_names: []
+                          parent_id: 14
+                          children:
+                            '16':
+                              resource_name: canesm2
+                              resource_id: 16
+                              permission_names:
+                                - read
+                              parent_id: 15
+                              children: {}
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+                  resource_type: directory
+    user_groups:
+      description: groups a user is member of
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                group_names:
+                  type: array
+                  items: 
+                    type: string
+          example:
+            code: 200
+            type: application/json
+            detail: Get user groups successful
+            group_names:
+              - users
+              - mario bros
+    user_group:
+      description: create/delete user group
+      post:
+        '201':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 201
+            type: application/json
+            detail: Create user-group assignation successful
+        '409':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                user_name:
+                  type: string
+                group_name:
+                  type: string
+          example:
+            code: 409
+            type: application/json
+            detail: User already belongs to this group
+            user_name: grandmaster
+            group_name: admin
+      delete:
+        '200':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 200
+            type: application/json
+            detail: Delete user-group successful
+        '406':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                user_name:
+                  type: string
+                group_name:
+                  type: string
+          example:
+            code: 406
+            type: application/json
+            detail: Invalid user-group combination for delete
+            user_name: basicuser
+            group_name: admins
+    users:
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                user_names:
+                  type: array
+                  items:
+                    type: string
+          example:
+            code: 200
+            type: application/json
+            detail: Get users successful
+            user_names:
+              - admin
+              - anonymous
+              - mario
+              - luigi
+              - wario
+              - waluigi
+        '403':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 403
+            type: application/json
+            detail: Get user query refused by db
+      post:
+        '201':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 201
+            type: application/json
+            detail: "Add user to db successful"
+        '403': 
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 403
+            type: application/json
+            detail: 
+              oneOf: 
+                - "Group query was refused by db"
+                - "Group check query was refused by db"
+                - "User check query was refused by db"
+                - "Failed to add group to db"
+                - "Failed to add user to db"
+                - "New user query was refused by db"
+                - "Failed to add user-group to db"
+                - "New group query was refused by db"
+        '406':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 406
+            type: application/json
+            detail:
+              oneOf:
+                - "Invalid `user_name` value specified"
+                - "Invalid `user_name` length specified (>64 characters)"
+                - "Invalid `email` value specified"
+                - "Invalid `password` value specified"
+                - "Invalid `group_name` value specified"
+                - "Group for new user already exists"
+        '409':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 409
+            type: application/json
+            detail:
+              oneOf:
+                - "Invalid `user_name` already logged in"
+                - "User name matches an already existing group name"
+                - "User name matches an already existing user name"
+    user:
+      matchdict_check:
+        '403':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 403
+            type: application/json
+            detail:
+              oneOf:
+                - User id query refused by db
+                - Anonymous user query refused by db
+                - User name query refused by db
+        '404':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 404
+            type: application/json
+            detail:
+              oneOf:
+                - User id not found in db
+                - Anonymous user not found in db
+                - User name not found in db
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/user'
+          example:
+            code: 200
+            type: application/json
+            detail: Get session successful
+            user_name: johny
+            email: john.rambo@gmail.com
+            group_names:
+              - stars
+              - special_forces
+      delete:
+        '200':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 200
+            type: application/json
+            detail: Delete user successful
+        '403':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 403
+            type: application/json
+            detail:
+              oneOf:
+                - Delete user by name refused by db
+                - Delete user-group refused by db
+        '404':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 404
+            type: application/json
+            detail: Could not find user-group in db
+    user_resources:
+      description: resources a user has permissions on
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
+          example:
+            resources:
+              thredds:
+                thredds:
+                  resource_id: 5
+                  permission_names: []
+                  service_name: thredds
+                  service_url: 'http://outarde.crim.ca:8083/thredds'
+                  service_type: thredds
+                  resources:
+                    '7':
+                      resource_name: birdhouse
+                      resource_id: 7
+                      permission_names: []
+                      parent_id: 5
+                      children:
+                        '14':
+                          resource_name: cmip5
+                          resource_id: 14
+                          permission_names: []
+                          parent_id: 7
+                          children:
+                            '15':
+                              resource_name: ccma
+                              resource_id: 15
+                              permission_names: []
+                              parent_id: 14
+                              children:
+                                '16':
+                                  resource_name: canesm2
+                                  resource_id: 16
+                                  permission_names: []
+                                  parent_id: 15
+                                  children:
+                                    '17':
+                                      resource_name: rcp85
+                                      resource_id: 17
+                                      permission_names:
+                                        - write
+                                      parent_id: 16
+                                      children: {}
+                                      resource_type: directory
+                                  resource_type: directory
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+              wps:
+                lb_malleefowl:
+                  resource_id: 1
+                  permission_names: []
+                  service_name: lb_malleefowl
+                  service_url: 'http://outarde.crim.ca:58091/wps'
+                  service_type: wps
+                  resources: {}
+                lb_flyingpigeon:
+                  resource_id: 2
+                  permission_names: []
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://outarde.crim.ca:58093/wps'
+                  service_type: wps
+                  resources: {}
+                lb_catalog:
+                  resource_id: 3
+                  permission_names: []
+                  service_name: lb_catalog
+                  service_url: 'http://outarde.crim.ca:58086/pywps'
+                  service_type: wps
+                  resources: {}
+    user_resource_permissions:
+      description: permissions the user has on a specific resource
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/resource_types'
+          example:
+            code: 200
+            type: application/json
+            detail: Get user resource permissions successful
+            permission_names:
+              - getcapabilities
+              - getmap
+    user_service_resources:
+      description: resources of a service the user has permissions on
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
+          example:
+            code: 200
+            type: application/json
+            detail: "Get user service resources successful"
+            service:
+              resource_id: 5
+              permission_names:
+                - read
+              service_name: thredds
+              service_url: 'http://outarde.crim.ca:8083/thredds'
+              service_type: thredds
+              resources:
+                '7':
+                  resource_name: birdhouse
+                  resource_id: 7
+                  permission_names: []
+                  parent_id: 5
+                  children:
+                    '8':
+                      resource_name: nrcan
+                      resource_id: 8
+                      permission_names:
+                        - read
+                      parent_id: 7
+                      children:
+                        '9':
+                          resource_name: nrcan_pr_3.nc
+                          resource_id: 9
+                          permission_names:
+                            - read
+                          parent_id: 8
+                          children: {}
+                          resource_type: file
+                      resource_type: directory
+                    '14':
+                      resource_name: cmip5
+                      resource_id: 14
+                      permission_names: []
+                      parent_id: 7
+                      children:
+                        '15':
+                          resource_name: ccma
+                          resource_id: 15
+                          permission_names: []
+                          parent_id: 14
+                          children:
+                            '16':
+                              resource_name: canesm2
+                              resource_id: 16
+                              permission_names:
+                                - read
+                              parent_id: 15
+                              children: {}
+                              resource_type: directory
+                          resource_type: directory
+                      resource_type: directory
+                  resource_type: directory
+    service_resources:
+      description: all resources under a specific service
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'
+          example:
+            code: 200
+            type: application/json
+            detail: Get service resources successful
+            geoserverwms:
+              resource_id: 123
+              permission_names: []
+              service_name: geoserverwms
+              service_url: 'http://outarde.crim.ca:8087/geoserverwms'
+              service_type: geoserverwms
+              resources: {}
+        '404':
+          allOf:
+            - $ref: '#/components/schemas/notfound'
+            - type: object
+              properties:
+                service_name:
+                  type: string
+          example:
+            code: 404
+            type: application/json
+            detail: "Service name not found in db"
+            param: 'None'
+            service_name: "foobar"
+            request_url: https://outarde.crim.ca/magpie/services/foobar/resources
+            route_name: "/services/foobar/resources"    
+    user_services:
+      description: services the user has permissions on
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/services'  
+          example:
+            code: 200
+            type: application/json
+            detail: Get user services successful
+            services:
+              thredds:
+                thredds:
+                  service_type: thredds
+                  service_name: thredds
+                  service_url: 'http://outarde.crim.ca:8083/thredds'
+                  permission_names:
+                    - read
+                  resource_id: 5
+              wps:
+                lb_malleefowl:
+                  service_type: wps
+                  service_name: lb_malleefowl
+                  service_url: 'http://outarde.crim.ca:58091/wps'
+                  permission_names:
+                    - getcapabilities
+                  resource_id: 1
+                lb_flyingpigeon:
+                  service_type: wps
+                  service_name: lb_flyingpigeon
+                  service_url: 'http://outarde.crim.ca:58093/wps'
+                  permission_names:
+                    - execute
+                    - getcapabilities
+                  resource_id: 2
+    user_service_permissions:
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/permissions'
+          example:
+            code: 200
+            type: application/json
+            detail: Get user service permissions successful
+            permission_names:
+              - getcapabilities
+              - getmap
+      post:
+        '201':
+          schema:
+            $ref: '#/components/schemas/base'
+          example:
+            code: 201
+            type: application/json
+            detail: "Create user resource permission successful"
+    service_type_resource_types:
+      description: available resource types under a specific service type
+      get: 
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - $ref: '#/components/schemas/resource_types'
+          example:
+            code: 200
+            type: application/json            
+            detail: Get service type resource types successful
+            resource_types: 
+              - directory
+              - file
+        '404':
+          schema:
+            $ref: '#/components/schemas/notfound'
+          example:
+            code: 404
+            type: application/json
+            detail: "Invalid `service_type` does not exist to obtain its resource types"
+            param: blah
+            paramCompare: "[u'thredds', u'geoserverwms', u'wfs', u'ncwms', u'wps']"
+            request_url: https://outarde.crim.ca/magpie/services/types/blah/resources/types
+            route_name: "/services/types/blah/resources/types"
+    session:
+      description: current user session
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                authenticated:
+                  type: boolean
+          example:
+            code: 200
+            type: application/json
+            detail: Get session successful
+            authenticated: false
+    version:
+      description: current Magpie Rest API version
+      get:
+        '200':
+          allOf:
+            - $ref: '#/components/schemas/base'
+            - type: object
+              properties:
+                version:
+                  type: string
+          example:
+            version_get_200:
+              code: 200
+              type: application/json
+              detail: Get version successful
+              version: 0.2.7

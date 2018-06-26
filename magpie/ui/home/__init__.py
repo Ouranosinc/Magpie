@@ -1,7 +1,6 @@
 import logging
 import requests
-from pyramid.interfaces import IAuthenticationPolicy
-from pyramid.security import Authenticated
+from definitions.pyramid_definitions import *
 
 logger = logging.getLogger(__name__)
 

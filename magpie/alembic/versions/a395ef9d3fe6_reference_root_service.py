@@ -14,13 +14,10 @@ root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
 from alembic import op
-import sqlalchemy as sa
 from alembic.context import get_context
-from sqlalchemy.dialects.postgresql.base import PGDialect
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.engine import reflection
+from definitions.sqlalchemy_definitions import *
 from magpie import models
-from magpie.management.resource.resource_utils import get_resource_root_service
+from magpie.api.management.resource.resource_utils import get_resource_root_service
 
 Session = sessionmaker()
 

@@ -3,7 +3,7 @@ General meta information on the magpie package.
 """
 
 
-__version__ = '0.5.4'
+__version__ = '0.6.0'
 
-__author__ = "Francois-Xavier"
-__email__ = 'francois-xavier.derue@crim.ca'
+__author__ = "Francois-Xavier Derue, Francis Charette Migneault"
+__email__ = 'francis.charette-migneault@crim.ca'
