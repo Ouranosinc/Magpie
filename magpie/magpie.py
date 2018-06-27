@@ -23,6 +23,8 @@ from definitions.ziggurat_definitions import *
 from __init__ import *
 from api.api_except import *
 from api.api_rest_schemas import *
+from helpers.register_default_group import init_admin, init_anonymous, init_user_group
+from helpers.register_providers import magpie_register_services_from_config
 import models
 import db
 import __meta__
@@ -94,6 +96,11 @@ def main(global_config=None, **settings):
     if not db.is_database_ready():
         time.sleep(2)
         raise Exception('Database not ready')
+
+    LOGGER.info('Register default providers')
+    providers_config_path = '{}/providers.cfg'.format(os.path.dirname(THIS_DIR))
+    magpie_register_services_from_config(providers_config_path, push_to_phoenix=True,
+                                         force_update=True, disable_get_capabilities=True)
 
     LOGGER.info('Running configurations setup...')
     magpie_url_template = 'http://{hostname}:{port}/magpie'
