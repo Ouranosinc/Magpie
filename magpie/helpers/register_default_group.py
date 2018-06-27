@@ -1,6 +1,6 @@
 from magpie import *
 from magpie import models
-from magpie.db import get_tm_session, get_session_factory, get_engine, is_database_ready
+from db import get_tm_session, get_session_factory, get_engine, is_database_ready
 from definitions.ziggurat_definitions import *
 import transaction
 import logging

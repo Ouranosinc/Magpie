@@ -1,4 +1,4 @@
-from magpie.register import *
+from register import *
 import os
 import argparse
 

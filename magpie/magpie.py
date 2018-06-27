@@ -84,6 +84,7 @@ def main(global_config=None, **settings):
     """
 
     # migrate db as required and check if database is ready
+    LOGGER.info('Running database migration (as required) ...')
     try:
         db.run_database_migration()
     except ImportError:
@@ -94,6 +95,7 @@ def main(global_config=None, **settings):
         time.sleep(2)
         raise Exception('Database not ready')
 
+    LOGGER.info('Running configurations setup...')
     magpie_url_template = 'http://{hostname}:{port}/magpie'
     hostname = os.getenv('HOSTNAME')
     if hostname:

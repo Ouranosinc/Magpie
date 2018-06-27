@@ -17,7 +17,7 @@ from alembic import op
 from alembic.context import get_context
 from magpie.definitions.sqlalchemy_definitions import *
 from magpie import models
-import register_default_group as def_grp
+from helpers import register_default_group as def_grp
 
 Session = sessionmaker()
 
