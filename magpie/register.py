@@ -413,7 +413,9 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
             )
             if svc_perm_getcapabilities is None:
                 print_log("Adding 'getcapabilities' permission to anonymous user")
-                svc_perm_getcapabilities = models.UserResourcePermissionService()
+                svc_perm_getcapabilities = models.UserResourcePermission(
+                    user_id=anonymous_user.id, perm_name='getcapabilities', resource_id=svc.resource_id
+                )
                 db_session.add(svc_perm_getcapabilities)
 
     transaction.commit()
