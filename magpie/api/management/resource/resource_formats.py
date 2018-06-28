@@ -1,7 +1,9 @@
-from api.api_requests import evaluate_call
 from definitions.pyramid_definitions import *
 from models import resource_tree_service, Service
 from services import service_type_dict
+
+# import indirectly from magpie->api_except instead of directly 'api_except' to avoid circular imports
+from magpie import evaluate_call
 
 
 def format_resource(resource, permissions=None, basic_info=False):
