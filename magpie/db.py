@@ -1,5 +1,7 @@
 from definitions.alembic_definitions import *
 from definitions.sqlalchemy_definitions import *
+import ConfigParser
+import transaction
 import models
 import inspect
 import zope.sqlalchemy
@@ -64,6 +66,24 @@ def get_tm_session(session_factory, transaction_manager):
     return db_session
 
 
+def get_db_session_from_settings(settings):
+    session_factory = get_session_factory(get_engine(settings))
+    db_session = get_tm_session(session_factory, transaction)
+    return db_session
+
+
+def get_db_session_from_config_ini(config_ini_path, ini_main_section_name='app:magpie_app'):
+    settings = get_settings_from_config_ini(config_ini_path, ini_main_section_name)
+    return get_db_session_from_settings(settings)
+
+
+def get_settings_from_config_ini(config_ini_path, ini_main_section_name='app:magpie_app'):
+    parser = ConfigParser.ConfigParser()
+    parser.read([config_ini_path])
+    settings = dict(parser.items(ini_main_section_name))
+    return settings
+
+
 def get_alembic_ini_path():
     curr_path = os.path.dirname(os.path.abspath(__file__))
     curr_path = os.path.dirname(curr_path)
@@ -109,7 +129,7 @@ def includeme(config):
     config.include('pyramid_tm')
 
     session_factory = get_session_factory(get_engine(settings))
-    config.registry['dbsession_factory'] = session_factory
+    config.registry['db_session_factory'] = session_factory
 
     # make `request.db` available for use in Pyramid
     config.add_request_method(

@@ -23,13 +23,15 @@ from definitions.ziggurat_definitions import *
 from __init__ import *
 from api.api_except import *
 from api.api_rest_schemas import *
-from helpers.register_default_group import init_admin, init_anonymous, init_user_group
+from common import *
+from helpers.register_default_users import register_default_users
 from helpers.register_providers import magpie_register_services_from_config
 import models
 import db
 import __meta__
-THIS_DIR = os.path.dirname(__file__)
-sys.path.insert(0, THIS_DIR)
+MAGPIE_MODULE_DIR = os.path.abspath(os.path.dirname(__file__))
+MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
+sys.path.insert(0, MAGPIE_MODULE_DIR)
 
 
 @VersionAPI.get(schema=Version_GET_Schema(), tags=[APITag], response_schemas={
@@ -85,24 +87,34 @@ def main(global_config=None, **settings):
     This function returns a Pyramid WSGI application.
     """
 
+    settings['magpie.root'] = MAGPIE_ROOT
+    settings['magpie.module'] = MAGPIE_MODULE_DIR
+
     # migrate db as required and check if database is ready
-    LOGGER.info('Running database migration (as required) ...')
+    print_log('Running database migration (as required) ...')
     try:
         db.run_database_migration()
     except ImportError:
         pass
     except Exception as e:
-        raise Exception('Database migration failed [{}]'.format(str(e)))
+        raise_log('Database migration failed [{}]'.format(str(e)))
     if not db.is_database_ready():
         time.sleep(2)
-        raise Exception('Database not ready')
+        raise_log('Database not ready')
 
-    LOGGER.info('Register default providers')
-    providers_config_path = '{}/providers.cfg'.format(os.path.dirname(THIS_DIR))
-    magpie_register_services_from_config(providers_config_path, push_to_phoenix=True,
-                                         force_update=True, disable_get_capabilities=True)
+    settings['magpie.phoenix_push'] = str2bool(os.getenv('PHOENIX_PUSH', False))
 
-    LOGGER.info('Running configurations setup...')
+    print_log('Register default providers...', LOGGER)
+    providers_config_path = '{}/providers.cfg'.format(MAGPIE_ROOT)
+    magpie_ini_path = '{}/magpie.ini'.format(MAGPIE_MODULE_DIR)
+    svc_db_session = db.get_db_session_from_config_ini(magpie_ini_path)
+    magpie_register_services_from_config(providers_config_path, push_to_phoenix=settings['magpie.phoenix_push'],
+                                         force_update=True, disable_getcapabilities=False, db_session=svc_db_session)
+
+    print_log('Register default users...')
+    register_default_users()
+
+    print_log('Running configurations setup...')
     magpie_url_template = 'http://{hostname}:{port}/magpie'
     hostname = os.getenv('HOSTNAME')
     if hostname:
@@ -110,7 +122,7 @@ def main(global_config=None, **settings):
 
     magpie_secret = os.getenv('MAGPIE_SECRET')
     if magpie_secret is None:
-        LOGGER.debug('Use default secret from magpie.ini')
+        print_log('Use default secret from magpie.ini', level=logging.DEBUG)
         magpie_secret = settings['magpie.secret']
 
     authn_policy = AuthTktAuthenticationPolicy(

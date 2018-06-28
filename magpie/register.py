@@ -3,6 +3,10 @@ import time
 import yaml
 import subprocess
 import requests
+import transaction
+import models
+from services import service_type_dict
+from api.management.user.user_utils import create_user_resource_permission
 from common import *
 
 LOGGER = logging.getLogger(__name__)
@@ -60,6 +64,17 @@ def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Resp
     http_code = int(curl_msg.split(msg_sep)[1])
     print_log("[{url}] {response}".format(response=curl_msg, url=url))
     return curl_err, http_code
+
+
+def phoenix_update_services(services_dict):
+    if not phoenix_remove_services():
+        print_log("Could not remove services, aborting register sync services to Phoenix")
+        return False
+    if not phoenix_register_services(services_dict):
+        print_log("Failed services registration from Magpie to Phoenix\n" +
+                  "[warning: services could have been removed but could not be re-added]")
+        return False
+    return True
 
 
 def phoenix_login(cookies):
@@ -241,17 +256,11 @@ def sync_services_phoenix(services_object_dict, services_as_dicts=False):
         else:
             services_dict[svc.resource_name] = {'url': svc.url, 'title': svc.resource_name,
                                                 'type': svc.type, 'c4i': False, 'public': True}
-    if not phoenix_remove_services():
-        print_log("Could not remove services, aborting register sync services to Phoenix")
-        return False
-    if not phoenix_register_services(services_dict):
-        print_log("Failed services registration during Phoenix sync\n" +
-                  "[warning: services could have been removed but could not be re-added]")
-        return False
-    return True
+
+    return phoenix_update_services(services_dict)
 
 
-def magpie_add_register_services_perms(services, statuses, curl_cookies, request_cookies, disable_get_capabilities):
+def magpie_add_register_services_perms(services, statuses, curl_cookies, request_cookies, disable_getcapabilities):
     magpie_url = get_magpie_url()
     try:
         login_usr = os.getenv('ANONYMOUS_USER')
@@ -263,7 +272,7 @@ def magpie_add_register_services_perms(services, statuses, curl_cookies, request
                                   .format(magpie=magpie_url, svc=service_name)
         resp_available_perms = requests.get(svc_available_perms_url, cookies=request_cookies)
         if resp_available_perms.status_code == 401:
-            raise_log("Invalid credentials, cannot update service permissions")
+            raise_log("Invalid credentials, cannot update service permissions", exception=ValueError)
 
         available_perms = resp_available_perms.json().get('permission_names', [])
         # only applicable to services supporting 'GetCapabilities' request
@@ -271,7 +280,7 @@ def magpie_add_register_services_perms(services, statuses, curl_cookies, request
 
             # enforce 'getcapabilities' permission if available for service just updated (200) or created (201)
             # update 'getcapabilities' permission when the service existed and it allowed
-            if (not disable_get_capabilities and statuses[service_name] == 409) \
+            if (not disable_getcapabilities and statuses[service_name] == 409) \
             or statuses[service_name] == 200 or statuses[service_name] == 201:
                 svc_anonym_add_perms_url = '{magpie}/users/{usr}/services/{svc}/permissions' \
                                            .format(magpie=magpie_url, usr=login_usr, svc=service_name)
@@ -319,34 +328,13 @@ def magpie_update_services_conflict(conflict_services, services_dict, request_co
             svc_info['service_url'] = svc_url_new
             res_svc_put = requests.put(svc_url_db, data=svc_info, cookies=request_cookies)
             statuses[svc_name] = res_svc_put.status_code
-            print_log("[{url_old}] => [{url_new}] Service URL update ({svc}): {resp}" \
+            print_log("[{url_old}] => [{url_new}] Service URL update ({svc}): {resp}"
                       .format(svc=svc_name, url_old=svc_url_old, url_new=svc_url_new, resp=res_svc_put.status_code))
     return statuses
 
 
-def magpie_register_services_from_config(service_config_file_path, push_to_phoenix=False,
-                                         force_update=False, disable_get_capabilities=False):
-    try:
-        admin_usr = os.getenv('ADMIN_USER')
-        admin_pwd = os.getenv('ADMIN_PASSWORD')
-        if admin_usr is None:
-            raise ValueError("Environment variable was None", 'ADMIN_USER')
-        if admin_pwd is None:
-            raise ValueError("Environment variable was None", 'ADMIN_PASSWORD')
-    except Exception as e:
-        raise Exception("Missing environment values [" + repr(e) + "]")
-
-    try:
-        services_cfg = yaml.load(open(service_config_file_path, 'r'))
-        services = services_cfg['providers']
-    except Exception as e:
-        raise Exception("Bad service file + [" + repr(e) + "]")
-    magpie_register_services(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat',
-                             force_update=force_update, disable_get_capabilities=disable_get_capabilities)
-
-
 def magpie_register_services(services_dict, push_to_phoenix, user, password, provider,
-                             force_update=False, disable_get_capabilities=False):
+                             force_update=False, disable_getcapabilities=False):
     magpie_url = get_magpie_url()
     curl_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_magpie')
     session = requests.Session()
@@ -375,18 +363,12 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
         # Add 'GetCapabilities' permissions on newly created services to allow 'ping' from Phoenix
         # Phoenix doesn't register the service if it cannot be checked with this request
         magpie_add_register_services_perms(services_dict, statuses_register,
-                                           curl_cookies, request_cookies, disable_get_capabilities)
+                                           curl_cookies, request_cookies, disable_getcapabilities)
         session.get(magpie_url + '/signout')
 
         # Push updated services to Phoenix
         if push_to_phoenix:
-            if not phoenix_remove_services():
-                print_log("Could not remove services, aborting register sync services to Phoenix")
-                return False
-            if not phoenix_register_services(services_dict):
-                print_log("Failed services registration from Magpie to Phoenix\n" +
-                          "[warning: services could have been removed but could not be re-added]")
-                return False
+            success = phoenix_update_services(services_dict)
 
     except Exception as e:
         print_log("Exception during magpie register services: [" + repr(e) + "]")
@@ -395,3 +377,78 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
         if os.path.isfile(curl_cookies):
             os.remove(curl_cookies)
     return success
+
+
+def magpie_register_services_with_db_session(services_dict, db_session, push_to_phoenix=False,
+                                             force_update=False, update_getcapabilities_permissions=False):
+    existing_services = models.Service.all(db_session=db_session)
+    existing_services_names = [svc.resource_name for svc in existing_services]
+    anonymous_user = models.User.by_user_name(os.getenv('ANONYMOUS_USER'), db_session=db_session)
+
+    for svc_name in services_dict:
+        svc_new_url = os.path.expandvars(services_dict[svc_name]['url'])
+        svc_type = services_dict[svc_name]['type']
+        if force_update and svc_name in existing_services_names:
+            svc = models.Service.by_service_name(svc_name, db_session=db_session)
+            if svc.url == svc_new_url:
+                print_log("Service URL already properly set [{url}] ({svc})".format(url=svc.url, svc=svc_name))
+            else:
+                print_log("Service URL update [{url_old}] => [{url_new}] ({svc})"
+                          .format(url_old=svc.url, url_new=svc_new_url, svc=svc_name))
+                svc.url = svc_new_url
+        elif not force_update and svc_name in existing_services_names:
+            print_log("Skipping service [{svc}] (conflict)" .format(svc=svc_name))
+        else:
+            print_log("Adding service [{svc}]".format(svc=svc_name))
+            svc = models.Service(resource_name=svc_name, resource_type=u'service', url=svc_new_url, type=svc_type)
+            db_session.add(svc)
+
+        if update_getcapabilities_permissions and anonymous_user is None:
+            print_log("Cannot update 'getcapabilities' permission of non existing anonymous user", level=logging.WARN)
+        elif update_getcapabilities_permissions and 'getcapabilities' in service_type_dict[svc_type].permission_names:
+            svc = models.Service.by_service_name(svc_name, db_session=db_session)
+            svc_perm_getcapabilities = models.UserResourcePermissionService.by_resource_user_and_perm(
+                user_id=anonymous_user.id, perm_name='getcapabilities',
+                resource_id=svc.resource_id, db_session=db_session
+            )
+            if svc_perm_getcapabilities is None:
+                print_log("Adding 'getcapabilities' permission to anonymous user")
+                svc_perm_getcapabilities = models.UserResourcePermissionService()
+                db_session.add(svc_perm_getcapabilities)
+
+    transaction.commit()
+    db_session.close()
+
+    if push_to_phoenix:
+        return phoenix_update_services(services_dict)
+    return True
+
+
+def magpie_register_services_from_config(service_config_file_path, push_to_phoenix=False,
+                                         force_update=False, disable_getcapabilities=False, db_session=None):
+    try:
+        services_cfg = yaml.load(open(service_config_file_path, 'r'))
+        services = services_cfg['providers']
+    except Exception as e:
+        raise_log("Bad service file + [" + repr(e) + "]", exception=type(e))
+
+    # register services using API POSTs
+    if db_session is None:
+        try:
+            admin_usr = os.getenv('ADMIN_USER')
+            admin_pwd = os.getenv('ADMIN_PASSWORD')
+            if admin_usr is None:
+                raise ValueError("Environment variable was None", 'ADMIN_USER')
+            if admin_pwd is None:
+                raise ValueError("Environment variable was None", 'ADMIN_PASSWORD')
+        except Exception as e:
+            raise_log("Missing environment values [" + repr(e) + "]", exception=type(e))
+
+        magpie_register_services(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat',
+                                 force_update=force_update, disable_getcapabilities=disable_getcapabilities)
+
+    # register services directly to db using session
+    else:
+        magpie_register_services_with_db_session(services, db_session,
+                                                 push_to_phoenix=push_to_phoenix, force_update=force_update,
+                                                 update_getcapabilities_permissions=not disable_getcapabilities)

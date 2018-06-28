@@ -11,7 +11,8 @@ from pyramid.httpexceptions import (
     HTTPMethodNotAllowed,
     HTTPNotAcceptable,
     HTTPConflict,
-    HTTPInternalServerError
+    HTTPUnprocessableEntity,
+    HTTPInternalServerError,
 )
 from pyramid.interfaces import IAuthenticationPolicy
 from pyramid.response import Response
