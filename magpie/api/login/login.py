@@ -6,8 +6,9 @@ from security import authomatic
 from definitions.pyramid_definitions import *
 from definitions.ziggurat_definitions import *
 from magpie import *
-from api.api_requests import *
 from api.api_except import *
+from api.api_requests import *
+from api.api_rest_schemas import *
 from api.management.user.user_utils import create_user
 import requests
 
@@ -204,6 +205,10 @@ def authomatic_login(request):
     return response
 
 
+@SessionAPI.get(schema=Session_GET_Schema(), tags=[LoginTag], response_schemas={
+    '200': Session_GET_OkResponseSchema(description="Get session successful."),
+    '500': InternalServerErrorResponseSchema(description="Failed to get session details.")
+})
 @view_config(route_name='session', permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
     def _get_session(req):
@@ -220,8 +225,8 @@ def get_session(request):
         return json_resp
 
     session_json = evaluate_call(lambda: _get_session(request), httpError=HTTPInternalServerError,
-                                 msgOnFail="Failed to get session details")
-    return valid_http(httpSuccess=HTTPOk, detail="Get session successful", content=session_json)
+                                 msgOnFail="Failed to get session details.")
+    return valid_http(httpSuccess=HTTPOk, detail="Get session successful.", content=session_json)
 
 
 @view_config(route_name='providers', request_method='GET', permission=NO_PERMISSION_REQUIRED)

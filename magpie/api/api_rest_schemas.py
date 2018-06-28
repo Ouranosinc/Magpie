@@ -20,6 +20,7 @@ class CorniceSwaggerPredicate(object):
 
 # Tags
 APITag = 'API'
+LoginTag = 'Login'
 UserTag = 'User'
 GroupTag = 'Group'
 ResourceTag = 'Resource'
@@ -67,6 +68,9 @@ ResourceAPI = Service(
 ServiceAPI = Service(
     path='/services/{service_name}',
     name='Service')
+SessionAPI = Service(
+    path='/session',
+    name='Session')
 VersionAPI = Service(
     path='/version',
     name='Version')
@@ -85,6 +89,41 @@ class BaseSchema(colander.MappingSchema):
 #    detail = colander.SchemaNode(colander.String(), description="Response status message")
 #    route_name = colander.SchemaNode(colander.String(), description="Specified route")
 #    request_url = colander.SchemaNode(colander.String(), description="Specified url")
+
+class GroupNamesListSchema(colander.SequenceSchema):
+    item = colander.SchemaNode(
+        colander.String(),
+        description="Groups the logged in user is member of",
+        example=["anonymous"]
+    )
+
+
+class Session_GET_Schema(colander.MappingSchema):
+    code = colander.SchemaNode(
+        colander.Integer(),
+        description="HTTP response code",
+        example=200)
+    type = colander.SchemaNode(
+        colander.String(),
+        description="Response content type",
+        example="application/json")
+    detail = colander.SchemaNode(
+        colander.String(),
+        description="Response status message",
+        example="Get session successful.")
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Currently logged in user name (anonymous if none)",
+        example="anonymous")
+    user_email = colander.SchemaNode(
+        colander.String(),
+        description="Currently logged in user email",
+        example="anonymous@mail.com")
+    group_names = GroupNamesListSchema()
+
+
+class Session_GET_OkResponseSchema(colander.MappingSchema):
+    body = Session_GET_Schema()
 
 
 class Version_GET_Schema(colander.MappingSchema):
@@ -114,15 +153,35 @@ class Version_GET_OkResponseSchema(colander.MappingSchema):
     body = Version_GET_Schema()
 
 
+class InternalServerErrorSchema(colander.MappingSchema):
+    code = colander.SchemaNode(
+        colander.Integer(),
+        description="HTTP response code",
+        example=500)
+    type = colander.SchemaNode(
+        colander.String(),
+        description="Response content type",
+        example="application/json")
+    detail = colander.SchemaNode(
+        colander.String(),
+        description="Response status message",
+        example="Internal Server Error. Unhandled exception occurred.")
+    route_name = colander.SchemaNode(
+        colander.String(),
+        description="Route called that generated the error",
+        example="/users/toto")
+    request_url = colander.SchemaNode(
+        colander.String(),
+        description="Request URL that generated the error",
+        example="http://localhost:2001/magpie/users/toto")
+
+
+class InternalServerErrorResponseSchema(colander.MappingSchema):
+    body = InternalServerErrorSchema()
+
+
 #  NOT REQUIRED field
 #field = colader.SchemaNode(colander.String(), missing=colader.drop)
-
-# Responses Schemas
-###HTTP200_User_ResponseSchema
-
-
-#class OkResponseSchema(colander.MappingSchema):
-#    body = BaseSchema()
 
 
 # return JSON Swagger specifications of Magpie REST API on route '/magpie/__api__'
