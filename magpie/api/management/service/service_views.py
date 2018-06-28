@@ -86,14 +86,14 @@ def update_service(request):
         verify_param(svc_name, notIn=True, paramCompare=all_svc_names, httpError=HTTPConflict,
                      msgOnFail="Specified `service_name` value '" + str(svc_name) + "' already exists")
 
-    def update_service_magpie_and_phoenix(svc, new_name, new_url, svc_push, db):
+    def update_service_magpie_and_phoenix(svc, new_name, new_url, svc_push, db_session):
         svc.resource_name = new_name
         svc.url = new_url
         if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED \
         and 'getcapabilities' in service_type_dict[svc.type].permission_names:
             # (re)apply getcapabilities to updated service to ensure updated push
-            add_service_getcapabilities_perms(svc, db)
-            sync_services_phoenix(db.query(models.Service))  # push all services
+            add_service_getcapabilities_perms(svc, db_session)
+            sync_services_phoenix(db_session.query(models.Service))  # push all services
 
     old_svc_content = format_service(service)
     err_svc_content = {u'service': old_svc_content, u'new_service_name': svc_name, u'new_service_url': svc_url}
@@ -120,10 +120,10 @@ def unregister_service(request):
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete service from resource tree failed", content=svc_content)
 
-    def remove_service_magpie_and_phoenix(svc, svc_push, db):
-        db.delete(svc)
+    def remove_service_magpie_and_phoenix(svc, svc_push, db_session):
+        db_session.delete(svc)
         if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED:
-            sync_services_phoenix(db.query(models.Service))
+            sync_services_phoenix(db_session.query(models.Service))
 
     evaluate_call(lambda: remove_service_magpie_and_phoenix(service, service_push, request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,

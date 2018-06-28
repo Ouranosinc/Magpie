@@ -14,7 +14,7 @@ def format_service(service, permissions=None):
             u'service_name': str(svc.resource_name),
             u'service_type': str(svc.type),
             u'resource_id': svc.resource_id,
-            u'permission_names': list() if perms is None else perms
+            u'permission_names': service_type_dict[svc.type].permission_names if perms is None else perms
         }
 
     return evaluate_call(
@@ -40,5 +40,5 @@ def format_service_resources(service, db_session, service_perms=None, resources_
         lambda: fmt_svc_res(service, db_session, service_perms, resources_perms_dict, display_all),
         fallback=db_session.rollback(), httpError=HTTPInternalServerError,
         msgOnFail="Failed to format service resources tree",
-        content=format_service(service)
+        content=format_service(service, service_perms)
     )
