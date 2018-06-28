@@ -155,6 +155,12 @@ def main(global_config=None, **settings):
     config.cornice_enable_openapi_explorer(api_explorer_path=magpie_api_view)
     #config.register_swagger_ui(swagger_ui_path=magpie_api_path)
 
+    # generate the api specs from code definitions
+    api_json = api_spec()
+    api_json_file_path = '{}/ui/swagger-ui/magpie-rest-api.json'.format(MAGPIE_MODULE_DIR)
+    with open(api_json_file_path, 'w') as api_file:
+        api_file.write(repr(api_json))
+
     config.scan('magpie')
     config.set_default_permission(ADMIN_PERM)
 

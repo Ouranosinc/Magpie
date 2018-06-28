@@ -187,7 +187,7 @@ class InternalServerErrorResponseSchema(colander.MappingSchema):
 # return JSON Swagger specifications of Magpie REST API on route '/magpie/__api__'
 # using all Cornice Services and Schemas
 @SwaggerAPI.get(tags=[APITag])
-def api_spec(request):
+def api_spec(request=None):
     generator = CorniceSwagger(get_services())
     json_api_spec = generator('Magpie REST API', __version__)
     return json_api_spec

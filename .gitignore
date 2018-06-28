@@ -17,6 +17,7 @@ env/
 magpieenv/
 magpie/api_docs/
 magpie/api_test/
+magpie/ui/swagger-ui/magpie-rest-api.json
 magpie/bin/
 magpie/include/
 magpie/lib/
