@@ -1,6 +1,9 @@
-from api.api_requests import *
-from models import resource_tree_service
+from definitions.pyramid_definitions import *
+from models import resource_tree_service, Service
 from services import service_type_dict
+
+# import indirectly from magpie->api_except instead of directly 'api_except' to avoid circular imports
+from magpie import evaluate_call
 
 
 def format_resource(resource, permissions=None, basic_info=False):
@@ -65,7 +68,7 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, intern
             else:
                 service_id = resource.root_service_id
                 if service_id not in internal_svc_res_perm_dict:
-                    service = models.Service.by_resource_id(service_id, db_session=db_session)
+                    service = Service.by_resource_id(service_id, db_session=db_session)
                     internal_svc_res_perm_dict[service_id] = service_type_dict[service.type].resource_types_permissions
 
             perms = internal_svc_res_perm_dict[service_id][resource.resource_type]

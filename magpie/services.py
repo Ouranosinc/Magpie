@@ -1,10 +1,10 @@
 from magpie import *
 from owsrequest import *
 from definitions.ziggurat_definitions import *
-from models import find_children_by_name
 from pyramid.security import Everyone as EVERYONE
 from pyramid.security import Allow
 from api.api_except import *
+import models
 
 
 class ServiceI(object):
@@ -169,15 +169,16 @@ class ServiceNCWMS2(ServiceWMS):
             return [(Allow, EVERYONE, permission_requested,)]
 
         if netcdf_file:
-            verify_param('outputs/', paramCompare=netcdf_file, httpError=HTTPNotFound,msgOnFail='outputs/ is not in path', notIn=True)
+            verify_param('outputs/', paramCompare=netcdf_file, httpError=HTTPNotFound,
+                         msgOnFail='outputs/ is not in path', notIn=True)
             netcdf_file = netcdf_file.replace('outputs/', 'birdhouse/')
 
             elems = netcdf_file.split('/')
-            db = self.request.db
             new_child = self.service
             while new_child and elems:
-                name = elems.pop(0)
-                new_child = find_children_by_name(name, parent_id=new_child.resource_id, db_session=db)
+                elem_name = elems.pop(0)
+                new_child = models.find_children_by_name(elem_name, parent_id=new_child.resource_id,
+                                                         db_session=self.request.db)
                 self.expand_acl(new_child, self.request.user)
 
         return self.acl
@@ -213,9 +214,9 @@ class ServiceGeoserver(ServiceWMS):
             workspace_name = layer_name.split(':')[0]
 
         # load workspace resource from the database
-        workspace = find_children_by_name(name=workspace_name,
-                                          parent_id=self.service.resource_id,
-                                          db_session=self.request.db)
+        workspace = models.find_children_by_name(name=workspace_name,
+                                                 parent_id=self.service.resource_id,
+                                                 db_session=self.request.db)
         if workspace:
             self.expand_acl(workspace, self.request.user)
         return self.acl
@@ -253,7 +254,8 @@ class ServiceAPI(ServiceI):
                 while route_child and route_parts:
                     part_name = route_parts.pop(0)
                     route_res_id = route_child.resource_id
-                    route_child = find_children_by_name(part_name, parent_id=route_res_id, db_session=self.request.db)
+                    route_child = models.find_children_by_name(part_name, parent_id=route_res_id,
+                                                               db_session=self.request.db)
                     self.expand_acl(route_child, self.request.user)
         return self.acl
 
@@ -319,9 +321,9 @@ class ServiceWFS(ServiceI):
             workspace_name = layer_name.split(':')[0]
 
         # load workspace resource from the database
-        workspace = find_children_by_name(name=workspace_name,
-                                          parent_id=self.service.resource_id,
-                                          db_session=self.request.db)
+        workspace = models.find_children_by_name(name=workspace_name,
+                                                 parent_id=self.service.resource_id,
+                                                 db_session=self.request.db)
         if workspace:
             self.expand_acl(workspace, self.request.user)
         return self.acl
@@ -370,13 +372,13 @@ class ServiceTHREDDS(ServiceI):
             return self.acl
 
         elems = elems[first_idx+1::]
-        db = self.request.db
         new_child = self.service
         while new_child and elems:
-            name = elems.pop(0)
-            if ".nc" in name:
-                name = name.split(".nc")[0]+".nc"  #in case there is more extension to discard such as .dds
-            new_child = find_children_by_name(name, parent_id=new_child.resource_id, db_session=db)
+            elem_name = elems.pop(0)
+            if ".nc" in elem_name:
+                elem_name = elem_name.split(".nc")[0]+".nc"  #in case there is more extension to discard such as .dds
+            parent_id = new_child.resource_id
+            new_child = models.find_children_by_name(elem_name, parent_id=parent_id, db_session=self.request.db)
             self.expand_acl(new_child, self.request.user)
 
         return self.acl

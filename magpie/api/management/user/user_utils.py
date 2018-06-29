@@ -1,9 +1,9 @@
 from magpie import *
-from magpie import models
 from api.api_except import *
 from api.management.resource.resource_utils import check_valid_service_resource_permission
 from definitions.ziggurat_definitions import *
 from services import service_type_dict
+import models
 
 
 def create_user(user_name, password, email, group_name, db_session):

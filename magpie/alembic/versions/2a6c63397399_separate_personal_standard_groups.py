@@ -16,8 +16,8 @@ sys.path.insert(0, root_dir)
 from alembic import op
 from alembic.context import get_context
 from magpie.definitions.sqlalchemy_definitions import *
+from magpie.helpers.register_default_users import init_anonymous, init_admin, init_user_group
 from magpie import models
-import register_default_group as def_grp
 
 Session = sessionmaker()
 
@@ -158,9 +158,9 @@ def upgrade():
         upgrade_migrate(old_grp_a, old_usr_a, new_grp_a, NEW_GROUP_ADMIN, session)
         upgrade_migrate(old_grp_u, old_usr_u, new_grp_u, NEW_GROUP_USERS, session)
         clean_user_groups(session)
-        def_grp.init_admin(session)
-        def_grp.init_anonymous(session)
-        def_grp.init_user_group(session)
+        init_admin(session)
+        init_anonymous(session)
+        init_user_group(session)
         session.commit()
 
 

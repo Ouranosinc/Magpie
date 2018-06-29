@@ -5,13 +5,13 @@ import os
 LOGGER = logging.getLogger(__name__)
 
 
-def print_log(msg):
+def print_log(msg, logger=LOGGER, level=logging.INFO):
     print(msg)
-    LOGGER.debug(msg)
+    logger.log(level, msg)
 
 
-def raise_log(msg, exception=Exception):
-    LOGGER.debug(msg)
+def raise_log(msg, exception=Exception, logger=LOGGER, level=logging.ERROR):
+    logger.log(level, msg)
     raise exception(msg)
 
 

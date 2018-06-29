@@ -1,9 +1,9 @@
 from magpie import *
-from magpie import models
+from definitions.pyramid_definitions import *
 from definitions.ziggurat_definitions import *
-from api.api_except import *
+from api.api_except import evaluate_call, verify_param
 from api.management.resource.resource_utils import check_valid_service_resource_permission
-from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy
+import models
 
 
 def get_request_method_content(request):

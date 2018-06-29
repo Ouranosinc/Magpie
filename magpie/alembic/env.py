@@ -1,9 +1,10 @@
 from __future__ import with_statement
 from alembic import context
 from magpie.definitions.sqlalchemy_definitions import engine_from_config, pool, create_engine
+from magpie.db import get_db_url
 from logging.config import fileConfig
 from sqlalchemy.schema import MetaData
-import os
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -32,15 +33,6 @@ target_metadata = MetaData(naming_convention={
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-def get_url():
-    return "postgresql://%s:%s@%s:%s/%s" % (
-        os.getenv("POSTGRES_USER", "pavics"),
-        os.getenv("POSTGRES_PASSWORD", "qwerty"),
-        os.getenv("POSTGRES_HOST", "localhost"),
-        os.getenv("POSTGRES_PORT", "5432"),
-        os.getenv("POSTGRES_DB", "pavics"),
-    )
-
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -55,7 +47,7 @@ def run_migrations_offline():
 
     """
     #url = config.get_main_option("sqlalchemy.url")
-    url = get_url()
+    url = get_db_url()
     context.configure(
         url=url, target_metadata=target_metadata, literal_binds=True)
 
@@ -74,7 +66,7 @@ def run_migrations_online():
     #    config.get_section(config.config_ini_section),
     #    prefix='sqlalchemy.',
     #    poolclass=pool.NullPool)
-    connectable = create_engine(get_url())
+    connectable = create_engine(get_db_url())
 
     with connectable.connect() as connection:
         context.configure(

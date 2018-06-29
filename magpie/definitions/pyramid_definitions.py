@@ -3,6 +3,7 @@ from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.httpexceptions import (
     HTTPOk,
+    HTTPCreated,
     HTTPFound,
     HTTPBadRequest,
     HTTPUnauthorized,
@@ -11,7 +12,8 @@ from pyramid.httpexceptions import (
     HTTPMethodNotAllowed,
     HTTPNotAcceptable,
     HTTPConflict,
-    HTTPInternalServerError
+    HTTPUnprocessableEntity,
+    HTTPInternalServerError,
 )
 from pyramid.interfaces import IAuthenticationPolicy
 from pyramid.response import Response

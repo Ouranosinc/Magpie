@@ -1,19 +1,16 @@
 import os
 import json
-import ConfigParser
 import pyramid
 from webtest import TestApp
-from magpie import magpie
+from magpie import magpie, db
 MAGPIE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
 
 json_headers = [('Content-Type', 'application/json')]
 
 
-def config_setup_from_ini(config_ini_file_path, ini_main_section_name):
-    parser = ConfigParser.ConfigParser()
-    parser.read([config_ini_file_path])
-    settings = dict(parser.items(ini_main_section_name))
+def config_setup_from_ini(config_ini_file_path):
+    settings = db.get_settings_from_config_ini(config_ini_file_path)
     config = pyramid.testing.setUp(settings=settings)
     return config
 
@@ -21,7 +18,7 @@ def config_setup_from_ini(config_ini_file_path, ini_main_section_name):
 def get_test_magpie_app():
     # parse settings from ini file to pass them to the application
     magpie_ini = '{}/magpie/magpie.ini'.format(MAGPIE_DIR)
-    config = config_setup_from_ini(magpie_ini, 'app:magpie_app')
+    config = config_setup_from_ini(magpie_ini)
     # required redefinition because root models' location is not the same from within this test file
     config.add_settings({'ziggurat_foundations.model_locations.User': 'magpie.models:User'})
     # scan dependencies

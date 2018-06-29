@@ -1,7 +1,8 @@
 from magpie import *
-from magpie import models
-from magpie.db import get_tm_session, get_session_factory, get_engine, is_database_ready
+from common import *
 from definitions.ziggurat_definitions import *
+import models
+import db
 import transaction
 import logging
 import time
@@ -10,42 +11,44 @@ LOGGER = logging.getLogger(__name__)
 
 
 def register_user_with_group(user_name, group_name, email, password, db_session):
-    db = db_session
-    if not GroupService.by_group_name(group_name, db_session=db):
+    if not GroupService.by_group_name(group_name, db_session=db_session):
         new_group = models.Group(group_name=group_name)
-        db.add(new_group)
-    registered_group = models.Group.by_group_name(group_name=group_name, db_session=db)
+        db_session.add(new_group)
+    registered_group = models.Group.by_group_name(group_name=group_name, db_session=db_session)
 
-    registered_user = UserService.by_user_name(user_name, db_session=db)
+    registered_user = UserService.by_user_name(user_name, db_session=db_session)
     if not registered_user:
         new_user = models.User(user_name=user_name, email=email)
         new_user.set_password(password)
         new_user.regenerate_security_code()
-        db.add(new_user)
-        registered_user = UserService.by_user_name(user_name, db_session=db).id
+        db_session.add(new_user)
+        registered_user = UserService.by_user_name(user_name, db_session=db_session).id
 
         # add personal user-group and reference between user/personal user-group
-        if not GroupService.by_group_name(user_name, db_session=db):
+        if not GroupService.by_group_name(user_name, db_session=db_session):
             new_group = models.Group(group_name=user_name)
-            db.add(new_group)
-            group_id = GroupService.by_group_name(user_name, db_session=db).id
+            db_session.add(new_group)
+            group_id = GroupService.by_group_name(user_name, db_session=db_session).id
             group_entry = models.UserGroup(group_id=group_id, user_id=registered_user.id)
-            db.add(group_entry)
+            db_session.add(group_entry)
     else:
-        LOGGER.debug(user_name+' already exist')
+        print_log(user_name+' already exist', level=logging.DEBUG)
 
     try:
         # ensure the reference between user/group exists (user joined the group)
-        group_entry = models.UserGroup(group_id=registered_group.id, user_id=registered_user.id)
-        db.add(group_entry)
+        user_group_refs = models.UserGroup.all(db_session=db_session)
+        user_group_refs_tup = [(ref.group_id, ref.user_id) for ref in user_group_refs]
+        if (registered_group.id, registered_user.id) not in user_group_refs_tup:
+            group_entry = models.UserGroup(group_id=registered_group.id, user_id=registered_user.id)
+            db_session.add(group_entry)
     except:  # in case reference already exists, avoid duplicate error
-        pass
+        db_session.rollback()
 
 
 def init_anonymous(db_session):
     register_user_with_group(user_name=ANONYMOUS_USER,
                              group_name=ANONYMOUS_USER,
-                             email=ANONYMOUS_USER+'@mail.com',
+                             email=ANONYMOUS_USER + '@mail.com',
                              password=ANONYMOUS_USER,
                              db_session=db_session)
 
@@ -68,33 +71,32 @@ def init_admin(db_session):
             db_session.add(new_group_permission)
         except Exception as e:
             db_session.rollback()
-            raise e
+            raise_log('Failed to create admin user-group permission', exception=type(e))
 
 
 def init_user_group(db_session):
-    db = db_session
-    if not GroupService.by_group_name(USER_GROUP, db_session=db):
+    if not GroupService.by_group_name(USER_GROUP, db_session=db_session):
         user_group = models.Group(group_name=USER_GROUP)
-        db.add(user_group)
+        db_session.add(user_group)
     else:
-        LOGGER.debug('USER_GROUP already initialized')
+        print_log('USER_GROUP already initialized', level=logging.DEBUG)
 
 
-if __name__ == '__main__':
-    # Initialize database with default user: admin+anonymous
-    if not is_database_ready():
+def register_default_users():
+    if not db.is_database_ready():
         time.sleep(2)
-        raise Exception('database is not ready yet')
-    import ConfigParser
-    Config = ConfigParser.ConfigParser()
-    curr_dir = os.path.dirname(__file__)
-    Config.read(curr_dir+'/magpie/magpie.ini')
-    settings = dict(Config.items('app:main'))
-    session_factory = get_session_factory(get_engine(settings))
-    db_session = get_tm_session(session_factory, transaction)
+        raise_log('Database not ready')
+
+    magpie_module_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+    magpie_ini_file = '{}/magpie.ini'.format(magpie_module_dir)
+    db_session = db.get_db_session_from_config_ini(magpie_ini_file)
 
     init_admin(db_session)
     init_anonymous(db_session)
     init_user_group(db_session)
     transaction.commit()
     db_session.close()
+
+
+if __name__ == '__main__':
+    register_default_users()

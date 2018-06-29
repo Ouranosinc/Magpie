@@ -1,4 +1,5 @@
-from magpie.register import *
+from register import magpie_register_services_from_config
+from db import get_db_session_from_config_ini
 import os
 import argparse
 
@@ -16,6 +17,14 @@ if __name__ == "__main__":
                              "already exist, ie: when conflicts occur during service creation (default: %(default)s)")
     parser.add_argument('-p', '--phoenix-push', default=False, action='store_true', dest='phoenix_push',
                         help="push registered Magpie services to sync in Phoenix (default: %(default)s)")
+    parser.add_argument('-d', '--use-db-session', default=False, action='store_true', dest='use_db_session',
+                        help="update registered services using db session config instead of API (default: %(default)s)")
     args = parser.parse_args()
-    magpie_register_services_from_config(args.config_file, args.phoenix_push,
-                                         args.force_update, args.no_getcapabilities)
+
+    db_session = None
+    if args.use_db_session:
+        config_ini = '{}/magpie.ini'.format(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+        db_session = get_db_session_from_config_ini(config_ini)
+    magpie_register_services_from_config(args.config_file,
+                                         push_to_phoenix=args.phoenix_push, force_update=args.force_update,
+                                         disable_getcapabilities=args.no_getcapabilities, db_session=db_session)

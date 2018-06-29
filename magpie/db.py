@@ -1,5 +1,7 @@
 from definitions.alembic_definitions import *
 from definitions.sqlalchemy_definitions import *
+import ConfigParser
+import transaction
 import models
 import inspect
 import zope.sqlalchemy
@@ -17,15 +19,18 @@ from models import *
 configure_mappers()
 
 
-def get_engine(settings, prefix='sqlalchemy.'):
-    database_url = 'postgresql://' \
-                   + os.getenv('POSTGRES_USER', 'postgres') + \
-                   ':' + os.getenv('POSTGRES_PASSWORD', 'postgres') + \
-                   '@' + os.getenv('POSTGRES_HOST', 'localhost') + \
-                   ':' + os.getenv('POSTGRES_PORT', '5432') + \
-                   '/' + os.getenv('POSTGRES_DB', 'magpiedb')
+def get_db_url():
+    return "postgresql://%s:%s@%s:%s/%s" % (
+        os.getenv("POSTGRES_USER", "postgres"),
+        os.getenv("POSTGRES_PASSWORD", "postgres"),
+        os.getenv("POSTGRES_HOST", "localhost"),
+        os.getenv("POSTGRES_PORT", "5432"),
+        os.getenv("POSTGRES_DB", "magpiedb"),
+    )
 
-    settings[prefix+'url'] = database_url
+
+def get_engine(settings, prefix='sqlalchemy.'):
+    settings[prefix+'url'] = get_db_url()
     return engine_from_config(settings, prefix)
 
 
@@ -56,9 +61,27 @@ def get_tm_session(session_factory, transaction_manager):
               dbsession = get_tm_session(session_factory, transaction.manager)
 
     """
-    dbsession = session_factory()
-    zope.sqlalchemy.register(dbsession, transaction_manager=transaction_manager)
-    return dbsession
+    db_session = session_factory()
+    zope.sqlalchemy.register(db_session, transaction_manager=transaction_manager)
+    return db_session
+
+
+def get_db_session_from_settings(settings):
+    session_factory = get_session_factory(get_engine(settings))
+    db_session = get_tm_session(session_factory, transaction)
+    return db_session
+
+
+def get_db_session_from_config_ini(config_ini_path, ini_main_section_name='app:magpie_app'):
+    settings = get_settings_from_config_ini(config_ini_path, ini_main_section_name)
+    return get_db_session_from_settings(settings)
+
+
+def get_settings_from_config_ini(config_ini_path, ini_main_section_name='app:magpie_app'):
+    parser = ConfigParser.ConfigParser()
+    parser.read([config_ini_path])
+    settings = dict(parser.items(ini_main_section_name))
+    return settings
 
 
 def get_alembic_ini_path():
@@ -106,9 +129,9 @@ def includeme(config):
     config.include('pyramid_tm')
 
     session_factory = get_session_factory(get_engine(settings))
-    config.registry['dbsession_factory'] = session_factory
+    config.registry['db_session_factory'] = session_factory
 
-    # make request.dbsession available for use in Pyramid
+    # make `request.db` available for use in Pyramid
     config.add_request_method(
         # r.tm is the transaction manager used by pyramid_tm
         lambda r: get_tm_session(session_factory, r.tm),
