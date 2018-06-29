@@ -133,6 +133,14 @@ TypeSchemaNode = colander.SchemaNode(colander.String(), description="Response co
 DetailSchemaNode = colander.SchemaNode(colander.String(), description="Response status message")
 
 
+class HeaderSchema(colander.MappingSchema):
+    content_type = colander.SchemaNode(
+        colander.String(),
+        example='application/json'
+    )
+    content_type.name = 'Content-Type'
+
+
 class BaseBodySchema(colander.MappingSchema):
     code = CodeSchemaNode
     type = TypeSchemaNode
@@ -305,7 +313,7 @@ class Services_GET_NotAcceptableResponseSchema(colander.MappingSchema):
     body = Services_GET_ResponseBodySchema()
 
 
-class Services_POST_RequestBodySchema(colander.MappingSchema):
+class Services_POST_BodySchema(colander.MappingSchema):
     service_name = colander.SchemaNode(
         colander.String(),
         description="Name of the service to create",
@@ -321,6 +329,11 @@ class Services_POST_RequestBodySchema(colander.MappingSchema):
         description="Private URL of the service to create",
         example="http://localhost:9000/my_service"
     )
+
+
+class Services_POST_RequestBodySchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = Services_POST_BodySchema()
 
 
 class Services_POST_ResponseBodySchema(colander.MappingSchema):
@@ -349,6 +362,34 @@ class Services_POST_ConflictResponseSchema(colander.MappingSchema):
     body = Services_POST_ResponseBodySchema(code=409)
 
 
+class Service_PUT_BodySchema(colander.MappingSchema):
+    service_name = colander.SchemaNode(
+        colander.String(),
+        description="New service name to apply to service specified in path",
+        missing=colander.drop,
+        default=colander.null,
+        example="my_service_new_name"
+    )
+    service_url = colander.SchemaNode(
+        colander.String(),
+        description="New service private URL to apply to service specified in path",
+        missing=colander.drop,
+        default=colander.null,
+        example="http://localhost:9000/new_service_name"
+    )
+    service_push = colander.SchemaNode(
+        colander.Boolean(),
+        description="Push service update to Phoenix if applicable",
+        missing=colander.drop,
+        default=False,
+    )
+
+
+class Service_PUT_RequestBodySchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = Service_PUT_BodySchema()
+
+
 class Service_SuccessResponseBodySchema(colander.MappingSchema):
     code = CodeSchemaNode
     type = TypeSchemaNode
@@ -374,6 +415,20 @@ class Service_PUT_ForbiddenResponseSchema(colander.MappingSchema):
 class Service_PUT_ConflictResponseSchema(colander.MappingSchema):
     description = "Specified `service_name` already exists."
     body = Service_FailureResponseBodySchema(code=409)
+
+
+class Service_DELETE_BodySchema(colander.MappingSchema):
+    service_push = colander.SchemaNode(
+        colander.Boolean(),
+        description="Push service update to Phoenix if applicable",
+        missing=colander.drop,
+        default=False
+    )
+
+
+class Service_DELETE_RequestBodySchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = Service_DELETE_BodySchema(missing=colander.drop)
 
 
 class Service_DELETE_OkResponseSchema(colander.MappingSchema):
@@ -432,10 +487,6 @@ class Version_GET_ResponseBodySchema(colander.MappingSchema):
 class Version_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get version successful."
     body = Version_GET_ResponseBodySchema()
-
-
-#  NOT REQUIRED field
-#field = colader.SchemaNode(colander.String(), missing=colader.drop)
 
 
 # return JSON Swagger specifications of Magpie REST API on route '/magpie/__api__'

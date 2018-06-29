@@ -34,7 +34,7 @@ MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
 sys.path.insert(0, MAGPIE_MODULE_DIR)
 
 
-@VersionAPI.get(schema=Version_GET_ResponseBodySchema(), tags=[APITag], response_schemas={
+@VersionAPI.get(tags=[APITag], response_schemas={
     '200': Version_GET_OkResponseSchema()
 })
 @view_config(route_name='version', request_method='GET', permission=NO_PERMISSION_REQUIRED)

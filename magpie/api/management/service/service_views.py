@@ -10,7 +10,7 @@ from models import resource_tree_service
 from services import service_type_dict
 
 
-@ServicesTypesAPI.get(schema=Services_GET_ResponseBodySchema(), tags=[ServiceTag], response_schemas={
+@ServicesTypesAPI.get(tags=[ServiceTag], response_schemas={
     '200': Services_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '406': Services_GET_NotAcceptableResponseSchema(),
@@ -20,7 +20,7 @@ def get_services_by_type_view(request):
     return get_services_runner(request)
 
 
-@ServicesAPI.get(schema=Services_GET_ResponseBodySchema(), tags=[ServiceTag], response_schemas={
+@ServicesAPI.get(tags=[ServiceTag], response_schemas={
     '200': Services_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '406': Services_GET_NotAcceptableResponseSchema(),
@@ -51,7 +51,7 @@ def get_services_runner(request):
                       content={u'services': json_response})
 
 
-@ServicesAPI.post(schema=Services_POST_ResponseBodySchema(), tags=[ServiceTag], response_schemas={
+@ServicesAPI.post(schema=Services_POST_RequestBodySchema(), tags=[ServiceTag], response_schemas={
     '201': Services_POST_CreatedResponseSchema(),
     '400': Services_POST_BadRequestResponseSchema(),
     '401': UnauthorizedResponseSchema(),
@@ -92,7 +92,7 @@ def register_service(request):
                       content={u'service': format_service(service)})
 
 
-@ServiceAPI.put(schema=Service_SuccessResponseBodySchema(), tags=[ServiceTag], response_schemas={
+@ServiceAPI.put(schema=Service_PUT_RequestBodySchema(), tags=[ServiceTag], response_schemas={
     '200': Service_PUT_OkResponseSchema(),
     '400': Service_PUT_BadRequestResponseSchema(),
     '401': UnauthorizedResponseSchema(),
@@ -102,7 +102,7 @@ def register_service(request):
 @view_config(route_name=ServiceAPI.name, request_method='PUT')
 def update_service(request):
     service = get_service_matchdict_checked(request)
-    service_push = str2bool(get_multiformat_post(request, 'service_push'))
+    service_push = str2bool(get_multiformat_post(request, 'service_push', default=False))
 
     def select_update(new_value, old_value):
         return new_value if new_value is not None and not new_value == '' else old_value
@@ -141,7 +141,7 @@ def update_service(request):
                       content={u'service': format_service(service)})
 
 
-@ServiceAPI.get(schema=Service_SuccessResponseBodySchema(), tags=[ServiceTag], response_schemas={
+@ServiceAPI.get(tags=[ServiceTag], response_schemas={
     '200': Service_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Service_MatchDictCheck_ForbiddenResponseBodySchema(),
@@ -154,7 +154,7 @@ def get_service(request):
                       content={u'service': format_service(service)})
 
 
-@ServiceAPI.delete(schema=Service_SuccessResponseBodySchema(), tags=[ServiceTag], response_schemas={
+@ServiceAPI.delete(schema=Service_DELETE_RequestBodySchema(), tags=[ServiceTag], response_schemas={
     '200': Service_DELETE_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Service_DELETE_ForbiddenResponseSchema(),
