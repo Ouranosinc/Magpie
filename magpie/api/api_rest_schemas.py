@@ -102,12 +102,24 @@ ResourceAPI = Service(
 ServicesAPI = Service(
     path='/services',
     name='Services')
-ServicesTypesAPI = Service(
-    path='/services/types/{service_type}',
-    name='ServicesTypes')
 ServiceAPI = Service(
     path='/services/{service_name}',
     name='Service')
+ServicesTypesAPI = Service(
+    path='/services/types/{service_type}',
+    name='ServicesTypes')
+ServicePermissionsAPI = Service(
+    path='/services/{service_name}/permissions',
+    name='ServicePermissions')
+ServiceResourcesAPI = Service(
+    path='/services/{service_name}/resources',
+    name='ServiceResources')
+ServiceResourceAPI = Service(
+    path='/services/{service_name}/resources/{resource_id}',
+    name='ServiceResource')
+ServiceResourcesTypesAPI = Service(
+    path='/services/types/{service_type}/resources/types',
+    name='ServiceResourcesTypes')
 SessionAPI = Service(
     path='/session',
     name='Session')
@@ -115,12 +127,13 @@ VersionAPI = Service(
     path='/version',
     name='Version')
 
+
 CodeSchemaNode = colander.SchemaNode(colander.Integer(), description="HTTP response code", example=200)
 TypeSchemaNode = colander.SchemaNode(colander.String(), description="Response content type", example="application/json")
 DetailSchemaNode = colander.SchemaNode(colander.String(), description="Response status message")
 
 
-class BaseSchema(colander.MappingSchema):
+class BaseBodySchema(colander.MappingSchema):
     code = CodeSchemaNode
     type = TypeSchemaNode
     detail = DetailSchemaNode
@@ -201,7 +214,7 @@ class PermissionSchema(colander.SequenceSchema):
     )
 
 
-class ServiceBodySchemaNode(colander.MappingSchema):
+class ServiceBodySchema(colander.MappingSchema):
     resource_id = colander.SchemaNode(
         colander.Integer(),
         description="Resource identification number",
@@ -230,15 +243,15 @@ class ServiceBodySchemaNode(colander.MappingSchema):
 
 
 class ServiceType_thredds_SchemaNode(colander.MappingSchema):
-    thredds = ServiceBodySchemaNode()
+    thredds = ServiceBodySchema()
 
 
 class ServiceType_ncwms_SchemaNode(colander.MappingSchema):
-    ncwms = ServiceBodySchemaNode()
+    ncwms = ServiceBodySchema()
 
 
 class ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
-    geoserver_api = ServiceBodySchemaNode()
+    geoserver_api = ServiceBodySchema()
     geoserver_api.name = "geoserver-api"
 
 
@@ -260,6 +273,11 @@ class Services_GET_ResponseBodySchema(colander.MappingSchema):
 class Services_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get services successful."
     body = Services_GET_ResponseBodySchema()
+
+
+class Service_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service successful."
+    body = Service_GET_ResponseBodySchema()
 
 
 class Services_GET_NotAcceptableResponseSchema(colander.MappingSchema):
@@ -309,6 +327,48 @@ class Services_POST_ForbiddenResponseSchema(colander.MappingSchema):
 class Services_POST_ConflictResponseSchema(colander.MappingSchema):
     description = "Specified `service_name` value already exists."
     body = Services_POST_ResponseBodySchema(code=409)
+
+
+class Services_PUT_SuccessResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    service = ServiceBodySchema()
+
+
+class Services_PUT_FailureResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    service_name = colander.SchemaNode(
+        colander.String(),
+        description="Service name extracted from path"
+    )
+
+
+class Services_PUT_OkResponseSchema(colander.MappingSchema):
+    description = "Update service successful."
+    body = Services_PUT_SuccessResponseBodySchema(code=200)
+
+
+class Services_PUT_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Current service values are already equal to update values."
+    body = Services_PUT_FailureResponseBodySchema(code=400)
+
+
+class Services_PUT_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Update service failed during value assignment."
+    body = Services_PUT_FailureResponseBodySchema(code=403)
+
+
+class Services_PUT_ConflictResponseSchema(colander.MappingSchema):
+    description = "Specified `service_name` already exists."
+    body = Services_PUT_FailureResponseBodySchema(code=409)
+
+
+class Services_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Delete service from db refused by db."
+    body = Services_DELETE_FailureResponseBodySchema(code=403)
 
 
 class Session_GET_ResponseBodySchema(colander.MappingSchema):

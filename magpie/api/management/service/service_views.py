@@ -1,4 +1,4 @@
-from api.management.resource.resource_utils import create_resource
+from api.management.resource.resource_utils import create_resource, delete_resource
 from api.management.service.service_formats import *
 from api.management.service.service_utils import *
 from api.api_requests import *
@@ -15,7 +15,7 @@ from services import service_type_dict
     '401': UnauthorizedResponseSchema(),
     '406': Services_GET_NotAcceptableResponseSchema(),
 })
-@view_config(route_name='services_type', request_method='GET')
+@view_config(route_name=ServicesTypesAPI.name, request_method='GET')
 def get_services_by_type_view(request):
     return get_services_runner(request)
 
@@ -25,7 +25,7 @@ def get_services_by_type_view(request):
     '401': UnauthorizedResponseSchema(),
     '406': Services_GET_NotAcceptableResponseSchema(),
 })
-@view_config(route_name='services', request_method='GET')
+@view_config(route_name=ServicesAPI.name, request_method='GET')
 def get_services_view(request):
     return get_services_runner(request)
 
@@ -58,7 +58,7 @@ def get_services_runner(request):
     '403': Services_POST_ForbiddenResponseSchema(),
     '409': Services_POST_ConflictResponseSchema(),
 })
-@view_config(route_name='services', request_method='POST')
+@view_config(route_name=ServicesAPI.name, request_method='POST')
 def register_service(request):
     service_name = get_value_multiformat_post_checked(request, 'service_name')
     service_url = get_value_multiformat_post_checked(request, 'service_url')
@@ -92,7 +92,14 @@ def register_service(request):
                       content=format_service(service))
 
 
-@view_config(route_name='service', request_method='PUT')
+@ServiceAPI.put(schema=Services_PUT_SuccessResponseBodySchema(), tags=[ServiceTag], response_schemas={
+    '200': Services_PUT_OkResponseSchema(),
+    '400': Services_PUT_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Services_PUT_ForbiddenResponseSchema(),
+    '409': Services_PUT_ConflictResponseSchema(),
+})
+@view_config(route_name=ServiceAPI.name, request_method='PUT')
 def update_service(request):
     service = get_service_matchdict_checked(request)
     service_push = str2bool(get_multiformat_post(request, 'service_push'))
@@ -104,7 +111,7 @@ def update_service(request):
     svc_name = select_update(get_multiformat_post(request, 'service_name'), service.resource_name)
     svc_url = select_update(get_multiformat_post(request, 'service_url'), service.url)
     verify_param(svc_name == service.resource_name and svc_url == service.url, notEqual=True, paramCompare=True,
-                 httpError=HTTPBadRequest, msgOnFail="Current service values are already equal to update values")
+                 httpError=HTTPBadRequest, msgOnFail=Services_PUT_BadRequestResponseSchema.description)
 
     if svc_name != service.resource_name:
         all_svc_names = list()
@@ -112,7 +119,8 @@ def update_service(request):
             for svc in get_services_by_type(svc_type, db_session=request.db):
                 all_svc_names.extend(svc.resource_name)
         verify_param(svc_name, notIn=True, paramCompare=all_svc_names, httpError=HTTPConflict,
-                     msgOnFail="Specified `service_name` value '" + str(svc_name) + "' already exists")
+                     msgOnFail=Services_PUT_ConflictResponseSchema.description,
+                     content={u'service_name': str(svc_name)})
 
     def update_service_magpie_and_phoenix(svc, new_name, new_url, svc_push, db_session):
         svc.resource_name = new_name
@@ -127,26 +135,34 @@ def update_service(request):
     err_svc_content = {u'service': old_svc_content, u'new_service_name': svc_name, u'new_service_url': svc_url}
     evaluate_call(lambda: update_service_magpie_and_phoenix(service, svc_name, svc_url, service_push, request.db),
                   fallback=lambda: request.db.rollback(),
-                  httpError=HTTPForbidden, msgOnFail="Update service failed during value assignment",
+                  httpError=HTTPForbidden, msgOnFail=Services_PUT_ForbiddenResponseSchema.description,
                   content=err_svc_content)
-    return valid_http(httpSuccess=HTTPOk, detail="Update service successful", content=format_service(service))
+    return valid_http(httpSuccess=HTTPOk, detail=Services_PUT_OkResponseSchema.description,
+                      content=format_service(service))
 
 
-@view_config(route_name='service', request_method='GET')
+@ServiceAPI.put(schema=Services_PUT_SuccessResponseBodySchema(), tags=[ServiceTag], response_schemas={
+    '200': Services_GET_OkResponseSchema(),
+    '400': Services_PUT_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Services_PUT_ForbiddenResponseSchema(),
+    '409': Services_PUT_ConflictResponseSchema(),
+})
+@view_config(route_name=ServiceAPI.name, request_method='GET')
 def get_service(request):
     service = get_service_matchdict_checked(request)
-    return valid_http(httpSuccess=HTTPOk, detail="Get service successful",
+    return valid_http(httpSuccess=HTTPOk, detail=Service_GET_OkResponseSchema.name,
                       content={str(service.resource_name): format_service(service)})
 
 
-@view_config(route_name='service', request_method='DELETE')
+@view_config(route_name=ServiceAPI.name, request_method='DELETE')
 def unregister_service(request):
     service = get_service_matchdict_checked(request)
     service_push = str2bool(get_multiformat_delete(request, 'service_push'))
     svc_content = format_service(service)
     evaluate_call(lambda: resource_tree_service.delete_branch(resource_id=service.resource_id, db_session=request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                  msgOnFail="Delete service from resource tree failed", content=svc_content)
+                  msgOnFail="Delete service from resource tree failed.", content=svc_content)
 
     def remove_service_magpie_and_phoenix(svc, svc_push, db_session):
         db_session.delete(svc)
@@ -155,11 +171,11 @@ def unregister_service(request):
 
     evaluate_call(lambda: remove_service_magpie_and_phoenix(service, service_push, request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                  msgOnFail="Delete service from db failed", content=svc_content)
+                  msgOnFail=Services_DELETE_ForbiddenResponseSchema.description, content=svc_content)
     return valid_http(httpSuccess=HTTPOk, detail="Delete service successful")
 
 
-@view_config(route_name='service_permissions', request_method='GET')
+@view_config(route_name=ServicePermissionsAPI.name, request_method='GET')
 def get_service_permissions(request):
     service = get_service_matchdict_checked(request)
     svc_content = format_service(service)
@@ -170,7 +186,12 @@ def get_service_permissions(request):
                       content={u'permission_names': svc_perms})
 
 
-@view_config(route_name='service_resources', request_method='GET')
+@view_config(route_name=ServiceResourceAPI.name, request_method='DELETE')
+def delete_service_resource_view(request):
+    return delete_resource(request)
+
+
+@view_config(route_name=ServiceResourcesAPI.name, request_method='GET')
 def get_service_resources_view(request):
     service = get_service_matchdict_checked(request)
     svc_res_json = format_service_resources(service, db_session=request.db, display_all=True)
@@ -178,7 +199,7 @@ def get_service_resources_view(request):
                       content={str(service.resource_name): svc_res_json})
 
 
-@view_config(route_name='service_resources', request_method='POST')
+@view_config(route_name=ServiceResourcesAPI.name, request_method='POST')
 def create_service_direct_resource(request):
     service = get_service_matchdict_checked(request)
     resource_name = get_multiformat_post(request, 'resource_name')
@@ -189,7 +210,7 @@ def create_service_direct_resource(request):
     return create_resource(resource_name, resource_type, parent_id=parent_id, db_session=request.db)
 
 
-@view_config(route_name='service_type_resource_types', request_method='GET')
+@view_config(route_name=ServiceResourcesTypesAPI.name, request_method='GET')
 def get_service_type_resource_types(request):
     service_type = get_value_matchdict_checked(request, 'service_type')
     verify_param(service_type, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotFound,

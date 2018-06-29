@@ -1,8 +1,11 @@
 import models
+from common import *
 from models import resource_factory, resource_type_dict, resource_tree_service
 from services import service_type_dict
+from register import sync_services_phoenix
 from definitions.pyramid_definitions import *
 from definitions.ziggurat_definitions import *
+from api.api_requests import *
 from api.api_except import verify_param, evaluate_call, raise_http, valid_http
 from api.management.resource.resource_formats import format_resource
 
@@ -156,3 +159,24 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
                   httpError=HTTPForbidden, msgOnFail="Failed to insert new resource in service tree using parent id")
     return valid_http(httpSuccess=HTTPCreated, detail="Create resource successful",
                       content=format_resource(new_resource, basic_info=True))
+
+
+def delete_resource(request):
+    resource = get_resource_matchdict_checked(request)
+    service_push = str2bool(get_multiformat_post(request, 'service_push'))
+    res_content = format_resource(resource, basic_info=True)
+    evaluate_call(lambda: resource_tree_service.delete_branch(resource_id=resource.resource_id, db_session=request.db),
+                  fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                  msgOnFail="Delete resource branch from tree service failed", content=res_content)
+
+    def remove_service_magpie_and_phoenix(res, svc_push, db):
+        if res.resource_type != 'service':
+            svc_push = False
+        db.delete(res)
+        if svc_push:
+            sync_services_phoenix(db.query(models.Service))
+
+    evaluate_call(lambda: remove_service_magpie_and_phoenix(resource, service_push, request.db),
+                  fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                  msgOnFail="Delete resource from db failed", content=res_content)
+    return valid_http(httpSuccess=HTTPOk, detail="Delete resource successful")
