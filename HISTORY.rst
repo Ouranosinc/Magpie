@@ -12,6 +12,9 @@ History
 * move many source files around to regroup by API/UI functionality
 * auto-generation of swagger REST API documentation
 * unit tests
+* validation of permitted resource types children under specific parent service or resource
+* ServiceAPI to filter read/write of specific GET,POST,etc on route parts
+* ServiceAccess to filter top-level route read/write access of a generic service URL
 
 0.5.x
 ---------------------

@@ -18,6 +18,10 @@ class ServiceI(object):
         def resource_types(cls):  # allowed resources types under the service
             return cls.resource_types_permissions.keys()
 
+        @property
+        def child_resource_allowed(cls):
+            return len(cls.resource_types) > 0
+
     def __init__(self, service, request):
         self.service = service
         self.request = request
@@ -173,12 +177,14 @@ class ServiceNCWMS2(ServiceWMS):
                          msgOnFail='outputs/ is not in path', notIn=True)
             netcdf_file = netcdf_file.replace('outputs/', 'birdhouse/')
 
-            elems = netcdf_file.split('/')
+            db_session = self.request.db
+            path_elems = netcdf_file.split('/')
             new_child = self.service
-            while new_child and elems:
-                elem_name = elems.pop(0)
-                new_child = models.find_children_by_name(elem_name, parent_id=new_child.resource_id,
-                                                         db_session=self.request.db)
+            while new_child and path_elems:
+                elem_name = path_elems.pop(0)
+                new_child = models.find_children_by_name(
+                    elem_name, parent_id=new_child.resource_id, db_session=db_session
+                )
                 self.expand_acl(new_child, self.request.user)
 
         return self.acl
@@ -220,6 +226,23 @@ class ServiceGeoserver(ServiceWMS):
         if workspace:
             self.expand_acl(workspace, self.request.user)
         return self.acl
+
+
+class ServiceAccess(ServiceI):
+    permission_names = ['access']
+    params_expected = []
+    resource_types_permissions = {}
+
+    def __init__(self, service, request):
+        super(ServiceAccess, self).__init__(service, request)
+
+    @property
+    def __acl__(self):
+        self.expand_acl(self.service, self.request.user)
+        return self.acl
+
+    def permission_requested(self):
+        return 'access'
 
 
 class ServiceAPI(ServiceI):
@@ -388,6 +411,7 @@ class ServiceTHREDDS(ServiceI):
 
 
 service_type_dict = {
+    u'access':          ServiceAccess,
     u'geoserver-api':   ServiceGeoserverAPI,
     u'geoserverwms':    ServiceGeoserver,
     u'ncwms':           ServiceNCWMS2,
