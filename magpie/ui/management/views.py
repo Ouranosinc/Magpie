@@ -406,23 +406,29 @@ class ManagementViews(object):
                                                      is_user=False, is_inherited_permissions=False):
         user_or_group_type = 'users' if is_user else 'groups'
         inherit_type = 'inherited_' if is_inherited_permissions and is_user else ''
+
+        group_perms_url = '{url}/{usr_grp_type}/{usr_grp}/{inherit}resources' \
+            .format(url=self.magpie_url, usr_grp_type=user_or_group_type,
+                    usr_grp=user_or_group_name, inherit=inherit_type)
+        resp_group_perms = check_response(requests.get(group_perms_url, cookies=self.request.cookies))
+        resp_group_perms_json = resp_group_perms.json()
+
+        svc_perm_url = '{url}/services/types/{svc_type}'.format(url=self.magpie_url, svc_type=service_type)
+        resp_svc_type = check_response(requests.get(svc_perm_url, cookies=self.request.cookies))
+        resp_available_svc_types = resp_svc_type.json()['services'][service_type]
         resources_permission_names = set()
+        for svc in resp_available_svc_types:
+            resources_permission_names.update(set(resp_available_svc_types[svc]['permission_names']))
+        resources_permission_names = list(resources_permission_names)
+
         resources = {}
         for service in services:
             if not service:
                 continue
 
-            svc_perm_url = '{url}/services/{svc}/permissions'.format(url=self.magpie_url, svc=service)
-            resp_svc = check_response(requests.get(svc_perm_url, cookies=self.request.cookies))
-            resources_permission_names.update(set(resp_svc.json()['permission_names']))
-
-            group_perms_url = '{url}/{usr_grp_type}/{usr_grp}/{inherit}resources' \
-                              .format(url=self.magpie_url, usr_grp_type=user_or_group_type,
-                                      usr_grp=user_or_group_name, inherit=inherit_type)
-            resp_group_perms = check_response(requests.get(group_perms_url, cookies=self.request.cookies))
             permission = {}
             try:
-                raw_perms = resp_group_perms.json()['resources'][service_type][service]
+                raw_perms = resp_group_perms_json['resources'][service_type][service]
                 permission[raw_perms['resource_id']] = raw_perms['permission_names']
                 permission.update(self.perm_tree_parser(raw_perms['resources']))
             except KeyError:
@@ -435,7 +441,7 @@ class ManagementViews(object):
             resources[service] = dict(id=raw_resources['resource_id'],
                                       permission_names=self.default_get(permission, raw_resources['resource_id'], []),
                                       children=self.resource_tree_parser(raw_resources['resources'], permission))
-        return list(resources_permission_names), resources
+        return resources_permission_names, resources
 
     @view_config(route_name='edit_group', renderer='templates/edit_group.mako')
     def edit_group(self):
