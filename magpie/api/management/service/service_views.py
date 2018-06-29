@@ -2,6 +2,7 @@ from api.management.resource.resource_utils import create_resource
 from api.management.service.service_formats import *
 from api.management.service.service_utils import *
 from api.api_requests import *
+from api.api_rest_schemas import *
 from definitions.pyramid_definitions import view_config
 from common import str2bool
 from register import sync_services_phoenix
@@ -9,6 +10,11 @@ from models import resource_tree_service
 from services import service_type_dict
 
 
+@ServicesAPI.get(schema=Services_GET_ResponseBodySchema(), tags=[ServiceTag], response_schemas={
+    '200': Services_GET_OkResponseSchema(description="Get services successful."),
+    '406': Services_GET_NotAcceptableResponseSchema(
+        description="Invalid `service_type` value does not correspond to any of the existing service types"),
+})
 @view_config(route_name='services_type', request_method='GET')
 @view_config(route_name='services', request_method='GET')
 def get_services_view(request):
@@ -28,7 +34,7 @@ def get_services_view(request):
         for service in services:
             json_response[service_type][service.resource_name] = format_service(service)
 
-    return valid_http(httpSuccess=HTTPOk, detail="Get services successful", content={u'services': json_response})
+    return valid_http(httpSuccess=HTTPOk, detail="Get services successful.", content={u'services': json_response})
 
 
 @view_config(route_name='services', request_method='POST')

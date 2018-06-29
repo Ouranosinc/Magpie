@@ -62,9 +62,15 @@ CurrentUserAPI = Service(
 GroupAPI = Service(
     path='/groups/{group_name}',
     name='Group')
+ResourcesAPI = Service(
+    path='/resources',
+    name='Resources')
 ResourceAPI = Service(
     path='/resources/{resource_id}',
     name='Resource')
+ServicesAPI = Service(
+    path='/services',
+    name='Services')
 ServiceAPI = Service(
     path='/services/{service_name}',
     name='Service')
@@ -76,11 +82,14 @@ VersionAPI = Service(
     name='Version')
 #NotFoundAPI = Service(name='NotFound', path='/', description="Route not found")
 
+CodeSchemaNode = colander.SchemaNode(colander.Integer(), description="HTTP response code", example=200)
+TypeSchemaNode = colander.SchemaNode(colander.String(), description="Response content type", example="application/json")
+DetailSchemaNode = colander.SchemaNode(colander.String(),description="Response status message")
 
 class BaseSchema(colander.MappingSchema):
-    code = colander.SchemaNode(colander.Integer(), description="HTTP response code")
-    type = colander.SchemaNode(colander.String(), description="Response content type")
-    detail = colander.SchemaNode(colander.String(), description="Response status message")
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
 
 
 #class NotFoundResponseSchema(colander.MappingSchema):
@@ -90,6 +99,7 @@ class BaseSchema(colander.MappingSchema):
 #    route_name = colander.SchemaNode(colander.String(), description="Specified route")
 #    request_url = colander.SchemaNode(colander.String(), description="Specified url")
 
+
 class GroupNamesListSchema(colander.SequenceSchema):
     item = colander.SchemaNode(
         colander.String(),
@@ -98,19 +108,83 @@ class GroupNamesListSchema(colander.SequenceSchema):
     )
 
 
-class Session_GET_Schema(colander.MappingSchema):
-    code = colander.SchemaNode(
+class PermissionSchema(colander.SequenceSchema):
+    item = colander.SchemaNode(
+        colander.String(),
+        description="Permissions applicable to the service/resource",
+        example=["read", "write"]
+    )
+
+
+class ServiceBodySchemaNode(colander.MappingSchema):
+    resource_id = colander.SchemaNode(
         colander.Integer(),
-        description="HTTP response code",
-        example=200)
-    type = colander.SchemaNode(
+        description="Resource identification number",
+    )
+    permission_names = PermissionSchema()
+    service_name = colander.SchemaNode(
         colander.String(),
-        description="Response content type",
-        example="application/json")
-    detail = colander.SchemaNode(
+        description="Name of the service",
+        example="thredds"
+    )
+    public_url = colander.SchemaNode(
         colander.String(),
-        description="Response status message",
-        example="Get session successful.")
+        description="Proxy URL available for public access with permissions",
+        example="http://localhost/twitcher/ows/proxy/thredds"
+    )
+    service_url = colander.SchemaNode(
+        colander.String(),
+        description="Private URL of the service (restricted access)",
+        example="http://localhost:9999/thredds"
+    )
+    service_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the service",
+        example="thredds"
+    )
+
+
+class ServiceType_thredds_SchemaNode(colander.MappingSchema):
+    thredds = ServiceBodySchemaNode()
+
+
+class ServiceType_ncwms_SchemaNode(colander.MappingSchema):
+    ncwms = ServiceBodySchemaNode()
+
+
+class ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
+    geoserverapi = ServiceBodySchemaNode()
+    geoserverapi.name = "geoserver-api"
+
+
+class ServicesSchemaNode(colander.MappingSchema):
+    geoserverapi = ServiceType_geoserverapi_SchemaNode()
+    geoserverapi.name = "geoserver-api"
+    ncwms = ServiceType_ncwms_SchemaNode()
+    thredds = ServiceType_thredds_SchemaNode()
+
+
+class Services_GET_ResponseBodySchema(colander.MappingSchema):
+    services = ServicesSchemaNode()
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    detail.example = "Get services successful."
+
+
+class Services_GET_OkResponseSchema(colander.MappingSchema):
+    body = Services_GET_ResponseBodySchema()
+
+
+class Services_GET_NotAcceptableResponseSchema(colander.MappingSchema):
+    body = Services_GET_ResponseBodySchema()
+
+
+class Session_GET_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    detail.example = "Get session successful."
     user_name = colander.SchemaNode(
         colander.String(),
         description="Currently logged in user name (anonymous if none)",
@@ -123,10 +197,10 @@ class Session_GET_Schema(colander.MappingSchema):
 
 
 class Session_GET_OkResponseSchema(colander.MappingSchema):
-    body = Session_GET_Schema()
+    body = Session_GET_ResponseBodySchema()
 
 
-class Version_GET_Schema(colander.MappingSchema):
+class Version_GET_ResponseBodySchema(colander.MappingSchema):
     code = colander.SchemaNode(
         colander.Integer(),
         description="HTTP response code",
@@ -150,7 +224,7 @@ class Version_GET_Schema(colander.MappingSchema):
 
 
 class Version_GET_OkResponseSchema(colander.MappingSchema):
-    body = Version_GET_Schema()
+    body = Version_GET_ResponseBodySchema()
 
 
 class InternalServerErrorSchema(colander.MappingSchema):
