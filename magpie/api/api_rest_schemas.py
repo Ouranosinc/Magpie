@@ -71,6 +71,9 @@ ResourceAPI = Service(
 ServicesAPI = Service(
     path='/services',
     name='Services')
+ServicesTypesAPI = Service(
+    path='/services/types/{service_type}',
+    name='ServicesTypes')
 ServiceAPI = Service(
     path='/services/{service_name}',
     name='Service')
@@ -80,11 +83,11 @@ SessionAPI = Service(
 VersionAPI = Service(
     path='/version',
     name='Version')
-#NotFoundAPI = Service(name='NotFound', path='/', description="Route not found")
 
 CodeSchemaNode = colander.SchemaNode(colander.Integer(), description="HTTP response code", example=200)
 TypeSchemaNode = colander.SchemaNode(colander.String(), description="Response content type", example="application/json")
 DetailSchemaNode = colander.SchemaNode(colander.String(),description="Response status message")
+
 
 class BaseSchema(colander.MappingSchema):
     code = CodeSchemaNode
@@ -92,12 +95,63 @@ class BaseSchema(colander.MappingSchema):
     detail = DetailSchemaNode
 
 
-#class NotFoundResponseSchema(colander.MappingSchema):
-#    code = colander.SchemaNode(colander.Integer(), description="HTTP response code")
-#    type = colander.SchemaNode(colander.String(), description="Response content type")
-#    detail = colander.SchemaNode(colander.String(), description="Response status message")
-#    route_name = colander.SchemaNode(colander.String(), description="Specified route")
-#    request_url = colander.SchemaNode(colander.String(), description="Specified url")
+class UnauthorizedResponseSchema(colander.MappingSchema):
+    description = "Unauthorized. Insufficient user privileges or missing authentication headers."
+    code = CodeSchemaNode
+    code.example = 401
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    route_name = colander.SchemaNode(colander.String(), description="Specified route")
+    request_url = colander.SchemaNode(colander.String(), description="Specified url")
+
+
+class NotFoundResponseSchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    code.example = 404
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    route_name = colander.SchemaNode(colander.String(), description="Specified route")
+    request_url = colander.SchemaNode(colander.String(), description="Specified url")
+
+
+class UnprocessableEntityBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    code.example = 422
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class UnprocessableEntityResponseSchema(colander.MappingSchema):
+    description = "Invalid value specified."
+    body = UnprocessableEntityBodySchema()
+
+
+class InternalServerErrorBodySchema(colander.MappingSchema):
+    code = colander.SchemaNode(
+        colander.Integer(),
+        description="HTTP response code",
+        example=500)
+    type = colander.SchemaNode(
+        colander.String(),
+        description="Response content type",
+        example="application/json")
+    detail = colander.SchemaNode(
+        colander.String(),
+        description="Response status message",
+        example="Internal Server Error. Unhandled exception occurred.")
+    route_name = colander.SchemaNode(
+        colander.String(),
+        description="Route called that generated the error",
+        example="/users/toto")
+    request_url = colander.SchemaNode(
+        colander.String(),
+        description="Request URL that generated the error",
+        example="http://localhost:2001/magpie/users/toto")
+
+
+class InternalServerErrorResponseSchema(colander.MappingSchema):
+    description = "Internal Server Error. Unhandled exception occurred."
+    body = InternalServerErrorBodySchema()
 
 
 class GroupNamesListSchema(colander.SequenceSchema):
@@ -153,13 +207,13 @@ class ServiceType_ncwms_SchemaNode(colander.MappingSchema):
 
 
 class ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
-    geoserverapi = ServiceBodySchemaNode()
-    geoserverapi.name = "geoserver-api"
+    geoserver_api = ServiceBodySchemaNode()
+    geoserver_api.name = "geoserver-api"
 
 
 class ServicesSchemaNode(colander.MappingSchema):
-    geoserverapi = ServiceType_geoserverapi_SchemaNode()
-    geoserverapi.name = "geoserver-api"
+    geoserver_api = ServiceType_geoserverapi_SchemaNode()
+    geoserver_api.name = "geoserver-api"
     ncwms = ServiceType_ncwms_SchemaNode()
     thredds = ServiceType_thredds_SchemaNode()
 
@@ -173,11 +227,57 @@ class Services_GET_ResponseBodySchema(colander.MappingSchema):
 
 
 class Services_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get services successful."
     body = Services_GET_ResponseBodySchema()
 
 
 class Services_GET_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Invalid `service_type` value does not correspond to any of the existing service types."
     body = Services_GET_ResponseBodySchema()
+
+
+class Services_POST_RequestBodySchema(colander.MappingSchema):
+    service_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the service to create",
+        example="my_service"
+    )
+    service_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the service to create",
+        example="wps"
+    )
+    service_url = colander.SchemaNode(
+        colander.String(),
+        description="Private URL of the service to create",
+        example="http://localhost:9000/my_service"
+    )
+
+
+class Services_POST_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class Services_POST_CreatedResponseSchema(colander.MappingSchema):
+    description = "Service registration to db successful."
+    body = Services_POST_ResponseBodySchema()
+
+
+class Services_POST_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid `service_type` value does not correspond to any of the existing service types."
+    body = Services_POST_ResponseBodySchema(code=400)
+
+
+class Services_POST_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Service registration forbidden by db."
+    body = Services_POST_ResponseBodySchema(code=403)
+
+
+class Services_POST_ConflictResponseSchema(colander.MappingSchema):
+    description = "Specified `service_name` value already exists."
+    body = Services_POST_ResponseBodySchema(code=409)
 
 
 class Session_GET_ResponseBodySchema(colander.MappingSchema):
@@ -224,34 +324,8 @@ class Version_GET_ResponseBodySchema(colander.MappingSchema):
 
 
 class Version_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get version successful."
     body = Version_GET_ResponseBodySchema()
-
-
-class InternalServerErrorSchema(colander.MappingSchema):
-    code = colander.SchemaNode(
-        colander.Integer(),
-        description="HTTP response code",
-        example=500)
-    type = colander.SchemaNode(
-        colander.String(),
-        description="Response content type",
-        example="application/json")
-    detail = colander.SchemaNode(
-        colander.String(),
-        description="Response status message",
-        example="Internal Server Error. Unhandled exception occurred.")
-    route_name = colander.SchemaNode(
-        colander.String(),
-        description="Route called that generated the error",
-        example="/users/toto")
-    request_url = colander.SchemaNode(
-        colander.String(),
-        description="Request URL that generated the error",
-        example="http://localhost:2001/magpie/users/toto")
-
-
-class InternalServerErrorResponseSchema(colander.MappingSchema):
-    body = InternalServerErrorSchema()
 
 
 #  NOT REQUIRED field

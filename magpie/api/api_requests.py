@@ -2,6 +2,7 @@ from magpie import *
 from definitions.pyramid_definitions import *
 from definitions.ziggurat_definitions import *
 from api.api_except import evaluate_call, verify_param
+from api.api_rest_schemas import *
 from api.management.resource.resource_utils import check_valid_service_resource_permission
 import models
 
@@ -43,7 +44,7 @@ def get_permission_multiformat_post_checked(request, service_resource, permissio
 def get_value_multiformat_post_checked(request, key):
     val = get_multiformat_any(request, key)
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
-                 content={str(key): str(val)}, msgOnFail="Invalid value specified.")
+                 content={str(key): str(val)}, msgOnFail=UnprocessableEntityResponseSchema.description)
     return val
 
 

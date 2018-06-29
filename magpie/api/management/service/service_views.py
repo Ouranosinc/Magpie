@@ -10,10 +10,15 @@ from models import resource_tree_service
 from services import service_type_dict
 
 
+@ServicesTypesAPI.get(schema=Services_GET_ResponseBodySchema(), tags=[ServiceTag], response_schemas={
+    '200': Services_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': Services_GET_NotAcceptableResponseSchema(),
+})
 @ServicesAPI.get(schema=Services_GET_ResponseBodySchema(), tags=[ServiceTag], response_schemas={
-    '200': Services_GET_OkResponseSchema(description="Get services successful."),
-    '406': Services_GET_NotAcceptableResponseSchema(
-        description="Invalid `service_type` value does not correspond to any of the existing service types"),
+    '200': Services_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': Services_GET_NotAcceptableResponseSchema(),
 })
 @view_config(route_name='services_type', request_method='GET')
 @view_config(route_name='services', request_method='GET')
@@ -24,7 +29,7 @@ def get_services_view(request):
         service_types = service_type_dict.keys()
     else:
         verify_param(service_type_filter, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotAcceptable,
-                     msgOnFail="Invalid `service_type` value does not correspond to any of the existing service types",
+                     msgOnFail=Services_GET_NotAcceptableResponseSchema.description,
                      content={u'service_type': str(service_type_filter)}, contentType='application/json')
         service_types = [service_type_filter]
 
@@ -34,9 +39,17 @@ def get_services_view(request):
         for service in services:
             json_response[service_type][service.resource_name] = format_service(service)
 
-    return valid_http(httpSuccess=HTTPOk, detail="Get services successful.", content={u'services': json_response})
+    return valid_http(httpSuccess=HTTPOk, detail=Services_GET_OkResponseSchema.description,
+                      content={u'services': json_response})
 
 
+@ServicesAPI.post(schema=Services_POST_ResponseBodySchema(), tags=[ServiceTag], response_schemas={
+    '201': Services_POST_CreatedResponseSchema(),
+    '400': Services_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Services_POST_ForbiddenResponseSchema(),
+    '409': Services_POST_ConflictResponseSchema(),
+})
 @view_config(route_name='services', request_method='POST')
 def register_service(request):
     service_name = get_value_multiformat_post_checked(request, 'service_name')
@@ -44,17 +57,18 @@ def register_service(request):
     service_type = get_value_multiformat_post_checked(request, 'service_type')
     service_push = str2bool(get_multiformat_post(request, 'service_push'))
     verify_param(service_type, isIn=True, paramCompare=service_type_dict.keys(), httpError=HTTPBadRequest,
-                 msgOnFail="Specified `service_type` value does not correspond to any of the available types.")
+                 msgOnFail=Services_POST_BadRequestResponseSchema.description)
 
     if models.Service.by_service_name(service_name, db_session=request.db):
         verify_param(service_name, notIn=True, httpError=HTTPConflict,
                      paramCompare=[models.Service.by_service_name(service_name, db_session=request.db).resource_name],
-                     msgOnFail="Specified `service_name` value '" + str(service_name) + "' already exists.")
+                     msgOnFail=Services_POST_ConflictResponseSchema.description,
+                     content={u'service_name': str(service_name)})
 
     service = evaluate_call(lambda: models.Service(resource_name=str(service_name), resource_type=u'service',
                                                    url=str(service_url), type=str(service_type)),
                             fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                            msgOnFail="Service creation for registration failed",
+                            msgOnFail="Service creation for registration failed.",
                             content={u'service_name': str(service_name), u'resource_type': u'service',
                                      u'service_url': str(service_url), u'service_type': str(service_type)})
 
@@ -65,8 +79,8 @@ def register_service(request):
 
     evaluate_call(lambda: add_service_magpie_and_phoenix(service, service_push, request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                  msgOnFail="Service registration forbidden by db", content=format_service(service))
-    return valid_http(httpSuccess=HTTPCreated, detail="Service registration to db successful",
+                  msgOnFail=Services_POST_ForbiddenResponseSchema.description, content=format_service(service))
+    return valid_http(httpSuccess=HTTPCreated, detail=Services_POST_CreatedResponseSchema.description,
                       content=format_service(service))
 
 
