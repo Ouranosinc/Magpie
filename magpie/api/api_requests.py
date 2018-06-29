@@ -13,26 +13,29 @@ def get_request_method_content(request):
     return getattr(request, method_property)
 
 
-def get_multiformat_any(request, key):
+def get_multiformat_any(request, key, default=None):
     msg = "Key `{key}` could not be extracted from {method} of type `{type}`" \
           .format(key=repr(key), method=request.method, type=request.content_type)
     if request.content_type == 'application/json':
-        return evaluate_call(lambda: request.json.get(key),
+        # avoid json parse error if body is empty
+        if not len(request.body):
+            return default
+        return evaluate_call(lambda: request.json.get(key, default),
                              httpError=HTTPInternalServerError, msgOnFail=msg)
-    return evaluate_call(lambda: get_request_method_content(request).get(key),
+    return evaluate_call(lambda: get_request_method_content(request).get(key, default),
                          httpError=HTTPInternalServerError, msgOnFail=msg)
 
 
-def get_multiformat_post(request, key):
-    return get_multiformat_any(request, key)
+def get_multiformat_post(request, key, default=None):
+    return get_multiformat_any(request, key, default)
 
 
-def get_multiformat_put(request, key):
-    return get_multiformat_any(request, key)
+def get_multiformat_put(request, key, default=None):
+    return get_multiformat_any(request, key, default)
 
 
-def get_multiformat_delete(request, key):
-    return get_multiformat_any(request, key)
+def get_multiformat_delete(request, key, default=None):
+    return get_multiformat_any(request, key, default)
 
 
 def get_permission_multiformat_post_checked(request, service_resource, permission_name_key='permission_name'):
@@ -117,11 +120,10 @@ def get_resource_matchdict_checked(request, resource_name_key='resource_id'):
 def get_service_matchdict_checked(request, service_name_key='service_name'):
     service_name = get_value_matchdict_checked(request, service_name_key)
     service = evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
-                            fallback=lambda: request.db.rollback(),
-                            httpError=HTTPForbidden, msgOnFail="Service query by name refused by db")
-    verify_param(service, notNone=True, httpError=HTTPNotFound,
-                 msgOnFail="Service name not found in db",
-                 content={u'service_name': service_name})
+                            fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                            msgOnFail=Service_MatchDictCheck_ForbiddenResponseBodySchema.description)
+    verify_param(service, notNone=True, httpError=HTTPNotFound, content={u'service_name': service_name},
+                 msgOnFail=Service_MatchDictCheck_NotFoundResponseBodySchema.description)
     return service
 
 
