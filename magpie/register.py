@@ -6,7 +6,6 @@ import requests
 import transaction
 import models
 from services import service_type_dict
-from api.management.user.user_utils import create_user_resource_permission
 from common import *
 
 LOGGER = logging.getLogger(__name__)

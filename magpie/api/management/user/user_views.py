@@ -5,7 +5,7 @@ from api.management.user.user_utils import *
 from api.management.service.service_formats import format_service, format_service_resources
 
 
-@view_config(route_name='users', request_method='POST')
+@view_config(route_name=UsersAPI.name, request_method='POST')
 def create_user_view(request):
     user_name = get_multiformat_post(request, 'user_name')
     email = get_multiformat_post(request, 'email')
@@ -15,7 +15,7 @@ def create_user_view(request):
     return create_user(user_name, password, email, group_name, db_session=request.db)
 
 
-@view_config(route_name='user', request_method='PUT')
+@view_config(route_name=UserAPI.name, request_method='PUT')
 def update_user_view(request):
     user = get_user_matchdict_checked(request, user_name_key='user_name')
     new_user_name = get_multiformat_post(request, 'user_name')
@@ -38,7 +38,7 @@ def update_user_view(request):
     return valid_http(httpSuccess=HTTPOk, detail="Update user successful.")
 
 
-@view_config(route_name='users', request_method='GET')
+@view_config(route_name=UsersAPI.name, request_method='GET')
 def get_users(request):
     user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
                                    fallback=lambda: request.db.rollback(),
@@ -46,7 +46,7 @@ def get_users(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get users successful", content={u'user_names': user_name_list})
 
 
-@view_config(route_name='user', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_view(request):
     user = get_user_matchdict_checked(request)
     json_response = {u'user_name': user.user_name,
@@ -55,7 +55,7 @@ def get_user_view(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get user successful", content=json_response)
 
 
-@view_config(route_name='user', request_method='DELETE')
+@view_config(route_name=UserAPI.name, request_method='DELETE')
 def delete_user(request):
     user = get_user_matchdict_checked(request)
     db = request.db
@@ -64,14 +64,14 @@ def delete_user(request):
     return valid_http(httpSuccess=HTTPOk, detail="Delete user successful")
 
 
-@view_config(route_name='user_groups', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserGroupsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_groups(request):
     user = get_user_matchdict_checked(request)
     group_names = get_user_groups_checked(request, user)
     return valid_http(httpSuccess=HTTPOk, detail="Get user groups successful", content={u'group_names': group_names})
 
 
-@view_config(route_name='user_group', request_method='POST')
+@view_config(route_name=UserGroupsAPI.name, request_method='POST')
 def assign_user_group(request):
     db = request.db
     user = get_user_matchdict_checked(request)
@@ -84,7 +84,7 @@ def assign_user_group(request):
     return valid_http(httpSuccess=HTTPCreated, detail="Create user-group assignation successful")
 
 
-@view_config(route_name='user_group', request_method='DELETE')
+@view_config(route_name=UserGroupAPI.name, request_method='DELETE')
 def delete_user_group(request):
     db = request.db
     user = get_user_matchdict_checked(request)
@@ -132,12 +132,12 @@ def get_user_resources_runner(request, inherited_group_resources_permissions=Tru
     return valid_http(httpSuccess=HTTPOk, detail="Get user resources successful", content={u'resources': usr_res_dict})
 
 
-@view_config(route_name='user_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_resources_view(request):
     return get_user_resources_runner(request, inherited_group_resources_permissions=False)
 
 
-@view_config(route_name='user_inherited_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserInheritedResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_inherited_resources_view(request):
     return get_user_resources_runner(request, inherited_group_resources_permissions=True)
 
@@ -151,17 +151,18 @@ def get_user_resource_permissions_runner(request, inherited_permissions=True):
                       content={u'permission_names': perm_names})
 
 
-@view_config(route_name='user_resource_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserResourcePermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_resource_permissions_view(request):
     return get_user_resource_permissions_runner(request, inherited_permissions=False)
 
 
-@view_config(route_name='user_resource_inherited_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserResourceInheritedPermissionsAPI.name, request_method='GET',
+             permission=NO_PERMISSION_REQUIRED)
 def get_user_resource_inherited_permissions_view(request):
     return get_user_resource_permissions_runner(request, inherited_permissions=True)
 
 
-@view_config(route_name='user_resource_permissions', request_method='POST')
+@view_config(route_name=UserResourcePermissionsAPI.name, request_method='POST')
 def create_user_resource_permission_view(request):
     user = get_user_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
@@ -169,7 +170,7 @@ def create_user_resource_permission_view(request):
     return create_user_resource_permission(perm_name, resource, user.id, request.db)
 
 
-@view_config(route_name='user_resource_permission', request_method='DELETE')
+@view_config(route_name=UserResourcePermissionAPI.name, request_method='DELETE')
 def delete_user_resource_permission_view(request):
     user = get_user_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
@@ -192,12 +193,12 @@ def get_user_services_runner(request, inherited_group_services_permissions):
     return valid_http(httpSuccess=HTTPOk, detail="Get user services successful", content={u'services': svc_json})
 
 
-@view_config(route_name='user_services', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserServicesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_services_view(request):
     return get_user_services_runner(request, inherited_group_services_permissions=False)
 
 
-@view_config(route_name='user_inherited_services', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserInheritedServicesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_inherited_services_view(request):
     return get_user_services_runner(request, inherited_group_services_permissions=True)
 
@@ -215,17 +216,18 @@ def get_user_service_permissions_runner(request, inherited_permissions):
                       content={u'permission_names': perms})
 
 
-@view_config(route_name='user_service_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserServicePermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_permissions_view(request):
     return get_user_service_permissions_runner(request, inherited_permissions=False)
 
 
-@view_config(route_name='user_service_inherited_permissions', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserServiceInheritedPermissionsAPI.name, request_method='GET',
+             permission=NO_PERMISSION_REQUIRED)
 def get_user_service_inherited_permissions_view(request):
     return get_user_service_permissions_runner(request, inherited_permissions=True)
 
 
-@view_config(route_name='user_service_permissions', request_method='POST')
+@view_config(route_name=UserServicePermissionsAPI.name, request_method='POST')
 def create_user_service_permission(request):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
@@ -233,7 +235,7 @@ def create_user_service_permission(request):
     return create_user_resource_permission(perm_name, service, user.id, request.db)
 
 
-@view_config(route_name='user_service_permission', request_method='DELETE')
+@view_config(route_name=UserServicePermissionAPI.name, request_method='DELETE')
 def delete_user_service_permission(request):
     user = get_user_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
@@ -266,11 +268,11 @@ def get_user_service_resource_permissions_runner(request, inherited_permissions)
                       content={u'service': user_svc_res_json})
 
 
-@view_config(route_name='user_service_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserServiceResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_resources_view(request):
     return get_user_service_resource_permissions_runner(request, inherited_permissions=False)
 
 
-@view_config(route_name='user_service_inherited_resources', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserServiceInheritedResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_inherited_resources_view(request):
     return get_user_service_resource_permissions_runner(request, inherited_permissions=True)

@@ -27,6 +27,10 @@ ResourceTag = 'Resource'
 ServiceTag = 'Service'
 
 
+def service_api_route_info(service_api):
+    return {'name': service_api.name, 'pattern': service_api.path}
+
+
 # Service Routes
 SwaggerAPI = Service(
     path='__api__',
@@ -38,8 +42,11 @@ UsersAPI = Service(
 UserAPI = Service(
     path='/users/{user_name}',
     name='User')
-UserGroupAPI = Service(
+UserGroupsAPI = Service(
     path='/users/{user_name}/groups',
+    name='UserGroups')
+UserGroupAPI = Service(
+    path='/users/{user_name}/groups/{group_name}',
     name='UserGroup')
 UserInheritedResourcesAPI = Service(
     path='/users/{user_name}/inherited_resources',
@@ -47,15 +54,39 @@ UserInheritedResourcesAPI = Service(
 UserResourcesAPI = Service(
     path='/users/{user_name}/resources',
     name='UserResources')
-UserResourcesPermissionsAPI = Service(
-    path='/users/{user_name}/resources',
-    name='UserResourcesPermissions')
+UserResourceInheritedPermissionsAPI = Service(
+    path='/users/{user_name}/resources/{resource_id}/inherited_permissions',
+    name='UserResourceInheritedPermissions')
+UserResourcePermissionAPI = Service(
+    path='/users/{user_name}/resources/{resource_id}/permissions/{permission_name}',
+    name='UserResourcePermission')
+UserResourcePermissionsAPI = Service(
+    path='/users/{user_name}/resources/{resource_id}/permissions',
+    name='UserResourcePermissions')
+UserResourcesTypesAPI = Service(
+    path='/users/{user_name}/resources/types/{resource_type}',
+    name='UserResourcesTypes')
 UserInheritedServicesAPI = Service(
     path='/users/{user_name}/inherited_services',
     name='UserInheritedServices')
 UserServicesAPI = Service(
     path='/users/{user_name}/services',
     name='UserServices')
+UserServiceInheritedResourcesAPI = Service(
+    path='/users/{user_name}/services/{service_name}/inherited_resources',
+    name='UserServiceInheritedResources')
+UserServiceResourcesAPI = Service(
+    path='/users/{user_name}/services/{service_name}/resources',
+    name='UserServiceResources')
+UserServiceInheritedPermissionsAPI = Service(
+    path='/users/{user_name}/services/{service_name}/inherited_permissions',
+    name='UserServiceInheritedPermissions')
+UserServicePermissionsAPI = Service(
+    path='/users/{user_name}/services/{service_name}/permissions',
+    name='UserServicePermissions')
+UserServicePermissionAPI = Service(
+    path='/users/{user_name}/services/{service_name}/permissions/{permission_name}',
+    name='UserServicePermission')
 CurrentUserAPI = Service(
     path='/users/current',
     name='CurrentUser')
@@ -86,7 +117,7 @@ VersionAPI = Service(
 
 CodeSchemaNode = colander.SchemaNode(colander.Integer(), description="HTTP response code", example=200)
 TypeSchemaNode = colander.SchemaNode(colander.String(), description="Response content type", example="application/json")
-DetailSchemaNode = colander.SchemaNode(colander.String(),description="Response status message")
+DetailSchemaNode = colander.SchemaNode(colander.String(), description="Response status message")
 
 
 class BaseSchema(colander.MappingSchema):

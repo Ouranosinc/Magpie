@@ -15,14 +15,22 @@ from services import service_type_dict
     '401': UnauthorizedResponseSchema(),
     '406': Services_GET_NotAcceptableResponseSchema(),
 })
+@view_config(route_name='services_type', request_method='GET')
+def get_services_by_type_view(request):
+    return get_services_runner(request)
+
+
 @ServicesAPI.get(schema=Services_GET_ResponseBodySchema(), tags=[ServiceTag], response_schemas={
     '200': Services_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '406': Services_GET_NotAcceptableResponseSchema(),
 })
-@view_config(route_name='services_type', request_method='GET')
 @view_config(route_name='services', request_method='GET')
 def get_services_view(request):
+    return get_services_runner(request)
+
+
+def get_services_runner(request):
     service_type_filter = request.matchdict.get('service_type')  # no check because None/empty is for 'all services'
     json_response = {}
     if not service_type_filter:
