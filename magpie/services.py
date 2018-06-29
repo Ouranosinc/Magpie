@@ -229,7 +229,7 @@ class ServiceGeoserver(ServiceWMS):
 
 
 class ServiceAccess(ServiceI):
-    permission_names = models.Route.permission_names
+    permission_names = ['access']
     params_expected = []
     resource_types_permissions = {}
 
@@ -242,9 +242,7 @@ class ServiceAccess(ServiceI):
         return self.acl
 
     def permission_requested(self):
-        if self.request.method == 'GET':
-            return u'read'
-        return u'write'
+        return 'access'
 
 
 class ServiceAPI(ServiceI):
