@@ -99,6 +99,9 @@ ResourcesAPI = Service(
 ResourceAPI = Service(
     path='/resources/{resource_id}',
     name='Resource')
+ResourcePermissionsAPI = Service(
+    path='/resources/{resource_id}/permissions',
+    name='ResourcePermissions')
 ServicesAPI = Service(
     path='/services',
     name='Services')
@@ -214,7 +217,7 @@ class GroupNamesListSchema(colander.SequenceSchema):
     )
 
 
-class PermissionSchema(colander.SequenceSchema):
+class PermissionListSchema(colander.SequenceSchema):
     item = colander.SchemaNode(
         colander.String(),
         description="Permissions applicable to the service/resource",
@@ -222,15 +225,202 @@ class PermissionSchema(colander.SequenceSchema):
     )
 
 
+def ResourceBodySchema(*args, **kwargs):
+    resource_body_schema = colander.SchemaNode(colander.Mapping(*args, **kwargs))
+
+    class ChildrenResourceBodySchema(colander.MappingSchema):
+        children = resource_body_schema     # recursive 'ResourceBodySchema'
+
+    resource_body_schema.add(colander.SchemaNode(
+        colander.Integer(),
+        description="Resource identification number",
+        name="resource_id"
+    ))
+    resource_body_schema.add(colander.SchemaNode(
+        colander.String(),
+        description="Name of the resource",
+        name="resource_name"
+    ))
+    resource_body_schema.add(colander.SchemaNode(
+        colander.String(),
+        description="Type of the resource",
+        name="resource_type"
+    ))
+    resource_body_schema.add(colander.SchemaNode(
+        colander.Integer(),
+        description="Parent resource identification number",
+        default=colander.null,  # if no parent
+        missing=colander.drop,  # if not returned (basic_info = True)
+        name="root_service_id"
+    ))
+    resource_body_schema.add(PermissionListSchema(
+        colander.Integer(),
+        description="Permissions applicable to the resource",
+        default=colander.null,  # if no parent
+        missing=colander.drop,  # if not returned (basic_info = True)
+        name="permission_names"
+    ))
+    #resource_body_schema.add(ChildrenResourceBodySchema(
+    #    description="Children resources of the resource",
+    #    default=colander.null,  # if no parent
+    #    missing=colander.drop,  # if not returned (basic_info = True)
+    #    name="children"
+    #))
+
+    return resource_body_schema
+
+
+class Resource_ResponseBodySchema(colander.MappingSchema):
+    resource = ResourceBodySchema()
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class Resource_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Resource query by id refused by db."
+    body = BaseBodySchema(code=403)
+
+
+class Resource_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Resource ID not found in db."
+    body = BaseBodySchema(code=404)
+
+
+class Resource_MatchDictCheck_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Resource ID is an invalid literal for `int` type."
+    body = BaseBodySchema(code=406)
+
+
+class Resource_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get resource successful."
+    body = Resource_ResponseBodySchema()
+
+
+class Resource_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
+    description = "Failed building resource children json formatted tree."
+    body = InternalServerErrorBodySchema()
+
+
+class Resource_DELETE_OkResponseSchema(colander.MappingSchema):
+    description = "Delete resource successful."
+    body = BaseBodySchema(code=200)
+
+
+class Resource_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Delete resource from db failed."
+    body = BaseBodySchema(code=403)
+
+
+class Resource_ServiceType_thredds_SchemaNode(colander.MappingSchema):
+    thredds = ResourceBodySchema()
+
+
+class Resource_ServiceType_ncwms_SchemaNode(colander.MappingSchema):
+    ncwms = ResourceBodySchema()
+
+
+class Resource_ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
+    geoserver_api = ResourceBodySchema()
+    geoserver_api.name = "geoserver-api"
+
+
+class ResourcesSchemaNode(colander.MappingSchema):
+    geoserver_api = Resource_ServiceType_geoserverapi_SchemaNode()
+    geoserver_api.name = "geoserver-api"
+    ncwms = Resource_ServiceType_ncwms_SchemaNode()
+    thredds = Resource_ServiceType_thredds_SchemaNode()
+
+
+class Resources_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    resources = ResourcesSchemaNode()
+
+
+class Resources_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get resources successful."
+    body = Resources_ResponseBodySchema()
+
+
+class Resources_POST_BodySchema(colander.MappingSchema):
+    resource_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the resource to create"
+    )
+    resource_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the resource to create"
+    )
+    parent_id = colander.SchemaNode(
+        colander.String(),
+        description="ID of parent resource under which the new resource should be created",
+        missing=colander.drop
+    )
+
+
+class Resources_POST_RequestBodySchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = Resources_POST_BodySchema()
+
+
+class Resources_POST_OkResponseSchema(colander.MappingSchema):
+    description = "Create resource successful."
+    body = Resource_ResponseBodySchema()
+
+
+class Resources_POST_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid [`resource_name`|`resource_type`|`parent_id`] specified for child resource creation."
+    body = BaseBodySchema(code=400)
+
+
+class Resources_POST_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Failed to insert new resource in service tree using parent id."
+    body = BaseBodySchema(code=403)
+
+
+class Resources_POST_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Could not find specified resource parent id."
+    body = BaseBodySchema(code=404)
+
+
+class Resources_POST_ConflictResponseSchema(colander.MappingSchema):
+    description = "Resource name already exists at requested tree level for creation."
+    body = BaseBodySchema(code=409)
+
+
+class ResourcePermissions_GET_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    permission_names = PermissionListSchema()
+
+
+class ResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get resource permissions successful."
+    body = ResourcePermissions_GET_ResponseBodySchema()
+
+
+class ResourcePermissions_GET_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Invalid resource type to extract permissions."
+    body = BaseBodySchema(code=406)
+
+
 class ServiceBodySchema(colander.MappingSchema):
     resource_id = colander.SchemaNode(
         colander.Integer(),
         description="Resource identification number",
     )
-    permission_names = PermissionSchema()
+    permission_names = PermissionListSchema()
     service_name = colander.SchemaNode(
         colander.String(),
         description="Name of the service",
+        example="thredds"
+    )
+    service_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the service",
         example="thredds"
     )
     public_url = colander.SchemaNode(
@@ -242,11 +432,6 @@ class ServiceBodySchema(colander.MappingSchema):
         colander.String(),
         description="Private URL of the service (restricted access)",
         example="http://localhost:9999/thredds"
-    )
-    service_type = colander.SchemaNode(
-        colander.String(),
-        description="Type of the service",
-        example="thredds"
     )
 
 
@@ -293,12 +478,12 @@ class Services_GET_OkResponseSchema(colander.MappingSchema):
     body = Services_GET_ResponseBodySchema()
 
 
-class Service_MatchDictCheck_ForbiddenResponseBodySchema(colander.MappingSchema):
+class Service_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Service query by name refused by db."
     body = BaseBodySchema(code=403)
 
 
-class Service_MatchDictCheck_NotFoundResponseBodySchema(colander.MappingSchema):
+class Service_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
     description = "Service name not found in db."
     body = Service_FailureResponseBodySchema(code=404)
 
@@ -439,6 +624,55 @@ class Service_DELETE_OkResponseSchema(colander.MappingSchema):
 class Service_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Delete service from db refused by db."
     body = Service_FailureResponseBodySchema(code=403)
+
+
+class ServicePermissions_ResponseBodySchema(colander.MappingSchema):
+    permission_names = PermissionListSchema()
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class ServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service permissions successful."
+    body = ServicePermissions_ResponseBodySchema()
+
+
+class ServicePermissions_GET_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Invalid service type specified by service."
+    body = ServicePermissions_ResponseBodySchema()
+
+
+# create service's resource use same method as direct resource create
+ServiceResources_POST_BodySchema = Resources_POST_BodySchema
+ServiceResources_POST_RequestBodySchema = Resources_POST_RequestBodySchema
+ServiceResources_POST_OkResponseSchema = Resources_POST_OkResponseSchema
+ServiceResources_POST_BadRequestResponseSchema = Resources_POST_BadRequestResponseSchema
+ServiceResources_POST_ForbiddenResponseSchema = Resources_POST_ForbiddenResponseSchema
+ServiceResources_POST_NotFoundResponseSchema = Resources_POST_NotFoundResponseSchema
+ServiceResources_POST_ConflictResponseSchema = Resources_POST_ConflictResponseSchema
+
+
+# delete service's resource use same method as direct resource delete
+ServiceResource_DELETE_ForbiddenResponseSchema = Resource_DELETE_ForbiddenResponseSchema
+ServiceResource_DELETE_OkResponseSchema = Resource_DELETE_OkResponseSchema
+
+
+class ServiceResource_DELETE_RequestBodySchema(colander.MappingSchema):
+    header = HeaderSchema()
+
+
+class ServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
+    service_name = ServiceBodySchema()
+    service_name.name = '{service_name}'
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class ServiceResources_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service resources successful."
+    body = ServiceResources_GET_ResponseBodySchema()
 
 
 class Session_GET_ResponseBodySchema(colander.MappingSchema):

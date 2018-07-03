@@ -144,8 +144,8 @@ def update_service(request):
 @ServiceAPI.get(tags=[ServiceTag], response_schemas={
     '200': Service_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
-    '403': Service_MatchDictCheck_ForbiddenResponseBodySchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseBodySchema(),
+    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
 })
 @view_config(route_name=ServiceAPI.name, request_method='GET')
 def get_service(request):
@@ -158,7 +158,7 @@ def get_service(request):
     '200': Service_DELETE_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Service_DELETE_ForbiddenResponseSchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseBodySchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
 })
 @view_config(route_name=ServiceAPI.name, request_method='DELETE')
 def unregister_service(request):
@@ -180,30 +180,62 @@ def unregister_service(request):
     return valid_http(httpSuccess=HTTPOk, detail=Service_DELETE_OkResponseSchema.description)
 
 
+@ServicePermissionsAPI.get(tags=[ServiceTag], response_schemas={
+    '200': ServicePermissions_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    '406': ServicePermissions_GET_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=ServicePermissionsAPI.name, request_method='GET')
 def get_service_permissions(request):
     service = get_service_matchdict_checked(request)
     svc_content = format_service(service)
-    svc_perms = evaluate_call(lambda: service_type_dict[service.type].permission_names, fallback=request.db.rollback(),
-                              httpError=HTTPNotAcceptable, msgOnFail="Invalid service type specified by service",
-                              content=svc_content)
-    return valid_http(httpSuccess=HTTPOk, detail="Get service permissions successful",
+    svc_perms = evaluate_call(lambda: service_type_dict[service.type].permission_names,
+                              fallback=request.db.rollback(), httpError=HTTPNotAcceptable, content=svc_content,
+                              msgOnFail=ServicePermissions_GET_NotAcceptableResponseSchema.description)
+    return valid_http(httpSuccess=HTTPOk, detail=ServicePermissions_GET_OkResponseSchema.description,
                       content={u'permission_names': svc_perms})
 
 
+@ServiceResourceAPI.delete(schema=ServiceResource_DELETE_RequestBodySchema(), tags=[ServiceTag], response_schemas={
+    '200': ServiceResource_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': ServiceResource_DELETE_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=ServiceResourceAPI.name, request_method='DELETE')
 def delete_service_resource_view(request):
     return delete_resource(request)
 
 
+@ServiceResourcesAPI.get(tags=[ServiceTag], response_schemas={
+    '200': ServiceResources_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=ServiceResourcesAPI.name, request_method='GET')
 def get_service_resources_view(request):
     service = get_service_matchdict_checked(request)
     svc_res_json = format_service_resources(service, db_session=request.db, display_all=True)
-    return valid_http(httpSuccess=HTTPOk, detail="Get service resources successful",
+    return valid_http(httpSuccess=HTTPOk, detail=ServiceResources_GET_OkResponseSchema.description,
                       content={str(service.resource_name): svc_res_json})
 
 
+@ServiceResourcesAPI.post(schema=ServiceResources_POST_RequestBodySchema, tags=[ServiceTag], response_schemas={
+    '200': ServiceResources_POST_OkResponseSchema(),
+    '400': ServiceResources_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': ServiceResources_POST_ForbiddenResponseSchema(),
+    '404': ServiceResources_POST_NotFoundResponseSchema(),
+    '409': ServiceResources_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=ServiceResourcesAPI.name, request_method='POST')
 def create_service_direct_resource(request):
     service = get_service_matchdict_checked(request)

@@ -123,14 +123,17 @@ def get_resource_root_service(resource, db_session):
 
 def create_resource(resource_name, resource_type, parent_id, db_session):
     verify_param(resource_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 msgOnFail="Invalid `resource_name` '" + str(resource_name) + "' specified for child resource creation")
+                 content={u'resource_name': str(resource_name)},
+                 msgOnFail="Invalid `resource_name` specified for child resource creation.")
     verify_param(resource_type, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 msgOnFail="Invalid `resource_type` '" + str(resource_type) + "' specified for child resource creation")
+                 content={u'resource_type': str(resource_type)},
+                 msgOnFail="Invalid `resource_type` specified for child resource creation.")
     verify_param(parent_id, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 msgOnFail="Invalid `parent_id` '" + str(parent_id) + "' specified for child resource creation")
+                 content={u'parent_id': str(parent_id)},
+                 msgOnFail="Invalid `parent_id` specified for child resource creation.")
     parent_resource = evaluate_call(lambda: ResourceService.by_resource_id(parent_id, db_session=db_session),
                                     fallback=lambda: db_session.rollback(), httpError=HTTPNotFound,
-                                    msgOnFail="Could not find specified resource parent id",
+                                    msgOnFail=Resources_POST_NotFoundResponseSchema.description,
                                     content={u'parent_id': str(parent_id), u'resource_name': str(resource_name),
                                              u'resource_type': str(resource_type)})
 
@@ -146,7 +149,7 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
     tree_struct_dict = resource_tree_service.build_subtree_strut(tree_struct)
     direct_children = tree_struct_dict[u'children']
     verify_param(resource_name, notIn=True, httpError=HTTPConflict,
-                 msgOnFail="Resource name already exists at requested tree level for creation",
+                 msgOnFail=Resources_POST_ConflictResponseSchema.description,
                  paramCompare=[child_dict[u'node'].resource_name for child_dict in direct_children.values()])
 
     def add_resource_in_tree(new_res, db):
@@ -156,15 +159,15 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
 
     evaluate_call(lambda: add_resource_in_tree(new_resource, db_session),
                   fallback=lambda: db_session.rollback(),
-                  httpError=HTTPForbidden, msgOnFail="Failed to insert new resource in service tree using parent id")
-    return valid_http(httpSuccess=HTTPCreated, detail="Create resource successful",
-                      content=format_resource(new_resource, basic_info=True))
+                  httpError=HTTPForbidden, msgOnFail=Resources_POST_ForbiddenResponseSchema.description)
+    return valid_http(httpSuccess=HTTPCreated, detail=Resources_POST_OkResponseSchema.description,
+                      content={u'resource': format_resource(new_resource, basic_info=True)})
 
 
 def delete_resource(request):
     resource = get_resource_matchdict_checked(request)
     service_push = str2bool(get_multiformat_post(request, 'service_push'))
-    res_content = format_resource(resource, basic_info=True)
+    res_content = {u'resource': format_resource(resource, basic_info=True)}
     evaluate_call(lambda: resource_tree_service.delete_branch(resource_id=resource.resource_id, db_session=request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete resource branch from tree service failed", content=res_content)
@@ -178,5 +181,5 @@ def delete_resource(request):
 
     evaluate_call(lambda: remove_service_magpie_and_phoenix(resource, service_push, request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                  msgOnFail="Delete resource from db failed", content=res_content)
-    return valid_http(httpSuccess=HTTPOk, detail="Delete resource successful")
+                  msgOnFail=Resource_DELETE_ForbiddenResponseSchema.description, content=res_content)
+    return valid_http(httpSuccess=HTTPOk, detail=Resource_DELETE_OkResponseSchema.description)

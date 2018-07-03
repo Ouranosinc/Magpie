@@ -8,7 +8,12 @@ from register import sync_services_phoenix
 from services import service_type_dict
 
 
-@view_config(route_name='resources', request_method='GET')
+@ResourcesAPI.get(tags=[ResourceTag], response_schemas={
+    '200': Resources_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '500': Resource_GET_InternalServerErrorResponseSchema()
+})
+@view_config(route_name=ResourcesAPI.name, request_method='GET')
 def get_resources_view(request):
     res_json = {}
     for svc_type in service_type_dict.keys():
@@ -17,19 +22,38 @@ def get_resources_view(request):
         for svc in services:
             res_json[svc_type][svc.resource_name] = format_service_resources(svc, request.db, display_all=True)
     res_json = {u'resources': res_json}
-    return valid_http(httpSuccess=HTTPOk, detail="Get resources successful", content=res_json)
+    return valid_http(httpSuccess=HTTPOk, detail=Resources_GET_OkResponseSchema.description, content=res_json)
 
 
+@ResourceAPI.get(tags=[ResourceTag], response_schemas={
+    '200': Resource_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+    '500': Resource_GET_InternalServerErrorResponseSchema()
+})
 @view_config(route_name=ResourceAPI.name, request_method='GET')
 def get_resource_view(request):
     resource = get_resource_matchdict_checked(request)
     res_json = evaluate_call(lambda: format_resource_with_children(resource, db_session=request.db),
                              fallback=lambda: request.db.rollback(), httpError=HTTPInternalServerError,
-                             msgOnFail="Failed building resource children json formatted tree",
-                             content=format_resource(resource, basic_info=True))
-    return valid_http(httpSuccess=HTTPOk, detail="Get resource successful", content={resource.resource_id: res_json})
+                             msgOnFail=Resource_GET_InternalServerErrorResponseSchema.description,
+                             content={u'resource': format_resource(resource, basic_info=True)})
+    return valid_http(httpSuccess=HTTPOk, detail=Resource_GET_OkResponseSchema.description,
+                      content={resource.resource_id: res_json})
 
 
+@ResourcesAPI.post(schema=Resources_POST_RequestBodySchema, tags=[ResourceTag], response_schemas={
+    '200': Resources_POST_OkResponseSchema(),
+    '400': Resources_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resources_POST_ForbiddenResponseSchema(),
+    '404': Resources_POST_NotFoundResponseSchema(),
+    '409': Resources_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=ResourcesAPI.name, request_method='POST')
 def create_resource_view(request):
     resource_name = get_value_multiformat_post_checked(request, 'resource_name')
@@ -43,7 +67,7 @@ def delete_resource_view(request):
     return delete_resource(request)
 
 
-@view_config(route_name='resource', request_method='PUT')
+@view_config(route_name=ResourceAPI.name, request_method='PUT')
 def update_resource(request):
     resource = get_resource_matchdict_checked(request, 'resource_id')
     service_push = str2bool(get_multiformat_post(request, 'service_push'))
@@ -67,12 +91,20 @@ def update_resource(request):
                                u'old_resource_name': res_old_name, u'new_resource_name': res_new_name})
 
 
-@view_config(route_name='resource_permissions', request_method='GET')
+@ResourcePermissionsAPI.get(tags=[ResourceTag], response_schemas={
+    '200': ResourcePermissions_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': ResourcePermissions_GET_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
+@view_config(route_name=ResourcePermissionsAPI.name, request_method='GET')
 def get_resource_permissions_view(request):
     resource = get_resource_matchdict_checked(request, 'resource_id')
     res_perm = evaluate_call(lambda: get_resource_permissions(resource, db_session=request.db),
                              fallback=lambda: request.db.rollback(), httpError=HTTPNotAcceptable,
-                             msgOnFail="Invalid resource type to extract permissions",
-                             content=format_resource(resource, basic_info=True))
-    return valid_http(httpSuccess=HTTPOk, detail="Get resource permissions successful",
+                             msgOnFail=ResourcePermissions_GET_NotAcceptableResponseSchema.description,
+                             content={u'resource': format_resource(resource, basic_info=True)})
+    return valid_http(httpSuccess=HTTPOk, detail=ResourcePermissions_GET_OkResponseSchema.description,
                       content={u'permission_names': res_perm})

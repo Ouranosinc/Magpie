@@ -109,11 +109,12 @@ def get_group_matchdict_checked(request, group_name_key='group_name'):
 def get_resource_matchdict_checked(request, resource_name_key='resource_id'):
     resource_id = get_value_matchdict_checked(request, resource_name_key)
     resource_id = evaluate_call(lambda: int(resource_id), httpError=HTTPNotAcceptable,
-                                msgOnFail="Resource ID is an invalid literal for `int` type")
+                                msgOnFail=Resource_MatchDictCheck_NotAcceptableResponseSchema.description)
     resource = evaluate_call(lambda: ResourceService.by_resource_id(resource_id, db_session=request.db),
-                             fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail="Resource query by id refused by db")
-    verify_param(resource, notNone=True, httpError=HTTPNotFound, msgOnFail="Resource ID not found in db")
+                             fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                             msgOnFail=Resource_MatchDictCheck_ForbiddenResponseSchema.description)
+    verify_param(resource, notNone=True, httpError=HTTPNotFound,
+                 msgOnFail=Resource_MatchDictCheck_NotFoundResponseSchema.description)
     return resource
 
 
@@ -121,9 +122,9 @@ def get_service_matchdict_checked(request, service_name_key='service_name'):
     service_name = get_value_matchdict_checked(request, service_name_key)
     service = evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
                             fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                            msgOnFail=Service_MatchDictCheck_ForbiddenResponseBodySchema.description)
+                            msgOnFail=Service_MatchDictCheck_ForbiddenResponseSchema.description)
     verify_param(service, notNone=True, httpError=HTTPNotFound, content={u'service_name': service_name},
-                 msgOnFail=Service_MatchDictCheck_NotFoundResponseBodySchema.description)
+                 msgOnFail=Service_MatchDictCheck_NotFoundResponseSchema.description)
     return service
 
 
@@ -136,5 +137,5 @@ def get_permission_matchdict_checked(request, service_resource, permission_name_
 def get_value_matchdict_checked(request, key):
     val = request.matchdict.get(key)
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
-                 content={str(key): str(val)}, msgOnFail="Invalid value specified")
+                 content={str(key): str(val)}, msgOnFail=UnprocessableEntityResponseSchema.description)
     return val
