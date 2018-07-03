@@ -128,7 +128,9 @@
                     </p>
                     <p class="panel_line">
                         <span class="panel_entry">Permissions: </span>
-                        <span class="panel_value">${service_perm}</span>
+                        %for perm in service_perm:
+                            <span class="label warning">${perm}</span>
+                        %endfor
                     </p>
                     <p class="panel_line">
                         <span class="panel_entry">ID: </span>
