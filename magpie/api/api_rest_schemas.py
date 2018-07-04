@@ -1,7 +1,7 @@
 from definitions.cornice_definitions import *
 from definitions.pyramid_definitions import view_config
 from db import get_database_revision
-from __meta__ import __version__
+import __meta__
 import requests
 
 
@@ -16,6 +16,13 @@ class CorniceSwaggerPredicate(object):
 
     def __call__(self, context, request):
         return self.schema
+
+
+TitleAPI = "Magpie REST API"
+InfoAPI = {
+    "description": __meta__.__description__,
+    "contact": {"name": __meta__.__maintainer__, "email": __meta__.__email__, "url": __meta__.__url__}
+}
 
 
 # Tags
@@ -936,7 +943,7 @@ class Version_GET_ResponseBodySchema(colander.MappingSchema):
     version = colander.SchemaNode(
         colander.String(),
         description="Magpie version string",
-        example=__version__)
+        example=__meta__.__version__)
     db_version = colander.SchemaNode(
         colander.String(),
         description="Database version string",
@@ -958,5 +965,5 @@ def api_spec(request=None, use_docstring_summary=False):
     generator.summary_docstrings = use_docstring_summary
     generator.default_security = get_security
     generator.swagger = SecurityDefinitionAPI
-    json_api_spec = generator.generate(title='Magpie REST API', version=__version__)
+    json_api_spec = generator.generate(title=TitleAPI, version=__meta__.__version__, info=InfoAPI)
     return json_api_spec

@@ -7,7 +7,7 @@ try:
 except ImportError:
     from distutils.core import setup
 
-from magpie.__meta__ import __version__, __author__, __email__
+import __meta__
 
 with open('README.rst') as readme_file:
     README = readme_file.read()
@@ -40,12 +40,12 @@ TEST_REQUIREMENTS = [
 setup(
     # -- meta information --------------------------------------------------
     name='magpie',
-    version=__version__,
-    description="Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations",
+    version=__meta__.__version__,
+    description=__meta__.__description__,
     long_description=README + '\n\n' + HISTORY,
-    author=__author__,
-    author_email=__email__,
-    url='https://github.com/Ouranosinc/Magpie',
+    author=__meta__.__author__,
+    author_email=__meta__.__email__,
+    url=__meta__.__url__,
     platforms=['linux_x86_64'],
     license="ISCL",
     keywords='magpie',

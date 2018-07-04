@@ -148,7 +148,7 @@ def main(global_config=None, **settings):
     magpie_api_view = '{}/api-explorer'.format(settings['magpie.url'])
     config.cornice_enable_openapi_view(
         api_path=magpie_api_path,
-        title='Magpie REST API',
+        title=TitleAPI,
         description="OpenAPI documentation",
         version=__meta__.__version__
     )
