@@ -66,7 +66,7 @@ def create_resource_view(request):
     return create_resource(resource_name, resource_type, parent_id, request.db)
 
 
-@ResourceAPI.delete(schema=ServiceResource_DELETE_RequestBodySchema(), tags=[ServiceTag], response_schemas={
+@ResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ServiceTag], response_schemas={
     '200': Resource_DELETE_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Resource_DELETE_ForbiddenResponseSchema(),
@@ -80,6 +80,13 @@ def delete_resource_view(request):
     return delete_resource(request)
 
 
+@ResourceAPI.put(schema=Resource_PUT_RequestSchema(), tags=[ResourceTag], response_schemas={
+    '200': Resource_PUT_OkResponseSchema(),
+    '403': Resource_PUT_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=ResourceAPI.name, request_method='PUT')
 def update_resource(request):
     """Update a resource information."""
@@ -96,11 +103,11 @@ def update_resource(request):
             sync_services_phoenix(db.query(models.Service))
 
     evaluate_call(lambda: rename_service_magpie_and_phoenix(resource, res_new_name, service_push, request.db),
-                  fallback=lambda: request.db.rollback(),
-                  msgOnFail="Failed to update resource with new name",
+                  fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                  msgOnFail=Resource_PUT_ForbiddenResponseSchema.description,
                   content={u'resource_id': resource.resource_id, u'resource_name': resource.resource_name,
                            u'old_resource_name': res_old_name, u'new_resource_name': res_new_name})
-    return valid_http(httpSuccess=HTTPOk, detail="Update resource successful",
+    return valid_http(httpSuccess=HTTPOk, detail=Resource_PUT_OkResponseSchema.description,
                       content={u'resource_id': resource.resource_id, u'resource_name': resource.resource_name,
                                u'old_resource_name': res_old_name, u'new_resource_name': res_new_name})
 

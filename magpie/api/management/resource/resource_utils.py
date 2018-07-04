@@ -170,7 +170,7 @@ def delete_resource(request):
     res_content = {u'resource': format_resource(resource, basic_info=True)}
     evaluate_call(lambda: resource_tree_service.delete_branch(resource_id=resource.resource_id, db_session=request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                  msgOnFail="Delete resource branch from tree service failed", content=res_content)
+                  msgOnFail="Delete resource branch from tree service failed.", content=res_content)
 
     def remove_service_magpie_and_phoenix(res, svc_push, db):
         if res.resource_type != 'service':

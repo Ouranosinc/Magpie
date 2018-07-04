@@ -155,10 +155,10 @@ def get_service(request):
     """Get a service information."""
     service = get_service_matchdict_checked(request)
     return valid_http(httpSuccess=HTTPOk, detail=Service_GET_OkResponseSchema.name,
-                      content={u'service': format_service(service)})
+                      content={service.resource_name: format_service(service)})
 
 
-@ServiceAPI.delete(schema=Service_DELETE_RequestBodySchema(), tags=[ServiceTag], response_schemas={
+@ServiceAPI.delete(schema=Service_DELETE_RequestSchema(), tags=[ServiceTag], response_schemas={
     '200': Service_DELETE_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Service_DELETE_ForbiddenResponseSchema(),
@@ -205,7 +205,7 @@ def get_service_permissions(request):
                       content={u'permission_names': svc_perms})
 
 
-@ServiceResourceAPI.delete(schema=ServiceResource_DELETE_RequestBodySchema(), tags=[ServiceTag], response_schemas={
+@ServiceResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ServiceTag], response_schemas={
     '200': ServiceResource_DELETE_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': ServiceResource_DELETE_ForbiddenResponseSchema(),

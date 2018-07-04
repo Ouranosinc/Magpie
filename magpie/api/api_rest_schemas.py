@@ -398,8 +398,67 @@ class Resource_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
     body = InternalServerErrorBodySchema()
 
 
-class Resource_DELETE_RequestBodySchema(colander.MappingSchema):
+class Resource_PUT_RequestBodySchema(colander.MappingSchema):
+    resource_name = colander.SchemaNode(
+        colander.String(),
+        description="New name to apply to the resource to update",
+    )
+    service_push = colander.SchemaNode(
+        colander.Boolean(),
+        description="Push service resource update to Phoenix",
+        missing=False,
+    )
+
+
+class Resource_PUT_RequestSchema(colander.MappingSchema):
     header = HeaderSchema()
+    body = Resource_PUT_RequestBodySchema()
+
+
+class Resource_PUT_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    resource_id = colander.SchemaNode(
+        colander.String(),
+        description="Updated resource identification number."
+    )
+    resource_name = colander.SchemaNode(
+        colander.String(),
+        description="Updated resource name (from object)."
+    )
+    old_resource_name = colander.SchemaNode(
+        colander.String(),
+        description="Resource name before update."
+    )
+    new_resource_name = colander.SchemaNode(
+        colander.String(),
+        description="Resource name after update."
+    )
+
+
+class Resource_PUT_OkResponseSchema(colander.MappingSchema):
+    description = "Update resource successful."
+    body = Resource_PUT_ResponseBodySchema()
+
+
+class Resource_PUT_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Failed to update resource with new name."
+    body = BaseBodySchema(code=403)
+
+
+class Resource_DELETE_RequestBodySchema(colander.MappingSchema):
+    service_push = colander.SchemaNode(
+        colander.Boolean(),
+        description="Push service update to Phoenix if applicable",
+        missing=colander.drop,
+        default=False,
+    )
+
+
+class Resource_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = Resource_DELETE_RequestBodySchema()
 
 
 class Resource_DELETE_OkResponseSchema(colander.MappingSchema):
@@ -558,6 +617,29 @@ class Service_FailureResponseBodySchema(colander.MappingSchema):
     )
 
 
+class Service_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Service query by name refused by db."
+    body = BaseBodySchema(code=403)
+
+
+class Service_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Service name not found in db."
+    body = Service_FailureResponseBodySchema(code=404)
+
+
+class Service_GET_ResponseBodySchema(colander.MappingSchema):
+    service_name = ServiceBodySchema()
+    service_name.name = '{service_name}'
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class Service_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service successful."
+    body = Service_GET_ResponseBodySchema()
+
+
 class Services_GET_ResponseBodySchema(colander.MappingSchema):
     services = ServicesSchemaNode()
     code = CodeSchemaNode
@@ -569,21 +651,6 @@ class Services_GET_ResponseBodySchema(colander.MappingSchema):
 class Services_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get services successful."
     body = Services_GET_ResponseBodySchema()
-
-
-class Service_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
-    description = "Service query by name refused by db."
-    body = BaseBodySchema(code=403)
-
-
-class Service_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
-    description = "Service name not found in db."
-    body = Service_FailureResponseBodySchema(code=404)
-
-
-class Service_GET_OkResponseSchema(colander.MappingSchema):
-    description = "Get service successful."
-    body = Service_FailureResponseBodySchema()
 
 
 class Services_GET_NotAcceptableResponseSchema(colander.MappingSchema):
@@ -695,18 +762,8 @@ class Service_PUT_ConflictResponseSchema(colander.MappingSchema):
     body = Service_FailureResponseBodySchema(code=409)
 
 
-class Service_DELETE_BodySchema(colander.MappingSchema):
-    service_push = colander.SchemaNode(
-        colander.Boolean(),
-        description="Push service update to Phoenix if applicable",
-        missing=colander.drop,
-        default=False
-    )
-
-
-class Service_DELETE_RequestBodySchema(colander.MappingSchema):
-    header = HeaderSchema()
-    body = Service_DELETE_BodySchema(missing=colander.drop)
+# delete service use same method as direct resource delete
+Service_DELETE_RequestSchema = Resource_DELETE_RequestSchema
 
 
 class Service_DELETE_OkResponseSchema(colander.MappingSchema):
@@ -747,13 +804,13 @@ ServiceResources_POST_ConflictResponseSchema = Resources_POST_ConflictResponseSc
 
 
 # delete service's resource use same method as direct resource delete
-ServiceResource_DELETE_RequestBodySchema = Resource_DELETE_RequestBodySchema
+ServiceResource_DELETE_RequestSchema = Resource_DELETE_RequestSchema
 ServiceResource_DELETE_ForbiddenResponseSchema = Resource_DELETE_ForbiddenResponseSchema
 ServiceResource_DELETE_OkResponseSchema = Resource_DELETE_OkResponseSchema
 
 
 class ServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
-    service_name = ServiceBodySchema()
+    service_name = Resource_ServiceWithChildrenResourcesContainerBodySchema()
     service_name.name = '{service_name}'
     code = CodeSchemaNode
     type = TypeSchemaNode
@@ -763,6 +820,9 @@ class ServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
 class ServiceResources_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get service resources successful."
     body = ServiceResources_GET_ResponseBodySchema()
+
+
+#class
 
 
 class Group_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
