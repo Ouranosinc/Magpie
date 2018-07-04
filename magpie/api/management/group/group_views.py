@@ -147,6 +147,7 @@ def delete_group_resource_permission_view(request):
 
 @GroupServiceResourcesAPI.get(tags=[GroupTag], response_schemas={
     '200': GroupServiceResources_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
     '403': Group_MatchDictCheck_ForbiddenResponseSchema(),
     '404': Group_MatchDictCheck_NotFoundResponseSchema(),
     '422': UnprocessableEntityResponseSchema()

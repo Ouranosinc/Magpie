@@ -16,6 +16,6 @@ def includeme(config):
     config.add_route(**service_api_route_info(GroupResourcesAPI))
     config.add_route(**service_api_route_info(GroupResourcePermissionsAPI))
     config.add_route(**service_api_route_info(GroupResourcePermissionAPI))
-    config.add_route(**service_api_route_info(GroupResourcesTypesAPI))
+    config.add_route(**service_api_route_info(GroupResourceTypesAPI))
 
     config.scan()

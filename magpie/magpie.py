@@ -144,12 +144,13 @@ def main(global_config=None, **settings):
     config.include('magpie')
 
     # include api views
+    print_log('Running api documentation setup...')
     magpie_api_path = '{}/__api__'.format(settings['magpie.url'])
     magpie_api_view = '{}/api-explorer'.format(settings['magpie.url'])
     config.cornice_enable_openapi_view(
         api_path=magpie_api_path,
         title=TitleAPI,
-        description="OpenAPI documentation",
+        description=__meta__.__description__,
         version=__meta__.__version__
     )
     config.cornice_enable_openapi_explorer(api_explorer_path=magpie_api_view)
@@ -164,6 +165,7 @@ def main(global_config=None, **settings):
     config.scan('magpie')
     config.set_default_permission(ADMIN_PERM)
 
+    print_log('Starting Magpie app...')
     wsgi_app = config.make_wsgi_app()
     return wsgi_app
 

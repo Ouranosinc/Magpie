@@ -48,7 +48,7 @@ def check_or_try_login_user(app, username=None, password=None):
         return None
     if auth is False and username is not None:
         data = {'user_name': username, 'password': password, 'provider_name': 'ziggurat'}
-        resp = app.post_json('/signin', data, headers=json_headers)
+        resp = app.post_json('/sign_in', data, headers=json_headers)
         if resp.status_int == 200:
             return resp.json['headers']
         return None

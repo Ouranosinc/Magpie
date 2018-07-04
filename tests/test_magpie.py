@@ -72,20 +72,31 @@ class TestMagpieWithAdminAuth(unittest.TestCase):
         cls.headers = check_or_try_login_user(cls.app, cls.usr, cls.pwd)
         cls.require = "cannot run tests without logged in 'administrator' user"
         assert cls.headers is not None, cls.require
+        cls.json_headers = cls.headers + json_headers
 
     @classmethod
     def tearDownClass(cls):
         pyramid.testing.tearDown()
 
-
     #@pytest.mark.skip(reason='No way to test this now')
     def test_GetAPI_valid(self):
         assert check_or_try_login_user(self.app, self.usr, self.pwd) is not None, self.require
         assert self.headers is not None, self.require
-        resp = self.app.get('/__api__', headers=json_headers + self.headers)
+        resp = self.app.get('/__api__', headers=self.json_headers)
         assert resp.status_int == 200
         assert resp.content_type == 'application/json'
         assert resp.json['version'] == magpie.__meta__.__version__
+
+    @pytest.mark.user
+    def test_GetUsers_valid(self):
+        assert check_or_try_login_user(self.app, self.usr, self.pwd) is not None, self.require
+        assert self.headers is not None, self.require
+        resp = self.app.get('/users', headers=self.json_headers)
+        assert resp.status_int == 200
+        assert resp.content_type == 'application/json'
+        assert 'users' in resp.json.keys()
+        assert 'anonymous' in resp.json['users']
+        assert len(resp.json['users']) > 1  # should have more than only 'anonymous'
 
 
 if __name__ == '__main__':

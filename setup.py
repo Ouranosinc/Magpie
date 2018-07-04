@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os, sys
+MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
+MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, 'magpie')
+sys.path.insert(0, MAGPIE_MODULE_DIR)
+
 from setuptools import find_packages
 try:
     from setuptools import setup
@@ -15,9 +20,8 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     HISTORY = history_file.read().replace('.. :changelog:', '')
 
-# See https://github.com/pypa/pip/issues/3610
-REQUIREMENTS = set([])  # use set to have unique packages by name
-LINKS = set([])
+LINKS = set()         # See https://github.com/pypa/pip/issues/3610
+REQUIREMENTS = set()  # use set to have unique packages by name
 with open('requirements.txt', 'r') as requirements_file:
     for line in requirements_file:
         if 'git+https' in line:
@@ -30,12 +34,22 @@ with open('requirements.txt', 'r') as requirements_file:
 LINKS = list(LINKS)
 REQUIREMENTS = list(REQUIREMENTS)
 
-TEST_REQUIREMENTS = [
+# put package test requirements here
+TEST_REQUIREMENTS = {
     'nose',
     'webtest',
-    'pytest'
-    # TODO: put package test requirements here
-]
+    'pytest',
+}
+
+RAW_REQUIREMENTS = set()
+for req in REQUIREMENTS:
+    raw_req = req.split('>')[0].split('=')[0].split('<')[0]
+    RAW_REQUIREMENTS.add(raw_req)
+for req in TEST_REQUIREMENTS:
+    raw_req = req.split('>')[0].split('=')[0].split('<')[0]
+    if raw_req not in RAW_REQUIREMENTS:
+        TEST_REQUIREMENTS.add(raw_req)
+TEST_REQUIREMENTS = list(TEST_REQUIREMENTS)
 
 setup(
     # -- meta information --------------------------------------------------
@@ -44,7 +58,10 @@ setup(
     description=__meta__.__description__,
     long_description=README + '\n\n' + HISTORY,
     author=__meta__.__author__,
-    author_email=__meta__.__email__,
+    maintainer=__meta__.__maintainer__,
+    maintainer_email=__meta__.__email__,
+    contact=__meta__.__maintainer__,
+    contact_email=__meta__.__email__,
     url=__meta__.__url__,
     platforms=['linux_x86_64'],
     license="ISCL",
