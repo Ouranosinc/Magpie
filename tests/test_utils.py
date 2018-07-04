@@ -21,6 +21,8 @@ def get_test_magpie_app():
     config = config_setup_from_ini(magpie_ini)
     # required redefinition because root models' location is not the same from within this test file
     config.add_settings({'ziggurat_foundations.model_locations.User': 'magpie.models:User'})
+    # remove API which cause duplicate view errors (?) TODO: figure out why it does so, because it shouldn't
+    config.registry.settings['magpie.api_generation_disabled'] = True
     # scan dependencies
     config.include('magpie')
     config.scan('magpie')

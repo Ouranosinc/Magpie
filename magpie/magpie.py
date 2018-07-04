@@ -142,28 +142,34 @@ def main(global_config=None, **settings):
     )
 
     config.include('magpie')
+    config.scan('magpie')
+    config.set_default_permission(ADMIN_PERM)
 
     # include api views
     print_log('Running api documentation setup...')
-    magpie_api_path = '{}/__api__'.format(settings['magpie.url'])
-    magpie_api_view = '{}/api-explorer'.format(settings['magpie.url'])
-    config.cornice_enable_openapi_view(
-        api_path=magpie_api_path,
-        title=TitleAPI,
-        description=__meta__.__description__,
-        version=__meta__.__version__
-    )
-    config.cornice_enable_openapi_explorer(api_explorer_path=magpie_api_view)
-    #config.register_swagger_ui(swagger_ui_path=magpie_api_path)
+    magpie_api_gen_disabled = os.getenv('MAGPIE_API_GENERATION_DISABLED')
+    if magpie_api_gen_disabled:
+        settings['magpie.api_generation_disabled'] = magpie_api_gen_disabled
+    if 'magpie.api_generation_disabled' not in settings:
+        settings['magpie.api_generation_disabled'] = False
 
-    # generate the api specs from code definitions
-    api_json = api_spec(use_docstring_summary=True)
-    api_json_file_path = '{}/ui/swagger-ui/magpie-rest-api.json'.format(MAGPIE_MODULE_DIR)
-    with open(api_json_file_path, 'w') as api_file:
-        api_file.write(repr(api_json))
+    if not settings['magpie.api_generation_disabled']:
+        magpie_api_path = '{}/__api__'.format(settings['magpie.url'])
+        magpie_api_view = '{}/api-explorer'.format(settings['magpie.url'])
+        config.cornice_enable_openapi_view(
+            api_path=magpie_api_path,
+            title=TitleAPI,
+            description=__meta__.__description__,
+            version=__meta__.__version__
+        )
+        config.cornice_enable_openapi_explorer(api_explorer_path=magpie_api_view)
+        #config.register_swagger_ui(swagger_ui_path=magpie_api_path)
 
-    config.scan('magpie')
-    config.set_default_permission(ADMIN_PERM)
+        # generate the api specs from code definitions
+        api_json = api_spec(use_docstring_summary=True)
+        api_json_file_path = '{}/ui/swagger-ui/magpie-rest-api.json'.format(MAGPIE_MODULE_DIR)
+        with open(api_json_file_path, 'w') as api_file:
+            api_file.write(repr(api_json))
 
     print_log('Starting Magpie app...')
     wsgi_app = config.make_wsgi_app()
