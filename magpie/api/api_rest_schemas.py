@@ -63,9 +63,9 @@ UserResourcePermissionAPI = Service(
 UserResourcePermissionsAPI = Service(
     path='/users/{user_name}/resources/{resource_id}/permissions',
     name='UserResourcePermissions')
-UserResourcesTypesAPI = Service(
+UserResourceTypesAPI = Service(
     path='/users/{user_name}/resources/types/{resource_type}',
-    name='UserResourcesTypes')
+    name='UserResourceTypes')
 UserInheritedServicesAPI = Service(
     path='/users/{user_name}/inherited_services',
     name='UserInheritedServices')
@@ -138,9 +138,9 @@ ServicesAPI = Service(
 ServiceAPI = Service(
     path='/services/{service_name}',
     name='Service')
-ServicesTypesAPI = Service(
+ServiceTypesAPI = Service(
     path='/services/types/{service_type}',
-    name='ServicesTypes')
+    name='ServiceTypes')
 ServicePermissionsAPI = Service(
     path='/services/{service_name}/permissions',
     name='ServicePermissions')
@@ -150,9 +150,9 @@ ServiceResourcesAPI = Service(
 ServiceResourceAPI = Service(
     path='/services/{service_name}/resources/{resource_id}',
     name='ServiceResource')
-ServiceResourcesTypesAPI = Service(
+ServiceResourceTypesAPI = Service(
     path='/services/types/{service_type}/resources/types',
-    name='ServiceResourcesTypes')
+    name='ServiceResourceTypes')
 SessionAPI = Service(
     path='/session',
     name='Session')
@@ -237,6 +237,14 @@ class InternalServerErrorBodySchema(colander.MappingSchema):
 class InternalServerErrorResponseSchema(colander.MappingSchema):
     description = "Internal Server Error. Unhandled exception occurred."
     body = InternalServerErrorBodySchema()
+
+
+class ResourceTypesListSchema(colander.SequenceSchema):
+    item = colander.SchemaNode(
+        colander.String(),
+        description="Available resource type under root service.",
+        example=["file", "dictionary"],
+    )
 
 
 class GroupNamesListSchema(colander.SequenceSchema):
@@ -822,7 +830,36 @@ class ServiceResources_GET_OkResponseSchema(colander.MappingSchema):
     body = ServiceResources_GET_ResponseBodySchema()
 
 
-#class
+class ServiceResourceTypes_GET_ResponseBodySchema(colander.MappingSchema):
+    resource_types = ResourceTypesListSchema()
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class ServiceResourceTypes_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service type resource types successful."
+    body = ServiceResourceTypes_GET_ResponseBodySchema()
+
+
+class ServiceResourceTypes_GET_FailureResponseBodySchema(colander.MappingSchema):
+    service_type = colander.SchemaNode(
+        colander.String(),
+        description="Service type retrieved from route path."
+    )
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class ServiceResourceTypes_GET_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Failed to obtain resource types for specified service type."
+    body = ServiceResourceTypes_GET_FailureResponseBodySchema(code=403)
+
+
+class ServiceResourceTypes_GET_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Invalid `service_type` does not exist to obtain its resource types."
+    body = ServiceResourceTypes_GET_FailureResponseBodySchema(code=404)
 
 
 class Group_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):

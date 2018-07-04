@@ -20,7 +20,7 @@ def includeme(config):
     config.add_route(**service_api_route_info(UserServiceInheritedResourcesAPI))
     config.add_route(**service_api_route_info(UserResourcesAPI))
     config.add_route(**service_api_route_info(UserInheritedResourcesAPI))
-    config.add_route(**service_api_route_info(UserResourcesTypesAPI))
+    config.add_route(**service_api_route_info(UserResourceTypesAPI))
     config.add_route(**service_api_route_info(UserResourcePermissionsAPI))
     config.add_route(**service_api_route_info(UserResourcePermissionAPI))
     config.add_route(**service_api_route_info(UserResourceInheritedPermissionsAPI))

@@ -10,12 +10,12 @@ from models import resource_tree_service
 from services import service_type_dict
 
 
-@ServicesTypesAPI.get(tags=[ServiceTag], response_schemas={
+@ServiceTypesAPI.get(tags=[ServiceTag], response_schemas={
     '200': Services_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '406': Services_GET_NotAcceptableResponseSchema(),
 })
-@view_config(route_name=ServicesTypesAPI.name, request_method='GET')
+@view_config(route_name=ServiceTypesAPI.name, request_method='GET')
 def get_services_by_type_view(request):
     return get_services_runner(request)
 
@@ -256,14 +256,21 @@ def create_service_direct_resource(request):
     return create_resource(resource_name, resource_type, parent_id=parent_id, db_session=request.db)
 
 
-@view_config(route_name=ServiceResourcesTypesAPI.name, request_method='GET')
+@ServiceResourceTypesAPI.get(tags=[ServiceTag], response_schemas={
+    '200': ServiceResourceTypes_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': ServiceResourceTypes_GET_ForbiddenResponseSchema(),
+    '404': ServiceResourceTypes_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
+@view_config(route_name=ServiceResourceTypesAPI.name, request_method='GET')
 def get_service_type_resource_types(request):
     """List all resources under a specific service type."""
     service_type = get_value_matchdict_checked(request, 'service_type')
     verify_param(service_type, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotFound,
-                 msgOnFail="Invalid `service_type` does not exist to obtain its resource types")
+                 msgOnFail=ServiceResourceTypes_GET_NotFoundResponseSchema.description)
     resource_types = evaluate_call(lambda: service_type_dict[service_type].resource_types,
                                    httpError=HTTPForbidden, content={u'service_type': str(service_type)},
-                                   msgOnFail="Failed to obtain resource types for specified service type")
-    return valid_http(httpSuccess=HTTPOk, detail="Get service type resource types successful",
+                                   msgOnFail=ServiceResourceTypes_GET_ForbiddenResponseSchema.description)
+    return valid_http(httpSuccess=HTTPOk, detail=ServiceResourceTypes_GET_OkResponseSchema.description,
                       content={u'resource_types': resource_types})

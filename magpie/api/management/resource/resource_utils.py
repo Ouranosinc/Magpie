@@ -5,6 +5,7 @@ from services import service_type_dict
 from register import sync_services_phoenix
 from definitions.pyramid_definitions import *
 from definitions.ziggurat_definitions import *
+from api.api_rest_schemas import *
 from api.api_requests import *
 from api.api_except import verify_param, evaluate_call, raise_http, valid_http
 from api.management.resource.resource_formats import format_resource

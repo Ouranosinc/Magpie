@@ -3,7 +3,6 @@ from definitions.pyramid_definitions import *
 from definitions.ziggurat_definitions import *
 from api.api_except import evaluate_call, verify_param
 from api.api_rest_schemas import *
-from api.management.resource.resource_utils import check_valid_service_resource_permission
 import models
 
 
@@ -39,6 +38,8 @@ def get_multiformat_delete(request, key, default=None):
 
 
 def get_permission_multiformat_post_checked(request, service_resource, permission_name_key='permission_name'):
+    # import here to avoid circular import error with undefined functions between (api_request, resource_utils)
+    from api.management.resource.resource_utils import check_valid_service_resource_permission
     perm_name = get_value_multiformat_post_checked(request, permission_name_key)
     check_valid_service_resource_permission(perm_name, service_resource, request.db)
     return perm_name
@@ -130,6 +131,8 @@ def get_service_matchdict_checked(request, service_name_key='service_name'):
 
 
 def get_permission_matchdict_checked(request, service_resource, permission_name_key='permission_name'):
+    # import here to avoid circular import error with undefined functions between (api_request, resource_utils)
+    from api.management.resource.resource_utils import check_valid_service_resource_permission
     perm_name = get_value_matchdict_checked(request, permission_name_key)
     check_valid_service_resource_permission(perm_name, service_resource, request.db)
     return perm_name
