@@ -27,11 +27,27 @@ ResourceTag = 'Resource'
 ServiceTag = 'Service'
 
 
+# Security
+SecurityDefinitionAPI = {'securityDefinitions': {'cookieAuth': {'type': 'apiKey', 'in': 'cookie', 'name': 'auth_tkt'}}}
+SecurityAdministratorAPI = [{'cookieAuth': []}]
+SecurityEveryoneAPI = []
+
+
+def get_security(service, method):
+    definitions = service.definitions
+    args = {}
+    for definition in definitions:
+        met, view, args = definition
+        if met == method:
+            break
+    return SecurityAdministratorAPI if 'security' not in args else args['security']
+
+
+# Service Routes
 def service_api_route_info(service_api):
     return {'name': service_api.name, 'pattern': service_api.path}
 
 
-# Service Routes
 SwaggerAPI = Service(
     path='__api__',
     name='Magpie REST API',
@@ -310,13 +326,13 @@ class ResourceBodySchema(colander.MappingSchema):
         colander.Integer(),
         description="Parent resource identification number",
         default=colander.null,  # if no parent
-        missing=colander.drop  # if not returned (basic_info = True)
+        missing=colander.drop   # if not returned (basic_info = True)
     )
     root_service_id = colander.SchemaNode(
         colander.Integer(),
         description="Resource tree root service identification number",
         default=colander.null,  # if no parent
-        missing=colander.drop  # if not returned (basic_info = True)
+        missing=colander.drop   # if not returned (basic_info = True)
     )
     permission_names = PermissionListSchema()
     permission_names.default = colander.null  # if no parent
@@ -932,15 +948,15 @@ class Version_GET_OkResponseSchema(colander.MappingSchema):
     body = Version_GET_ResponseBodySchema()
 
 
-# return JSON Swagger specifications of Magpie REST API on route '/magpie/__api__'
-# using all Cornice Services and Schemas
 @SwaggerAPI.get(tags=[APITag])
-def api_spec(request=None):
+def api_spec(request=None, use_docstring_summary=False):
+    """
+    Return JSON Swagger specifications of Magpie REST API on route '/magpie/__api__' using Cornice Services and Schemas.
+    """
     generator = CorniceSwagger(get_services())
-    generator.summary_docstrings = True  # function docstrings are used to create the route's summary in Swagger-UI
-    json_api_spec = generator('Magpie REST API', __version__)
+    # function docstrings are used to create the route's summary in Swagger-UI
+    generator.summary_docstrings = use_docstring_summary
+    generator.default_security = get_security
+    generator.swagger = SecurityDefinitionAPI
+    json_api_spec = generator.generate(title='Magpie REST API', version=__version__)
     return json_api_spec
-
-
-#def openapi_spec_generate_json(request):
-#    api_json = requests.post()

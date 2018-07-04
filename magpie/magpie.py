@@ -34,7 +34,7 @@ MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
 sys.path.insert(0, MAGPIE_MODULE_DIR)
 
 
-@VersionAPI.get(tags=[APITag], response_schemas={
+@VersionAPI.get(tags=[APITag], api_security=SecurityEveryoneAPI, response_schemas={
     '200': Version_GET_OkResponseSchema()
 })
 @view_config(route_name='version', request_method='GET', permission=NO_PERMISSION_REQUIRED)
@@ -156,7 +156,7 @@ def main(global_config=None, **settings):
     #config.register_swagger_ui(swagger_ui_path=magpie_api_path)
 
     # generate the api specs from code definitions
-    api_json = api_spec()
+    api_json = api_spec(use_docstring_summary=True)
     api_json_file_path = '{}/ui/swagger-ui/magpie-rest-api.json'.format(MAGPIE_MODULE_DIR)
     with open(api_json_file_path, 'w') as api_file:
         api_file.write(repr(api_json))

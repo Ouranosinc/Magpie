@@ -66,7 +66,7 @@ def create_resource_view(request):
     return create_resource(resource_name, resource_type, parent_id, request.db)
 
 
-@ResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ServiceTag], response_schemas={
+@ResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ResourceTag], response_schemas={
     '200': Resource_DELETE_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Resource_DELETE_ForbiddenResponseSchema(),
