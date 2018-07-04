@@ -90,9 +90,39 @@ UserServicePermissionAPI = Service(
 CurrentUserAPI = Service(
     path='/users/current',
     name='CurrentUser')
+GroupsAPI = Service(
+    path='/groups',
+    name='Groups')
 GroupAPI = Service(
     path='/groups/{group_name}',
     name='Group')
+GroupUsersAPI = Service(
+    path='/groups/{group_name}/users',
+    name='GroupUsers')
+GroupServicesAPI = Service(
+    path='/groups/{group_name}/services',
+    name='GroupServices')
+GroupServicePermissionsAPI = Service(
+    path='/groups/{group_name}/services/{service_name}/permissions',
+    name='GroupServicePermissions')
+GroupServicePermissionAPI = Service(
+    path='/groups/{group_name}/services/{service_name}/permissions/{permission_name}',
+    name='GroupServicePermission')
+GroupServiceResourcesAPI = Service(
+    path='/groups/{group_name}/services/{service_name}/resources',
+    name='GroupServiceResources')
+GroupResourcesAPI = Service(
+    path='/groups/{group_name}/resources',
+    name='GroupResources')
+GroupResourcePermissionsAPI = Service(
+    path='/groups/{group_name}/resources/{resource_id}/permissions',
+    name='GroupResourcePermissions')
+GroupResourcePermissionAPI = Service(
+    path='/groups/{group_name}/resources/{resource_id}/permissions/{permission_name}',
+    name='GroupResourcePermission')
+GroupResourcesTypesAPI = Service(
+    path='/groups/{group_name}/resources/types/{resource_type}',
+    name='GroupResourcesTypes')
 ResourcesAPI = Service(
     path='/resources',
     name='Resources')
@@ -225,53 +255,111 @@ class PermissionListSchema(colander.SequenceSchema):
     )
 
 
-def ResourceBodySchema(*args, **kwargs):
-    resource_body_schema = colander.SchemaNode(colander.Mapping(*args, **kwargs))
-
-    class ChildrenResourceBodySchema(colander.MappingSchema):
-        children = resource_body_schema     # recursive 'ResourceBodySchema'
-
-    resource_body_schema.add(colander.SchemaNode(
+class ServiceBodySchema(colander.MappingSchema):
+    resource_id = colander.SchemaNode(
         colander.Integer(),
         description="Resource identification number",
-        name="resource_id"
-    ))
-    resource_body_schema.add(colander.SchemaNode(
+    )
+    permission_names = PermissionListSchema()
+    service_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the service",
+        example="thredds"
+    )
+    service_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the service",
+        example="thredds"
+    )
+    public_url = colander.SchemaNode(
+        colander.String(),
+        description="Proxy URL available for public access with permissions",
+        example="http://localhost/twitcher/ows/proxy/thredds"
+    )
+    service_url = colander.SchemaNode(
+        colander.String(),
+        description="Private URL of the service (restricted access)",
+        example="http://localhost:9999/thredds"
+    )
+
+
+class ResourceBodySchema(colander.MappingSchema):
+    resource_id = colander.SchemaNode(
+        colander.Integer(),
+        description="Resource identification number",
+    )
+    resource_name = colander.SchemaNode(
         colander.String(),
         description="Name of the resource",
-        name="resource_name"
-    ))
-    resource_body_schema.add(colander.SchemaNode(
+        example="thredds"
+    )
+    resource_type = colander.SchemaNode(
         colander.String(),
         description="Type of the resource",
-        name="resource_type"
-    ))
-    resource_body_schema.add(colander.SchemaNode(
+        example="service"
+    )
+    parent_id = colander.SchemaNode(
         colander.Integer(),
         description="Parent resource identification number",
         default=colander.null,  # if no parent
-        missing=colander.drop,  # if not returned (basic_info = True)
-        name="root_service_id"
-    ))
-    resource_body_schema.add(PermissionListSchema(
+        missing=colander.drop  # if not returned (basic_info = True)
+    )
+    root_service_id = colander.SchemaNode(
         colander.Integer(),
-        description="Permissions applicable to the resource",
+        description="Resource tree root service identification number",
         default=colander.null,  # if no parent
-        missing=colander.drop,  # if not returned (basic_info = True)
-        name="permission_names"
-    ))
-    #resource_body_schema.add(ChildrenResourceBodySchema(
-    #    description="Children resources of the resource",
-    #    default=colander.null,  # if no parent
-    #    missing=colander.drop,  # if not returned (basic_info = True)
-    #    name="children"
-    #))
-
-    return resource_body_schema
+        missing=colander.drop  # if not returned (basic_info = True)
+    )
+    permission_names = PermissionListSchema()
+    permission_names.default = colander.null  # if no parent
+    permission_names.missing = colander.drop  # if not returned (basic_info = True)
 
 
-class Resource_ResponseBodySchema(colander.MappingSchema):
-    resource = ResourceBodySchema()
+# TODO: improve by making recursive resources work (?)
+class Resource_ChildrenContainerWithoutChildResourceBodySchema(ResourceBodySchema):
+    children = colander.MappingSchema(default={})
+
+
+class Resource_ChildResourceWithoutChildrenBodySchema(colander.MappingSchema):
+    id = Resource_ChildrenContainerWithoutChildResourceBodySchema()
+    id.name = '{resource_id}'
+
+
+class Resource_ChildrenContainerWithChildResourceBodySchema(ResourceBodySchema):
+    children = Resource_ChildResourceWithoutChildrenBodySchema()
+
+
+class Resource_ChildResourceWithChildrenContainerBodySchema(colander.MappingSchema):
+    id = Resource_ChildrenContainerWithChildResourceBodySchema()
+    id.name = '{resource_id}'
+
+
+class Resource_ServiceWithChildrenResourcesContainerBodySchema(ServiceBodySchema):
+    resources = Resource_ChildResourceWithChildrenContainerBodySchema()
+
+
+class Resource_ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
+    geoserver_api = Resource_ServiceWithChildrenResourcesContainerBodySchema()
+    geoserver_api.name = "geoserver-api"
+
+
+class Resource_ServiceType_ncwms_SchemaNode(colander.MappingSchema):
+    ncwms = Resource_ServiceWithChildrenResourcesContainerBodySchema()
+
+
+class Resource_ServiceType_thredds_SchemaNode(colander.MappingSchema):
+    thredds = Resource_ServiceWithChildrenResourcesContainerBodySchema()
+
+
+class ResourcesSchemaNode(colander.MappingSchema):
+    geoserver_api = Resource_ServiceType_geoserverapi_SchemaNode()
+    geoserver_api.name = "geoserver-api"
+    ncwms = Resource_ServiceType_ncwms_SchemaNode()
+    thredds = Resource_ServiceType_thredds_SchemaNode()
+
+
+class Resources_ResponseBodySchema(colander.MappingSchema):
+    resources = ResourcesSchemaNode()
     code = CodeSchemaNode
     type = TypeSchemaNode
     detail = DetailSchemaNode
@@ -292,14 +380,26 @@ class Resource_MatchDictCheck_NotAcceptableResponseSchema(colander.MappingSchema
     body = BaseBodySchema(code=406)
 
 
+class Resource_GET_ResponseBodySchema(colander.MappingSchema):
+    resource_id = Resource_ChildResourceWithChildrenContainerBodySchema()
+    resource_id.name = '{resource_id}'
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
 class Resource_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get resource successful."
-    body = Resource_ResponseBodySchema()
+    body = Resource_GET_ResponseBodySchema()
 
 
 class Resource_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
     description = "Failed building resource children json formatted tree."
     body = InternalServerErrorBodySchema()
+
+
+class Resource_DELETE_RequestBodySchema(colander.MappingSchema):
+    header = HeaderSchema()
 
 
 class Resource_DELETE_OkResponseSchema(colander.MappingSchema):
@@ -310,33 +410,6 @@ class Resource_DELETE_OkResponseSchema(colander.MappingSchema):
 class Resource_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Delete resource from db failed."
     body = BaseBodySchema(code=403)
-
-
-class Resource_ServiceType_thredds_SchemaNode(colander.MappingSchema):
-    thredds = ResourceBodySchema()
-
-
-class Resource_ServiceType_ncwms_SchemaNode(colander.MappingSchema):
-    ncwms = ResourceBodySchema()
-
-
-class Resource_ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
-    geoserver_api = ResourceBodySchema()
-    geoserver_api.name = "geoserver-api"
-
-
-class ResourcesSchemaNode(colander.MappingSchema):
-    geoserver_api = Resource_ServiceType_geoserverapi_SchemaNode()
-    geoserver_api.name = "geoserver-api"
-    ncwms = Resource_ServiceType_ncwms_SchemaNode()
-    thredds = Resource_ServiceType_thredds_SchemaNode()
-
-
-class Resources_ResponseBodySchema(colander.MappingSchema):
-    code = CodeSchemaNode
-    type = TypeSchemaNode
-    detail = DetailSchemaNode
-    resources = ResourcesSchemaNode()
 
 
 class Resources_GET_OkResponseSchema(colander.MappingSchema):
@@ -365,9 +438,17 @@ class Resources_POST_RequestBodySchema(colander.MappingSchema):
     body = Resources_POST_BodySchema()
 
 
+class Resource_POST_ResponseBodySchema(colander.MappingSchema):
+    resource_id = Resource_ChildResourceWithChildrenContainerBodySchema()
+    resource_id.name = '{resource_id}'
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
 class Resources_POST_OkResponseSchema(colander.MappingSchema):
     description = "Create resource successful."
-    body = Resource_ResponseBodySchema()
+    body = Resource_POST_ResponseBodySchema()
 
 
 class Resources_POST_BadRequestResponseSchema(colander.MappingSchema):
@@ -407,40 +488,15 @@ class ResourcePermissions_GET_NotAcceptableResponseSchema(colander.MappingSchema
     body = BaseBodySchema(code=406)
 
 
-class ServiceBodySchema(colander.MappingSchema):
-    resource_id = colander.SchemaNode(
-        colander.Integer(),
-        description="Resource identification number",
-    )
-    permission_names = PermissionListSchema()
-    service_name = colander.SchemaNode(
-        colander.String(),
-        description="Name of the service",
-        example="thredds"
-    )
-    service_type = colander.SchemaNode(
-        colander.String(),
-        description="Type of the service",
-        example="thredds"
-    )
-    public_url = colander.SchemaNode(
-        colander.String(),
-        description="Proxy URL available for public access with permissions",
-        example="http://localhost/twitcher/ows/proxy/thredds"
-    )
-    service_url = colander.SchemaNode(
-        colander.String(),
-        description="Private URL of the service (restricted access)",
-        example="http://localhost:9999/thredds"
-    )
+class ServiceResourcesBodySchema(ServiceBodySchema):
+    children = ResourcesSchemaNode()
 
 
-class ServiceType_thredds_SchemaNode(colander.MappingSchema):
-    thredds = ServiceBodySchema()
-
-
-class ServiceType_ncwms_SchemaNode(colander.MappingSchema):
-    ncwms = ServiceBodySchema()
+class ServiceType_access_SchemaNode(colander.MappingSchema):
+    frontend = ServiceBodySchema()
+    geoserver_web = ServiceBodySchema()
+    geoserver_web.name = "geoserver-web"
+    magpie = ServiceBodySchema()
 
 
 class ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
@@ -448,11 +504,48 @@ class ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
     geoserver_api.name = "geoserver-api"
 
 
+class ServiceType_geoserverwms_SchemaNode(colander.MappingSchema):
+    geoserverwms = ServiceBodySchema()
+
+
+class ServiceType_ncwms_SchemaNode(colander.MappingSchema):
+    ncwms = ServiceBodySchema()
+    ncwms.name = "ncWMS2"
+
+
+class ServiceType_projectapi_SchemaNode(colander.MappingSchema):
+    project_api = ServiceBodySchema()
+    project_api.name = "project-api"
+
+
+class ServiceType_thredds_SchemaNode(colander.MappingSchema):
+    thredds = ServiceBodySchema()
+
+
+class ServiceType_wfs_SchemaNode(colander.MappingSchema):
+    geoserver = ServiceBodySchema()
+
+
+class ServiceType_wps_SchemaNode(colander.MappingSchema):
+    lb_flyingpigeon = ServiceBodySchema()
+    flyingpigeon = ServiceBodySchema()
+    project = ServiceBodySchema()
+    catalog = ServiceBodySchema()
+    malleefowl = ServiceBodySchema()
+    hummingbird = ServiceBodySchema()
+
+
 class ServicesSchemaNode(colander.MappingSchema):
+    access = ServiceType_access_SchemaNode()
     geoserver_api = ServiceType_geoserverapi_SchemaNode()
     geoserver_api.name = "geoserver-api"
+    geoserverwms = ServiceType_geoserverwms_SchemaNode()
     ncwms = ServiceType_ncwms_SchemaNode()
+    project_api = ServiceType_projectapi_SchemaNode()
+    project_api.name = "project-api"
     thredds = ServiceType_thredds_SchemaNode()
+    wfs = ServiceType_wfs_SchemaNode()
+    wps = ServiceType_wps_SchemaNode()
 
 
 class Service_FailureResponseBodySchema(colander.MappingSchema):
@@ -654,12 +747,9 @@ ServiceResources_POST_ConflictResponseSchema = Resources_POST_ConflictResponseSc
 
 
 # delete service's resource use same method as direct resource delete
+ServiceResource_DELETE_RequestBodySchema = Resource_DELETE_RequestBodySchema
 ServiceResource_DELETE_ForbiddenResponseSchema = Resource_DELETE_ForbiddenResponseSchema
 ServiceResource_DELETE_OkResponseSchema = Resource_DELETE_OkResponseSchema
-
-
-class ServiceResource_DELETE_RequestBodySchema(colander.MappingSchema):
-    header = HeaderSchema()
 
 
 class ServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
@@ -673,6 +763,28 @@ class ServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
 class ServiceResources_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get service resources successful."
     body = ServiceResources_GET_ResponseBodySchema()
+
+
+class Group_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Group query by name refused by db."
+    body = BaseBodySchema(code=403)
+
+
+class Group_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Group name not found in db."
+    body = BaseBodySchema(code=404)
+
+
+class GroupServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
+    service = ServiceResourcesBodySchema()
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class GroupServiceResources_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get group service resources successful."
+    body = GroupServiceResources_GET_ResponseBodySchema()
 
 
 class Session_GET_ResponseBodySchema(colander.MappingSchema):
@@ -728,6 +840,7 @@ class Version_GET_OkResponseSchema(colander.MappingSchema):
 @SwaggerAPI.get(tags=[APITag])
 def api_spec(request=None):
     generator = CorniceSwagger(get_services())
+    generator.summary_docstrings = True  # function docstrings are used to create the route's summary in Swagger-UI
     json_api_spec = generator('Magpie REST API', __version__)
     return json_api_spec
 

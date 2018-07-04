@@ -69,6 +69,7 @@ def sign_in_external(request):
 
 @view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
+    """Signs in a user session."""
     provider_name = get_value_multiformat_post_checked(request, 'provider_name')
     user_name = get_value_multiformat_post_checked(request, 'user_name')
     password = get_multiformat_post(request, 'password')   # no check since password is None for external login#
@@ -104,7 +105,7 @@ def login_success_ziggurat(request):
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):
-    """create new user with an External Identity"""
+    """Create new user with an External Identity"""
     local_user_name = external_user_name + '_' + provider_name
     local_user_name = local_user_name.replace(" ", '_')
     create_user(local_user_name, password=None, email=email, group_name=USER_GROUP, db_session=db_session)
@@ -159,7 +160,8 @@ def login_failure(request, reason=None):
 
 
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
-def sign_out_ziggurat(request):
+def sign_out(request):
+    """Signs out the current user session."""
     return valid_http(httpSuccess=HTTPOk, detail="Sign out successful.", httpKWArgs={'headers': forget(request)})
 
 
@@ -211,6 +213,7 @@ def authomatic_login(request):
 })
 @view_config(route_name='session', permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
+    """Get information about current session."""
     def _get_session(req):
         authn_policy = req.registry.queryUtility(IAuthenticationPolicy)
         principals = authn_policy.effective_principals(req)
@@ -231,6 +234,7 @@ def get_session(request):
 
 @view_config(route_name='providers', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_providers(request):
+    """Get list of providers."""
     return valid_http(httpSuccess=HTTPOk, detail="Get providers successful",
                       content={u'provider_names': providers,
                                u'internal_providers': internal_providers,

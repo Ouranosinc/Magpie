@@ -27,6 +27,7 @@ def get_services_by_type_view(request):
 })
 @view_config(route_name=ServicesAPI.name, request_method='GET')
 def get_services_view(request):
+    """List all registered services."""
     return get_services_runner(request)
 
 
@@ -60,6 +61,7 @@ def get_services_runner(request):
 })
 @view_config(route_name=ServicesAPI.name, request_method='POST')
 def register_service(request):
+    """Registers a new service."""
     service_name = get_value_multiformat_post_checked(request, 'service_name')
     service_url = get_value_multiformat_post_checked(request, 'service_url')
     service_type = get_value_multiformat_post_checked(request, 'service_type')
@@ -101,6 +103,7 @@ def register_service(request):
 })
 @view_config(route_name=ServiceAPI.name, request_method='PUT')
 def update_service(request):
+    """Update a service information."""
     service = get_service_matchdict_checked(request)
     service_push = str2bool(get_multiformat_post(request, 'service_push', default=False))
 
@@ -149,6 +152,7 @@ def update_service(request):
 })
 @view_config(route_name=ServiceAPI.name, request_method='GET')
 def get_service(request):
+    """Get a service information."""
     service = get_service_matchdict_checked(request)
     return valid_http(httpSuccess=HTTPOk, detail=Service_GET_OkResponseSchema.name,
                       content={u'service': format_service(service)})
@@ -162,6 +166,7 @@ def get_service(request):
 })
 @view_config(route_name=ServiceAPI.name, request_method='DELETE')
 def unregister_service(request):
+    """Unregister a service."""
     service = get_service_matchdict_checked(request)
     service_push = str2bool(get_multiformat_delete(request, 'service_push', default=False))
     svc_content = format_service(service)
@@ -190,6 +195,7 @@ def unregister_service(request):
 })
 @view_config(route_name=ServicePermissionsAPI.name, request_method='GET')
 def get_service_permissions(request):
+    """List all applicable permissions for a service."""
     service = get_service_matchdict_checked(request)
     svc_content = format_service(service)
     svc_perms = evaluate_call(lambda: service_type_dict[service.type].permission_names,
@@ -209,6 +215,7 @@ def get_service_permissions(request):
 })
 @view_config(route_name=ServiceResourceAPI.name, request_method='DELETE')
 def delete_service_resource_view(request):
+    """Unregister a resource."""
     return delete_resource(request)
 
 
@@ -221,6 +228,7 @@ def delete_service_resource_view(request):
 })
 @view_config(route_name=ServiceResourcesAPI.name, request_method='GET')
 def get_service_resources_view(request):
+    """List all resources registered under a service."""
     service = get_service_matchdict_checked(request)
     svc_res_json = format_service_resources(service, db_session=request.db, display_all=True)
     return valid_http(httpSuccess=HTTPOk, detail=ServiceResources_GET_OkResponseSchema.description,
@@ -238,6 +246,7 @@ def get_service_resources_view(request):
 })
 @view_config(route_name=ServiceResourcesAPI.name, request_method='POST')
 def create_service_direct_resource(request):
+    """Register a new resource directly under a service."""
     service = get_service_matchdict_checked(request)
     resource_name = get_multiformat_post(request, 'resource_name')
     resource_type = get_multiformat_post(request, 'resource_type')
@@ -249,6 +258,7 @@ def create_service_direct_resource(request):
 
 @view_config(route_name=ServiceResourcesTypesAPI.name, request_method='GET')
 def get_service_type_resource_types(request):
+    """List all resources under a specific service type."""
     service_type = get_value_matchdict_checked(request, 'service_type')
     verify_param(service_type, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotFound,
                  msgOnFail="Invalid `service_type` does not exist to obtain its resource types")

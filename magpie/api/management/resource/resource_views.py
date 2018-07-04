@@ -1,3 +1,4 @@
+from api.api_requests import *
 from api.management.service.service_utils import get_services_by_type
 from api.management.service.service_formats import format_service_resources
 from api.management.resource.resource_utils import *
@@ -15,6 +16,7 @@ from services import service_type_dict
 })
 @view_config(route_name=ResourcesAPI.name, request_method='GET')
 def get_resources_view(request):
+    """List all registered resources."""
     res_json = {}
     for svc_type in service_type_dict.keys():
         services = get_services_by_type(svc_type, db_session=request.db)
@@ -36,6 +38,7 @@ def get_resources_view(request):
 })
 @view_config(route_name=ResourceAPI.name, request_method='GET')
 def get_resource_view(request):
+    """Get resource information."""
     resource = get_resource_matchdict_checked(request)
     res_json = evaluate_call(lambda: format_resource_with_children(resource, db_session=request.db),
                              fallback=lambda: request.db.rollback(), httpError=HTTPInternalServerError,
@@ -56,19 +59,30 @@ def get_resource_view(request):
 })
 @view_config(route_name=ResourcesAPI.name, request_method='POST')
 def create_resource_view(request):
+    """Register a new resource."""
     resource_name = get_value_multiformat_post_checked(request, 'resource_name')
     resource_type = get_value_multiformat_post_checked(request, 'resource_type')
     parent_id = get_value_multiformat_post_checked(request, 'parent_id')
     return create_resource(resource_name, resource_type, parent_id, request.db)
 
 
+@ResourceAPI.delete(schema=ServiceResource_DELETE_RequestBodySchema(), tags=[ServiceTag], response_schemas={
+    '200': Resource_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resource_DELETE_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=ResourceAPI.name, request_method='DELETE')
 def delete_resource_view(request):
+    """Unregister a resource."""
     return delete_resource(request)
 
 
 @view_config(route_name=ResourceAPI.name, request_method='PUT')
 def update_resource(request):
+    """Update a resource information."""
     resource = get_resource_matchdict_checked(request, 'resource_id')
     service_push = str2bool(get_multiformat_post(request, 'service_push'))
     res_old_name = resource.resource_name
@@ -101,6 +115,7 @@ def update_resource(request):
 })
 @view_config(route_name=ResourcePermissionsAPI.name, request_method='GET')
 def get_resource_permissions_view(request):
+    """List all applicable permissions for a resource."""
     resource = get_resource_matchdict_checked(request, 'resource_id')
     res_perm = evaluate_call(lambda: get_resource_permissions(resource, db_session=request.db),
                              fallback=lambda: request.db.rollback(), httpError=HTTPNotAcceptable,

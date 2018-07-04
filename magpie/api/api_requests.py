@@ -101,8 +101,9 @@ def get_group_matchdict_checked(request, group_name_key='group_name'):
     group_name = get_value_matchdict_checked(request, group_name_key)
     group = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
                           fallback=lambda: request.db.rollback(),
-                          httpError=HTTPForbidden, msgOnFail="Group query by name refused by db")
-    verify_param(group, notNone=True, httpError=HTTPNotFound, msgOnFail="Group name not found in db")
+                          httpError=HTTPForbidden, msgOnFail=Group_MatchDictCheck_ForbiddenResponseSchema.description)
+    verify_param(group, notNone=True, httpError=HTTPNotFound,
+                 msgOnFail=Group_MatchDictCheck_NotFoundResponseSchema.description)
     return group
 
 
