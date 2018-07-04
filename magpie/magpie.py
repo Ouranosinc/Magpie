@@ -116,6 +116,9 @@ def main(global_config=None, **settings):
 
     print_log('Running configurations setup...')
     magpie_url_template = 'http://{hostname}:{port}/magpie'
+    port = os.getenv('MAGPIE_PORT')
+    if port:
+        settings['magpie.port'] = port
     hostname = os.getenv('HOSTNAME')
     if hostname:
         settings['magpie.url'] = magpie_url_template.format(hostname=hostname, port=settings['magpie.port'])
