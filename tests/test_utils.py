@@ -34,7 +34,7 @@ def get_test_magpie_app():
     return app
 
 
-def test_request(app_or_url, method, path, **kwargs):
+def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kwargs):
     """
     Calls the request using either a `webtest.TestApp` instance or a `requests` instance from a string URL.
     :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
@@ -54,7 +54,7 @@ def test_request(app_or_url, method, path, **kwargs):
             return app_or_url.delete_json(path, **kwargs)
     else:
         url = '{url}{path}'.format(url=app_or_url, path=path)
-        return requests.request(method, url, **kwargs)
+        return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
 
 
 def check_or_try_login_user(app_or_url, username=None, password=None):
@@ -64,7 +64,7 @@ def check_or_try_login_user(app_or_url, username=None, password=None):
     :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
     :param username: name of the user to login or None otherwise
     :param password: password to use for login if the user was not already logged in
-    :return: cookie headers of the user session or None
+    :return: headers and cookies of the user session or (None, None)
     :raise: Exception on any login/logout failure as required by the caller's specifications (username/password)
     """
 
@@ -81,7 +81,7 @@ def check_or_try_login_user(app_or_url, username=None, password=None):
     auth = body.get('authenticated', False)
     user = body.get('user_name', '')
     if auth is False and username is None:
-        return None
+        return None, None
     if auth is False and username is not None:
         data = {'user_name': username, 'password': password, 'provider_name': 'ziggurat'}
 
@@ -91,8 +91,8 @@ def check_or_try_login_user(app_or_url, username=None, password=None):
             resp = requests.post('{}/signin'.format(app_or_url), json=data, headers=dict(json_headers))
 
         if resp.status_code == 200:
-            return resp.headers
-        return None
+            return resp.headers, resp.cookies
+        return None, None
 
     if auth is True and username != user:
         raise Exception("invalid user")

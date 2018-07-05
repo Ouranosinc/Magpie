@@ -70,10 +70,11 @@ class TestMagpieWithAdminAuth(unittest.TestCase):
         cls.app = get_test_magpie_app()
         cls.usr = os.getenv('MAGPIE_TEST_ADMIN_USERNAME')
         cls.pwd = os.getenv('MAGPIE_TEST_ADMIN_PASSWORD')
-        assert cls.usr is not None and cls.pwd is not None, "cannot login with unspecified username/password"
-        cls.headers = check_or_try_login_user(cls.app, cls.usr, cls.pwd)
+        assert cls.usr and cls.pwd, "cannot login with unspecified username/password"
+        cls.headers, cls.cookies = check_or_try_login_user(cls.app, cls.usr, cls.pwd)
         cls.require = "cannot run tests without logged in 'administrator' user"
-        assert cls.headers is not None, cls.require
+        assert cls.headers and cls.cookies, cls.require
+        cls.app.cookies = cls.cookies
         cls.json_headers = cls.headers + json_headers
 
     @classmethod
@@ -82,8 +83,9 @@ class TestMagpieWithAdminAuth(unittest.TestCase):
 
     @classmethod
     def check_requirements(cls):
-        assert check_or_try_login_user(cls.app, cls.usr, cls.pwd) is not None, cls.require
-        assert cls.headers is not None, cls.require
+        headers, cookies = check_or_try_login_user(cls.app, cls.usr, cls.pwd)
+        assert headers and cookies, cls.require
+        assert cls.headers and cls.cookies and cls.app.cookies, cls.require
 
     #@pytest.mark.skip(reason='No way to test this now')
     def test_GetAPI_valid(self):
@@ -116,12 +118,13 @@ class TestMagpieWithAdminAuthRemote(unittest.TestCase):
         cls.usr = os.getenv('MAGPIE_TEST_ADMIN_USERNAME')
         cls.pwd = os.getenv('MAGPIE_TEST_ADMIN_PASSWORD')
         cls.url = os.getenv('MAGPIE_TEST_REMOTE_SERVER_URL')
-        assert cls.url is not None, "cannot test without a remote server URL"
-        assert cls.usr is not None and cls.pwd is not None, "cannot login with unspecified username/password"
-        cls.headers = check_or_try_login_user(cls.url, cls.usr, cls.pwd)
+        assert cls.url, "cannot test without a remote server URL"
+        assert cls.usr and cls.pwd, "cannot login with unspecified username/password"
+        cls.headers, cls.cookies = check_or_try_login_user(cls.url, cls.usr, cls.pwd)
         cls.require = "cannot run tests without logged in 'administrator' user"
-        assert cls.headers is not None, cls.require
-        cls.json_headers = dict(cls.headers)
+        assert cls.headers and cls.cookies, cls.require
+        cls.json_headers = {} # cls.headers.copy()
+        cls.json_headers['Content-Type'] = 'application/json'
 
     @classmethod
     def tearDownClass(cls):
@@ -129,18 +132,23 @@ class TestMagpieWithAdminAuthRemote(unittest.TestCase):
 
     @classmethod
     def check_requirements(cls):
-        assert check_or_try_login_user(cls.url, cls.usr, cls.pwd) is not None, cls.require
-        assert cls.headers is not None, cls.require
+        headers, cookies = check_or_try_login_user(cls.url, cls.usr, cls.pwd)
+        assert headers and cookies, cls.require
+        assert cls.headers and cls.cookies, cls.require
 
     @pytest.mark.user
     def test_GetUsers_valid(self):
         self.check_requirements()
-        resp = test_request(self.url, 'GET', '/users', headers=self.json_headers)
+        resp = test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
         assert resp.status_code == 200
-        assert resp.content_type == 'application/json'
+        assert resp.content['type'] == 'application/json'
         assert 'users' in resp.json.keys()
-        assert 'anonymous' in resp.json['users']
-        assert len(resp.json['users']) > 1  # should have more than only 'anonymous'
+        assert len(resp.json['users']) > 1          # should have more than only 'anonymous'
+        assert 'anonymous' in resp.json['users']    # anonymous always in users
+        assert self.usr in resp.json['users']       # current test user in users
+
+
+    
 
 
 if __name__ == '__main__':
