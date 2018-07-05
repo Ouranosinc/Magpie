@@ -1,6 +1,7 @@
 import os
 import json
 import pyramid
+import requests
 from webtest import TestApp
 from magpie import magpie, db
 MAGPIE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -20,7 +21,9 @@ def get_test_magpie_app():
     magpie_ini = '{}/magpie/magpie.ini'.format(MAGPIE_DIR)
     config = config_setup_from_ini(magpie_ini)
     # required redefinition because root models' location is not the same from within this test file
-    config.add_settings({'ziggurat_foundations.model_locations.User': 'magpie.models:User'})
+    config.add_settings({'ziggurat_foundations.model_locations.User': 'magpie.models:User',
+                         'ziggurat_foundations.model_locations.user': 'magpie.models:User'})
+    config.include('ziggurat_foundations.ext.pyramid.sign_in')
     # remove API which cause duplicate view errors (?) TODO: figure out why it does so, because it shouldn't
     config.registry.settings['magpie.api_generation_disabled'] = True
     # scan dependencies
@@ -31,28 +34,65 @@ def get_test_magpie_app():
     return app
 
 
-def check_or_try_login_user(app, username=None, password=None):
+def test_request(app_or_url, method, path, **kwargs):
+    """
+    Calls the request using either a `webtest.TestApp` instance or a `requests` instance from a string URL.
+    :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
+    :param method: request method (GET, POST, PUT, DELETE)
+    :param path: test path starting at base path
+    :return: response of the request
+    """
+    method = method.upper()
+    if isinstance(app_or_url, TestApp):
+        if method == 'GET':
+            return app_or_url.get(path, **kwargs)
+        elif method == 'POST':
+            return app_or_url.post_json(path, **kwargs)
+        elif method == 'PUT':
+            return app_or_url.put_json(path, **kwargs)
+        elif method == 'DELETE':
+            return app_or_url.delete_json(path, **kwargs)
+    else:
+        url = '{url}{path}'.format(url=app_or_url, path=path)
+        return requests.request(method, url, **kwargs)
+
+
+def check_or_try_login_user(app_or_url, username=None, password=None):
     """
     Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
 
-    :param app: instance of the test application
+    :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
     :param username: name of the user to login or None otherwise
     :param password: password to use for login if the user was not already logged in
     :return: cookie headers of the user session or None
     :raise: Exception on any login/logout failure as required by the caller's specifications (username/password)
     """
-    resp = app.get('/session', headers=json_headers)
-    if resp.status_int != 200:
+
+    if isinstance(app_or_url, TestApp):
+        resp = app_or_url.get('/session', headers=json_headers)
+        body = resp.json
+    else:
+        resp = requests.get('{}/session'.format(app_or_url), headers=dict(json_headers))
+        body = resp.json()
+
+    if resp.status_code != 200:
         raise Exception('cannot retrieve logged in user information')
-    auth = resp.json.get('authenticated', False)
-    user = resp.json.get('user_name', '')
+
+    auth = body.get('authenticated', False)
+    user = body.get('user_name', '')
     if auth is False and username is None:
         return None
     if auth is False and username is not None:
         data = {'user_name': username, 'password': password, 'provider_name': 'ziggurat'}
-        resp = app.post_json('/sign_in', data, headers=json_headers)
-        if resp.status_int == 200:
-            return resp.json['headers']
+
+        if isinstance(app_or_url, TestApp):
+            resp = app_or_url.post_json('/signin', data, headers=json_headers)
+        else:
+            resp = requests.post('{}/signin'.format(app_or_url), json=data, headers=dict(json_headers))
+
+        if resp.status_code == 200:
+            return resp.headers
         return None
+
     if auth is True and username != user:
         raise Exception("invalid user")
