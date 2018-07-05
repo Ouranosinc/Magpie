@@ -35,10 +35,10 @@ class TestMagpieUI_NoAuthLocal(unittest.TestCase):
     def tearDownClass(cls):
         pyramid.testing.tearDown()
 
-    def test_Home_valid(self):
-        resp = test_request(self.app, 'GET', '/', headers=self.json_headers)
-        assert resp.status_code == 200
-        assert resp.content_type == 'text/html'
+    def test_Home(self):
+        resp = test_request(self.app, 'GET', '/')
+        assert resp.status_code == 200, format_test_val_ref(resp.status_code, 200)
+        assert resp.content_type == 'text/html', format_test_val_ref(resp.content_type, 'text/html')
         resp.mustcontain("Magpie Administration")
 
 
@@ -58,8 +58,9 @@ class TestMagpieUI_NoAuthRemote(unittest.TestCase):
     def tearDownClass(cls):
         pyramid.testing.tearDown()
 
-    def test_Home_valid(self):
+    def test_Home(self):
         resp = test_request(self.url, 'GET', '/')
-        assert resp.status_code == 200
-        assert resp.headers['Content-Type'] == 'text/html; charset=UTF-8'
+        content_type = 'text/html; charset=UTF-8'
+        assert resp.status_code == 200, format_test_val_ref(resp.status_code, 200)
+        assert resp.headers['Content-Type'] == content_type, format_test_val_ref(resp.content_type, content_type)
         assert "Magpie Administration" in resp.text

@@ -39,7 +39,18 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
     :return: response of the request
     """
     method = method.upper()
+
+    # obtain json body from any json/data/body/params kw and empty {} if not specified
+    # reapply with the expected webtest/requests method kw afterward
+    json_body = None
+    for kw in ['json', 'data', 'body', 'params']:
+        json_body = kwargs.get(kw, json_body)
+        if kw in kwargs:
+            kwargs.pop(kw)
+    json_body = json_body or {}
+
     if isinstance(app_or_url, TestApp):
+        kwargs['params'] = json_body
         if method == 'GET':
             return app_or_url.get(path, **kwargs)
         elif method == 'POST':
@@ -49,6 +60,7 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
         elif method == 'DELETE':
             return app_or_url.delete_json(path, **kwargs)
     else:
+        kwargs['json'] = json_body
         url = '{url}{path}'.format(url=app_or_url, path=path)
         return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
 
@@ -96,16 +108,27 @@ def check_or_try_login_user(app_or_url, username=None, password=None, headers=No
         raise Exception("invalid user")
 
 
+def format_test_val_ref(val, ref):
+    return 'Test value: {0}, Reference value: {1}'.format(val, ref)
+
+
 def check_response_basic_info(response, expected_code=200):
+    """
+    Validates basic Magpie API response metadata.
+    :param response: response to validate.
+    :param expected_code: status code to validate from the response.
+    :return: json body of the response for convenience.
+    """
     if isinstance(response, TestResponse):
         json_body = response.json
     else:
         json_body = response.json()
-    assert response.status_code == expected_code
     assert response.headers['Content-Type'] == 'application/json'
-    assert json_body['type'] == 'application/json'
-    assert json_body['code'] == expected_code
+    assert response.status_code == expected_code, format_test_val_ref(response.status_code, expected_code)
+    assert json_body['code'] == expected_code, format_test_val_ref(json_body['code'], expected_code)
+    assert json_body['type'] == 'application/json', format_test_val_ref(json_body['type'], 'application/json')
     assert json_body['detail'] != ''
+    return json_body
 
 
 def check_resource_children(resource_dict, parent_resource_id, root_service_id):
