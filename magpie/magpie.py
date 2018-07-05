@@ -8,7 +8,6 @@ Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations
 # -- Standard library --403------------------------------------------------------
 import logging.config
 import argparse
-import os
 import time
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -29,9 +28,6 @@ from helpers.register_providers import magpie_register_services_from_config
 import models
 import db
 import __meta__
-MAGPIE_MODULE_DIR = os.path.abspath(os.path.dirname(__file__))
-MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
-sys.path.insert(0, MAGPIE_MODULE_DIR)
 
 
 @VersionAPI.get(tags=[APITag], api_security=SecurityEveryoneAPI, response_schemas={
@@ -105,10 +101,8 @@ def main(global_config=None, **settings):
     settings['magpie.phoenix_push'] = str2bool(os.getenv('PHOENIX_PUSH', False))
 
     print_log('Register default providers...', LOGGER)
-    providers_config_path = '{}/providers.cfg'.format(MAGPIE_ROOT)
-    magpie_ini_path = '{}/magpie.ini'.format(MAGPIE_MODULE_DIR)
-    svc_db_session = db.get_db_session_from_config_ini(magpie_ini_path)
-    magpie_register_services_from_config(providers_config_path, push_to_phoenix=settings['magpie.phoenix_push'],
+    svc_db_session = db.get_db_session_from_config_ini(MAGPIE_INI_FILE_PATH)
+    magpie_register_services_from_config(MAGPIE_PROVIDERS_CONFIG_PATH, push_to_phoenix=settings['magpie.phoenix_push'],
                                          force_update=True, disable_getcapabilities=False, db_session=svc_db_session)
 
     print_log('Register default users...')

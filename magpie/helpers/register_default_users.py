@@ -87,10 +87,7 @@ def register_default_users():
         time.sleep(2)
         raise_log('Database not ready')
 
-    magpie_module_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-    magpie_ini_file = '{}/magpie.ini'.format(magpie_module_dir)
-    db_session = db.get_db_session_from_config_ini(magpie_ini_file)
-
+    db_session = db.get_db_session_from_config_ini(MAGPIE_INI_FILE_PATH)
     init_admin(db_session)
     init_anonymous(db_session)
     init_user_group(db_session)

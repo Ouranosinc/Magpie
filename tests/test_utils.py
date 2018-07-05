@@ -1,14 +1,10 @@
-import os
-import json
+import six
 import pyramid
 import requests
 from webtest import TestApp
 from webtest.response import TestResponse
 from magpie import magpie, db
-MAGPIE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-
-
-json_headers = [('Content-Type', 'application/json')]
+from magpie import *
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -19,8 +15,7 @@ def config_setup_from_ini(config_ini_file_path):
 
 def get_test_magpie_app():
     # parse settings from ini file to pass them to the application
-    magpie_ini = '{}/magpie/magpie.ini'.format(MAGPIE_DIR)
-    config = config_setup_from_ini(magpie_ini)
+    config = config_setup_from_ini(MAGPIE_INI_FILE_PATH)
     # required redefinition because root models' location is not the same from within this test file
     config.add_settings({'ziggurat_foundations.model_locations.User': 'magpie.models:User',
                          'ziggurat_foundations.model_locations.user': 'magpie.models:User'})
@@ -58,7 +53,7 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
         return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
 
 
-def check_or_try_login_user(app_or_url, username=None, password=None):
+def check_or_try_login_user(app_or_url, username=None, password=None, headers=None):
     """
     Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
 
@@ -69,11 +64,13 @@ def check_or_try_login_user(app_or_url, username=None, password=None):
     :raise: Exception on any login/logout failure as required by the caller's specifications (username/password)
     """
 
+    headers = headers or {}
+
     if isinstance(app_or_url, TestApp):
-        resp = app_or_url.get('/session', headers=json_headers)
+        resp = app_or_url.get('/session', headers=headers)
         body = resp.json
     else:
-        resp = requests.get('{}/session'.format(app_or_url), headers=dict(json_headers))
+        resp = requests.get('{}/session'.format(app_or_url), headers=headers)
         body = resp.json()
 
     if resp.status_code != 200:
@@ -87,9 +84,9 @@ def check_or_try_login_user(app_or_url, username=None, password=None):
         data = {'user_name': username, 'password': password, 'provider_name': 'ziggurat'}
 
         if isinstance(app_or_url, TestApp):
-            resp = app_or_url.post_json('/signin', data, headers=json_headers)
+            resp = app_or_url.post_json('/signin', data, headers=headers)
         else:
-            resp = requests.post('{}/signin'.format(app_or_url), json=data, headers=dict(json_headers))
+            resp = requests.post('{}/signin'.format(app_or_url), json=data, headers=headers)
 
         if resp.status_code == 200:
             return resp.headers, resp.cookies
@@ -111,8 +108,40 @@ def check_response_basic_info(response, expected_code=200):
     assert json_body['detail'] != ''
 
 
+def check_resource_children(resource_dict, parent_resource_id, root_service_id):
+    """
+    Crawls through a resource-children tree to validate data field, types and corresponding values.
+    :param resource_dict: top-level 'resources' dictionary possibly containing children resources.
+    :param parent_resource_id: top-level resource/service id (int)
+    :param root_service_id: top-level service id (int)
+    :raise any invalid match on expected data field, type or value
+    """
+    assert isinstance(resource_dict, dict)
+
+    for resource_id in resource_dict:
+        assert isinstance(resource_id, six.string_types)
+        resource_int_id = int(resource_id)  # should by an 'int' string, no error raised
+        resource_info = resource_dict[resource_id]
+        assert 'root_service_id' in resource_info
+        assert isinstance(resource_info['root_service_id'], int)
+        assert resource_info['root_service_id'] == root_service_id
+        assert 'resource_id' in resource_info
+        assert isinstance(resource_info['resource_id'], int)
+        assert resource_info['resource_id'] == resource_int_id
+        assert 'parent_id' in resource_info
+        assert isinstance(resource_info['parent_id'], int)
+        assert resource_info['parent_id'] == parent_resource_id
+        assert 'resource_name' in resource_info
+        assert isinstance(resource_info['resource_name'], six.string_types)
+        assert 'permission_names' in resource_info
+        assert isinstance(resource_info['permission_names'], list)
+        assert 'children' in resource_info
+
+        check_resource_children(resource_info['children'], resource_int_id, root_service_id)
+
+
 def all_equal(iterable_test, iterable_ref, any_order=False):
-    if not (hasattr(iterable_test, '__iterable__') and hasattr(iterable_ref, '__iterable__')):
+    if not (hasattr(iterable_test, '__iter__') and hasattr(iterable_ref, '__iter__')):
         return False
     if len(iterable_test) != len(iterable_ref):
         return False
