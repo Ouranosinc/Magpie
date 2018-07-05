@@ -3,6 +3,7 @@ import json
 import pyramid
 import requests
 from webtest import TestApp
+from webtest.response import TestResponse
 from magpie import magpie, db
 MAGPIE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
@@ -96,3 +97,25 @@ def check_or_try_login_user(app_or_url, username=None, password=None):
 
     if auth is True and username != user:
         raise Exception("invalid user")
+
+
+def check_response_basic_info(response, expected_code=200):
+    if isinstance(response, TestResponse):
+        json_body = response.json
+    else:
+        json_body = response.json()
+    assert response.status_code == expected_code
+    assert response.headers['Content-Type'] == 'application/json'
+    assert json_body['type'] == 'application/json'
+    assert json_body['code'] == expected_code
+    assert json_body['detail'] != ''
+
+
+def all_equal(iterable_test, iterable_ref, any_order=False):
+    if not (hasattr(iterable_test, '__iterable__') and hasattr(iterable_ref, '__iterable__')):
+        return False
+    if len(iterable_test) != len(iterable_ref):
+        return False
+    if any_order:
+        return all([it in iterable_ref for it in iterable_test])
+    return all(it == ir for it, ir in zip(iterable_test, iterable_ref))
