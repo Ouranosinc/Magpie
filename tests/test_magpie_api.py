@@ -235,6 +235,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         check_val_is_in(self.usr, json_body['user_names'])          # current test user in users
 
     @pytest.mark.users
+    @pytest.mark.defaults
     def test_ValidateDefaultUsers(self):
         resp = test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
@@ -294,6 +295,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
                 check_val_type(svc_dict['resources'], dict)
 
     @pytest.mark.users
+    @pytest.mark.defaults
     def test_ValidateDefaultGroups(self):
         resp = test_request(self.url, 'GET', '/groups', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
@@ -356,6 +358,18 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
             check_val_equal(resp.status_code, 200)
         cls.setup_CheckNonExistingTestResource()
 
+    @classmethod
+    def setup_GetRegisteredServicesList(cls):
+        resp = test_request(cls.url, 'GET', '/services', headers=cls.json_headers, cookies=cls.cookies)
+        json_body = check_response_basic_info(resp, 200)
+
+        # prepare a flat list of registered services
+        services_list = list()
+        for svc_type in json_body['services']:
+            services_of_type = json_body['services'][svc_type]
+            services_list.extend(services_of_type.values())
+        return services_list
+
     @pytest.mark.services
     def test_GetServiceResources(self):
         route = '/services/{svc}/resources'.format(svc=self.test_service_name)
@@ -378,6 +392,20 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         check_val_type(svc_dict['public_url'], types.StringTypes)
         check_val_type(svc_dict['permission_names'], list)
         check_resource_children(svc_dict['resources'], svc_dict['resource_id'], svc_dict['resource_id'])
+
+    @pytest.mark.services
+    def test_GetServicePermissions(self):
+        services_list = self.setup_GetRegisteredServicesList()
+
+        for svc in services_list:
+            svc_name = svc['service_name']
+            service_perms = service_type_dict[svc['service_type']].permission_names
+            route = '/services/{svc}/permissions'.format(svc=svc_name)
+            resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+            json_body = check_response_basic_info(resp, 200)
+            check_val_is_in('permission_names', json_body)
+            check_val_type(json_body['permission_names'], list)
+            check_all_equal(json_body['permission_names'], service_perms)
 
     @pytest.mark.services
     def test_PostServiceResources_DirectResource_NoParentID(self):
@@ -457,15 +485,9 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
                                     paramValue=self.test_resource_name, paramName=u'resource_name')
 
     @pytest.mark.services
+    @pytest.mark.defaults
     def test_ValidateDefaultServiceProviders(self):
-        resp = test_request(self.url, 'GET', '/services', headers=self.json_headers, cookies=self.cookies)
-        json_body = check_response_basic_info(resp, 200)
-
-        # prepare a flat list of registered services
-        services_list = list()
-        for svc_type in json_body['services']:
-            services_of_type = json_body['services'][svc_type]
-            services_list.extend(services_of_type.values())
+        services_list = self.setup_GetRegisteredServicesList()
 
         # ensure that registered services information are all matching the providers in config file
         # ignore registered services not from providers as their are not explicitly required from the config
