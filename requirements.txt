@@ -27,4 +27,4 @@ paste
 cornice_swagger
 cornice
 colander
-git+https://github.com/Ouranosinc/twitcher.git@pavics-0.3.9#egg=pyramid_twitcher
+git+https://github.com/Ouranosinc/twitcher.git@issue-24-rest-api-with-magpie#egg=pyramid_twitcher
