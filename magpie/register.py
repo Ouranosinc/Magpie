@@ -183,9 +183,9 @@ def get_magpie_url():
     return 'http://{0}{1}'.format(hostname, magpie_port)
 
 
-def get_twitcher_protected_service_url(magpie_service_name):
+def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
     try:
-        hostname = os.getenv('HOSTNAME')
+        hostname = hostname or os.getenv('HOSTNAME')
         twitcher_proxy = os.getenv('TWITCHER_PROTECTED_PATH')
         if hostname is None:
             raise ValueError("Environment variable was None", 'HOSTNAME')

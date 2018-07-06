@@ -47,9 +47,9 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
 
 def init_anonymous(db_session):
     register_user_with_group(user_name=ANONYMOUS_USER,
-                             group_name=ANONYMOUS_USER,
+                             group_name=ANONYMOUS_GROUP,
                              email=ANONYMOUS_USER + '@mail.com',
-                             password=ANONYMOUS_USER,
+                             password=ANONYMOUS_PASSWORD,
                              db_session=db_session)
 
 

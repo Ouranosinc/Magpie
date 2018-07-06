@@ -5,7 +5,7 @@ Send contents to server.
 """
 
 from subprocess import check_call
-from urllib.parse import urljoin
+from six.moves.urllib.parse import urljoin
 from shlex import split
 import argparse
 

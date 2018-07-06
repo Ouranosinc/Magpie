@@ -1,6 +1,7 @@
 from definitions.alembic_definitions import *
 from definitions.sqlalchemy_definitions import *
-import ConfigParser
+# noinspection PyCompatibility
+import configparser
 import transaction
 import models
 import inspect
@@ -8,7 +9,6 @@ import zope.sqlalchemy
 import os
 import logging
 logger = logging.getLogger(__name__)
-
 
 # import or define all models here to ensure they are attached to the
 # Base.metadata prior to any initialization routines
@@ -78,7 +78,7 @@ def get_db_session_from_config_ini(config_ini_path, ini_main_section_name='app:m
 
 
 def get_settings_from_config_ini(config_ini_path, ini_main_section_name='app:magpie_app'):
-    parser = ConfigParser.ConfigParser()
+    parser = configparser.ConfigParser()
     parser.read([config_ini_path])
     settings = dict(parser.items(ini_main_section_name))
     return settings

@@ -11,10 +11,12 @@ Tests for `magpie.api` module.
 import unittest
 import pytest
 import pyramid.testing
-import six
 import yaml
+import six
+from six.moves.urllib.parse import urlparse
 from magpie import *
 from magpie.services import service_type_dict
+from magpie.register import get_twitcher_protected_service_url
 from magpie import magpie
 from test_utils import *
 
@@ -232,6 +234,14 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         check_val_is_in('anonymous', json_body['user_names'])       # anonymous always in users
         check_val_is_in(self.usr, json_body['user_names'])          # current test user in users
 
+    @pytest.mark.users
+    def test_ValidateDefaultUsers(self):
+        resp = test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
+        json_body = check_response_basic_info(resp, 200)
+        users = json_body['user_names']
+        check_val_is_in(ANONYMOUS_USER, users)
+        check_val_is_in(ADMIN_USER, users)
+
     @classmethod
     def check_GetUserResourcesPermissions(cls, user_name):
         route = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=cls.test_service_resource_id, usr=user_name)
@@ -282,6 +292,15 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
                 check_val_type(svc_dict['public_url'], types.StringTypes)
                 check_val_type(svc_dict['permission_names'], list)
                 check_val_type(svc_dict['resources'], dict)
+
+    @pytest.mark.users
+    def test_ValidateDefaultGroups(self):
+        resp = test_request(self.url, 'GET', '/groups', headers=self.json_headers, cookies=self.cookies)
+        json_body = check_response_basic_info(resp, 200)
+        groups = json_body['group_names']
+        check_val_is_in(ANONYMOUS_GROUP, groups)
+        check_val_is_in(USER_GROUP, groups)
+        check_val_is_in(ADMIN_GROUP, groups)
 
     @pytest.mark.groups
     def test_GetGroupUsers(self):
@@ -436,6 +455,45 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         check_error_param_structure(json_body, version=self.version,
                                     isParamValueLiteralUnicode=True, paramCompareExists=True,
                                     paramValue=self.test_resource_name, paramName=u'resource_name')
+
+    @pytest.mark.services
+    def test_ValidateDefaultServiceProviders(self):
+        resp = test_request(self.url, 'GET', '/services', headers=self.json_headers, cookies=self.cookies)
+        json_body = check_response_basic_info(resp, 200)
+
+        # prepare a flat list of registered services
+        services_list = list()
+        for svc_type in json_body['services']:
+            services_of_type = json_body['services'][svc_type]
+            services_list.extend(services_of_type.values())
+
+        # ensure that registered services information are all matching the providers in config file
+        # ignore registered services not from providers as their are not explicitly required from the config
+        for svc in services_list:
+            svc_name = svc['service_name']
+            if svc_name in self.test_services_info:
+                check_val_equal(svc['service_type'], self.test_services_info[svc_name]['type'])
+                hostname = urlparse(self.url).hostname
+                check_val_equal(svc['public_url'], get_twitcher_protected_service_url(svc_name, hostname=hostname))
+                svc_url = self.test_services_info[svc_name]['url'].replace('${HOSTNAME}', hostname)
+                check_val_equal(svc['service_url'], svc_url)
+
+        # ensure that no providers are missing from registered services
+        registered_svc_names = [svc['service_name'] for svc in services_list]
+        for svc_name in self.test_services_info:
+            check_val_is_in(svc_name, registered_svc_names)
+
+        # ensure that 'getcapabilities' permission is given to anonymous for applicable services
+        services_list_getcap = [svc for svc in services_list if 'getcapabilities' in svc['permission_names']]
+        route = '/users/{usr}/services'.format(usr=ANONYMOUS_USER)
+        resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        json_body = check_response_basic_info(resp, 200)
+        services = json_body['services']
+        for svc in services_list_getcap:
+            svc_name = svc['service_name']
+            svc_type = svc['service_type']
+            check_val_is_in(svc_name, services[svc_type])
+            check_val_is_in('getcapabilities', services[svc_type][svc_name]['permission_names'])
 
     @pytest.mark.resources
     def test_PostResources_DirectServiceResource(self):
