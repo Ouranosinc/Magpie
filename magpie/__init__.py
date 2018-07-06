@@ -5,6 +5,10 @@ import sys
 this_dir = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, this_dir)
 
+# Expose magpieadapter as subpackage
+import magpieadapter
+
+
 ADMIN_USER = os.getenv('ADMIN_USER', 'admin')
 ADMIN_GROUP = os.getenv('ADMIN_GROUP', 'administrators')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin')

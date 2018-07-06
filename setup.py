@@ -15,9 +15,19 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     HISTORY = history_file.read().replace('.. :changelog:', '')
 
+# See https://github.com/pypa/pip/issues/3610
 REQUIREMENTS = set([])  # use set to have unique packages by name
+LINKS = set([])
 with open('requirements.txt', 'r') as requirements_file:
-    [REQUIREMENTS.add(line.strip()) for line in requirements_file]
+    for line in requirements_file:
+        if 'git+https' in line:
+            pkg = line.split('#')[-1]
+            LINKS.add(line.strip() + '-0')
+            REQUIREMENTS.add(pkg.replace('egg=', '').rstrip())
+        else:
+            REQUIREMENTS.add(line.strip())
+
+LINKS = list(LINKS)
 REQUIREMENTS = list(REQUIREMENTS)
 
 TEST_REQUIREMENTS = [
@@ -61,6 +71,7 @@ setup(
                  'magpie'},
     include_package_data=True,
     install_requires=REQUIREMENTS,
+    dependency_links=LINKS,
     zip_safe=False,
 
     # -- self - tests --------------------------------------------------------
