@@ -22,7 +22,8 @@ def check_valid_service_resource_permission(permission_name, service_resource, d
     svc_res_perms = get_resource_permissions(service_resource, db_session=db_session)
     svc_res_type = service_resource.resource_type
     svc_res_name = service_resource.resource_name
-    verify_param(permission_name, paramCompare=svc_res_perms, isIn=True, httpError=HTTPBadRequest,
+    verify_param(permission_name, paramName=u'permission_name', paramCompare=svc_res_perms, isIn=True,
+                 httpError=HTTPBadRequest,
                  msgOnFail="Permission not allowed for {0} `{1}`".format(svc_res_type, svc_res_name))
 
 
@@ -43,13 +44,14 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
     root_service = get_resource_root_service(parent_resource, db_session=db_session)
     verify_param(root_service, notNone=True, httpError=HTTPInternalServerError,
                  msgOnFail="Failed retrieving `root_service` from db")
-    verify_param(root_service.resource_type, isEqual=True, httpError=HTTPInternalServerError, paramCompare=u'service',
+    verify_param(root_service.resource_type, isEqual=True, httpError=HTTPInternalServerError,
+                 paramName=u'resource_type', paramCompare=u'service',
                  msgOnFail="Invalid `root_service` retrieved from db is not a service")
     verify_param(service_type_dict[root_service.type].child_resource_allowed, isEqual=True,
                  paramCompare=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Child resource not allowed for specified service type `{}`".format(root_service.type))
     verify_param(resource_type, isIn=True, httpError=HTTPNotAcceptable,
-                 paramCompare=service_type_dict[root_service.type].resource_types,
+                 paramName=u'resource_type', paramCompare=service_type_dict[root_service.type].resource_types,
                  msgOnFail="Invalid `resource_type` specified for service type `{}`".format(root_service.type))
     return root_service
 
@@ -97,11 +99,12 @@ def get_resource_permissions(resource, db_session):
 
     # otherwise obtain root level service to infer sub-resource permissions
     service = models.Service.by_resource_id(resource.root_service_id, db_session=db_session)
-    verify_param(service.resource_type, isEqual=True, paramCompare=u'service', httpError=HTTPNotAcceptable,
+    verify_param(service.resource_type, isEqual=True, httpError=HTTPNotAcceptable,
+                 paramName=u'resource_type', paramCompare=u'service',
                  msgOnFail="Invalid `root_service` specified for resource permission retrieval")
     service_obj = service_type_dict[service.type]
-    verify_param(resource.resource_type, isIn=True, paramCompare=service_obj.resource_types,
-                 httpError=HTTPNotAcceptable,
+    verify_param(resource.resource_type, isIn=True, httpError=HTTPNotAcceptable,
+                 paramName=u'resource_type', paramCompare=service_obj.resource_types,
                  msgOnFail="Invalid `resource_type` for corresponding service resource permission retrieval")
     return service_obj.resource_types_permissions[resource.resource_type]
 
@@ -123,14 +126,11 @@ def get_resource_root_service(resource, db_session):
 
 
 def create_resource(resource_name, resource_type, parent_id, db_session):
-    verify_param(resource_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 content={u'resource_name': str(resource_name)},
+    verify_param(resource_name, paramName=u'resource_name', notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `resource_name` specified for child resource creation.")
-    verify_param(resource_type, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 content={u'resource_type': str(resource_type)},
+    verify_param(resource_type, paramName=u'resource_type', notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `resource_type` specified for child resource creation.")
-    verify_param(parent_id, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 content={u'parent_id': str(parent_id)},
+    verify_param(parent_id, paramName=u'parent_id', notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `parent_id` specified for child resource creation.")
     parent_resource = evaluate_call(lambda: ResourceService.by_resource_id(parent_id, db_session=db_session),
                                     fallback=lambda: db_session.rollback(), httpError=HTTPNotFound,
@@ -149,7 +149,7 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
     tree_struct = resource_tree_service.from_parent_deeper(parent_id, limit_depth=1, db_session=db_session)
     tree_struct_dict = resource_tree_service.build_subtree_strut(tree_struct)
     direct_children = tree_struct_dict[u'children']
-    verify_param(resource_name, notIn=True, httpError=HTTPConflict,
+    verify_param(resource_name, paramName=u'resource_name', notIn=True, httpError=HTTPConflict,
                  msgOnFail=Resources_POST_ConflictResponseSchema.description,
                  paramCompare=[child_dict[u'node'].resource_name for child_dict in direct_children.values()])
 

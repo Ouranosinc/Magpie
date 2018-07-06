@@ -1,9 +1,10 @@
-import six
+import types
 import pyramid
 import requests
+from distutils.version import *
 from webtest import TestApp
 from webtest.response import TestResponse
-from magpie import magpie, db
+from magpie import magpie, db, common, __meta__
 from magpie import *
 
 
@@ -108,8 +109,44 @@ def check_or_try_login_user(app_or_url, username=None, password=None, headers=No
         raise Exception("invalid user")
 
 
-def format_test_val_ref(val, ref):
-    return 'Test value: {0}, Reference value: {1}'.format(val, ref)
+def format_test_val_ref(val, ref, pre='Fail'):
+    return '({0}) Test value: `{1}`, Reference value: `{2}`'.format(pre, val, ref)
+
+
+def all_equal(iter_val, iter_ref, any_order=False):
+    if not (hasattr(iter_val, '__iter__') and hasattr(iter_ref, '__iter__')):
+        return False
+    if len(iter_val) != len(iter_ref):
+        return False
+    if any_order:
+        return all([it in iter_ref for it in iter_val])
+    return all(it == ir for it, ir in zip(iter_val, iter_ref))
+
+
+def check_all_equal(iter_val, iter_ref, any_order=False, msg=None):
+    r_it_val = repr(iter_val)
+    r_it_ref = repr(iter_ref)
+    assert all_equal(iter_val, iter_ref, any_order), msg or format_test_val_ref(r_it_val, r_it_ref, pre='Equal Fail')
+
+
+def check_val_equal(val, ref, msg=None):
+    assert isinstance(ref, null) or val == ref, msg or format_test_val_ref(val, ref, pre='Equal Fail')
+
+
+def check_val_not_equal(val, ref, msg=None):
+    assert isinstance(ref, null) or val != ref, msg or format_test_val_ref(val, ref, pre='Equal Fail')
+
+
+def check_val_is_in(val, ref, msg=None):
+    assert isinstance(ref, null) or val in ref, msg or format_test_val_ref(val, ref, pre='Is In Fail')
+
+
+def check_val_not_in(val, ref, msg=None):
+    assert isinstance(ref, null) or val not in ref, msg or format_test_val_ref(val, ref, pre='Not In Fail')
+
+
+def check_val_type(val, ref, msg=None):
+    assert isinstance(val, ref), msg or format_test_val_ref(val, repr(ref), pre='Type Fail')
 
 
 def check_response_basic_info(response, expected_code=200):
@@ -123,12 +160,84 @@ def check_response_basic_info(response, expected_code=200):
         json_body = response.json
     else:
         json_body = response.json()
-    assert response.headers['Content-Type'] == 'application/json'
-    assert response.status_code == expected_code, format_test_val_ref(response.status_code, expected_code)
-    assert json_body['code'] == expected_code, format_test_val_ref(json_body['code'], expected_code)
-    assert json_body['type'] == 'application/json', format_test_val_ref(json_body['type'], 'application/json')
+    check_val_equal(response.headers['Content-Type'], 'application/json')
+    check_val_equal(response.status_code, expected_code)
+    check_val_equal(json_body['code'], expected_code)
+    check_val_equal(json_body['type'], 'application/json')
     assert json_body['detail'] != ''
     return json_body
+
+
+class null(object):
+    """ Represents a null value to differentiate from None. """
+    def __repr__(self):
+        return '<Null>'
+
+
+Null = null()
+
+
+def check_error_param_structure(json_body, paramValue=Null, paramName=Null, paramCompare=Null,
+                                isParamValueLiteralUnicode=False, paramCompareExists=False, version=None):
+    """
+    Validates error response 'param' information based on different Magpie version formats.
+    :param json_body: json body of the response to validate.
+    :param paramValue: expected 'value' of param, not verified if <Null>
+    :param paramName: expected 'name' of param, not verified if <Null> or non existing for Magpie version
+    :param paramCompare: expected 'compare'/'paramCompare' value, not verified if <Null>
+    :param isParamValueLiteralUnicode: param value is represented as `u'{paramValue}'` for older Magpie version
+    :param paramCompareExists: verify that 'compare'/'paramCompare' is in the body, not necessarily validating the value
+    :param version: version of application/remote server to use for format validation, use local Magpie version if None
+    :raise failing condition
+    """
+    check_val_type(json_body, dict)
+    check_val_is_in('param', json_body)
+    version = version or __meta__.__version__
+    if LooseVersion(version) >= LooseVersion('0.6.3'):
+        check_val_type(json_body['param'], dict)
+        check_val_is_in('value', json_body['param'])
+        check_val_is_in('name', json_body['param'])
+        check_val_equal(json_body['param']['name'], paramName)
+        check_val_equal(json_body['param']['value'], paramValue)
+        if paramCompareExists:
+            check_val_is_in('compare', json_body['param'])
+            check_val_equal(json_body['param']['compare'], paramCompare)
+    else:
+        # unicode representation was explicitly returned in value only when of string type
+        if isParamValueLiteralUnicode and isinstance(paramValue, types.StringTypes):
+            paramValue = u'u\'{}\''.format(paramValue)
+        check_val_equal(json_body['param'], paramValue)
+        if paramCompareExists:
+            check_val_is_in('paramCompare', json_body)
+            check_val_equal(json_body['paramCompare'], paramCompare)
+
+
+def check_post_resource_structure(json_body, resource_name, resource_type, version=None):
+    """
+    Validates POST /resource response information based on different Magpie version formats.
+    :param json_body: json body of the response to validate.
+    :param resource_name: name of the resource to validate.
+    :param resource_type: type of the resource to validate.
+    :param version: version of application/remote server to use for format validation, use local Magpie version if None.
+    :raise failing condition
+    """
+    version = version or __meta__.__version__
+    if LooseVersion(version) >= LooseVersion('0.6.3'):
+        check_val_is_in('resource', json_body)
+        check_val_type(json_body['resource'], dict)
+        check_val_is_in('resource_name', json_body['resource'])
+        check_val_is_in('resource_type', json_body['resource'])
+        check_val_is_in('resource_id', json_body['resource'])
+        check_val_equal(json_body['resource']['resource_name'], resource_name)
+        check_val_equal(json_body['resource']['resource_name'], resource_type)
+        check_val_type(json_body['resource']['resource_id'], int)
+    else:
+        check_val_is_in('resource_name', json_body)
+        check_val_is_in('resource_type', json_body)
+        check_val_is_in('resource_id', json_body)
+        check_val_equal(json_body['resource_name'], resource_name)
+        check_val_equal(json_body['resource_type'], resource_type)
+        check_val_type(json_body['resource_id'], int)
 
 
 def check_resource_children(resource_dict, parent_resource_id, root_service_id):
@@ -142,32 +251,21 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
     assert isinstance(resource_dict, dict)
 
     for resource_id in resource_dict:
-        assert isinstance(resource_id, six.string_types)
+        check_val_type(resource_id, types.StringTypes)
         resource_int_id = int(resource_id)  # should by an 'int' string, no error raised
         resource_info = resource_dict[resource_id]
-        assert 'root_service_id' in resource_info
-        assert isinstance(resource_info['root_service_id'], int)
-        assert resource_info['root_service_id'] == root_service_id
-        assert 'resource_id' in resource_info
-        assert isinstance(resource_info['resource_id'], int)
-        assert resource_info['resource_id'] == resource_int_id
-        assert 'parent_id' in resource_info
-        assert isinstance(resource_info['parent_id'], int)
-        assert resource_info['parent_id'] == parent_resource_id
-        assert 'resource_name' in resource_info
-        assert isinstance(resource_info['resource_name'], six.string_types)
-        assert 'permission_names' in resource_info
-        assert isinstance(resource_info['permission_names'], list)
-        assert 'children' in resource_info
-
+        check_val_is_in('root_service_id', resource_info)
+        check_val_type(resource_info['root_service_id'], int)
+        check_val_equal(resource_info['root_service_id'], root_service_id)
+        check_val_is_in('resource_id', resource_info)
+        check_val_type(resource_info['resource_id'], int)
+        check_val_equal(resource_info['resource_id'], resource_int_id)
+        check_val_is_in('parent_id', resource_info)
+        check_val_type(resource_info['parent_id'], int)
+        check_val_equal(resource_info['parent_id'], parent_resource_id)
+        check_val_is_in('resource_name', resource_info)
+        check_val_type(resource_info['resource_name'], types.StringTypes)
+        check_val_is_in('permission_names', resource_info)
+        check_val_type(resource_info['permission_names'], list)
+        check_val_is_in('children', resource_info)
         check_resource_children(resource_info['children'], resource_int_id, root_service_id)
-
-
-def all_equal(iterable_test, iterable_ref, any_order=False):
-    if not (hasattr(iterable_test, '__iter__') and hasattr(iterable_ref, '__iter__')):
-        return False
-    if len(iterable_test) != len(iterable_ref):
-        return False
-    if any_order:
-        return all([it in iterable_ref for it in iterable_test])
-    return all(it == ir for it, ir in zip(iterable_test, iterable_ref))

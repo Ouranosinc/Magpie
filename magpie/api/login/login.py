@@ -50,9 +50,10 @@ providers = internal_providers + external_providers
 def sign_in_external(request):
     provider_name = get_value_multiformat_post_checked(request, 'provider_name')
     user_name = get_value_multiformat_post_checked(request, 'user_name')
-    verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid: `provider_name` not found within available providers.",
-                 content={u'provider_name': str(provider_name), u'providers': providers})
+    verify_param(provider_name, paramName=u'provider_name', paramCompare=providers, isIn=True,
+                 httpError=HTTPNotAcceptable, content={u'provider_name': str(provider_name), u'providers': providers},
+                 msgOnFail="Invalid: `provider_name` not found within available providers.")
+
     if provider_name == 'openid':
         query_field = dict(id=user_name)
     elif provider_name == 'github':
@@ -74,9 +75,9 @@ def sign_in(request):
     user_name = get_value_multiformat_post_checked(request, 'user_name')
     password = get_multiformat_post(request, 'password')   # no check since password is None for external login#
 
-    verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `provider_name` not found within available providers",
-                 content={u'provider_name': str(provider_name), u'providers': providers})
+    verify_param(provider_name, paramName=u'provider_name', paramCompare=providers, isIn=True,
+                 httpError=HTTPNotAcceptable, content={u'provider_name': str(provider_name), u'providers': providers},
+                 msgOnFail="Invalid `provider_name` not found within available providers")
 
     if provider_name in internal_providers:
         signin_internal_url = '{}/signin_internal'.format(request.application_url)

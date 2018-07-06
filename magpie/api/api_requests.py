@@ -48,7 +48,7 @@ def get_permission_multiformat_post_checked(request, service_resource, permissio
 def get_value_multiformat_post_checked(request, key):
     val = get_multiformat_any(request, key)
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
-                 content={str(key): str(val)}, msgOnFail=UnprocessableEntityResponseSchema.description)
+                 paramName=key, msgOnFail=UnprocessableEntityResponseSchema.description)
     return val
 
 
@@ -141,5 +141,5 @@ def get_permission_matchdict_checked(request, service_resource, permission_name_
 def get_value_matchdict_checked(request, key):
     val = request.matchdict.get(key)
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
-                 content={str(key): str(val)}, msgOnFail=UnprocessableEntityResponseSchema.description)
+                 paramName=key, msgOnFail=UnprocessableEntityResponseSchema.description)
     return val
