@@ -1,13 +1,6 @@
+from definitions.twitcher_definitions import *
+from db import *
 import logging
-import os
-import sys
-from twitcher.adapter.base import AdapterInterface
-from twitcher.owsproxy import owsproxy
-
-
-this_dir = os.path.abspath(os.path.dirname(__file__))
-sys.path.insert(0, this_dir)
-
 logger = logging.getLogger(__name__)
 
 
@@ -57,9 +50,6 @@ class MagpieAdapter(AdapterInterface):
         config.add_route('owsproxy', protected_path + '/{service_name}')
         config.add_route('owsproxy_extra', protected_path + '/{service_name}/{extra_path:.*}')
         config.add_route('owsproxy_secured', protected_path + '/{service_name}/{access_token}')
-
-        # include postgresdb
-        config.include('magpieadapter.postgresdb')
 
         config.add_view(owsproxy, route_name='owsproxy')
         config.add_view(owsproxy, route_name='owsproxy_extra')

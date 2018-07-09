@@ -7,11 +7,8 @@ import requests
 import json
 LOGGER = logging.getLogger(__name__)
 
-
-from twitcher.store.base import ServiceStore
-from twitcher.datatype import Service
-from twitcher.exceptions import ServiceNotFound
-from pyramid.exceptions import ConfigurationError
+from definitions.twitcher_definitions import *
+from definitions.pyramid_definitions import ConfigurationError
 
 
 class MagpieServiceStore(ServiceStore):
@@ -43,7 +40,7 @@ class MagpieServiceStore(ServiceStore):
         Lists all services registered in magpie.
         """
         my_services = []
-        response = requests.get(self.magpie_url + '/services/types/wps', headers=self.headers)
+        response = requests.get('{url}/services/types/wps'.format(url=self.magpie_url), headers=self.headers)
         if response.status_code != 200:
             raise response.raise_for_status()
         services = json.loads(response.text)
@@ -56,7 +53,7 @@ class MagpieServiceStore(ServiceStore):
         """
         Gets service for given ``name`` from magpie.
         """
-        response = requests.get(self.magpie_url + '/services/{name}'.format(name=name), headers=self.headers)
+        response = requests.get('{url}/services/{name}'.format(url=self.magpie_url, name=name), headers=self.headers)
         if response.status_code == 404:
             raise ServiceNotFound
         if response.status_code != 200:
@@ -75,7 +72,6 @@ class MagpieServiceStore(ServiceStore):
             if service.url == url:
                 return service
         raise ServiceNotFound
-
 
     def clear_services(self):
         """
