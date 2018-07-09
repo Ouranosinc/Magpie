@@ -1,20 +1,14 @@
 import logging
 import os
 import sys
-
-# TODO Is the following block really useful?
-this_dir = os.path.abspath(os.path.dirname(__file__))
-sys.path.insert(0, this_dir)
-
-
 from twitcher.adapter.base import AdapterInterface
 from twitcher.owsproxy import owsproxy
 
 
+this_dir = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, this_dir)
+
 logger = logging.getLogger(__name__)
-
-
-__version__ = '0.1.1'
 
 
 class MagpieAdapter(AdapterInterface):
