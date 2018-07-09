@@ -1,19 +1,34 @@
 from definitions.pyramid_definitions import *
 from definitions.ziggurat_definitions import *
 from api.api_requests import *
+from api.api_rest_schemas import *
 from api.management.user.user_utils import *
 from api.management.service.service_formats import format_service, format_service_resources
 
 
+@UsersAPI.get(tags=[UsersTag], response_schemas={
+    '200': Users_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Users_GET_ForbiddenResponseSchema(),
+})
 @view_config(route_name=UsersAPI.name, request_method='GET')
 def get_users(request):
     """List all registered users."""
     user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
                                    fallback=lambda: request.db.rollback(),
-                                   httpError=HTTPForbidden, msgOnFail="Get users query refused by db")
-    return valid_http(httpSuccess=HTTPOk, detail="Get users successful", content={u'user_names': user_name_list})
+                                   httpError=HTTPForbidden, msgOnFail=Users_GET_ForbiddenResponseSchema.description)
+    return valid_http(httpSuccess=HTTPOk, content={u'user_names': user_name_list},
+                      detail=Users_GET_OkResponseSchema.description)
 
 
+@UsersAPI.post(tags=[UsersTag], response_schemas={
+    '200': Users_POST_OkResponseSchema(),
+    '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Users_POST_ForbiddenResponseSchema(),
+    '406': Users_POST_NotAcceptableResponseSchema(),
+    '409': Users_CheckInfo_Login_ConflictResponseSchema(),
+})
 @view_config(route_name=UsersAPI.name, request_method='POST')
 def create_user_view(request):
     """Create a new user."""
@@ -25,6 +40,15 @@ def create_user_view(request):
     return create_user(user_name, password, email, group_name, db_session=request.db)
 
 
+@UsersAPI.put(tags=[UsersTag], response_schemas={
+    '200': Users_PUT_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Users_PUT_ForbiddenResponseSchema(),
+})
+@CurrentUserAPI.put(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
+    '200': Users_PUT_OkResponseSchema(),
+    '403': Users_PUT_ForbiddenResponseSchema(),
+})
 @view_config(route_name=UserAPI.name, request_method='PUT')
 def update_user_view(request):
     """Update user information by user name."""

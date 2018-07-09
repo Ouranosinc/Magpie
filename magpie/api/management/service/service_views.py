@@ -10,7 +10,7 @@ from models import resource_tree_service
 from services import service_type_dict
 
 
-@ServiceTypesAPI.get(tags=[ServiceTag], response_schemas={
+@ServiceTypesAPI.get(tags=[ServicesTag], response_schemas={
     '200': Services_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '406': Services_GET_NotAcceptableResponseSchema(),
@@ -20,7 +20,7 @@ def get_services_by_type_view(request):
     return get_services_runner(request)
 
 
-@ServicesAPI.get(tags=[ServiceTag], response_schemas={
+@ServicesAPI.get(tags=[ServicesTag], response_schemas={
     '200': Services_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '406': Services_GET_NotAcceptableResponseSchema(),
@@ -52,7 +52,7 @@ def get_services_runner(request):
                       content={u'services': json_response})
 
 
-@ServicesAPI.post(schema=Services_POST_RequestBodySchema(), tags=[ServiceTag], response_schemas={
+@ServicesAPI.post(schema=Services_POST_RequestBodySchema(), tags=[ServicesTag], response_schemas={
     '201': Services_POST_CreatedResponseSchema(),
     '400': Services_POST_BadRequestResponseSchema(),
     '401': UnauthorizedResponseSchema(),
@@ -94,7 +94,7 @@ def register_service(request):
                       content={u'service': format_service(service)})
 
 
-@ServiceAPI.put(schema=Service_PUT_RequestBodySchema(), tags=[ServiceTag], response_schemas={
+@ServiceAPI.put(schema=Service_PUT_RequestBodySchema(), tags=[ServicesTag], response_schemas={
     '200': Service_PUT_OkResponseSchema(),
     '400': Service_PUT_BadRequestResponseSchema(),
     '401': UnauthorizedResponseSchema(),
@@ -144,7 +144,7 @@ def update_service(request):
                       content={u'service': format_service(service)})
 
 
-@ServiceAPI.get(tags=[ServiceTag], response_schemas={
+@ServiceAPI.get(tags=[ServicesTag], response_schemas={
     '200': Service_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
@@ -158,7 +158,7 @@ def get_service(request):
                       content={service.resource_name: format_service(service)})
 
 
-@ServiceAPI.delete(schema=Service_DELETE_RequestSchema(), tags=[ServiceTag], response_schemas={
+@ServiceAPI.delete(schema=Service_DELETE_RequestSchema(), tags=[ServicesTag], response_schemas={
     '200': Service_DELETE_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Service_DELETE_ForbiddenResponseSchema(),
@@ -185,7 +185,7 @@ def unregister_service(request):
     return valid_http(httpSuccess=HTTPOk, detail=Service_DELETE_OkResponseSchema.description)
 
 
-@ServicePermissionsAPI.get(tags=[ServiceTag], response_schemas={
+@ServicePermissionsAPI.get(tags=[ServicesTag], response_schemas={
     '200': ServicePermissions_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
@@ -205,7 +205,7 @@ def get_service_permissions(request):
                       content={u'permission_names': svc_perms})
 
 
-@ServiceResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ServiceTag], response_schemas={
+@ServiceResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ServicesTag], response_schemas={
     '200': ServiceResource_DELETE_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': ServiceResource_DELETE_ForbiddenResponseSchema(),
@@ -219,7 +219,7 @@ def delete_service_resource_view(request):
     return delete_resource(request)
 
 
-@ServiceResourcesAPI.get(tags=[ServiceTag], response_schemas={
+@ServiceResourcesAPI.get(tags=[ServicesTag], response_schemas={
     '200': ServiceResources_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
@@ -235,7 +235,7 @@ def get_service_resources_view(request):
                       content={str(service.resource_name): svc_res_json})
 
 
-@ServiceResourcesAPI.post(schema=ServiceResources_POST_RequestBodySchema, tags=[ServiceTag], response_schemas={
+@ServiceResourcesAPI.post(schema=ServiceResources_POST_RequestBodySchema, tags=[ServicesTag], response_schemas={
     '200': ServiceResources_POST_OkResponseSchema(),
     '400': ServiceResources_POST_BadRequestResponseSchema(),
     '401': UnauthorizedResponseSchema(),
@@ -256,7 +256,7 @@ def create_service_direct_resource(request):
     return create_resource(resource_name, resource_type, parent_id=parent_id, db_session=request.db)
 
 
-@ServiceResourceTypesAPI.get(tags=[ServiceTag], response_schemas={
+@ServiceResourceTypesAPI.get(tags=[ServicesTag], response_schemas={
     '200': ServiceResourceTypes_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': ServiceResourceTypes_GET_ForbiddenResponseSchema(),

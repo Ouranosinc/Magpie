@@ -9,7 +9,7 @@ from register import sync_services_phoenix
 from services import service_type_dict
 
 
-@ResourcesAPI.get(tags=[ResourceTag], response_schemas={
+@ResourcesAPI.get(tags=[ResourcesTag], response_schemas={
     '200': Resources_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '500': Resource_GET_InternalServerErrorResponseSchema()
@@ -27,7 +27,7 @@ def get_resources_view(request):
     return valid_http(httpSuccess=HTTPOk, detail=Resources_GET_OkResponseSchema.description, content=res_json)
 
 
-@ResourceAPI.get(tags=[ResourceTag], response_schemas={
+@ResourceAPI.get(tags=[ResourcesTag], response_schemas={
     '200': Resource_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
@@ -48,7 +48,7 @@ def get_resource_view(request):
                       content={resource.resource_id: res_json})
 
 
-@ResourcesAPI.post(schema=Resources_POST_RequestBodySchema, tags=[ResourceTag], response_schemas={
+@ResourcesAPI.post(schema=Resources_POST_RequestBodySchema, tags=[ResourcesTag], response_schemas={
     '200': Resources_POST_OkResponseSchema(),
     '400': Resources_POST_BadRequestResponseSchema(),
     '401': UnauthorizedResponseSchema(),
@@ -66,7 +66,7 @@ def create_resource_view(request):
     return create_resource(resource_name, resource_type, parent_id, request.db)
 
 
-@ResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ResourceTag], response_schemas={
+@ResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ResourcesTag], response_schemas={
     '200': Resource_DELETE_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Resource_DELETE_ForbiddenResponseSchema(),
@@ -80,7 +80,7 @@ def delete_resource_view(request):
     return delete_resource(request)
 
 
-@ResourceAPI.put(schema=Resource_PUT_RequestSchema(), tags=[ResourceTag], response_schemas={
+@ResourceAPI.put(schema=Resource_PUT_RequestSchema(), tags=[ResourcesTag], response_schemas={
     '200': Resource_PUT_OkResponseSchema(),
     '403': Resource_PUT_ForbiddenResponseSchema(),
     '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
@@ -112,7 +112,7 @@ def update_resource(request):
                                u'old_resource_name': res_old_name, u'new_resource_name': res_new_name})
 
 
-@ResourcePermissionsAPI.get(tags=[ResourceTag], response_schemas={
+@ResourcePermissionsAPI.get(tags=[ResourcesTag], response_schemas={
     '200': ResourcePermissions_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),

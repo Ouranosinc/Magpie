@@ -28,10 +28,11 @@ InfoAPI = {
 # Tags
 APITag = 'API'
 LoginTag = 'Login'
-UserTag = 'User'
-GroupTag = 'Group'
-ResourceTag = 'Resource'
-ServiceTag = 'Service'
+UsersTag = 'User'
+CurrentUserTag = 'Current User'
+GroupsTag = 'Group'
+ResourcesTag = 'Resource'
+ServicesTag = 'Service'
 
 
 # Security
@@ -203,6 +204,20 @@ class BaseBodySchema(colander.MappingSchema):
     detail = DetailSchemaNode
 
 
+class ErrorVerifyParamBodySchema(colander.MappingSchema):
+    name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the failing condition parameter",
+        missing=colander.drop)
+    value = colander.SchemaNode(
+        colander.Any(),
+        description="Value of the failing condition parameter")
+    compare = colander.SchemaNode(
+        colander.Any(),
+        description="Test comparison value of the failing condition parameter",
+        missing=colander.drop)
+
+
 class UnauthorizedResponseSchema(colander.MappingSchema):
     description = "Unauthorized. Insufficient user privileges or missing authentication headers."
     code = CodeSchemaNode
@@ -275,6 +290,14 @@ class GroupNamesListSchema(colander.SequenceSchema):
         colander.String(),
         description="Groups the logged in user is member of",
         example=["anonymous"]
+    )
+
+
+class UserNamesListSchema(colander.SequenceSchema):
+    item = colander.SchemaNode(
+        colander.String(),
+        description="Users registered in the db",
+        example=["anonymous", "admin", "toto"]
     )
 
 
@@ -883,6 +906,70 @@ class ServiceResourceTypes_GET_ForbiddenResponseSchema(colander.MappingSchema):
 class ServiceResourceTypes_GET_NotFoundResponseSchema(colander.MappingSchema):
     description = "Invalid `service_type` does not exist to obtain its resource types."
     body = ServiceResourceTypes_GET_FailureResponseBodySchema(code=404)
+
+
+class Users_GET_BodyResponseSchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    user_names = UserNamesListSchema()
+
+
+class Users_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get users successful."
+    body = Users_GET_BodyResponseSchema()
+
+
+class Users_GET_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Get users query refused by db."
+    body = BaseBodySchema(code=403)
+
+
+class Users_CheckInfo_BodyResponseSchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    param = ErrorVerifyParamBodySchema()
+
+
+class Users_CheckInfo_Name_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid `user_name` value specified."
+    body = Users_CheckInfo_BodyResponseSchema()
+
+
+class Users_CheckInfo_Email_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid `email` value specified."
+    body = Users_CheckInfo_BodyResponseSchema()
+
+
+class Users_CheckInfo_Password_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid `password` value specified."
+    body = Users_CheckInfo_BodyResponseSchema()
+
+
+class Users_CheckInfo_GroupName_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid `group_name` value specified."
+    body = Users_CheckInfo_BodyResponseSchema()
+
+
+class Users_CheckInfo_Login_ConflictResponseSchema(colander.MappingSchema):
+    description = "Invalid `user_name` already logged in."
+    body = Users_CheckInfo_BodyResponseSchema()
+
+
+class Users_POST_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Group query was refused by db."
+    body = "Add user to db successful."
+
+
+class Users_POST_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Group query was refused by db."
+    body = BaseBodySchema(code=403)
+
+
+class Users_POST_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Group for new user doesn't exist."
+    body = BaseBodySchema(code=406)
 
 
 class Group_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):

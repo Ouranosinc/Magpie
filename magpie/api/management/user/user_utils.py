@@ -1,5 +1,6 @@
 from magpie import *
 from api.api_except import *
+from api.api_rest_schemas import *
 from api.management.resource.resource_utils import check_valid_service_resource_permission
 from definitions.ziggurat_definitions import *
 from services import service_type_dict
@@ -11,8 +12,9 @@ def create_user(user_name, password, email, group_name, db_session):
 
     # Check that group already exists
     group_check = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db),
-                                httpError=HTTPForbidden, msgOnFail="Group query was refused by db")
-    verify_param(group_check, notNone=True, httpError=HTTPNotAcceptable, msgOnFail="Group for new user doesn't exist")
+                                httpError=HTTPForbidden, msgOnFail=Users_POST_ForbiddenResponseSchema.description)
+    verify_param(group_check, notNone=True, httpError=HTTPNotAcceptable,
+                 msgOnFail=Users_POST_NotAcceptableResponseSchema.description)
 
     # Check if user already exists
     user_check = evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db),
@@ -35,7 +37,7 @@ def create_user(user_name, password, email, group_name, db_session):
     evaluate_call(lambda: db.add(group_entry), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
 
-    return valid_http(httpSuccess=HTTPCreated, detail="Add user to db successful")
+    return valid_http(httpSuccess=HTTPCreated, detail=Users_POST_OkResponseSchema.description)
 
 
 def create_user_resource_permission(permission_name, resource, user_id, db_session):
@@ -122,19 +124,19 @@ def get_user_service_resources_permissions_dict(user, service, db_session, inher
 
 def check_user_info(user_name, email, password, group_name):
     verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 paramName=u'user_name', msgOnFail="Invalid `user_name` value specified")
+                 paramName=u'user_name', msgOnFail=Users_CheckInfo_Name_BadRequestResponseSchema.description)
     verify_param(len(user_name), isIn=True, httpError=HTTPBadRequest,
                  paramName=u'user_name', paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
                  msgOnFail="Invalid `user_name` length specified " +
                            "(>{length} characters)".format(length=USER_NAME_MAX_LENGTH))
     verify_param(email, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 paramName=u'email', msgOnFail="Invalid `email` value specified")
+                 paramName=u'email', msgOnFail=Users_CheckInfo_Email_BadRequestResponseSchema.description)
     verify_param(password, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 paramName=u'password', msgOnFail="Invalid `password` value specified")
+                 paramName=u'password', msgOnFail=Users_CheckInfo_Password_BadRequestResponseSchema.description)
     verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 paramName=u'group_name', msgOnFail="Invalid `group_name` value specified")
+                 paramName=u'group_name', msgOnFail=Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
     verify_param(user_name, paramCompare=[LOGGED_USER], notIn=True, httpError=HTTPConflict,
-                 paramName=u'user_name', msgOnFail="Invalid `user_name` already logged in")
+                 paramName=u'user_name', msgOnFail=Users_CheckInfo_Login_ConflictResponseSchema.description)
 
 
 def get_user_groups_checked(request, user):

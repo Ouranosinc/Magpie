@@ -145,7 +145,7 @@ def delete_group_resource_permission_view(request):
     return delete_group_resource_permission(perm_name, resource, group, db_session=request.db)
 
 
-@GroupServiceResourcesAPI.get(tags=[GroupTag], response_schemas={
+@GroupServiceResourcesAPI.get(tags=[GroupsTag], response_schemas={
     '200': GroupServiceResources_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Group_MatchDictCheck_ForbiddenResponseSchema(),
