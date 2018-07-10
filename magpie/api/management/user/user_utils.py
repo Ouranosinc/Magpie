@@ -2,6 +2,7 @@ from magpie import *
 from api.api_except import *
 from api.api_rest_schemas import *
 from api.management.resource.resource_utils import check_valid_service_resource_permission
+from api.management.user.user_formats import *
 from definitions.ziggurat_definitions import *
 from services import service_type_dict
 import models
@@ -37,7 +38,8 @@ def create_user(user_name, password, email, group_name, db_session):
     evaluate_call(lambda: db.add(group_entry), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
 
-    return valid_http(httpSuccess=HTTPCreated, detail=Users_POST_OkResponseSchema.description)
+    return valid_http(httpSuccess=HTTPCreated, detail=Users_POST_OkResponseSchema.description,
+                      content={u'user': format_user(new_user, [group_name])})
 
 
 def create_user_resource_permission(permission_name, resource, user_id, db_session):

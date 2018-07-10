@@ -334,7 +334,7 @@ def generate_response_http_format(httpClass, httpKWArgs, jsonContent, outputType
     try:
         # directly output json if asked with 'application/json'
         if outputType == 'application/json':
-            httpResponse = httpClass(body=jsonContent, content_type='application/json', **httpKWArgs)
+            httpResponse = httpClass(body=jsonContent, content_type='application/json; charset=UTF-8', **httpKWArgs)
 
         # otherwise json is contained within the html <body> section
         elif outputType == 'text/html':

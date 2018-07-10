@@ -210,10 +210,10 @@ class ErrorVerifyParamBodySchema(colander.MappingSchema):
         description="Name of the failing condition parameter",
         missing=colander.drop)
     value = colander.SchemaNode(
-        colander.Any(),
+        colander.String(),
         description="Value of the failing condition parameter")
     compare = colander.SchemaNode(
-        colander.Any(),
+        colander.String(),
         description="Test comparison value of the failing condition parameter",
         missing=colander.drop)
 
@@ -307,6 +307,18 @@ class PermissionListSchema(colander.SequenceSchema):
         description="Permissions applicable to the service/resource",
         example=["read", "write"]
     )
+
+
+class UserBodySchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the user.",
+        example="toto")
+    email = colander.SchemaNode(
+        colander.String(),
+        description="Email of the user.",
+        example="toto@mail.com")
+    group_names = GroupNamesListSchema()
 
 
 class ServiceBodySchema(colander.MappingSchema):
@@ -957,9 +969,16 @@ class Users_CheckInfo_Login_ConflictResponseSchema(colander.MappingSchema):
     body = Users_CheckInfo_BodyResponseSchema()
 
 
-class Users_POST_ForbiddenResponseSchema(colander.MappingSchema):
-    description = "Group query was refused by db."
-    body = "Add user to db successful."
+class Users_POST_BodyResponseSchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    user = UserBodySchema()
+
+
+class Users_POST_OkResponseSchema(colander.MappingSchema):
+    description = "Add user to db successful."
+    body = Users_POST_BodyResponseSchema()
 
 
 class Users_POST_ForbiddenResponseSchema(colander.MappingSchema):
@@ -970,6 +989,12 @@ class Users_POST_ForbiddenResponseSchema(colander.MappingSchema):
 class Users_POST_NotAcceptableResponseSchema(colander.MappingSchema):
     description = "Group for new user doesn't exist."
     body = BaseBodySchema(code=406)
+
+
+# PUT method uses same sub-function as POST method (same responses)
+Users_PUT_OkResponseSchema = Users_POST_OkResponseSchema
+Users_PUT_ForbiddenResponseSchema = Users_POST_ForbiddenResponseSchema
+Users_PUT_NotAcceptableResponseSchema = Users_POST_NotAcceptableResponseSchema
 
 
 class Group_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):

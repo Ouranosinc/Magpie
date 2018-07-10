@@ -20,7 +20,7 @@ def format_service(service, permissions=None):
     return evaluate_call(
         lambda: fmt_svc(service, permissions),
         httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format service",
+        msgOnFail="Failed to format service.",
         content={u'service': repr(service), u'permissions': repr(permissions)}
     )
 

@@ -18,5 +18,5 @@ def format_group(group, basic_info=False):
 
     return evaluate_call(
         lambda: fmt_grp(group, basic_info), httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format group", content={u'group': repr(group)}
+        msgOnFail="Failed to format group.", content={u'group': repr(group)}
     )

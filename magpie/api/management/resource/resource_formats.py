@@ -25,7 +25,7 @@ def format_resource(resource, permissions=None, basic_info=False):
     return evaluate_call(
         lambda: fmt_res(resource, permissions, basic_info),
         httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format resource",
+        msgOnFail="Failed to format resource.",
         content={u'resource': repr(resource), u'permissions': repr(permissions), u'basic_info': str(basic_info)}
     )
 
