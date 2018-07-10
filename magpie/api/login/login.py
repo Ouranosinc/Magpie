@@ -208,7 +208,7 @@ def authomatic_login(request):
     return response
 
 
-@SessionAPI.get(schema=Session_GET_ResponseBodySchema(), tags=[LoginTag], response_schemas={
+@SessionAPI.get(schema=Session_GET_BodyResponseSchema(), tags=[LoginTag], response_schemas={
     '200': Session_GET_OkResponseSchema(description="Get session successful."),
     '500': InternalServerErrorResponseSchema(description="Failed to get session details.")
 })

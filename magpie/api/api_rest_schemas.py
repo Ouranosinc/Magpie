@@ -465,7 +465,7 @@ class ResourcesSchemaNode(colander.MappingSchema):
     thredds = Resource_ServiceType_thredds_SchemaNode()
 
 
-class Resources_ResponseBodySchema(colander.MappingSchema):
+class Resources_BodyResponseSchema(colander.MappingSchema):
     resources = ResourcesSchemaNode()
     code = CodeSchemaNode
     type = TypeSchemaNode
@@ -487,7 +487,7 @@ class Resource_MatchDictCheck_NotAcceptableResponseSchema(colander.MappingSchema
     body = BaseBodySchema(code=HTTPNotAcceptable.code)
 
 
-class Resource_GET_ResponseBodySchema(colander.MappingSchema):
+class Resource_GET_BodyResponseSchema(colander.MappingSchema):
     resource_id = Resource_ChildResourceWithChildrenContainerBodySchema()
     resource_id.name = '{resource_id}'
     code = CodeSchemaNode
@@ -497,7 +497,7 @@ class Resource_GET_ResponseBodySchema(colander.MappingSchema):
 
 class Resource_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get resource successful."
-    body = Resource_GET_ResponseBodySchema()
+    body = Resource_GET_BodyResponseSchema()
 
 
 class Resource_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
@@ -522,7 +522,7 @@ class Resource_PUT_RequestSchema(colander.MappingSchema):
     body = Resource_PUT_RequestBodySchema()
 
 
-class Resource_PUT_ResponseBodySchema(colander.MappingSchema):
+class Resource_PUT_BodyResponseSchema(colander.MappingSchema):
     code = CodeSchemaNode
     type = TypeSchemaNode
     detail = DetailSchemaNode
@@ -546,7 +546,7 @@ class Resource_PUT_ResponseBodySchema(colander.MappingSchema):
 
 class Resource_PUT_OkResponseSchema(colander.MappingSchema):
     description = "Update resource successful."
-    body = Resource_PUT_ResponseBodySchema()
+    body = Resource_PUT_BodyResponseSchema()
 
 
 class Resource_PUT_ForbiddenResponseSchema(colander.MappingSchema):
@@ -580,7 +580,7 @@ class Resource_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
 
 class Resources_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get resources successful."
-    body = Resources_ResponseBodySchema()
+    body = Resources_BodyResponseSchema()
 
 
 class Resources_POST_BodySchema(colander.MappingSchema):
@@ -604,7 +604,7 @@ class Resources_POST_RequestBodySchema(colander.MappingSchema):
     body = Resources_POST_BodySchema()
 
 
-class Resource_POST_ResponseBodySchema(colander.MappingSchema):
+class Resource_POST_BodyResponseSchema(colander.MappingSchema):
     resource_id = Resource_ChildResourceWithChildrenContainerBodySchema()
     resource_id.name = '{resource_id}'
     code = CodeSchemaNode
@@ -614,7 +614,7 @@ class Resource_POST_ResponseBodySchema(colander.MappingSchema):
 
 class Resources_POST_OkResponseSchema(colander.MappingSchema):
     description = "Create resource successful."
-    body = Resource_POST_ResponseBodySchema()
+    body = Resource_POST_BodyResponseSchema()
 
 
 class Resources_POST_BadRequestResponseSchema(colander.MappingSchema):
@@ -637,7 +637,7 @@ class Resources_POST_ConflictResponseSchema(colander.MappingSchema):
     body = BaseBodySchema(code=HTTPConflict.code)
 
 
-class ResourcePermissions_GET_ResponseBodySchema(colander.MappingSchema):
+class ResourcePermissions_GET_BodyResponseSchema(colander.MappingSchema):
     code = CodeSchemaNode
     type = TypeSchemaNode
     detail = DetailSchemaNode
@@ -646,7 +646,7 @@ class ResourcePermissions_GET_ResponseBodySchema(colander.MappingSchema):
 
 class ResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get resource permissions successful."
-    body = ResourcePermissions_GET_ResponseBodySchema()
+    body = ResourcePermissions_GET_BodyResponseSchema()
 
 
 class ResourcePermissions_GET_NotAcceptableResponseSchema(colander.MappingSchema):
@@ -714,7 +714,7 @@ class ServicesSchemaNode(colander.MappingSchema):
     wps = ServiceType_wps_SchemaNode()
 
 
-class Service_FailureResponseBodySchema(colander.MappingSchema):
+class Service_FailureBodyResponseSchema(colander.MappingSchema):
     code = CodeSchemaNode
     type = TypeSchemaNode
     detail = DetailSchemaNode
@@ -731,10 +731,10 @@ class Service_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
 
 class Service_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
     description = "Service name not found in db."
-    body = Service_FailureResponseBodySchema(code=HTTPNotFound.code)
+    body = Service_FailureBodyResponseSchema(code=HTTPNotFound.code)
 
 
-class Service_GET_ResponseBodySchema(colander.MappingSchema):
+class Service_GET_BodyResponseSchema(colander.MappingSchema):
     service_name = ServiceBodySchema()
     service_name.name = '{service_name}'
     code = CodeSchemaNode
@@ -744,10 +744,10 @@ class Service_GET_ResponseBodySchema(colander.MappingSchema):
 
 class Service_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get service successful."
-    body = Service_GET_ResponseBodySchema()
+    body = Service_GET_BodyResponseSchema()
 
 
-class Services_GET_ResponseBodySchema(colander.MappingSchema):
+class Services_GET_BodyResponseSchema(colander.MappingSchema):
     services = ServicesSchemaNode()
     code = CodeSchemaNode
     type = TypeSchemaNode
@@ -757,12 +757,12 @@ class Services_GET_ResponseBodySchema(colander.MappingSchema):
 
 class Services_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get services successful."
-    body = Services_GET_ResponseBodySchema()
+    body = Services_GET_BodyResponseSchema()
 
 
 class Services_GET_NotAcceptableResponseSchema(colander.MappingSchema):
     description = "Invalid `service_type` value does not correspond to any of the existing service types."
-    body = Services_GET_ResponseBodySchema()
+    body = Services_GET_BodyResponseSchema()
 
 
 class Services_POST_BodySchema(colander.MappingSchema):
@@ -788,7 +788,7 @@ class Services_POST_RequestBodySchema(colander.MappingSchema):
     body = Services_POST_BodySchema()
 
 
-class Services_POST_ResponseBodySchema(colander.MappingSchema):
+class Services_POST_BodyResponseSchema(colander.MappingSchema):
     code = CodeSchemaNode
     type = TypeSchemaNode
     detail = DetailSchemaNode
@@ -796,22 +796,22 @@ class Services_POST_ResponseBodySchema(colander.MappingSchema):
 
 class Services_POST_CreatedResponseSchema(colander.MappingSchema):
     description = "Service registration to db successful."
-    body = Services_POST_ResponseBodySchema()
+    body = Services_POST_BodyResponseSchema()
 
 
 class Services_POST_BadRequestResponseSchema(colander.MappingSchema):
     description = "Invalid `service_type` value does not correspond to any of the existing service types."
-    body = Services_POST_ResponseBodySchema(code=HTTPBadRequest.code)
+    body = Services_POST_BodyResponseSchema(code=HTTPBadRequest.code)
 
 
 class Services_POST_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Service registration forbidden by db."
-    body = Services_POST_ResponseBodySchema(code=HTTPForbidden.code)
+    body = Services_POST_BodyResponseSchema(code=HTTPForbidden.code)
 
 
 class Services_POST_ConflictResponseSchema(colander.MappingSchema):
     description = "Specified `service_name` value already exists."
-    body = Services_POST_ResponseBodySchema(code=HTTPConflict.code)
+    body = Services_POST_BodyResponseSchema(code=HTTPConflict.code)
 
 
 class Service_PUT_BodySchema(colander.MappingSchema):
@@ -842,7 +842,7 @@ class Service_PUT_RequestBodySchema(colander.MappingSchema):
     body = Service_PUT_BodySchema()
 
 
-class Service_SuccessResponseBodySchema(colander.MappingSchema):
+class Service_SuccessBodyResponseSchema(colander.MappingSchema):
     code = CodeSchemaNode
     type = TypeSchemaNode
     detail = DetailSchemaNode
@@ -851,22 +851,22 @@ class Service_SuccessResponseBodySchema(colander.MappingSchema):
 
 class Service_PUT_OkResponseSchema(colander.MappingSchema):
     description = "Update service successful."
-    body = Service_SuccessResponseBodySchema(code=HTTPOk.code)
+    body = Service_SuccessBodyResponseSchema(code=HTTPOk.code)
 
 
 class Service_PUT_BadRequestResponseSchema(colander.MappingSchema):
     description = "Current service values are already equal to update values."
-    body = Service_FailureResponseBodySchema(code=HTTPBadRequest.code)
+    body = Service_FailureBodyResponseSchema(code=HTTPBadRequest.code)
 
 
 class Service_PUT_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Update service failed during value assignment."
-    body = Service_FailureResponseBodySchema(code=HTTPForbidden.code)
+    body = Service_FailureBodyResponseSchema(code=HTTPForbidden.code)
 
 
 class Service_PUT_ConflictResponseSchema(colander.MappingSchema):
     description = "Specified `service_name` already exists."
-    body = Service_FailureResponseBodySchema(code=HTTPConflict.code)
+    body = Service_FailureBodyResponseSchema(code=HTTPConflict.code)
 
 
 # delete service use same method as direct resource delete
@@ -880,10 +880,10 @@ class Service_DELETE_OkResponseSchema(colander.MappingSchema):
 
 class Service_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Delete service from db refused by db."
-    body = Service_FailureResponseBodySchema(code=HTTPForbidden.code)
+    body = Service_FailureBodyResponseSchema(code=HTTPForbidden.code)
 
 
-class ServicePermissions_ResponseBodySchema(colander.MappingSchema):
+class ServicePermissions_BodyResponseSchema(colander.MappingSchema):
     permission_names = PermissionListSchema()
     code = CodeSchemaNode
     type = TypeSchemaNode
@@ -892,12 +892,12 @@ class ServicePermissions_ResponseBodySchema(colander.MappingSchema):
 
 class ServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get service permissions successful."
-    body = ServicePermissions_ResponseBodySchema()
+    body = ServicePermissions_BodyResponseSchema()
 
 
 class ServicePermissions_GET_NotAcceptableResponseSchema(colander.MappingSchema):
     description = "Invalid service type specified by service."
-    body = ServicePermissions_ResponseBodySchema()
+    body = ServicePermissions_BodyResponseSchema()
 
 
 # create service's resource use same method as direct resource create
@@ -916,7 +916,7 @@ ServiceResource_DELETE_ForbiddenResponseSchema = Resource_DELETE_ForbiddenRespon
 ServiceResource_DELETE_OkResponseSchema = Resource_DELETE_OkResponseSchema
 
 
-class ServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
+class ServiceResources_GET_BodyResponseSchema(colander.MappingSchema):
     service_name = Resource_ServiceWithChildrenResourcesContainerBodySchema()
     service_name.name = '{service_name}'
     code = CodeSchemaNode
@@ -926,10 +926,10 @@ class ServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
 
 class ServiceResources_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get service resources successful."
-    body = ServiceResources_GET_ResponseBodySchema()
+    body = ServiceResources_GET_BodyResponseSchema()
 
 
-class ServiceResourceTypes_GET_ResponseBodySchema(colander.MappingSchema):
+class ServiceResourceTypes_GET_BodyResponseSchema(colander.MappingSchema):
     resource_types = ResourceTypesListSchema()
     code = CodeSchemaNode
     type = TypeSchemaNode
@@ -938,10 +938,10 @@ class ServiceResourceTypes_GET_ResponseBodySchema(colander.MappingSchema):
 
 class ServiceResourceTypes_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get service type resource types successful."
-    body = ServiceResourceTypes_GET_ResponseBodySchema()
+    body = ServiceResourceTypes_GET_BodyResponseSchema()
 
 
-class ServiceResourceTypes_GET_FailureResponseBodySchema(colander.MappingSchema):
+class ServiceResourceTypes_GET_FailureBodyResponseSchema(colander.MappingSchema):
     service_type = colander.SchemaNode(
         colander.String(),
         description="Service type retrieved from route path."
@@ -953,12 +953,12 @@ class ServiceResourceTypes_GET_FailureResponseBodySchema(colander.MappingSchema)
 
 class ServiceResourceTypes_GET_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Failed to obtain resource types for specified service type."
-    body = ServiceResourceTypes_GET_FailureResponseBodySchema(code=HTTPForbidden.code)
+    body = ServiceResourceTypes_GET_FailureBodyResponseSchema(code=HTTPForbidden.code)
 
 
 class ServiceResourceTypes_GET_NotFoundResponseSchema(colander.MappingSchema):
     description = "Invalid `service_type` does not exist to obtain its resource types."
-    body = ServiceResourceTypes_GET_FailureResponseBodySchema(code=HTTPNotFound.code)
+    body = ServiceResourceTypes_GET_FailureBodyResponseSchema(code=HTTPNotFound.code)
 
 
 class Users_GET_BodyResponseSchema(colander.MappingSchema):
@@ -1020,6 +1020,34 @@ class User_Check_ConflictResponseSchema(colander.MappingSchema):
     body = BaseBodySchema(code=HTTPForbidden.code)
 
 
+class User_POST_BodyRequestSchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="New name to apply to the user",
+        example="john",
+    )
+    email = colander.SchemaNode(
+        colander.String(),
+        description="New email to apply to the user",
+        example="john@mail.com",
+    )
+    password = colander.SchemaNode(
+        colander.String(),
+        description="New password to apply to the user",
+        example="itzaseekit",
+    )
+    group_name = colander.SchemaNode(
+        colander.String(),
+        description="New password to apply to the user",
+        example="users",
+    )
+
+
+class Users_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = User_POST_BodyRequestSchema()
+
+
 class Users_POST_BodyResponseSchema(colander.MappingSchema):
     code = CodeSchemaNode
     type = TypeSchemaNode
@@ -1042,19 +1070,30 @@ class UserNew_POST_ForbiddenResponseSchema(colander.MappingSchema):
     body = BaseBodySchema(code=HTTPForbidden.code)
 
 
-class UserGroup_GET_ForbiddenResponseSchema(colander.MappingSchema):
-    description = "Group query was refused by db."
-    body = BaseBodySchema(code=HTTPForbidden.code)
+class User_PUT_BodyRequestSchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="New name to apply to the user",
+        missing=colander.drop,
+        example="john",
+    )
+    email = colander.SchemaNode(
+        colander.String(),
+        description="New email to apply to the user",
+        missing=colander.drop,
+        example="john@mail.com",
+    )
+    password = colander.SchemaNode(
+        colander.String(),
+        description="New password to apply to the user",
+        missing=colander.drop,
+        example="itzaseekit",
+    )
 
 
-class UserGroup_GET_NotAcceptableResponseSchema(colander.MappingSchema):
-    description = "Group for new user doesn't exist."
-    body = BaseBodySchema(code=HTTPNotAcceptable.code)
-
-
-class UserGroup_Check_ForbiddenResponseSchema(colander.MappingSchema):
-    description = "Failed to add user-group to db."
-    body = BaseBodySchema(code=HTTPForbidden.code)
+class User_PUT_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = User_PUT_BodyRequestSchema()
 
 
 class Users_PUT_OkResponseSchema(colander.MappingSchema):
@@ -1103,6 +1142,11 @@ class User_GET_NotFoundResponseSchema(colander.MappingSchema):
     body = BaseBodySchema(code=HTTPNotFound.code)
 
 
+class User_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = {}
+
+
 class User_DELETE_OkResponseSchema(colander.MappingSchema):
     description = "Delete user successful."
     body = BaseBodySchema(code=HTTPForbidden.code)
@@ -1113,7 +1157,22 @@ class User_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
     body = BaseBodySchema(code=HTTPForbidden.code)
 
 
-class UserGroup_POST_BodyResponseSchema(BaseBodySchema):
+class UserGroup_GET_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Group query was refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class UserGroup_GET_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Group for new user doesn't exist."
+    body = BaseBodySchema(code=HTTPNotAcceptable.code)
+
+
+class UserGroup_Check_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Failed to add user-group to db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class UserGroups_POST_BodyRequestSchema(colander.MappingSchema):
     user_name = colander.SchemaNode(
         colander.String(),
         description="Name of the user in the user-group relationship",
@@ -1126,14 +1185,75 @@ class UserGroup_POST_BodyResponseSchema(BaseBodySchema):
     )
 
 
-class UserGroup_POST_OkResponseSchema(colander.MappingSchema):
+class UserGroups_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = UserGroups_POST_BodyRequestSchema()
+
+
+class UserGroups_POST_BodyResponseSchema(BaseBodySchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the user in the user-group relationship",
+        example="toto",
+    )
+    group_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the group in the user-group relationship",
+        example="users",
+    )
+
+
+class UserGroups_POST_OkResponseSchema(colander.MappingSchema):
     description = "Create user-group assignation successful."
-    body = UserGroup_POST_BodyResponseSchema(code=HTTPOk.code)
+    body = UserGroups_POST_BodyResponseSchema(code=HTTPOk.code)
 
 
-class UserGroup_POST_ConflictResponseSchema(colander.MappingSchema):
+class UserGroups_POST_ConflictResponseSchema(colander.MappingSchema):
     description = "User already belongs to this group."
     body = BaseBodySchema(code=HTTPConflict.code)
+
+
+class UserGroup_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = {}
+
+
+class UserGroup_DELETE_OkResponseSchema(colander.MappingSchema):
+    description = "Delete user-group successful."
+    body = BaseBodySchema(code=HTTPOk.code)
+
+
+class UserGroup_DELETE_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Invalid user-group combination for delete."
+    body = BaseBodySchema(code=HTTPNotFound.code)
+
+
+class UserResources_GET_BodyResponseSchema(BaseBodySchema):
+    resources = ResourcesSchemaNode
+
+
+class UserResources_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get user resources successful."
+    body = UserResources_GET_BodyResponseSchema()
+
+
+class UserResources_GET_NotFoundBodyResponseSchema(BaseBodySchema):
+    user_name = colander.SchemaNode(colander.String(), description="User name value read from path")
+    resource_types = ResourceTypesListSchema(description="Resource types searched for")
+
+
+class UserResources_GET_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Failed to populate user resources."
+    body = UserResources_GET_NotFoundBodyResponseSchema(code=HTTPNotFound.code)
+
+
+class UserResourcePermissions_GET_BodyResponseSchema(BaseBodySchema):
+    permission_names = PermissionListSchema()
+
+
+class UserResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get user resource permissions successful."
+    body = UserResourcePermissions_GET_BodyResponseSchema(code=HTTPNotFound.code)
 
 
 class Group_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
@@ -1146,23 +1266,16 @@ class Group_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
     body = BaseBodySchema(code=HTTPNotFound.code)
 
 
-class GroupServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
+class GroupServiceResources_GET_BodyResponseSchema(BaseBodySchema):
     service = ServiceResourcesBodySchema()
-    code = CodeSchemaNode
-    type = TypeSchemaNode
-    detail = DetailSchemaNode
 
 
 class GroupServiceResources_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get group service resources successful."
-    body = GroupServiceResources_GET_ResponseBodySchema()
+    body = GroupServiceResources_GET_BodyResponseSchema()
 
 
-class Session_GET_ResponseBodySchema(colander.MappingSchema):
-    code = CodeSchemaNode
-    type = TypeSchemaNode
-    detail = DetailSchemaNode
-    detail.example = "Get session successful."
+class Session_GET_BodyResponseSchema(BaseBodySchema):
     user_name = colander.SchemaNode(
         colander.String(),
         description="Currently logged in user name (anonymous if none)",
@@ -1175,10 +1288,10 @@ class Session_GET_ResponseBodySchema(colander.MappingSchema):
 
 
 class Session_GET_OkResponseSchema(colander.MappingSchema):
-    body = Session_GET_ResponseBodySchema()
+    body = Session_GET_BodyResponseSchema()
 
 
-class Version_GET_ResponseBodySchema(colander.MappingSchema):
+class Version_GET_BodyResponseSchema(colander.MappingSchema):
     code = colander.SchemaNode(
         colander.Integer(),
         description="HTTP response code",
@@ -1203,7 +1316,7 @@ class Version_GET_ResponseBodySchema(colander.MappingSchema):
 
 class Version_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get version successful."
-    body = Version_GET_ResponseBodySchema()
+    body = Version_GET_BodyResponseSchema()
 
 
 @SwaggerAPI.get(tags=[APITag])
