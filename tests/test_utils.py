@@ -1,4 +1,4 @@
-import types
+import six
 import pyramid
 import requests
 from distutils.version import *
@@ -204,7 +204,7 @@ def check_error_param_structure(json_body, paramValue=Null, paramName=Null, para
             check_val_equal(json_body['param']['compare'], paramCompare)
     else:
         # unicode representation was explicitly returned in value only when of string type
-        if isParamValueLiteralUnicode and isinstance(paramValue, types.StringTypes):
+        if isParamValueLiteralUnicode and isinstance(paramValue, six.string_types):
             paramValue = u'u\'{}\''.format(paramValue)
         check_val_equal(json_body['param'], paramValue)
         if paramCompareExists:
@@ -251,7 +251,7 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
     assert isinstance(resource_dict, dict)
 
     for resource_id in resource_dict:
-        check_val_type(resource_id, types.StringTypes)
+        check_val_type(resource_id, six.string_types)
         resource_int_id = int(resource_id)  # should by an 'int' string, no error raised
         resource_info = resource_dict[resource_id]
         check_val_is_in('root_service_id', resource_info)
@@ -264,7 +264,7 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
         check_val_type(resource_info['parent_id'], int)
         check_val_equal(resource_info['parent_id'], parent_resource_id)
         check_val_is_in('resource_name', resource_info)
-        check_val_type(resource_info['resource_name'], types.StringTypes)
+        check_val_type(resource_info['resource_name'], six.string_types)
         check_val_is_in('permission_names', resource_info)
         check_val_type(resource_info['permission_names'], list)
         check_val_is_in('children', resource_info)

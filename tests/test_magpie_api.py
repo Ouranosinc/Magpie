@@ -108,7 +108,7 @@ class TestMagpieAPI_WithAdminAuthLocal(unittest.TestCase):
         check_val_is_in('db_version', json_body)
         check_val_is_in('version', json_body)
         check_val_equal(json_body['version'], magpie.__meta__.__version__)
-        check_val_type(json_body['version'], types.StringTypes)
+        check_val_type(json_body['version'], six.string_types)
         version_parts = json_body['version'].split('.')
         check_val_equal(len(version_parts), 3)
 
@@ -152,7 +152,7 @@ class TestMagpieAPI_NoAuthRemote(unittest.TestCase):
         check_val_is_in('version', json_body)
         # server not necessarily at latest version, ensure at least format
         #check_val_equal(json_body['version'], magpie.__meta__.__version__)
-        check_val_type(json_body['version'], types.StringTypes)
+        check_val_type(json_body['version'], six.string_types)
         version_parts = json_body['version'].split('.')
         check_val_equal(len(version_parts), 3)
 
@@ -287,10 +287,10 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
                 check_val_is_in('permission_names', svc_dict)
                 check_val_is_in('resources', svc_dict)
                 check_val_type(svc_dict['resource_id'], int)
-                check_val_type(svc_dict['service_name'], types.StringTypes)
-                check_val_type(svc_dict['service_url'], types.StringTypes)
-                check_val_type(svc_dict['service_type'], types.StringTypes)
-                check_val_type(svc_dict['public_url'], types.StringTypes)
+                check_val_type(svc_dict['service_name'], six.string_types)
+                check_val_type(svc_dict['service_url'], six.string_types)
+                check_val_type(svc_dict['service_type'], six.string_types)
+                check_val_type(svc_dict['public_url'], six.string_types)
                 check_val_type(svc_dict['permission_names'], list)
                 check_val_type(svc_dict['resources'], dict)
 
@@ -386,10 +386,10 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         check_val_is_in('permission_names', svc_dict)
         check_val_is_in('resources', svc_dict)
         check_val_type(svc_dict['resource_id'], int)
-        check_val_type(svc_dict['service_name'], types.StringTypes)
-        check_val_type(svc_dict['service_url'], types.StringTypes)
-        check_val_type(svc_dict['service_type'], types.StringTypes)
-        check_val_type(svc_dict['public_url'], types.StringTypes)
+        check_val_type(svc_dict['service_name'], six.string_types)
+        check_val_type(svc_dict['service_url'], six.string_types)
+        check_val_type(svc_dict['service_type'], six.string_types)
+        check_val_type(svc_dict['public_url'], six.string_types)
         check_val_type(svc_dict['permission_names'], list)
         check_resource_children(svc_dict['resources'], svc_dict['resource_id'], svc_dict['resource_id'])
 

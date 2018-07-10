@@ -1,6 +1,7 @@
 from pyramid.httpexceptions import *
 from sys import exc_info
 import types
+import six
 
 # control variables to avoid infinite recursion in case of
 # major programming error to avoid application hanging
@@ -98,7 +99,7 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
         status = status or (not type(param) == ofType)
     if status:
         if withParam:
-            content[u'param'] = {u'value': str(param) if type(param) in types.StringTypes else repr(param)}
+            content[u'param'] = {u'value': str(param) if type(param) in six.string_types else repr(param)}
             if paramName is not None:
                 content[u'param'][u'name'] = str(paramName)
             if paramCompare is not None:
@@ -367,4 +368,4 @@ def isclass(obj):
     :param obj: object to evaluate for class type
     :return: (bool) indicating if `object` is a class
     """
-    return isinstance(obj, (type, types.ClassType))
+    return isinstance(obj, (type, six.class_types))
