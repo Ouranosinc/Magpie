@@ -324,7 +324,7 @@ class ManagementViews(object):
         groups = self.get_all_groups()
         [groups_info.setdefault(grp, {u'members': len(self.get_group_users(grp))}) for grp in groups if grp != u'']
 
-        return add_template_data(self.request, {u'group_names': groups_info})
+        return add_template_data(self.request, {u'group_names': sorted(groups_info)})
 
     @view_config(route_name='add_group', renderer='templates/add_group.mako')
     def add_group(self):

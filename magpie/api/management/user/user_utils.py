@@ -146,4 +146,4 @@ def get_user_groups_checked(request, user):
     db = request.db
     group_names = evaluate_call(lambda: [group.group_name for group in user.groups], fallback=lambda: db.rollback(),
                                 httpError=HTTPInternalServerError, msgOnFail="Failed to obtain groups of user")
-    return group_names
+    return sorted(group_names)

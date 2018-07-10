@@ -156,7 +156,12 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
         resp = test_request(self.app, 'GET', '/session', headers=self.json_headers)
         json_body = check_response_basic_info(resp, 200)
         check_val_equal(json_body['authenticated'], False)
-        check_val_not_in('group_names', json_body)
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            check_val_not_in('user', json_body)
+        else:
+            check_val_not_in('user_name', json_body)
+            check_val_not_in('user_email', json_body)
+            check_val_not_in('group_names', json_body)
 
     def test_GetVersion(self):
         resp = test_request(self.app, 'GET', '/version', headers=self.json_headers)
@@ -271,7 +276,12 @@ class TestMagpieAPI_NoAuthRemote(unittest.TestCase):
         resp = test_request(self.url, 'GET', '/session', headers=self.json_headers)
         json_body = check_response_basic_info(resp, 200)
         check_val_equal(json_body['authenticated'], False)
-        check_val_not_in('group_names', json_body)
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            check_val_not_in('user', json_body)
+        else:
+            check_val_not_in('user_name', json_body)
+            check_val_not_in('user_email', json_body)
+            check_val_not_in('group_names', json_body)
 
     def test_GetVersion(self):
         resp = test_request(self.url, 'GET', '/version', headers=self.json_headers)
@@ -358,10 +368,17 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         resp = test_request(self.url, 'GET', '/session', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
         check_val_equal(json_body['authenticated'], True)
-        check_val_equal(json_body['user_name'], self.usr)
-        check_val_is_in(ADMIN_GROUP, json_body['group_names'])
-        check_val_type(json_body['group_names'], list)
-        check_val_is_in('user_email', json_body)
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            check_val_is_in('user', json_body)
+            check_val_equal(json_body['user']['user_name'], self.usr)
+            check_val_is_in(ADMIN_GROUP, json_body['user']['group_names'])
+            check_val_type(json_body['user']['group_names'], list)
+            check_val_is_in('email', json_body['user'])
+        else:
+            check_val_equal(json_body['user_name'], self.usr)
+            check_val_is_in(ADMIN_GROUP, json_body['group_names'])
+            check_val_type(json_body['group_names'], list)
+            check_val_is_in('user_email', json_body)
 
     @pytest.mark.users
     def test_GetUsers(self):

@@ -129,4 +129,4 @@ def get_resource_permissions_view(request):
                              msgOnFail=ResourcePermissions_GET_NotAcceptableResponseSchema.description,
                              content={u'resource': format_resource(resource, basic_info=True)})
     return valid_http(httpSuccess=HTTPOk, detail=ResourcePermissions_GET_OkResponseSchema.description,
-                      content={u'permission_names': res_perm})
+                      content={u'permission_names': sorted(res_perm)})

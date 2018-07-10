@@ -18,7 +18,7 @@ def get_users(request):
     user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
                                    fallback=lambda: request.db.rollback(),
                                    httpError=HTTPForbidden, msgOnFail=Users_GET_ForbiddenResponseSchema.description)
-    return valid_http(httpSuccess=HTTPOk, content={u'user_names': user_name_list},
+    return valid_http(httpSuccess=HTTPOk, content={u'user_names': sorted(user_name_list)},
                       detail=Users_GET_OkResponseSchema.description)
 
 
@@ -282,7 +282,7 @@ def get_user_resource_permissions_runner(request, inherited_permissions=True):
     perm_names = get_user_resource_permissions(resource=resource, user=user, db_session=request.db,
                                                inherited_permissions=inherited_permissions)
     return valid_http(httpSuccess=HTTPOk, detail=UserResourcePermissions_GET_OkResponseSchema.description,
-                      content={u'permission_names': perm_names})
+                      content={u'permission_names': sorted(perm_names)})
 
 
 @UserResourcePermissionsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
@@ -382,7 +382,7 @@ def get_user_service_permissions_runner(request, inherited_permissions):
                           content={u'service_name': str(service.resource_name), u'user_name': str(user.user_name)})
     message_inherit = ' inherited ' if inherited_permissions else ' '
     return valid_http(httpSuccess=HTTPOk, detail="Get user service{}permissions successful".format(message_inherit),
-                      content={u'permission_names': perms})
+                      content={u'permission_names': sorted(perms)})
 
 
 @view_config(route_name=UserServicePermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)

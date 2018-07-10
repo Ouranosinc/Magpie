@@ -19,7 +19,7 @@ def format_resource(resource, permissions=None, basic_info=False):
             u'parent_id': res.parent_id,
             u'root_service_id': res.root_service_id,
             u'children': {},
-            u'permission_names': list() if perms is None else perms
+            u'permission_names': list() if perms is None else sorted(perms)
         }
 
     return evaluate_call(

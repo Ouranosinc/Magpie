@@ -318,6 +318,14 @@ class InternalServerErrorResponseSchema(colander.MappingSchema):
     body = InternalServerErrorBodySchema()
 
 
+class ProvidersListSchema(colander.SequenceSchema):
+    item = colander.SchemaNode(
+        colander.String(),
+        description="Available login providers.",
+        example=["ziggurat", "openid"],
+    )
+
+
 class ResourceTypesListSchema(colander.SequenceSchema):
     item = colander.SchemaNode(
         colander.String(),
@@ -1285,19 +1293,31 @@ class GroupServiceResources_GET_OkResponseSchema(colander.MappingSchema):
 
 
 class Session_GET_BodyResponseSchema(BaseBodySchema):
-    user_name = colander.SchemaNode(
-        colander.String(),
-        description="Currently logged in user name (anonymous if none)",
-        example="anonymous")
-    user_email = colander.SchemaNode(
-        colander.String(),
-        description="Currently logged in user email",
-        example="anonymous@mail.com")
-    group_names = GroupNamesListSchema()
+    user = UserBodySchema(missing=colander.drop)
+    authenticated = colander.SchemaNode(
+        colander.Boolean(),
+        description="Indicates if any user session is currently authenticated (user logged in)")
 
 
 class Session_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get session successful."
     body = Session_GET_BodyResponseSchema()
+
+
+class Session_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
+    description = "Failed to get session details."
+    body = InternalServerErrorResponseSchema()
+
+
+class Providers_GET_BodyResponseSchema(colander.MappingSchema):
+    provider_names = ProvidersListSchema()
+    internal_providers = ProvidersListSchema()
+    external_providers = ProvidersListSchema()
+
+
+class Providers_GET_OkResponseSchema(BaseBodySchema):
+    description = "Get providers successful."
+    body = Providers_GET_BodyResponseSchema()
 
 
 class Version_GET_BodyResponseSchema(colander.MappingSchema):

@@ -9,6 +9,7 @@ from magpie import *
 from api.api_except import *
 from api.api_requests import *
 from api.api_rest_schemas import *
+from api.management.user.user_formats import *
 from api.management.user.user_utils import create_user
 import requests
 
@@ -209,8 +210,8 @@ def authomatic_login(request):
 
 
 @SessionAPI.get(schema=Session_GET_BodyResponseSchema(), tags=[LoginTag], response_schemas={
-    '200': Session_GET_OkResponseSchema(description="Get session successful."),
-    '500': InternalServerErrorResponseSchema(description="Failed to get session details.")
+    '200': Session_GET_OkResponseSchema(),
+    '500': Session_GET_InternalServerErrorResponseSchema()
 })
 @view_config(route_name='session', permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
@@ -220,23 +221,20 @@ def get_session(request):
         principals = authn_policy.effective_principals(req)
         if Authenticated in principals:
             user = request.user
-            json_resp = {u'authenticated': True,
-                         u'user_name': user.user_name,
-                         u'user_email': user.email,
-                         u'group_names': [group.group_name for group in user.groups]}
+            json_resp = {u'authenticated': True, u'user': format_user(user)}
         else:
             json_resp = {u'authenticated': False}
         return json_resp
 
     session_json = evaluate_call(lambda: _get_session(request), httpError=HTTPInternalServerError,
-                                 msgOnFail="Failed to get session details.")
-    return valid_http(httpSuccess=HTTPOk, detail="Get session successful.", content=session_json)
+                                 msgOnFail=Session_GET_InternalServerErrorResponseSchema.description)
+    return valid_http(httpSuccess=HTTPOk, detail=Session_GET_OkResponseSchema.description, content=session_json)
 
 
 @view_config(route_name='providers', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_providers(request):
-    """Get list of providers."""
-    return valid_http(httpSuccess=HTTPOk, detail="Get providers successful",
-                      content={u'provider_names': providers,
-                               u'internal_providers': internal_providers,
-                               u'external_providers': external_providers})
+    """Get list of login providers."""
+    return valid_http(httpSuccess=HTTPOk, detail=Providers_GET_OkResponseSchema.description,
+                      content={u'provider_names': sorted(providers),
+                               u'internal_providers': sorted(internal_providers),
+                               u'external_providers': sorted(external_providers)})

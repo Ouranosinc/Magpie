@@ -202,7 +202,7 @@ def get_service_permissions(request):
                               fallback=request.db.rollback(), httpError=HTTPNotAcceptable, content=svc_content,
                               msgOnFail=ServicePermissions_GET_NotAcceptableResponseSchema.description)
     return valid_http(httpSuccess=HTTPOk, detail=ServicePermissions_GET_OkResponseSchema.description,
-                      content={u'permission_names': svc_perms})
+                      content={u'permission_names': sorted(svc_perms)})
 
 
 @ServiceResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ServicesTag], response_schemas={

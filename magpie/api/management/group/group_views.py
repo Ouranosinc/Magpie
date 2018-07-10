@@ -62,7 +62,8 @@ def get_group_users(request):
     group = get_group_matchdict_checked(request)
     user_names = evaluate_call(lambda: [user.user_name for user in group.users],
                                httpError=HTTPForbidden, msgOnFail="Failed to obtain group user names from db")
-    return valid_http(httpSuccess=HTTPOk, detail="Get group users successful", content={u'user_names': user_names})
+    return valid_http(httpSuccess=HTTPOk, detail="Get group users successful",
+                      content={u'user_names': sorted(user_names)})
 
 
 @view_config(route_name=GroupServicesAPI.name, request_method='GET')

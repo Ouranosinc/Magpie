@@ -14,7 +14,7 @@ def format_service(service, permissions=None):
             u'service_name': str(svc.resource_name),
             u'service_type': str(svc.type),
             u'resource_id': svc.resource_id,
-            u'permission_names': service_type_dict[svc.type].permission_names if perms is None else perms
+            u'permission_names': sorted(service_type_dict[svc.type].permission_names if perms is None else perms)
         }
 
     return evaluate_call(
