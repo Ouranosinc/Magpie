@@ -114,6 +114,51 @@ UserServicePermissionAPI = Service(
 CurrentUserAPI = Service(
     path='/users/current',
     name='CurrentUser')
+CurrentUserGroupsAPI = Service(
+    path='/users/current/groups',
+    name='CurrentUserGroups')
+CurrentUserGroupAPI = Service(
+    path='/users/current/groups/{group_name}',
+    name='CurrentUserGroup')
+CurrentUserInheritedResourcesAPI = Service(
+    path='/users/current/inherited_resources',
+    name='CurrentUserInheritedResources')
+CurrentUserResourcesAPI = Service(
+    path='/users/current/resources',
+    name='CurrentUserResources')
+CurrentUserResourceInheritedPermissionsAPI = Service(
+    path='/users/current/resources/{resource_id}/inherited_permissions',
+    name='CurrentUserResourceInheritedPermissions')
+CurrentUserResourcePermissionAPI = Service(
+    path='/users/current/resources/{resource_id}/permissions/{permission_name}',
+    name='CurrentUserResourcePermission')
+CurrentUserResourcePermissionsAPI = Service(
+    path='/users/current/resources/{resource_id}/permissions',
+    name='CurrentUserResourcePermissions')
+CurrentUserResourceTypesAPI = Service(
+    path='/users/current/resources/types/{resource_type}',
+    name='CurrentUserResourceTypes')
+CurrentUserInheritedServicesAPI = Service(
+    path='/users/current/inherited_services',
+    name='CurrentUserInheritedServices')
+CurrentUserServicesAPI = Service(
+    path='/users/current/services',
+    name='CurrentUserServices')
+CurrentUserServiceInheritedResourcesAPI = Service(
+    path='/users/current/services/{service_name}/inherited_resources',
+    name='CurrentUserServiceInheritedResources')
+CurrentUserServiceResourcesAPI = Service(
+    path='/users/current/services/{service_name}/resources',
+    name='CurrentUserServiceResources')
+CurrentUserServiceInheritedPermissionsAPI = Service(
+    path='/users/current/services/{service_name}/inherited_permissions',
+    name='CurrentUserServiceInheritedPermissions')
+CurrentUserServicePermissionsAPI = Service(
+    path='/users/current/services/{service_name}/permissions',
+    name='CurrentUserServicePermissions')
+CurrentUserServicePermissionAPI = Service(
+    path='/users/current/services/{service_name}/permissions/{permission_name}',
+    name='CurrentUserServicePermission')
 GroupsAPI = Service(
     path='/groups',
     name='Groups')
@@ -1056,6 +1101,39 @@ class User_GET_ForbiddenResponseSchema(colander.MappingSchema):
 class User_GET_NotFoundResponseSchema(colander.MappingSchema):
     description = "User name not found in db."
     body = BaseBodySchema(code=HTTPNotFound.code)
+
+
+class User_DELETE_OkResponseSchema(colander.MappingSchema):
+    description = "Delete user successful."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class User_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Delete user by name refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class UserGroup_POST_BodyResponseSchema(BaseBodySchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the user in the user-group relationship",
+        example="toto",
+    )
+    group_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the group in the user-group relationship",
+        example="users",
+    )
+
+
+class UserGroup_POST_OkResponseSchema(colander.MappingSchema):
+    description = "Create user-group assignation successful."
+    body = UserGroup_POST_BodyResponseSchema(code=HTTPOk.code)
+
+
+class UserGroup_POST_ConflictResponseSchema(colander.MappingSchema):
+    description = "User already belongs to this group."
+    body = BaseBodySchema(code=HTTPConflict.code)
 
 
 class Group_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):

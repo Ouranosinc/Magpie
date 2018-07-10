@@ -6,6 +6,8 @@ MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, 'magpie')
 sys.path.insert(0, MAGPIE_MODULE_DIR)
 
+from tests.test_runner import test_suite
+
 from setuptools import find_packages
 try:
     from setuptools import setup
@@ -92,7 +94,7 @@ setup(
     zip_safe=False,
 
     # -- self - tests --------------------------------------------------------
-    test_suite='tests',
+    test_suite='setup.test_suite',
     tests_require=TEST_REQUIREMENTS,
 
     # -- script entry points -----------------------------------------------

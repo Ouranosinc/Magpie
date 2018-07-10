@@ -48,9 +48,10 @@ def create_user_view(request):
     '406': UserGroup_GET_NotAcceptableResponseSchema(),
     '409': Users_CheckInfo_Login_ConflictResponseSchema(),
 })
-@CurrentUserAPI.put(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
+@CurrentUserAPI.put(tags=[CurrentUserTag], response_schemas={
     '200': Users_PUT_OkResponseSchema(),
     '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
     '403': UserGroup_GET_ForbiddenResponseSchema(),
     '406': UserGroup_GET_NotAcceptableResponseSchema(),
     '409': Users_CheckInfo_Login_ConflictResponseSchema(),
@@ -79,13 +80,13 @@ def update_user_view(request):
     return valid_http(httpSuccess=HTTPOk, detail=Users_PUT_OkResponseSchema.description)
 
 
-@UserAPI.get(tags=[UsersTag], response_schemas={
+@UserAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
     '200': User_GET_OkResponseSchema(),
     '403': User_CheckAnonymous_ForbiddenResponseSchema(),
     '404': User_CheckAnonymous_NotFoundResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),
 })
-@CurrentUserAPI.get(tags=[CurrentUserTag], response_schemas={
+@CurrentUserAPI.get(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
     '200': User_GET_OkResponseSchema(),
     '403': User_CheckAnonymous_ForbiddenResponseSchema(),
     '404': User_CheckAnonymous_NotFoundResponseSchema(),
@@ -99,14 +100,28 @@ def get_user_view(request):
                       content={u'user': format_user(user)})
 
 
+@UserAPI.delete(tags=[UsersTag], response_schemas={
+    '200': User_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
+@CurrentUserAPI.delete(tags=[CurrentUserTag], response_schemas={
+    '200': User_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=UserAPI.name, request_method='DELETE')
 def delete_user(request):
     """Delete a user by name."""
     user = get_user_matchdict_checked(request)
     db = request.db
     evaluate_call(lambda: db.delete(user), fallback=lambda: db.rollback(),
-                  httpError=HTTPForbidden, msgOnFail="Delete user by name refused by db")
-    return valid_http(httpSuccess=HTTPOk, detail="Delete user successful")
+                  httpError=HTTPForbidden, msgOnFail=User_DELETE_ForbiddenResponseSchema.description)
+    return valid_http(httpSuccess=HTTPOk, detail=User_DELETE_OkResponseSchema.description)
 
 
 @view_config(route_name=UserGroupsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
@@ -117,6 +132,22 @@ def get_user_groups(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get user groups successful", content={u'group_names': group_names})
 
 
+@UserGroupAPI.get(tags=[UsersTag], response_schemas={
+    '200': UserGroup_POST_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '409': UserGroup_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
+@CurrentUserGroupAPI.get(tags=[CurrentUserTag], response_schemas={
+    '200': UserGroup_POST_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '409': UserGroup_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=UserGroupsAPI.name, request_method='POST')
 def assign_user_group(request):
     """Assign a user to a group."""
@@ -126,9 +157,9 @@ def assign_user_group(request):
     new_user_group = models.UserGroup(group_id=group.id, user_id=user.id)
 
     evaluate_call(lambda: db.add(new_user_group), fallback=lambda: db.rollback(),
-                  httpError=HTTPConflict, msgOnFail="User already belongs to this group",
+                  httpError=HTTPConflict, msgOnFail=UserGroup_POST_ConflictResponseSchema.description,
                   content={u'user_name': user.user_name, u'group_name': group.group_name})
-    return valid_http(httpSuccess=HTTPCreated, detail="Create user-group assignation successful")
+    return valid_http(httpSuccess=HTTPCreated, detail=UserGroup_POST_OkResponseSchema.description)
 
 
 @view_config(route_name=UserGroupAPI.name, request_method='DELETE')

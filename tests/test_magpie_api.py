@@ -21,6 +21,116 @@ from magpie import magpie
 from test_utils import *
 
 
+# Generic setup and validation methods across unittests
+class TestSetup(object):
+    @staticmethod
+    def get_Version(test_class):
+        resp = test_request(test_class.url, 'GET', '/version',
+                            headers=test_class.json_headers, cookies=test_class.cookies)
+        json_body = check_response_basic_info(resp, 200)
+        return json_body['version']
+
+    @staticmethod
+    def create_TestServiceResource(test_class, data_override=None):
+        route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
+        data = {
+            "resource_name": test_class.test_resource_name,
+            "resource_type": test_class.test_resource_type,
+        }
+        if data_override:
+            data.update(data_override)
+        resp = test_request(test_class.url, 'POST', route,
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies, json=data)
+        return check_response_basic_info(resp, 201)
+
+    @staticmethod
+    def get_ExistingTestServiceInfo(test_class):
+        route = '/services/{svc}'.format(svc=test_class.test_service_name)
+        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
+        return resp.json()[test_class.test_service_name]
+
+    @staticmethod
+    def get_ExistingTestServiceDirectResources(test_class):
+        route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
+        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
+        json_body = resp.json()
+        resources = json_body[test_class.test_service_name]['resources']
+        return [resources[res] for res in resources]
+
+    @staticmethod
+    def check_NonExistingTestResource(test_class):
+        resources = TestSetup.get_ExistingTestServiceDirectResources(test_class)
+        resources_names = [res['resource_name'] for res in resources]
+        check_val_not_in(test_class.test_resource_name, resources_names)
+
+    @staticmethod
+    def delete_TestServiceResource(test_class):
+        resources = TestSetup.get_ExistingTestServiceDirectResources(test_class)
+        test_resource = filter(lambda r: r['resource_name'] == test_class.test_resource_name, resources)
+        # delete as required, skip if non-existing
+        if len(test_resource) > 0:
+            resource_id = test_resource[0]['resource_id']
+            route = '/services/{svc}/resources/{res_id}'.format(svc=test_class.test_service_name, res_id=resource_id)
+            resp = test_request(test_class.url, 'DELETE', route,
+                                headers=test_class.json_headers,
+                                cookies=test_class.cookies)
+            check_val_equal(resp.status_code, 200)
+        TestSetup.check_NonExistingTestResource(test_class)
+
+    @staticmethod
+    def get_RegisteredServicesList(test_class):
+        resp = test_request(test_class.url, 'GET', '/services',
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies)
+        json_body = check_response_basic_info(resp, 200)
+
+        # prepare a flat list of registered services
+        services_list = list()
+        for svc_type in json_body['services']:
+            services_of_type = json_body['services'][svc_type]
+            services_list.extend(services_of_type.values())
+        return services_list
+
+    @staticmethod
+    def get_RegisteredUsersList(test_class):
+        resp = test_request(test_class.url, 'GET', '/users',
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies)
+        json_body = check_response_basic_info(resp, 200)
+        return json_body['user_names']
+
+    @staticmethod
+    def check_NonExistingTestUser(test_class):
+        users = TestSetup.get_RegisteredUsersList(test_class)
+        check_val_not_in(test_class.test_user_name, users)
+
+    @staticmethod
+    def create_TestUser(test_class):
+        data = {
+            "user_name": test_class.test_user_name,
+            "email": '{}@mail.com'.format(test_class.test_user_name),
+            "password": test_class.test_user_name,
+            "group_name": test_class.test_user_group,
+        }
+        resp = test_request(test_class.url, 'POST', '/users',
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies, json=data)
+        return check_response_basic_info(resp, 201)
+
+    @staticmethod
+    def delete_TestUser(test_class):
+        users = TestSetup.get_RegisteredUsersList(test_class)
+        # delete as required, skip if non-existing
+        if test_class.test_user_name in users:
+            route = '/users/{usr}'.format(usr=test_class.test_user_name)
+            resp = test_request(test_class.url, 'DELETE', route,
+                                headers=test_class.json_headers,
+                                cookies=test_class.cookies)
+            check_val_equal(resp.status_code, 200)
+        TestSetup.check_NonExistingTestUser(test_class)
+
+
 @pytest.mark.offline
 @pytest.mark.api
 class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
@@ -32,6 +142,7 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
     def setUpClass(cls):
         cls.app = get_test_magpie_app()
         cls.json_headers = [('Content-Type', 'application/json')]
+        cls.version = magpie.__meta__.__version__
 
     @classmethod
     def tearDownClass(cls):
@@ -49,7 +160,17 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
         json_body = check_response_basic_info(resp, 200)
         check_val_is_in('db_version', json_body)
         check_val_is_in('version', json_body)
-        check_val_equal(json_body['version'], magpie.__meta__.__version__)
+        check_val_equal(json_body['version'], self.version)
+
+    @pytest.mark.users
+    def test_GetCurrentUser(self):
+        TestSetup.check_NonExistingTestUser(self)
+        resp = test_request(self.url, 'GET', '/users/current', headers=self.json_headers, cookies=self.cookies)
+        json_body = check_response_basic_info(resp, 200)
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            check_val_equal(json_body['user']['user_name'], self.usr)
+        else:
+            check_val_equal(json_body['user_name'], self.usr)
 
 
 @pytest.mark.skip(reason="Not implemented.")
@@ -88,6 +209,7 @@ class TestMagpieAPI_WithAdminAuthLocal(unittest.TestCase):
         assert cls.headers and cls.cookies, cls.require
         cls.app.cookies = cls.cookies
         cls.json_headers = [('Content-Type', 'application/json')]
+        cls.version = TestSetup.get_Version(cls)
 
     @classmethod
     def tearDownClass(cls):
@@ -133,6 +255,9 @@ class TestMagpieAPI_NoAuthRemote(unittest.TestCase):
         cls.url = os.getenv('MAGPIE_TEST_REMOTE_SERVER_URL')
         assert cls.url, "cannot test without a remote server URL"
         cls.json_headers = {'Content-Type': 'application/json'}
+        cls.cookies = None
+        cls.usr = ANONYMOUS_USER
+        cls.version = TestSetup.get_Version(cls)
 
     @classmethod
     def tearDownClass(cls):
@@ -156,6 +281,15 @@ class TestMagpieAPI_NoAuthRemote(unittest.TestCase):
         version_parts = json_body['version'].split('.')
         check_val_equal(len(version_parts), 3)
 
+    @pytest.mark.users
+    def test_GetCurrentUser(self):
+        resp = test_request(self.url, 'GET', '/users/current', headers=self.json_headers)
+        json_body = check_response_basic_info(resp, 200)
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            check_val_equal(json_body['user']['user_name'], self.usr)
+        else:
+            check_val_equal(json_body['user_name'], self.usr)
+
 
 @pytest.mark.online
 @pytest.mark.api
@@ -176,12 +310,13 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         cls.require = "cannot run tests without logged in '{}' user".format(ADMIN_GROUP)
         cls.json_headers = {'Content-Type': 'application/json'}
         cls.check_requirements()
+        cls.version = TestSetup.get_Version(cls)
         cls.get_test_values()
 
     @classmethod
     def tearDownClass(cls):
-        cls.setup_DeleteTestServiceResource()
-        cls.setup_DeleteTestUser()
+        TestSetup.delete_TestServiceResource(cls)
+        TestSetup.delete_TestUser(cls)
         pyramid.testing.tearDown()
 
     @classmethod
@@ -210,14 +345,10 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         cls.test_user_name = u'unittest_toto'
         cls.test_user_group = u'users'
 
-        resp = test_request(cls.url, 'GET', '/version', headers=cls.json_headers, cookies=cls.cookies)
-        json_body = check_response_basic_info(resp, 200)
-        cls.version = json_body['version']
-
     def setUp(self):
         self.check_requirements()
-        self.setup_DeleteTestServiceResource()
-        self.setup_DeleteTestUser()
+        TestSetup.delete_TestServiceResource(self)
+        TestSetup.delete_TestUser(self)
 
     @pytest.mark.login
     def test_GetSession_Administrator(self):
@@ -311,7 +442,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.users
     def test_PostUsers(self):
-        json_body = self.setup_CreateTestUser()
+        json_body = TestSetup.create_TestUser(self)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             check_val_is_in('user', json_body)
             check_val_is_in('user_name', json_body['user'])
@@ -321,12 +452,12 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
             check_val_is_in('group_names', json_body['user'])
             check_val_type(json_body['user']['group_names'], list)
 
-        users = self.setup_GetRegisteredUsersList()
+        users = TestSetup.get_RegisteredUsersList(self)
         check_val_is_in(self.test_user_name, users)
 
     @pytest.mark.users
     def test_GetUser_existing(self):
-        self.setup_CreateTestUser()
+        TestSetup.create_TestUser(self)
 
         route = '/users/{usr}'.format(usr=self.test_user_name)
         resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
@@ -349,14 +480,14 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.users
     def test_GetUser_missing(self):
-        self.setup_CheckNonExistingTestUser()
+        TestSetup.check_NonExistingTestUser(self)
         route = '/users/{usr}'.format(usr=self.test_user_name)
         resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-        json_body = check_response_basic_info(resp, 404)
+        check_response_basic_info(resp, 404)
 
     @pytest.mark.users
     def test_GetCurrentUser(self):
-        self.setup_CheckNonExistingTestUser()
+        TestSetup.check_NonExistingTestUser(self)
         resp = test_request(self.url, 'GET', '/users/current', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
@@ -373,94 +504,6 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         check_val_type(json_body['user_names'], list)
         check_val_is_in(ADMIN_USER, json_body['user_names'])
         check_val_is_in(self.usr, json_body['user_names'])
-
-    @classmethod
-    def setup_GetExistingTestServiceInfo(cls):
-        route = '/services/{svc}'.format(svc=cls.test_service_name)
-        resp = test_request(cls.url, 'GET', route, headers=cls.json_headers, cookies=cls.cookies)
-        return resp.json()[cls.test_service_name]
-
-    @classmethod
-    def setup_GetExistingTestServiceDirectResources(cls):
-        route = '/services/{svc}/resources'.format(svc=cls.test_service_name)
-        resp = test_request(cls.url, 'GET', route, headers=cls.json_headers, cookies=cls.cookies)
-        json_body = resp.json()
-        resources = json_body[cls.test_service_name]['resources']
-        return [resources[res] for res in resources]
-
-    @classmethod
-    def setup_CheckNonExistingTestResource(cls):
-        resources = cls.setup_GetExistingTestServiceDirectResources()
-        resources_names = [res['resource_name'] for res in resources]
-        check_val_not_in(cls.test_resource_name, resources_names)
-
-    @classmethod
-    def setup_CreateTestServiceResource(cls, data_override=None):
-        route = '/services/{svc}/resources'.format(svc=cls.test_service_name)
-        data = {
-            "resource_name": cls.test_resource_name,
-            "resource_type": cls.test_resource_type,
-        }
-        if data_override:
-            data.update(data_override)
-        resp = test_request(cls.url, 'POST', route, headers=cls.json_headers, cookies=cls.cookies, json=data)
-        return check_response_basic_info(resp, 201)
-
-    @classmethod
-    def setup_DeleteTestServiceResource(cls):
-        resources = cls.setup_GetExistingTestServiceDirectResources()
-        test_resource = filter(lambda r: r['resource_name'] == cls.test_resource_name, resources)
-        # delete as required, skip if non-existing
-        if len(test_resource) > 0:
-            resource_id = test_resource[0]['resource_id']
-            route = '/services/{svc}/resources/{res_id}'.format(svc=cls.test_service_name, res_id=resource_id)
-            resp = test_request(cls.url, 'DELETE', route, headers=cls.json_headers, cookies=cls.cookies)
-            check_val_equal(resp.status_code, 200)
-        cls.setup_CheckNonExistingTestResource()
-
-    @classmethod
-    def setup_GetRegisteredServicesList(cls):
-        resp = test_request(cls.url, 'GET', '/services', headers=cls.json_headers, cookies=cls.cookies)
-        json_body = check_response_basic_info(resp, 200)
-
-        # prepare a flat list of registered services
-        services_list = list()
-        for svc_type in json_body['services']:
-            services_of_type = json_body['services'][svc_type]
-            services_list.extend(services_of_type.values())
-        return services_list
-
-    @classmethod
-    def setup_GetRegisteredUsersList(cls):
-        resp = test_request(cls.url, 'GET', '/users', headers=cls.json_headers, cookies=cls.cookies)
-        json_body = check_response_basic_info(resp, 200)
-        return json_body['user_names']
-
-    @classmethod
-    def setup_CheckNonExistingTestUser(cls):
-        users = cls.setup_GetRegisteredUsersList()
-        check_val_not_in(cls.test_user_name, users)
-
-    @classmethod
-    def setup_CreateTestUser(cls):
-        data = {
-            "user_name": cls.test_user_name,
-            "email": '{}@mail.com'.format(cls.test_user_name),
-            "password": cls.test_user_name,
-            "group_name": cls.test_user_group,
-        }
-        resp = test_request(cls.url, 'POST', '/users', headers=cls.json_headers, cookies=cls.cookies, json=data)
-        return check_response_basic_info(resp, 201)
-
-    @classmethod
-    def setup_DeleteTestUser(cls):
-        users = cls.setup_GetRegisteredUsersList()
-        # delete as required, skip if non-existing
-        if cls.test_user_name in users:
-            route = '/users/{usr}'.format(usr=cls.test_user_name)
-            resp = test_request(cls.url, 'DELETE', route, headers=cls.json_headers, cookies=cls.cookies)
-            check_val_equal(resp.status_code, 200)
-        cls.setup_CheckNonExistingTestUser()
 
     @pytest.mark.services
     def test_GetServiceResources(self):
@@ -487,7 +530,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.services
     def test_GetServicePermissions(self):
-        services_list = self.setup_GetRegisteredServicesList()
+        services_list = TestSetup.get_RegisteredServicesList(self)
 
         for svc in services_list:
             svc_name = svc['service_name']
@@ -501,9 +544,9 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.services
     def test_PostServiceResources_DirectResource_NoParentID(self):
-        resources_prior = self.setup_GetExistingTestServiceDirectResources()
+        resources_prior = TestSetup.get_ExistingTestServiceDirectResources(self)
         resources_prior_ids = [res['resource_id'] for res in resources_prior]
-        json_body = self.setup_CreateTestServiceResource()
+        json_body = TestSetup.create_TestServiceResource(self)
         check_val_is_in('resource_id', json_body)
         check_val_is_in('resource_name', json_body)
         check_val_is_in('resource_type', json_body)
@@ -513,11 +556,11 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.services
     def test_PostServiceResources_DirectResource_WithParentID(self):
-        resources_prior = self.setup_GetExistingTestServiceDirectResources()
+        resources_prior = TestSetup.get_ExistingTestServiceDirectResources(self)
         resources_prior_ids = [res['resource_id'] for res in resources_prior]
-        service_id = self.setup_GetExistingTestServiceInfo()['resource_id']
+        service_id = TestSetup.get_ExistingTestServiceInfo(self)['resource_id']
         extra_data = {"parent_id": service_id}
-        json_body = self.setup_CreateTestServiceResource(extra_data)
+        json_body = TestSetup.create_TestServiceResource(self, extra_data)
         check_val_is_in('resource_id', json_body)
         check_val_is_in('resource_name', json_body)
         check_val_is_in('resource_type', json_body)
@@ -528,8 +571,8 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
     @pytest.mark.services
     def test_PostServiceResources_ChildrenResource_WithParentID(self):
         # create the direct resource
-        json_body = self.setup_CreateTestServiceResource()
-        resources = self.setup_GetExistingTestServiceDirectResources()
+        json_body = TestSetup.create_TestServiceResource(self)
+        resources = TestSetup.get_ExistingTestServiceDirectResources(self)
         resources_ids = [res['resource_id'] for res in resources]
         test_resource_id = json_body['resource_id']
         check_val_is_in(test_resource_id, resources_ids, msg="service resource must exist to create children resource")
@@ -541,7 +584,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
             "resource_type": self.test_resource_type,
             "parent_id": test_resource_id
         }
-        json_body = self.setup_CreateTestServiceResource(data_override)
+        json_body = TestSetup.create_TestServiceResource(self, data_override)
         check_val_is_in('resource_id', json_body)
         check_val_not_in(json_body['resource_id'], resources_ids)
         check_val_is_in('resource_name', json_body)
@@ -550,7 +593,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         check_val_equal(json_body['resource_type'], self.test_resource_type)
 
         # validate created children resource info
-        service_root_id = self.setup_GetExistingTestServiceInfo()['resource_id']
+        service_root_id = TestSetup.get_ExistingTestServiceInfo(self)['resource_id']
         child_resource_id = json_body['resource_id']
         route = '/resources/{res_id}'.format(res_id=child_resource_id)
         resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
@@ -567,7 +610,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.services
     def test_PostServiceResources_DirectResource_Conflict(self):
-        self.setup_CreateTestServiceResource()
+        TestSetup.create_TestServiceResource(self)
         route = '/services/{svc}/resources'.format(svc=self.test_service_name)
         data = {"resource_name": self.test_resource_name, "resource_type": self.test_resource_type}
         resp = test_request(self.url, 'POST', route, headers=self.json_headers, cookies=self.cookies, json=data)
@@ -579,7 +622,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
     @pytest.mark.services
     @pytest.mark.defaults
     def test_ValidateDefaultServiceProviders(self):
-        services_list = self.setup_GetRegisteredServicesList()
+        services_list = TestSetup.get_RegisteredServicesList(self)
 
         # ensure that registered services information are all matching the providers in config file
         # ignore registered services not from providers as their are not explicitly required from the config
@@ -611,7 +654,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.resources
     def test_PostResources_DirectServiceResource(self):
-        service_info = self.setup_GetExistingTestServiceInfo()
+        service_info = TestSetup.get_ExistingTestServiceInfo(self)
         service_resource_id = service_info['resource_id']
 
         data = {
@@ -625,7 +668,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.resources
     def test_PostResources_ChildrenResource(self):
-        resource_info = self.setup_CreateTestServiceResource()
+        resource_info = TestSetup.create_TestServiceResource(self)
         direct_resource_id = resource_info['resource_id']
 
         data = {
@@ -649,13 +692,13 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.resources
     def test_DeleteResource(self):
-        json_body = self.setup_CreateTestServiceResource()
+        json_body = TestSetup.create_TestServiceResource(self)
         resource_id = json_body['resource_id']
 
         route = '/resources/{res_id}'.format(res_id=resource_id)
         resp = test_request(self.url, 'DELETE', route, headers=self.json_headers, cookies=self.cookies)
         check_response_basic_info(resp, 200)
-        self.setup_CheckNonExistingTestResource()
+        TestSetup.check_NonExistingTestResource(self)
 
 
 if __name__ == '__main__':
