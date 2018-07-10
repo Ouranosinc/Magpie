@@ -7,7 +7,7 @@ def format_user(user, group_names=None):
         return {
             u'user_name': str(usr.user_name),
             u'email': str(usr.email),
-            u'group_names': list(grp_names) if grp_names else [],
+            u'group_names': list(grp_names) if grp_names else [grp for grp in user.groups],
         }
 
     return evaluate_call(
@@ -16,4 +16,3 @@ def format_user(user, group_names=None):
         msgOnFail="Failed to format user.",
         content={u'service': repr(user)}
     )
-

@@ -181,6 +181,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.setup_DeleteTestServiceResource()
+        cls.setup_DeleteTestUser()
         pyramid.testing.tearDown()
 
     @classmethod
@@ -206,6 +207,9 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         assert len(test_service_resource_types), "test service should allow at least 1 sub-resource for test execution"
         cls.test_resource_type = test_service_resource_types[0]
 
+        cls.test_user_name = u'unittest_toto'
+        cls.test_user_group = u'users'
+
         resp = test_request(cls.url, 'GET', '/version', headers=cls.json_headers, cookies=cls.cookies)
         json_body = check_response_basic_info(resp, 200)
         cls.version = json_body['version']
@@ -213,6 +217,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
     def setUp(self):
         self.check_requirements()
         self.setup_DeleteTestServiceResource()
+        self.setup_DeleteTestUser()
 
     @pytest.mark.login
     def test_GetSession_Administrator(self):
@@ -304,6 +309,61 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         check_val_is_in(USER_GROUP, groups)
         check_val_is_in(ADMIN_GROUP, groups)
 
+    @pytest.mark.users
+    def test_PostUsers(self):
+        json_body = self.setup_CreateTestUser()
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            check_val_is_in('user', json_body)
+            check_val_is_in('user_name', json_body['user'])
+            check_val_type(json_body['user']['user_name'], six.string_types)
+            check_val_is_in('email', json_body['user'])
+            check_val_type(json_body['user']['email'], six.string_types)
+            check_val_is_in('group_names', json_body['user'])
+            check_val_type(json_body['user']['group_names'], list)
+
+        users = self.setup_GetRegisteredUsersList()
+        check_val_is_in(self.test_user_name, users)
+
+    @pytest.mark.users
+    def test_GetUser_existing(self):
+        self.setup_CreateTestUser()
+
+        route = '/users/{usr}'.format(usr=self.test_user_name)
+        resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        json_body = check_response_basic_info(resp, 200)
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            check_val_is_in('user', json_body)
+            check_val_is_in('user_name', json_body['user'])
+            check_val_type(json_body['user']['user_name'], six.string_types)
+            check_val_is_in('email', json_body['user'])
+            check_val_type(json_body['user']['email'], six.string_types)
+            check_val_is_in('group_names', json_body['user'])
+            check_val_type(json_body['user']['group_names'], list)
+        else:
+            check_val_is_in('user_name', json_body)
+            check_val_type(json_body['user_name'], six.string_types)
+            check_val_is_in('email', json_body)
+            check_val_type(json_body['email'], six.string_types)
+            check_val_is_in('group_names', json_body)
+            check_val_type(json_body['group_names'], list)
+
+    @pytest.mark.users
+    def test_GetUser_missing(self):
+        self.setup_CheckNonExistingTestUser()
+        route = '/users/{usr}'.format(usr=self.test_user_name)
+        resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        json_body = check_response_basic_info(resp, 404)
+
+    @pytest.mark.users
+    def test_GetCurrentUser(self):
+        self.setup_CheckNonExistingTestUser()
+        resp = test_request(self.url, 'GET', '/users/current', headers=self.json_headers, cookies=self.cookies)
+        json_body = check_response_basic_info(resp, 200)
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            check_val_equal(json_body['user']['user_name'], self.usr)
+        else:
+            check_val_equal(json_body['user_name'], self.usr)
+
     @pytest.mark.groups
     def test_GetGroupUsers(self):
         route = '/groups/{grp}/users'.format(grp=ADMIN_GROUP)
@@ -369,6 +429,38 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
             services_of_type = json_body['services'][svc_type]
             services_list.extend(services_of_type.values())
         return services_list
+
+    @classmethod
+    def setup_GetRegisteredUsersList(cls):
+        resp = test_request(cls.url, 'GET', '/users', headers=cls.json_headers, cookies=cls.cookies)
+        json_body = check_response_basic_info(resp, 200)
+        return json_body['user_names']
+
+    @classmethod
+    def setup_CheckNonExistingTestUser(cls):
+        users = cls.setup_GetRegisteredUsersList()
+        check_val_not_in(cls.test_user_name, users)
+
+    @classmethod
+    def setup_CreateTestUser(cls):
+        data = {
+            "user_name": cls.test_user_name,
+            "email": '{}@mail.com'.format(cls.test_user_name),
+            "password": cls.test_user_name,
+            "group_name": cls.test_user_group,
+        }
+        resp = test_request(cls.url, 'POST', '/users', headers=cls.json_headers, cookies=cls.cookies, json=data)
+        return check_response_basic_info(resp, 201)
+
+    @classmethod
+    def setup_DeleteTestUser(cls):
+        users = cls.setup_GetRegisteredUsersList()
+        # delete as required, skip if non-existing
+        if cls.test_user_name in users:
+            route = '/users/{usr}'.format(usr=cls.test_user_name)
+            resp = test_request(cls.url, 'DELETE', route, headers=cls.json_headers, cookies=cls.cookies)
+            check_val_equal(resp.status_code, 200)
+        cls.setup_CheckNonExistingTestUser()
 
     @pytest.mark.services
     def test_GetServiceResources(self):

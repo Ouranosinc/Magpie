@@ -13,7 +13,7 @@ from api.management.service.service_formats import format_service, format_servic
 })
 @view_config(route_name=UsersAPI.name, request_method='GET')
 def get_users(request):
-    """List all registered users."""
+    """List all registered user names."""
     user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
                                    fallback=lambda: request.db.rollback(),
                                    httpError=HTTPForbidden, msgOnFail=Users_GET_ForbiddenResponseSchema.description)
@@ -26,7 +26,7 @@ def get_users(request):
     '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': Users_POST_ForbiddenResponseSchema(),
-    '406': Users_POST_NotAcceptableResponseSchema(),
+    '406': UserGroup_GET_NotAcceptableResponseSchema(),
     '409': Users_CheckInfo_Login_ConflictResponseSchema(),
 })
 @view_config(route_name=UsersAPI.name, request_method='POST')
@@ -42,12 +42,18 @@ def create_user_view(request):
 
 @UsersAPI.put(tags=[UsersTag], response_schemas={
     '200': Users_PUT_OkResponseSchema(),
+    '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
     '401': UnauthorizedResponseSchema(),
-    '403': Users_PUT_ForbiddenResponseSchema(),
+    '403': UserGroup_GET_ForbiddenResponseSchema(),
+    '406': UserGroup_GET_NotAcceptableResponseSchema(),
+    '409': Users_CheckInfo_Login_ConflictResponseSchema(),
 })
 @CurrentUserAPI.put(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
     '200': Users_PUT_OkResponseSchema(),
-    '403': Users_PUT_ForbiddenResponseSchema(),
+    '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
+    '403': UserGroup_GET_ForbiddenResponseSchema(),
+    '406': UserGroup_GET_NotAcceptableResponseSchema(),
+    '409': Users_CheckInfo_Login_ConflictResponseSchema(),
 })
 @view_config(route_name=UserAPI.name, request_method='PUT')
 def update_user_view(request):
@@ -62,7 +68,7 @@ def update_user_view(request):
     if user.user_name != new_user_name:
         evaluate_call(lambda: models.User.by_user_name(new_user_name, db_session=request.db),
                       fallback=lambda: request.db.rollback(),
-                      httpError=HTTPConflict, msgOnFail="New name user already exists")
+                      httpError=HTTPConflict, msgOnFail=User_PUT_ConflictResponseSchema.description)
         user.user_name = new_user_name
     if user.email != new_email:
         user.email = new_email
@@ -70,17 +76,27 @@ def update_user_view(request):
         user.set_password(new_password)
         user.regenerate_security_code()
 
-    return valid_http(httpSuccess=HTTPOk, detail="Update user successful.")
+    return valid_http(httpSuccess=HTTPOk, detail=Users_PUT_OkResponseSchema.description)
 
 
+@UserAPI.get(tags=[UsersTag], response_schemas={
+    '200': User_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
+@CurrentUserAPI.get(tags=[CurrentUserTag], response_schemas={
+    '200': User_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=UserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_view(request):
     """Get user information by name."""
     user = get_user_matchdict_checked(request)
-    json_response = {u'user_name': user.user_name,
-                     u'email': user.email,
-                     u'group_names': [group.group_name for group in user.groups]}
-    return valid_http(httpSuccess=HTTPOk, detail="Get user successful", content=json_response)
+    return valid_http(httpSuccess=HTTPOk, detail=User_GET_OkResponseSchema.description,
+                      content={u'user': format_user(user)})
 
 
 @view_config(route_name=UserAPI.name, request_method='DELETE')

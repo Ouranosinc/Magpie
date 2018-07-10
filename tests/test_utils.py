@@ -73,6 +73,7 @@ def check_or_try_login_user(app_or_url, username=None, password=None, headers=No
     :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
     :param username: name of the user to login or None otherwise
     :param password: password to use for login if the user was not already logged in
+    :param headers: headers to include in the test request
     :return: headers and cookies of the user session or (None, None)
     :raise: Exception on any login/logout failure as required by the caller's specifications (username/password)
     """
@@ -160,7 +161,8 @@ def check_response_basic_info(response, expected_code=200):
         json_body = response.json
     else:
         json_body = response.json()
-    check_val_equal(response.headers['Content-Type'], 'application/json')
+    content_types = [ct.strip() for ct in response.headers['Content-Type'].split(';')]
+    check_val_is_in('application/json', content_types)
     check_val_equal(response.status_code, expected_code)
     check_val_equal(json_body['code'], expected_code)
     check_val_equal(json_body['type'], 'application/json')

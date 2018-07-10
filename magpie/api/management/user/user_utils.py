@@ -13,15 +13,15 @@ def create_user(user_name, password, email, group_name, db_session):
 
     # Check that group already exists
     group_check = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db),
-                                httpError=HTTPForbidden, msgOnFail=Users_POST_ForbiddenResponseSchema.description)
+                                httpError=HTTPForbidden, msgOnFail=UserGroup_GET_ForbiddenResponseSchema.description)
     verify_param(group_check, notNone=True, httpError=HTTPNotAcceptable,
-                 msgOnFail=Users_POST_NotAcceptableResponseSchema.description)
+                 msgOnFail=UserGroup_Check_ForbiddenResponseSchema.description)
 
     # Check if user already exists
     user_check = evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db),
-                               httpError=HTTPForbidden, msgOnFail="User check query was refused by db")
+                               httpError=HTTPForbidden, msgOnFail=User_Check_ForbiddenResponseSchema.description)
     verify_param(user_check, isNone=True, httpError=HTTPConflict,
-                 msgOnFail="User name matches an already existing user name")
+                 msgOnFail=User_Check_ConflictResponseSchema.description)
 
     # Create user with specified name and group to assign
     user_model = models.User(user_name=user_name, email=email)
@@ -29,14 +29,14 @@ def create_user(user_name, password, email, group_name, db_session):
         user_model.set_password(password)
         user_model.regenerate_security_code()
     evaluate_call(lambda: db.add(user_model), fallback=lambda: db.rollback(),
-                  httpError=HTTPForbidden, msgOnFail="Failed to add user to db")
+                  httpError=HTTPForbidden, msgOnFail=Users_POST_ForbiddenResponseSchema.description)
 
     # Assign user to default group and own group
     new_user = evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db),
-                             httpError=HTTPForbidden, msgOnFail="New user query was refused by db")
+                             httpError=HTTPForbidden, msgOnFail=UserNew_POST_ForbiddenResponseSchema.description)
     group_entry = models.UserGroup(group_id=group_check.id, user_id=new_user.id)
     evaluate_call(lambda: db.add(group_entry), fallback=lambda: db.rollback(),
-                  httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
+                  httpError=HTTPForbidden, msgOnFail=UserGroup_GET_ForbiddenResponseSchema.description)
 
     return valid_http(httpSuccess=HTTPCreated, detail=Users_POST_OkResponseSchema.description,
                       content={u'user': format_user(new_user, [group_name])})

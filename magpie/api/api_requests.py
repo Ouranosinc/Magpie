@@ -75,9 +75,10 @@ def get_user(request, user_name_or_token):
             return curr_user
         else:
             anonymous = evaluate_call(lambda: UserService.by_user_name(ANONYMOUS_USER, db_session=request.db),
-                                      fallback=lambda: request.db.rollback(),
-                                      httpError=HTTPForbidden, msgOnFail="Anonymous user query refused by db")
-            verify_param(anonymous, notNone=True, httpError=HTTPNotFound, msgOnFail="Anonymous user not found in db")
+                                      fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                                      msgOnFail=User_CheckAnonymous_ForbiddenResponseSchema.description)
+            verify_param(anonymous, notNone=True, httpError=HTTPNotFound,
+                         msgOnFail=User_CheckAnonymous_NotFoundResponseSchema.description)
             return anonymous
     else:
         authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
@@ -88,8 +89,8 @@ def get_user(request, user_name_or_token):
             raise HTTPForbidden()
         user = evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
                              fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail="User name query refused by db")
-        verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db")
+                             httpError=HTTPForbidden, msgOnFail=User_GET_ForbiddenResponseSchema.description)
+        verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail=User_GET_NotFoundResponseSchema.description)
         return user
 
 
