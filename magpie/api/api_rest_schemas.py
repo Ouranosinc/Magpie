@@ -1144,7 +1144,7 @@ class User_GET_NotFoundResponseSchema(colander.MappingSchema):
 
 class User_DELETE_RequestSchema(colander.MappingSchema):
     header = HeaderSchema()
-    body = {}
+    body = colander.MappingSchema(default={})
 
 
 class User_DELETE_OkResponseSchema(colander.MappingSchema):
@@ -1170,6 +1170,15 @@ class UserGroup_GET_NotAcceptableResponseSchema(colander.MappingSchema):
 class UserGroup_Check_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Failed to add user-group to db."
     body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class UserGroups_GET_BodyResponseSchema(BaseBodySchema):
+    group_names = GroupNamesListSchema()
+
+
+class UserGroups_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get user groups successful."
+    body = UserGroups_GET_BodyResponseSchema()
 
 
 class UserGroups_POST_BodyRequestSchema(colander.MappingSchema):
@@ -1215,7 +1224,7 @@ class UserGroups_POST_ConflictResponseSchema(colander.MappingSchema):
 
 class UserGroup_DELETE_RequestSchema(colander.MappingSchema):
     header = HeaderSchema()
-    body = {}
+    body = colander.MappingSchema(default={})
 
 
 class UserGroup_DELETE_OkResponseSchema(colander.MappingSchema):

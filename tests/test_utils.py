@@ -51,6 +51,10 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
     json_body = json_body or {}
 
     if isinstance(app_or_url, TestApp):
+        # remove any 'cookies' keyword handled by the 'TestApp' instance
+        if 'cookies' in kwargs:
+            kwargs.pop('cookies')
+
         kwargs['params'] = json_body
         if method == 'GET':
             return app_or_url.get(path, **kwargs)

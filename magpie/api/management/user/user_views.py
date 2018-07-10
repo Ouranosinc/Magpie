@@ -125,12 +125,25 @@ def delete_user(request):
     return valid_http(httpSuccess=HTTPOk, detail=User_DELETE_OkResponseSchema.description)
 
 
+@UserGroupsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
+    '200': UserGroups_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
+@CurrentUserGroupsAPI.get(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
+    '200': UserGroups_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=UserGroupsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_groups(request):
     """List all groups a user belongs to."""
     user = get_user_matchdict_checked(request)
     group_names = get_user_groups_checked(request, user)
-    return valid_http(httpSuccess=HTTPOk, detail="Get user groups successful", content={u'group_names': group_names})
+    return valid_http(httpSuccess=HTTPOk, detail=UserGroups_GET_OkResponseSchema.description,
+                      content={u'group_names': group_names})
 
 
 @UserGroupsAPI.post(schema=UserGroups_POST_RequestSchema(), tags=[UsersTag], response_schemas={

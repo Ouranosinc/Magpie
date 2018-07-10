@@ -141,8 +141,11 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = get_test_magpie_app()
+        cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.json_headers = [('Content-Type', 'application/json')]
         cls.version = magpie.__meta__.__version__
+        cls.cookies = None
+        cls.usr = ANONYMOUS_USER
 
     @classmethod
     def tearDownClass(cls):
@@ -164,7 +167,6 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
 
     @pytest.mark.users
     def test_GetCurrentUser(self):
-        TestSetup.check_NonExistingTestUser(self)
         resp = test_request(self.url, 'GET', '/users/current', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
@@ -201,6 +203,7 @@ class TestMagpieAPI_WithAdminAuthLocal(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = get_test_magpie_app()
+        cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.usr = os.getenv('MAGPIE_TEST_ADMIN_USERNAME')
         cls.pwd = os.getenv('MAGPIE_TEST_ADMIN_PASSWORD')
         assert cls.usr and cls.pwd, "cannot login with unspecified username/password"
