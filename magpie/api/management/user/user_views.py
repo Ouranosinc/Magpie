@@ -49,7 +49,7 @@ def create_user_view(request):
     '406': UserGroup_GET_NotAcceptableResponseSchema(),
     '409': Users_CheckInfo_Login_ConflictResponseSchema(),
 })
-@CurrentUserAPI.put(schema=User_PUT_RequestSchema(), tags=[CurrentUserTag], response_schemas={
+@LoggedUserAPI.put(schema=User_PUT_RequestSchema(), tags=[LoggedUserTag], response_schemas={
     '200': Users_PUT_OkResponseSchema(),
     '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
     '401': UnauthorizedResponseSchema(),
@@ -81,22 +81,30 @@ def update_user_view(request):
     return valid_http(httpSuccess=HTTPOk, detail=Users_PUT_OkResponseSchema.description)
 
 
-@UserAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': User_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
-@CurrentUserAPI.get(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': User_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+#@UserAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
+#    '200': User_GET_OkResponseSchema(),
+#    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+#    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+#    '422': UnprocessableEntityResponseSchema(),
+#})
 @view_config(route_name=UserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_view(request):
     """Get user information by name."""
     user = get_user_matchdict_checked(request)
+    return valid_http(httpSuccess=HTTPOk, detail=User_GET_OkResponseSchema.description,
+                      content={u'user': format_user(user)})
+
+
+#@LoggedUserAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
+#    '200': User_GET_OkResponseSchema(),
+#    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+#    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+#    '422': UnprocessableEntityResponseSchema(),
+#})
+@view_config(route_name=LoggedUserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_logged_user_view(request):
+    """Get logged user information."""
+    user = get_user(request, LOGGED_USER)
     return valid_http(httpSuccess=HTTPOk, detail=User_GET_OkResponseSchema.description,
                       content={u'user': format_user(user)})
 
@@ -108,7 +116,7 @@ def get_user_view(request):
     '404': User_CheckAnonymous_NotFoundResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),
 })
-@CurrentUserAPI.delete(schema=User_DELETE_RequestSchema(), tags=[CurrentUserTag], response_schemas={
+@LoggedUserAPI.delete(schema=User_DELETE_RequestSchema(), tags=[LoggedUserTag], response_schemas={
     '200': User_DELETE_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': User_CheckAnonymous_ForbiddenResponseSchema(),
@@ -131,7 +139,7 @@ def delete_user(request):
     '404': User_CheckAnonymous_NotFoundResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),
 })
-@CurrentUserGroupsAPI.get(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
+@LoggedUserGroupsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
     '200': UserGroups_GET_OkResponseSchema(),
     '403': User_CheckAnonymous_ForbiddenResponseSchema(),
     '404': User_CheckAnonymous_NotFoundResponseSchema(),
@@ -154,7 +162,7 @@ def get_user_groups(request):
     '409': UserGroups_POST_ConflictResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),
 })
-@CurrentUserGroupsAPI.post(schema=UserGroups_POST_RequestSchema(), tags=[CurrentUserTag], response_schemas={
+@LoggedUserGroupsAPI.post(schema=UserGroups_POST_RequestSchema(), tags=[LoggedUserTag], response_schemas={
     '200': UserGroups_POST_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': User_CheckAnonymous_ForbiddenResponseSchema(),
@@ -183,7 +191,7 @@ def assign_user_group(request):
     '404': User_CheckAnonymous_NotFoundResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),
 })
-@CurrentUserGroupAPI.delete(schema=UserGroup_DELETE_RequestSchema(), tags=[CurrentUserTag], response_schemas={
+@LoggedUserGroupAPI.delete(schema=UserGroup_DELETE_RequestSchema(), tags=[LoggedUserTag], response_schemas={
     '200': UserGroup_DELETE_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '403': User_CheckAnonymous_ForbiddenResponseSchema(),
@@ -240,7 +248,7 @@ def get_user_resources_runner(request, inherited_group_resources_permissions=Tru
                       content={u'resources': usr_res_dict})
 
 
-@CurrentUserResourcesAPI.get(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
+@LoggedUserResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
     '200': UserResources_GET_OkResponseSchema(),
     '403': User_CheckAnonymous_ForbiddenResponseSchema(),
     '404': UserResources_GET_NotFoundResponseSchema(),
@@ -264,7 +272,7 @@ def get_user_resources_view(request):
     '404': UserResources_GET_NotFoundResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),
 })
-@CurrentUserInheritedResourcesAPI.get(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
+@LoggedUserInheritedResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
     '200': UserResources_GET_OkResponseSchema(),
     '403': User_CheckAnonymous_ForbiddenResponseSchema(),
     '404': UserResources_GET_NotFoundResponseSchema(),
@@ -292,7 +300,7 @@ def get_user_resource_permissions_runner(request, inherited_permissions=True):
     '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),
 })
-@CurrentUserResourcePermissionsAPI.get(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
+@LoggedUserResourcePermissionsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
     '200': UserResourcePermissions_GET_OkResponseSchema(),
     '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
     '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
@@ -312,8 +320,8 @@ def get_user_resource_permissions_view(request):
     '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),
 })
-@CurrentUserResourceInheritedPermissionsAPI.get(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI,
-                                                response_schemas={
+@LoggedUserResourceInheritedPermissionsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                                               response_schemas={
     '200': UserResourcePermissions_GET_OkResponseSchema(),
     '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
     '404': Resource_MatchDictCheck_NotFoundResponseSchema(),

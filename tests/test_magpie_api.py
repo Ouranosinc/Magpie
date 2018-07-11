@@ -21,116 +21,6 @@ from magpie import magpie
 from test_utils import *
 
 
-# Generic setup and validation methods across unittests
-class TestSetup(object):
-    @staticmethod
-    def get_Version(test_class):
-        resp = test_request(test_class.url, 'GET', '/version',
-                            headers=test_class.json_headers, cookies=test_class.cookies)
-        json_body = check_response_basic_info(resp, 200)
-        return json_body['version']
-
-    @staticmethod
-    def create_TestServiceResource(test_class, data_override=None):
-        route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
-        data = {
-            "resource_name": test_class.test_resource_name,
-            "resource_type": test_class.test_resource_type,
-        }
-        if data_override:
-            data.update(data_override)
-        resp = test_request(test_class.url, 'POST', route,
-                            headers=test_class.json_headers,
-                            cookies=test_class.cookies, json=data)
-        return check_response_basic_info(resp, 201)
-
-    @staticmethod
-    def get_ExistingTestServiceInfo(test_class):
-        route = '/services/{svc}'.format(svc=test_class.test_service_name)
-        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
-        return resp.json()[test_class.test_service_name]
-
-    @staticmethod
-    def get_ExistingTestServiceDirectResources(test_class):
-        route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
-        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
-        json_body = resp.json()
-        resources = json_body[test_class.test_service_name]['resources']
-        return [resources[res] for res in resources]
-
-    @staticmethod
-    def check_NonExistingTestResource(test_class):
-        resources = TestSetup.get_ExistingTestServiceDirectResources(test_class)
-        resources_names = [res['resource_name'] for res in resources]
-        check_val_not_in(test_class.test_resource_name, resources_names)
-
-    @staticmethod
-    def delete_TestServiceResource(test_class):
-        resources = TestSetup.get_ExistingTestServiceDirectResources(test_class)
-        test_resource = filter(lambda r: r['resource_name'] == test_class.test_resource_name, resources)
-        # delete as required, skip if non-existing
-        if len(test_resource) > 0:
-            resource_id = test_resource[0]['resource_id']
-            route = '/services/{svc}/resources/{res_id}'.format(svc=test_class.test_service_name, res_id=resource_id)
-            resp = test_request(test_class.url, 'DELETE', route,
-                                headers=test_class.json_headers,
-                                cookies=test_class.cookies)
-            check_val_equal(resp.status_code, 200)
-        TestSetup.check_NonExistingTestResource(test_class)
-
-    @staticmethod
-    def get_RegisteredServicesList(test_class):
-        resp = test_request(test_class.url, 'GET', '/services',
-                            headers=test_class.json_headers,
-                            cookies=test_class.cookies)
-        json_body = check_response_basic_info(resp, 200)
-
-        # prepare a flat list of registered services
-        services_list = list()
-        for svc_type in json_body['services']:
-            services_of_type = json_body['services'][svc_type]
-            services_list.extend(services_of_type.values())
-        return services_list
-
-    @staticmethod
-    def get_RegisteredUsersList(test_class):
-        resp = test_request(test_class.url, 'GET', '/users',
-                            headers=test_class.json_headers,
-                            cookies=test_class.cookies)
-        json_body = check_response_basic_info(resp, 200)
-        return json_body['user_names']
-
-    @staticmethod
-    def check_NonExistingTestUser(test_class):
-        users = TestSetup.get_RegisteredUsersList(test_class)
-        check_val_not_in(test_class.test_user_name, users)
-
-    @staticmethod
-    def create_TestUser(test_class):
-        data = {
-            "user_name": test_class.test_user_name,
-            "email": '{}@mail.com'.format(test_class.test_user_name),
-            "password": test_class.test_user_name,
-            "group_name": test_class.test_user_group,
-        }
-        resp = test_request(test_class.url, 'POST', '/users',
-                            headers=test_class.json_headers,
-                            cookies=test_class.cookies, json=data)
-        return check_response_basic_info(resp, 201)
-
-    @staticmethod
-    def delete_TestUser(test_class):
-        users = TestSetup.get_RegisteredUsersList(test_class)
-        # delete as required, skip if non-existing
-        if test_class.test_user_name in users:
-            route = '/users/{usr}'.format(usr=test_class.test_user_name)
-            resp = test_request(test_class.url, 'DELETE', route,
-                                headers=test_class.json_headers,
-                                cookies=test_class.cookies)
-            check_val_equal(resp.status_code, 200)
-        TestSetup.check_NonExistingTestUser(test_class)
-
-
 @pytest.mark.offline
 @pytest.mark.api
 class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
@@ -142,7 +32,7 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
     def setUpClass(cls):
         cls.app = get_test_magpie_app()
         cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
-        cls.json_headers = [('Content-Type', 'application/json')]
+        cls.json_headers = get_headers_content_type(cls.app, 'application/json')
         cls.version = magpie.__meta__.__version__
         cls.cookies = None
         cls.usr = ANONYMOUS_USER
@@ -172,7 +62,7 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
 
     @pytest.mark.users
     def test_GetCurrentUser(self):
-        resp = test_request(self.url, 'GET', '/users/current', headers=self.json_headers, cookies=self.cookies)
+        resp = test_request(self.url, 'GET', '/users/{}'.format(LOGGED_USER), headers=self.json_headers)
         json_body = check_response_basic_info(resp, 200)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             check_val_equal(json_body['user']['user_name'], self.usr)
@@ -183,7 +73,7 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
 @pytest.mark.skip(reason="Not implemented.")
 @pytest.mark.offline
 @pytest.mark.api
-class TestMagpieAPI_WithUsersAuthLocal(unittest.TestCase):
+class TestMagpieAPI_UsersAuthLocal(unittest.TestCase):
     """
     Test any operation that require at least 'Users' group AuthN/AuthZ.
     """
@@ -200,7 +90,7 @@ class TestMagpieAPI_WithUsersAuthLocal(unittest.TestCase):
 @unittest.skip("Signin not working, cannot test protected paths.")
 @pytest.mark.offline
 @pytest.mark.api
-class TestMagpieAPI_WithAdminAuthLocal(unittest.TestCase):
+class TestMagpieAPI_AdminAuthLocal(unittest.TestCase):
     """
     Test any operation that require at least 'Administrator' group AuthN/AuthZ.
     """
@@ -214,9 +104,9 @@ class TestMagpieAPI_WithAdminAuthLocal(unittest.TestCase):
         assert cls.usr and cls.pwd, "cannot login with unspecified username/password"
         cls.headers, cls.cookies = check_or_try_login_user(cls.app, cls.usr, cls.pwd)
         cls.require = "cannot run tests without logged in '{}' user".format(ADMIN_GROUP)
+        cls.json_headers = get_headers_content_type(cls.app, 'application/json')
         assert cls.headers and cls.cookies, cls.require
         cls.app.cookies = cls.cookies
-        cls.json_headers = [('Content-Type', 'application/json')]
         cls.version = TestSetup.get_Version(cls)
 
     @classmethod
@@ -262,7 +152,7 @@ class TestMagpieAPI_NoAuthRemote(unittest.TestCase):
     def setUpClass(cls):
         cls.url = os.getenv('MAGPIE_TEST_REMOTE_SERVER_URL')
         assert cls.url, "cannot test without a remote server URL"
-        cls.json_headers = {'Content-Type': 'application/json'}
+        cls.json_headers = get_headers_content_type(cls.url, 'application/json')
         cls.cookies = None
         cls.usr = ANONYMOUS_USER
         cls.version = TestSetup.get_Version(cls)
@@ -306,7 +196,7 @@ class TestMagpieAPI_NoAuthRemote(unittest.TestCase):
 
 @pytest.mark.online
 @pytest.mark.api
-class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
+class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
     """
     Test any operation that require at least 'Administrator' group AuthN/AuthZ.
     Use an already running remote bird server.
@@ -321,7 +211,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         assert cls.usr and cls.pwd, "cannot login with unspecified username/password"
         cls.headers, cls.cookies = check_or_try_login_user(cls.url, cls.usr, cls.pwd)
         cls.require = "cannot run tests without logged in '{}' user".format(ADMIN_GROUP)
-        cls.json_headers = {'Content-Type': 'application/json'}
+        cls.json_headers = get_headers_content_type(cls.url, 'application/json')
         cls.check_requirements()
         cls.version = TestSetup.get_Version(cls)
         cls.get_test_values()
@@ -409,7 +299,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.users
     def test_GetCurrentUserResourcesPermissions(self):
-        self.check_GetUserResourcesPermissions('current')
+        self.check_GetUserResourcesPermissions(LOGGED_USER)
 
     @pytest.mark.users
     def test_GetUserResourcesPermissions(self):
@@ -589,7 +479,7 @@ class TestMagpieAPI_WithAdminAuthRemote(unittest.TestCase):
         check_val_equal(json_body['resource_type'], self.test_resource_type)
 
     @pytest.mark.services
-    def test_PostServiceResources_ChildrenResource_WithParentID(self):
+    def test_PostServiceResources_ChildrenResource_ParentID(self):
         # create the direct resource
         json_body = TestSetup.create_TestServiceResource(self)
         resources = TestSetup.get_ExistingTestServiceDirectResources(self)

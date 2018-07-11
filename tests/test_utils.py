@@ -31,6 +31,16 @@ def get_test_magpie_app():
     return app
 
 
+def get_headers_content_type(app_or_url, content_type):
+    if isinstance(app_or_url, TestApp):
+        return [('Content-Type', content_type)]
+    return {'Content-Type': content_type}
+
+
+def get_response_content_types_list(response):
+    return [ct.strip() for ct in response.headers['Content-Type'].split(';')]
+
+
 def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kwargs):
     """
     Calls the request using either a `webtest.TestApp` instance or a `requests` instance from a string URL.
@@ -53,7 +63,9 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
     if isinstance(app_or_url, TestApp):
         # remove any 'cookies' keyword handled by the 'TestApp' instance
         if 'cookies' in kwargs:
-            kwargs.pop('cookies')
+            cookies = kwargs.pop('cookies')
+            if cookies and not app_or_url.cookies:
+                app_or_url.cookies.update(cookies)
 
         kwargs['params'] = json_body
         if method == 'GET':
@@ -165,7 +177,7 @@ def check_response_basic_info(response, expected_code=200):
         json_body = response.json
     else:
         json_body = response.json()
-    content_types = [ct.strip() for ct in response.headers['Content-Type'].split(';')]
+    content_types = get_response_content_types_list(response)
     check_val_is_in('application/json', content_types)
     check_val_equal(response.status_code, expected_code)
     check_val_equal(json_body['code'], expected_code)
@@ -275,3 +287,137 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
         check_val_type(resource_info['permission_names'], list)
         check_val_is_in('children', resource_info)
         check_resource_children(resource_info['children'], resource_int_id, root_service_id)
+
+
+# Generic setup and validation methods across unittests
+class TestSetup(object):
+    @staticmethod
+    def get_Version(test_class):
+        resp = test_request(test_class.url, 'GET', '/version',
+                            headers=test_class.json_headers, cookies=test_class.cookies)
+        json_body = check_response_basic_info(resp, 200)
+        return json_body['version']
+
+    @staticmethod
+    def check_UpStatus(test_class, method, path):
+        """
+        Verifies that the Magpie UI page at very least returned an Ok response with the displayed title.
+        Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
+        """
+        resp = test_request(test_class.url, method, path, cookies=test_class.cookies)
+        check_val_equal(resp.status_code, 200)
+        check_val_is_in('Content-Type', resp.headers)
+        check_val_is_in('text/html', get_response_content_types_list(resp))
+        check_val_is_in("Magpie Administration", resp.text)
+
+    @staticmethod
+    def get_AnyServiceOfTestServiceType(test_class):
+        route = '/services/types/{}'.format(test_class.test_service_type)
+        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
+        check_val_equal(resp.status_code, 200)
+        json_body = resp.json()
+        check_val_is_in('services', json_body)
+        check_val_is_in(test_class.test_service_type, json_body['services'])
+        check_val_not_equal(len(json_body['services'][test_class.test_service_type]), 0)
+        services = json_body['services'][test_class.test_service_type]
+        return services.items()[0]
+
+    @staticmethod
+    def create_TestServiceResource(test_class, data_override=None):
+        route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
+        data = {
+            "resource_name": test_class.test_resource_name,
+            "resource_type": test_class.test_resource_type,
+        }
+        if data_override:
+            data.update(data_override)
+        resp = test_request(test_class.url, 'POST', route,
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies, json=data)
+        return check_response_basic_info(resp, 201)
+
+    @staticmethod
+    def get_ExistingTestServiceInfo(test_class):
+        route = '/services/{svc}'.format(svc=test_class.test_service_name)
+        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
+        return resp.json()[test_class.test_service_name]
+
+    @staticmethod
+    def get_ExistingTestServiceDirectResources(test_class):
+        route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
+        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
+        json_body = resp.json()
+        resources = json_body[test_class.test_service_name]['resources']
+        return [resources[res] for res in resources]
+
+    @staticmethod
+    def check_NonExistingTestResource(test_class):
+        resources = TestSetup.get_ExistingTestServiceDirectResources(test_class)
+        resources_names = [res['resource_name'] for res in resources]
+        check_val_not_in(test_class.test_resource_name, resources_names)
+
+    @staticmethod
+    def delete_TestServiceResource(test_class):
+        resources = TestSetup.get_ExistingTestServiceDirectResources(test_class)
+        test_resource = filter(lambda r: r['resource_name'] == test_class.test_resource_name, resources)
+        # delete as required, skip if non-existing
+        if len(test_resource) > 0:
+            resource_id = test_resource[0]['resource_id']
+            route = '/services/{svc}/resources/{res_id}'.format(svc=test_class.test_service_name, res_id=resource_id)
+            resp = test_request(test_class.url, 'DELETE', route,
+                                headers=test_class.json_headers,
+                                cookies=test_class.cookies)
+            check_val_equal(resp.status_code, 200)
+        TestSetup.check_NonExistingTestResource(test_class)
+
+    @staticmethod
+    def get_RegisteredServicesList(test_class):
+        resp = test_request(test_class.url, 'GET', '/services',
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies)
+        json_body = check_response_basic_info(resp, 200)
+
+        # prepare a flat list of registered services
+        services_list = list()
+        for svc_type in json_body['services']:
+            services_of_type = json_body['services'][svc_type]
+            services_list.extend(services_of_type.values())
+        return services_list
+
+    @staticmethod
+    def get_RegisteredUsersList(test_class):
+        resp = test_request(test_class.url, 'GET', '/users',
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies)
+        json_body = check_response_basic_info(resp, 200)
+        return json_body['user_names']
+
+    @staticmethod
+    def check_NonExistingTestUser(test_class):
+        users = TestSetup.get_RegisteredUsersList(test_class)
+        check_val_not_in(test_class.test_user_name, users)
+
+    @staticmethod
+    def create_TestUser(test_class):
+        data = {
+            "user_name": test_class.test_user_name,
+            "email": '{}@mail.com'.format(test_class.test_user_name),
+            "password": test_class.test_user_name,
+            "group_name": test_class.test_user_group,
+        }
+        resp = test_request(test_class.url, 'POST', '/users',
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies, json=data)
+        return check_response_basic_info(resp, 201)
+
+    @staticmethod
+    def delete_TestUser(test_class):
+        users = TestSetup.get_RegisteredUsersList(test_class)
+        # delete as required, skip if non-existing
+        if test_class.test_user_name in users:
+            route = '/users/{usr}'.format(usr=test_class.test_user_name)
+            resp = test_request(test_class.url, 'DELETE', route,
+                                headers=test_class.json_headers,
+                                cookies=test_class.cookies)
+            check_val_equal(resp.status_code, 200)
+        TestSetup.check_NonExistingTestUser(test_class)

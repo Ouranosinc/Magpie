@@ -1,6 +1,7 @@
 from definitions.cornice_definitions import *
 from definitions.pyramid_definitions import *
 from db import get_database_revision
+from magpie import LOGGED_USER
 import __meta__
 import requests
 
@@ -29,7 +30,7 @@ InfoAPI = {
 APITag = 'API'
 LoginTag = 'Login'
 UsersTag = 'User'
-CurrentUserTag = 'Current User'
+LoggedUserTag = 'Logged User'
 GroupsTag = 'Group'
 ResourcesTag = 'Resource'
 ServicesTag = 'Service'
@@ -54,6 +55,9 @@ def get_security(service, method):
 # Service Routes
 def service_api_route_info(service_api):
     return {'name': service_api.name, 'pattern': service_api.path}
+
+
+LoggedUserBase = '/users/{}'.format(LOGGED_USER)
 
 
 SwaggerAPI = Service(
@@ -111,54 +115,54 @@ UserServicePermissionsAPI = Service(
 UserServicePermissionAPI = Service(
     path='/users/{user_name}/services/{service_name}/permissions/{permission_name}',
     name='UserServicePermission')
-CurrentUserAPI = Service(
-    path='/users/current',
-    name='CurrentUser')
-CurrentUserGroupsAPI = Service(
-    path='/users/current/groups',
-    name='CurrentUserGroups')
-CurrentUserGroupAPI = Service(
-    path='/users/current/groups/{group_name}',
-    name='CurrentUserGroup')
-CurrentUserInheritedResourcesAPI = Service(
-    path='/users/current/inherited_resources',
-    name='CurrentUserInheritedResources')
-CurrentUserResourcesAPI = Service(
-    path='/users/current/resources',
-    name='CurrentUserResources')
-CurrentUserResourceInheritedPermissionsAPI = Service(
-    path='/users/current/resources/{resource_id}/inherited_permissions',
-    name='CurrentUserResourceInheritedPermissions')
-CurrentUserResourcePermissionAPI = Service(
-    path='/users/current/resources/{resource_id}/permissions/{permission_name}',
-    name='CurrentUserResourcePermission')
-CurrentUserResourcePermissionsAPI = Service(
-    path='/users/current/resources/{resource_id}/permissions',
-    name='CurrentUserResourcePermissions')
-CurrentUserResourceTypesAPI = Service(
-    path='/users/current/resources/types/{resource_type}',
-    name='CurrentUserResourceTypes')
-CurrentUserInheritedServicesAPI = Service(
-    path='/users/current/inherited_services',
-    name='CurrentUserInheritedServices')
-CurrentUserServicesAPI = Service(
-    path='/users/current/services',
-    name='CurrentUserServices')
-CurrentUserServiceInheritedResourcesAPI = Service(
-    path='/users/current/services/{service_name}/inherited_resources',
-    name='CurrentUserServiceInheritedResources')
-CurrentUserServiceResourcesAPI = Service(
-    path='/users/current/services/{service_name}/resources',
-    name='CurrentUserServiceResources')
-CurrentUserServiceInheritedPermissionsAPI = Service(
-    path='/users/current/services/{service_name}/inherited_permissions',
-    name='CurrentUserServiceInheritedPermissions')
-CurrentUserServicePermissionsAPI = Service(
-    path='/users/current/services/{service_name}/permissions',
-    name='CurrentUserServicePermissions')
-CurrentUserServicePermissionAPI = Service(
-    path='/users/current/services/{service_name}/permissions/{permission_name}',
-    name='CurrentUserServicePermission')
+LoggedUserAPI = Service(
+    path=LoggedUserBase,
+    name='LoggedUser')
+LoggedUserGroupsAPI = Service(
+    path=LoggedUserBase + '/groups',
+    name='LoggedUserGroups')
+LoggedUserGroupAPI = Service(
+    path=LoggedUserBase + '/groups/{group_name}',
+    name='LoggedUserGroup')
+LoggedUserInheritedResourcesAPI = Service(
+    path=LoggedUserBase + '/inherited_resources',
+    name='LoggedUserInheritedResources')
+LoggedUserResourcesAPI = Service(
+    path=LoggedUserBase + '/resources',
+    name='LoggedUserResources')
+LoggedUserResourceInheritedPermissionsAPI = Service(
+    path=LoggedUserBase + '/resources/{resource_id}/inherited_permissions',
+    name='LoggedUserResourceInheritedPermissions')
+LoggedUserResourcePermissionAPI = Service(
+    path=LoggedUserBase + '/resources/{resource_id}/permissions/{permission_name}',
+    name='LoggedUserResourcePermission')
+LoggedUserResourcePermissionsAPI = Service(
+    path=LoggedUserBase + '/resources/{resource_id}/permissions',
+    name='LoggedUserResourcePermissions')
+LoggedUserResourceTypesAPI = Service(
+    path=LoggedUserBase + '/resources/types/{resource_type}',
+    name='LoggedUserResourceTypes')
+LoggedUserInheritedServicesAPI = Service(
+    path=LoggedUserBase + '/inherited_services',
+    name='LoggedUserInheritedServices')
+LoggedUserServicesAPI = Service(
+    path=LoggedUserBase + '/services',
+    name='LoggedUserServices')
+LoggedUserServiceInheritedResourcesAPI = Service(
+    path=LoggedUserBase + '/services/{service_name}/inherited_resources',
+    name='LoggedUserServiceInheritedResources')
+LoggedUserServiceResourcesAPI = Service(
+    path=LoggedUserBase + '/services/{service_name}/resources',
+    name='LoggedUserServiceResources')
+LoggedUserServiceInheritedPermissionsAPI = Service(
+    path=LoggedUserBase + '/services/{service_name}/inherited_permissions',
+    name='LoggedUserServiceInheritedPermissions')
+LoggedUserServicePermissionsAPI = Service(
+    path=LoggedUserBase + '/services/{service_name}/permissions',
+    name='LoggedUserServicePermissions')
+LoggedUserServicePermissionAPI = Service(
+    path=LoggedUserBase + '/services/{service_name}/permissions/{permission_name}',
+    name='LoggedUserServicePermission')
 GroupsAPI = Service(
     path='/groups',
     name='Groups')
@@ -863,7 +867,7 @@ class Service_PUT_OkResponseSchema(colander.MappingSchema):
 
 
 class Service_PUT_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Current service values are already equal to update values."
+    description = "Logged service values are already equal to update values."
     body = Service_FailureBodyResponseSchema(code=HTTPBadRequest.code)
 
 
