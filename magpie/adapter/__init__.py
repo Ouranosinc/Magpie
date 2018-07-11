@@ -28,11 +28,11 @@ class MagpieAdapter(AdapterInterface):
         logger.info('Loading MagpieAdapter config')
         config = auth_config_from_settings(settings)
         config.set_request_property(get_user, 'user', reify=True)
+        self.owsproxy_config(settings, config)
         return config
 
     def owsproxy_config(self, settings, config):
         logger.info('Loading MagpieAdapter owsproxy config')
-        protected_path = settings.get('twitcher.ows_proxy_protected_path', '/ows')
 
         # use pyramid_tm to hook the transaction lifecycle to the request
         config.include('pyramid_tm')
@@ -49,6 +49,7 @@ class MagpieAdapter(AdapterInterface):
         )
 
         logger.info('Adding MagpieAdapter owsproxy routes and views')
+        protected_path = settings.get('twitcher.ows_proxy_protected_path', '/ows')
         config.add_route('owsproxy', protected_path + '/{service_name}')
         config.add_route('owsproxy_extra', protected_path + '/{service_name}/{extra_path:.*}')
         config.add_route('owsproxy_secured', protected_path + '/{service_name}/{access_token}')
