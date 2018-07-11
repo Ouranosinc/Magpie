@@ -7,6 +7,7 @@ from definitions.pyramid_definitions import *
 from definitions.ziggurat_definitions import *
 from magpie import *
 from api.api_requests import *
+from api.api_except import *
 from api.management.user.user_utils import create_user
 import requests
 
