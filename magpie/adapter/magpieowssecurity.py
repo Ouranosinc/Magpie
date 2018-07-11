@@ -1,6 +1,6 @@
 import tempfile
-from definitions.twitcher_definitions import *
-from definitions.pyramid_definitions import IAuthenticationPolicy, IAuthorizationPolicy, HTTPForbidden, HTTPNotFound
+from magpie.definitions.twitcher_definitions import *
+from magpie.definitions.pyramid_definitions import *
 from magpie.services import service_factory
 from magpie.models import Service
 from magpie.api.api_except import evaluate_call, verify_param

@@ -7,8 +7,8 @@ import requests
 import json
 LOGGER = logging.getLogger(__name__)
 
-from definitions.twitcher_definitions import *
-from definitions.pyramid_definitions import ConfigurationError
+from magpie.definitions.twitcher_definitions import *
+from magpie.definitions.pyramid_definitions import ConfigurationError
 
 
 class MagpieServiceStore(ServiceStore):

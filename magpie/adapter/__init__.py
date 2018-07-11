@@ -1,5 +1,10 @@
-from definitions.twitcher_definitions import *
-from db import *
+from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.ziggurat_definitions import *
+from magpie.definitions.twitcher_definitions import *
+from magpie.adapter.magpieowssecurity import *
+from magpie.adapter.magpieservice import *
+from magpie.models import get_user
+from magpie.db import *
 import logging
 logger = logging.getLogger(__name__)
 
@@ -7,22 +12,15 @@ logger = logging.getLogger(__name__)
 class MagpieAdapter(AdapterInterface):
 
     def servicestore_factory(self, registry, database=None, headers=None):
-        from magpie.magpieadapter.magpieservice import MagpieServiceStore
         return MagpieServiceStore(registry=registry, headers=headers)
 
     def owssecurity_factory(self, registry):
-        from magpie.magpieadapter.magpieowssecurity import MagpieOWSSecurity
         # TODO For magpie we cannot store the servicestore object since the constructor need a header with token
         # taken from the request... maybe we should check for that?!?
         #return MagpieOWSSecurity(tokenstore_factory(registry), servicestore_factory(registry))
         return MagpieOWSSecurity()
 
     def configurator_factory(self, settings):
-        from pyramid.config import Configurator
-        from pyramid.authentication import AuthTktAuthenticationPolicy
-        from pyramid.authorization import ACLAuthorizationPolicy
-        from ziggurat_foundations.models import groupfinder
-
         magpie_secret = settings['magpie.secret']
 
         # Disable rpcinterface which is conflicting with postgres db
@@ -40,14 +38,11 @@ class MagpieAdapter(AdapterInterface):
             authorization_policy=authz_policy
         )
 
-        from magpie.models import get_user
         config.set_request_property(get_user, 'user', reify=True)
         return config
 
     def owsproxy_config(self, settings, config):
         protected_path = settings.get('twitcher.ows_proxy_protected_path', '/ows')
-
-        settings = config.get_settings()
 
         # use pyramid_tm to hook the transaction lifecycle to the request
         config.include('pyramid_tm')
