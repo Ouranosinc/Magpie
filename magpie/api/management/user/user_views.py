@@ -240,13 +240,13 @@ def get_user_resources_runner(request, inherited_group_resources_permissions=Tru
                       content={u'resources': usr_res_dict})
 
 
-@UserResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
+@CurrentUserResourcesAPI.get(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
     '200': UserResources_GET_OkResponseSchema(),
     '403': User_CheckAnonymous_ForbiddenResponseSchema(),
     '404': UserResources_GET_NotFoundResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),
 })
-@CurrentUserResourcesAPI.get(tags=[CurrentUserTag], api_security=SecurityEveryoneAPI, response_schemas={
+@UserResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
     '200': UserResources_GET_OkResponseSchema(),
     '403': User_CheckAnonymous_ForbiddenResponseSchema(),
     '404': UserResources_GET_NotFoundResponseSchema(),

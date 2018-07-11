@@ -229,7 +229,7 @@ class ManagementViews(object):
 
         user_resp = requests.get(user_url, cookies=self.request.cookies)
         check_response(user_resp)
-        user_info = user_resp.json()
+        user_info = user_resp.json()['user']
         user_info[u'edit_mode'] = u'no_edit'
         user_info[u'own_groups'] = own_groups
         user_info[u'groups'] = all_groups

@@ -38,7 +38,7 @@ ServicesTag = 'Service'
 # Security
 SecurityDefinitionAPI = {'securityDefinitions': {'cookieAuth': {'type': 'apiKey', 'in': 'cookie', 'name': 'auth_tkt'}}}
 SecurityAdministratorAPI = [{'cookieAuth': []}]
-SecurityEveryoneAPI = []
+SecurityEveryoneAPI = [{}]
 
 
 def get_security(service, method):
@@ -310,7 +310,7 @@ class InternalServerErrorBodySchema(colander.MappingSchema):
     request_url = colander.SchemaNode(
         colander.String(),
         description="Request URL that generated the error",
-        example="http://localhost:HTTPOk.code1/magpie/users/toto")
+        example="http://localhost:2001/magpie/users/toto")
 
 
 class InternalServerErrorResponseSchema(colander.MappingSchema):
@@ -1246,7 +1246,7 @@ class UserGroup_DELETE_NotFoundResponseSchema(colander.MappingSchema):
 
 
 class UserResources_GET_BodyResponseSchema(BaseBodySchema):
-    resources = ResourcesSchemaNode
+    resources = ResourcesSchemaNode()
 
 
 class UserResources_GET_OkResponseSchema(colander.MappingSchema):
