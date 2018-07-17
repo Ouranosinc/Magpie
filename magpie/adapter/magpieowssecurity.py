@@ -11,8 +11,7 @@ LOGGER = logging.getLogger("TWITCHER")
 
 class MagpieOWSSecurity(object):
 
-    @staticmethod
-    def prepare_headers(request, access_token):
+    def prepare_headers(self, request, access_token):
         if "esgf_access_token" in access_token.data or "esgf_credentials" in access_token.data:
             workdir = tempfile.mkdtemp(prefix=request.prefix, dir=request.workdir)
             if fetch_certificate(workdir=workdir, data=access_token.data):
@@ -21,8 +20,7 @@ class MagpieOWSSecurity(object):
                 LOGGER.debug("Prepared request headers.")
         return request
 
-    @staticmethod
-    def check_request(request):
+    def check_request(self, request):
         twitcher_protected_path = request.registry.settings.get('twitcher.ows_proxy_protected_path', '/ows')
         if request.path.startswith(twitcher_protected_path):
             service_name = parse_service_name(request.path, twitcher_protected_path)
