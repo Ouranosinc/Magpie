@@ -20,8 +20,10 @@ from magpie import *
 from tests.utils import *
 
 
-@pytest.mark.offline
 @pytest.mark.ui
+@pytest.mark.local
+@unittest.skipUnless(os.getenv('MAGPIE_TEST_UI', True), reason="Skip 'ui' tests requested.")
+@unittest.skipUnless(os.getenv('MAGPIE_TEST_LOCAL', True), reason="Skip 'local' tests requested.")
 class TestMagpieUI_NoAuthLocal(unittest.TestCase):
     """
     Test any operation that do not require user AuthN/AuthZ.
@@ -39,18 +41,22 @@ class TestMagpieUI_NoAuthLocal(unittest.TestCase):
         pyramid.testing.tearDown()
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_Home(self):
         TestSetup.check_UpStatus(self, method='GET', path='/')
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_Login(self):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/login')
 
 
 @unittest.skip("Not implemented.")
 @pytest.mark.skip(reason="Not implemented.")
-@pytest.mark.offline
-@pytest.mark.api
+@pytest.mark.ui
+@pytest.mark.local
+@unittest.skipUnless(os.getenv('MAGPIE_TEST_UI', True), reason="Skip 'ui' tests requested.")
+@unittest.skipUnless(os.getenv('MAGPIE_TEST_LOCAL', True), reason="Skip 'local' tests requested.")
 class TestMagpieUI_AdminAuthLocal(unittest.TestCase):
     """
     Test any operation that require at least 'administrator' group AuthN/AuthZ.
@@ -65,8 +71,10 @@ class TestMagpieUI_AdminAuthLocal(unittest.TestCase):
         pyramid.testing.tearDown()
 
 
-@pytest.mark.online
 @pytest.mark.ui
+@pytest.mark.remote
+@unittest.skipUnless(os.getenv('MAGPIE_TEST_UI', True), reason="Skip 'ui' tests requested.")
+@unittest.skipUnless(os.getenv('MAGPIE_TEST_REMOTE', True), reason="Skip 'remote' tests requested.")
 class TestMagpieUI_NoAuthRemote(unittest.TestCase):
     """
     Test any operation that do not require user AuthN/AuthZ.
@@ -86,16 +94,20 @@ class TestMagpieUI_NoAuthRemote(unittest.TestCase):
         pyramid.testing.tearDown()
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_Home(self):
         TestSetup.check_UpStatus(self, method='GET', path='/')
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_Login(self):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/login')
 
 
-@pytest.mark.online
 @pytest.mark.ui
+@pytest.mark.remote
+@unittest.skipUnless(os.getenv('MAGPIE_TEST_UI', True), reason="Skip 'ui' tests requested.")
+@unittest.skipUnless(os.getenv('MAGPIE_TEST_REMOTE', True), reason="Skip 'remote' tests requested.")
 class TestMagpieUI_AdminAuthRemote(unittest.TestCase):
     """
     Test any operation that require at least 'Administrator' group AuthN/AuthZ.
@@ -130,62 +142,57 @@ class TestMagpieUI_AdminAuthRemote(unittest.TestCase):
         self.check_requirements()
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_Home(self):
         TestSetup.check_UpStatus(self, method='GET', path='/')
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_Login(self):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/login')
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_ViewUsers(self):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/users')
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_EditUser(self):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/users/anonymous/default')
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_EditUserService(self):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/users/anonymous/{}'.format(self.test_service_type))
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_ViewGroups(self):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/groups')
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_EditGroup(self):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/groups/anonymous/default')
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_EditGroupService(self):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/groups/anonymous/{}'.format(self.test_service_type))
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_ViewService(self):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/services/default')
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_ViewServiceSpecific(self):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/services/{}'.format(self.test_service_type))
 
     @pytest.mark.status
+    @unittest.skipUnless(os.getenv('MAGPIE_TEST_STATUS', True), reason="Skip 'status' tests requested.")
     def test_EditService(self):
         path = '/ui/services/{type}/{name}'.format(type=self.test_service_type, name=self.test_service_name)
         TestSetup.check_UpStatus(self, method='GET', path=path)
-
-
-test_cases = [
-    TestMagpieUI_NoAuthLocal,
-    TestMagpieUI_AdminAuthLocal,
-    TestMagpieUI_NoAuthRemote,
-    TestMagpieUI_AdminAuthRemote,
-]
-
-
-def load_tests(loader, tests, pattern):
-    suite = unittest.TestSuite()
-    for test_class in test_cases:
-        tests = loader.loadTestsFromTestCase(test_class)
-        suite.addTests(tests)
-    return suite
