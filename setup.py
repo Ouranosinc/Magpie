@@ -37,7 +37,7 @@ REQUIREMENTS = list(REQUIREMENTS)
 
 # put package test requirements here
 TEST_REQUIREMENTS = {
-    'nose',
+    'nose==1.3.7',
     'webtest',
     'pytest',
 }
