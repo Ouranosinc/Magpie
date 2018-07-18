@@ -45,7 +45,7 @@ clean-pyc:
 clean-test:
 	rm -fr .tox/
 	rm -f .coverage
-	rm -fr htmlcov/
+	rm -fr coverage/
 
 lint:
 	flake8 magpie tests

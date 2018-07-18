@@ -36,21 +36,22 @@ LINKS = list(LINKS)
 REQUIREMENTS = list(REQUIREMENTS)
 
 # put package test requirements here
-TEST_REQUIREMENTS = {
+TEST_REQUIREMENTS = [
     'nose==1.3.7',
     'webtest',
     'pytest',
-}
+]
 
-RAW_REQUIREMENTS = set()
+raw_requirements = set()
 for req in REQUIREMENTS:
-    raw_req = req.split('>')[0].split('=')[0].split('<')[0]
-    RAW_REQUIREMENTS.add(raw_req)
+    raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
+    raw_requirements.add(raw_req)
+filtered_test_requirements = set()
 for req in TEST_REQUIREMENTS:
-    raw_req = req.split('>')[0].split('=')[0].split('<')[0]
-    if raw_req not in RAW_REQUIREMENTS:
-        TEST_REQUIREMENTS.add(raw_req)
-TEST_REQUIREMENTS = list(TEST_REQUIREMENTS)
+    raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
+    if raw_req not in raw_requirements:
+        filtered_test_requirements.add(req)
+TEST_REQUIREMENTS = list(filtered_test_requirements)
 
 setup(
     # -- meta information --------------------------------------------------
