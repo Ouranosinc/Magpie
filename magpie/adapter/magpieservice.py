@@ -46,7 +46,9 @@ class MagpieServiceStore(ServiceStore):
         services = json.loads(response.text)
         if 'wps' in services['services']:
             for key, service in services['services']['wps'].items():
-                my_services.append(Service(url=service['service_url'], name=service['service_name']))
+                my_services.append(Service(url=service['service_url'],
+                                           name=service['service_name'],
+                                           type=service['service_type']))
         return my_services
 
     def fetch_by_name(self, name):
@@ -60,7 +62,9 @@ class MagpieServiceStore(ServiceStore):
             raise response.raise_for_status()
         services = json.loads(response.text)
         if name in services:
-            return Service(url=services[name]['service_url'], name=services[name]['service_name'])
+            return Service(url=services[name]['service_url'],
+                           name=services[name]['service_name'],
+                           type=services[name]['service_type'])
         raise ServiceNotFound
 
     def fetch_by_url(self, url):
