@@ -18,32 +18,32 @@ class MagpieServiceStore(ServiceStore):
     """
     Registry for OWS services. Uses magpie to fetch service url and attributes.
     """
-    def __init__(self, registry, headers=None):
-        self.headers = headers
+    def __init__(self, registry):
         try:
             self.magpie_url = registry.settings.get('magpie.url').strip('/')
         except AttributeError:
             #If magpie.url does not exist, calling strip fct over None will raise this issue
             raise ConfigurationError('magpie.url config cannot be found')
 
-    def save_service(self, service, overwrite=True):
+    def save_service(self, service, overwrite=True, request=None):
         """
         Magpie store is read-only, use magpie api to add services
         """
         raise NotImplementedError
 
-    def delete_service(self, name):
+    def delete_service(self, name, request=None):
         """
         Magpie store is read-only, use magpie api to delete services
         """
         raise NotImplementedError
 
-    def list_services(self):
+    #TODO Now only wps are returned as well as fetch_by_ulr... fetch_by_name has been patched to support other service_type
+    def list_services(self, request=None):
         """
         Lists all services registered in magpie.
         """
         my_services = []
-        response = requests.get(self.magpie_url + '/services/types/wps', headers=self.headers)
+        response = requests.get(self.magpie_url + '/services/types/wps', cookies=request.cookies)
         if response.status_code != 200:
             raise response.raise_for_status()
         services = json.loads(response.text)
@@ -52,11 +52,11 @@ class MagpieServiceStore(ServiceStore):
                 my_services.append(Service(url=service['service_url'], name=service['service_name']))
         return my_services
 
-    def fetch_by_name(self, name):
+    def fetch_by_name(self, name, request=None):
         """
         Gets service for given ``name`` from magpie.
         """
-        response = requests.get(self.magpie_url + '/services/{name}'.format(name=name), headers=self.headers)
+        response = requests.get(self.magpie_url + '/services/{name}'.format(name=name), cookies=request.cookies)
         if response.status_code == 404:
             raise ServiceNotFound
         if response.status_code != 200:
@@ -66,18 +66,18 @@ class MagpieServiceStore(ServiceStore):
             return Service(url=services[name]['service_url'], name=services[name]['service_name'])
         raise ServiceNotFound
 
-    def fetch_by_url(self, url):
+    def fetch_by_url(self, url, request=None):
         """
         Gets service for given ``url`` from mongodb storage.
         """
-        services = self.list_services()
+        services = self.list_services(request=request)
         for service in services:
             if service.url == url:
                 return service
         raise ServiceNotFound
 
 
-    def clear_services(self):
+    def clear_services(self, request=None):
         """
         Magpie store is read-only, use magpie api to delete services
         """
