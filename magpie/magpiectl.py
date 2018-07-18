@@ -25,6 +25,7 @@ from api.api_rest_schemas import *
 from common import *
 from helpers.register_default_users import register_default_users
 from helpers.register_providers import magpie_register_services_from_config
+import warnings
 import models
 import db
 import __meta__
@@ -87,13 +88,16 @@ def main(global_config=None, **settings):
     settings['magpie.module'] = MAGPIE_MODULE_DIR
 
     # migrate db as required and check if database is ready
-    print_log('Running database migration (as required) ...')
-    try:
-        db.run_database_migration()
-    except ImportError:
-        pass
-    except Exception as e:
-        raise_log('Database migration failed [{}]'.format(str(e)))
+    if not settings.get('magpie.db_migration_disabled', False):
+        print_log('Running database migration (as required) ...')
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=sa_exc.SAWarning)
+                db.run_database_migration()
+        except ImportError:
+            pass
+        except Exception as e:
+            raise_log('Database migration failed [{}]'.format(str(e)))
     if not db.is_database_ready():
         time.sleep(2)
         raise_log('Database not ready')

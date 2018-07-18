@@ -1,5 +1,7 @@
+from magpie import MAGPIE_ROOT
 from definitions.alembic_definitions import *
 from definitions.sqlalchemy_definitions import *
+from common import print_log
 # noinspection PyCompatibility
 import configparser
 import transaction
@@ -84,14 +86,8 @@ def get_settings_from_config_ini(config_ini_path, ini_main_section_name='app:mag
     return settings
 
 
-def get_alembic_ini_path():
-    curr_path = os.path.dirname(os.path.abspath(__file__))
-    curr_path = os.path.dirname(curr_path)
-    return '{path}/alembic.ini'.format(path=curr_path)
-
-
 def run_database_migration():
-    alembic_args = ['-c', get_alembic_ini_path(), 'upgrade', 'heads']
+    alembic_args = ['-c', '{path}/alembic.ini'.format(path=MAGPIE_ROOT), 'upgrade', 'heads']
     alembic.config.main(argv=alembic_args)
 
 

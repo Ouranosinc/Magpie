@@ -4,8 +4,8 @@ import requests
 from distutils.version import *
 from webtest import TestApp
 from webtest.response import TestResponse
-from magpie import magpie, db, common, __meta__
-from magpie import *
+import magpie
+from magpie import __meta__, db, models, magpiectl, MAGPIE_INI_FILE_PATH
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -18,16 +18,17 @@ def get_test_magpie_app():
     # parse settings from ini file to pass them to the application
     config = config_setup_from_ini(MAGPIE_INI_FILE_PATH)
     # required redefinition because root models' location is not the same from within this test file
-    config.add_settings({'ziggurat_foundations.model_locations.User': 'magpie.models:User',
-                         'ziggurat_foundations.model_locations.user': 'magpie.models:User'})
+    config.add_settings({'ziggurat_foundations.model_locations.User': 'models:User',
+                         'ziggurat_foundations.model_locations.user': 'models:User'})
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
     # remove API which cause duplicate view errors (?) TODO: figure out why it does so, because it shouldn't
     config.registry.settings['magpie.api_generation_disabled'] = True
+    config.registry.settings['magpie.db_migration_disabled'] = True
     # scan dependencies
     config.include('magpie')
     config.scan('magpie')
     # create the test application
-    app = TestApp(magpie.main({}, **config.registry.settings))
+    app = TestApp(magpiectl.main({}, **config.registry.settings))
     return app
 
 
@@ -320,7 +321,7 @@ class TestSetup(object):
         check_val_is_in(test_class.test_service_type, json_body['services'])
         check_val_not_equal(len(json_body['services'][test_class.test_service_type]), 0)
         services = json_body['services'][test_class.test_service_type]
-        return services.items()[0]
+        return services[services.keys()[0]]
 
     @staticmethod
     def create_TestServiceResource(test_class, data_override=None):

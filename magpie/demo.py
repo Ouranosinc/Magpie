@@ -11,7 +11,7 @@ def main(global_settings, **settings):
     )
 
     config.include('pyramid_mako')
-    config.include('ui')
+    config.include('magpie.ui')
 
     config.scan()
     return config.make_wsgi_app()

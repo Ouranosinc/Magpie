@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os, sys
+import os
+import sys
 MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, 'magpie')
 sys.path.insert(0, MAGPIE_MODULE_DIR)
-
-from tests.test_runner import test_suite
 
 from setuptools import find_packages
 try:
@@ -14,7 +13,7 @@ try:
 except ImportError:
     from distutils.core import setup
 
-import __meta__
+from magpie import __meta__
 
 with open('README.rst') as readme_file:
     README = readme_file.read()
@@ -73,12 +72,8 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: ISC License (ISCL)',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
     ],
 
     # -- Package structure -------------------------------------------------
@@ -86,21 +81,22 @@ setup(
     #    'magpie',
     #],
     packages=find_packages(),
-    package_dir={'magpie':
-                 'magpie'},
+    package_dir={'magpie': 'magpie'},
     include_package_data=True,
     install_requires=REQUIREMENTS,
     dependency_links=LINKS,
     zip_safe=False,
 
     # -- self - tests --------------------------------------------------------
-    test_suite='setup.test_suite',
+    #test_suite='nose.collector',
+    #test_suite='tests.test_runner',
+    #test_loader='tests.test_runner:run_suite',
     tests_require=TEST_REQUIREMENTS,
 
     # -- script entry points -----------------------------------------------
     entry_points="""\
           [paste.app_factory]
-          main = magpie:main
+          main = magpiectl:main
           [console_scripts]
           """,
 )

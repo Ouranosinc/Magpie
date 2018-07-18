@@ -8,15 +8,16 @@ test_magpie_ui
 Tests for `magpie.ui` module.
 """
 
+import os
 import unittest
 import pytest
 import pyramid.testing
 import six
 import yaml
+import magpie
+from services import service_type_dict
 from magpie import *
-from magpie.services import service_type_dict
-from magpie import magpie
-from test_utils import *
+from tests.utils import *
 
 
 @pytest.mark.offline
@@ -46,6 +47,24 @@ class TestMagpieUI_NoAuthLocal(unittest.TestCase):
         TestSetup.check_UpStatus(self, method='GET', path='/ui/login')
 
 
+@unittest.skip("Not implemented.")
+@pytest.mark.skip(reason="Not implemented.")
+@pytest.mark.offline
+@pytest.mark.api
+class TestMagpieUI_AdminAuthLocal(unittest.TestCase):
+    """
+    Test any operation that require at least 'administrator' group AuthN/AuthZ.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = get_test_magpie_app()
+
+    @classmethod
+    def tearDownClass(cls):
+        pyramid.testing.tearDown()
+
+
 @pytest.mark.online
 @pytest.mark.ui
 class TestMagpieUI_NoAuthRemote(unittest.TestCase):
@@ -59,7 +78,7 @@ class TestMagpieUI_NoAuthRemote(unittest.TestCase):
         assert cls.url, "cannot test without a remote server URL"
         cls.json_headers = get_headers_content_type(cls.url, 'application/json')
         cls.cookies = None
-        cls.usr = ANONYMOUS_USER
+        cls.usr = magpie.ANONYMOUS_USER
         cls.version = TestSetup.get_Version(cls)
 
     @classmethod
@@ -90,12 +109,12 @@ class TestMagpieUI_AdminAuthRemote(unittest.TestCase):
         assert cls.url, "cannot test without a remote server URL"
         assert cls.usr and cls.pwd, "cannot login with unspecified username/password"
         cls.headers, cls.cookies = check_or_try_login_user(cls.url, cls.usr, cls.pwd)
-        cls.require = "cannot run tests without logged in '{}' user".format(ADMIN_GROUP)
+        cls.require = "cannot run tests without logged in '{}' user".format(magpie.ADMIN_GROUP)
         cls.json_headers = get_headers_content_type(cls.url, 'application/json')
         cls.check_requirements()
         cls.version = TestSetup.get_Version(cls)
         cls.test_service_type = service_type_dict.keys()[0]
-        cls.test_service_name = TestSetup.get_AnyServiceOfTestServiceType(cls)
+        cls.test_service_name = TestSetup.get_AnyServiceOfTestServiceType(cls)['service_name']
 
     @classmethod
     def tearDownClass(cls):
@@ -154,3 +173,19 @@ class TestMagpieUI_AdminAuthRemote(unittest.TestCase):
     def test_EditService(self):
         path = '/ui/services/{type}/{name}'.format(type=self.test_service_type, name=self.test_service_name)
         TestSetup.check_UpStatus(self, method='GET', path=path)
+
+
+test_cases = [
+    TestMagpieUI_NoAuthLocal,
+    TestMagpieUI_AdminAuthLocal,
+    TestMagpieUI_NoAuthRemote,
+    TestMagpieUI_AdminAuthRemote,
+]
+
+
+def load_tests(loader, tests, pattern):
+    suite = unittest.TestSuite()
+    for test_class in test_cases:
+        tests = loader.loadTestsFromTestCase(test_class)
+        suite.addTests(tests)
+    return suite
