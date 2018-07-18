@@ -5,6 +5,7 @@ __pycache__/
 .eggs/
 .pytest_cache/
 build/
+coverage/
 dist/
 docs/_build/
 docs/magpie.esgf.rst
@@ -15,7 +16,6 @@ docs/magpie.management.rst
 docs/magpie.tests.rst
 docs/magpie.rst
 env/
-htmlcov/
 magpieenv/
 magpie/api_docs/
 magpie/api_test/

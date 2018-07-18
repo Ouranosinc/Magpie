@@ -60,7 +60,7 @@ coverage:
 	coverage run --source magpie setup.py test
 	coverage report -m
 	coverage html
-	$(BROWSER) htmlcov/index.html
+	$(BROWSER) coverage/index.html
 
 migrate:
 	alembic upgrade head
