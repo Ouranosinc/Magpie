@@ -264,7 +264,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         assert len(test_service_resource_types), "test service should allow at least 1 sub-resource for test execution"
         cls.test_resource_type = test_service_resource_types[0]
 
-        cls.test_user_name = u'unittest_toto'
+        cls.test_user_name = u'magpie-unittest-toto'
         cls.test_user_group = u'users'
 
     def setUp(self):
@@ -347,7 +347,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         json_body = check_response_basic_info(resp, 200)
         check_val_is_in('resources', json_body)
         check_val_type(json_body['resources'], dict)
-        check_all_equal(json_body['resources'].keys(), service_type_dict.keys(), any_order=True)
+        check_all_equal(json_body['resources'].keys(), get_service_types_for_version(self.version), any_order=True)
         for svc_type in json_body['resources']:
             for svc in json_body['resources'][svc_type]:
                 svc_dict = json_body['resources'][svc_type][svc]
@@ -597,12 +597,12 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         route = '/users/{usr}/services'.format(usr=magpie.ANONYMOUS_USER)
         resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
-        services = json_body['services']
+        services_body = json_body['services']
         for svc in services_list_getcap:
             svc_name = svc['service_name']
             svc_type = svc['service_type']
-            check_val_is_in(svc_name, services[svc_type])
-            check_val_is_in('getcapabilities', services[svc_type][svc_name]['permission_names'])
+            check_val_is_in(svc_name, services_body[svc_type])
+            check_val_is_in('getcapabilities', services_body[svc_type][svc_name]['permission_names'])
 
     @pytest.mark.resources
     @unittest.skipUnless(MAGPIE_TEST_RESOURCES, reason="Skip 'resources' tests requested.")

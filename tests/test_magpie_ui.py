@@ -126,7 +126,7 @@ class TestMagpieUI_AdminAuthRemote(unittest.TestCase):
         cls.json_headers = get_headers_content_type(cls.url, 'application/json')
         cls.check_requirements()
         cls.version = TestSetup.get_Version(cls)
-        cls.test_service_type = service_type_dict.keys()[0]
+        cls.test_service_type = get_service_types_for_version(cls.version)[0]
         cls.test_service_name = TestSetup.get_AnyServiceOfTestServiceType(cls)['service_name']
 
     @classmethod

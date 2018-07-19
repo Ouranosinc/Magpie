@@ -5,7 +5,7 @@ from distutils.version import *
 from webtest import TestApp
 from webtest.response import TestResponse
 import magpie
-from magpie import __meta__, db, models, magpiectl, MAGPIE_INI_FILE_PATH
+from magpie import __meta__, db, models, services, magpiectl, MAGPIE_INI_FILE_PATH
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -40,6 +40,13 @@ def get_headers_content_type(app_or_url, content_type):
 
 def get_response_content_types_list(response):
     return [ct.strip() for ct in response.headers['Content-Type'].split(';')]
+
+
+def get_service_types_for_version(version):
+    available_service_types = set(services.service_type_dict.keys())
+    if LooseVersion(version) <= LooseVersion('0.6.2'):
+        available_service_types = available_service_types - {'access'}
+    return list(available_service_types)
 
 
 def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kwargs):
@@ -319,7 +326,8 @@ class TestSetup(object):
         json_body = resp.json()
         check_val_is_in('services', json_body)
         check_val_is_in(test_class.test_service_type, json_body['services'])
-        check_val_not_equal(len(json_body['services'][test_class.test_service_type]), 0)
+        check_val_not_equal(len(json_body['services'][test_class.test_service_type]), 0,
+                            msg="Missing any required service of type: `{}`".format(test_class.test_service_type))
         services = json_body['services'][test_class.test_service_type]
         return services[services.keys()[0]]
 
