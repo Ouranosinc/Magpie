@@ -59,7 +59,7 @@ test-all:
 coverage:
 	coverage run --source magpie setup.py test
 	coverage report -m
-	coverage html
+	coverage html -d coverage
 	$(BROWSER) coverage/index.html
 
 migrate:
