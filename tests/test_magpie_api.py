@@ -20,12 +20,13 @@ from services import service_type_dict
 from register import get_twitcher_protected_service_url
 from magpie import __meta__
 from tests.utils import *
+from tests.runner import *
 
 
 @pytest.mark.api
 @pytest.mark.local
-@unittest.skipUnless(os.getenv('MAGPIE_TEST_API', True), reason="Skip 'api' tests requested.")
-@unittest.skipUnless(os.getenv('MAGPIE_TEST_LOCAL', True), reason="Skip 'local' tests requested.")
+@unittest.skipUnless(MAGPIE_TEST_API, reason="Skip 'api' tests requested.")
+@unittest.skipUnless(MAGPIE_TEST_LOCAL, reason="Skip 'local' tests requested.")
 class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
     """
     Test any operation that do not require user AuthN/AuthZ.
@@ -45,7 +46,7 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
         pyramid.testing.tearDown()
 
     @pytest.mark.login
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_LOGIN', True), reason="Skip 'login' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_LOGIN, reason="Skip 'login' tests requested.")
     def test_GetSession_Anonymous(self):
         resp = test_request(self.app, 'GET', '/session', headers=self.json_headers)
         json_body = check_response_basic_info(resp, 200)
@@ -65,7 +66,7 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
         check_val_equal(json_body['version'], self.version)
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetCurrentUser(self):
         resp = test_request(self.url, 'GET', '/users/{}'.format(magpie.LOGGED_USER), headers=self.json_headers)
         json_body = check_response_basic_info(resp, 200)
@@ -79,8 +80,8 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
 @pytest.mark.skip(reason="Not implemented.")
 @pytest.mark.api
 @pytest.mark.local
-@unittest.skipUnless(os.getenv('MAGPIE_TEST_API', True), reason="Skip 'api' tests requested.")
-@unittest.skipUnless(os.getenv('MAGPIE_TEST_LOCAL', True), reason="Skip 'local' tests requested.")
+@unittest.skipUnless(MAGPIE_TEST_API, reason="Skip 'api' tests requested.")
+@unittest.skipUnless(MAGPIE_TEST_LOCAL, reason="Skip 'local' tests requested.")
 class TestMagpieAPI_UsersAuthLocal(unittest.TestCase):
     """
     Test any operation that require at least 'Users' group AuthN/AuthZ.
@@ -99,8 +100,8 @@ class TestMagpieAPI_UsersAuthLocal(unittest.TestCase):
 @pytest.mark.skip(reason="Signin not working, cannot test protected paths.")
 @pytest.mark.api
 @pytest.mark.local
-@unittest.skipUnless(os.getenv('MAGPIE_TEST_API', True), reason="Skip 'api' tests requested.")
-@unittest.skipUnless(os.getenv('MAGPIE_TEST_LOCAL', True), reason="Skip 'local' tests requested.")
+@unittest.skipUnless(MAGPIE_TEST_API, reason="Skip 'api' tests requested.")
+@unittest.skipUnless(MAGPIE_TEST_LOCAL, reason="Skip 'local' tests requested.")
 class TestMagpieAPI_AdminAuthLocal(unittest.TestCase):
     """
     Test any operation that require at least 'Administrator' group AuthN/AuthZ.
@@ -144,7 +145,7 @@ class TestMagpieAPI_AdminAuthLocal(unittest.TestCase):
         check_val_equal(len(version_parts), 3)
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetUsers(self):
         resp = test_request(self.app, 'GET', '/users', headers=self.json_headers)
         json_body = check_response_basic_info(resp, 200)
@@ -155,8 +156,8 @@ class TestMagpieAPI_AdminAuthLocal(unittest.TestCase):
 
 @pytest.mark.api
 @pytest.mark.remote
-@unittest.skipUnless(os.getenv('MAGPIE_TEST_API', True), reason="Skip 'api' tests requested.")
-@unittest.skipUnless(os.getenv('MAGPIE_TEST_REMOTE', True), reason="Skip 'remote' tests requested.")
+@unittest.skipUnless(MAGPIE_TEST_API, reason="Skip 'api' tests requested.")
+@unittest.skipUnless(MAGPIE_TEST_REMOTE, reason="Skip 'remote' tests requested.")
 class TestMagpieAPI_NoAuthRemote(unittest.TestCase):
     """
     Test any operation that do not require user AuthN/AuthZ.
@@ -176,7 +177,7 @@ class TestMagpieAPI_NoAuthRemote(unittest.TestCase):
         pyramid.testing.tearDown()
 
     @pytest.mark.login
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_LOGIN', True), reason="Skip 'login' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_LOGIN, reason="Skip 'login' tests requested.")
     def test_GetSession_Anonymous(self):
         resp = test_request(self.url, 'GET', '/session', headers=self.json_headers)
         json_body = check_response_basic_info(resp, 200)
@@ -200,7 +201,7 @@ class TestMagpieAPI_NoAuthRemote(unittest.TestCase):
         check_val_equal(len(version_parts), 3)
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetCurrentUser(self):
         resp = test_request(self.url, 'GET', '/users/current', headers=self.json_headers)
         json_body = check_response_basic_info(resp, 200)
@@ -212,8 +213,8 @@ class TestMagpieAPI_NoAuthRemote(unittest.TestCase):
 
 @pytest.mark.api
 @pytest.mark.remote
-@unittest.skipUnless(os.getenv('MAGPIE_TEST_API', True), reason="Skip 'api' tests requested.")
-@unittest.skipUnless(os.getenv('MAGPIE_TEST_REMOTE', True), reason="Skip 'remote' tests requested.")
+@unittest.skipUnless(MAGPIE_TEST_API, reason="Skip 'api' tests requested.")
+@unittest.skipUnless(MAGPIE_TEST_REMOTE, reason="Skip 'remote' tests requested.")
 class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
     """
     Test any operation that require at least 'Administrator' group AuthN/AuthZ.
@@ -272,7 +273,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         TestSetup.delete_TestUser(self)
 
     @pytest.mark.login
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_LOGIN', True), reason="Skip 'login' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_LOGIN, reason="Skip 'login' tests requested.")
     def test_GetSession_Administrator(self):
         resp = test_request(self.url, 'GET', '/session', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
@@ -290,7 +291,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
             check_val_is_in('user_email', json_body)
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetUsers(self):
         resp = test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
@@ -302,8 +303,8 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.users
     @pytest.mark.defaults
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_DEFAULTS', True), reason="Skip 'defaults' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_DEFAULTS, reason="Skip 'defaults' tests requested.")
     def test_ValidateDefaultUsers(self):
         resp = test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
@@ -320,17 +321,17 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_val_type(json_body['permission_names'], list)
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetCurrentUserResourcesPermissions(self):
         self.check_GetUserResourcesPermissions(magpie.LOGGED_USER)
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetUserResourcesPermissions(self):
         self.check_GetUserResourcesPermissions(self.usr)
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetCurrentUserGroups(self):
         resp = test_request(self.url, 'GET', '/users/current/groups', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
@@ -339,7 +340,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_val_is_in(magpie.ADMIN_GROUP, json_body['group_names'])
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetUserInheritedResources(self):
         route = '/users/{usr}/inherited_resources'.format(usr=self.usr)
         resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
@@ -368,8 +369,8 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.users
     @pytest.mark.defaults
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_DEFAULTS', True), reason="Skip 'defaults' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_DEFAULTS, reason="Skip 'defaults' tests requested.")
     def test_ValidateDefaultGroups(self):
         resp = test_request(self.url, 'GET', '/groups', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
@@ -379,7 +380,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_val_is_in(magpie.ADMIN_GROUP, groups)
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_PostUsers(self):
         json_body = TestSetup.create_TestUser(self)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
@@ -395,7 +396,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_val_is_in(self.test_user_name, users)
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetUser_existing(self):
         TestSetup.create_TestUser(self)
 
@@ -419,7 +420,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
             check_val_type(json_body['group_names'], list)
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetUser_missing(self):
         TestSetup.check_NonExistingTestUser(self)
         route = '/users/{usr}'.format(usr=self.test_user_name)
@@ -427,7 +428,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_response_basic_info(resp, 404)
 
     @pytest.mark.users
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_USERS', True), reason="Skip 'users' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetCurrentUser(self):
         TestSetup.check_NonExistingTestUser(self)
         resp = test_request(self.url, 'GET', '/users/current', headers=self.json_headers, cookies=self.cookies)
@@ -438,7 +439,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
             check_val_equal(json_body['user_name'], self.usr)
 
     @pytest.mark.groups
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_GROUPS', True), reason="Skip 'groups' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_GROUPS, reason="Skip 'groups' tests requested.")
     def test_GetGroupUsers(self):
         route = '/groups/{grp}/users'.format(grp=magpie.ADMIN_GROUP)
         resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
@@ -449,7 +450,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_val_is_in(self.usr, json_body['user_names'])
 
     @pytest.mark.services
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_SERVICES', True), reason="Skip 'services' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_SERVICES, reason="Skip 'services' tests requested.")
     def test_GetServiceResources(self):
         route = '/services/{svc}/resources'.format(svc=self.test_service_name)
         resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
@@ -473,7 +474,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_resource_children(svc_dict['resources'], svc_dict['resource_id'], svc_dict['resource_id'])
 
     @pytest.mark.services
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_SERVICES', True), reason="Skip 'services' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_SERVICES, reason="Skip 'services' tests requested.")
     def test_GetServicePermissions(self):
         services_list = TestSetup.get_RegisteredServicesList(self)
 
@@ -488,7 +489,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
             check_all_equal(json_body['permission_names'], service_perms)
 
     @pytest.mark.services
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_SERVICES', True), reason="Skip 'services' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_SERVICES, reason="Skip 'services' tests requested.")
     def test_PostServiceResources_DirectResource_NoParentID(self):
         resources_prior = TestSetup.get_ExistingTestServiceDirectResources(self)
         resources_prior_ids = [res['resource_id'] for res in resources_prior]
@@ -501,7 +502,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_val_equal(json_body['resource_type'], self.test_resource_type)
 
     @pytest.mark.services
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_SERVICES', True), reason="Skip 'services' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_SERVICES, reason="Skip 'services' tests requested.")
     def test_PostServiceResources_DirectResource_WithParentID(self):
         resources_prior = TestSetup.get_ExistingTestServiceDirectResources(self)
         resources_prior_ids = [res['resource_id'] for res in resources_prior]
@@ -516,7 +517,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_val_equal(json_body['resource_type'], self.test_resource_type)
 
     @pytest.mark.services
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_SERVICES', True), reason="Skip 'services' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_SERVICES, reason="Skip 'services' tests requested.")
     def test_PostServiceResources_ChildrenResource_ParentID(self):
         # create the direct resource
         json_body = TestSetup.create_TestServiceResource(self)
@@ -557,7 +558,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_val_equal(len(resource_body['children']), 0)
 
     @pytest.mark.services
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_SERVICES', True), reason="Skip 'services' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_SERVICES, reason="Skip 'services' tests requested.")
     def test_PostServiceResources_DirectResource_Conflict(self):
         TestSetup.create_TestServiceResource(self)
         route = '/services/{svc}/resources'.format(svc=self.test_service_name)
@@ -570,8 +571,8 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
 
     @pytest.mark.services
     @pytest.mark.defaults
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_SERVICES', True), reason="Skip 'services' tests requested.")
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_DEFAULTS', True), reason="Skip 'defaults' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_SERVICES, reason="Skip 'services' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_DEFAULTS, reason="Skip 'defaults' tests requested.")
     def test_ValidateDefaultServiceProviders(self):
         services_list = TestSetup.get_RegisteredServicesList(self)
 
@@ -604,7 +605,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
             check_val_is_in('getcapabilities', services[svc_type][svc_name]['permission_names'])
 
     @pytest.mark.resources
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_RESOURCES', True), reason="Skip 'resources' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_RESOURCES, reason="Skip 'resources' tests requested.")
     def test_PostResources_DirectServiceResource(self):
         service_info = TestSetup.get_ExistingTestServiceInfo(self)
         service_resource_id = service_info['resource_id']
@@ -619,7 +620,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type, self.version)
 
     @pytest.mark.resources
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_RESOURCES', True), reason="Skip 'resources' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_RESOURCES, reason="Skip 'resources' tests requested.")
     def test_PostResources_ChildrenResource(self):
         resource_info = TestSetup.create_TestServiceResource(self)
         direct_resource_id = resource_info['resource_id']
@@ -634,7 +635,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type, self.version)
 
     @pytest.mark.resources
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_RESOURCES', True), reason="Skip 'resources' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_RESOURCES, reason="Skip 'resources' tests requested.")
     def test_PostResources_MissingParentID(self):
         data = {
             "resource_name": self.test_resource_name,
@@ -645,7 +646,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         check_error_param_structure(json_body, paramName='parent_id', paramValue=repr(None), version=self.version)
 
     @pytest.mark.resources
-    @unittest.skipUnless(os.getenv('MAGPIE_TEST_RESOURCES', True), reason="Skip 'resources' tests requested.")
+    @unittest.skipUnless(MAGPIE_TEST_RESOURCES, reason="Skip 'resources' tests requested.")
     def test_DeleteResource(self):
         json_body = TestSetup.create_TestServiceResource(self)
         resource_id = json_body['resource_id']

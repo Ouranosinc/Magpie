@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from magpie.common import str2bool
 import sqlalchemy.exc as sa_exc
 import unittest
 import warnings
@@ -12,6 +13,19 @@ test_modules = [
     '{}.test_magpie_api'.format(test_root_name),
     '{}.test_magpie_ui'.format(test_root_name),
 ]
+
+# run test options
+MAGPIE_TEST_DEFAULTS = str2bool(os.getenv('MAGPIE_TEST_DEFAULTS', True))
+MAGPIE_TEST_LOGIN = str2bool(os.getenv('MAGPIE_TEST_LOGIN', True))
+MAGPIE_TEST_SERVICES = str2bool(os.getenv('MAGPIE_TEST_SERVICES', True))
+MAGPIE_TEST_RESOURCES = str2bool(os.getenv('MAGPIE_TEST_RESOURCES', True))
+MAGPIE_TEST_GROUPS = str2bool(os.getenv('MAGPIE_TEST_GROUPS', True))
+MAGPIE_TEST_USERS = str2bool(os.getenv('MAGPIE_TEST_USERS', True))
+MAGPIE_TEST_STATUS = str2bool(os.getenv('MAGPIE_TEST_STATUS', True))
+MAGPIE_TEST_REMOTE = str2bool(os.getenv('MAGPIE_TEST_REMOTE', True))
+MAGPIE_TEST_LOCAL = str2bool(os.getenv('MAGPIE_TEST_LOCAL', True))
+MAGPIE_TEST_API = str2bool(os.getenv('MAGPIE_TEST_API', True))
+MAGPIE_TEST_UI = str2bool(os.getenv('MAGPIE_TEST_UI', True))
 
 
 def test_suite():
