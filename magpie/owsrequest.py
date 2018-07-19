@@ -31,7 +31,7 @@ class OWSParser(object):
             self.params[param_name] = self._get_param_value(param_name)
         return self.params
 
-    def _get_param_value(self):
+    def _get_param_value(self, param):
         raise NotImplementedError
 
 

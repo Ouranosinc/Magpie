@@ -1,6 +1,7 @@
 from pyramid.config import Configurator
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
+from pyramid.exceptions import ConfigurationError
 from pyramid.httpexceptions import (
     HTTPOk,
     HTTPCreated,
@@ -15,7 +16,7 @@ from pyramid.httpexceptions import (
     HTTPUnprocessableEntity,
     HTTPInternalServerError,
 )
-from pyramid.interfaces import IAuthenticationPolicy
+from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy
 from pyramid.response import Response
 from pyramid.view import (
     view_config,

@@ -1,9 +1,34 @@
+from definitions.pyramid_definitions import *
+from definitions.ziggurat_definitions import *
+from api.esgf import esgfopenid
+from common import print_log
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
-from api.esgf import esgfopenid
+import models
 import os
 import logging
 logger = logging.getLogger(__name__)
+
+
+def auth_config_from_settings(settings):
+    magpie_secret = os.getenv('MAGPIE_SECRET')
+    if magpie_secret is None:
+        print_log('Use default secret from magpie.ini', level=logging.DEBUG)
+        magpie_secret = settings['magpie.secret']
+
+    authn_policy = AuthTktAuthenticationPolicy(
+        magpie_secret,
+        callback=groupfinder,
+    )
+    authz_policy = ACLAuthorizationPolicy()
+
+    config = Configurator(
+        settings=settings,
+        root_factory=models.RootFactory,
+        authentication_policy=authn_policy,
+        authorization_policy=authz_policy
+    )
+    return config
 
 
 def authomatic(request):
