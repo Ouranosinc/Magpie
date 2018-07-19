@@ -26,7 +26,6 @@ def get_test_magpie_app():
     config.registry.settings['magpie.db_migration_disabled'] = True
     # scan dependencies
     config.include('magpie')
-    config.scan('magpie')
     # create the test application
     app = TestApp(magpiectl.main({}, **config.registry.settings))
     return app
@@ -44,7 +43,7 @@ def get_response_content_types_list(response):
 
 def get_service_types_for_version(version):
     available_service_types = set(services.service_type_dict.keys())
-    if LooseVersion(version) <= LooseVersion('0.6.2'):
+    if LooseVersion(version) <= LooseVersion('0.6.1'):
         available_service_types = available_service_types - {'access'}
     return list(available_service_types)
 
