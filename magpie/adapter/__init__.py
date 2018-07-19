@@ -12,13 +12,10 @@ logger = logging.getLogger(__name__)
 
 class MagpieAdapter(AdapterInterface):
 
-    def servicestore_factory(self, registry, database=None, headers=None):
-        return MagpieServiceStore(registry=registry, headers=headers)
+    def servicestore_factory(self, registry, database=None):
+        return MagpieServiceStore(registry=registry)
 
     def owssecurity_factory(self, registry):
-        # TODO For magpie we cannot store the servicestore object since the constructor need a header with token
-        # taken from the request... maybe we should check for that?!?
-        #return MagpieOWSSecurity(tokenstore_factory(registry), servicestore_factory(registry))
         return MagpieOWSSecurity()
 
     def configurator_factory(self, settings):
