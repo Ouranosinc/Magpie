@@ -3,14 +3,14 @@ from authomatic.providers import oauth1, oauth2, openid
 from authomatic import Authomatic, provider_id
 from security import authomatic
 
-from definitions.pyramid_definitions import *
-from definitions.ziggurat_definitions import *
+from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.ziggurat_definitions import *
 from magpie import *
-from api.api_except import *
-from api.api_requests import *
-from api.api_rest_schemas import *
-from api.management.user.user_formats import *
-from api.management.user.user_utils import create_user
+from magpie.api.api_except import *
+from magpie.api.api_requests import *
+from magpie.api.api_rest_schemas import *
+from magpie.api.management.user.user_formats import *
+from magpie.api.management.user.user_utils import create_user
 import requests
 
 

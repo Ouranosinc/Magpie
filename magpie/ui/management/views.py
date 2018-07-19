@@ -1,10 +1,10 @@
 import requests
-from definitions.pyramid_definitions import *
+from magpie.definitions.pyramid_definitions import *
 from magpie import USER_NAME_MAX_LENGTH, ANONYMOUS_USER, USER_GROUP
 from services import service_type_dict
 from models import resource_type_dict
-from ui.management import check_response
-from ui.home import add_template_data
+from magpie.ui.management import check_response
+from magpie.ui.home import add_template_data
 import register
 import json
 

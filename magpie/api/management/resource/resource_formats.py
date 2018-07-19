@@ -1,7 +1,7 @@
-from definitions.pyramid_definitions import *
+from magpie.definitions.pyramid_definitions import *
 from models import resource_tree_service, Service
 from services import service_type_dict
-from api.api_except import evaluate_call
+from magpie.api.api_except import evaluate_call
 
 
 def format_resource(resource, permissions=None, basic_info=False):

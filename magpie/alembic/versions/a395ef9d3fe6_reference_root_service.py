@@ -15,7 +15,7 @@ sys.path.insert(0, root_dir)
 
 from alembic import op
 from alembic.context import get_context
-from definitions.sqlalchemy_definitions import *
+from magpie.definitions.sqlalchemy_definitions import *
 from magpie import models
 from magpie.api.management.resource.resource_utils import get_resource_root_service
 

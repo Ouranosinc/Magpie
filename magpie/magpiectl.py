@@ -9,74 +9,26 @@ Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations
 import logging.config
 import argparse
 import time
+import warnings
 import logging
 LOGGER = logging.getLogger(__name__)
 
 # -- Definitions
-from definitions.alembic_definitions import *
-from definitions.pyramid_definitions import *
-from definitions.sqlalchemy_definitions import *
-from definitions.ziggurat_definitions import *
+from magpie.definitions.alembic_definitions import *
+from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.sqlalchemy_definitions import *
+from magpie.definitions.ziggurat_definitions import *
 
 # -- Project specific --------------------------------------------------------
 from __init__ import *
-from api.api_except import *
-from api.api_rest_schemas import *
-from common import *
-from helpers.register_default_users import register_default_users
-from helpers.register_providers import magpie_register_services_from_config
-import warnings
-import models
-import db
-import __meta__
-
-
-@VersionAPI.get(tags=[APITag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': Version_GET_OkResponseSchema()
-})
-@view_config(route_name='version', request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_version(request):
-    return valid_http(httpSuccess=HTTPOk,
-                      content={u'version': __meta__.__version__, u'db_version': db.get_database_revision(request.db)},
-                      detail=Version_GET_OkResponseSchema.description, contentType='application/json')
-
-
-#@NotFoundAPI.get(schema=NotFoundResponseSchema(), response_schemas={
-#    '404': NotFoundResponseSchema(description="Route not found")})
-@notfound_view_config()
-def not_found(request):
-    content = get_request_info(request, default_msg="The route resource could not be found.")
-    return raise_http(nothrow=True, httpError=HTTPNotFound, contentType='application/json',
-                      detail=content['detail'], content=content)
-
-
-@exception_view_config()
-def internal_server_error(request):
-    content = get_request_info(request, default_msg=InternalServerErrorResponseSchema.description)
-    return raise_http(nothrow=True, httpError=HTTPInternalServerError, contentType='application/json',
-                      detail=content['detail'], content=content)
-
-
-@forbidden_view_config()
-def unauthorized_access(request):
-    # if not overridden, default is HTTPForbidden [403], which is for a slightly different situation
-    # this better reflects the HTTPUnauthorized [401] user access with specified AuthZ headers
-    # [http://www.restapitutorial.com/httpstatuscodes.html]
-    content = get_request_info(request, default_msg=UnauthorizedResponseSchema.description)
-    return raise_http(nothrow=True, httpError=HTTPUnauthorized, contentType='application/json',
-                      detail=content['detail'], content=content)
-
-
-def get_request_info(request, default_msg="undefined"):
-    content = {u'route_name': str(request.upath_info), u'request_url': str(request.url), u'detail': default_msg}
-    if hasattr(request, 'exception'):
-        if hasattr(request.exception, 'json'):
-            if type(request.exception.json) is dict:
-                content.update(request.exception.json)
-    elif hasattr(request, 'matchdict'):
-        if request.matchdict is not None and request.matchdict != '':
-            content.update(request.matchdict)
-    return content
+from magpie.api.api_except import *
+from magpie.api.api_rest_schemas import *
+from magpie.api.api_generic import *
+from magpie.common import *
+from magpie.helpers.register_default_users import register_default_users
+from magpie.helpers.register_providers import magpie_register_services_from_config
+from magpie.security import auth_config_from_settings
+from magpie import models, db, __meta__
 
 
 def main(global_config=None, **settings):
@@ -126,21 +78,14 @@ def main(global_config=None, **settings):
         print_log('Use default secret from magpie.ini', level=logging.DEBUG)
         magpie_secret = settings['magpie.secret']
 
-    authn_policy = AuthTktAuthenticationPolicy(
-        magpie_secret,
-        callback=groupfinder,
-    )
-    authz_policy = ACLAuthorizationPolicy()
+    # avoid cornice conflicting with magpie exception views
+    settings['handle_exceptions'] = False
 
-    config = Configurator(
-        settings=settings,
-        root_factory=models.RootFactory,
-        authentication_policy=authn_policy,
-        authorization_policy=authz_policy
-    )
-
+    config = auth_config_from_settings(settings)
     config.include('magpie')
-    config.scan('magpie')
+    # Don't use scan otherwise modules like 'magpie.adapter' are
+    # automatically found and cause import errors on missing packages
+    #config.scan('magpie')
     config.set_default_permission(ADMIN_PERM)
 
     # include api views

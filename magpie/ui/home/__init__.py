@@ -1,6 +1,6 @@
 import logging
 import requests
-from definitions.pyramid_definitions import *
+from magpie.definitions.pyramid_definitions import *
 
 logger = logging.getLogger(__name__)
 

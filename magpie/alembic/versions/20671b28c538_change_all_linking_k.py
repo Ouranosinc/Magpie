@@ -13,7 +13,7 @@ down_revision = '4c10d97c509'
 
 from alembic import op
 from alembic.context import get_context
-from definitions.sqlalchemy_definitions import *
+from magpie.definitions.sqlalchemy_definitions import *
 
 
 def upgrade():

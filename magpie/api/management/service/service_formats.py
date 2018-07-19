@@ -1,9 +1,9 @@
 from register import get_twitcher_protected_service_url
 from services import service_type_dict
-from definitions.pyramid_definitions import *
-from api.api_except import evaluate_call
-from api.management.resource.resource_utils import crop_tree_with_permission
-from api.management.resource.resource_formats import get_resource_children, format_resource_tree
+from magpie.definitions.pyramid_definitions import *
+from magpie.api.api_except import evaluate_call
+from magpie.api.management.resource.resource_utils import crop_tree_with_permission
+from magpie.api.management.resource.resource_formats import get_resource_children, format_resource_tree
 
 
 def format_service(service, permissions=None):

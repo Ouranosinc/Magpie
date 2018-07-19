@@ -1,10 +1,10 @@
-from definitions.pyramid_definitions import *
-from definitions.ziggurat_definitions import *
-from api.api_requests import *
-from api.api_rest_schemas import *
-from api.management.user.user_formats import *
-from api.management.user.user_utils import *
-from api.management.service.service_formats import format_service, format_service_resources
+from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.ziggurat_definitions import *
+from magpie.api.api_requests import *
+from magpie.api.api_rest_schemas import *
+from magpie.api.management.user.user_formats import *
+from magpie.api.management.user.user_utils import *
+from magpie.api.management.service.service_formats import format_service, format_service_resources
 
 
 @UsersAPI.get(tags=[UsersTag], response_schemas={

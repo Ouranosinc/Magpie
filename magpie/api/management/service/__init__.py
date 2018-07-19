@@ -1,4 +1,4 @@
-from api.api_rest_schemas import *
+from magpie.api.api_rest_schemas import *
 import logging
 logger = logging.getLogger(__name__)
 

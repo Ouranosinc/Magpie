@@ -1,9 +1,9 @@
 from magpie import *
-from api.api_except import *
-from api.api_rest_schemas import *
-from api.management.resource.resource_utils import check_valid_service_resource_permission
-from api.management.user.user_formats import *
-from definitions.ziggurat_definitions import *
+from magpie.api.api_except import *
+from magpie.api.api_rest_schemas import *
+from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
+from magpie.api.management.user.user_formats import *
+from magpie.definitions.ziggurat_definitions import *
 from services import service_type_dict
 import models
 

@@ -1,9 +1,9 @@
-from api.management.resource.resource_utils import create_resource, delete_resource
-from api.management.service.service_formats import *
-from api.management.service.service_utils import *
-from api.api_requests import *
-from api.api_rest_schemas import *
-from definitions.pyramid_definitions import view_config
+from magpie.api.management.resource.resource_utils import create_resource, delete_resource
+from magpie.api.management.service.service_formats import *
+from magpie.api.management.service.service_utils import *
+from magpie.api.api_requests import *
+from magpie.api.api_rest_schemas import *
+from magpie.definitions.pyramid_definitions import view_config
 from common import str2bool
 from register import sync_services_phoenix
 from models import resource_tree_service

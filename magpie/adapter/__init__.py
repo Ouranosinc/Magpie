@@ -9,10 +9,9 @@ from magpie.db import *
 import logging
 logger = logging.getLogger(__name__)
 
-
 class MagpieAdapter(AdapterInterface):
 
-    def servicestore_factory(self, registry, database=None):
+    def servicestore_factory(self, registry, database=None, headers=None):
         return MagpieServiceStore(registry=registry)
 
     def owssecurity_factory(self, registry):

@@ -1,6 +1,6 @@
-from api.management.group.group_utils import *
-from definitions.ziggurat_definitions import *
-from definitions.pyramid_definitions import view_config
+from magpie.api.management.group.group_utils import *
+from magpie.definitions.ziggurat_definitions import *
+from magpie.definitions.pyramid_definitions import view_config
 
 
 @view_config(route_name=GroupsAPI.name, request_method='GET')

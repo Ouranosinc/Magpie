@@ -1,5 +1,5 @@
-from definitions.cornice_definitions import *
-from definitions.pyramid_definitions import *
+from magpie.definitions.cornice_definitions import *
+from magpie.definitions.pyramid_definitions import *
 from db import get_database_revision
 from magpie import LOGGED_USER
 import __meta__
@@ -280,13 +280,31 @@ class UnauthorizedResponseSchema(colander.MappingSchema):
     request_url = colander.SchemaNode(colander.String(), description="Specified url")
 
 
+class NotFoundBodySchema(colander.MappingSchema):
+    code = colander.SchemaNode(
+        colander.Integer(),
+        description="HTTP response code",
+        example=404)
+    type = colander.SchemaNode(
+        colander.String(),
+        description="Response content type",
+        example="application/json")
+    detail = colander.SchemaNode(
+        colander.String(),
+        description="Response status message",)
+    route_name = colander.SchemaNode(
+        colander.String(),
+        description="Route called that generated the error",
+        example="/users/toto")
+    request_url = colander.SchemaNode(
+        colander.String(),
+        description="Request URL that generated the error",
+        example="http://localhost:2001/magpie/users/toto")
+
+
 class NotFoundResponseSchema(colander.MappingSchema):
-    code = CodeSchemaNode
-    code.example = HTTPNotFound.code
-    type = TypeSchemaNode
-    detail = DetailSchemaNode
-    route_name = colander.SchemaNode(colander.String(), description="Specified route")
-    request_url = colander.SchemaNode(colander.String(), description="Specified url")
+    description = "The route resource could not be found."
+    body = NotFoundBodySchema()
 
 
 class UnprocessableEntityResponseSchema(colander.MappingSchema):

@@ -15,9 +15,9 @@ sys.path.insert(0, root_dir)
 
 from alembic import op
 from alembic.context import get_context
-from definitions.sqlalchemy_definitions import *
+from magpie.definitions.sqlalchemy_definitions import *
 from magpie import models, ANONYMOUS_USER
-from definitions.ziggurat_definitions import *
+from magpie.definitions.ziggurat_definitions import *
 
 Session = sessionmaker()
 

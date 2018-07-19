@@ -1,6 +1,6 @@
 from magpie import *
 from common import *
-from definitions.ziggurat_definitions import *
+from magpie.definitions.ziggurat_definitions import *
 import models
 import db
 import transaction

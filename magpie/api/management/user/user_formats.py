@@ -1,5 +1,5 @@
-from definitions.pyramid_definitions import HTTPInternalServerError
-from api.api_except import evaluate_call
+from magpie.definitions.pyramid_definitions import HTTPInternalServerError
+from magpie.api.api_except import evaluate_call
 
 
 def format_user(user, group_names=None):

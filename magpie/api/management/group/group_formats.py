@@ -1,4 +1,4 @@
-from api.api_requests import *
+from magpie.api.api_requests import *
 
 
 def format_group(group, basic_info=False):
