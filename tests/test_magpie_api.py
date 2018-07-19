@@ -250,7 +250,14 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
     @classmethod
     def get_test_values(cls):
         services_cfg = yaml.load(open(magpie.MAGPIE_PROVIDERS_CONFIG_PATH, 'r'))
-        cls.test_services_info = services_cfg['providers']
+        provider_services_info = services_cfg['providers']
+        # filter impossible providers from possible previous version of remote server
+        possible_service_types = get_service_types_for_version(cls.version)
+        cls.test_services_info = dict()
+        for svc_name in provider_services_info:
+            if provider_services_info[svc_name]['type'] in possible_service_types:
+                cls.test_services_info[svc_name] = provider_services_info[svc_name]
+
         cls.test_service_name = u'project-api'
         cls.test_service_type = cls.test_services_info[cls.test_service_name]['type']
         check_val_is_in(cls.test_service_type, cls.test_services_info)
