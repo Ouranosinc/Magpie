@@ -608,7 +608,9 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         for svc in services_list_getcap:
             svc_name = svc['service_name']
             svc_type = svc['service_type']
-            check_val_is_in(svc_name, services_body[svc_type])
+            msg = "Service `{name}` of type `{type}` is expected to have `{perm}` permissions for user `{usr}`" \
+                  .format(name=svc_name, type=svc_type, perm='getcapabilities', usr=magpie.ANONYMOUS_USER)
+            check_val_is_in(svc_name, services_body[svc_type], msg=msg)
             check_val_is_in('getcapabilities', services_body[svc_type][svc_name]['permission_names'])
 
     @pytest.mark.resources
