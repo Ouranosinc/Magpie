@@ -24,7 +24,8 @@ def check_valid_service_resource_permission(permission_name, service_resource, d
     svc_res_name = service_resource.resource_name
     verify_param(permission_name, paramName=u'permission_name', paramCompare=svc_res_perms, isIn=True,
                  httpError=HTTPBadRequest,
-                 msgOnFail="Permission not allowed for {0} `{1}`".format(svc_res_type, svc_res_name))
+                 content={u'resource_type': str(svc_res_type), u'resource_name': str(svc_res_name)},
+                 msgOnFail=UserResourcePermissions_POST_BadRequestResponseSchema.description)
 
 
 def check_valid_service_resource(parent_resource, resource_type, db_session):
@@ -90,8 +91,8 @@ def get_service_or_resource_types(service_resource):
 
 
 def get_resource_permissions(resource, db_session):
-    verify_param(resource, notNone=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `resource` specified for resource permission retrieval")
+    verify_param(resource, notNone=True, httpError=HTTPNotAcceptable, paramName=u'resource',
+                 msgOnFail=UserResourcePermissions_GET_NotAcceptableResourceResponseSchema.description)
     # directly access the service resource
     if resource.root_service_id is None:
         service = resource
@@ -101,11 +102,11 @@ def get_resource_permissions(resource, db_session):
     service = models.Service.by_resource_id(resource.root_service_id, db_session=db_session)
     verify_param(service.resource_type, isEqual=True, httpError=HTTPNotAcceptable,
                  paramName=u'resource_type', paramCompare=u'service',
-                 msgOnFail="Invalid `root_service` specified for resource permission retrieval")
+                 msgOnFail=UserResourcePermissions_GET_NotAcceptableRootServiceResponseSchema.description)
     service_obj = service_type_dict[service.type]
     verify_param(resource.resource_type, isIn=True, httpError=HTTPNotAcceptable,
                  paramName=u'resource_type', paramCompare=service_obj.resource_types,
-                 msgOnFail="Invalid `resource_type` for corresponding service resource permission retrieval")
+                 msgOnFail=UserResourcePermissions_GET_NotAcceptableResourceTypeResponseSchema.description)
     return service_obj.resource_types_permissions[resource.resource_type]
 
 

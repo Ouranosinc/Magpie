@@ -81,12 +81,12 @@ def update_user_view(request):
     return valid_http(httpSuccess=HTTPOk, detail=Users_PUT_OkResponseSchema.description)
 
 
-#@UserAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
-#    '200': User_GET_OkResponseSchema(),
-#    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-#    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-#    '422': UnprocessableEntityResponseSchema(),
-#})
+@UserAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
+    '200': User_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=UserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_view(request):
     """Get user information by name."""
@@ -95,12 +95,12 @@ def get_user_view(request):
                       content={u'user': format_user(user)})
 
 
-#@LoggedUserAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
-#    '200': User_GET_OkResponseSchema(),
-#    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-#    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-#    '422': UnprocessableEntityResponseSchema(),
-#})
+@LoggedUserAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
+    '200': User_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=LoggedUserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_logged_user_view(request):
     """Get logged user information."""
@@ -335,6 +335,22 @@ def get_user_resource_inherited_permissions_view(request):
     return get_user_resource_permissions_runner(request, inherited_permissions=True)
 
 
+@UserResourcePermissionsAPI.post(schema=UserResourcePermissions_POST_RequestSchema(), response_schemas={
+    '201': UserResourcePermissions_POST_CreatedResponseSchema(),
+    '400': UserResourcePermissions_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': UserResourcePermissions_POST_NotAcceptableResponseSchema(),
+    '409': UserResourcePermissions_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
+@LoggedUserResourcePermissionsAPI.post(schema=UserResourcePermissions_POST_RequestSchema(), response_schemas={
+    '201': UserResourcePermissions_POST_CreatedResponseSchema(),
+    '400': UserResourcePermissions_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': UserResourcePermissions_POST_NotAcceptableResponseSchema(),
+    '409': UserResourcePermissions_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=UserResourcePermissionsAPI.name, request_method='POST')
 def create_user_resource_permission_view(request):
     """Create a permission on specific resource for a user."""
@@ -344,6 +360,22 @@ def create_user_resource_permission_view(request):
     return create_user_resource_permission(perm_name, resource, user.id, request.db)
 
 
+@UserResourcePermissionsAPI.delete(schema=UserResourcePermissions_DELETE_RequestSchema(), response_schemas={
+    '200': UserResourcePermissions_DELETE_OkResponseSchema(),
+    '400': UserResourcePermissions_DELETE_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '404': UserResourcePermissions_DELETE_NotFoundResponseSchema(),
+    '406': UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
+@LoggedUserResourcePermissionsAPI.delete(schema=UserResourcePermissions_DELETE_RequestSchema(), response_schemas={
+    '200': UserResourcePermissions_DELETE_OkResponseSchema(),
+    '400': UserResourcePermissions_DELETE_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '404': UserResourcePermissions_DELETE_NotFoundResponseSchema(),
+    '406': UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+})
 @view_config(route_name=UserResourcePermissionAPI.name, request_method='DELETE')
 def delete_user_resource_permission_view(request):
     """Delete a permission on a resource for a user (not including his groups permissions)."""

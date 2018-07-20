@@ -46,15 +46,15 @@ def create_user_resource_permission(permission_name, resource, user_id, db_sessi
     check_valid_service_resource_permission(permission_name, resource, db_session)
     resource_id = resource.resource_id
     new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
-    verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
-                 content={u'resource_id': str(resource_id), u'user_id': str(user_id)},
-                 msgOnFail="Failed to create permission using specified `resource_id` and `user_id`")
+    verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable, paramName=u'permission_name',
+                 content={u'resource_id': resource_id, u'user_id': user_id},
+                 msgOnFail=UserResourcePermissions_POST_NotAcceptableResponseSchema.description)
     new_perm.perm_name = permission_name
     evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
-                  httpError=HTTPConflict, msgOnFail="Permission already exist on service for user, cannot add to db",
+                  httpError=HTTPConflict, msgOnFail=UserResourcePermissions_POST_ConflictResponseSchema.description,
                   content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
-    return valid_http(httpSuccess=HTTPCreated, detail="Create user resource permission successful",
-                      content={u'resource_id': resource_id})
+    return valid_http(httpSuccess=HTTPCreated, detail=UserResourcePermissions_POST_CreatedResponseSchema.description,
+                      content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
 
 
 def delete_user_resource_permission(permission_name, resource, user_id, db_session):
@@ -62,9 +62,9 @@ def delete_user_resource_permission(permission_name, resource, user_id, db_sessi
     resource_id = resource.resource_id
     del_perm = UserResourcePermissionService.get(user_id, resource_id, permission_name, db_session)
     evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
-                  httpError=HTTPNotFound, msgOnFail="Could not find user resource permission to delete from db",
+                  httpError=HTTPNotFound, msgOnFail=UserResourcePermissions_DELETE_NotFoundResponseSchema.description,
                   content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
-    return valid_http(httpSuccess=HTTPOk, detail="Delete user resource permission successful")
+    return valid_http(httpSuccess=HTTPOk, detail=UserResourcePermissions_DELETE_OkResponseSchema.description)
 
 
 def filter_user_permission(resource_permission_tuple_list, user):
