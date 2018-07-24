@@ -97,7 +97,7 @@ def get_user_service_permissions(user, service, db_session, inherited_permission
 def get_user_resources_permissions_dict(user, db_session, resource_types=None,
                                         resource_ids=None, inherited_permissions=True):
     verify_param(user, notNone=True, httpError=HTTPNotFound,
-                 msgOnFail="Invalid user specified to obtain resource permissions")
+                 msgOnFail="Invalid user specified to obtain resource permissions.")
     res_perm_tuple_list = user.resources_with_possible_perms(resource_ids=resource_ids,
                                                              resource_types=resource_types, db_session=db_session)
     if not inherited_permissions:
@@ -130,7 +130,7 @@ def check_user_info(user_name, email, password, group_name):
     verify_param(len(user_name), isIn=True, httpError=HTTPBadRequest,
                  paramName=u'user_name', paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
                  msgOnFail="Invalid `user_name` length specified " +
-                           "(>{length} characters)".format(length=USER_NAME_MAX_LENGTH))
+                           "(>{length} characters).".format(length=USER_NAME_MAX_LENGTH))
     verify_param(email, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  paramName=u'email', msgOnFail=Users_CheckInfo_Email_BadRequestResponseSchema.description)
     verify_param(password, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
@@ -142,8 +142,8 @@ def check_user_info(user_name, email, password, group_name):
 
 
 def get_user_groups_checked(request, user):
-    verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db")
+    verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db.")
     db = request.db
     group_names = evaluate_call(lambda: [group.group_name for group in user.groups], fallback=lambda: db.rollback(),
-                                httpError=HTTPInternalServerError, msgOnFail="Failed to obtain groups of user")
+                                httpError=HTTPInternalServerError, msgOnFail="Failed to obtain groups of user.")
     return sorted(group_names)

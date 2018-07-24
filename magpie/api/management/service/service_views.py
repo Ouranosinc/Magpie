@@ -10,21 +10,14 @@ from models import resource_tree_service
 from services import service_type_dict
 
 
-@ServiceTypesAPI.get(tags=[ServicesTag], response_schemas={
-    '200': Services_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '406': Services_GET_NotAcceptableResponseSchema(),
-})
+@ServiceTypesAPI.get(tags=[ServicesTag], response_schemas=ServiceTypes_GET_responses)
 @view_config(route_name=ServiceTypesAPI.name, request_method='GET')
 def get_services_by_type_view(request):
+    """List all registered services from a specific type."""
     return get_services_runner(request)
 
 
-@ServicesAPI.get(tags=[ServicesTag], response_schemas={
-    '200': Services_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '406': Services_GET_NotAcceptableResponseSchema(),
-})
+@ServicesAPI.get(tags=[ServicesTag], response_schemas=Services_GET_responses)
 @view_config(route_name=ServicesAPI.name, request_method='GET')
 def get_services_view(request):
     """List all registered services."""
@@ -52,13 +45,8 @@ def get_services_runner(request):
                       content={u'services': json_response})
 
 
-@ServicesAPI.post(schema=Services_POST_RequestBodySchema(), tags=[ServicesTag], response_schemas={
-    '201': Services_POST_CreatedResponseSchema(),
-    '400': Services_POST_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Services_POST_ForbiddenResponseSchema(),
-    '409': Services_POST_ConflictResponseSchema(),
-})
+@ServicesAPI.post(schema=Services_POST_RequestBodySchema(), tags=[ServicesTag],
+                  response_schemas=Services_POST_responses)
 @view_config(route_name=ServicesAPI.name, request_method='POST')
 def register_service(request):
     """Registers a new service."""
@@ -94,13 +82,7 @@ def register_service(request):
                       content={u'service': format_service(service)})
 
 
-@ServiceAPI.put(schema=Service_PUT_RequestBodySchema(), tags=[ServicesTag], response_schemas={
-    '200': Service_PUT_OkResponseSchema(),
-    '400': Service_PUT_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Service_PUT_ForbiddenResponseSchema(),
-    '409': Service_PUT_ConflictResponseSchema(),
-})
+@ServiceAPI.put(schema=Service_PUT_RequestBodySchema(), tags=[ServicesTag], response_schemas=Service_PUT_responses)
 @view_config(route_name=ServiceAPI.name, request_method='PUT')
 def update_service(request):
     """Update a service information."""
@@ -144,12 +126,7 @@ def update_service(request):
                       content={u'service': format_service(service)})
 
 
-@ServiceAPI.get(tags=[ServicesTag], response_schemas={
-    '200': Service_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
-})
+@ServiceAPI.get(tags=[ServicesTag], response_schemas=Service_GET_responses)
 @view_config(route_name=ServiceAPI.name, request_method='GET')
 def get_service(request):
     """Get a service information."""
@@ -158,12 +135,7 @@ def get_service(request):
                       content={service.resource_name: format_service(service)})
 
 
-@ServiceAPI.delete(schema=Service_DELETE_RequestSchema(), tags=[ServicesTag], response_schemas={
-    '200': Service_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Service_DELETE_ForbiddenResponseSchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
-})
+@ServiceAPI.delete(schema=Service_DELETE_RequestSchema(), tags=[ServicesTag], response_schemas=Service_DELETE_responses)
 @view_config(route_name=ServiceAPI.name, request_method='DELETE')
 def unregister_service(request):
     """Unregister a service."""
@@ -185,14 +157,7 @@ def unregister_service(request):
     return valid_http(httpSuccess=HTTPOk, detail=Service_DELETE_OkResponseSchema.description)
 
 
-@ServicePermissionsAPI.get(tags=[ServicesTag], response_schemas={
-    '200': ServicePermissions_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
-    '406': ServicePermissions_GET_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@ServicePermissionsAPI.get(tags=[ServicesTag], response_schemas=ServicePermissions_GET_responses)
 @view_config(route_name=ServicePermissionsAPI.name, request_method='GET')
 def get_service_permissions(request):
     """List all applicable permissions for a service."""
@@ -205,27 +170,15 @@ def get_service_permissions(request):
                       content={u'permission_names': sorted(svc_perms)})
 
 
-@ServiceResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ServicesTag], response_schemas={
-    '200': ServiceResource_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': ServiceResource_DELETE_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@ServiceResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ServicesTag],
+                           response_schemas=ServiceResource_DELETE_responses)
 @view_config(route_name=ServiceResourceAPI.name, request_method='DELETE')
 def delete_service_resource_view(request):
     """Unregister a resource."""
     return delete_resource(request)
 
 
-@ServiceResourcesAPI.get(tags=[ServicesTag], response_schemas={
-    '200': ServiceResources_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@ServiceResourcesAPI.get(tags=[ServicesTag], response_schemas=ServiceResources_GET_responses)
 @view_config(route_name=ServiceResourcesAPI.name, request_method='GET')
 def get_service_resources_view(request):
     """List all resources registered under a service."""
@@ -235,15 +188,8 @@ def get_service_resources_view(request):
                       content={str(service.resource_name): svc_res_json})
 
 
-@ServiceResourcesAPI.post(schema=ServiceResources_POST_RequestBodySchema, tags=[ServicesTag], response_schemas={
-    '200': ServiceResources_POST_OkResponseSchema(),
-    '400': ServiceResources_POST_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': ServiceResources_POST_ForbiddenResponseSchema(),
-    '404': ServiceResources_POST_NotFoundResponseSchema(),
-    '409': ServiceResources_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@ServiceResourcesAPI.post(schema=ServiceResources_POST_RequestBodySchema, tags=[ServicesTag],
+                          response_schemas=ServiceResources_POST_responses)
 @view_config(route_name=ServiceResourcesAPI.name, request_method='POST')
 def create_service_direct_resource(request):
     """Register a new resource directly under a service."""
@@ -256,13 +202,7 @@ def create_service_direct_resource(request):
     return create_resource(resource_name, resource_type, parent_id=parent_id, db_session=request.db)
 
 
-@ServiceResourceTypesAPI.get(tags=[ServicesTag], response_schemas={
-    '200': ServiceResourceTypes_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': ServiceResourceTypes_GET_ForbiddenResponseSchema(),
-    '404': ServiceResourceTypes_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@ServiceResourceTypesAPI.get(tags=[ServicesTag], response_schemas=ServiceResource_GET_responses)
 @view_config(route_name=ServiceResourceTypesAPI.name, request_method='GET')
 def get_service_type_resource_types(request):
     """List all resources under a specific service type."""

@@ -1,9 +1,6 @@
 from magpie.definitions.cornice_definitions import *
 from magpie.definitions.pyramid_definitions import *
-from db import get_database_revision
-from magpie import LOGGED_USER
-import __meta__
-import requests
+from magpie import LOGGED_USER, __meta__
 
 
 class CorniceSwaggerPredicate(object):
@@ -60,10 +57,13 @@ def service_api_route_info(service_api):
 LoggedUserBase = '/users/{}'.format(LOGGED_USER)
 
 
+SwaggerGenerator = Service(
+    path='/__api__',
+    name='swagger_schema')
 SwaggerAPI = Service(
-    path='__api__',
-    name='Magpie REST API',
-    description="Magpie REST API documentation")
+    path='/api',
+    name='swagger',
+    description="{} documentation".format(TitleAPI))
 UsersAPI = Service(
     path='/users',
     name='Users')
@@ -100,6 +100,9 @@ UserInheritedServicesAPI = Service(
 UserServicesAPI = Service(
     path='/users/{user_name}/services',
     name='UserServices')
+UserServiceAPI = Service(
+    path='/users/{user_name}/services/{service_name}',
+    name='UserService')
 UserServiceInheritedResourcesAPI = Service(
     path='/users/{user_name}/services/{service_name}/inherited_resources',
     name='UserServiceInheritedResources')
@@ -689,59 +692,59 @@ class ServiceResourcesBodySchema(ServiceBodySchema):
 
 
 class ServiceType_access_SchemaNode(colander.MappingSchema):
-    frontend = ServiceBodySchema()
-    geoserver_web = ServiceBodySchema()
+    frontend = ServiceBodySchema(missing=colander.drop)
+    geoserver_web = ServiceBodySchema(missing=colander.drop)
     geoserver_web.name = "geoserver-web"
-    magpie = ServiceBodySchema()
+    magpie = ServiceBodySchema(missing=colander.drop)
 
 
 class ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
-    geoserver_api = ServiceBodySchema()
+    geoserver_api = ServiceBodySchema(missing=colander.drop)
     geoserver_api.name = "geoserver-api"
 
 
 class ServiceType_geoserverwms_SchemaNode(colander.MappingSchema):
-    geoserverwms = ServiceBodySchema()
+    geoserverwms = ServiceBodySchema(missing=colander.drop)
 
 
 class ServiceType_ncwms_SchemaNode(colander.MappingSchema):
-    ncwms = ServiceBodySchema()
+    ncwms = ServiceBodySchema(missing=colander.drop)
     ncwms.name = "ncWMS2"
 
 
 class ServiceType_projectapi_SchemaNode(colander.MappingSchema):
-    project_api = ServiceBodySchema()
+    project_api = ServiceBodySchema(missing=colander.drop)
     project_api.name = "project-api"
 
 
 class ServiceType_thredds_SchemaNode(colander.MappingSchema):
-    thredds = ServiceBodySchema()
+    thredds = ServiceBodySchema(missing=colander.drop)
 
 
 class ServiceType_wfs_SchemaNode(colander.MappingSchema):
-    geoserver = ServiceBodySchema()
+    geoserver = ServiceBodySchema(missing=colander.drop)
 
 
 class ServiceType_wps_SchemaNode(colander.MappingSchema):
-    lb_flyingpigeon = ServiceBodySchema()
-    flyingpigeon = ServiceBodySchema()
-    project = ServiceBodySchema()
-    catalog = ServiceBodySchema()
-    malleefowl = ServiceBodySchema()
-    hummingbird = ServiceBodySchema()
+    lb_flyingpigeon = ServiceBodySchema(missing=colander.drop)
+    flyingpigeon = ServiceBodySchema(missing=colander.drop)
+    project = ServiceBodySchema(missing=colander.drop)
+    catalog = ServiceBodySchema(missing=colander.drop)
+    malleefowl = ServiceBodySchema(missing=colander.drop)
+    hummingbird = ServiceBodySchema(missing=colander.drop)
 
 
 class ServicesSchemaNode(colander.MappingSchema):
     access = ServiceType_access_SchemaNode()
-    geoserver_api = ServiceType_geoserverapi_SchemaNode()
+    geoserver_api = ServiceType_geoserverapi_SchemaNode(missing=colander.drop)
     geoserver_api.name = "geoserver-api"
-    geoserverwms = ServiceType_geoserverwms_SchemaNode()
+    geoserverwms = ServiceType_geoserverwms_SchemaNode(missing=colander.drop)
     ncwms = ServiceType_ncwms_SchemaNode()
-    project_api = ServiceType_projectapi_SchemaNode()
+    project_api = ServiceType_projectapi_SchemaNode(missing=colander.drop)
     project_api.name = "project-api"
     thredds = ServiceType_thredds_SchemaNode()
-    wfs = ServiceType_wfs_SchemaNode()
-    wps = ServiceType_wps_SchemaNode()
+    wfs = ServiceType_wfs_SchemaNode(missing=colander.drop)
+    wps = ServiceType_wps_SchemaNode(missing=colander.drop)
 
 
 class Service_FailureBodyResponseSchema(colander.MappingSchema):
@@ -844,7 +847,7 @@ class Services_POST_ConflictResponseSchema(colander.MappingSchema):
     body = Services_POST_ResponseBodySchema(code=HTTPConflict.code)
 
 
-class Service_PUT_BodySchema(colander.MappingSchema):
+class Service_PUT_ResponseBodySchema(colander.MappingSchema):
     service_name = colander.SchemaNode(
         colander.String(),
         description="New service name to apply to service specified in path",
@@ -869,7 +872,7 @@ class Service_PUT_BodySchema(colander.MappingSchema):
 
 class Service_PUT_RequestBodySchema(colander.MappingSchema):
     header = HeaderSchema()
-    body = Service_PUT_BodySchema()
+    body = Service_PUT_ResponseBodySchema()
 
 
 class Service_SuccessBodyResponseSchema(colander.MappingSchema):
@@ -1276,14 +1279,14 @@ class UserResources_GET_OkResponseSchema(colander.MappingSchema):
     body = UserResources_GET_ResponseBodySchema()
 
 
-class UserResources_GET_NotFoundBodyResponseSchema(BaseBodySchema):
+class UserResources_GET_NotFoundResponseBodySchema(BaseBodySchema):
     user_name = colander.SchemaNode(colander.String(), description="User name value read from path")
     resource_types = ResourceTypesListSchema(description="Resource types searched for")
 
 
 class UserResources_GET_NotFoundResponseSchema(colander.MappingSchema):
     description = "Failed to populate user resources."
-    body = UserResources_GET_NotFoundBodyResponseSchema(code=HTTPNotFound.code)
+    body = UserResources_GET_NotFoundResponseBodySchema(code=HTTPNotFound.code)
 
 
 class UserResourcePermissions_GET_ResponseBodySchema(BaseBodySchema):
@@ -1302,23 +1305,23 @@ class UserResourcePermissions_GET_NotAcceptableParamResponseSchema(colander.Mapp
                                   missing=colander.drop)
 
 
-class UserResourcePermissions_GET_NotAcceptableBodyResponseSchema(colander.MappingSchema):
+class UserResourcePermissions_GET_NotAcceptableResponseBodySchema(colander.MappingSchema):
     param = UserResourcePermissions_GET_NotAcceptableParamResponseSchema()
 
 
 class UserResourcePermissions_GET_NotAcceptableRootServiceResponseSchema(colander.MappingSchema):
     description = "Invalid `resource` specified for resource permission retrieval."
-    body = UserResourcePermissions_GET_NotAcceptableBodyResponseSchema(code=HTTPNotAcceptable.code)
+    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(code=HTTPNotAcceptable.code)
 
 
 class UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(colander.MappingSchema):
     description = "Invalid `resource` specified for resource permission retrieval."
-    body = UserResourcePermissions_GET_NotAcceptableBodyResponseSchema(code=HTTPNotAcceptable.code)
+    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(code=HTTPNotAcceptable.code)
 
 
 class UserResourcePermissions_GET_NotAcceptableResourceTypeResponseSchema(colander.MappingSchema):
     description = "Invalid `resource_type` for corresponding service resource permission retrieval."
-    body = UserResourcePermissions_GET_NotAcceptableBodyResponseSchema(code=HTTPNotAcceptable.code)
+    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(code=HTTPNotAcceptable.code)
 
 
 class UserResourcePermissions_POST_RequestBodySchema(BaseBodySchema):
@@ -1386,7 +1389,7 @@ UserResourcePermissions_DELETE_BadResponseBodySchema = UserResourcePermissions_P
 UserResourcePermissions_DELETE_BadRequestResponseSchema = UserResourcePermissions_POST_BadRequestResponseSchema
 
 
-class UserResourcePermissions_DELETE_RequestSchema(colander.MappingSchema):
+class UserResourcePermission_DELETE_RequestSchema(colander.MappingSchema):
     body = colander.MappingSchema(default={})
 
 
@@ -1398,6 +1401,52 @@ class UserResourcePermissions_DELETE_OkResponseSchema(colander.MappingSchema):
 class UserResourcePermissions_DELETE_NotFoundResponseSchema(colander.MappingSchema):
     description = "Could not find user resource permission to delete from db."
     body = UserResourcePermissions_DELETE_BadResponseBodySchema(code=HTTPOk.code)
+
+
+class UserServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
+    service = ServiceResourcesBodySchema()
+
+
+class UserServiceResources_GET_OkResponseSchema(BaseBodySchema):
+    description = "Get user service resources successful."
+    body = UserServiceResources_GET_ResponseBodySchema()
+
+
+class UserServicePermissions_POST_RequestBodySchema(colander.MappingSchema):
+    permission_name = colander.SchemaNode(colander.String(), description="Name of the permission to create.")
+
+
+class UserServicePermissions_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = UserServicePermissions_POST_RequestBodySchema()
+
+
+class UserServicePermission_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = colander.MappingSchema(default={})
+
+
+class UserServices_GET_ResponseBodySchema(BaseBodySchema):
+    services = ServicesSchemaNode()
+
+
+class UserServices_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get user services successful."
+    body = UserServices_GET_ResponseBodySchema
+
+
+class UserServicePermissions_GET_ResponseBodySchema(BaseBodySchema):
+    permission_names = PermissionListSchema()
+
+
+class UserServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get user service permissions successful."
+    body = UserServicePermissions_GET_ResponseBodySchema()
+
+
+class UserServicePermissions_GET_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Could not find permissions using specified `service_name` and `user_name`."
+    body = BaseBodySchema(code=HTTPNotFound.code)
 
 
 class Group_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
@@ -1423,7 +1472,7 @@ class Session_GET_ResponseBodySchema(BaseBodySchema):
     user = UserBodySchema(missing=colander.drop)
     authenticated = colander.SchemaNode(
         colander.Boolean(),
-        description="Indicates if any user session is currently authenticated (user logged in)")
+        description="Indicates if any user session is currently authenticated (user logged in).")
 
 
 class Session_GET_OkResponseSchema(colander.MappingSchema):
@@ -1475,15 +1524,282 @@ class Version_GET_OkResponseSchema(colander.MappingSchema):
     body = Version_GET_ResponseBodySchema()
 
 
-@SwaggerAPI.get(tags=[APITag])
-def api_spec(request=None, use_docstring_summary=False):
+# Responses for specific views
+Resource_GET_responses = {
+    '200': Resource_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+    '500': Resource_GET_InternalServerErrorResponseSchema()
+}
+Resource_PUT_responses = {
+    '200': Resource_PUT_OkResponseSchema(),
+    '403': Resource_PUT_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+Resources_GET_responses = {
+    '200': Resources_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '500': Resource_GET_InternalServerErrorResponseSchema()
+}
+Resources_POST_responses = {
+    '200': Resources_POST_OkResponseSchema(),
+    '400': Resources_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resources_POST_ForbiddenResponseSchema(),
+    '404': Resources_POST_NotFoundResponseSchema(),
+    '409': Resources_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+Resources_DELETE_responses = {
+    '200': Resource_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resource_DELETE_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ResourcePermissions_GET_responses = {
+    '200': ResourcePermissions_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': ResourcePermissions_GET_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ServiceTypes_GET_responses = {
+    '200': Services_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': Services_GET_NotAcceptableResponseSchema(),
+}
+Services_GET_responses = {
+    '200': Services_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': Services_GET_NotAcceptableResponseSchema(),
+}
+Services_POST_responses = {
+    '201': Services_POST_CreatedResponseSchema(),
+    '400': Services_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Services_POST_ForbiddenResponseSchema(),
+    '409': Services_POST_ConflictResponseSchema(),
+}
+Service_GET_responses = {
+    '200': Service_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+}
+Service_PUT_responses = {
+    '200': Service_PUT_OkResponseSchema(),
+    '400': Service_PUT_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_PUT_ForbiddenResponseSchema(),
+    '409': Service_PUT_ConflictResponseSchema(),
+}
+Service_DELETE_responses = {
+    '200': Service_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_DELETE_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+}
+ServicePermissions_GET_responses = {
+    '200': ServicePermissions_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    '406': ServicePermissions_GET_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ServiceResources_GET_responses = {
+    '200': ServiceResources_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ServiceResources_POST_responses = {
+    '200': ServiceResources_POST_OkResponseSchema(),
+    '400': ServiceResources_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': ServiceResources_POST_ForbiddenResponseSchema(),
+    '404': ServiceResources_POST_NotFoundResponseSchema(),
+    '409': ServiceResources_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ServiceResource_GET_responses = {
+    '200': ServiceResourceTypes_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': ServiceResourceTypes_GET_ForbiddenResponseSchema(),
+    '404': ServiceResourceTypes_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ServiceResource_DELETE_responses = {
+    '200': ServiceResource_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': ServiceResource_DELETE_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserResources_GET_responses = {
+    '200': UserResources_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': UserResources_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserGroups_GET_responses = {
+    '200': UserGroups_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserGroups_POST_responses = {
+    '200': UserGroups_POST_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '409': UserGroups_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserGroup_DELETE_responses = {
+    '200': UserGroup_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserResourcePermissions_GET_responses = {
+    '200': UserResourcePermissions_GET_OkResponseSchema(),
+    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserResourcePermissions_POST_responses = {
+    '201': UserResourcePermissions_POST_CreatedResponseSchema(),
+    '400': UserResourcePermissions_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': UserResourcePermissions_POST_NotAcceptableResponseSchema(),
+    '409': UserResourcePermissions_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserResourcePermission_DELETE_responses = {
+    '200': UserResourcePermissions_DELETE_OkResponseSchema(),
+    '400': UserResourcePermissions_DELETE_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '404': UserResourcePermissions_DELETE_NotFoundResponseSchema(),
+    '406': UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserServices_GET_responses = {
+    '200': UserServices_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': User_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserServicePermissions_GET_responses = {
+    '200': UserServicePermissions_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': UserServicePermissions_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserServiceResources_GET_responses = {
+    '200': UserServiceResources_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserServicePermissions_POST_responses = UserResourcePermissions_POST_responses
+UserServicePermission_DELETE_responses = UserResourcePermission_DELETE_responses
+LoggedUserResources_GET_responses = {
+    '200': UserResources_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': UserResources_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserGroups_GET_responses = {
+    '200': UserGroups_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserGroups_POST_responses = {
+    '200': UserGroups_POST_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '409': UserGroups_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserGroup_DELETE_responses = {
+    '200': UserGroup_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserResourcePermissions_GET_responses = {
+    '200': UserResourcePermissions_GET_OkResponseSchema(),
+    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserResourcePermissions_POST_responses = {
+    '201': UserResourcePermissions_POST_CreatedResponseSchema(),
+    '400': UserResourcePermissions_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': UserResourcePermissions_POST_NotAcceptableResponseSchema(),
+    '409': UserResourcePermissions_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserResourcePermission_DELETE_responses = {
+    '200': UserResourcePermissions_DELETE_OkResponseSchema(),
+    '400': UserResourcePermissions_DELETE_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '404': UserResourcePermissions_DELETE_NotFoundResponseSchema(),
+    '406': UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserServices_GET_responses = {
+    '200': UserServices_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': User_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserServicePermissions_GET_responses = {
+    '200': UserServicePermissions_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': UserServicePermissions_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserServiceResources_GET_responses = {
+    '200': UserServiceResources_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserServicePermissions_POST_responses = LoggedUserResourcePermissions_POST_responses
+LoggedUserServicePermission_DELETE_responses = LoggedUserResourcePermission_DELETE_responses
+Version_GET_responses = {
+    '200': Version_GET_OkResponseSchema()
+}
+
+
+# use Cornice Services and Schemas to return swagger specifications
+def api_schema(request):
     """
-    Return JSON Swagger specifications of Magpie REST API on route '/magpie/__api__' using Cornice Services and Schemas.
+    Return JSON Swagger specifications of Magpie REST API.
     """
     generator = CorniceSwagger(get_services())
     # function docstrings are used to create the route's summary in Swagger-UI
-    generator.summary_docstrings = use_docstring_summary
+    generator.summary_docstrings = True
     generator.default_security = get_security
     generator.swagger = SecurityDefinitionAPI
-    json_api_spec = generator.generate(title=TitleAPI, version=__meta__.__version__, info=InfoAPI)
+    json_api_spec = generator.generate(title=TitleAPI, version=__meta__.__version__, info=InfoAPI, base_path='/magpie')
     return json_api_spec

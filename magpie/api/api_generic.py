@@ -4,18 +4,17 @@ from magpie.api.api_rest_schemas import *
 from magpie import __meta__, db
 
 
-@VersionAPI.get(tags=[APITag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': Version_GET_OkResponseSchema()
-})
+@VersionAPI.get(tags=[APITag], api_security=SecurityEveryoneAPI, response_schemas=Version_GET_responses)
 @view_config(route_name='version', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_version(request):
+    """
+    Version information of the API.
+    """
     return valid_http(httpSuccess=HTTPOk,
                       content={u'version': __meta__.__version__, u'db_version': db.get_database_revision(request.db)},
                       detail=Version_GET_OkResponseSchema.description, contentType='application/json')
 
 
-#@NotFoundAPI.get(schema=NotFoundResponseSchema(), response_schemas={
-#    '404': NotFoundResponseSchema(description="Route not found")})
 @notfound_view_config()
 def not_found(request):
     content = get_request_info(request, default_msg=NotFoundResponseSchema.description)
@@ -46,6 +45,8 @@ def get_request_info(request, default_msg="undefined"):
         if hasattr(request.exception, 'json'):
             if type(request.exception.json) is dict:
                 content.update(request.exception.json)
+        elif isinstance(request.exception, HTTPServerError) and hasattr(request.exception, 'message'):
+            content.update({u'exception': str(request.exception.message)})
     elif hasattr(request, 'matchdict'):
         if request.matchdict is not None and request.matchdict != '':
             content.update(request.matchdict)

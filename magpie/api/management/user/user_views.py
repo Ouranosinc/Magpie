@@ -133,18 +133,9 @@ def delete_user(request):
     return valid_http(httpSuccess=HTTPOk, detail=User_DELETE_OkResponseSchema.description)
 
 
-@UserGroupsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': UserGroups_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
-@LoggedUserGroupsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': UserGroups_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@UserGroupsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas=UserGroups_GET_responses)
+@LoggedUserGroupsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                         response_schemas=LoggedUserGroups_GET_responses)
 @view_config(route_name=UserGroupsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_groups(request):
     """List all groups a user belongs to."""
@@ -154,22 +145,9 @@ def get_user_groups(request):
                       content={u'group_names': group_names})
 
 
-@UserGroupsAPI.post(schema=UserGroups_POST_RequestSchema(), tags=[UsersTag], response_schemas={
-    '200': UserGroups_POST_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '409': UserGroups_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
-@LoggedUserGroupsAPI.post(schema=UserGroups_POST_RequestSchema(), tags=[LoggedUserTag], response_schemas={
-    '200': UserGroups_POST_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '409': UserGroups_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@UserGroupsAPI.post(schema=UserGroups_POST_RequestSchema(), tags=[UsersTag], response_schemas=UserGroups_POST_responses)
+@LoggedUserGroupsAPI.post(schema=UserGroups_POST_RequestSchema(), tags=[LoggedUserTag],
+                          response_schemas=LoggedUserGroups_POST_responses)
 @view_config(route_name=UserGroupsAPI.name, request_method='POST')
 def assign_user_group(request):
     """Assign a user to a group."""
@@ -184,20 +162,10 @@ def assign_user_group(request):
     return valid_http(httpSuccess=HTTPCreated, detail=UserGroups_POST_OkResponseSchema.description)
 
 
-@UserGroupAPI.delete(schema=UserGroup_DELETE_RequestSchema(), tags=[UsersTag], response_schemas={
-    '200': UserGroup_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
-@LoggedUserGroupAPI.delete(schema=UserGroup_DELETE_RequestSchema(), tags=[LoggedUserTag], response_schemas={
-    '200': UserGroup_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@UserGroupAPI.delete(schema=UserGroup_DELETE_RequestSchema(), tags=[UsersTag],
+                     response_schemas=UserGroup_DELETE_responses)
+@LoggedUserGroupAPI.delete(schema=UserGroup_DELETE_RequestSchema(), tags=[LoggedUserTag],
+                           response_schemas=LoggedUserGroup_DELETE_responses)
 @view_config(route_name=UserGroupAPI.name, request_method='DELETE')
 def delete_user_group(request):
     """Remove a user from a group."""
@@ -248,36 +216,19 @@ def get_user_resources_runner(request, inherited_group_resources_permissions=Tru
                       content={u'resources': usr_res_dict})
 
 
-@LoggedUserResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': UserResources_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': UserResources_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
-@UserResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': UserResources_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': UserResources_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@UserResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas=UserResources_GET_responses)
+@LoggedUserResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                            response_schemas=LoggedUserResources_GET_responses)
 @view_config(route_name=UserResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_resources_view(request):
     """List all resources a user has direct permission on (not including his groups permissions)."""
     return get_user_resources_runner(request, inherited_group_resources_permissions=False)
 
 
-@UserInheritedResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': UserResources_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': UserResources_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
-@LoggedUserInheritedResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': UserResources_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': UserResources_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@UserInheritedResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
+                               response_schemas=UserResources_GET_responses)
+@LoggedUserInheritedResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                                     response_schemas=LoggedUserResources_GET_responses)
 @view_config(route_name=UserInheritedResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_inherited_resources_view(request):
     """List all resources a user has permission on with his inherited user and groups permissions."""
@@ -293,41 +244,20 @@ def get_user_resource_permissions_runner(request, inherited_permissions=True):
                       content={u'permission_names': sorted(perm_names)})
 
 
-@UserResourcePermissionsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': UserResourcePermissions_GET_OkResponseSchema(),
-    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
-@LoggedUserResourcePermissionsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': UserResourcePermissions_GET_OkResponseSchema(),
-    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@UserResourcePermissionsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
+                                response_schemas=UserResourcePermissions_GET_responses)
+@LoggedUserResourcePermissionsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                                      response_schemas=LoggedUserResourcePermissions_GET_responses)
 @view_config(route_name=UserResourcePermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_resource_permissions_view(request):
     """List all direct permissions a user has on a specific resource (not including his groups permissions)."""
     return get_user_resource_permissions_runner(request, inherited_permissions=False)
 
 
-@UserResourceInheritedPermissionsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': UserResourcePermissions_GET_OkResponseSchema(),
-    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@UserResourceInheritedPermissionsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
+                                         response_schemas=UserResourcePermissions_GET_responses)
 @LoggedUserResourceInheritedPermissionsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                                               response_schemas={
-    '200': UserResourcePermissions_GET_OkResponseSchema(),
-    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+                                               response_schemas=LoggedUserResourcePermissions_GET_responses)
 @view_config(route_name=UserResourceInheritedPermissionsAPI.name, request_method='GET',
              permission=NO_PERMISSION_REQUIRED)
 def get_user_resource_inherited_permissions_view(request):
@@ -335,22 +265,10 @@ def get_user_resource_inherited_permissions_view(request):
     return get_user_resource_permissions_runner(request, inherited_permissions=True)
 
 
-@UserResourcePermissionsAPI.post(schema=UserResourcePermissions_POST_RequestSchema(), response_schemas={
-    '201': UserResourcePermissions_POST_CreatedResponseSchema(),
-    '400': UserResourcePermissions_POST_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '406': UserResourcePermissions_POST_NotAcceptableResponseSchema(),
-    '409': UserResourcePermissions_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
-@LoggedUserResourcePermissionsAPI.post(schema=UserResourcePermissions_POST_RequestSchema(), response_schemas={
-    '201': UserResourcePermissions_POST_CreatedResponseSchema(),
-    '400': UserResourcePermissions_POST_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '406': UserResourcePermissions_POST_NotAcceptableResponseSchema(),
-    '409': UserResourcePermissions_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@UserResourcePermissionsAPI.post(schema=UserResourcePermissions_POST_RequestSchema(), tags=[UsersTag],
+                                 response_schemas=UserResourcePermissions_POST_responses)
+@LoggedUserResourcePermissionsAPI.post(schema=UserResourcePermissions_POST_RequestSchema(), tags=[LoggedUserTag],
+                                       response_schemas=LoggedUserResourcePermissions_POST_responses)
 @view_config(route_name=UserResourcePermissionsAPI.name, request_method='POST')
 def create_user_resource_permission_view(request):
     """Create a permission on specific resource for a user."""
@@ -360,22 +278,10 @@ def create_user_resource_permission_view(request):
     return create_user_resource_permission(perm_name, resource, user.id, request.db)
 
 
-@UserResourcePermissionsAPI.delete(schema=UserResourcePermissions_DELETE_RequestSchema(), response_schemas={
-    '200': UserResourcePermissions_DELETE_OkResponseSchema(),
-    '400': UserResourcePermissions_DELETE_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '404': UserResourcePermissions_DELETE_NotFoundResponseSchema(),
-    '406': UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
-@LoggedUserResourcePermissionsAPI.delete(schema=UserResourcePermissions_DELETE_RequestSchema(), response_schemas={
-    '200': UserResourcePermissions_DELETE_OkResponseSchema(),
-    '400': UserResourcePermissions_DELETE_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '404': UserResourcePermissions_DELETE_NotFoundResponseSchema(),
-    '406': UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@UserResourcePermissionAPI.delete(schema=UserResourcePermission_DELETE_RequestSchema(), tags=[UsersTag],
+                                  response_schemas=UserResourcePermission_DELETE_responses)
+@LoggedUserResourcePermissionAPI.delete(schema=UserResourcePermission_DELETE_RequestSchema(), tags=[LoggedUserTag],
+                                        response_schemas=LoggedUserResourcePermission_DELETE_responses)
 @view_config(route_name=UserResourcePermissionAPI.name, request_method='DELETE')
 def delete_user_resource_permission_view(request):
     """Delete a permission on a resource for a user (not including his groups permissions)."""
@@ -397,15 +303,23 @@ def get_user_services_runner(request, inherited_group_services_permissions):
             svc_json[svc.type] = {}
         svc_json[svc.type][svc.resource_name] = format_service(svc, perms)
 
-    return valid_http(httpSuccess=HTTPOk, detail="Get user services successful", content={u'services': svc_json})
+    return valid_http(httpSuccess=HTTPOk, detail=UserServices_GET_OkResponseSchema.description,
+                      content={u'services': svc_json})
 
 
+@UserServicesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas=UserServices_GET_responses)
+@LoggedUserServicesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                           response_schemas=LoggedUserServices_GET_responses)
 @view_config(route_name=UserServicesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_services_view(request):
     """List all services a user has direct permission on (not including his groups permissions)."""
     return get_user_services_runner(request, inherited_group_services_permissions=False)
 
 
+@UserInheritedServicesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
+                              response_schemas=UserServices_GET_responses)
+@LoggedUserInheritedServicesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                                    response_schemas=LoggedUserServices_GET_responses)
 @view_config(route_name=UserInheritedServicesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_inherited_services_view(request):
     """List all services a user has permission on with his inherited user and groups permissions."""
@@ -418,19 +332,26 @@ def get_user_service_permissions_runner(request, inherited_permissions):
     perms = evaluate_call(lambda: get_user_service_permissions(service=service, user=user, db_session=request.db,
                                                                inherited_permissions=inherited_permissions),
                           fallback=lambda: request.db.rollback(), httpError=HTTPNotFound,
-                          msgOnFail="Could not find permissions using specified `service_name` and `user_name`",
+                          msgOnFail=UserServicePermissions_GET_NotFoundResponseSchema.description,
                           content={u'service_name': str(service.resource_name), u'user_name': str(user.user_name)})
-    message_inherit = ' inherited ' if inherited_permissions else ' '
-    return valid_http(httpSuccess=HTTPOk, detail="Get user service{}permissions successful".format(message_inherit),
+    return valid_http(httpSuccess=HTTPOk, detail=UserServicePermissions_GET_OkResponseSchema.description,
                       content={u'permission_names': sorted(perms)})
 
 
+@UserServicePermissionsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
+                               response_schemas=UserServicePermissions_GET_responses)
+@LoggedUserServicePermissionsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                                     response_schemas=LoggedUserServicePermissions_GET_responses)
 @view_config(route_name=UserServicePermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_permissions_view(request):
     """List all direct permissions a user has on a service (not including his groups permissions)."""
     return get_user_service_permissions_runner(request, inherited_permissions=False)
 
 
+@UserServiceInheritedPermissionsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
+                                        response_schemas=UserServicePermissions_GET_responses)
+@LoggedUserServiceInheritedPermissionsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                                              response_schemas=LoggedUserServicePermissions_GET_responses)
 @view_config(route_name=UserServiceInheritedPermissionsAPI.name, request_method='GET',
              permission=NO_PERMISSION_REQUIRED)
 def get_user_service_inherited_permissions_view(request):
@@ -438,6 +359,10 @@ def get_user_service_inherited_permissions_view(request):
     return get_user_service_permissions_runner(request, inherited_permissions=True)
 
 
+@UserServicePermissionsAPI.post(schema=UserServicePermissions_POST_RequestBodySchema, tags=[UsersTag],
+                                response_schemas=UserServicePermissions_POST_responses)
+@LoggedUserServicePermissionsAPI.post(schema=UserServicePermissions_POST_RequestBodySchema, tags=[LoggedUserTag],
+                                      response_schemas=LoggedUserServicePermissions_POST_responses)
 @view_config(route_name=UserServicePermissionsAPI.name, request_method='POST')
 def create_user_service_permission(request):
     """Create a permission on a service for a user."""
@@ -447,6 +372,10 @@ def create_user_service_permission(request):
     return create_user_resource_permission(perm_name, service, user.id, request.db)
 
 
+@UserServicePermissionAPI.delete(schema=UserServicePermission_DELETE_RequestSchema, tags=[UsersTag],
+                                 response_schemas=UserServicePermission_DELETE_responses)
+@LoggedUserServicePermissionAPI.delete(schema=UserServicePermission_DELETE_RequestSchema, tags=[LoggedUserTag],
+                                       response_schemas=LoggedUserServicePermission_DELETE_responses)
 @view_config(route_name=UserServicePermissionAPI.name, request_method='DELETE')
 def delete_user_service_permission(request):
     """Delete a permission on a service for a user (not including his groups permissions)."""
@@ -477,16 +406,24 @@ def get_user_service_resource_permissions_runner(request, inherited_permissions)
         resources_perms_dict=resources_perms_dict,
         display_all=False
     )
-    return valid_http(httpSuccess=HTTPOk, detail="Get user service resources successful",
+    return valid_http(httpSuccess=HTTPOk, detail=UserServiceResources_GET_OkResponseSchema.description,
                       content={u'service': user_svc_res_json})
 
 
+@UserServiceResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
+                             response_schemas=UserServiceResources_GET_responses)
+@LoggedUserServiceResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                                   response_schemas=LoggedUserServiceResources_GET_responses)
 @view_config(route_name=UserServiceResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_resources_view(request):
     """List all resources under a service a user has direct permission on (not including his groups permissions)."""
     return get_user_service_resource_permissions_runner(request, inherited_permissions=False)
 
 
+@UserServiceInheritedResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
+                                      response_schemas=UserServiceResources_GET_responses)
+@LoggedUserServiceInheritedResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                                            response_schemas=LoggedUserServiceResources_GET_responses)
 @view_config(route_name=UserServiceInheritedResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_inherited_resources_view(request):
     """List all resources under a service a user has permission on using all his inherited user and groups

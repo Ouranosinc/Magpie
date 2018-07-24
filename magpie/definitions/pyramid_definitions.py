@@ -17,7 +17,7 @@ from pyramid.httpexceptions import (
     HTTPInternalServerError,
 )
 from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy
-from pyramid.response import Response
+from pyramid.response import Response, FileResponse
 from pyramid.view import (
     view_config,
     notfound_view_config,

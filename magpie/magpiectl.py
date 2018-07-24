@@ -73,11 +73,6 @@ def main(global_config=None, **settings):
     if hostname:
         settings['magpie.url'] = magpie_url_template.format(hostname=hostname, port=settings['magpie.port'])
 
-    magpie_secret = os.getenv('MAGPIE_SECRET')
-    if magpie_secret is None:
-        print_log('Use default secret from magpie.ini', level=logging.DEBUG)
-        magpie_secret = settings['magpie.secret']
-
     # avoid cornice conflicting with magpie exception views
     settings['handle_exceptions'] = False
 
@@ -97,22 +92,17 @@ def main(global_config=None, **settings):
         settings['magpie.api_generation_disabled'] = False
 
     if not settings['magpie.api_generation_disabled']:
-        magpie_api_path = '{}/__api__'.format(settings['magpie.url'])
-        magpie_api_view = '{}/api-explorer'.format(settings['magpie.url'])
+        magpie_api_path = '{base}{path}'.format(base=settings['magpie.url'], path=SwaggerGenerator.path)
         config.cornice_enable_openapi_view(
             api_path=magpie_api_path,
             title=TitleAPI,
             description=__meta__.__description__,
             version=__meta__.__version__
         )
-        config.cornice_enable_openapi_explorer(api_explorer_path=magpie_api_view)
-        #config.register_swagger_ui(swagger_ui_path=magpie_api_path)
-
-        # generate the api specs from code definitions
-        api_json = api_spec(use_docstring_summary=True)
-        api_json_file_path = '{}/ui/swagger-ui/magpie-rest-api.json'.format(MAGPIE_MODULE_DIR)
-        with open(api_json_file_path, 'w') as api_file:
-            api_file.write(repr(api_json))
+        config.add_route(**service_api_route_info(SwaggerGenerator))
+        config.add_view(api_schema, route_name=SwaggerGenerator.name, request_method='GET',
+                        renderer='json', permission=NO_PERMISSION_REQUIRED)
+        config.add_route(**service_api_route_info(SwaggerAPI))
 
     print_log('Starting Magpie app...')
     wsgi_app = config.make_wsgi_app()

@@ -18,6 +18,7 @@ from six.moves.urllib.parse import urlparse
 import magpie
 from services import service_type_dict
 from register import get_twitcher_protected_service_url
+from magpie.api.api_rest_schemas import SwaggerGenerator
 from magpie import __meta__
 from tests.utils import *
 from tests.runner import *
@@ -135,7 +136,7 @@ class TestMagpieAPI_AdminAuthLocal(unittest.TestCase):
         self.check_requirements()
 
     def test_GetAPI(self):
-        resp = test_request(self.app, 'GET', '/__api__', headers=self.json_headers)
+        resp = test_request(self.app, 'GET', SwaggerGenerator.path, headers=self.json_headers)
         json_body = check_response_basic_info(resp, 200)
         check_val_is_in('db_version', json_body)
         check_val_is_in('version', json_body)
