@@ -7,11 +7,7 @@ from magpie.api.management.user.user_utils import *
 from magpie.api.management.service.service_formats import format_service, format_service_resources
 
 
-@UsersAPI.get(tags=[UsersTag], response_schemas={
-    '200': Users_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Users_GET_ForbiddenResponseSchema(),
-})
+@UsersAPI.get(tags=[UsersTag], response_schemas=Users_GET_responses)
 @view_config(route_name=UsersAPI.name, request_method='GET')
 def get_users(request):
     """List all registered user names."""
@@ -22,14 +18,7 @@ def get_users(request):
                       detail=Users_GET_OkResponseSchema.description)
 
 
-@UsersAPI.post(schema=Users_POST_RequestSchema(), tags=[UsersTag], response_schemas={
-    '200': Users_POST_OkResponseSchema(),
-    '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Users_POST_ForbiddenResponseSchema(),
-    '406': UserGroup_GET_NotAcceptableResponseSchema(),
-    '409': Users_CheckInfo_Login_ConflictResponseSchema(),
-})
+@UsersAPI.post(schema=Users_POST_RequestSchema(), tags=[UsersTag], response_schemas=Users_POST_responses)
 @view_config(route_name=UsersAPI.name, request_method='POST')
 def create_user_view(request):
     """Create a new user."""
@@ -41,22 +30,8 @@ def create_user_view(request):
     return create_user(user_name, password, email, group_name, db_session=request.db)
 
 
-@UsersAPI.put(schema=User_PUT_RequestSchema(), tags=[UsersTag], response_schemas={
-    '200': Users_PUT_OkResponseSchema(),
-    '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': UserGroup_GET_ForbiddenResponseSchema(),
-    '406': UserGroup_GET_NotAcceptableResponseSchema(),
-    '409': Users_CheckInfo_Login_ConflictResponseSchema(),
-})
-@LoggedUserAPI.put(schema=User_PUT_RequestSchema(), tags=[LoggedUserTag], response_schemas={
-    '200': Users_PUT_OkResponseSchema(),
-    '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': UserGroup_GET_ForbiddenResponseSchema(),
-    '406': UserGroup_GET_NotAcceptableResponseSchema(),
-    '409': Users_CheckInfo_Login_ConflictResponseSchema(),
-})
+@UserAPI.put(schema=User_PUT_RequestSchema(), tags=[UsersTag], response_schemas=User_PUT_responses)
+@LoggedUserAPI.put(schema=User_PUT_RequestSchema(), tags=[LoggedUserTag], response_schemas=LoggedUser_PUT_responses)
 @view_config(route_name=UserAPI.name, request_method='PUT')
 def update_user_view(request):
     """Update user information by user name."""
@@ -81,12 +56,7 @@ def update_user_view(request):
     return valid_http(httpSuccess=HTTPOk, detail=Users_PUT_OkResponseSchema.description)
 
 
-@UserAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': User_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@UserAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas=User_GET_responses)
 @view_config(route_name=UserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_view(request):
     """Get user information by name."""
@@ -95,12 +65,7 @@ def get_user_view(request):
                       content={u'user': format_user(user)})
 
 
-@LoggedUserAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas={
-    '200': User_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@LoggedUserAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas=LoggedUser_GET_responses)
 @view_config(route_name=LoggedUserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_logged_user_view(request):
     """Get logged user information."""
@@ -109,20 +74,9 @@ def get_logged_user_view(request):
                       content={u'user': format_user(user)})
 
 
-@UserAPI.delete(schema=User_DELETE_RequestSchema(), tags=[UsersTag], response_schemas={
-    '200': User_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
-@LoggedUserAPI.delete(schema=User_DELETE_RequestSchema(), tags=[LoggedUserTag], response_schemas={
-    '200': User_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-})
+@UserAPI.delete(schema=User_DELETE_RequestSchema(), tags=[UsersTag], response_schemas=User_DELETE_responses)
+@LoggedUserAPI.delete(schema=User_DELETE_RequestSchema(), tags=[LoggedUserTag],
+                      response_schemas=LoggedUser_DELETE_responses)
 @view_config(route_name=UserAPI.name, request_method='DELETE')
 def delete_user(request):
     """Delete a user by name."""
@@ -159,7 +113,7 @@ def assign_user_group(request):
     evaluate_call(lambda: db.add(new_user_group), fallback=lambda: db.rollback(),
                   httpError=HTTPConflict, msgOnFail=UserGroups_POST_ConflictResponseSchema.description,
                   content={u'user_name': user.user_name, u'group_name': group.group_name})
-    return valid_http(httpSuccess=HTTPCreated, detail=UserGroups_POST_OkResponseSchema.description)
+    return valid_http(httpSuccess=HTTPCreated, detail=UserGroups_POST_CreatedResponseSchema.description)
 
 
 @UserGroupAPI.delete(schema=UserGroup_DELETE_RequestSchema(), tags=[UsersTag],
