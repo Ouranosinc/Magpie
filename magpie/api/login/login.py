@@ -3,12 +3,14 @@ from authomatic.providers import oauth1, oauth2, openid
 from authomatic import Authomatic, provider_id
 from security import authomatic
 
-from definitions.pyramid_definitions import *
-from definitions.ziggurat_definitions import *
+from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.ziggurat_definitions import *
 from magpie import *
-from api.api_requests import *
-from api.api_except import *
-from api.management.user.user_utils import create_user
+from magpie.api.api_except import *
+from magpie.api.api_requests import *
+from magpie.api.api_rest_schemas import *
+from magpie.api.management.user.user_formats import *
+from magpie.api.management.user.user_utils import create_user
 import requests
 
 
@@ -49,9 +51,10 @@ providers = internal_providers + external_providers
 def sign_in_external(request):
     provider_name = get_value_multiformat_post_checked(request, 'provider_name')
     user_name = get_value_multiformat_post_checked(request, 'user_name')
-    verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid: `provider_name` not found within available providers.",
-                 content={u'provider_name': str(provider_name), u'providers': providers})
+    verify_param(provider_name, paramName=u'provider_name', paramCompare=providers, isIn=True,
+                 httpError=HTTPNotAcceptable, content={u'provider_name': str(provider_name), u'providers': providers},
+                 msgOnFail="Invalid: `provider_name` not found within available providers.")
+
     if provider_name == 'openid':
         query_field = dict(id=user_name)
     elif provider_name == 'github':
@@ -68,13 +71,14 @@ def sign_in_external(request):
 
 @view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
+    """Signs in a user session."""
     provider_name = get_value_multiformat_post_checked(request, 'provider_name')
     user_name = get_value_multiformat_post_checked(request, 'user_name')
     password = get_multiformat_post(request, 'password')   # no check since password is None for external login#
 
-    verify_param(provider_name, paramCompare=providers, isIn=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `provider_name` not found within available providers",
-                 content={u'provider_name': str(provider_name), u'providers': providers})
+    verify_param(provider_name, paramName=u'provider_name', paramCompare=providers, isIn=True,
+                 httpError=HTTPNotAcceptable, content={u'provider_name': str(provider_name), u'providers': providers},
+                 msgOnFail="Invalid `provider_name` not found within available providers")
 
     if provider_name in internal_providers:
         signin_internal_url = '{}/signin_internal'.format(request.application_url)
@@ -103,7 +107,7 @@ def login_success_ziggurat(request):
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):
-    """create new user with an External Identity"""
+    """Create new user with an External Identity"""
     local_user_name = external_user_name + '_' + provider_name
     local_user_name = local_user_name.replace(" ", '_')
     create_user(local_user_name, password=None, email=email, group_name=USER_GROUP, db_session=db_session)
@@ -158,7 +162,8 @@ def login_failure(request, reason=None):
 
 
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
-def sign_out_ziggurat(request):
+def sign_out(request):
+    """Signs out the current user session."""
     return valid_http(httpSuccess=HTTPOk, detail="Sign out successful.", httpKWArgs={'headers': forget(request)})
 
 
@@ -204,29 +209,32 @@ def authomatic_login(request):
     return response
 
 
+@SessionAPI.get(schema=Session_GET_ResponseBodySchema(), tags=[LoginTag], response_schemas={
+    '200': Session_GET_OkResponseSchema(),
+    '500': Session_GET_InternalServerErrorResponseSchema()
+})
 @view_config(route_name='session', permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
+    """Get information about current session."""
     def _get_session(req):
         authn_policy = req.registry.queryUtility(IAuthenticationPolicy)
         principals = authn_policy.effective_principals(req)
         if Authenticated in principals:
             user = request.user
-            json_resp = {u'authenticated': True,
-                         u'user_name': user.user_name,
-                         u'user_email': user.email,
-                         u'group_names': [group.group_name for group in user.groups]}
+            json_resp = {u'authenticated': True, u'user': format_user(user)}
         else:
             json_resp = {u'authenticated': False}
         return json_resp
 
     session_json = evaluate_call(lambda: _get_session(request), httpError=HTTPInternalServerError,
-                                 msgOnFail="Failed to get session details")
-    return valid_http(httpSuccess=HTTPOk, detail="Get session successful", content=session_json)
+                                 msgOnFail=Session_GET_InternalServerErrorResponseSchema.description)
+    return valid_http(httpSuccess=HTTPOk, detail=Session_GET_OkResponseSchema.description, content=session_json)
 
 
 @view_config(route_name='providers', request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_providers(request):
-    return valid_http(httpSuccess=HTTPOk, detail="Get providers successful",
-                      content={u'provider_names': providers,
-                               u'internal_providers': internal_providers,
-                               u'external_providers': external_providers})
+    """Get list of login providers."""
+    return valid_http(httpSuccess=HTTPOk, detail=Providers_GET_OkResponseSchema.description,
+                      content={u'provider_names': sorted(providers),
+                               u'internal_providers': sorted(internal_providers),
+                               u'external_providers': sorted(external_providers)})

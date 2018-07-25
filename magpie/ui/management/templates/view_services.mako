@@ -101,7 +101,7 @@
     </form>
 %endif
 <button class="img_button" type="button" onclick="location.href='${request.route_url('add_service', cur_svc_type=cur_svc_type)}'">
-    <img src="${request.static_url('ui.home:static/add.png')}">
+    <img src="${request.static_url('magpie.ui.home:static/add.png')}">
     Add Service
 </button>
 

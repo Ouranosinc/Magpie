@@ -6,6 +6,8 @@ def includeme(config):
     logger.info('Adding ui routes ...')
 
     # Add all the admin ui routes
-    config.include('ui.login')
-    config.include('ui.home')
-    config.include('ui.management')
+    config.include('magpie.ui.login')
+    config.include('magpie.ui.home')
+    config.include('magpie.ui.management')
+    config.include('magpie.ui.swagger')
+    config.scan()

@@ -1,6 +1,5 @@
 import sys
 import gunicorn.app.wsgiapp
-import sys
 
 
 if __name__ == '__main__':

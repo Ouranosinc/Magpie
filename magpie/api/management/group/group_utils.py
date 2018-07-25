@@ -1,12 +1,12 @@
 from models import resource_tree_service, resource_type_dict
 from services import service_type_dict
-from api.api_requests import *
-from api.api_except import *
-from api.management.resource.resource_utils import check_valid_service_resource_permission
-from api.management.resource.resource_formats import format_resource
-from api.management.service.service_formats import format_service_resources, format_service
-from api.management.group.group_formats import format_group
-from definitions.ziggurat_definitions import *
+from magpie.api.api_requests import *
+from magpie.api.api_except import *
+from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
+from magpie.api.management.resource.resource_formats import format_resource
+from magpie.api.management.service.service_formats import format_service_resources, format_service
+from magpie.api.management.group.group_formats import format_group
+from magpie.definitions.ziggurat_definitions import *
 
 
 def get_all_groups(db_session):

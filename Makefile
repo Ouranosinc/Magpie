@@ -45,7 +45,7 @@ clean-pyc:
 clean-test:
 	rm -fr .tox/
 	rm -f .coverage
-	rm -fr htmlcov/
+	rm -fr coverage/
 
 lint:
 	flake8 magpie tests
@@ -59,8 +59,8 @@ test-all:
 coverage:
 	coverage run --source magpie setup.py test
 	coverage report -m
-	coverage html
-	$(BROWSER) htmlcov/index.html
+	coverage html -d coverage
+	$(BROWSER) coverage/index.html
 
 migrate:
 	alembic upgrade head

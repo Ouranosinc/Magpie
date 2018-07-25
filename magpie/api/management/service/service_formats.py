@@ -1,9 +1,9 @@
 from register import get_twitcher_protected_service_url
 from services import service_type_dict
-from definitions.pyramid_definitions import *
-from api.api_except import evaluate_call
-from api.management.resource.resource_utils import crop_tree_with_permission
-from api.management.resource.resource_formats import get_resource_children, format_resource_tree
+from magpie.definitions.pyramid_definitions import *
+from magpie.api.api_except import evaluate_call
+from magpie.api.management.resource.resource_utils import crop_tree_with_permission
+from magpie.api.management.resource.resource_formats import get_resource_children, format_resource_tree
 
 
 def format_service(service, permissions=None):
@@ -14,13 +14,13 @@ def format_service(service, permissions=None):
             u'service_name': str(svc.resource_name),
             u'service_type': str(svc.type),
             u'resource_id': svc.resource_id,
-            u'permission_names': service_type_dict[svc.type].permission_names if perms is None else perms
+            u'permission_names': sorted(service_type_dict[svc.type].permission_names if perms is None else perms)
         }
 
     return evaluate_call(
         lambda: fmt_svc(service, permissions),
         httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format service",
+        msgOnFail="Failed to format service.",
         content={u'service': repr(service), u'permissions': repr(permissions)}
     )
 

@@ -1,7 +1,7 @@
-from definitions.pyramid_definitions import *
+from magpie.definitions.pyramid_definitions import *
 from models import resource_tree_service, Service
 from services import service_type_dict
-from api.api_except import evaluate_call
+from magpie.api.api_except import evaluate_call
 
 
 def format_resource(resource, permissions=None, basic_info=False):
@@ -19,14 +19,14 @@ def format_resource(resource, permissions=None, basic_info=False):
             u'parent_id': res.parent_id,
             u'root_service_id': res.root_service_id,
             u'children': {},
-            u'permission_names': list() if perms is None else perms
+            u'permission_names': list() if perms is None else sorted(perms)
         }
 
     return evaluate_call(
         lambda: fmt_res(resource, permissions, basic_info),
         httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format resource",
-        content={u'service': repr(resource), u'permissions': repr(permissions), u'basic_info': str(basic_info)}
+        msgOnFail="Failed to format resource.",
+        content={u'resource': repr(resource), u'permissions': repr(permissions), u'basic_info': str(basic_info)}
     )
 
 

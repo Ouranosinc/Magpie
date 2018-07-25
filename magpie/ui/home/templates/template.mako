@@ -4,8 +4,8 @@
     <title>Magpie admin area</title>
     <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans" />
-    <link rel="shortcut icon" type="image/x-icon" href="${request.static_url('ui.home:static/settings.png')}" />
-    <link href="${request.static_url('ui.home:static/style.css')}" rel="stylesheet" type="text/css" media="all" />
+    <link rel="shortcut icon" type="image/x-icon" href="${request.static_url('magpie.ui.home:static/settings.png')}" />
+    <link href="${request.static_url('magpie.ui.home:static/style.css')}" rel="stylesheet" type="text/css" media="all" />
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
     <style>
         <%block name="style"/>
@@ -15,7 +15,7 @@
 
 <div class="header">
     <a href="${request.route_url('home')}">
-        <img src="${request.static_url('ui.home:static/settings_white.png')}">
+        <img src="${request.static_url('magpie.ui.home:static/settings_white.png')}">
         Magpie Administration
     </a>
     %if logged_user:

@@ -1,5 +1,5 @@
 FROM ubuntu:16.04
-MAINTAINER Francois-Xavier Derue
+MAINTAINER Francis Charette-Migneault
 
 RUN apt-get update && apt-get install -y \
 	build-essential \

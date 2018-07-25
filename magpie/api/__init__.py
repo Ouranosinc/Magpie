@@ -6,10 +6,10 @@ def includeme(config):
     logger.info('Adding api routes ...')
 
     # Add all the admin ui routes
-    config.include('api.esgf')
-    config.include('api.home')
-    config.include('api.login')
-    config.include('api.management')
+    config.include('magpie.api.esgf')
+    config.include('magpie.api.home')
+    config.include('magpie.api.login')
+    config.include('magpie.api.management')
 
     config.add_route('version', '/version')
     config.scan()

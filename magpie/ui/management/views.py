@@ -1,10 +1,10 @@
 import requests
-from definitions.pyramid_definitions import *
+from magpie.definitions.pyramid_definitions import *
 from magpie import USER_NAME_MAX_LENGTH, ANONYMOUS_USER, USER_GROUP
 from services import service_type_dict
 from models import resource_type_dict
-from ui.management import check_response
-from ui.home import add_template_data
+from magpie.ui.management import check_response
+from magpie.ui.home import add_template_data
 import register
 import json
 
@@ -229,7 +229,7 @@ class ManagementViews(object):
 
         user_resp = requests.get(user_url, cookies=self.request.cookies)
         check_response(user_resp)
-        user_info = user_resp.json()
+        user_info = user_resp.json()['user']
         user_info[u'edit_mode'] = u'no_edit'
         user_info[u'own_groups'] = own_groups
         user_info[u'groups'] = all_groups
@@ -324,7 +324,7 @@ class ManagementViews(object):
         groups = self.get_all_groups()
         [groups_info.setdefault(grp, {u'members': len(self.get_group_users(grp))}) for grp in groups if grp != u'']
 
-        return add_template_data(self.request, {u'group_names': groups_info})
+        return add_template_data(self.request, {u'group_names': sorted(groups_info)})
 
     @view_config(route_name='add_group', renderer='templates/add_group.mako')
     def add_group(self):

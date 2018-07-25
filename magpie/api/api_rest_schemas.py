@@ -1,8 +1,6 @@
-from definitions.cornice_definitions import *
-from definitions.pyramid_definitions import view_config
-from db import get_database_revision
-from __meta__ import __version__
-import requests
+from magpie.definitions.cornice_definitions import *
+from magpie.definitions.pyramid_definitions import *
+from magpie import LOGGED_USER, __meta__
 
 
 class CorniceSwaggerPredicate(object):
@@ -18,27 +16,65 @@ class CorniceSwaggerPredicate(object):
         return self.schema
 
 
+TitleAPI = "Magpie REST API"
+InfoAPI = {
+    "description": __meta__.__description__,
+    "contact": {"name": __meta__.__maintainer__, "email": __meta__.__email__, "url": __meta__.__url__}
+}
+
+
 # Tags
 APITag = 'API'
-UserTag = 'User'
-GroupTag = 'Group'
-ResourceTag = 'Resource'
-ServiceTag = 'Service'
+LoginTag = 'Login'
+UsersTag = 'User'
+LoggedUserTag = 'Logged User'
+GroupsTag = 'Group'
+ResourcesTag = 'Resource'
+ServicesTag = 'Service'
+
+
+# Security
+SecurityDefinitionAPI = {'securityDefinitions': {'cookieAuth': {'type': 'apiKey', 'in': 'cookie', 'name': 'auth_tkt'}}}
+SecurityAdministratorAPI = [{'cookieAuth': []}]
+SecurityEveryoneAPI = []
+
+
+def get_security(service, method):
+    definitions = service.definitions
+    args = {}
+    for definition in definitions:
+        met, view, args = definition
+        if met == method:
+            break
+    return SecurityAdministratorAPI if 'security' not in args else args['security']
 
 
 # Service Routes
+def service_api_route_info(service_api):
+    return {'name': service_api.name, 'pattern': service_api.path}
+
+
+LoggedUserBase = '/users/{}'.format(LOGGED_USER)
+
+
+SwaggerGenerator = Service(
+    path='/__api__',
+    name='swagger_schema')
 SwaggerAPI = Service(
-    path='__api__',
-    name='Magpie REST API',
-    description="Magpie REST API documentation")
+    path='/api',
+    name='swagger',
+    description="{} documentation".format(TitleAPI))
+UsersAPI = Service(
+    path='/users',
+    name='Users')
 UserAPI = Service(
     path='/users/{user_name}',
     name='User')
-UsersAPI = Service(
-    path='/users/{user_name}',
-    name='Users')
-UserGroupAPI = Service(
+UserGroupsAPI = Service(
     path='/users/{user_name}/groups',
+    name='UserGroups')
+UserGroupAPI = Service(
+    path='/users/{user_name}/groups/{group_name}',
     name='UserGroup')
 UserInheritedResourcesAPI = Service(
     path='/users/{user_name}/inherited_resources',
@@ -46,52 +82,1425 @@ UserInheritedResourcesAPI = Service(
 UserResourcesAPI = Service(
     path='/users/{user_name}/resources',
     name='UserResources')
-UserResourcesPermissionsAPI = Service(
-    path='/users/{user_name}/resources',
-    name='UserResourcesPermissions')
+UserResourceInheritedPermissionsAPI = Service(
+    path='/users/{user_name}/resources/{resource_id}/inherited_permissions',
+    name='UserResourceInheritedPermissions')
+UserResourcePermissionAPI = Service(
+    path='/users/{user_name}/resources/{resource_id}/permissions/{permission_name}',
+    name='UserResourcePermission')
+UserResourcePermissionsAPI = Service(
+    path='/users/{user_name}/resources/{resource_id}/permissions',
+    name='UserResourcePermissions')
+UserResourceTypesAPI = Service(
+    path='/users/{user_name}/resources/types/{resource_type}',
+    name='UserResourceTypes')
 UserInheritedServicesAPI = Service(
     path='/users/{user_name}/inherited_services',
     name='UserInheritedServices')
 UserServicesAPI = Service(
     path='/users/{user_name}/services',
     name='UserServices')
-CurrentUserAPI = Service(
-    path='/users/current',
-    name='CurrentUser')
+UserServiceAPI = Service(
+    path='/users/{user_name}/services/{service_name}',
+    name='UserService')
+UserServiceInheritedResourcesAPI = Service(
+    path='/users/{user_name}/services/{service_name}/inherited_resources',
+    name='UserServiceInheritedResources')
+UserServiceResourcesAPI = Service(
+    path='/users/{user_name}/services/{service_name}/resources',
+    name='UserServiceResources')
+UserServiceInheritedPermissionsAPI = Service(
+    path='/users/{user_name}/services/{service_name}/inherited_permissions',
+    name='UserServiceInheritedPermissions')
+UserServicePermissionsAPI = Service(
+    path='/users/{user_name}/services/{service_name}/permissions',
+    name='UserServicePermissions')
+UserServicePermissionAPI = Service(
+    path='/users/{user_name}/services/{service_name}/permissions/{permission_name}',
+    name='UserServicePermission')
+LoggedUserAPI = Service(
+    path=LoggedUserBase,
+    name='LoggedUser')
+LoggedUserGroupsAPI = Service(
+    path=LoggedUserBase + '/groups',
+    name='LoggedUserGroups')
+LoggedUserGroupAPI = Service(
+    path=LoggedUserBase + '/groups/{group_name}',
+    name='LoggedUserGroup')
+LoggedUserInheritedResourcesAPI = Service(
+    path=LoggedUserBase + '/inherited_resources',
+    name='LoggedUserInheritedResources')
+LoggedUserResourcesAPI = Service(
+    path=LoggedUserBase + '/resources',
+    name='LoggedUserResources')
+LoggedUserResourceInheritedPermissionsAPI = Service(
+    path=LoggedUserBase + '/resources/{resource_id}/inherited_permissions',
+    name='LoggedUserResourceInheritedPermissions')
+LoggedUserResourcePermissionAPI = Service(
+    path=LoggedUserBase + '/resources/{resource_id}/permissions/{permission_name}',
+    name='LoggedUserResourcePermission')
+LoggedUserResourcePermissionsAPI = Service(
+    path=LoggedUserBase + '/resources/{resource_id}/permissions',
+    name='LoggedUserResourcePermissions')
+LoggedUserResourceTypesAPI = Service(
+    path=LoggedUserBase + '/resources/types/{resource_type}',
+    name='LoggedUserResourceTypes')
+LoggedUserInheritedServicesAPI = Service(
+    path=LoggedUserBase + '/inherited_services',
+    name='LoggedUserInheritedServices')
+LoggedUserServicesAPI = Service(
+    path=LoggedUserBase + '/services',
+    name='LoggedUserServices')
+LoggedUserServiceInheritedResourcesAPI = Service(
+    path=LoggedUserBase + '/services/{service_name}/inherited_resources',
+    name='LoggedUserServiceInheritedResources')
+LoggedUserServiceResourcesAPI = Service(
+    path=LoggedUserBase + '/services/{service_name}/resources',
+    name='LoggedUserServiceResources')
+LoggedUserServiceInheritedPermissionsAPI = Service(
+    path=LoggedUserBase + '/services/{service_name}/inherited_permissions',
+    name='LoggedUserServiceInheritedPermissions')
+LoggedUserServicePermissionsAPI = Service(
+    path=LoggedUserBase + '/services/{service_name}/permissions',
+    name='LoggedUserServicePermissions')
+LoggedUserServicePermissionAPI = Service(
+    path=LoggedUserBase + '/services/{service_name}/permissions/{permission_name}',
+    name='LoggedUserServicePermission')
+GroupsAPI = Service(
+    path='/groups',
+    name='Groups')
 GroupAPI = Service(
     path='/groups/{group_name}',
     name='Group')
+GroupUsersAPI = Service(
+    path='/groups/{group_name}/users',
+    name='GroupUsers')
+GroupServicesAPI = Service(
+    path='/groups/{group_name}/services',
+    name='GroupServices')
+GroupServicePermissionsAPI = Service(
+    path='/groups/{group_name}/services/{service_name}/permissions',
+    name='GroupServicePermissions')
+GroupServicePermissionAPI = Service(
+    path='/groups/{group_name}/services/{service_name}/permissions/{permission_name}',
+    name='GroupServicePermission')
+GroupServiceResourcesAPI = Service(
+    path='/groups/{group_name}/services/{service_name}/resources',
+    name='GroupServiceResources')
+GroupResourcesAPI = Service(
+    path='/groups/{group_name}/resources',
+    name='GroupResources')
+GroupResourcePermissionsAPI = Service(
+    path='/groups/{group_name}/resources/{resource_id}/permissions',
+    name='GroupResourcePermissions')
+GroupResourcePermissionAPI = Service(
+    path='/groups/{group_name}/resources/{resource_id}/permissions/{permission_name}',
+    name='GroupResourcePermission')
+GroupResourceTypesAPI = Service(
+    path='/groups/{group_name}/resources/types/{resource_type}',
+    name='GroupResourceTypes')
+ResourcesAPI = Service(
+    path='/resources',
+    name='Resources')
 ResourceAPI = Service(
     path='/resources/{resource_id}',
     name='Resource')
+ResourcePermissionsAPI = Service(
+    path='/resources/{resource_id}/permissions',
+    name='ResourcePermissions')
+ServicesAPI = Service(
+    path='/services',
+    name='Services')
 ServiceAPI = Service(
     path='/services/{service_name}',
     name='Service')
+ServiceTypesAPI = Service(
+    path='/services/types/{service_type}',
+    name='ServiceTypes')
+ServicePermissionsAPI = Service(
+    path='/services/{service_name}/permissions',
+    name='ServicePermissions')
+ServiceResourcesAPI = Service(
+    path='/services/{service_name}/resources',
+    name='ServiceResources')
+ServiceResourceAPI = Service(
+    path='/services/{service_name}/resources/{resource_id}',
+    name='ServiceResource')
+ServiceResourceTypesAPI = Service(
+    path='/services/types/{service_type}/resources/types',
+    name='ServiceResourceTypes')
+SessionAPI = Service(
+    path='/session',
+    name='Session')
 VersionAPI = Service(
     path='/version',
     name='Version')
-#NotFoundAPI = Service(name='NotFound', path='/', description="Route not found")
 
 
-class BaseSchema(colander.MappingSchema):
-    code = colander.SchemaNode(colander.Integer(), description="HTTP response code")
-    type = colander.SchemaNode(colander.String(), description="Response content type")
-    detail = colander.SchemaNode(colander.String(), description="Response status message")
+CodeSchemaNode = colander.SchemaNode(colander.Integer(), description="HTTP response code", example=HTTPOk.code)
+TypeSchemaNode = colander.SchemaNode(colander.String(), description="Response content type", example="application/json")
+DetailSchemaNode = colander.SchemaNode(colander.String(), description="Response status message")
 
 
-#class NotFoundResponseSchema(colander.MappingSchema):
-#    code = colander.SchemaNode(colander.Integer(), description="HTTP response code")
-#    type = colander.SchemaNode(colander.String(), description="Response content type")
-#    detail = colander.SchemaNode(colander.String(), description="Response status message")
-#    route_name = colander.SchemaNode(colander.String(), description="Specified route")
-#    request_url = colander.SchemaNode(colander.String(), description="Specified url")
+class HeaderSchema(colander.MappingSchema):
+    content_type = colander.SchemaNode(
+        colander.String(),
+        example='application/json'
+    )
+    content_type.name = 'Content-Type'
 
 
-class Version_GET_Schema(colander.MappingSchema):
+class BaseBodySchema(colander.MappingSchema):
+    def __init__(self, code=None):
+        super(BaseBodySchema, self).__init__()
+        self.code = CodeSchemaNode
+        self.code.example = code
+        self.type = TypeSchemaNode
+        self.detail = DetailSchemaNode
+
+
+class ErrorVerifyParamBodySchema(colander.MappingSchema):
+    name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the failing condition parameter",
+        missing=colander.drop)
+    value = colander.SchemaNode(
+        colander.String(),
+        description="Value of the failing condition parameter")
+    compare = colander.SchemaNode(
+        colander.String(),
+        description="Test comparison value of the failing condition parameter",
+        missing=colander.drop)
+
+
+class UnauthorizedResponseSchema(colander.MappingSchema):
+    description = "Unauthorized. Insufficient user privileges or missing authentication headers."
+    code = CodeSchemaNode
+    code.example = 401
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    route_name = colander.SchemaNode(colander.String(), description="Specified route")
+    request_url = colander.SchemaNode(colander.String(), description="Specified url")
+
+
+class NotFoundBodySchema(colander.MappingSchema):
     code = colander.SchemaNode(
         colander.Integer(),
         description="HTTP response code",
-        example=200)
+        example=404)
+    type = colander.SchemaNode(
+        colander.String(),
+        description="Response content type",
+        example="application/json")
+    detail = colander.SchemaNode(
+        colander.String(),
+        description="Response status message",)
+    route_name = colander.SchemaNode(
+        colander.String(),
+        description="Route called that generated the error",
+        example="/users/toto")
+    request_url = colander.SchemaNode(
+        colander.String(),
+        description="Request URL that generated the error",
+        example="http://localhost:2001/magpie/users/toto")
+
+
+class NotFoundResponseSchema(colander.MappingSchema):
+    description = "The route resource could not be found."
+    body = NotFoundBodySchema()
+
+
+class UnprocessableEntityResponseSchema(colander.MappingSchema):
+    description = "Invalid value specified."
+    body = BaseBodySchema(HTTPUnprocessableEntity.code)
+
+
+class InternalServerErrorBodySchema(colander.MappingSchema):
+    code = colander.SchemaNode(
+        colander.Integer(),
+        description="HTTP response code",
+        example=500)
+    type = colander.SchemaNode(
+        colander.String(),
+        description="Response content type",
+        example="application/json")
+    detail = colander.SchemaNode(
+        colander.String(),
+        description="Response status message",
+        example="Internal Server Error. Unhandled exception occurred.")
+    route_name = colander.SchemaNode(
+        colander.String(),
+        description="Route called that generated the error",
+        example="/users/toto")
+    request_url = colander.SchemaNode(
+        colander.String(),
+        description="Request URL that generated the error",
+        example="http://localhost:2001/magpie/users/toto")
+
+
+class InternalServerErrorResponseSchema(colander.MappingSchema):
+    description = "Internal Server Error. Unhandled exception occurred."
+    body = InternalServerErrorBodySchema()
+
+
+class ProvidersListSchema(colander.SequenceSchema):
+    item = colander.SchemaNode(
+        colander.String(),
+        description="Available login providers.",
+        example=["ziggurat", "openid"],
+    )
+
+
+class ResourceTypesListSchema(colander.SequenceSchema):
+    item = colander.SchemaNode(
+        colander.String(),
+        description="Available resource type under root service.",
+        example=["file", "dictionary"],
+    )
+
+
+class GroupNamesListSchema(colander.SequenceSchema):
+    item = colander.SchemaNode(
+        colander.String(),
+        description="Groups the logged in user is member of",
+        example=["anonymous"]
+    )
+
+
+class UserNamesListSchema(colander.SequenceSchema):
+    item = colander.SchemaNode(
+        colander.String(),
+        description="Users registered in the db",
+        example=["anonymous", "admin", "toto"]
+    )
+
+
+class PermissionListSchema(colander.SequenceSchema):
+    item = colander.SchemaNode(
+        colander.String(),
+        description="Permissions applicable to the service/resource",
+        example=["read", "write"]
+    )
+
+
+class UserBodySchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the user.",
+        example="toto")
+    email = colander.SchemaNode(
+        colander.String(),
+        description="Email of the user.",
+        example="toto@mail.com")
+    group_names = GroupNamesListSchema()
+
+
+class ServiceBodySchema(colander.MappingSchema):
+    resource_id = colander.SchemaNode(
+        colander.Integer(),
+        description="Resource identification number",
+    )
+    permission_names = PermissionListSchema()
+    service_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the service",
+        example="thredds"
+    )
+    service_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the service",
+        example="thredds"
+    )
+    public_url = colander.SchemaNode(
+        colander.String(),
+        description="Proxy URL available for public access with permissions",
+        example="http://localhost/twitcher/ows/proxy/thredds"
+    )
+    service_url = colander.SchemaNode(
+        colander.String(),
+        description="Private URL of the service (restricted access)",
+        example="http://localhost:9999/thredds"
+    )
+
+
+class ResourceBodySchema(colander.MappingSchema):
+    resource_id = colander.SchemaNode(
+        colander.Integer(),
+        description="Resource identification number",
+    )
+    resource_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the resource",
+        example="thredds"
+    )
+    resource_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the resource",
+        example="service"
+    )
+    parent_id = colander.SchemaNode(
+        colander.Integer(),
+        description="Parent resource identification number",
+        default=colander.null,  # if no parent
+        missing=colander.drop   # if not returned (basic_info = True)
+    )
+    root_service_id = colander.SchemaNode(
+        colander.Integer(),
+        description="Resource tree root service identification number",
+        default=colander.null,  # if no parent
+        missing=colander.drop   # if not returned (basic_info = True)
+    )
+    permission_names = PermissionListSchema()
+    permission_names.default = colander.null  # if no parent
+    permission_names.missing = colander.drop  # if not returned (basic_info = True)
+
+
+# TODO: improve by making recursive resources work (?)
+class Resource_ChildrenContainerWithoutChildResourceBodySchema(ResourceBodySchema):
+    children = colander.MappingSchema(default={})
+
+
+class Resource_ChildResourceWithoutChildrenBodySchema(colander.MappingSchema):
+    id = Resource_ChildrenContainerWithoutChildResourceBodySchema()
+    id.name = '{resource_id}'
+
+
+class Resource_ChildrenContainerWithChildResourceBodySchema(ResourceBodySchema):
+    children = Resource_ChildResourceWithoutChildrenBodySchema()
+
+
+class Resource_ChildResourceWithChildrenContainerBodySchema(colander.MappingSchema):
+    id = Resource_ChildrenContainerWithChildResourceBodySchema()
+    id.name = '{resource_id}'
+
+
+class Resource_ServiceWithChildrenResourcesContainerBodySchema(ServiceBodySchema):
+    resources = Resource_ChildResourceWithChildrenContainerBodySchema()
+
+
+class Resource_ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
+    geoserver_api = Resource_ServiceWithChildrenResourcesContainerBodySchema()
+    geoserver_api.name = "geoserver-api"
+
+
+class Resource_ServiceType_ncwms_SchemaNode(colander.MappingSchema):
+    ncwms = Resource_ServiceWithChildrenResourcesContainerBodySchema()
+
+
+class Resource_ServiceType_thredds_SchemaNode(colander.MappingSchema):
+    thredds = Resource_ServiceWithChildrenResourcesContainerBodySchema()
+
+
+class ResourcesSchemaNode(colander.MappingSchema):
+    geoserver_api = Resource_ServiceType_geoserverapi_SchemaNode()
+    geoserver_api.name = "geoserver-api"
+    ncwms = Resource_ServiceType_ncwms_SchemaNode()
+    thredds = Resource_ServiceType_thredds_SchemaNode()
+
+
+class Resources_ResponseBodySchema(colander.MappingSchema):
+    resources = ResourcesSchemaNode()
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class Resource_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Resource query by id refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class Resource_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Resource ID not found in db."
+    body = BaseBodySchema(code=HTTPNotFound.code)
+
+
+class Resource_MatchDictCheck_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Resource ID is an invalid literal for `int` type."
+    body = BaseBodySchema(code=HTTPNotAcceptable.code)
+
+
+class Resource_GET_ResponseBodySchema(colander.MappingSchema):
+    resource_id = Resource_ChildResourceWithChildrenContainerBodySchema()
+    resource_id.name = '{resource_id}'
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class Resource_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get resource successful."
+    body = Resource_GET_ResponseBodySchema()
+
+
+class Resource_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
+    description = "Failed building resource children json formatted tree."
+    body = InternalServerErrorBodySchema()
+
+
+class Resource_PUT_RequestBodySchema(colander.MappingSchema):
+    resource_name = colander.SchemaNode(
+        colander.String(),
+        description="New name to apply to the resource to update",
+    )
+    service_push = colander.SchemaNode(
+        colander.Boolean(),
+        description="Push service resource update to Phoenix",
+        missing=False,
+    )
+
+
+class Resource_PUT_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = Resource_PUT_RequestBodySchema()
+
+
+class Resource_PUT_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    resource_id = colander.SchemaNode(
+        colander.String(),
+        description="Updated resource identification number."
+    )
+    resource_name = colander.SchemaNode(
+        colander.String(),
+        description="Updated resource name (from object)."
+    )
+    old_resource_name = colander.SchemaNode(
+        colander.String(),
+        description="Resource name before update."
+    )
+    new_resource_name = colander.SchemaNode(
+        colander.String(),
+        description="Resource name after update."
+    )
+
+
+class Resource_PUT_OkResponseSchema(colander.MappingSchema):
+    description = "Update resource successful."
+    body = Resource_PUT_ResponseBodySchema()
+
+
+class Resource_PUT_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Failed to update resource with new name."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class Resource_DELETE_RequestBodySchema(colander.MappingSchema):
+    service_push = colander.SchemaNode(
+        colander.Boolean(),
+        description="Push service update to Phoenix if applicable",
+        missing=colander.drop,
+        default=False,
+    )
+
+
+class Resource_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = Resource_DELETE_RequestBodySchema()
+
+
+class Resource_DELETE_OkResponseSchema(colander.MappingSchema):
+    description = "Delete resource successful."
+    body = BaseBodySchema(code=HTTPOk.code)
+
+
+class Resource_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Delete resource from db failed."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class Resources_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get resources successful."
+    body = Resources_ResponseBodySchema()
+
+
+class Resources_POST_BodySchema(colander.MappingSchema):
+    resource_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the resource to create"
+    )
+    resource_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the resource to create"
+    )
+    parent_id = colander.SchemaNode(
+        colander.String(),
+        description="ID of parent resource under which the new resource should be created",
+        missing=colander.drop
+    )
+
+
+class Resources_POST_RequestBodySchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = Resources_POST_BodySchema()
+
+
+class Resource_POST_ResponseBodySchema(colander.MappingSchema):
+    resource_id = Resource_ChildResourceWithChildrenContainerBodySchema()
+    resource_id.name = '{resource_id}'
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class Resources_POST_OkResponseSchema(colander.MappingSchema):
+    description = "Create resource successful."
+    body = Resource_POST_ResponseBodySchema()
+
+
+class Resources_POST_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid [`resource_name`|`resource_type`|`parent_id`] specified for child resource creation."
+    body = BaseBodySchema(code=HTTPBadRequest.code)
+
+
+class Resources_POST_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Failed to insert new resource in service tree using parent id."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class Resources_POST_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Could not find specified resource parent id."
+    body = BaseBodySchema(code=HTTPNotFound.code)
+
+
+class Resources_POST_ConflictResponseSchema(colander.MappingSchema):
+    description = "Resource name already exists at requested tree level for creation."
+    body = BaseBodySchema(code=HTTPConflict.code)
+
+
+class ResourcePermissions_GET_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    permission_names = PermissionListSchema()
+
+
+class ResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get resource permissions successful."
+    body = ResourcePermissions_GET_ResponseBodySchema()
+
+
+class ResourcePermissions_GET_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Invalid resource type to extract permissions."
+    body = BaseBodySchema(code=HTTPNotAcceptable.code)
+
+
+class ServiceResourcesBodySchema(ServiceBodySchema):
+    children = ResourcesSchemaNode()
+
+
+class ServiceType_access_SchemaNode(colander.MappingSchema):
+    frontend = ServiceBodySchema(missing=colander.drop)
+    geoserver_web = ServiceBodySchema(missing=colander.drop)
+    geoserver_web.name = "geoserver-web"
+    magpie = ServiceBodySchema(missing=colander.drop)
+
+
+class ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
+    geoserver_api = ServiceBodySchema(missing=colander.drop)
+    geoserver_api.name = "geoserver-api"
+
+
+class ServiceType_geoserverwms_SchemaNode(colander.MappingSchema):
+    geoserverwms = ServiceBodySchema(missing=colander.drop)
+
+
+class ServiceType_ncwms_SchemaNode(colander.MappingSchema):
+    ncwms = ServiceBodySchema(missing=colander.drop)
+    ncwms.name = "ncWMS2"
+
+
+class ServiceType_projectapi_SchemaNode(colander.MappingSchema):
+    project_api = ServiceBodySchema(missing=colander.drop)
+    project_api.name = "project-api"
+
+
+class ServiceType_thredds_SchemaNode(colander.MappingSchema):
+    thredds = ServiceBodySchema(missing=colander.drop)
+
+
+class ServiceType_wfs_SchemaNode(colander.MappingSchema):
+    geoserver = ServiceBodySchema(missing=colander.drop)
+
+
+class ServiceType_wps_SchemaNode(colander.MappingSchema):
+    lb_flyingpigeon = ServiceBodySchema(missing=colander.drop)
+    flyingpigeon = ServiceBodySchema(missing=colander.drop)
+    project = ServiceBodySchema(missing=colander.drop)
+    catalog = ServiceBodySchema(missing=colander.drop)
+    malleefowl = ServiceBodySchema(missing=colander.drop)
+    hummingbird = ServiceBodySchema(missing=colander.drop)
+
+
+class ServicesSchemaNode(colander.MappingSchema):
+    access = ServiceType_access_SchemaNode()
+    geoserver_api = ServiceType_geoserverapi_SchemaNode(missing=colander.drop)
+    geoserver_api.name = "geoserver-api"
+    geoserverwms = ServiceType_geoserverwms_SchemaNode(missing=colander.drop)
+    ncwms = ServiceType_ncwms_SchemaNode()
+    project_api = ServiceType_projectapi_SchemaNode(missing=colander.drop)
+    project_api.name = "project-api"
+    thredds = ServiceType_thredds_SchemaNode()
+    wfs = ServiceType_wfs_SchemaNode(missing=colander.drop)
+    wps = ServiceType_wps_SchemaNode(missing=colander.drop)
+
+
+class Service_FailureBodyResponseSchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    service_name = colander.SchemaNode(
+        colander.String(),
+        description="Service name extracted from path"
+    )
+
+
+class Service_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Service query by name refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class Service_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Service name not found in db."
+    body = Service_FailureBodyResponseSchema(code=HTTPNotFound.code)
+
+
+class Service_GET_ResponseBodySchema(colander.MappingSchema):
+    service_name = ServiceBodySchema()
+    service_name.name = '{service_name}'
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class Service_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service successful."
+    body = Service_GET_ResponseBodySchema()
+
+
+class Services_GET_ResponseBodySchema(colander.MappingSchema):
+    services = ServicesSchemaNode()
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    detail.example = "Get services successful."
+
+
+class Services_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get services successful."
+    body = Services_GET_ResponseBodySchema()
+
+
+class Services_GET_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Invalid `service_type` value does not correspond to any of the existing service types."
+    body = Services_GET_ResponseBodySchema()
+
+
+class Services_POST_BodySchema(colander.MappingSchema):
+    service_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the service to create",
+        example="my_service"
+    )
+    service_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the service to create",
+        example="wps"
+    )
+    service_url = colander.SchemaNode(
+        colander.String(),
+        description="Private URL of the service to create",
+        example="http://localhost:9000/my_service"
+    )
+
+
+class Services_POST_RequestBodySchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = Services_POST_BodySchema()
+
+
+class Services_POST_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class Services_POST_CreatedResponseSchema(colander.MappingSchema):
+    description = "Service registration to db successful."
+    body = Services_POST_ResponseBodySchema()
+
+
+class Services_POST_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid `service_type` value does not correspond to any of the existing service types."
+    body = Services_POST_ResponseBodySchema(code=HTTPBadRequest.code)
+
+
+class Services_POST_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Service registration forbidden by db."
+    body = Services_POST_ResponseBodySchema(code=HTTPForbidden.code)
+
+
+class Services_POST_ConflictResponseSchema(colander.MappingSchema):
+    description = "Specified `service_name` value already exists."
+    body = Services_POST_ResponseBodySchema(code=HTTPConflict.code)
+
+
+class Service_PUT_ResponseBodySchema(colander.MappingSchema):
+    service_name = colander.SchemaNode(
+        colander.String(),
+        description="New service name to apply to service specified in path",
+        missing=colander.drop,
+        default=colander.null,
+        example="my_service_new_name"
+    )
+    service_url = colander.SchemaNode(
+        colander.String(),
+        description="New service private URL to apply to service specified in path",
+        missing=colander.drop,
+        default=colander.null,
+        example="http://localhost:9000/new_service_name"
+    )
+    service_push = colander.SchemaNode(
+        colander.Boolean(),
+        description="Push service update to Phoenix if applicable",
+        missing=colander.drop,
+        default=False,
+    )
+
+
+class Service_PUT_RequestBodySchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = Service_PUT_ResponseBodySchema()
+
+
+class Service_SuccessBodyResponseSchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    service = ServiceBodySchema()
+
+
+class Service_PUT_OkResponseSchema(colander.MappingSchema):
+    description = "Update service successful."
+    body = Service_SuccessBodyResponseSchema(code=HTTPOk.code)
+
+
+class Service_PUT_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Logged service values are already equal to update values."
+    body = Service_FailureBodyResponseSchema(code=HTTPBadRequest.code)
+
+
+class Service_PUT_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Update service failed during value assignment."
+    body = Service_FailureBodyResponseSchema(code=HTTPForbidden.code)
+
+
+class Service_PUT_ConflictResponseSchema(colander.MappingSchema):
+    description = "Specified `service_name` already exists."
+    body = Service_FailureBodyResponseSchema(code=HTTPConflict.code)
+
+
+# delete service use same method as direct resource delete
+Service_DELETE_RequestSchema = Resource_DELETE_RequestSchema
+
+
+class Service_DELETE_OkResponseSchema(colander.MappingSchema):
+    description = "Delete service successful."
+    body = ServiceBodySchema(code=HTTPOk.code)
+
+
+class Service_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Delete service from db refused by db."
+    body = Service_FailureBodyResponseSchema(code=HTTPForbidden.code)
+
+
+class ServicePermissions_ResponseBodySchema(colander.MappingSchema):
+    permission_names = PermissionListSchema()
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class ServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service permissions successful."
+    body = ServicePermissions_ResponseBodySchema()
+
+
+class ServicePermissions_GET_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Invalid service type specified by service."
+    body = ServicePermissions_ResponseBodySchema()
+
+
+# create service's resource use same method as direct resource create
+ServiceResources_POST_BodySchema = Resources_POST_BodySchema
+ServiceResources_POST_RequestBodySchema = Resources_POST_RequestBodySchema
+ServiceResources_POST_OkResponseSchema = Resources_POST_OkResponseSchema
+ServiceResources_POST_BadRequestResponseSchema = Resources_POST_BadRequestResponseSchema
+ServiceResources_POST_ForbiddenResponseSchema = Resources_POST_ForbiddenResponseSchema
+ServiceResources_POST_NotFoundResponseSchema = Resources_POST_NotFoundResponseSchema
+ServiceResources_POST_ConflictResponseSchema = Resources_POST_ConflictResponseSchema
+
+
+# delete service's resource use same method as direct resource delete
+ServiceResource_DELETE_RequestSchema = Resource_DELETE_RequestSchema
+ServiceResource_DELETE_ForbiddenResponseSchema = Resource_DELETE_ForbiddenResponseSchema
+ServiceResource_DELETE_OkResponseSchema = Resource_DELETE_OkResponseSchema
+
+
+class ServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
+    service_name = Resource_ServiceWithChildrenResourcesContainerBodySchema()
+    service_name.name = '{service_name}'
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class ServiceResources_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service resources successful."
+    body = ServiceResources_GET_ResponseBodySchema()
+
+
+class ServiceResourceTypes_GET_ResponseBodySchema(colander.MappingSchema):
+    resource_types = ResourceTypesListSchema()
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class ServiceResourceTypes_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service type resource types successful."
+    body = ServiceResourceTypes_GET_ResponseBodySchema()
+
+
+class ServiceResourceTypes_GET_FailureBodyResponseSchema(colander.MappingSchema):
+    service_type = colander.SchemaNode(
+        colander.String(),
+        description="Service type retrieved from route path."
+    )
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+
+
+class ServiceResourceTypes_GET_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Failed to obtain resource types for specified service type."
+    body = ServiceResourceTypes_GET_FailureBodyResponseSchema(code=HTTPForbidden.code)
+
+
+class ServiceResourceTypes_GET_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Invalid `service_type` does not exist to obtain its resource types."
+    body = ServiceResourceTypes_GET_FailureBodyResponseSchema(code=HTTPNotFound.code)
+
+
+class Users_GET_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    user_names = UserNamesListSchema()
+
+
+class Users_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get users successful."
+    body = Users_GET_ResponseBodySchema()
+
+
+class Users_GET_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Get users query refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class Users_CheckInfo_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    param = ErrorVerifyParamBodySchema()
+
+
+class Users_CheckInfo_Name_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid `user_name` value specified."
+    body = Users_CheckInfo_ResponseBodySchema()
+
+
+class Users_CheckInfo_Email_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid `email` value specified."
+    body = Users_CheckInfo_ResponseBodySchema()
+
+
+class Users_CheckInfo_Password_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid `password` value specified."
+    body = Users_CheckInfo_ResponseBodySchema()
+
+
+class Users_CheckInfo_GroupName_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid `group_name` value specified."
+    body = Users_CheckInfo_ResponseBodySchema()
+
+
+class Users_CheckInfo_Login_ConflictResponseSchema(colander.MappingSchema):
+    description = "Invalid `user_name` already logged in."
+    body = Users_CheckInfo_ResponseBodySchema()
+
+
+class User_Check_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "User check query was refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class User_Check_ConflictResponseSchema(colander.MappingSchema):
+    description = "User name matches an already existing user name."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class User_POST_RequestBodySchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="New name to apply to the user",
+        example="john",
+    )
+    email = colander.SchemaNode(
+        colander.String(),
+        description="New email to apply to the user",
+        example="john@mail.com",
+    )
+    password = colander.SchemaNode(
+        colander.String(),
+        description="New password to apply to the user",
+        example="itzaseekit",
+    )
+    group_name = colander.SchemaNode(
+        colander.String(),
+        description="New password to apply to the user",
+        example="users",
+    )
+
+
+class Users_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = User_POST_RequestBodySchema()
+
+
+class Users_POST_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    user = UserBodySchema()
+
+
+class Users_POST_OkResponseSchema(colander.MappingSchema):
+    description = "Add user to db successful."
+    body = Users_POST_ResponseBodySchema()
+
+
+class Users_POST_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Failed to add user to db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class UserNew_POST_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "New user query was refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class User_PUT_RequestBodySchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="New name to apply to the user",
+        missing=colander.drop,
+        example="john",
+    )
+    email = colander.SchemaNode(
+        colander.String(),
+        description="New email to apply to the user",
+        missing=colander.drop,
+        example="john@mail.com",
+    )
+    password = colander.SchemaNode(
+        colander.String(),
+        description="New password to apply to the user",
+        missing=colander.drop,
+        example="itzaseekit",
+    )
+
+
+class User_PUT_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = User_PUT_RequestBodySchema()
+
+
+class Users_PUT_OkResponseSchema(colander.MappingSchema):
+    description = "Update user successful."
+    body = BaseBodySchema(code=HTTPOk.code)
+
+
+# PUT method uses same sub-function as POST method (same responses)
+User_PUT_ForbiddenResponseSchema = Users_POST_ForbiddenResponseSchema
+
+
+class User_PUT_ConflictResponseSchema(colander.MappingSchema):
+    description = "New name user already exists."
+    body = BaseBodySchema(code=HTTPConflict.code)
+
+
+class User_GET_ResponseBodySchema(colander.MappingSchema):
+    code = CodeSchemaNode
+    type = TypeSchemaNode
+    detail = DetailSchemaNode
+    user = UserBodySchema()
+
+
+class User_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get user successful."
+    body = User_GET_ResponseBodySchema()
+
+
+class User_CheckAnonymous_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Anonymous user query refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class User_CheckAnonymous_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Anonymous user not found in db."
+    body = BaseBodySchema(code=HTTPNotFound.code)
+
+
+class User_GET_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "User name query refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class User_GET_NotFoundResponseSchema(colander.MappingSchema):
+    description = "User name not found in db."
+    body = BaseBodySchema(code=HTTPNotFound.code)
+
+
+class User_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = colander.MappingSchema(default={})
+
+
+class User_DELETE_OkResponseSchema(colander.MappingSchema):
+    description = "Delete user successful."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class User_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Delete user by name refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class UserGroup_GET_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Group query was refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class UserGroup_GET_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Group for new user doesn't exist."
+    body = BaseBodySchema(code=HTTPNotAcceptable.code)
+
+
+class UserGroup_Check_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Failed to add user-group to db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class UserGroups_GET_ResponseBodySchema(BaseBodySchema):
+    group_names = GroupNamesListSchema()
+
+
+class UserGroups_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get user groups successful."
+    body = UserGroups_GET_ResponseBodySchema()
+
+
+class UserGroups_POST_RequestBodySchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the user in the user-group relationship",
+        example="toto",
+    )
+    group_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the group in the user-group relationship",
+        example="users",
+    )
+
+
+class UserGroups_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = UserGroups_POST_RequestBodySchema()
+
+
+class UserGroups_POST_ResponseBodySchema(BaseBodySchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the user in the user-group relationship",
+        example="toto",
+    )
+    group_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the group in the user-group relationship",
+        example="users",
+    )
+
+
+class UserGroups_POST_OkResponseSchema(colander.MappingSchema):
+    description = "Create user-group assignation successful."
+    body = UserGroups_POST_ResponseBodySchema(code=HTTPOk.code)
+
+
+class UserGroups_POST_ConflictResponseSchema(colander.MappingSchema):
+    description = "User already belongs to this group."
+    body = BaseBodySchema(code=HTTPConflict.code)
+
+
+class UserGroup_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = colander.MappingSchema(default={})
+
+
+class UserGroup_DELETE_OkResponseSchema(colander.MappingSchema):
+    description = "Delete user-group successful."
+    body = BaseBodySchema(code=HTTPOk.code)
+
+
+class UserGroup_DELETE_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Invalid user-group combination for delete."
+    body = BaseBodySchema(code=HTTPNotFound.code)
+
+
+class UserResources_GET_ResponseBodySchema(BaseBodySchema):
+    resources = ResourcesSchemaNode()
+
+
+class UserResources_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get user resources successful."
+    body = UserResources_GET_ResponseBodySchema()
+
+
+class UserResources_GET_NotFoundResponseBodySchema(BaseBodySchema):
+    user_name = colander.SchemaNode(colander.String(), description="User name value read from path")
+    resource_types = ResourceTypesListSchema(description="Resource types searched for")
+
+
+class UserResources_GET_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Failed to populate user resources."
+    body = UserResources_GET_NotFoundResponseBodySchema(code=HTTPNotFound.code)
+
+
+class UserResourcePermissions_GET_ResponseBodySchema(BaseBodySchema):
+    permission_names = PermissionListSchema()
+
+
+class UserResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get user resource permissions successful."
+    body = UserResourcePermissions_GET_ResponseBodySchema(code=HTTPNotFound.code)
+
+
+class UserResourcePermissions_GET_NotAcceptableParamResponseSchema(colander.MappingSchema):
+    name = colander.SchemaNode(colander.String(), description='name of the parameter tested', example='resource_type')
+    value = colander.SchemaNode(colander.String(), description='value of the parameter tested')
+    compare = colander.SchemaNode(colander.String(), description='comparison value of the parameter tested',
+                                  missing=colander.drop)
+
+
+class UserResourcePermissions_GET_NotAcceptableResponseBodySchema(colander.MappingSchema):
+    param = UserResourcePermissions_GET_NotAcceptableParamResponseSchema()
+
+
+class UserResourcePermissions_GET_NotAcceptableRootServiceResponseSchema(colander.MappingSchema):
+    description = "Invalid `resource` specified for resource permission retrieval."
+    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(code=HTTPNotAcceptable.code)
+
+
+class UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(colander.MappingSchema):
+    description = "Invalid `resource` specified for resource permission retrieval."
+    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(code=HTTPNotAcceptable.code)
+
+
+class UserResourcePermissions_GET_NotAcceptableResourceTypeResponseSchema(colander.MappingSchema):
+    description = "Invalid `resource_type` for corresponding service resource permission retrieval."
+    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(code=HTTPNotAcceptable.code)
+
+
+class UserResourcePermissions_POST_RequestBodySchema(BaseBodySchema):
+    resource_id = colander.SchemaNode(
+        colander.Integer(),
+        description="resource_id of the created user-resource-permission reference.")
+    user_id = colander.SchemaNode(
+        colander.Integer(),
+        description="user_id of the created user-resource-permission reference.")
+    permission_name = colander.SchemaNode(
+        colander.String(),
+        description="permission_name of the created user-resource-permission reference.")
+
+
+class UserResourcePermissions_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = UserResourcePermissions_POST_RequestBodySchema()
+
+
+class UserResourcePermissions_POST_ResponseBodySchema(BaseBodySchema):
+    resource_id = colander.SchemaNode(
+        colander.Integer(),
+        description="resource_id of the created user-resource-permission reference.")
+    user_id = colander.SchemaNode(
+        colander.Integer(),
+        description="user_id of the created user-resource-permission reference.")
+    permission_name = colander.SchemaNode(
+        colander.String(),
+        description="permission_name of the created user-resource-permission reference.")
+
+
+class UserResourcePermissions_POST_ParamResponseBodySchema(BaseBodySchema):
+    name = colander.SchemaNode(colander.String(), description="Specified parameter.", example=u'permission_name')
+    value = colander.SchemaNode(colander.String(), description="Specified parameter value.")
+
+
+class UserResourcePermissions_POST_BadResponseBodySchema(BaseBodySchema):
+    resource_type = colander.SchemaNode(colander.String(), description="Specified resource_type.")
+    resource_name = colander.SchemaNode(colander.String(), description="Specified resource_name.")
+    param = UserResourcePermissions_POST_ParamResponseBodySchema()
+
+
+class UserResourcePermissions_POST_CreatedResponseSchema(colander.MappingSchema):
+    description = "Create user resource permission successful."
+    body = UserResourcePermissions_POST_ResponseBodySchema(code=HTTPCreated.code)
+
+
+class UserResourcePermissions_POST_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Permission not allowed for specified `resource_type`."
+    body = UserResourcePermissions_POST_BadResponseBodySchema(code=HTTPNotAcceptable.code)
+
+
+class UserResourcePermissions_POST_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Failed to create permission using specified `resource_id` and `user_id`."
+    body = UserResourcePermissions_POST_BadResponseBodySchema(code=HTTPNotAcceptable.code)
+
+
+class UserResourcePermissions_POST_ConflictResponseSchema(colander.MappingSchema):
+    description = "Permission already exist on resource for user, cannot add to db."
+    body = UserResourcePermissions_POST_ResponseBodySchema(code=HTTPConflict.code)
+
+
+# using same definitions
+UserResourcePermissions_DELETE_BadResponseBodySchema = UserResourcePermissions_POST_ResponseBodySchema
+UserResourcePermissions_DELETE_BadRequestResponseSchema = UserResourcePermissions_POST_BadRequestResponseSchema
+
+
+class UserResourcePermission_DELETE_RequestSchema(colander.MappingSchema):
+    body = colander.MappingSchema(default={})
+
+
+class UserResourcePermissions_DELETE_OkResponseSchema(colander.MappingSchema):
+    description = "Delete user resource permission successful."
+    body = BaseBodySchema(code=HTTPOk.code)
+
+
+class UserResourcePermissions_DELETE_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Could not find user resource permission to delete from db."
+    body = UserResourcePermissions_DELETE_BadResponseBodySchema(code=HTTPOk.code)
+
+
+class UserServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
+    service = ServiceResourcesBodySchema()
+
+
+class UserServiceResources_GET_OkResponseSchema(BaseBodySchema):
+    description = "Get user service resources successful."
+    body = UserServiceResources_GET_ResponseBodySchema()
+
+
+class UserServicePermissions_POST_RequestBodySchema(colander.MappingSchema):
+    permission_name = colander.SchemaNode(colander.String(), description="Name of the permission to create.")
+
+
+class UserServicePermissions_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = UserServicePermissions_POST_RequestBodySchema()
+
+
+class UserServicePermission_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderSchema()
+    body = colander.MappingSchema(default={})
+
+
+class UserServices_GET_ResponseBodySchema(BaseBodySchema):
+    services = ServicesSchemaNode()
+
+
+class UserServices_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get user services successful."
+    body = UserServices_GET_ResponseBodySchema
+
+
+class UserServicePermissions_GET_ResponseBodySchema(BaseBodySchema):
+    permission_names = PermissionListSchema()
+
+
+class UserServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get user service permissions successful."
+    body = UserServicePermissions_GET_ResponseBodySchema()
+
+
+class UserServicePermissions_GET_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Could not find permissions using specified `service_name` and `user_name`."
+    body = BaseBodySchema(code=HTTPNotFound.code)
+
+
+class Group_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Group query by name refused by db."
+    body = BaseBodySchema(code=HTTPForbidden.code)
+
+
+class Group_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Group name not found in db."
+    body = BaseBodySchema(code=HTTPNotFound.code)
+
+
+class GroupServiceResources_GET_ResponseBodySchema(BaseBodySchema):
+    service = ServiceResourcesBodySchema()
+
+
+class GroupServiceResources_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get group service resources successful."
+    body = GroupServiceResources_GET_ResponseBodySchema()
+
+
+class Session_GET_ResponseBodySchema(BaseBodySchema):
+    user = UserBodySchema(missing=colander.drop)
+    authenticated = colander.SchemaNode(
+        colander.Boolean(),
+        description="Indicates if any user session is currently authenticated (user logged in).")
+
+
+class Session_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get session successful."
+    body = Session_GET_ResponseBodySchema()
+
+
+class Session_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
+    description = "Failed to get session details."
+    body = InternalServerErrorResponseSchema()
+
+
+class Providers_GET_ResponseBodySchema(colander.MappingSchema):
+    provider_names = ProvidersListSchema()
+    internal_providers = ProvidersListSchema()
+    external_providers = ProvidersListSchema()
+
+
+class Providers_GET_OkResponseSchema(BaseBodySchema):
+    description = "Get providers successful."
+    body = Providers_GET_ResponseBodySchema()
+
+
+class Version_GET_ResponseBodySchema(colander.MappingSchema):
+    code = colander.SchemaNode(
+        colander.Integer(),
+        description="HTTP response code",
+        example=HTTPOk.code)
     type = colander.SchemaNode(
         colander.String(),
         description="Response content type",
@@ -103,7 +1512,7 @@ class Version_GET_Schema(colander.MappingSchema):
     version = colander.SchemaNode(
         colander.String(),
         description="Magpie version string",
-        example=__version__)
+        example=__meta__.__version__)
     db_version = colander.SchemaNode(
         colander.String(),
         description="Database version string",
@@ -111,28 +1520,286 @@ class Version_GET_Schema(colander.MappingSchema):
 
 
 class Version_GET_OkResponseSchema(colander.MappingSchema):
-    body = Version_GET_Schema()
+    description = "Get version successful."
+    body = Version_GET_ResponseBodySchema()
 
 
-#  NOT REQUIRED field
-#field = colader.SchemaNode(colander.String(), missing=colader.drop)
+# Responses for specific views
+Resource_GET_responses = {
+    '200': Resource_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+    '500': Resource_GET_InternalServerErrorResponseSchema()
+}
+Resource_PUT_responses = {
+    '200': Resource_PUT_OkResponseSchema(),
+    '403': Resource_PUT_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+Resources_GET_responses = {
+    '200': Resources_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '500': Resource_GET_InternalServerErrorResponseSchema()
+}
+Resources_POST_responses = {
+    '200': Resources_POST_OkResponseSchema(),
+    '400': Resources_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resources_POST_ForbiddenResponseSchema(),
+    '404': Resources_POST_NotFoundResponseSchema(),
+    '409': Resources_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+Resources_DELETE_responses = {
+    '200': Resource_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resource_DELETE_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ResourcePermissions_GET_responses = {
+    '200': ResourcePermissions_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': ResourcePermissions_GET_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ServiceTypes_GET_responses = {
+    '200': Services_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': Services_GET_NotAcceptableResponseSchema(),
+}
+Services_GET_responses = {
+    '200': Services_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': Services_GET_NotAcceptableResponseSchema(),
+}
+Services_POST_responses = {
+    '201': Services_POST_CreatedResponseSchema(),
+    '400': Services_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Services_POST_ForbiddenResponseSchema(),
+    '409': Services_POST_ConflictResponseSchema(),
+}
+Service_GET_responses = {
+    '200': Service_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+}
+Service_PUT_responses = {
+    '200': Service_PUT_OkResponseSchema(),
+    '400': Service_PUT_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_PUT_ForbiddenResponseSchema(),
+    '409': Service_PUT_ConflictResponseSchema(),
+}
+Service_DELETE_responses = {
+    '200': Service_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_DELETE_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+}
+ServicePermissions_GET_responses = {
+    '200': ServicePermissions_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    '406': ServicePermissions_GET_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ServiceResources_GET_responses = {
+    '200': ServiceResources_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ServiceResources_POST_responses = {
+    '200': ServiceResources_POST_OkResponseSchema(),
+    '400': ServiceResources_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': ServiceResources_POST_ForbiddenResponseSchema(),
+    '404': ServiceResources_POST_NotFoundResponseSchema(),
+    '409': ServiceResources_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ServiceResource_GET_responses = {
+    '200': ServiceResourceTypes_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': ServiceResourceTypes_GET_ForbiddenResponseSchema(),
+    '404': ServiceResourceTypes_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ServiceResource_DELETE_responses = {
+    '200': ServiceResource_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': ServiceResource_DELETE_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserResources_GET_responses = {
+    '200': UserResources_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': UserResources_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserGroups_GET_responses = {
+    '200': UserGroups_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserGroups_POST_responses = {
+    '200': UserGroups_POST_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '409': UserGroups_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserGroup_DELETE_responses = {
+    '200': UserGroup_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserResourcePermissions_GET_responses = {
+    '200': UserResourcePermissions_GET_OkResponseSchema(),
+    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserResourcePermissions_POST_responses = {
+    '201': UserResourcePermissions_POST_CreatedResponseSchema(),
+    '400': UserResourcePermissions_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': UserResourcePermissions_POST_NotAcceptableResponseSchema(),
+    '409': UserResourcePermissions_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserResourcePermission_DELETE_responses = {
+    '200': UserResourcePermissions_DELETE_OkResponseSchema(),
+    '400': UserResourcePermissions_DELETE_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '404': UserResourcePermissions_DELETE_NotFoundResponseSchema(),
+    '406': UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserServices_GET_responses = {
+    '200': UserServices_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': User_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserServicePermissions_GET_responses = {
+    '200': UserServicePermissions_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': UserServicePermissions_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserServiceResources_GET_responses = {
+    '200': UserServiceResources_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+UserServicePermissions_POST_responses = UserResourcePermissions_POST_responses
+UserServicePermission_DELETE_responses = UserResourcePermission_DELETE_responses
+LoggedUserResources_GET_responses = {
+    '200': UserResources_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': UserResources_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserGroups_GET_responses = {
+    '200': UserGroups_GET_OkResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserGroups_POST_responses = {
+    '200': UserGroups_POST_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '409': UserGroups_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserGroup_DELETE_responses = {
+    '200': UserGroup_DELETE_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
+    '404': User_CheckAnonymous_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserResourcePermissions_GET_responses = {
+    '200': UserResourcePermissions_GET_OkResponseSchema(),
+    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
+    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserResourcePermissions_POST_responses = {
+    '201': UserResourcePermissions_POST_CreatedResponseSchema(),
+    '400': UserResourcePermissions_POST_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '406': UserResourcePermissions_POST_NotAcceptableResponseSchema(),
+    '409': UserResourcePermissions_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserResourcePermission_DELETE_responses = {
+    '200': UserResourcePermissions_DELETE_OkResponseSchema(),
+    '400': UserResourcePermissions_DELETE_BadRequestResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '404': UserResourcePermissions_DELETE_NotFoundResponseSchema(),
+    '406': UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserServices_GET_responses = {
+    '200': UserServices_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': User_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserServicePermissions_GET_responses = {
+    '200': UserServicePermissions_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': UserServicePermissions_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserServiceResources_GET_responses = {
+    '200': UserServiceResources_GET_OkResponseSchema(),
+    '403': User_GET_ForbiddenResponseSchema(),
+    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+LoggedUserServicePermissions_POST_responses = LoggedUserResourcePermissions_POST_responses
+LoggedUserServicePermission_DELETE_responses = LoggedUserResourcePermission_DELETE_responses
+Version_GET_responses = {
+    '200': Version_GET_OkResponseSchema()
+}
 
-# Responses Schemas
-###HTTP200_User_ResponseSchema
 
-
-#class OkResponseSchema(colander.MappingSchema):
-#    body = BaseSchema()
-
-
-# return JSON Swagger specifications of Magpie REST API on route '/magpie/__api__'
-# using all Cornice Services and Schemas
-@SwaggerAPI.get(tags=[APITag])
-def api_spec(request):
+# use Cornice Services and Schemas to return swagger specifications
+def api_schema(request):
+    """
+    Return JSON Swagger specifications of Magpie REST API.
+    """
     generator = CorniceSwagger(get_services())
-    json_api_spec = generator('Magpie REST API', __version__)
+    # function docstrings are used to create the route's summary in Swagger-UI
+    generator.summary_docstrings = True
+    generator.default_security = get_security
+    generator.swagger = SecurityDefinitionAPI
+    json_api_spec = generator.generate(title=TitleAPI, version=__meta__.__version__, info=InfoAPI, base_path='/magpie')
     return json_api_spec
-
-
-#def openapi_spec_generate_json(request):
-#    api_json = requests.post()

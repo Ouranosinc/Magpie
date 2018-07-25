@@ -1,9 +1,8 @@
 from magpie import *
 from owsrequest import *
-from definitions.ziggurat_definitions import *
-from pyramid.security import Everyone as EVERYONE
-from pyramid.security import Allow
-from api.api_except import *
+from magpie.definitions.ziggurat_definitions import *
+from magpie.definitions.pyramid_definitions import EVERYONE, ALLOW
+from magpie.api.api_except import *
 import models
 
 
@@ -170,7 +169,7 @@ class ServiceNCWMS2(ServiceWMS):
                 netcdf_file = netcdf_file.rsplit('/', 1)[0]
 
         else:
-            return [(Allow, EVERYONE, permission_requested,)]
+            return [(ALLOW, EVERYONE, permission_requested,)]
 
         if netcdf_file:
             verify_param('outputs/', paramCompare=netcdf_file, httpError=HTTPNotFound,

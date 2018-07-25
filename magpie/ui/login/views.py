@@ -1,10 +1,10 @@
 import requests
-from definitions.pyramid_definitions import *
-from ui.management import check_response
-from ui.home import add_template_data
+from magpie.definitions.pyramid_definitions import *
+from magpie.ui.management import check_response
+from magpie.ui.home import add_template_data
 
 
-class ManagementViews(object):
+class LoginViews(object):
     def __init__(self, request):
         self.request = request
         self.magpie_url = self.request.registry.settings['magpie.url']

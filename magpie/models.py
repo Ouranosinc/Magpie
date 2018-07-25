@@ -1,7 +1,7 @@
-from definitions.pyramid_definitions import *
-from definitions.ziggurat_definitions import *
-from definitions.sqlalchemy_definitions import *
-from api.api_except import *
+from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.ziggurat_definitions import *
+from magpie.definitions.sqlalchemy_definitions import *
+from magpie.api.api_except import *
 
 
 Base = declarative_base()

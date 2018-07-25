@@ -1,16 +1,18 @@
-from api.management.group.group_utils import *
-from definitions.ziggurat_definitions import *
-from definitions.pyramid_definitions import view_config
+from magpie.api.management.group.group_utils import *
+from magpie.definitions.ziggurat_definitions import *
+from magpie.definitions.pyramid_definitions import view_config
 
 
-@view_config(route_name='groups', request_method='GET')
+@view_config(route_name=GroupsAPI.name, request_method='GET')
 def get_groups(request):
+    """Get list of group names."""
     group_names = get_all_groups(request.db)
     return valid_http(httpSuccess=HTTPOk, detail="Get groups successful", content={u'group_names': group_names})
 
 
-@view_config(route_name='groups', request_method='POST')
+@view_config(route_name=GroupsAPI.name, request_method='POST')
 def create_group(request):
+    """Create a group."""
     group_name = get_value_multiformat_post_checked(request, 'group_name')
     group = GroupService.by_group_name(group_name, db_session=request.db)
     group_content_error = {u'group_name': str(group_name)}
@@ -26,8 +28,9 @@ def create_group(request):
                       content={u'group': format_group(new_group)})
 
 
-@view_config(route_name='group', request_method='PUT')
+@view_config(route_name=GroupAPI.name, request_method='PUT')
 def edit_group(request):
+    """Update a group by name."""
     group = get_group_matchdict_checked(request, group_name_key='group_name')
     new_group_name = get_multiformat_post(request, 'group_name')
     verify_param(new_group_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
@@ -44,24 +47,28 @@ def edit_group(request):
     return valid_http(httpSuccess=HTTPOk, detail="Update group successful.")
 
 
-@view_config(route_name='group', request_method='DELETE')
+@view_config(route_name=GroupAPI.name, request_method='DELETE')
 def delete_group(request):
+    """Delete a group by name."""
     group = get_group_matchdict_checked(request)
     evaluate_call(lambda: request.db.delete(group), fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete group forbidden by db")
     return valid_http(httpSuccess=HTTPOk, detail="Delete group successful")
 
 
-@view_config(route_name='group_users', request_method='GET')
+@view_config(route_name=GroupUsersAPI.name, request_method='GET')
 def get_group_users(request):
+    """List all user from a group."""
     group = get_group_matchdict_checked(request)
     user_names = evaluate_call(lambda: [user.user_name for user in group.users],
                                httpError=HTTPForbidden, msgOnFail="Failed to obtain group user names from db")
-    return valid_http(httpSuccess=HTTPOk, detail="Get group users successful", content={u'user_names': user_names})
+    return valid_http(httpSuccess=HTTPOk, detail="Get group users successful",
+                      content={u'user_names': sorted(user_names)})
 
 
-@view_config(route_name='group_services', request_method='GET')
+@view_config(route_name=GroupServicesAPI.name, request_method='GET')
 def get_group_services_view(request):
+    """List all services a group has permission on."""
     group = get_group_matchdict_checked(request)
     res_perm_dict = get_group_resources_permissions_dict(group, resource_types=[u'service'], db_session=request.db)
     grp_svc_json = evaluate_call(lambda: get_group_services(res_perm_dict, request.db),
@@ -70,8 +77,9 @@ def get_group_services_view(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get group services successful", content={u'services': grp_svc_json})
 
 
-@view_config(route_name='group_service_permissions', request_method='GET')
+@view_config(route_name=GroupServicePermissionsAPI.name, request_method='GET')
 def get_group_service_permissions_view(request):
+    """List all permissions a group has on a specific service."""
     group = get_group_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
     svc_perms_found = evaluate_call(lambda: get_group_service_permissions(group, service, request.db),
@@ -82,24 +90,27 @@ def get_group_service_permissions_view(request):
                       content={u'permission_names': svc_perms_found})
 
 
-@view_config(route_name='group_service_permissions', request_method='POST')
+@view_config(route_name=GroupServicePermissionsAPI.name, request_method='POST')
 def create_group_service_permission(request):
+    """Create a permission on a specific resource for a group."""
     group = get_group_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, service)
     return create_group_resource_permission(perm_name, service, group, db_session=request.db)
 
 
-@view_config(route_name='group_service_permission', request_method='DELETE')
+@view_config(route_name=GroupServicePermissionAPI.name, request_method='DELETE')
 def delete_group_service_permission(request):
+    """Delete a permission from a specific resource for a group."""
     group = get_group_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_matchdict_checked(request, service)
     return delete_group_resource_permission(perm_name, service, group, db_session=request.db)
 
 
-@view_config(route_name='group_resources', request_method='GET')
+@view_config(route_name=GroupResourcesAPI.name, request_method='GET')
 def get_group_resources_view(request):
+    """List all resources a group has permission on."""
     group = get_group_matchdict_checked(request)
     grp_res_json = evaluate_call(lambda: get_group_resources(group, request.db), fallback=lambda: request.db.rollback(),
                                  httpError=HTTPInternalServerError, content={u'group': repr(group)},
@@ -107,8 +118,9 @@ def get_group_resources_view(request):
     return valid_http(httpSuccess=HTTPOk, detail="Get group resources successful", content={u'resources': grp_res_json})
 
 
-@view_config(route_name='group_resource_permissions', request_method='GET')
+@view_config(route_name=GroupResourcePermissionsAPI.name, request_method='GET')
 def get_group_resource_permissions_view(request):
+    """List all permissions a group has on a specific resource."""
     group = get_group_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
     perm_names = get_group_resource_permissions(group, resource, db_session=request.db)
@@ -116,24 +128,34 @@ def get_group_resource_permissions_view(request):
                       content={u'permission_names': perm_names})
 
 
-@view_config(route_name='group_resource_permissions', request_method='POST')
+@view_config(route_name=GroupResourcePermissionsAPI.name, request_method='POST')
 def create_group_resource_permission_view(request):
+    """Create a permission on a specific resource for a group."""
     group = get_group_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, resource)
     return create_group_resource_permission(perm_name, resource, group, db_session=request.db)
 
 
-@view_config(route_name='group_resource_permission', request_method='DELETE')
+@view_config(route_name=GroupResourcePermissionAPI.name, request_method='DELETE')
 def delete_group_resource_permission_view(request):
+    """Delete a permission from a specific resource for a group."""
     group = get_group_matchdict_checked(request)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_matchdict_checked(request, resource)
     return delete_group_resource_permission(perm_name, resource, group, db_session=request.db)
 
 
-@view_config(route_name='group_service_resources', request_method='GET')
+@GroupServiceResourcesAPI.get(tags=[GroupsTag], response_schemas={
+    '200': GroupServiceResources_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': Group_MatchDictCheck_ForbiddenResponseSchema(),
+    '404': Group_MatchDictCheck_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema()
+})
+@view_config(route_name=GroupServiceResourcesAPI.name, request_method='GET')
 def get_group_service_resources_view(request):
+    """List all resources under a service a group has permission on."""
     group = get_group_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
     svc_perms = get_group_service_permissions(group=group, service=service, db_session=request.db)
@@ -145,5 +167,5 @@ def get_group_service_resources_view(request):
         resources_perms_dict=res_perms,
         display_all=False
     )
-    return valid_http(httpSuccess=HTTPOk, detail="Get group service resources successful",
+    return valid_http(httpSuccess=HTTPOk, detail=GroupServiceResources_GET_OkResponseSchema.description,
                       content={u'service': svc_res_json})

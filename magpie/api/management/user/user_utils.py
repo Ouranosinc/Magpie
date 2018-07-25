@@ -1,7 +1,9 @@
 from magpie import *
-from api.api_except import *
-from api.management.resource.resource_utils import check_valid_service_resource_permission
-from definitions.ziggurat_definitions import *
+from magpie.api.api_except import *
+from magpie.api.api_rest_schemas import *
+from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
+from magpie.api.management.user.user_formats import *
+from magpie.definitions.ziggurat_definitions import *
 from services import service_type_dict
 import models
 
@@ -11,14 +13,15 @@ def create_user(user_name, password, email, group_name, db_session):
 
     # Check that group already exists
     group_check = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db),
-                                httpError=HTTPForbidden, msgOnFail="Group query was refused by db")
-    verify_param(group_check, notNone=True, httpError=HTTPNotAcceptable, msgOnFail="Group for new user doesn't exist")
+                                httpError=HTTPForbidden, msgOnFail=UserGroup_GET_ForbiddenResponseSchema.description)
+    verify_param(group_check, notNone=True, httpError=HTTPNotAcceptable,
+                 msgOnFail=UserGroup_Check_ForbiddenResponseSchema.description)
 
     # Check if user already exists
     user_check = evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db),
-                               httpError=HTTPForbidden, msgOnFail="User check query was refused by db")
+                               httpError=HTTPForbidden, msgOnFail=User_Check_ForbiddenResponseSchema.description)
     verify_param(user_check, isNone=True, httpError=HTTPConflict,
-                 msgOnFail="User name matches an already existing user name")
+                 msgOnFail=User_Check_ConflictResponseSchema.description)
 
     # Create user with specified name and group to assign
     user_model = models.User(user_name=user_name, email=email)
@@ -26,31 +29,32 @@ def create_user(user_name, password, email, group_name, db_session):
         user_model.set_password(password)
         user_model.regenerate_security_code()
     evaluate_call(lambda: db.add(user_model), fallback=lambda: db.rollback(),
-                  httpError=HTTPForbidden, msgOnFail="Failed to add user to db")
+                  httpError=HTTPForbidden, msgOnFail=Users_POST_ForbiddenResponseSchema.description)
 
     # Assign user to default group and own group
     new_user = evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db),
-                             httpError=HTTPForbidden, msgOnFail="New user query was refused by db")
+                             httpError=HTTPForbidden, msgOnFail=UserNew_POST_ForbiddenResponseSchema.description)
     group_entry = models.UserGroup(group_id=group_check.id, user_id=new_user.id)
     evaluate_call(lambda: db.add(group_entry), fallback=lambda: db.rollback(),
-                  httpError=HTTPForbidden, msgOnFail="Failed to add user-group to db")
+                  httpError=HTTPForbidden, msgOnFail=UserGroup_GET_ForbiddenResponseSchema.description)
 
-    return valid_http(httpSuccess=HTTPCreated, detail="Add user to db successful")
+    return valid_http(httpSuccess=HTTPCreated, detail=Users_POST_OkResponseSchema.description,
+                      content={u'user': format_user(new_user, [group_name])})
 
 
 def create_user_resource_permission(permission_name, resource, user_id, db_session):
     check_valid_service_resource_permission(permission_name, resource, db_session)
     resource_id = resource.resource_id
     new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
-    verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
-                 content={u'resource_id': str(resource_id), u'user_id': str(user_id)},
-                 msgOnFail="Failed to create permission using specified `resource_id` and `user_id`")
+    verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable, paramName=u'permission_name',
+                 content={u'resource_id': resource_id, u'user_id': user_id},
+                 msgOnFail=UserResourcePermissions_POST_NotAcceptableResponseSchema.description)
     new_perm.perm_name = permission_name
     evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
-                  httpError=HTTPConflict, msgOnFail="Permission already exist on service for user, cannot add to db",
+                  httpError=HTTPConflict, msgOnFail=UserResourcePermissions_POST_ConflictResponseSchema.description,
                   content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
-    return valid_http(httpSuccess=HTTPCreated, detail="Create user resource permission successful",
-                      content={u'resource_id': resource_id})
+    return valid_http(httpSuccess=HTTPCreated, detail=UserResourcePermissions_POST_CreatedResponseSchema.description,
+                      content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
 
 
 def delete_user_resource_permission(permission_name, resource, user_id, db_session):
@@ -58,9 +62,9 @@ def delete_user_resource_permission(permission_name, resource, user_id, db_sessi
     resource_id = resource.resource_id
     del_perm = UserResourcePermissionService.get(user_id, resource_id, permission_name, db_session)
     evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
-                  httpError=HTTPNotFound, msgOnFail="Could not find user resource permission to delete from db",
+                  httpError=HTTPNotFound, msgOnFail=UserResourcePermissions_DELETE_NotFoundResponseSchema.description,
                   content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
-    return valid_http(httpSuccess=HTTPOk, detail="Delete user resource permission successful")
+    return valid_http(httpSuccess=HTTPOk, detail=UserResourcePermissions_DELETE_OkResponseSchema.description)
 
 
 def filter_user_permission(resource_permission_tuple_list, user):
@@ -93,7 +97,7 @@ def get_user_service_permissions(user, service, db_session, inherited_permission
 def get_user_resources_permissions_dict(user, db_session, resource_types=None,
                                         resource_ids=None, inherited_permissions=True):
     verify_param(user, notNone=True, httpError=HTTPNotFound,
-                 msgOnFail="Invalid user specified to obtain resource permissions")
+                 msgOnFail="Invalid user specified to obtain resource permissions.")
     res_perm_tuple_list = user.resources_with_possible_perms(resource_ids=resource_ids,
                                                              resource_types=resource_types, db_session=db_session)
     if not inherited_permissions:
@@ -122,24 +126,24 @@ def get_user_service_resources_permissions_dict(user, service, db_session, inher
 
 def check_user_info(user_name, email, password, group_name):
     verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 msgOnFail="Invalid `user_name` value specified")
+                 paramName=u'user_name', msgOnFail=Users_CheckInfo_Name_BadRequestResponseSchema.description)
     verify_param(len(user_name), isIn=True, httpError=HTTPBadRequest,
-                 paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
+                 paramName=u'user_name', paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
                  msgOnFail="Invalid `user_name` length specified " +
-                           "(>{length} characters)".format(length=USER_NAME_MAX_LENGTH))
+                           "(>{length} characters).".format(length=USER_NAME_MAX_LENGTH))
     verify_param(email, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 msgOnFail="Invalid `email` value specified")
+                 paramName=u'email', msgOnFail=Users_CheckInfo_Email_BadRequestResponseSchema.description)
     verify_param(password, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 msgOnFail="Invalid `password` value specified")
+                 paramName=u'password', msgOnFail=Users_CheckInfo_Password_BadRequestResponseSchema.description)
     verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                 msgOnFail="Invalid `group_name` value specified")
+                 paramName=u'group_name', msgOnFail=Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
     verify_param(user_name, paramCompare=[LOGGED_USER], notIn=True, httpError=HTTPConflict,
-                 msgOnFail="Invalid `user_name` already logged in")
+                 paramName=u'user_name', msgOnFail=Users_CheckInfo_Login_ConflictResponseSchema.description)
 
 
 def get_user_groups_checked(request, user):
-    verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db")
+    verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db.")
     db = request.db
     group_names = evaluate_call(lambda: [group.group_name for group in user.groups], fallback=lambda: db.rollback(),
-                                httpError=HTTPInternalServerError, msgOnFail="Failed to obtain groups of user")
-    return group_names
+                                httpError=HTTPInternalServerError, msgOnFail="Failed to obtain groups of user.")
+    return sorted(group_names)

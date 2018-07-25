@@ -1,6 +1,7 @@
 from pyramid.httpexceptions import *
 from sys import exc_info
 import types
+import six
 
 # control variables to avoid infinite recursion in case of
 # major programming error to avoid application hanging
@@ -11,7 +12,8 @@ RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWArgs=None, msgOnFail="",
                  content=None, contentType='application/json',
                  notNone=False, notEmpty=False, notIn=False, notEqual=False,
-                 isNone=False,  isEmpty=False,  isIn=False,  isEqual=False, ofType=None, withParam=True):
+                 isNone=False,  isEmpty=False,  isIn=False,  isEqual=False, ofType=None,
+                 withParam=True, paramName=None):
     """
     Evaluate various parameter combinations given the requested flags.
     Given a failing verification, directly raises the specified `httpError`.
@@ -19,6 +21,7 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
     Exceptions are generated using the standard output method.
 
     :param param: (bool) parameter value to evaluate
+    :param paramName: (str) name of the tested parameter returned in response if specified for debugging purposes
     :param paramCompare:
         other value(s) to test against, can be an iterable (single value resolved as iterable unless None)
         to test for None type, use `isNone`/`notNone` flags instead or `paramCompare`=[None]
@@ -96,9 +99,11 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
         status = status or (not type(param) == ofType)
     if status:
         if withParam:
-            content[u'param'] = repr(param)
+            content[u'param'] = {u'value': str(param) if type(param) in six.string_types else repr(param)}
+            if paramName is not None:
+                content[u'param'][u'name'] = str(paramName)
             if paramCompare is not None:
-                content[u'paramCompare'] = repr(paramCompare)
+                content[u'param'][u'compare'] = repr(paramCompare)
         raise_http(httpError, httpKWArgs=httpKWArgs, detail=msgOnFail, content=content, contentType=contentType)
 
 
@@ -329,7 +334,7 @@ def generate_response_http_format(httpClass, httpKWArgs, jsonContent, outputType
     try:
         # directly output json if asked with 'application/json'
         if outputType == 'application/json':
-            httpResponse = httpClass(body=jsonContent, content_type='application/json', **httpKWArgs)
+            httpResponse = httpClass(body=jsonContent, content_type='application/json; charset=UTF-8', **httpKWArgs)
 
         # otherwise json is contained within the html <body> section
         elif outputType == 'text/html':
@@ -363,4 +368,4 @@ def isclass(obj):
     :param obj: object to evaluate for class type
     :return: (bool) indicating if `object` is a class
     """
-    return isinstance(obj, (type, types.ClassType))
+    return isinstance(obj, (type, six.class_types))

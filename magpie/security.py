@@ -1,6 +1,6 @@
-from definitions.pyramid_definitions import *
-from definitions.ziggurat_definitions import *
-from api.esgf import esgfopenid
+from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.ziggurat_definitions import *
+from magpie.api.esgf import esgfopenid
 from common import print_log
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid

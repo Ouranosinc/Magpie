@@ -1,8 +1,8 @@
 from magpie import *
-from definitions.pyramid_definitions import *
-from definitions.ziggurat_definitions import *
-from api.api_except import evaluate_call, verify_param
-from api.management.resource.resource_utils import check_valid_service_resource_permission
+from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.ziggurat_definitions import *
+from magpie.api.api_except import evaluate_call, verify_param
+from magpie.api.api_rest_schemas import *
 import models
 
 
@@ -12,29 +12,34 @@ def get_request_method_content(request):
     return getattr(request, method_property)
 
 
-def get_multiformat_any(request, key):
+def get_multiformat_any(request, key, default=None):
     msg = "Key `{key}` could not be extracted from {method} of type `{type}`" \
           .format(key=repr(key), method=request.method, type=request.content_type)
     if request.content_type == 'application/json':
-        return evaluate_call(lambda: request.json.get(key),
+        # avoid json parse error if body is empty
+        if not len(request.body):
+            return default
+        return evaluate_call(lambda: request.json.get(key, default),
                              httpError=HTTPInternalServerError, msgOnFail=msg)
-    return evaluate_call(lambda: get_request_method_content(request).get(key),
+    return evaluate_call(lambda: get_request_method_content(request).get(key, default),
                          httpError=HTTPInternalServerError, msgOnFail=msg)
 
 
-def get_multiformat_post(request, key):
-    return get_multiformat_any(request, key)
+def get_multiformat_post(request, key, default=None):
+    return get_multiformat_any(request, key, default)
 
 
-def get_multiformat_put(request, key):
-    return get_multiformat_any(request, key)
+def get_multiformat_put(request, key, default=None):
+    return get_multiformat_any(request, key, default)
 
 
-def get_multiformat_delete(request, key):
-    return get_multiformat_any(request, key)
+def get_multiformat_delete(request, key, default=None):
+    return get_multiformat_any(request, key, default)
 
 
 def get_permission_multiformat_post_checked(request, service_resource, permission_name_key='permission_name'):
+    # import here to avoid circular import error with undefined functions between (api_request, resource_utils)
+    from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
     perm_name = get_value_multiformat_post_checked(request, permission_name_key)
     check_valid_service_resource_permission(perm_name, service_resource, request.db)
     return perm_name
@@ -43,7 +48,7 @@ def get_permission_multiformat_post_checked(request, service_resource, permissio
 def get_value_multiformat_post_checked(request, key):
     val = get_multiformat_any(request, key)
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
-                 content={str(key): str(val)}, msgOnFail="Invalid value specified.")
+                 paramName=key, msgOnFail=UnprocessableEntityResponseSchema.description)
     return val
 
 
@@ -70,9 +75,10 @@ def get_user(request, user_name_or_token):
             return curr_user
         else:
             anonymous = evaluate_call(lambda: UserService.by_user_name(ANONYMOUS_USER, db_session=request.db),
-                                      fallback=lambda: request.db.rollback(),
-                                      httpError=HTTPForbidden, msgOnFail="Anonymous user query refused by db")
-            verify_param(anonymous, notNone=True, httpError=HTTPNotFound, msgOnFail="Anonymous user not found in db")
+                                      fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                                      msgOnFail=User_CheckAnonymous_ForbiddenResponseSchema.description)
+            verify_param(anonymous, notNone=True, httpError=HTTPNotFound,
+                         msgOnFail=User_CheckAnonymous_NotFoundResponseSchema.description)
             return anonymous
     else:
         authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
@@ -83,8 +89,8 @@ def get_user(request, user_name_or_token):
             raise HTTPForbidden()
         user = evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
                              fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail="User name query refused by db")
-        verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail="User name not found in db")
+                             httpError=HTTPForbidden, msgOnFail=User_GET_ForbiddenResponseSchema.description)
+        verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail=User_GET_NotFoundResponseSchema.description)
         return user
 
 
@@ -97,34 +103,37 @@ def get_group_matchdict_checked(request, group_name_key='group_name'):
     group_name = get_value_matchdict_checked(request, group_name_key)
     group = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
                           fallback=lambda: request.db.rollback(),
-                          httpError=HTTPForbidden, msgOnFail="Group query by name refused by db")
-    verify_param(group, notNone=True, httpError=HTTPNotFound, msgOnFail="Group name not found in db")
+                          httpError=HTTPForbidden, msgOnFail=Group_MatchDictCheck_ForbiddenResponseSchema.description)
+    verify_param(group, notNone=True, httpError=HTTPNotFound,
+                 msgOnFail=Group_MatchDictCheck_NotFoundResponseSchema.description)
     return group
 
 
 def get_resource_matchdict_checked(request, resource_name_key='resource_id'):
     resource_id = get_value_matchdict_checked(request, resource_name_key)
     resource_id = evaluate_call(lambda: int(resource_id), httpError=HTTPNotAcceptable,
-                                msgOnFail="Resource ID is an invalid literal for `int` type")
+                                msgOnFail=Resource_MatchDictCheck_NotAcceptableResponseSchema.description)
     resource = evaluate_call(lambda: ResourceService.by_resource_id(resource_id, db_session=request.db),
-                             fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail="Resource query by id refused by db")
-    verify_param(resource, notNone=True, httpError=HTTPNotFound, msgOnFail="Resource ID not found in db")
+                             fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                             msgOnFail=Resource_MatchDictCheck_ForbiddenResponseSchema.description)
+    verify_param(resource, notNone=True, httpError=HTTPNotFound,
+                 msgOnFail=Resource_MatchDictCheck_NotFoundResponseSchema.description)
     return resource
 
 
 def get_service_matchdict_checked(request, service_name_key='service_name'):
     service_name = get_value_matchdict_checked(request, service_name_key)
     service = evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
-                            fallback=lambda: request.db.rollback(),
-                            httpError=HTTPForbidden, msgOnFail="Service query by name refused by db")
-    verify_param(service, notNone=True, httpError=HTTPNotFound,
-                 msgOnFail="Service name not found in db",
-                 content={u'service_name': service_name})
+                            fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                            msgOnFail=Service_MatchDictCheck_ForbiddenResponseSchema.description)
+    verify_param(service, notNone=True, httpError=HTTPNotFound, content={u'service_name': service_name},
+                 msgOnFail=Service_MatchDictCheck_NotFoundResponseSchema.description)
     return service
 
 
 def get_permission_matchdict_checked(request, service_resource, permission_name_key='permission_name'):
+    # import here to avoid circular import error with undefined functions between (api_request, resource_utils)
+    from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
     perm_name = get_value_matchdict_checked(request, permission_name_key)
     check_valid_service_resource_permission(perm_name, service_resource, request.db)
     return perm_name
@@ -133,5 +142,5 @@ def get_permission_matchdict_checked(request, service_resource, permission_name_
 def get_value_matchdict_checked(request, key):
     val = request.matchdict.get(key)
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
-                 content={str(key): str(val)}, msgOnFail="Invalid value specified")
+                 paramName=key, msgOnFail=UnprocessableEntityResponseSchema.description)
     return val

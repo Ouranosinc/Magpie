@@ -16,11 +16,11 @@
             <td><input type="text" name="group_name" value="${form_group_name}"></td>
             %if conflict_group_name:
                 <td><p class="alert_form_error">
-                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Conflict </p>
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Conflict </p>
                 </td>
             %elif invalid_group_name:
                 <td><p class="alert_form_error">
-                    <img src="${request.static_url('ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </p>
                 </td>
             %else:
                 <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->

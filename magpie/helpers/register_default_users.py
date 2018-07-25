@@ -1,6 +1,6 @@
 from magpie import *
 from common import *
-from definitions.ziggurat_definitions import *
+from magpie.definitions.ziggurat_definitions import *
 import models
 import db
 import transaction
@@ -47,9 +47,9 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
 
 def init_anonymous(db_session):
     register_user_with_group(user_name=ANONYMOUS_USER,
-                             group_name=ANONYMOUS_USER,
+                             group_name=ANONYMOUS_GROUP,
                              email=ANONYMOUS_USER + '@mail.com',
-                             password=ANONYMOUS_USER,
+                             password=ANONYMOUS_PASSWORD,
                              db_session=db_session)
 
 
@@ -87,10 +87,7 @@ def register_default_users():
         time.sleep(2)
         raise_log('Database not ready')
 
-    magpie_module_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-    magpie_ini_file = '{}/magpie.ini'.format(magpie_module_dir)
-    db_session = db.get_db_session_from_config_ini(magpie_ini_file)
-
+    db_session = db.get_db_session_from_config_ini(MAGPIE_INI_FILE_PATH)
     init_admin(db_session)
     init_anonymous(db_session)
     init_user_group(db_session)
