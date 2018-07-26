@@ -162,7 +162,7 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
     evaluate_call(lambda: add_resource_in_tree(new_resource, db_session),
                   fallback=lambda: db_session.rollback(),
                   httpError=HTTPForbidden, msgOnFail=Resources_POST_ForbiddenResponseSchema.description)
-    return valid_http(httpSuccess=HTTPCreated, detail=Resources_POST_OkResponseSchema.description,
+    return valid_http(httpSuccess=HTTPCreated, detail=Resources_POST_CreatedResponseSchema.description,
                       content={u'resource': format_resource(new_resource, basic_info=True)})
 
 
