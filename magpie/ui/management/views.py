@@ -321,10 +321,10 @@ class ManagementViews(object):
             return HTTPFound(self.request.route_url('edit_group', group_name=group_name, cur_svc_type='default'))
 
         groups_info = {}
-        groups = self.get_all_groups()
+        groups = sorted(self.get_all_groups())
         [groups_info.setdefault(grp, {u'members': len(self.get_group_users(grp))}) for grp in groups if grp != u'']
 
-        return add_template_data(self.request, {u'group_names': sorted(groups_info)})
+        return add_template_data(self.request, {u'group_names': groups_info})
 
     @view_config(route_name='add_group', renderer='templates/add_group.mako')
     def add_group(self):
