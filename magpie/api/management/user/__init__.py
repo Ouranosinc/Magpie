@@ -25,7 +25,7 @@ def includeme(config):
     config.add_route(**service_api_route_info(UserResourcePermissionAPI))
     config.add_route(**service_api_route_info(UserResourceInheritedPermissionsAPI))
     # Logged User routes
-    config.add_route(**service_api_route_info(LoggedUserAPI))
+    #config.add_route(**service_api_route_info(LoggedUserAPI))
     #config.add_route(**service_api_route_info(LoggedUserGroupsAPI))
     #config.add_route(**service_api_route_info(LoggedUserGroupAPI))
     #config.add_route(**service_api_route_info(LoggedUserServicesAPI))

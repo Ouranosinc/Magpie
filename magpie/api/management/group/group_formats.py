@@ -13,7 +13,7 @@ def format_group(group, basic_info=False):
             u'description': str(grp.description),
             u'member_count': grp.member_count,
             u'group_id': grp.id,
-            u'users': grp.users
+            u'user_names': [usr.user_name for usr in grp.users]
         }
 
     return evaluate_call(

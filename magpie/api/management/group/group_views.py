@@ -32,6 +32,15 @@ def create_group(request):
                       content={u'group': format_group(new_group, basic_info=True)})
 
 
+@GroupAPI.get(tags=[GroupsTag], response_schemas=Group_GET_responses)
+@view_config(route_name=GroupAPI.name, request_method='GET')
+def get_group(request):
+    """Get group information."""
+    group = get_group_matchdict_checked(request, group_name_key='group_name')
+    return valid_http(httpSuccess=HTTPOk, detail=Group_GET_OkResponseSchema.description,
+                      content={u'group': format_group(group)})
+
+
 @GroupAPI.put(schema=Group_PUT_RequestSchema(), tags=[GroupsTag], response_schemas=Group_PUT_responses)
 @view_config(route_name=GroupAPI.name, request_method='PUT')
 def edit_group(request):
