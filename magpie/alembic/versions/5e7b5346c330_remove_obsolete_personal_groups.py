@@ -18,7 +18,7 @@ from alembic import op
 from alembic.context import get_context
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm import sessionmaker
-from magpie import models, ANONYMOUS_USER, ADMIN_GROUP, USER_GROUP
+from magpie import models, ANONYMOUS_USER, ADMIN_GROUP, USERS_GROUP
 from magpie.definitions.ziggurat_definitions import *
 
 Session = sessionmaker()
@@ -37,8 +37,9 @@ def upgrade():
         all_users = session.query(models.User)
         all_groups = session.query(models.Group)
         all_user_group_refs = models.UserGroup.all(db_session=session)
+        all_user_res_perms = models.GroupResourcePermission.all(db_session=session)
 
-        ignore_groups = {ADMIN_GROUP, USER_GROUP}
+        ignore_groups = {ADMIN_GROUP, USERS_GROUP}
         user_names = {usr.user_name for usr in all_users}
 
         # parse through 'personal' groups matching an existing user
@@ -50,15 +51,12 @@ def upgrade():
                 user = UserService.by_user_name(user_name=group_name, db_session=session)
 
                 # transfer permissions from 'personal' group to user
-                user_perms = GroupService.resources_with_possible_perms(group, db_session=session)
-                for perm in user_perms:
-                    new_perm = models.UserResourcePermission(resource_id=perm.resource.resource_id, user_id=user.id)
-                    new_perm.perm_name = perm.perm_name
-                    session.add(new_perm)
-
-                # delete obsolete 'personal' group permissions
-                for perm in group.resource_permissions:
-                    session.delete(perm)
+                user_group_res_perm = [urp for urp in all_user_res_perms if urp.group_id == group.id]
+                for group_perm in user_group_res_perm:
+                    user_perm = models.UserResourcePermission(resource_id=group_perm.resource_id,
+                                                              user_id=user.id, perm_name=group_perm.perm_name)
+                    session.add(user_perm)
+                    session.delete(group_perm)
 
                 # delete obsolete personal group and corresponding user-group references
                 for usr_grp in all_user_group_refs:

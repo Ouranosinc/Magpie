@@ -384,7 +384,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         json_body = check_response_basic_info(resp, 200)
         groups = json_body['group_names']
         check_val_is_in(magpie.ANONYMOUS_GROUP, groups)
-        check_val_is_in(magpie.USER_GROUP, groups)
+        check_val_is_in(magpie.USERS_GROUP, groups)
         check_val_is_in(magpie.ADMIN_GROUP, groups)
 
     @pytest.mark.users
