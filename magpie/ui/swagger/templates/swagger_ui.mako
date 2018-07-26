@@ -33,7 +33,10 @@
                     SwaggerUIBundle.plugins.DownloadUrl
                 ],
                 layout: "StandaloneLayout",
-                validatorUrl: null // disable validator error messages not finding local routes
+                validatorUrl: null,     // disable validator error messages not finding local routes
+                tagsSorter: 'alpha',
+                apisSorter : "alpha",
+                operationsSorter: "alpha",
             });
         });
     </script>
