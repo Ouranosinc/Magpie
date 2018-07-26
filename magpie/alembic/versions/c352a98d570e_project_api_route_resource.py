@@ -30,15 +30,19 @@ Session = sessionmaker()
 def change_project_api_resource_type(new_type_name):
     context = get_context()
     if isinstance(context.connection.engine.dialect, PGDialect):
+        # obtain service 'project-api'
         session = Session(bind=op.get_bind())
         project_api_svc = models.Service.by_service_name('project-api', db_session=session)
-        project_api_id = project_api_svc.resource_id
-        project_api_res = session.query(models.Resource).filter(models.Resource.root_service_id == project_api_id)
 
-        for res in project_api_res:
-            res.resource_type = 'route'
+        # nothing to edit if it doesn't exist, otherwise change resource types to 'route'
+        if project_api_svc:
+            project_api_id = project_api_svc.resource_id
+            project_api_res = session.query(models.Resource).filter(models.Resource.root_service_id == project_api_id)
 
-        session.commit()
+            for res in project_api_res:
+                res.resource_type = 'route'
+
+            session.commit()
 
 def upgrade():
     change_project_api_resource_type('route')

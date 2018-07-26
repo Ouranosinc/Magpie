@@ -110,7 +110,7 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
     """Create new user with an External Identity"""
     local_user_name = external_user_name + '_' + provider_name
     local_user_name = local_user_name.replace(" ", '_')
-    create_user(local_user_name, password=None, email=email, group_name=USER_GROUP, db_session=db_session)
+    create_user(local_user_name, password=None, email=email, group_name=USERS_GROUP, db_session=db_session)
 
     user = UserService.by_user_name(local_user_name, db_session=db_session)
     ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,

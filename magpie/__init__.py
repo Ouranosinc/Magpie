@@ -13,7 +13,7 @@ ADMIN_USER = os.getenv('ADMIN_USER', 'admin')
 ADMIN_GROUP = os.getenv('ADMIN_GROUP', 'administrators')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin')
 
-USER_GROUP = os.getenv('USER_GROUP', 'users')
+USERS_GROUP = os.getenv('USERS_GROUP', 'users')
 
 ANONYMOUS_USER = os.getenv('ANONYMOUS_USER', 'anonymous')
 ANONYMOUS_GROUP = ANONYMOUS_USER

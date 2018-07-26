@@ -22,15 +22,7 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
         new_user.set_password(password)
         new_user.regenerate_security_code()
         db_session.add(new_user)
-        registered_user = UserService.by_user_name(user_name, db_session=db_session).id
-
-        # add personal user-group and reference between user/personal user-group
-        if not GroupService.by_group_name(user_name, db_session=db_session):
-            new_group = models.Group(group_name=user_name)
-            db_session.add(new_group)
-            group_id = GroupService.by_group_name(user_name, db_session=db_session).id
-            group_entry = models.UserGroup(group_id=group_id, user_id=registered_user.id)
-            db_session.add(group_entry)
+        registered_user = UserService.by_user_name(user_name, db_session=db_session)
     else:
         print_log(user_name+' already exist', level=logging.DEBUG)
 
@@ -75,11 +67,11 @@ def init_admin(db_session):
 
 
 def init_user_group(db_session):
-    if not GroupService.by_group_name(USER_GROUP, db_session=db_session):
-        user_group = models.Group(group_name=USER_GROUP)
+    if not GroupService.by_group_name(USERS_GROUP, db_session=db_session):
+        user_group = models.Group(group_name=USERS_GROUP)
         db_session.add(user_group)
     else:
-        print_log('USER_GROUP already initialized', level=logging.DEBUG)
+        print_log('USERS_GROUP already initialized', level=logging.DEBUG)
 
 
 def register_default_users():
