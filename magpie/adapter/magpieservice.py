@@ -2,6 +2,7 @@
 Store adapters to read data from magpie.
 """
 
+from six.moves.urllib.parse import urlparse
 import logging
 import requests
 import json
@@ -17,7 +18,15 @@ class MagpieServiceStore(ServiceStore):
     """
     def __init__(self, registry):
         try:
-            self.magpie_url = registry.settings.get('magpie.url').strip('/')
+            # add 'http' scheme to url if omitted from config since further 'requests' calls fail without it
+            # mostly for testing when only 'localhost' is specified
+            # otherwise twitcher config should explicitly define it in MAGPIE_URL
+            url_parsed = urlparse(registry.settings.get('magpie.url').strip('/'))
+            if url_parsed.scheme in ['http', 'https']:
+                self.magpie_url = url_parsed.geturl()
+            else:
+                self.magpie_url = 'http://{}'.format(url_parsed.geturl())
+                LOGGER.warn("Missing scheme from MagpieServiceStore url, new value: '{}'".format(self.magpie_url))
         except AttributeError:
             #If magpie.url does not exist, calling strip fct over None will raise this issue
             raise ConfigurationError('magpie.url config cannot be found')
