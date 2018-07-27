@@ -81,28 +81,14 @@ def main(global_config=None, **settings):
     # Don't use scan otherwise modules like 'magpie.adapter' are
     # automatically found and cause import errors on missing packages
     #config.scan('magpie')
-    config.set_default_permission(ADMIN_PERM)
+    config.set_default_permission(ADMIN_PERMISSION)
 
     # include api views
     print_log('Running api documentation setup...')
-    magpie_api_gen_disabled = os.getenv('MAGPIE_API_GENERATION_DISABLED')
-    if magpie_api_gen_disabled:
-        settings['magpie.api_generation_disabled'] = magpie_api_gen_disabled
-    if 'magpie.api_generation_disabled' not in settings:
-        settings['magpie.api_generation_disabled'] = False
-
-    if not settings['magpie.api_generation_disabled']:
-        magpie_api_path = '{base}{path}'.format(base=settings['magpie.url'], path=SwaggerGenerator.path)
-        config.cornice_enable_openapi_view(
-            api_path=magpie_api_path,
-            title=TitleAPI,
-            description=__meta__.__description__,
-            version=__meta__.__version__
-        )
-        config.add_route(**service_api_route_info(SwaggerGenerator))
-        config.add_view(api_schema, route_name=SwaggerGenerator.name, request_method='GET',
-                        renderer='json', permission=NO_PERMISSION_REQUIRED)
-        config.add_route(**service_api_route_info(SwaggerAPI))
+    config.add_route(**service_api_route_info(SwaggerGenerator))
+    config.add_view(api_schema, route_name=SwaggerGenerator.name, request_method='GET',
+                    renderer='json', permission=NO_PERMISSION_REQUIRED)
+    config.add_route(**service_api_route_info(SwaggerAPI))
 
     print_log('Starting Magpie app...')
     wsgi_app = config.make_wsgi_app()

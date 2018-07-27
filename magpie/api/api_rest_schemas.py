@@ -1,19 +1,6 @@
 from magpie.definitions.cornice_definitions import *
 from magpie.definitions.pyramid_definitions import *
-from magpie import LOGGED_USER, USER_NAME_MAX_LENGTH, __meta__
-
-
-class CorniceSwaggerPredicate(object):
-    """Predicate to add simple information to Cornice Swagger."""
-
-    def __init__(self, schema, config):
-        self.schema = schema
-
-    def phash(self):
-        return str(self.schema)
-
-    def __call__(self, context, request):
-        return self.schema
+from magpie import LOGGED_USER, USER_NAME_MAX_LENGTH, ADMIN_PERMISSION, __meta__
 
 
 TitleAPI = "Magpie REST API"
@@ -34,9 +21,10 @@ ServicesTag = 'Service'
 
 
 # Security
-SecurityDefinitionAPI = {'securityDefinitions': {'cookieAuth': {'type': 'apiKey', 'in': 'cookie', 'name': 'auth_tkt'}}}
+SecurityCookieAuthAPI = {'cookieAuth': {'type': 'apiKey', 'in': 'cookie', 'name': 'auth_tkt'}}
+SecurityDefinitionsAPI = {'securityDefinitions': SecurityCookieAuthAPI}
 SecurityAdministratorAPI = [{'cookieAuth': []}]
-SecurityEveryoneAPI = []
+SecurityEveryoneAPI = [{}]
 
 
 def get_security(service, method):
@@ -46,6 +34,13 @@ def get_security(service, method):
         met, view, args = definition
         if met == method:
             break
+    # automatically retrieve permission if specified within the view definition
+    permission = args.get('permission')
+    if permission == NO_PERMISSION_REQUIRED:
+        return SecurityEveryoneAPI
+    elif permission == ADMIN_PERMISSION:
+        return SecurityAdministratorAPI
+    # return default admin permission otherwise unless specified form cornice decorator
     return SecurityAdministratorAPI if 'security' not in args else args['security']
 
 
@@ -64,6 +59,13 @@ SwaggerAPI = Service(
     path='/api',
     name='swagger',
     description="{} documentation".format(TitleAPI))
+# trailing '/' allows the route to work on all following routes:
+# - '/api'
+# - '/api/'
+# - '/magpie/api'
+# - '/magpie/api/' (final '/' added automatically by application)
+SwaggerAPI_extra_name = SwaggerAPI.name + '_extra'
+SwaggerAPI_extra_path = SwaggerAPI.path + '/'
 UsersAPI = Service(
     path='/users',
     name='Users')
@@ -285,6 +287,21 @@ class ErrorVerifyParamBodySchema(colander.MappingSchema):
         missing=colander.drop)
 
 
+class ErrorRequestInfoBodySchema(BaseBodySchema):
+    route_name = colander.SchemaNode(
+        colander.String(),
+        description="Route called that generated the error",
+        example="/users/toto")
+    request_url = colander.SchemaNode(
+        colander.String(),
+        description="Request URL that generated the error",
+        example="http://localhost:2001/magpie/users/toto")
+    method = colander.SchemaNode(
+        colander.String(),
+        description="Request method that generated the error",
+        example="GET")
+
+
 class UnauthorizedResponseBodySchema(BaseBodySchema):
     route_name = colander.SchemaNode(colander.String(), description="Specified route")
     request_url = colander.SchemaNode(colander.String(), description="Specified url")
@@ -296,32 +313,16 @@ class UnauthorizedResponseSchema(colander.MappingSchema):
     body = UnauthorizedResponseBodySchema(code=HTTPUnauthorized.code)
 
 
-class NotFoundBodySchema(colander.MappingSchema):
-    code = colander.SchemaNode(
-        colander.Integer(),
-        description="HTTP response code",
-        example=HTTPNotFound.code)
-    type = colander.SchemaNode(
-        colander.String(),
-        description="Response content type",
-        example="application/json")
-    detail = colander.SchemaNode(
-        colander.String(),
-        description="Response status message",)
-    route_name = colander.SchemaNode(
-        colander.String(),
-        description="Route called that generated the error",
-        example="/users/toto")
-    request_url = colander.SchemaNode(
-        colander.String(),
-        description="Request URL that generated the error",
-        example="http://localhost:2001/magpie/users/toto")
-
-
 class NotFoundResponseSchema(colander.MappingSchema):
     description = "The route resource could not be found."
     header = HeaderResponseSchema()
-    body = NotFoundBodySchema()
+    body = ErrorRequestInfoBodySchema(code=HTTPNotFound.code)
+
+
+class MethodNotAllowedResponseSchema(colander.MappingSchema):
+    description = "The method is not allowed for this resource."
+    header = HeaderResponseSchema()
+    body = ErrorRequestInfoBodySchema(code=HTTPMethodNotAllowed.code)
 
 
 class UnprocessableEntityResponseSchema(colander.MappingSchema):
@@ -330,33 +331,14 @@ class UnprocessableEntityResponseSchema(colander.MappingSchema):
     body = BaseBodySchema(HTTPUnprocessableEntity.code)
 
 
-class InternalServerErrorBodySchema(BaseBodySchema):
-    code = colander.SchemaNode(
-        colander.Integer(),
-        description="HTTP response code",
-        example=HTTPInternalServerError.code)
-    type = colander.SchemaNode(
-        colander.String(),
-        description="Response content type",
-        example="application/json")
-    detail = colander.SchemaNode(
-        colander.String(),
-        description="Response status message",
-        example="Internal Server Error. Unhandled exception occurred.")
-    route_name = colander.SchemaNode(
-        colander.String(),
-        description="Route called that generated the error",
-        example="/users/toto")
-    request_url = colander.SchemaNode(
-        colander.String(),
-        description="Request URL that generated the error",
-        example="http://localhost:2001/magpie/users/toto")
+class InternalServerErrorResponseBodySchema(ErrorRequestInfoBodySchema):
+    pass
 
 
 class InternalServerErrorResponseSchema(colander.MappingSchema):
     description = "Internal Server Error. Unhandled exception occurred."
     header = HeaderResponseSchema()
-    body = InternalServerErrorBodySchema()
+    body = ErrorRequestInfoBodySchema(code=HTTPInternalServerError.code)
 
 
 class ProvidersListSchema(colander.SequenceSchema):
@@ -578,7 +560,7 @@ class Resource_GET_OkResponseSchema(colander.MappingSchema):
 class Resource_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
     description = "Failed building resource children json formatted tree."
     header = HeaderResponseSchema()
-    body = InternalServerErrorBodySchema(code=HTTPInternalServerError.code)
+    body = InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code)
 
 
 class Resource_PUT_RequestBodySchema(colander.MappingSchema):
@@ -1702,7 +1684,7 @@ class GroupServices_GET_OkResponseSchema(colander.MappingSchema):
     body = GroupServices_GET_ResponseBodySchema(code=HTTPOk.code)
 
 
-class GroupServices_InternalServerErrorResponseBodySchema(InternalServerErrorBodySchema):
+class GroupServices_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
     group = GroupBodySchema()
 
 
@@ -1722,7 +1704,7 @@ class GroupServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
     body = GroupServicePermissions_GET_ResponseBodySchema()
 
 
-class GroupServicePermissions_GET_InternalServerErrorResponseBodySchema(InternalServerErrorBodySchema):
+class GroupServicePermissions_GET_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
     group = GroupBodySchema()
     service = ServiceBodySchema()
 
@@ -1781,7 +1763,7 @@ class GroupResourcePermission_DELETE_RequestSchema(colander.MappingSchema):
     body = colander.MappingSchema(default={})
 
 
-class GroupResourcesPermissions_InternalServerErrorResponseBodySchema(InternalServerErrorBodySchema):
+class GroupResourcesPermissions_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
     group = colander.SchemaNode(colander.String(), description="Object representation of the group.")
     resource_ids = colander.SchemaNode(colander.String(), description="Object representation of the resource ids.")
     resource_types = colander.SchemaNode(colander.String(), description="Object representation of the resource types.")
@@ -1793,7 +1775,7 @@ class GroupResourcesPermissions_InternalServerErrorResponseSchema(colander.Mappi
     body = GroupResourcesPermissions_InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code)
 
 
-class GroupResourcePermissions_InternalServerErrorResponseBodySchema(InternalServerErrorBodySchema):
+class GroupResourcePermissions_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
     group = colander.SchemaNode(colander.String(), description="Object representation of the group.")
     resource = colander.SchemaNode(colander.String(), description="Object representation of the resource.")
 
@@ -1814,7 +1796,7 @@ class GroupResources_GET_OkResponseSchema(colander.MappingSchema):
     body = GroupResources_GET_ResponseBodySchema()
 
 
-class GroupResources_GET_InternalServerErrorResponseBodySchema(InternalServerErrorBodySchema):
+class GroupResources_GET_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
     group = colander.SchemaNode(colander.String(), description="Object representation of the group.")
 
 
@@ -2365,6 +2347,11 @@ def api_schema(request):
     # function docstrings are used to create the route's summary in Swagger-UI
     generator.summary_docstrings = True
     generator.default_security = get_security
-    generator.swagger = SecurityDefinitionAPI
+    swagger_base_spec = {
+        'host': request.host,
+        'schemes': [request.scheme]
+    }
+    swagger_base_spec.update(SecurityDefinitionsAPI)
+    generator.swagger = swagger_base_spec
     json_api_spec = generator.generate(title=TitleAPI, version=__meta__.__version__, info=InfoAPI, base_path='/magpie')
     return json_api_spec

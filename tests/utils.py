@@ -21,8 +21,6 @@ def get_test_magpie_app():
     config.add_settings({'ziggurat_foundations.model_locations.User': 'models:User',
                          'ziggurat_foundations.model_locations.user': 'models:User'})
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
-    # remove API which cause duplicate view errors (?) TODO: figure out why it does so, because it shouldn't
-    config.registry.settings['magpie.api_generation_disabled'] = True
     config.registry.settings['magpie.db_migration_disabled'] = True
     # scan dependencies
     config.include('magpie')

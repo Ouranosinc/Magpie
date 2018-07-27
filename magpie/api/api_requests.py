@@ -94,6 +94,13 @@ def get_user(request, user_name_or_token):
         return user
 
 
+def get_user_matchdict_checked_or_logged(request, user_name_key='user_name', logged_user_name=LOGGED_USER):
+    logged_user_path = UserAPI.path.replace('{' + user_name_key + '}', logged_user_name)
+    if user_name_key not in request.matchdict and request.path_info.startswith(logged_user_path):
+        return get_user(request, logged_user_name)
+    return get_user_matchdict_checked(request, user_name_key)
+
+
 def get_user_matchdict_checked(request, user_name_key='user_name'):
     user_name = get_value_matchdict_checked(request, user_name_key)
     return get_user(request, user_name)

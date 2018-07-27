@@ -4,9 +4,7 @@ logger = logging.getLogger(__name__)
 
 
 def includeme(config):
-    if config.registry.settings.get('magpie.api_generation_disabled'):
-        logger.warn('Skipping swagger ...')
-    else:
-        logger.info('Adding swagger ...')
-        config.add_route(**service_api_route_info(SwaggerAPI))
-        config.scan()
+    logger.info('Adding swagger ...')
+    config.add_route(**service_api_route_info(SwaggerAPI))
+    config.add_route(SwaggerAPI_extra_name, SwaggerAPI_extra_path)
+    config.scan()

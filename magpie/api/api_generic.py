@@ -1,7 +1,6 @@
 from magpie.definitions.pyramid_definitions import *
 from magpie.api.api_except import *
 from magpie.api.api_rest_schemas import *
-from magpie import __meta__, db
 
 
 @notfound_view_config()
@@ -29,7 +28,8 @@ def unauthorized_access(request):
 
 
 def get_request_info(request, default_msg="undefined"):
-    content = {u'route_name': str(request.upath_info), u'request_url': str(request.url), u'detail': default_msg}
+    content = {u'route_name': str(request.upath_info), u'request_url': str(request.url),
+               u'detail': default_msg, u'method': request.method}
     if hasattr(request, 'exception'):
         if hasattr(request.exception, 'json'):
             if type(request.exception.json) is dict:
