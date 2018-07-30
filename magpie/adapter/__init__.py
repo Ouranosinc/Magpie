@@ -9,6 +9,7 @@ from magpie.db import *
 import logging
 logger = logging.getLogger(__name__)
 
+
 class MagpieAdapter(AdapterInterface):
 
     def servicestore_factory(self, registry, database=None, headers=None):
@@ -25,8 +26,7 @@ class MagpieAdapter(AdapterInterface):
         config = auth_config_from_settings(settings)
         config.set_request_property(get_user, 'user', reify=True)
         self.owsproxy_config(settings, config)
-        return config
-
+        return
     def owsproxy_config(self, settings, config):
         logger.info('Loading MagpieAdapter owsproxy config')
 
@@ -53,3 +53,8 @@ class MagpieAdapter(AdapterInterface):
         config.add_view(owsproxy, route_name='owsproxy')
         config.add_view(owsproxy, route_name='owsproxy_extra')
         config.add_view(owsproxy, route_name='owsproxy_secured')
+
+    def processstore_factory(self, registry, database=None):
+        # no reimplementation of processes on magpie side
+        # simply return the default twitcher process store
+        return DefaultAdapter.processstore_factory(registry, database)
