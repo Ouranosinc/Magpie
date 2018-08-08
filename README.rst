@@ -35,8 +35,3 @@ At the command line::
 .. _Authomatic: https://authomatic.github.io/authomatic/
 .. _Ziggurat-Foundations: https://github.com/ergo/ziggurat_foundations
 
-An administration interface is also provided:
-
-.. raw:: html
-
-    <img src="https://www.dropbox.com/s/glhpg3amoblktyt/magpieDemo.gif?raw=1" width="1200px">
