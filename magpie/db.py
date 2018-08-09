@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from magpie.constants import MAGPIE_ROOT
+from magpie.constants import MAGPIE_INI_FILE_PATH
 from magpie.definitions.alembic_definitions import *
 from magpie.definitions.sqlalchemy_definitions import *
 from common import print_log
@@ -89,7 +89,8 @@ def get_settings_from_config_ini(config_ini_path, ini_main_section_name='app:mag
 
 
 def run_database_migration():
-    alembic_args = ['-c', '{path}/alembic.ini'.format(path=MAGPIE_ROOT), 'upgrade', 'heads']
+    logger.info("Using file '{}' for migration.".format(MAGPIE_INI_FILE_PATH))
+    alembic_args = ['-c', MAGPIE_INI_FILE_PATH, 'upgrade', 'heads']
     alembic.config.main(argv=alembic_args)
 
 
