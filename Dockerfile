@@ -18,11 +18,6 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --upgrade pip setuptools
 RUN pip install gunicorn
 
-# change in 'cornice-swagger==0.6.1.dev0' required but not yet deployed as package
-# TODO: remove this operation and move to 'requirements.txt' when available
-RUN git clone https://github.com/Cornices/cornice.ext.swagger cornice_swagger
-RUN pip install cornice_swagger/
-
 COPY requirements.txt /opt/local/src/magpie/requirements.txt
 RUN pip install -r /opt/local/src/magpie/requirements.txt
 COPY ./ /opt/local/src/magpie/
