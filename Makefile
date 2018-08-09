@@ -53,6 +53,12 @@ lint:
 test: install
 	python setup.py test
 
+test-local: install
+	MAGPIE_TEST_REMOTE=false python setup.py test
+
+test-remote: install
+	MAGPIE_TEST_LOCAL=false python setup.py test
+
 test-all:
 	tox
 

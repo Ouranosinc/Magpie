@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 import os
 
 MAGPIE_MODULE_DIR = os.path.abspath(os.path.dirname(__file__))

@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 from magpie.constants import MAGPIE_ROOT
 from magpie.definitions.alembic_definitions import *
 from magpie.definitions.sqlalchemy_definitions import *
