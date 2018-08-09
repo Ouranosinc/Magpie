@@ -1,13 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from magpie.constants import MAGPIE_INI_FILE_PATH
+from magpie.constants import MAGPIE_ALEMBIC_INI_FILE_PATH
 from magpie.definitions.alembic_definitions import *
 from magpie.definitions.sqlalchemy_definitions import *
-from common import print_log
+from magpie.common import print_log
 # noinspection PyCompatibility
 import configparser
 import transaction
-import models
 import inspect
 import zope.sqlalchemy
 import os
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # import or define all models here to ensure they are attached to the
 # Base.metadata prior to any initialization routines
-from models import *
+from magpie import models
 
 # run configure_mappers after defining all of the models to ensure
 # all relationships can be setup
@@ -89,8 +88,8 @@ def get_settings_from_config_ini(config_ini_path, ini_main_section_name='app:mag
 
 
 def run_database_migration():
-    logger.info("Using file '{}' for migration.".format(MAGPIE_INI_FILE_PATH))
-    alembic_args = ['-c', MAGPIE_INI_FILE_PATH, 'upgrade', 'heads']
+    logger.info("Using file '{}' for migration.".format(MAGPIE_ALEMBIC_INI_FILE_PATH))
+    alembic_args = ['-c', MAGPIE_ALEMBIC_INI_FILE_PATH, 'upgrade', 'heads']
     alembic.config.main(argv=alembic_args)
 
 

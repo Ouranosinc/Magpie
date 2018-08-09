@@ -7,6 +7,7 @@ MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
 
 MAGPIE_PROVIDERS_CONFIG_PATH = '{}/providers.cfg'.format(MAGPIE_ROOT)
 MAGPIE_INI_FILE_PATH = '{}/magpie.ini'.format(MAGPIE_MODULE_DIR)
+MAGPIE_ALEMBIC_INI_FILE_PATH = '{}/alembic/alembic.ini'.format(MAGPIE_MODULE_DIR)
 
 ADMIN_USER = os.getenv('ADMIN_USER', 'admin')
 ADMIN_GROUP = os.getenv('ADMIN_GROUP', 'administrators')

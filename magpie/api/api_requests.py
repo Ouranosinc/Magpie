@@ -2,7 +2,7 @@ from magpie.constants import ADMIN_GROUP, ANONYMOUS_USER
 from magpie.definitions import ziggurat_definitions as zig
 from magpie.api.api_except import evaluate_call, verify_param
 from magpie.api.api_rest_schemas import *
-import models
+from magpie import models
 
 
 def get_request_method_content(request):

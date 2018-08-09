@@ -68,8 +68,8 @@ coverage:
 	coverage html -d coverage
 	$(BROWSER) coverage/index.html
 
-migrate:
-	alembic upgrade head
+migrate: install
+	alembic -c $(CUR_DIR)/magpie/alembic/alembic.ini upgrade head
 
 docs:
 	echo $(CUR_DIR)

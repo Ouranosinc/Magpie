@@ -4,9 +4,9 @@ from magpie.api.management.service.service_formats import format_service_resourc
 from magpie.api.management.resource.resource_utils import *
 from magpie.api.management.resource.resource_formats import *
 from magpie.definitions.pyramid_definitions import view_config
-from common import str2bool
-from register import sync_services_phoenix
-from services import service_type_dict
+from magpie.common import str2bool
+from magpie.register import sync_services_phoenix
+from magpie.services import service_type_dict
 
 
 @ResourcesAPI.get(tags=[ResourcesTag], response_schemas=Resources_GET_responses)

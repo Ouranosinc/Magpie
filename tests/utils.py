@@ -4,7 +4,7 @@ import requests
 from distutils.version import *
 from webtest import TestApp
 from webtest.response import TestResponse
-from magpie import __meta__, constants, db, models, services, magpiectl
+from magpie import __meta__, constants, db, services, magpiectl
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -324,8 +324,8 @@ class TestSetup(object):
         check_val_is_in(test_class.test_service_type, json_body['services'])
         check_val_not_equal(len(json_body['services'][test_class.test_service_type]), 0,
                             msg="Missing any required service of type: `{}`".format(test_class.test_service_type))
-        services = json_body['services'][test_class.test_service_type]
-        return services[services.keys()[0]]
+        services_dict = json_body['services'][test_class.test_service_type]
+        return services_dict.values()[0]
 
     @staticmethod
     def create_TestServiceResource(test_class, data_override=None):

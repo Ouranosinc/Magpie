@@ -1,8 +1,6 @@
-from magpie import constants
+from magpie import constants, db, models
 from magpie.common import print_log, raise_log
 from magpie.definitions.ziggurat_definitions import *
-import models
-import db
 import transaction
 import logging
 import time

@@ -1,6 +1,6 @@
 from magpie.definitions.pyramid_definitions import *
-from models import resource_tree_service, Service
-from services import service_type_dict
+from magpie.models import resource_tree_service, Service
+from magpie.services import service_type_dict
 from magpie.api.api_except import evaluate_call
 
 

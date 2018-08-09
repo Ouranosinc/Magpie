@@ -1,7 +1,7 @@
 from magpie import models
-from register import SERVICES_PHOENIX_ALLOWED
+from magpie.register import SERVICES_PHOENIX_ALLOWED
 from magpie.definitions.ziggurat_definitions import *
-from services import service_type_dict
+from magpie.services import service_type_dict
 from magpie.api.api_except import *
 from magpie.api.management.group.group_utils import create_group_resource_permission
 import os

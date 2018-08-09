@@ -14,9 +14,8 @@ import pytest
 import pyramid.testing
 import six
 import yaml
-import magpie
-from services import service_type_dict
-from magpie import *
+from magpie.services import service_type_dict
+from magpie import constants
 from tests.utils import *
 from tests.runner import *
 
@@ -87,7 +86,7 @@ class TestMagpieUI_NoAuthRemote(unittest.TestCase):
         assert cls.url, "cannot test without a remote server URL"
         cls.json_headers = get_headers_content_type(cls.url, 'application/json')
         cls.cookies = None
-        cls.usr = magpie.ANONYMOUS_USER
+        cls.usr = constants.ANONYMOUS_USER
         cls.version = TestSetup.get_Version(cls)
 
     @classmethod
@@ -122,7 +121,7 @@ class TestMagpieUI_AdminAuthRemote(unittest.TestCase):
         assert cls.url, "cannot test without a remote server URL"
         assert cls.usr and cls.pwd, "cannot login with unspecified username/password"
         cls.headers, cls.cookies = check_or_try_login_user(cls.url, cls.usr, cls.pwd)
-        cls.require = "cannot run tests without logged in '{}' user".format(magpie.ADMIN_GROUP)
+        cls.require = "cannot run tests without logged in '{}' user".format(constants.ADMIN_GROUP)
         cls.json_headers = get_headers_content_type(cls.url, 'application/json')
         cls.check_requirements()
         cls.version = TestSetup.get_Version(cls)

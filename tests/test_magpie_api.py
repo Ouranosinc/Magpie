@@ -15,8 +15,8 @@ import pyramid.testing
 import yaml
 import six
 from six.moves.urllib.parse import urlparse
-from services import service_type_dict
-from register import get_twitcher_protected_service_url
+from magpie.services import service_type_dict
+from magpie.register import get_twitcher_protected_service_url
 from magpie.api.api_rest_schemas import SwaggerGenerator
 from magpie import __meta__, constants
 from tests.utils import *
@@ -37,9 +37,9 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
         cls.app = get_test_magpie_app()
         cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.json_headers = get_headers_content_type(cls.app, 'application/json')
-        cls.version = magpie.__meta__.__version__
+        cls.version = __meta__.__version__
         cls.cookies = None
-        cls.usr = magpie.ANONYMOUS_USER
+        cls.usr = constants.ANONYMOUS_USER
 
     @classmethod
     def tearDownClass(cls):
@@ -68,7 +68,7 @@ class TestMagpieAPI_NoAuthLocal(unittest.TestCase):
     @pytest.mark.users
     @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetCurrentUser(self):
-        resp = test_request(self.url, 'GET', '/users/{}'.format(magpie.LOGGED_USER), headers=self.json_headers)
+        resp = test_request(self.url, 'GET', '/users/{}'.format(constants.LOGGED_USER), headers=self.json_headers)
         json_body = check_response_basic_info(resp, 200)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             check_val_equal(json_body['user']['user_name'], self.usr)
@@ -115,7 +115,7 @@ class TestMagpieAPI_AdminAuthLocal(unittest.TestCase):
         cls.pwd = os.getenv('MAGPIE_TEST_ADMIN_PASSWORD')
         assert cls.usr and cls.pwd, "cannot login with unspecified username/password"
         cls.headers, cls.cookies = check_or_try_login_user(cls.app, cls.usr, cls.pwd)
-        cls.require = "cannot run tests without logged in '{}' user".format(magpie.ADMIN_GROUP)
+        cls.require = "cannot run tests without logged in '{}' user".format(constants.ADMIN_GROUP)
         cls.json_headers = get_headers_content_type(cls.app, 'application/json')
         assert cls.headers and cls.cookies, cls.require
         cls.app.cookies = cls.cookies
@@ -139,7 +139,7 @@ class TestMagpieAPI_AdminAuthLocal(unittest.TestCase):
         json_body = check_response_basic_info(resp, 200)
         check_val_is_in('db_version', json_body)
         check_val_is_in('version', json_body)
-        check_val_equal(json_body['version'], magpie.__meta__.__version__)
+        check_val_equal(json_body['version'], __meta__.__version__)
         check_val_type(json_body['version'], six.string_types)
         version_parts = json_body['version'].split('.')
         check_val_equal(len(version_parts), 3)
@@ -169,7 +169,7 @@ class TestMagpieAPI_NoAuthRemote(unittest.TestCase):
         assert cls.url, "cannot test without a remote server URL"
         cls.json_headers = get_headers_content_type(cls.url, 'application/json')
         cls.cookies = None
-        cls.usr = magpie.ANONYMOUS_USER
+        cls.usr = constants.ANONYMOUS_USER
         cls.version = TestSetup.get_Version(cls)
 
     @classmethod
@@ -229,7 +229,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         assert cls.url, "cannot test without a remote server URL"
         assert cls.usr and cls.pwd, "cannot login with unspecified username/password"
         cls.headers, cls.cookies = check_or_try_login_user(cls.url, cls.usr, cls.pwd)
-        cls.require = "cannot run tests without logged in '{}' user".format(magpie.ADMIN_GROUP)
+        cls.require = "cannot run tests without logged in '{}' user".format(constants.ADMIN_GROUP)
         cls.json_headers = get_headers_content_type(cls.url, 'application/json')
         cls.check_requirements()
         cls.version = TestSetup.get_Version(cls)
@@ -288,12 +288,12 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             check_val_is_in('user', json_body)
             check_val_equal(json_body['user']['user_name'], self.usr)
-            check_val_is_in(magpie.ADMIN_GROUP, json_body['user']['group_names'])
+            check_val_is_in(constants.ADMIN_GROUP, json_body['user']['group_names'])
             check_val_type(json_body['user']['group_names'], list)
             check_val_is_in('email', json_body['user'])
         else:
             check_val_equal(json_body['user_name'], self.usr)
-            check_val_is_in(magpie.ADMIN_GROUP, json_body['group_names'])
+            check_val_is_in(constants.ADMIN_GROUP, json_body['group_names'])
             check_val_type(json_body['group_names'], list)
             check_val_is_in('user_email', json_body)
 
@@ -316,8 +316,8 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         resp = test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
         users = json_body['user_names']
-        check_val_is_in(magpie.ANONYMOUS_USER, users)
-        check_val_is_in(magpie.ADMIN_USER, users)
+        check_val_is_in(constants.ANONYMOUS_USER, users)
+        check_val_is_in(constants.ADMIN_USER, users)
 
     @classmethod
     def check_GetUserResourcesPermissions(cls, user_name):
@@ -330,7 +330,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
     @pytest.mark.users
     @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
     def test_GetCurrentUserResourcesPermissions(self):
-        self.check_GetUserResourcesPermissions(magpie.LOGGED_USER)
+        self.check_GetUserResourcesPermissions(constants.LOGGED_USER)
 
     @pytest.mark.users
     @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
@@ -344,7 +344,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         json_body = check_response_basic_info(resp, 200)
         check_val_is_in('group_names', json_body)
         check_val_type(json_body['group_names'], list)
-        check_val_is_in(magpie.ADMIN_GROUP, json_body['group_names'])
+        check_val_is_in(constants.ADMIN_GROUP, json_body['group_names'])
 
     @pytest.mark.users
     @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
@@ -382,9 +382,9 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         resp = test_request(self.url, 'GET', '/groups', headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
         groups = json_body['group_names']
-        check_val_is_in(magpie.ANONYMOUS_GROUP, groups)
-        check_val_is_in(magpie.USERS_GROUP, groups)
-        check_val_is_in(magpie.ADMIN_GROUP, groups)
+        check_val_is_in(constants.ANONYMOUS_GROUP, groups)
+        check_val_is_in(constants.USERS_GROUP, groups)
+        check_val_is_in(constants.ADMIN_GROUP, groups)
 
     @pytest.mark.users
     @unittest.skipUnless(MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
@@ -448,12 +448,12 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
     @pytest.mark.groups
     @unittest.skipUnless(MAGPIE_TEST_GROUPS, reason="Skip 'groups' tests requested.")
     def test_GetGroupUsers(self):
-        route = '/groups/{grp}/users'.format(grp=magpie.ADMIN_GROUP)
+        route = '/groups/{grp}/users'.format(grp=constants.ADMIN_GROUP)
         resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
         check_val_is_in('user_names', json_body)
         check_val_type(json_body['user_names'], list)
-        check_val_is_in(magpie.ADMIN_USER, json_body['user_names'])
+        check_val_is_in(constants.ADMIN_USER, json_body['user_names'])
         check_val_is_in(self.usr, json_body['user_names'])
 
     @pytest.mark.services
@@ -601,7 +601,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
 
         # ensure that 'getcapabilities' permission is given to anonymous for applicable services
         services_list_getcap = [svc for svc in services_list if 'getcapabilities' in svc['permission_names']]
-        route = '/users/{usr}/services'.format(usr=magpie.ANONYMOUS_USER)
+        route = '/users/{usr}/services'.format(usr=constants.ANONYMOUS_USER)
         resp = test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = check_response_basic_info(resp, 200)
         services_body = json_body['services']
@@ -609,7 +609,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
             svc_name = svc['service_name']
             svc_type = svc['service_type']
             msg = "Service `{name}` of type `{type}` is expected to have `{perm}` permissions for user `{usr}`" \
-                  .format(name=svc_name, type=svc_type, perm='getcapabilities', usr=magpie.ANONYMOUS_USER)
+                  .format(name=svc_name, type=svc_type, perm='getcapabilities', usr=constants.ANONYMOUS_USER)
             check_val_is_in(svc_name, services_body[svc_type], msg=msg)
             check_val_is_in('getcapabilities', services_body[svc_type][svc_name]['permission_names'])
 

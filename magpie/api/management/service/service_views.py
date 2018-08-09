@@ -4,10 +4,10 @@ from magpie.api.management.service.service_utils import *
 from magpie.api.api_requests import *
 from magpie.api.api_rest_schemas import *
 from magpie.definitions.pyramid_definitions import view_config
-from common import str2bool
-from register import sync_services_phoenix
-from models import resource_tree_service
-from services import service_type_dict
+from magpie.common import str2bool
+from magpie.register import sync_services_phoenix
+from magpie.models import resource_tree_service
+from magpie.services import service_type_dict
 
 
 @ServiceTypesAPI.get(tags=[ServicesTag], response_schemas=ServiceTypes_GET_responses)
