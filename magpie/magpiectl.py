@@ -85,10 +85,10 @@ def main(global_config=None, **settings):
 
     # include api views
     print_log('Running api documentation setup...')
+    config.add_route(**service_api_route_info(SwaggerAPI))
     config.add_route(**service_api_route_info(SwaggerGenerator))
     config.add_view(api_schema, route_name=SwaggerGenerator.name, request_method='GET',
                     renderer='json', permission=NO_PERMISSION_REQUIRED)
-    config.add_route(**service_api_route_info(SwaggerAPI))
 
     print_log('Starting Magpie app...')
     wsgi_app = config.make_wsgi_app()
