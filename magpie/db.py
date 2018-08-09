@@ -1,4 +1,4 @@
-from magpie import MAGPIE_ROOT
+from magpie.constants import MAGPIE_ROOT
 from magpie.definitions.alembic_definitions import *
 from magpie.definitions.sqlalchemy_definitions import *
 from common import print_log

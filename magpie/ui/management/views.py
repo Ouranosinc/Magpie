@@ -1,6 +1,6 @@
 import requests
 from magpie.definitions.pyramid_definitions import *
-from magpie import USER_NAME_MAX_LENGTH, ANONYMOUS_USER, USERS_GROUP
+from magpie.constants import USER_NAME_MAX_LENGTH, ANONYMOUS_USER, USERS_GROUP
 from services import service_type_dict
 from models import resource_type_dict
 from magpie.ui.management import check_response

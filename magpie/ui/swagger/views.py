@@ -1,5 +1,5 @@
 from magpie.api.api_rest_schemas import *
-from magpie import MAGPIE_MODULE_DIR
+from magpie.constants import MAGPIE_MODULE_DIR
 import os
 
 

@@ -15,11 +15,10 @@ import pyramid.testing
 import yaml
 import six
 from six.moves.urllib.parse import urlparse
-import magpie
 from services import service_type_dict
 from register import get_twitcher_protected_service_url
 from magpie.api.api_rest_schemas import SwaggerGenerator
-from magpie import __meta__
+from magpie import __meta__, constants
 from tests.utils import *
 from tests.runner import *
 
@@ -250,7 +249,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
 
     @classmethod
     def get_test_values(cls):
-        services_cfg = yaml.load(open(magpie.MAGPIE_PROVIDERS_CONFIG_PATH, 'r'))
+        services_cfg = yaml.load(open(constants.MAGPIE_PROVIDERS_CONFIG_PATH, 'r'))
         provider_services_info = services_cfg['providers']
         # filter impossible providers from possible previous version of remote server
         possible_service_types = get_service_types_for_version(cls.version)

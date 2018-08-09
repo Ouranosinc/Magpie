@@ -50,7 +50,7 @@ clean-test:
 lint:
 	flake8 magpie tests
 
-test:
+test: install
 	python setup.py test
 
 test-all:

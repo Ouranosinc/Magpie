@@ -2,16 +2,15 @@ from authomatic.adapters import WebObAdapter
 from authomatic.providers import oauth1, oauth2, openid
 from authomatic import Authomatic, provider_id
 from security import authomatic
-
-from magpie.definitions.pyramid_definitions import *
+from magpie.constants import USERS_GROUP
 from magpie.definitions.ziggurat_definitions import *
-from magpie import *
 from magpie.api.api_except import *
 from magpie.api.api_requests import *
 from magpie.api.api_rest_schemas import *
 from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import create_user
 import requests
+import os
 
 
 external_providers_config = {

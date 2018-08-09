@@ -1,4 +1,3 @@
-from magpie.definitions.pyramid_definitions import *
 from magpie.api.api_except import *
 from magpie.api.api_rest_schemas import *
 

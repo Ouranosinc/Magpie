@@ -1,6 +1,7 @@
 from magpie.definitions.cornice_definitions import *
 from magpie.definitions.pyramid_definitions import *
-from magpie import LOGGED_USER, USER_NAME_MAX_LENGTH, ADMIN_PERMISSION, __meta__
+from magpie.constants import LOGGED_USER, USER_NAME_MAX_LENGTH, ADMIN_PERMISSION
+from magpie import __meta__
 
 
 TitleAPI = "Magpie REST API"

@@ -4,8 +4,7 @@ import requests
 from distutils.version import *
 from webtest import TestApp
 from webtest.response import TestResponse
-import magpie
-from magpie import __meta__, db, models, services, magpiectl, MAGPIE_INI_FILE_PATH
+from magpie import __meta__, constants, db, models, services, magpiectl
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -16,7 +15,7 @@ def config_setup_from_ini(config_ini_file_path):
 
 def get_test_magpie_app():
     # parse settings from ini file to pass them to the application
-    config = config_setup_from_ini(MAGPIE_INI_FILE_PATH)
+    config = config_setup_from_ini(constants.MAGPIE_INI_FILE_PATH)
     # required redefinition because root models' location is not the same from within this test file
     config.add_settings({'ziggurat_foundations.model_locations.User': 'models:User',
                          'ziggurat_foundations.model_locations.user': 'models:User'})

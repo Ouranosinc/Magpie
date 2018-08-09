@@ -28,7 +28,7 @@ from magpie.common import *
 from magpie.helpers.register_default_users import register_default_users
 from magpie.helpers.register_providers import magpie_register_services_from_config
 from magpie.security import auth_config_from_settings
-from magpie import models, db, __meta__
+from magpie import models, db, constants, __meta__
 
 
 def main(global_config=None, **settings):
@@ -36,8 +36,8 @@ def main(global_config=None, **settings):
     This function returns a Pyramid WSGI application.
     """
 
-    settings['magpie.root'] = MAGPIE_ROOT
-    settings['magpie.module'] = MAGPIE_MODULE_DIR
+    settings['magpie.root'] = constants.MAGPIE_ROOT
+    settings['magpie.module'] = constants.MAGPIE_MODULE_DIR
 
     # migrate db as required and check if database is ready
     if not settings.get('magpie.db_migration_disabled', False):
@@ -57,8 +57,9 @@ def main(global_config=None, **settings):
     settings['magpie.phoenix_push'] = str2bool(os.getenv('PHOENIX_PUSH', False))
 
     print_log('Register default providers...', LOGGER)
-    svc_db_session = db.get_db_session_from_config_ini(MAGPIE_INI_FILE_PATH)
-    magpie_register_services_from_config(MAGPIE_PROVIDERS_CONFIG_PATH, push_to_phoenix=settings['magpie.phoenix_push'],
+    svc_db_session = db.get_db_session_from_config_ini(constants.MAGPIE_INI_FILE_PATH)
+    magpie_register_services_from_config(constants.MAGPIE_PROVIDERS_CONFIG_PATH,
+                                         push_to_phoenix=settings['magpie.phoenix_push'],
                                          force_update=True, disable_getcapabilities=False, db_session=svc_db_session)
 
     print_log('Register default users...')
