@@ -6,11 +6,14 @@ from magpie.adapter.magpieservice import *
 from magpie.models import get_user
 from magpie.security import auth_config_from_settings
 from magpie.db import *
+from magpie import __meta__
 import logging
 logger = logging.getLogger(__name__)
 
 
 class MagpieAdapter(AdapterInterface):
+    def describe_adapter(self):
+        return {"name": self.__class__.__name__, "version": __meta__.__version__}
 
     def servicestore_factory(self, registry, database=None, headers=None):
         return MagpieServiceStore(registry=registry)
@@ -26,7 +29,8 @@ class MagpieAdapter(AdapterInterface):
         config = auth_config_from_settings(settings)
         config.set_request_property(get_user, 'user', reify=True)
         self.owsproxy_config(settings, config)
-        return
+        return config
+
     def owsproxy_config(self, settings, config):
         logger.info('Loading MagpieAdapter owsproxy config')
 
