@@ -39,7 +39,7 @@ def upgrade():
         all_user_group_refs = models.UserGroup.all(db_session=session)
         all_user_res_perms = models.GroupResourcePermission.all(db_session=session)
 
-        ignore_groups = {constants.ADMIN_GROUP, constants.USERS_GROUP}
+        ignore_groups = {constants.MAGPIE_ADMIN_GROUP, constants.MAGPIE_USERS_GROUP}
         user_names = {usr.user_name for usr in all_users}
 
         # parse through 'personal' groups matching an existing user

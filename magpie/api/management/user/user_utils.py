@@ -128,7 +128,7 @@ def check_user_info(user_name, email, password, group_name):
     verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  paramName=u'user_name', msgOnFail=Users_CheckInfo_Name_BadRequestResponseSchema.description)
     verify_param(len(user_name), isIn=True, httpError=HTTPBadRequest,
-                 paramName=u'user_name', paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
+                 paramName=u'user_name', paramCompare=range(1, 1 + MAGPIE_USER_NAME_MAX_LENGTH),
                  msgOnFail=Users_CheckInfo_Size_BadRequestResponseSchema.description)
     verify_param(email, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  paramName=u'email', msgOnFail=Users_CheckInfo_Email_BadRequestResponseSchema.description)
@@ -136,7 +136,7 @@ def check_user_info(user_name, email, password, group_name):
                  paramName=u'password', msgOnFail=Users_CheckInfo_Password_BadRequestResponseSchema.description)
     verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  paramName=u'group_name', msgOnFail=Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
-    verify_param(user_name, paramCompare=[LOGGED_USER], notIn=True, httpError=HTTPConflict,
+    verify_param(user_name, paramCompare=[MAGPIE_LOGGED_USER], notIn=True, httpError=HTTPConflict,
                  paramName=u'user_name', msgOnFail=Users_CheckInfo_Login_ConflictResponseSchema.description)
 
 

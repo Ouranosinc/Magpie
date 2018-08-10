@@ -1,6 +1,6 @@
 from magpie.definitions.cornice_definitions import *
 from magpie.definitions.pyramid_definitions import *
-from magpie.constants import LOGGED_USER, USER_NAME_MAX_LENGTH, ADMIN_PERMISSION
+from magpie.constants import MAGPIE_LOGGED_USER, MAGPIE_USER_NAME_MAX_LENGTH, MAGPIE_ADMIN_PERMISSION
 from magpie import __meta__
 
 
@@ -39,7 +39,7 @@ def get_security(service, method):
     permission = args.get('permission')
     if permission == NO_PERMISSION_REQUIRED:
         return SecurityEveryoneAPI
-    elif permission == ADMIN_PERMISSION:
+    elif permission == MAGPIE_ADMIN_PERMISSION:
         return SecurityAdministratorAPI
     # return default admin permission otherwise unless specified form cornice decorator
     return SecurityAdministratorAPI if 'security' not in args else args['security']
@@ -50,15 +50,15 @@ def service_api_route_info(service_api):
     return {'name': service_api.name, 'pattern': service_api.path}
 
 
-LoggedUserBase = '/users/{}'.format(LOGGED_USER)
+LoggedUserBase = '/users/{}'.format(MAGPIE_LOGGED_USER)
 
 
 SwaggerGenerator = Service(
     path='/json',
-    name='swagger_schema')
+    name='swagger_schema_json')
 SwaggerAPI = Service(
     path='/api',
-    name='swagger',
+    name='swagger_schema_ui',
     description="{} documentation".format(TitleAPI))
 # trailing '/' allows the route to work on all following routes:
 # - '/api'
@@ -1042,7 +1042,8 @@ class Users_CheckInfo_Name_BadRequestResponseSchema(colander.MappingSchema):
 
 
 class Users_CheckInfo_Size_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Invalid `user_name` length specified (>{length} characters).".format(length=USER_NAME_MAX_LENGTH)
+    description = "Invalid `user_name` length specified (>{length} characters)." \
+        .format(length=MAGPIE_USER_NAME_MAX_LENGTH)
     header = HeaderResponseSchema()
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
@@ -1359,19 +1360,22 @@ class UserResourcePermissions_GET_NotAcceptableResponseBodySchema(colander.Mappi
 class UserResourcePermissions_GET_NotAcceptableRootServiceResponseSchema(colander.MappingSchema):
     description = "Invalid `resource` specified for resource permission retrieval."
     header = HeaderResponseSchema()
-    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
+    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(
+        code=HTTPNotAcceptable.code, description=description)
 
 
 class UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(colander.MappingSchema):
     description = "Invalid `resource` specified for resource permission retrieval."
     header = HeaderResponseSchema()
-    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
+    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(
+        code=HTTPNotAcceptable.code, description=description)
 
 
 class UserResourcePermissions_GET_NotAcceptableResourceTypeResponseSchema(colander.MappingSchema):
     description = "Invalid `resource_type` for corresponding service resource permission retrieval."
     header = HeaderResponseSchema()
-    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
+    body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(
+        code=HTTPNotAcceptable.code, description=description)
 
 
 class UserResourcePermissions_GET_NotFoundResponseSchema(colander.MappingSchema):
@@ -1620,7 +1624,8 @@ class Group_PUT_Name_NotAcceptableResponseSchema(colander.MappingSchema):
 
 
 class Group_PUT_Size_NotAcceptableResponseSchema(colander.MappingSchema):
-    description = "Invalid `group_name` length specified (>{length} characters).".format(length=USER_NAME_MAX_LENGTH)
+    description = "Invalid `group_name` length specified (>{length} characters)." \
+        .format(length=MAGPIE_USER_NAME_MAX_LENGTH)
     header = HeaderResponseSchema()
     body = BaseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
@@ -1683,7 +1688,8 @@ class GroupServices_InternalServerErrorResponseBodySchema(InternalServerErrorRes
 class GroupServices_InternalServerErrorResponseSchema(colander.MappingSchema):
     description = "Failed to populate group services."
     header = HeaderResponseSchema()
-    body = GroupServices_InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
+    body = GroupServices_InternalServerErrorResponseBodySchema(
+        code=HTTPInternalServerError.code, description=description)
 
 
 class GroupServicePermissions_GET_ResponseBodySchema(BaseBodySchema):
@@ -1704,7 +1710,8 @@ class GroupServicePermissions_GET_InternalServerErrorResponseBodySchema(Internal
 class GroupServicePermissions_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
     description = "Failed to extract permissions names from group-service."
     header = HeaderResponseSchema()
-    body = GroupServicePermissions_GET_InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
+    body = GroupServicePermissions_GET_InternalServerErrorResponseBodySchema(
+        code=HTTPInternalServerError.code, description=description)
 
 
 class GroupServicePermissions_POST_RequestSchema(colander.MappingSchema):
@@ -1764,7 +1771,8 @@ class GroupResourcesPermissions_InternalServerErrorResponseBodySchema(InternalSe
 class GroupResourcesPermissions_InternalServerErrorResponseSchema(colander.MappingSchema):
     description = "Failed to build group resources json tree."
     header = HeaderResponseSchema()
-    body = GroupResourcesPermissions_InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
+    body = GroupResourcesPermissions_InternalServerErrorResponseBodySchema(
+        code=HTTPInternalServerError.code, description=description)
 
 
 class GroupResourcePermissions_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
@@ -1775,7 +1783,8 @@ class GroupResourcePermissions_InternalServerErrorResponseBodySchema(InternalSer
 class GroupResourcePermissions_InternalServerErrorResponseSchema(colander.MappingSchema):
     description = "Failed to obtain group resource permissions."
     header = HeaderResponseSchema()
-    body = GroupResourcePermissions_InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
+    body = GroupResourcePermissions_InternalServerErrorResponseBodySchema(
+        code=HTTPInternalServerError.code, description=description)
 
 
 class GroupResources_GET_ResponseBodySchema(BaseBodySchema):
@@ -1795,7 +1804,8 @@ class GroupResources_GET_InternalServerErrorResponseBodySchema(InternalServerErr
 class GroupResources_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
     description = "Failed to build group resources json tree."
     header = HeaderResponseSchema()
-    body = GroupResources_GET_InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
+    body = GroupResources_GET_InternalServerErrorResponseBodySchema(
+        code=HTTPInternalServerError.code, description=description)
 
 
 class GroupResourcePermissions_GET_ResponseBodySchema(BaseBodySchema):

@@ -1,6 +1,6 @@
 import requests
 from magpie.definitions.pyramid_definitions import *
-from magpie.constants import USER_NAME_MAX_LENGTH, ANONYMOUS_USER, USERS_GROUP
+from magpie.constants import get_constant
 from services import service_type_dict
 from models import resource_type_dict
 from magpie.ui.management import check_response
@@ -12,7 +12,8 @@ import json
 class ManagementViews(object):
     def __init__(self, request):
         self.request = request
-        self.magpie_url = self.request.registry.settings['magpie.url']
+        self.magpie_url = get_constant('magpie.url', settings=self.request.registry.settings,
+                                       raise_missing=True, raise_not_set=True)
 
     def get_all_groups(self, first_default_group=None):
         try:
@@ -169,11 +170,11 @@ class ManagementViews(object):
 
     @view_config(route_name='add_user', renderer='templates/add_user.mako')
     def add_user(self):
-
+        users_group = get_constant('MAGPIE_USERS_GROUP')
         return_data = {u'conflict_group_name': False, u'conflict_user_name': False, u'conflict_user_email': False,
                        u'invalid_user_name': False, u'invalid_user_email': False, u'invalid_password': False,
                        u'too_long_user_name': False, u'form_user_name': u'', u'form_user_email': u'',
-                       u'user_groups': self.get_all_groups(first_default_group=USERS_GROUP)}
+                       u'user_groups': self.get_all_groups(first_default_group=users_group)}
         check_data = [u'conflict_group_name', u'conflict_user_name', u'conflict_email',
                       u'invalid_user_name', u'invalid_email', u'invalid_password']
 
@@ -195,7 +196,7 @@ class ManagementViews(object):
                 return_data[u'conflict_user_email'] = True
             if user_email == '':
                 return_data[u'invalid_user_email'] = True
-            if len(user_name) > USER_NAME_MAX_LENGTH:
+            if len(user_name) > MAGPIE_USER_NAME_MAX_LENGTH:
                 return_data[u'too_long_user_name'] = True
             if user_name in self.get_user_names():
                 return_data[u'conflict_user_name'] = True
@@ -225,7 +226,7 @@ class ManagementViews(object):
 
         user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
-        all_groups = self.get_all_groups(first_default_group=USERS_GROUP)
+        all_groups = self.get_all_groups(first_default_group=MAGPIE_USERS_GROUP)
 
         user_resp = requests.get(user_url, cookies=self.request.cookies)
         check_response(user_resp)

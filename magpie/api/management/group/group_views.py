@@ -50,7 +50,7 @@ def edit_group(request):
     verify_param(new_group_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail=Group_PUT_Name_NotAcceptableResponseSchema.description)
     verify_param(len(new_group_name), isIn=True, httpError=HTTPNotAcceptable,
-                 paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
+                 paramCompare=range(1, 1 + MAGPIE_USER_NAME_MAX_LENGTH),
                  msgOnFail=Group_PUT_Size_NotAcceptableResponseSchema.description)
     verify_param(new_group_name, notEqual=True, httpError=HTTPNotAcceptable,
                  paramCompare=group.group_name, msgOnFail=Group_PUT_Same_NotAcceptableResponseSchema.description)

@@ -44,6 +44,7 @@ help:
 clean: clean-build clean-pyc clean-test
 
 clean-build:
+	@echo "Cleaning build artifacts..."
 	rm -fr build/
 	rm -fr dist/
 	rm -fr .eggs/
@@ -51,38 +52,46 @@ clean-build:
 	find . -type f -name '*.egg' -exec rm -f {} +
 
 clean-pyc:
+	@echo "Cleaning Python artifacts..."
 	find . -type f -name '*.pyc' -exec rm -f {} +
 	find . -type f -name '*.pyo' -exec rm -f {} +
 	find . -type f -name '*~' -exec rm -f {} +
 	find . -type f -name '__pycache__' -exec rm -fr {} +
 
 clean-test:
+	@echo "Cleaning tests artifacts..."
 	rm -fr .tox/
 	rm -f .coverage
 	rm -fr coverage/
 
 .PHONY: lint
 lint:
+	@echo "Checking code style with flake8..."
 	flake8 magpie tests
 
 .PHONY: test
 test: install
+	@echo "Running tests..."
 	python setup.py test
 
 .PHONY: test-local
 test-local: install
+	@echo "Running local tests..."
 	MAGPIE_TEST_REMOTE=false python setup.py test
 
 .PHONY: test-remote
 test-remote: install
+	@echo "Running remote tests..."
 	MAGPIE_TEST_LOCAL=false python setup.py test
 
 .PHONY: test-tox
 test-tox:
+	@echo "Running tests with tox..."
 	tox
 
 .PHONY: coverage
 coverage:
+	@echo "Running coverage analysis..."
 	coverage run --source magpie setup.py test
 	coverage report -m
 	coverage html -d coverage
@@ -90,11 +99,12 @@ coverage:
 
 .PHONY: migrate
 migrate: install
+	@echo "Running database migration..."
 	alembic -c $(CUR_DIR)/magpie/alembic/alembic.ini upgrade head
 
 .PHONY: docs
 docs:
-	@echo $(CUR_DIR)
+	@echo "Building docs..."
 	rm -f $(CUR_DIR)/docs/magpie.rst
 	rm -f $(CUR_DIR)/docs/modules.rst
 	sphinx-apidoc -o $(CUR_DIR)/docs/ $(CUR_DIR)/magpie
@@ -104,29 +114,34 @@ docs:
 
 .PHONY: serve-docs
 serve-docs: docs
+	@echo "Serving docs..."
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
 .PHONY: release
 release: clean
+	@echo "Creating release..."
 	python setup.py sdist upload
 	python setup.py bdist_wheel upload
 
 .PHONY: dist
 dist: clean
+	@echo "Creating distribution..."
 	python setup.py sdist
 	python setup.py bdist_wheel
 	ls -l dist
 
 .PHONY: sysinstall
 sysinstall: clean
+	@echo "Installing system dependencies..."
 	pip install --upgrade pip setuptools
 	pip install gunicorn
 
 .PHONY: install
 install: sysinstall
+	@echo "Installing Magpie..."
 	python setup.py install
 
 .PHONY: start
 start: install
-	@echo "Starting Magpie"
+	@echo "Starting Magpie..."
 	exec gunicorn -b 0.0.0.0:2001 --paste "$(CUR_DIR)/magpie/magpie.ini" --workers 10 --preload

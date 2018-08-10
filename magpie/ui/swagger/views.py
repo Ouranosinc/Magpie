@@ -4,8 +4,8 @@ import os
 
 
 @SwaggerAPI.get(tags=[APITag])
-@view_config(route_name=SwaggerAPI.name, renderer='templates/swagger_ui.mako', permission=NO_PERMISSION_REQUIRED)
-@view_config(route_name=SwaggerAPI_extra_name, renderer='templates/swagger_ui.mako', permission=NO_PERMISSION_REQUIRED)
+#@view_config(route_name=SwaggerAPI.name, renderer='templates/swagger_ui.mako', permission=NO_PERMISSION_REQUIRED)
+#@view_config(route_name=SwaggerAPI_extra_name, renderer='templates/swagger_ui.mako', permission=NO_PERMISSION_REQUIRED)
 def api_swagger(request):
     """
     Swagger UI route to display the Magpie REST API schemas.

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from magpie.constants import MAGPIE_ALEMBIC_INI_FILE_PATH
+from magpie import constants
 from magpie.definitions.alembic_definitions import *
 from magpie.definitions.sqlalchemy_definitions import *
 from magpie.common import print_log
@@ -24,11 +24,11 @@ configure_mappers()
 
 def get_db_url():
     return "postgresql://%s:%s@%s:%s/%s" % (
-        os.getenv("POSTGRES_USER", "postgres"),
-        os.getenv("POSTGRES_PASSWORD", "postgres"),
-        os.getenv("POSTGRES_HOST", "localhost"),
-        os.getenv("POSTGRES_PORT", "5432"),
-        os.getenv("POSTGRES_DB", "magpiedb"),
+        constants.MAGPIE_POSTGRES_USER,
+        constants.MAGPIE_POSTGRES_PASSWORD,
+        constants.MAGPIE_POSTGRES_HOST,
+        constants.MAGPIE_POSTGRES_PORT,
+        constants.MAGPIE_POSTGRES_DB,
     )
 
 
@@ -88,8 +88,8 @@ def get_settings_from_config_ini(config_ini_path, ini_main_section_name='app:mag
 
 
 def run_database_migration():
-    logger.info("Using file '{}' for migration.".format(MAGPIE_ALEMBIC_INI_FILE_PATH))
-    alembic_args = ['-c', MAGPIE_ALEMBIC_INI_FILE_PATH, 'upgrade', 'heads']
+    logger.info("Using file '{}' for migration.".format(constants.MAGPIE_ALEMBIC_INI_FILE_PATH))
+    alembic_args = ['-c', constants.MAGPIE_ALEMBIC_INI_FILE_PATH, 'upgrade', 'heads']
     alembic.config.main(argv=alembic_args)
 
 

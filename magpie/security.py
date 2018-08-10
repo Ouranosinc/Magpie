@@ -1,7 +1,7 @@
 from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.api.esgf import esgfopenid
-from magpie.common import print_log
+from magpie.constants import get_constant
 from magpie import models
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
@@ -11,11 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def auth_config_from_settings(settings):
-    magpie_secret = os.getenv('MAGPIE_SECRET')
-    if magpie_secret is None:
-        print_log('Use default secret from magpie.ini', level=logging.DEBUG)
-        magpie_secret = settings['magpie.secret']
-
+    magpie_secret = get_constant('MAGPIE_SECRET', settings=settings, settings_name='magpie.secret')
     authn_policy = AuthTktAuthenticationPolicy(
         magpie_secret,
         callback=groupfinder,

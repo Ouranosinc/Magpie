@@ -24,6 +24,7 @@ zope.sqlalchemy
 gunicorn
 alembic==0.9.6
 paste
+python-dotenv
 # api docs
 cornice_swagger>=0.7.0
 cornice

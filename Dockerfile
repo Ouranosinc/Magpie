@@ -16,16 +16,10 @@ RUN apt-get update && apt-get install -y \
 	vim
 
 ARG MAGPIE_DIR=/opt/local/src/magpie
+WORKDIR $MAGPIE_DIR
+
 COPY ./ $MAGPIE_DIR
 RUN make install -f $MAGPIE_DIR/Makefile
 RUN make docs -f $MAGPIE_DIR/Makefile
 
-ENV POSTGRES_USER=magpie
-ENV POSTGRES_DB=magpiedb
-ENV POSTGRES_PASSWORD=qwerty
-ENV POSTGRES_HOST=postgres
-ENV POSTGRES_PORT=5432
-ENV DAEMON_OPTS --nodaemon
-
-WORKDIR /
 CMD ["make", "start", "-f", "$MAGPIE_DIR/Makefile"]

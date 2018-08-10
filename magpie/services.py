@@ -42,7 +42,7 @@ class ServiceI(object):
                 for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
                     self.acl.append((outcome, perm_user, perm_name,))
             else:
-                user = UserService.by_user_name(ANONYMOUS_USER, db_session=self.request.db)
+                user = UserService.by_user_name(MAGPIE_ANONYMOUS_USER, db_session=self.request.db)
                 if user is None:
                     raise Exception('No Anonymous user in the database')
                 else:

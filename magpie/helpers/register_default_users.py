@@ -36,27 +36,28 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
 
 
 def init_anonymous(db_session):
-    register_user_with_group(user_name=constants.ANONYMOUS_USER,
-                             group_name=constants.ANONYMOUS_GROUP,
-                             email=constants.ANONYMOUS_EMAIL,
-                             password=constants.ANONYMOUS_PASSWORD,
+    register_user_with_group(user_name=constants.MAGPIE_ANONYMOUS_USER,
+                             group_name=constants.MAGPIE_ANONYMOUS_GROUP,
+                             email=constants.MAGPIE_ANONYMOUS_EMAIL,
+                             password=constants.MAGPIE_ANONYMOUS_PASSWORD,
                              db_session=db_session)
 
 
 def init_admin(db_session):
-    if not (UserService.by_user_name(constants.ADMIN_USER, db_session=db_session)
-            and GroupService.by_group_name(constants.ADMIN_GROUP, db_session=db_session)):
-        register_user_with_group(user_name=constants.ADMIN_USER,
-                                 group_name=constants.ADMIN_GROUP,
-                                 email=constants.ADMIN_EMAIL,
-                                 password=constants.ADMIN_PASSWORD,
+    if not (UserService.by_user_name(constants.MAGPIE_ADMIN_USER, db_session=db_session)
+            and GroupService.by_group_name(constants.MAGPIE_ADMIN_GROUP, db_session=db_session)):
+        register_user_with_group(user_name=constants.MAGPIE_ADMIN_USER,
+                                 group_name=constants.MAGPIE_ADMIN_GROUP,
+                                 email=constants.MAGPIE_ADMIN_EMAIL,
+                                 password=constants.MAGPIE_ADMIN_PASSWORD,
                                  db_session=db_session)
 
-    # Check if ADMIN_GROUP has permission ADMIN_PERMISSION
-    admin_group = GroupService.by_group_name(constants.ADMIN_GROUP, db_session=db_session)
-    permission_names = [permission.perm_name for permission in admin_group.permissions]
-    if constants.ADMIN_PERMISSION not in permission_names:
-        new_group_permission = models.GroupPermission(perm_name=constants.ADMIN_PERMISSION, group_id=admin_group.id)
+    # Check if MAGPIE_ADMIN_GROUP has permission MAGPIE_ADMIN_PERMISSION
+    magpie_admin_group = GroupService.by_group_name(constants.MAGPIE_ADMIN_GROUP, db_session=db_session)
+    permission_names = [permission.perm_name for permission in magpie_admin_group.permissions]
+    if constants.MAGPIE_ADMIN_PERMISSION not in permission_names:
+        new_group_permission = models.GroupPermission(perm_name=constants.MAGPIE_ADMIN_PERMISSION,
+                                                      group_id=magpie_admin_group.id)
         try:
             db_session.add(new_group_permission)
         except Exception as e:
@@ -65,11 +66,11 @@ def init_admin(db_session):
 
 
 def init_user_group(db_session):
-    if not GroupService.by_group_name(constants.USERS_GROUP, db_session=db_session):
-        user_group = models.Group(group_name=constants.USERS_GROUP)
+    if not GroupService.by_group_name(constants.MAGPIE_USERS_GROUP, db_session=db_session):
+        user_group = models.Group(group_name=constants.MAGPIE_USERS_GROUP)
         db_session.add(user_group)
     else:
-        print_log('USERS_GROUP already initialized', level=logging.DEBUG)
+        print_log('MAGPIE_USERS_GROUP already initialized', level=logging.DEBUG)
 
 
 def register_default_users():

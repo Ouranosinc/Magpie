@@ -2,7 +2,7 @@ from authomatic.adapters import WebObAdapter
 from authomatic.providers import oauth1, oauth2, openid
 from authomatic import Authomatic, provider_id
 from security import authomatic
-from magpie.constants import USERS_GROUP
+from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import *
 from magpie.api.api_except import *
 from magpie.api.api_requests import *
@@ -10,7 +10,6 @@ from magpie.api.api_rest_schemas import *
 from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import create_user
 import requests
-import os
 
 
 external_providers_config = {
@@ -40,7 +39,8 @@ external_providers_config = {
     },
 }
 
-external_providers_authomatic = Authomatic(config=external_providers_config, secret=os.getenv('MAGPIE_SECRET'))
+external_providers_authomatic = Authomatic(config=external_providers_config,
+                                           secret=get_constant('MAGPIE_SECRET'))
 external_providers = external_providers_config.keys()
 internal_providers = [u'ziggurat']
 providers = internal_providers + external_providers
@@ -109,7 +109,8 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
     """Create new user with an External Identity"""
     local_user_name = external_user_name + '_' + provider_name
     local_user_name = local_user_name.replace(" ", '_')
-    create_user(local_user_name, password=None, email=email, group_name=USERS_GROUP, db_session=db_session)
+    group_name = get_constant('MAGPIE_USERS_GROUP')
+    create_user(local_user_name, password=None, email=email, group_name=group_name, db_session=db_session)
 
     user = UserService.by_user_name(local_user_name, db_session=db_session)
     ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
