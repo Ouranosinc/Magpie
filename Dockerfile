@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y \
 	libxslt1-dev \
 	zlib1g-dev \
 	python-pip \
-	git
+	git \
+	vim
 
 
 RUN pip install --upgrade pip setuptools

@@ -11,21 +11,31 @@ endef
 export BROWSER_PYSCRIPT
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
-CUR_DIR := $(abspath $(lastword $(MAKEFILE_LIST))/..)
+# Application
+APP_ROOT := $(CURDIR)
+APP_NAME := $(shell basename $(APP_ROOT))
+
+.PHONY: all
+all: help
 
 help:
 	@echo "clean - remove all build, test, coverage and Python artifacts"
 	@echo "clean-build - remove build artifacts"
 	@echo "clean-pyc - remove Python file artifacts"
 	@echo "clean-test - remove test and coverage artifacts"
-	@echo "lint - check style with flake8"
-	@echo "test - run tests quickly with the default Python"
-	@echo "test-all - run tests on every Python version with tox"
+	@echo "conda-create - create conda magpie environment"
 	@echo "coverage - check code coverage quickly with the default Python"
-	@echo "docs - generate Sphinx HTML documentation, including API docs"
-	@echo "release - package and upload a release"
 	@echo "dist - package"
+	@echo "docs - generate Sphinx HTML documentation, including API docs"
 	@echo "install - install the package to the active Python's site-packages"
+	@echo "lint - check style with flake8"
+	@echo "migrate - run postgres database migration with alembic"
+	@echo "release - package and upload a release"
+	@echo "start - start local magpie instance with gunicorn"
+	@echo "test - run tests quickly with the default Python"
+	@echo "test-local - run only local tests with the default Python"
+	@echo "test-remote - run only remote tests with the default Python"
+	@echo "test-all - run tests on every Python version with tox"
 
 clean: clean-build clean-pyc clean-test
 
@@ -95,3 +105,5 @@ dist: clean
 install: clean
 	python setup.py install
 
+start: install
+	$(CUR_DIR)/bin/gunicorn -b 0.0.0.0:2001 --paste $(CUR_DIR)/magpie/magpie.ini --workers 1 --preload

@@ -1,9 +1,8 @@
-from magpie import *
-from owsrequest import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.pyramid_definitions import EVERYONE, ALLOW
 from magpie.api.api_except import *
-import models
+from magpie import models
+from owsrequest import *
 
 
 class ServiceI(object):

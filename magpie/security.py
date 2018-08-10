@@ -1,10 +1,10 @@
 from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.api.esgf import esgfopenid
-from common import print_log
+from magpie.common import print_log
+from magpie import models
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
-import models
 import os
 import logging
 logger = logging.getLogger(__name__)
