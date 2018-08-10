@@ -33,6 +33,5 @@ ENV POSTGRES_HOST=postgres
 ENV POSTGRES_PORT=5432
 ENV DAEMON_OPTS --nodaemon
 
-CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf", "--nodaemon"]
-#WORKDIR /
-#ENTRYPOINT exec gunicorn -b 0.0.0.0:2001 --paste /opt/local/src/magpie/magpie/magpie.ini
+WORKDIR /
+CMD ["make", "start"]

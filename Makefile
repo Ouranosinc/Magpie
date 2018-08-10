@@ -13,7 +13,7 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
 # Application
 CUR_DIR := $(abspath $(lastword $(MAKEFILE_LIST))/..)
-APP_ROOT := $(CURDIR)
+APP_ROOT := $(CUR_DIR)
 APP_NAME := $(shell basename $(APP_ROOT))
 
 .PHONY: all
@@ -32,7 +32,7 @@ help:
 	@echo "lint - check style with flake8"
 	@echo "migrate - run postgres database migration with alembic"
 	@echo "release - package and upload a release"
-	@echo "start - start local magpie instance with gunicorn"
+	@echo "start - start magpie instance with gunicorn"
 	@echo "test - run tests quickly with the default Python"
 	@echo "test-local - run only local tests with the default Python"
 	@echo "test-remote - run only remote tests with the default Python"
@@ -83,7 +83,7 @@ migrate: install
 	alembic -c $(CUR_DIR)/magpie/alembic/alembic.ini upgrade head
 
 docs:
-	echo $(CUR_DIR)
+	@echo $(CUR_DIR)
 	rm -f $(CUR_DIR)/docs/magpie.rst
 	rm -f $(CUR_DIR)/docs/modules.rst
 	sphinx-apidoc -o $(CUR_DIR)/docs/ $(CUR_DIR)/magpie
@@ -107,4 +107,5 @@ install: clean
 	python setup.py install
 
 start: install
-	$(CUR_DIR)/bin/gunicorn -b 0.0.0.0:2001 --paste $(CUR_DIR)/magpie/magpie.ini --workers 1 --preload
+	@echo "Starting Magpie"
+	exec gunicorn -b 0.0.0.0:2001 --paste "$(CUR_DIR)/magpie/magpie.ini" --workers 10 --preload
