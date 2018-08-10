@@ -1,4 +1,3 @@
-.PHONY: clean-pyc clean-build docs clean
 define BROWSER_PYSCRIPT
 import os, webbrowser, sys
 try:
@@ -20,24 +19,27 @@ APP_NAME := $(shell basename $(APP_ROOT))
 all: help
 
 help:
-	@echo "clean - remove all build, test, coverage and Python artifacts"
-	@echo "clean-build - remove build artifacts"
-	@echo "clean-pyc - remove Python file artifacts"
-	@echo "clean-test - remove test and coverage artifacts"
-	@echo "conda-create - create conda magpie environment"
-	@echo "coverage - check code coverage quickly with the default Python"
-	@echo "dist - package"
-	@echo "docs - generate Sphinx HTML documentation, including API docs"
-	@echo "install - install the package to the active Python's site-packages"
-	@echo "lint - check style with flake8"
-	@echo "migrate - run postgres database migration with alembic"
-	@echo "release - package and upload a release"
-	@echo "start - start magpie instance with gunicorn"
-	@echo "test - run tests quickly with the default Python"
-	@echo "test-local - run only local tests with the default Python"
-	@echo "test-remote - run only remote tests with the default Python"
-	@echo "test-all - run tests on every Python version with tox"
+    @echo "Cleaning:"
+	@echo "  clean - remove all build, test, coverage and Python artifacts"
+	@echo "  clean-build - remove build artifacts"
+	@echo "  clean-pyc - remove Python file artifacts"
+	@echo "  clean-test - remove test and coverage artifacts"
+	@echo "Install and run"
+	@echo "  dist - package"
+	@echo "  docs - generate Sphinx HTML documentation, including API docs"
+	@echo "  install - install the package to the active Python's site-packages"
+	@echo "  migrate - run postgres database migration with alembic"
+	@echo "  release - package and upload a release"
+	@echo "  start - start magpie instance with gunicorn"
+	@echo "Test and coverage"
+	@echo "  coverage - check code coverage quickly with the default Python"
+	@echo "  lint - check style with flake8"
+	@echo "  test - run tests quickly with the default Python"
+	@echo "  test-local - run only local tests with the default Python"
+	@echo "  test-remote - run only remote tests with the default Python"
+	@echo "  test-tox - run tests on every Python version with tox"
 
+.PHONY: clean clean-build clean-pyc clean-test
 clean: clean-build clean-pyc clean-test
 
 clean-build:
@@ -58,30 +60,38 @@ clean-test:
 	rm -f .coverage
 	rm -fr coverage/
 
+.PHONY: lint
 lint:
 	flake8 magpie tests
 
+.PHONY: test
 test: install
 	python setup.py test
 
+.PHONY: test-local
 test-local: install
 	MAGPIE_TEST_REMOTE=false python setup.py test
 
+.PHONY: test-remote
 test-remote: install
 	MAGPIE_TEST_LOCAL=false python setup.py test
 
-test-all:
+.PHONY: test-tox
+test-tox:
 	tox
 
+.PHONY: coverage
 coverage:
 	coverage run --source magpie setup.py test
 	coverage report -m
 	coverage html -d coverage
 	$(BROWSER) coverage/index.html
 
+.PHONY: migrate
 migrate: install
 	alembic -c $(CUR_DIR)/magpie/alembic/alembic.ini upgrade head
 
+.PHONY: docs
 docs:
 	@echo $(CUR_DIR)
 	rm -f $(CUR_DIR)/docs/magpie.rst
@@ -91,21 +101,26 @@ docs:
 	$(MAKE) -C $(CUR_DIR)/docs html
 	$(BROWSER) $(CUR_DIR)/docs/_build/html/index.html
 
-servedocs: docs
+.PHONY: serve-docs
+serve-docs: docs
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
+.PHONY: release
 release: clean
 	python setup.py sdist upload
 	python setup.py bdist_wheel upload
 
+.PHONY: dist
 dist: clean
 	python setup.py sdist
 	python setup.py bdist_wheel
 	ls -l dist
 
+.PHONY: install
 install: clean
 	python setup.py install
 
+.PHONY: start
 start: install
 	@echo "Starting Magpie"
 	exec gunicorn -b 0.0.0.0:2001 --paste "$(CUR_DIR)/magpie/magpie.ini" --workers 10 --preload
