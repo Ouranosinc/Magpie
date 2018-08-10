@@ -12,6 +12,7 @@ export BROWSER_PYSCRIPT
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
 # Application
+CUR_DIR := $(abspath $(lastword $(MAKEFILE_LIST))/..)
 APP_ROOT := $(CURDIR)
 APP_NAME := $(shell basename $(APP_ROOT))
 
