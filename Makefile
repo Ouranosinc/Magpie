@@ -67,7 +67,7 @@ clean-test:
 .PHONY: lint
 lint:
 	@echo "Checking code style with flake8..."
-	flake8 magpie tests
+	flake8 magpie tests --ignore=E501
 
 .PHONY: test
 test: install

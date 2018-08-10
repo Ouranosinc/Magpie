@@ -1,7 +1,7 @@
 import six
 import pyramid
 import requests
-from distutils.version import *
+from distutils.version import LooseVersion
 from webtest import TestApp
 from webtest.response import TestResponse
 from magpie import __meta__, constants, db, services, magpiectl
