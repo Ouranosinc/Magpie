@@ -20,24 +20,25 @@ all: help
 
 help:
     @echo "Cleaning:"
-	@echo "  clean - remove all build, test, coverage and Python artifacts"
-	@echo "  clean-build - remove build artifacts"
-	@echo "  clean-pyc - remove Python file artifacts"
-	@echo "  clean-test - remove test and coverage artifacts"
+	@echo "  clean:  		remove all build, test, coverage and Python artifacts"
+	@echo "  clean-build:	remove build artifacts"
+	@echo "  clean-pyc:  	remove Python file artifacts"
+	@echo "  clean-test:  	remove test and coverage artifacts"
 	@echo "Install and run"
-	@echo "  dist - package"
-	@echo "  docs - generate Sphinx HTML documentation, including API docs"
-	@echo "  install - install the package to the active Python's site-packages"
-	@echo "  migrate - run postgres database migration with alembic"
-	@echo "  release - package and upload a release"
-	@echo "  start - start magpie instance with gunicorn"
+	@echo "  dist:  		package"
+	@echo "  docs: 			generate Sphinx HTML documentation, including API docs"
+	@echo "  install:  		install the package to the active Python's site-packages"
+	@echo "  sysinstall:  	install system dependencies and required installers/runners"
+	@echo "  migrate:  		run postgres database migration with alembic"
+	@echo "  release:  		package and upload a release"
+	@echo "  start: 		start magpie instance with gunicorn"
 	@echo "Test and coverage"
-	@echo "  coverage - check code coverage quickly with the default Python"
-	@echo "  lint - check style with flake8"
-	@echo "  test - run tests quickly with the default Python"
-	@echo "  test-local - run only local tests with the default Python"
-	@echo "  test-remote - run only remote tests with the default Python"
-	@echo "  test-tox - run tests on every Python version with tox"
+	@echo "  coverage: 		check code coverage quickly with the default Python"
+	@echo "  lint: 			check style with flake8"
+	@echo "  test: 			run tests quickly with the default Python"
+	@echo "  test-local: 	run only local tests with the default Python"
+	@echo "  test-remote: 	run only remote tests with the default Python"
+	@echo "  test-tox: 		run tests on every Python version with tox"
 
 .PHONY: clean clean-build clean-pyc clean-test
 clean: clean-build clean-pyc clean-test
@@ -116,8 +117,13 @@ dist: clean
 	python setup.py bdist_wheel
 	ls -l dist
 
+.PHONY: sysinstall
+sysinstall: clean
+	pip install --upgrade pip setuptools
+	pip install gunicorn
+
 .PHONY: install
-install: clean
+install: sysinstall
 	python setup.py install
 
 .PHONY: start

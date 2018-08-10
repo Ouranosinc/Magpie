@@ -15,23 +15,17 @@ RUN apt-get update && apt-get install -y \
 	git \
 	vim
 
+ARG MAGPIE_DIR=/opt/local/src/magpie
+COPY ./ $MAGPIE_DIR
+RUN make install -f $MAGPIE_DIR/Makefile
+RUN make docs -f $MAGPIE_DIR/Makefile
 
-RUN pip install --upgrade pip setuptools
-RUN pip install gunicorn
-
-COPY requirements.txt /opt/local/src/magpie/requirements.txt
-RUN pip install -r /opt/local/src/magpie/requirements.txt
-COPY ./ /opt/local/src/magpie/
-RUN pip install /opt/local/src/magpie/
-
-RUN make docs -f /opt/local/src/magpie/Makefile
-
-ENV POSTGRES_USER=pavics
-ENV POSTGRES_DB=pavics
+ENV POSTGRES_USER=magpie
+ENV POSTGRES_DB=magpiedb
 ENV POSTGRES_PASSWORD=qwerty
 ENV POSTGRES_HOST=postgres
 ENV POSTGRES_PORT=5432
 ENV DAEMON_OPTS --nodaemon
 
 WORKDIR /
-CMD ["make", "start"]
+CMD ["make", "start", "-f", "$MAGPIE_DIR/Makefile"]
