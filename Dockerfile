@@ -22,4 +22,4 @@ COPY ./ $MAGPIE_DIR
 RUN make install -f $MAGPIE_DIR/Makefile
 RUN make docs -f $MAGPIE_DIR/Makefile
 
-CMD ["make", "start", "-f", "$MAGPIE_DIR/Makefile"]
+CMD ["make", "start"]
