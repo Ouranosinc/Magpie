@@ -14,8 +14,8 @@ MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
 MAGPIE_PROVIDERS_CONFIG_PATH = '{}/providers.cfg'.format(MAGPIE_ROOT)
 MAGPIE_INI_FILE_PATH = '{}/magpie.ini'.format(MAGPIE_MODULE_DIR)
 MAGPIE_ALEMBIC_INI_FILE_PATH = '{}/alembic/alembic.ini'.format(MAGPIE_MODULE_DIR)
-MAGPIE_ENV_FILE = os.path.join(MAGPIE_ROOT, 'env', 'magpie.env')
-MAGPIE_POSTGRES_ENV_FILE = os.path.join(MAGPIE_ROOT, 'env', 'postgres.env')
+MAGPIE_ENV_FILE = os.path.join(MAGPIE_MODULE_DIR, 'env', 'magpie.env')
+MAGPIE_POSTGRES_ENV_FILE = os.path.join(MAGPIE_MODULE_DIR, 'env', 'postgres.env')
 
 # create .env from .env.example if not present and load variables into environment
 if not os.path.isfile(MAGPIE_ENV_FILE):
