@@ -5,6 +5,7 @@ import shutil
 import dotenv
 import logging
 from magpie.common import str2bool, raise_log, print_log
+logger = logging.getLogger(__name__)
 
 # ===========================
 # path variables
@@ -14,16 +15,30 @@ MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
 MAGPIE_PROVIDERS_CONFIG_PATH = '{}/providers.cfg'.format(MAGPIE_ROOT)
 MAGPIE_INI_FILE_PATH = '{}/magpie.ini'.format(MAGPIE_MODULE_DIR)
 MAGPIE_ALEMBIC_INI_FILE_PATH = '{}/alembic/alembic.ini'.format(MAGPIE_MODULE_DIR)
-MAGPIE_ENV_FILE = os.path.join(MAGPIE_MODULE_DIR, 'env', 'magpie.env')
-MAGPIE_POSTGRES_ENV_FILE = os.path.join(MAGPIE_MODULE_DIR, 'env', 'postgres.env')
+# allow custom location of env files directory to avoid
+# loading from installed magpie in python site-packages
+MAGPIE_ENV_DIR = os.getenv('MAGPIE_ENV_DIR', os.path.join(MAGPIE_ROOT, 'env'))
+MAGPIE_ENV_FILE = os.path.join(MAGPIE_ENV_DIR, 'magpie.env')
+MAGPIE_POSTGRES_ENV_FILE = os.path.join(MAGPIE_ENV_DIR, 'postgres.env')
 
 # create .env from .env.example if not present and load variables into environment
-if not os.path.isfile(MAGPIE_ENV_FILE):
-    shutil.copyfile(MAGPIE_ENV_FILE + ".example", MAGPIE_ENV_FILE)
-if not os.path.isfile(MAGPIE_POSTGRES_ENV_FILE):
-    shutil.copyfile(MAGPIE_POSTGRES_ENV_FILE + ".example", MAGPIE_POSTGRES_ENV_FILE)
-dotenv.load_dotenv(MAGPIE_ENV_FILE, override=False)
-dotenv.load_dotenv(MAGPIE_POSTGRES_ENV_FILE, override=False)
+# if files still cannot be found at 'MAGPIE_ENV_DIR' and variables are still not set,
+# default values in following sections will be used instead
+magpie_env_example = MAGPIE_ENV_FILE + ".example"
+postgres_env_example = MAGPIE_ENV_FILE + ".example"
+if not os.path.isfile(MAGPIE_ENV_FILE) and os.path.isfile(magpie_env_example):
+    shutil.copyfile(magpie_env_example, MAGPIE_ENV_FILE)
+if not os.path.isfile(MAGPIE_POSTGRES_ENV_FILE) and os.path.isfile(postgres_env_example):
+    shutil.copyfile(postgres_env_example, MAGPIE_POSTGRES_ENV_FILE)
+del magpie_env_example
+del postgres_env_example
+try:
+    # if variables already exist, don't override them from defaults in env files
+    dotenv.load_dotenv(MAGPIE_ENV_FILE, override=False)
+    dotenv.load_dotenv(MAGPIE_POSTGRES_ENV_FILE, override=False)
+except IOError:
+    logger.warn("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR))
+    pass
 
 # ===========================
 # variables from magpie.env

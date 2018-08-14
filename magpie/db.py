@@ -3,13 +3,11 @@
 from magpie import constants
 from magpie.definitions.alembic_definitions import *
 from magpie.definitions.sqlalchemy_definitions import *
-from magpie.common import print_log
 # noinspection PyCompatibility
 import configparser
 import transaction
 import inspect
 import zope.sqlalchemy
-import os
 import logging
 logger = logging.getLogger(__name__)
 

@@ -15,8 +15,6 @@ docs/magpie.login.rst
 docs/magpie.management.rst
 docs/magpie.tests.rst
 docs/magpie.rst
-magpie/env/magpie.env
-magpie/env/postgres.env
 magpieenv/
 magpie/api_docs/
 magpie/api_test/

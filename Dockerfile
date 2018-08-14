@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
 	vim
 
 ARG MAGPIE_DIR=/opt/local/src/magpie
+ENV MAGPIE_ENV_DIR=$MAGPIE_DIR/env
 WORKDIR $MAGPIE_DIR
 
 COPY ./ $MAGPIE_DIR
