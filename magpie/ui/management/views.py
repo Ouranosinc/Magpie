@@ -1,11 +1,12 @@
-import requests
 from magpie.definitions.pyramid_definitions import *
 from magpie.constants import get_constant
-from services import service_type_dict
-from models import resource_type_dict
+from magpie.common import str2bool
+from magpie.services import service_type_dict
+from magpie.models import resource_type_dict
 from magpie.ui.management import check_response
 from magpie.ui.home import add_template_data
-import register
+from magpie import register
+import requests
 import json
 
 
@@ -196,7 +197,7 @@ class ManagementViews(object):
                 return_data[u'conflict_user_email'] = True
             if user_email == '':
                 return_data[u'invalid_user_email'] = True
-            if len(user_name) > MAGPIE_USER_NAME_MAX_LENGTH:
+            if len(user_name) > get_constant('MAGPIE_USER_NAME_MAX_LENGTH'):
                 return_data[u'too_long_user_name'] = True
             if user_name in self.get_user_names():
                 return_data[u'conflict_user_name'] = True
@@ -226,7 +227,7 @@ class ManagementViews(object):
 
         user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
-        all_groups = self.get_all_groups(first_default_group=MAGPIE_USERS_GROUP)
+        all_groups = self.get_all_groups(first_default_group=get_constant('MAGPIE_USERS_GROUP'))
 
         user_resp = requests.get(user_url, cookies=self.request.cookies)
         check_response(user_resp)
@@ -243,7 +244,7 @@ class ManagementViews(object):
             requires_update_name = False
 
             if u'inherited_permissions' in self.request.POST:
-                inherited_permissions = register.str2bool(self.request.POST[u'inherited_permissions'])
+                inherited_permissions = str2bool(self.request.POST[u'inherited_permissions'])
                 user_info[u'inherited_permissions'] = inherited_permissions
 
             if u'delete' in self.request.POST:
@@ -558,7 +559,7 @@ class ManagementViews(object):
         # apply default state if arriving on the page for the first time
         # future editions on the page will transfer the last saved state
         service_push_show = cur_svc_type in register.SERVICES_PHOENIX_ALLOWED
-        service_push = register.str2bool(self.request.POST.get('service_push', service_push_show))
+        service_push = str2bool(self.request.POST.get('service_push', service_push_show))
 
         service_info = {u'edit_mode': u'no_edit', u'service_name': service_name, u'service_url': service_url,
                         u'public_url': register.get_twitcher_protected_service_url(service_name),
