@@ -97,8 +97,6 @@ class TestMagpieAPI_UsersAuthLocal(unittest.TestCase):
         pyramid.testing.tearDown()
 
 
-@unittest.skip("Signin not working, cannot test protected paths.")
-@pytest.mark.skip(reason="Signin not working, cannot test protected paths.")
 @pytest.mark.api
 @pytest.mark.local
 @unittest.skipUnless(runner.MAGPIE_TEST_API, reason="Skip 'api' tests requested.")
@@ -114,12 +112,15 @@ class TestMagpieAPI_AdminAuthLocal(unittest.TestCase):
         cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.usr = get_constant('MAGPIE_TEST_ADMIN_USERNAME')
         cls.pwd = get_constant('MAGPIE_TEST_ADMIN_PASSWORD')
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd)
-        cls.require = "cannot run tests without logged in '{}' user".format(get_constant('MAGPIE_ADMIN_GROUP'))
         cls.json_headers = utils.get_headers_content_type(cls.app, 'application/json')
-        assert cls.headers and cls.cookies, cls.require
-        cls.app.cookies = cls.cookies
+        cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
+        # TODO: fix UI views so that they can be 'found' directly in the WebTest.TestApp
+        # NOTE: localhost magpie has to be running for following login call to work
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd,
+                                                                 use_ui_form_submit=True, version=cls.version)
+        cls.require = "cannot run tests without logged in '{}' user".format(get_constant('MAGPIE_ADMIN_GROUP'))
+        assert cls.headers and cls.cookies, cls.require
 
     @classmethod
     def tearDownClass(cls):
@@ -136,13 +137,21 @@ class TestMagpieAPI_AdminAuthLocal(unittest.TestCase):
 
     def test_GetAPI(self):
         resp = utils.test_request(self.app, 'GET', SwaggerGenerator.path, headers=self.json_headers)
-        json_body = utils.check_response_basic_info(resp, 200)
-        utils.check_val_is_in('db_version', json_body)
-        utils.check_val_is_in('version', json_body)
-        utils.check_val_equal(json_body['version'], __meta__.__version__)
-        utils.check_val_type(json_body['version'], six.string_types)
-        version_parts = json_body['version'].split('.')
-        utils.check_val_equal(len(version_parts), 3)
+        json_body = utils.get_json_body(resp)
+        content_types = utils.get_response_content_types_list(resp)
+        utils.check_val_is_in('application/json', content_types)
+        utils.check_val_equal(resp.status_code, 200)
+        utils.check_val_is_in('info', json_body)
+        utils.check_val_is_in('version', json_body['info'])
+        utils.check_val_equal(json_body['info']['version'], self.version)
+        utils.check_val_is_in('paths', json_body)
+        utils.check_val_is_in('host', json_body)
+        utils.check_val_is_in('schemes', json_body)
+        utils.check_val_is_in('tags', json_body)
+        utils.check_val_is_in('basePath', json_body)
+        utils.check_val_is_in('securityDefinitions', json_body)
+        utils.check_val_is_in('swagger', json_body)
+        utils.check_val_equal(json_body['swagger'], '2.0')
 
     @pytest.mark.users
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason="Skip 'users' tests requested.")
@@ -228,8 +237,8 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
         cls.require = "cannot run tests without logged in '{}' user".format(get_constant('MAGPIE_ADMIN_GROUP'))
         cls.json_headers = utils.get_headers_content_type(cls.url, 'application/json')
-        cls.check_requirements()
         cls.version = utils.TestSetup.get_Version(cls)
+        cls.check_requirements()
         cls.get_test_values()
 
     @classmethod
@@ -240,7 +249,7 @@ class TestMagpieAPI_AdminAuthRemote(unittest.TestCase):
 
     @classmethod
     def check_requirements(cls):
-        headers, cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
+        headers, cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd, version=cls.version)
         assert headers and cookies, cls.require
         assert cls.headers and cls.cookies, cls.require
 

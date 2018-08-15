@@ -30,6 +30,10 @@ class TestMagpieUI_NoAuthLocal(unittest.TestCase):
         cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.json_headers = utils.get_headers_content_type(cls.app, 'application/json')
         cls.cookies = None
+        cls.test_user = get_constant('MAGPIE_ANONYMOUS_USER')
+        cls.test_group = get_constant('MAGPIE_ANONYMOUS_GROUP')
+        cls.test_service_type = 'wps'
+        cls.test_service_name = 'flyingpigeon'
 
     @classmethod
     def tearDownClass(cls):
@@ -45,9 +49,46 @@ class TestMagpieUI_NoAuthLocal(unittest.TestCase):
     def test_Login(self):
         utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/login')
 
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_ViewUsers(self):
+        utils.TestSetup.check_Unauthorized(self, method='GET', path='/ui/users')
 
-@unittest.skip("Not implemented.")
-@pytest.mark.skip(reason="Not implemented.")
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_ViewGroups(self):
+        utils.TestSetup.check_Unauthorized(self, method='GET', path='/ui/groups')
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_ViewServices(self):
+        utils.TestSetup.check_Unauthorized(self, method='GET', path='/ui/services/default')
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_ViewServicesOfType(self):
+        path = '/ui/services/{}'.format(self.test_service_type)
+        utils.TestSetup.check_Unauthorized(self, method='GET', path=path)
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_EditUser(self):
+        path = '/ui/users/{}/default'.format(self.test_user)
+        utils.TestSetup.check_Unauthorized(self, method='GET', path=path)
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_EditGroup(self):
+        path = '/ui/groups/{}/default'.format(self.test_group)
+        utils.TestSetup.check_Unauthorized(self, method='GET', path=path)
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_EditService(self):
+        path = '/ui/services/{type}/{name}'.format(type=self.test_service_type, name=self.test_service_name)
+        utils.TestSetup.check_Unauthorized(self, method='GET', path=path)
+
+
 @pytest.mark.ui
 @pytest.mark.local
 @unittest.skipUnless(runner.MAGPIE_TEST_UI, reason="Skip 'ui' tests requested.")
@@ -59,11 +100,82 @@ class TestMagpieUI_AdminAuthLocal(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.usr = get_constant('MAGPIE_TEST_ADMIN_USERNAME')
+        cls.pwd = get_constant('MAGPIE_TEST_ADMIN_PASSWORD')
         cls.app = utils.get_test_magpie_app()
+        cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
+        cls.json_headers = utils.get_headers_content_type(cls.url, 'application/json')
+        cls.cookies = None
+        cls.version = utils.TestSetup.get_Version(cls)
+        # TODO: fix UI views so that they can be 'found' directly in the WebTest.TestApp
+        # NOTE: localhost magpie has to be running for following login call to work
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd, use_ui_form_submit=True)
+        cls.require = "cannot run tests without logged in '{}' user".format(get_constant('MAGPIE_ADMIN_GROUP'))
+        cls.check_requirements()
+
+        cls.test_user = get_constant('MAGPIE_ANONYMOUS_USER')
+        cls.test_group = get_constant('MAGPIE_ANONYMOUS_GROUP')
+        cls.test_service_type = utils.get_service_types_for_version(cls.version)[0]
+        cls.test_service_name = utils.TestSetup.get_AnyServiceOfTestServiceType(cls)['service_name']
 
     @classmethod
     def tearDownClass(cls):
         pyramid.testing.tearDown()
+
+    @classmethod
+    def check_requirements(cls):
+        headers, cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
+        assert headers and cookies, cls.require
+        assert cls.headers and cls.cookies, cls.require
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_Home(self):
+        utils.TestSetup.check_UpStatus(self, method='GET', path='/')
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_Login(self):
+        utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/login')
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_ViewUsers(self):
+        utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/users')
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_ViewGroups(self):
+        utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/groups')
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_ViewServices(self):
+        utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/services/default')
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_ViewServicesOfType(self):
+        path = '/ui/services/{}'.format(self.test_service_type)
+        utils.TestSetup.check_UpStatus(self, method='GET', path=path)
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_EditUser(self):
+        path = '/ui/users/{}/default'.format(self.test_user)
+        utils.TestSetup.check_UpStatus(self, method='GET', path=path)
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_EditGroup(self):
+        path = '/ui/groups/{}/default'.format(self.test_group)
+        utils.TestSetup.check_UpStatus(self, method='GET', path=path)
+
+    @pytest.mark.status
+    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason="Skip 'status' tests requested.")
+    def test_EditService(self):
+        path = '/ui/services/{type}/{name}'.format(type=self.test_service_type, name=self.test_service_name)
+        utils.TestSetup.check_UpStatus(self, method='GET', path=path)
 
 
 @pytest.mark.ui

@@ -18,7 +18,7 @@ def get_test_magpie_app():
     config = config_setup_from_ini(constants.MAGPIE_INI_FILE_PATH)
     # required redefinition because root models' location is not the same from within this test file
     config.add_settings({'ziggurat_foundations.model_locations.User': 'models:User',
-                         'ziggurat_foundations.model_locations.user': 'models:User'})
+                         'ziggurat_foundations.model_locations.user': 'models:User', })
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
     config.registry.settings['magpie.db_migration_disabled'] = True
     # scan dependencies
@@ -36,6 +36,12 @@ def get_headers_content_type(app_or_url, content_type):
 
 def get_response_content_types_list(response):
     return [ct.strip() for ct in response.headers['Content-Type'].split(';')]
+
+
+def get_json_body(response):
+    if isinstance(response, TestResponse):
+        return response.json
+    return response.json()
 
 
 def get_service_types_for_version(version):
@@ -86,14 +92,18 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
         return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
 
 
-def check_or_try_login_user(app_or_url, username=None, password=None, headers=None):
+def check_or_try_login_user(app_or_url, username=None, password=None, provider='ziggurat', headers=None,
+                            use_ui_form_submit=False, version=__meta__.__version__):
     """
     Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
 
     :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
     :param username: name of the user to login or None otherwise
     :param password: password to use for login if the user was not already logged in
+    :param provider: provider string to use for login (default: ziggurat, ie: magpie's local signin)
     :param headers: headers to include in the test request
+    :param use_ui_form_submit: use Magpie UI login 'form' to obtain cookies (required for local WebTest.App login)
+    :param version: server or local app version to evaluate responses with backward compatibility
     :return: headers and cookies of the user session or (None, None)
     :raise: Exception on any login/logout failure as required by the caller's specifications (username/password)
     """
@@ -110,24 +120,47 @@ def check_or_try_login_user(app_or_url, username=None, password=None, headers=No
     if resp.status_code != 200:
         raise Exception('cannot retrieve logged in user information')
 
+    resp_cookies = None
     auth = body.get('authenticated', False)
-    user = body.get('user_name', '')
     if auth is False and username is None:
         return None, None
     if auth is False and username is not None:
-        data = {'user_name': username, 'password': password, 'provider_name': 'ziggurat'}
+        data = {'user_name': username, 'password': password, 'provider_name': provider}
 
         if isinstance(app_or_url, TestApp):
-            resp = app_or_url.post_json('/signin', data, headers=headers)
+            if use_ui_form_submit:
+                resp = app_or_url.get(url='/ui/login')
+                form = resp.forms['login_internal']
+                form['user_name'] = username
+                form['password'] = password
+                form['provider_name'] = provider
+                resp = form.submit('submit')
+                resp_cookies = app_or_url.cookies    # automatically set by form submit
+            else:
+                resp = app_or_url.post_json('/signin', data, headers=headers)
+                resp_cookies = resp.cookies
         else:
             resp = requests.post('{}/signin'.format(app_or_url), json=data, headers=headers)
+            resp_cookies = resp.cookies
 
-        if resp.status_code == 200:
-            return resp.headers, resp.cookies
-        return None, None
+        # response OK (200) if directly from API /signin
+        # response Found (302) if redirected UI /login
+        if resp.status_code < 400:
+            return resp.headers, resp_cookies
 
-    if auth is True and username != user:
-        raise Exception("invalid user")
+    if auth is True:
+        if LooseVersion(version) >= LooseVersion('0.6.3'):
+            logged_user = body.get('user', {}).get('user_name', '')
+        else:
+            logged_user = body.get('user_name', '')
+        if username != logged_user:
+            raise Exception("invalid user")
+        if isinstance(app_or_url, TestApp):
+            resp_cookies = app_or_url.cookies
+        else:
+            resp_cookies = resp.cookies
+
+    return resp.headers, resp_cookies
 
 
 def format_test_val_ref(val, ref, pre='Fail'):
@@ -177,10 +210,7 @@ def check_response_basic_info(response, expected_code=200):
     :param expected_code: status code to validate from the response.
     :return: json body of the response for convenience.
     """
-    if isinstance(response, TestResponse):
-        json_body = response.json
-    else:
-        json_body = response.json()
+    json_body = get_json_body(response)
     content_types = get_response_content_types_list(response)
     check_val_is_in('application/json', content_types)
     check_val_equal(response.status_code, expected_code)
@@ -310,16 +340,35 @@ class TestSetup(object):
         """
         resp = test_request(test_class.url, method, path, cookies=test_class.cookies)
         check_val_equal(resp.status_code, 200)
-        check_val_is_in('Content-Type', resp.headers)
+        check_val_is_in('Content-Type', dict(resp.headers))
         check_val_is_in('text/html', get_response_content_types_list(resp))
         check_val_is_in("Magpie Administration", resp.text)
+
+    @staticmethod
+    def check_Unauthorized(test_class, method, path):
+        """
+        Verifies that Magpie returned an Unauthorized response.
+        Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
+        """
+        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, expect_errors=True)
+        check_val_equal(resp.status_code, 401)
+        check_val_is_in('Content-Type', dict(resp.headers))
+        check_val_is_in('application/json', get_response_content_types_list(resp))
+        json_body = get_json_body(resp)
+        check_val_is_in('code', json_body)
+        check_val_equal(json_body['code'], 401)
+        check_val_is_in('method', json_body)
+        check_val_equal(json_body['method'], method)
+        check_val_is_in('request_url', json_body)
+        check_val_is_in('route_name', json_body)
+        check_val_is_in('detail', json_body)
 
     @staticmethod
     def get_AnyServiceOfTestServiceType(test_class):
         route = '/services/types/{}'.format(test_class.test_service_type)
         resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
         check_val_equal(resp.status_code, 200)
-        json_body = resp.json()
+        json_body = get_json_body(resp)
         check_val_is_in('services', json_body)
         check_val_is_in(test_class.test_service_type, json_body['services'])
         check_val_not_equal(len(json_body['services'][test_class.test_service_type]), 0,
