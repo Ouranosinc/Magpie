@@ -1,4 +1,4 @@
-from magpie.constants import MAGPIE_ADMIN_GROUP, MAGPIE_ANONYMOUS_USER
+from magpie.constants import get_constant
 from magpie.definitions import ziggurat_definitions as zig
 from magpie.api.api_except import evaluate_call, verify_param
 from magpie.api.api_rest_schemas import *
@@ -68,12 +68,13 @@ def get_userid_by_token(token, authn_policy):
 
 
 def get_user(request, user_name_or_token):
-    if user_name_or_token == MAGPIE_LOGGED_USER:
+    if user_name_or_token == get_constant('MAGPIE_LOGGED_USER'):
         curr_user = request.user
         if curr_user:
             return curr_user
         else:
-            anonymous = evaluate_call(lambda: zig.UserService.by_user_name(MAGPIE_ANONYMOUS_USER, db_session=request.db),
+            anonymous_user = get_constant('MAGPIE_ANONYMOUS_USER')
+            anonymous = evaluate_call(lambda: zig.UserService.by_user_name(anonymous_user, db_session=request.db),
                                       fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                                       msgOnFail=User_CheckAnonymous_ForbiddenResponseSchema.description)
             verify_param(anonymous, notNone=True, httpError=HTTPNotFound,
@@ -82,8 +83,8 @@ def get_user(request, user_name_or_token):
     else:
         authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
         principals = authn_policy.effective_principals(request)
-        MAGPIE_ADMIN_GROUP = zig.GroupService.by_group_name(MAGPIE_ADMIN_GROUP, db_session=request.db)
-        admin_principal = 'group:{}'.format(MAGPIE_ADMIN_GROUP.id)
+        admin_group = zig.GroupService.by_group_name(get_constant('MAGPIE_ADMIN_GROUP'), db_session=request.db)
+        admin_principal = 'group:{}'.format(admin_group.id)
         if admin_principal not in principals:
             raise HTTPForbidden()
         user = evaluate_call(lambda: zig.UserService.by_user_name(user_name_or_token, db_session=request.db),
@@ -93,7 +94,8 @@ def get_user(request, user_name_or_token):
         return user
 
 
-def get_user_matchdict_checked_or_logged(request, user_name_key='user_name', logged_user_name=MAGPIE_LOGGED_USER):
+def get_user_matchdict_checked_or_logged(request, user_name_key='user_name'):
+    logged_user_name = get_constant('MAGPIE_LOGGED_USER')
     logged_user_path = UserAPI.path.replace('{' + user_name_key + '}', logged_user_name)
     if user_name_key not in request.matchdict and request.path_info.startswith(logged_user_path):
         return get_user(request, logged_user_name)
