@@ -2,6 +2,7 @@ from magpie.definitions.cornice_definitions import *
 from magpie.definitions.pyramid_definitions import *
 from magpie.constants import MAGPIE_LOGGED_USER, MAGPIE_USER_NAME_MAX_LENGTH, MAGPIE_ADMIN_PERMISSION
 from magpie import __meta__
+import six
 
 
 TitleAPI = "Magpie REST API"
@@ -261,46 +262,82 @@ class HeaderRequestSchema(colander.MappingSchema):
 
 
 class BaseBodySchema(colander.MappingSchema):
-    def __init__(self, code=None, description=None):
+    __code = None
+    __desc = None
+
+    def __init__(self, code, description):
         super(BaseBodySchema, self).__init__()
-        self.code = colander.SchemaNode(
-            colander.Integer(), description="HTTP response code", example=code)
-        self.type = colander.SchemaNode(
-            colander.String(), description="Response content type", example="application/json")
-        self.detail = colander.SchemaNode(
-            colander.String(), description="Response status message", example=description)
+        assert isinstance(code, int)
+        assert isinstance(description, six.string_types)
+        self.__code = code
+        self.__desc = description
+
+        # update the values
+        child_nodes = getattr(self, 'children')
+        for node in child_nodes:
+            if node.name == 'code':
+                node.example = self.__code
+            if node.name == 'detail':
+                node.example = self.__desc
+
+    code = colander.SchemaNode(
+        colander.Integer(),
+        description="HTTP response code",
+        example=__code)
+    type = colander.SchemaNode(
+        colander.String(),
+        description="Response content type",
+        example="application/json")
+    detail = colander.SchemaNode(
+        colander.String(),
+        description="Response status message",
+        example=__desc)
 
 
 class ErrorVerifyParamBodySchema(colander.MappingSchema):
     name = colander.SchemaNode(
         colander.String(),
-        description="Name of the failing condition parameter",
+        description="Name of the failing condition parameter.",
         missing=colander.drop)
     value = colander.SchemaNode(
         colander.String(),
-        description="Value of the failing condition parameter")
+        description="Value of the failing condition parameter.")
     compare = colander.SchemaNode(
         colander.String(),
-        description="Test comparison value of the failing condition parameter",
+        description="Test comparison value of the failing condition parameter.",
         missing=colander.drop)
 
 
 class ErrorRequestInfoBodySchema(BaseBodySchema):
+    def __init__(self, **kw):
+        super(ErrorRequestInfoBodySchema, self).__init__(**kw)
+        assert kw.get('code') >= 400
+
     route_name = colander.SchemaNode(
         colander.String(),
-        description="Route called that generated the error",
+        description="Route called that generated the error.",
         example="/users/toto")
     request_url = colander.SchemaNode(
         colander.String(),
-        description="Request URL that generated the error",
+        description="Request URL that generated the error.",
         example="http://localhost:2001/magpie/users/toto")
     method = colander.SchemaNode(
         colander.String(),
-        description="Request method that generated the error",
+        description="Request method that generated the error.",
         example="GET")
 
 
+class InternalServerErrorResponseBodySchema(ErrorRequestInfoBodySchema):
+    def __init__(self, **kw):
+        kw['code'] = HTTPInternalServerError.code
+        super(InternalServerErrorResponseBodySchema, self).__init__(**kw)
+
+
 class UnauthorizedResponseBodySchema(BaseBodySchema):
+    def __init__(self, **kw):
+        kw['code'] = HTTPUnauthorized.code
+        super(UnauthorizedResponseBodySchema, self).__init__(**kw)
+
     route_name = colander.SchemaNode(colander.String(), description="Specified route")
     request_url = colander.SchemaNode(colander.String(), description="Specified url")
 
@@ -326,11 +363,7 @@ class MethodNotAllowedResponseSchema(colander.MappingSchema):
 class UnprocessableEntityResponseSchema(colander.MappingSchema):
     description = "Invalid value specified."
     header = HeaderResponseSchema()
-    body = BaseBodySchema(HTTPUnprocessableEntity.code, description=description)
-
-
-class InternalServerErrorResponseBodySchema(ErrorRequestInfoBodySchema):
-    pass
+    body = BaseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
 
 
 class InternalServerErrorResponseSchema(colander.MappingSchema):
@@ -1322,7 +1355,7 @@ class UserResources_GET_ResponseBodySchema(BaseBodySchema):
 class UserResources_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get user resources successful."
     header = HeaderResponseSchema()
-    body = UserResources_GET_ResponseBodySchema()
+    body = UserResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class UserResources_GET_NotFoundResponseBodySchema(BaseBodySchema):
@@ -1384,7 +1417,7 @@ class UserResourcePermissions_GET_NotFoundResponseSchema(colander.MappingSchema)
     body = BaseBodySchema(code=HTTPNotFound.code, description=description)
 
 
-class UserResourcePermissions_POST_RequestBodySchema(BaseBodySchema):
+class UserResourcePermissions_POST_RequestBodySchema(colander.MappingSchema):
     resource_id = colander.SchemaNode(
         colander.Integer(),
         description="resource_id of the created user-resource-permission reference.")
@@ -1413,8 +1446,8 @@ class UserResourcePermissions_POST_ResponseBodySchema(BaseBodySchema):
         description="permission_name of the created user-resource-permission reference.")
 
 
-class UserResourcePermissions_POST_ParamResponseBodySchema(BaseBodySchema):
-    name = colander.SchemaNode(colander.String(), description="Specified parameter.", example=u'permission_name')
+class UserResourcePermissions_POST_ParamResponseBodySchema(colander.MappingSchema):
+    name = colander.SchemaNode(colander.String(), description="Specified parameter.", example='permission_name')
     value = colander.SchemaNode(colander.String(), description="Specified parameter value.")
 
 
@@ -1469,14 +1502,14 @@ class UserResourcePermissions_DELETE_NotFoundResponseSchema(colander.MappingSche
     body = UserResourcePermissions_DELETE_BadResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class UserServiceResources_GET_ResponseBodySchema(colander.MappingSchema):
+class UserServiceResources_GET_ResponseBodySchema(BaseBodySchema):
     service = ServiceResourcesBodySchema()
 
 
-class UserServiceResources_GET_OkResponseSchema(BaseBodySchema):
+class UserServiceResources_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get user service resources successful."
     header = HeaderResponseSchema()
-    body = UserServiceResources_GET_ResponseBodySchema()
+    body = UserServiceResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class UserServicePermissions_POST_RequestBodySchema(colander.MappingSchema):
@@ -1510,7 +1543,7 @@ class UserServicePermissions_GET_ResponseBodySchema(BaseBodySchema):
 class UserServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get user service permissions successful."
     header = HeaderResponseSchema()
-    body = UserServicePermissions_GET_ResponseBodySchema()
+    body = UserServicePermissions_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class UserServicePermissions_GET_NotFoundResponseSchema(colander.MappingSchema):
@@ -1699,7 +1732,7 @@ class GroupServicePermissions_GET_ResponseBodySchema(BaseBodySchema):
 class GroupServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get group service permissions successful."
     header = HeaderResponseSchema()
-    body = GroupServicePermissions_GET_ResponseBodySchema()
+    body = GroupServicePermissions_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class GroupServicePermissions_GET_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
@@ -1794,7 +1827,7 @@ class GroupResources_GET_ResponseBodySchema(BaseBodySchema):
 class GroupResources_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get group resources successful."
     header = HeaderResponseSchema()
-    body = GroupResources_GET_ResponseBodySchema()
+    body = GroupResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class GroupResources_GET_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
@@ -1825,7 +1858,7 @@ class GroupServiceResources_GET_ResponseBodySchema(BaseBodySchema):
 class GroupServiceResources_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get group service resources successful."
     header = HeaderResponseSchema()
-    body = GroupServiceResources_GET_ResponseBodySchema()
+    body = GroupServiceResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class GroupServicePermission_DELETE_RequestSchema(colander.MappingSchema):
@@ -1872,7 +1905,7 @@ class Session_GET_ResponseBodySchema(BaseBodySchema):
 class Session_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get session successful."
     header = HeaderResponseSchema()
-    body = Session_GET_ResponseBodySchema()
+    body = Session_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class Session_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
@@ -1881,7 +1914,7 @@ class Session_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
     body = InternalServerErrorResponseSchema()
 
 
-class Providers_GET_ResponseBodySchema(colander.MappingSchema):
+class Providers_GET_ResponseBodySchema(BaseBodySchema):
     provider_names = ProvidersListSchema()
     internal_providers = ProvidersListSchema()
     external_providers = ProvidersListSchema()
@@ -1890,7 +1923,7 @@ class Providers_GET_ResponseBodySchema(colander.MappingSchema):
 class Providers_GET_OkResponseSchema(BaseBodySchema):
     description = "Get providers successful."
     header = HeaderResponseSchema()
-    body = Providers_GET_ResponseBodySchema()
+    body = Providers_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class Version_GET_ResponseBodySchema(BaseBodySchema):

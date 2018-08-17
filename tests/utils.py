@@ -87,6 +87,9 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
         elif method == 'DELETE':
             return app_or_url.delete_json(path, **kwargs)
     else:
+        # remove keywords specific to TestApp
+        kwargs.pop('expect_errors', None)
+
         kwargs['json'] = json_body
         url = '{url}{path}'.format(url=app_or_url, path=path)
         return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
@@ -203,20 +206,34 @@ def check_val_type(val, ref, msg=None):
     assert isinstance(val, ref), msg or format_test_val_ref(val, repr(ref), pre='Type Fail')
 
 
-def check_response_basic_info(response, expected_code=200):
+def check_response_basic_info(response, expected_code=200, expected_type='application/json', expected_method='GET'):
     """
     Validates basic Magpie API response metadata.
+
     :param response: response to validate.
     :param expected_code: status code to validate from the response.
+    :param expected_type: Content-Type to validate from the response.
+    :param expected_method: method 'GET', 'POST', etc. to validate from the response if an error.
     :return: json body of the response for convenience.
     """
     json_body = get_json_body(response)
+    check_val_is_in('Content-Type', dict(response.headers), msg="Response doesn't define `Content-Type` header.")
     content_types = get_response_content_types_list(response)
-    check_val_is_in('application/json', content_types)
-    check_val_equal(response.status_code, expected_code)
-    check_val_equal(json_body['code'], expected_code)
-    check_val_equal(json_body['type'], 'application/json')
-    assert json_body['detail'] != ''
+    check_val_equal(response.status_code, expected_code, msg="Response doesn't match expected HTTP status code.")
+    check_val_is_in(expected_type, content_types, msg="Response doesn't match expected HTTP Content-Type header.")
+    check_val_is_in('code', json_body, msg="Parameter `code` should be in response JSON body.")
+    check_val_is_in('type', json_body, msg="Parameter `type` should be in response JSON body.")
+    check_val_is_in('detail', json_body, msg="Parameter `detail` should be in response JSON body.")
+    check_val_equal(json_body['code'], expected_code, msg="Parameter `code` should match the HTTP status code.")
+    check_val_equal(json_body['type'], expected_type, msg="Parameter `type` should match the HTTP Content-Type header.")
+    check_val_not_equal(json_body['detail'], '', msg="Parameter `detail` should not be empty.")
+
+    if response.status_code >= 400:
+        check_val_is_in('request_url', json_body)
+        check_val_is_in('route_name', json_body)
+        check_val_is_in('method', json_body)
+        check_val_equal(json_body['method'], expected_method)
+
     return json_body
 
 
@@ -300,8 +317,7 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
     :param root_service_id: top-level service id (int)
     :raise any invalid match on expected data field, type or value
     """
-    assert isinstance(resource_dict, dict)
-
+    check_val_type(resource_dict, dict)
     for resource_id in resource_dict:
         check_val_type(resource_id, six.string_types)
         resource_int_id = int(resource_id)  # should by an 'int' string, no error raised
@@ -345,23 +361,13 @@ class TestSetup(object):
         check_val_is_in("Magpie Administration", resp.text)
 
     @staticmethod
-    def check_Unauthorized(test_class, method, path):
+    def check_Unauthorized(test_class, method, path, content_type='application/json'):
         """
         Verifies that Magpie returned an Unauthorized response.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
         resp = test_request(test_class.url, method, path, cookies=test_class.cookies, expect_errors=True)
-        check_val_equal(resp.status_code, 401)
-        check_val_is_in('Content-Type', dict(resp.headers))
-        check_val_is_in('application/json', get_response_content_types_list(resp))
-        json_body = get_json_body(resp)
-        check_val_is_in('code', json_body)
-        check_val_equal(json_body['code'], 401)
-        check_val_is_in('method', json_body)
-        check_val_equal(json_body['method'], method)
-        check_val_is_in('request_url', json_body)
-        check_val_is_in('route_name', json_body)
-        check_val_is_in('detail', json_body)
+        check_response_basic_info(resp, expected_code=401, expected_type=content_type, expected_method=method)
 
     @staticmethod
     def get_AnyServiceOfTestServiceType(test_class):

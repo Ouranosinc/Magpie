@@ -22,17 +22,21 @@ def default_run(option):
 
 
 # run test options
-MAGPIE_TEST_DEFAULTS = default_run('MAGPIE_TEST_DEFAULTS')
+MAGPIE_TEST_DEFAULTS = default_run('MAGPIE_TEST_DEFAULTS')  # default users, providers and views
 MAGPIE_TEST_LOGIN = default_run('MAGPIE_TEST_LOGIN')
 MAGPIE_TEST_SERVICES = default_run('MAGPIE_TEST_SERVICES')
 MAGPIE_TEST_RESOURCES = default_run('MAGPIE_TEST_RESOURCES')
 MAGPIE_TEST_GROUPS = default_run('MAGPIE_TEST_GROUPS')
 MAGPIE_TEST_USERS = default_run('MAGPIE_TEST_USERS')
-MAGPIE_TEST_STATUS = default_run('MAGPIE_TEST_STATUS')
+MAGPIE_TEST_STATUS = default_run('MAGPIE_TEST_STATUS')  # validate views found and displayed correctly as per permission
 MAGPIE_TEST_REMOTE = default_run('MAGPIE_TEST_REMOTE')
 MAGPIE_TEST_LOCAL = default_run('MAGPIE_TEST_LOCAL')
 MAGPIE_TEST_API = default_run('MAGPIE_TEST_API')
 MAGPIE_TEST_UI = default_run('MAGPIE_TEST_UI')
+
+
+def MAGPIE_TEST_DISABLED_MESSAGE(option):
+    return "Skip{}tests requested.".format(" '{}' ".format(option) if option else '')
 
 
 def test_suite():

@@ -131,7 +131,7 @@ def update_service(request):
 def get_service(request):
     """Get a service information."""
     service = get_service_matchdict_checked(request)
-    return valid_http(httpSuccess=HTTPOk, detail=Service_GET_OkResponseSchema.name,
+    return valid_http(httpSuccess=HTTPOk, detail=Service_GET_OkResponseSchema.description,
                       content={service.resource_name: format_service(service)})
 
 
