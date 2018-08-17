@@ -5,7 +5,8 @@ from magpie.services import service_type_dict
 from magpie.models import resource_type_dict
 from magpie.ui.management import check_response
 from magpie.ui.home import add_template_data
-from magpie import register
+from magpie import register, __meta__
+from distutils.version import LooseVersion
 import requests
 import json
 
@@ -64,7 +65,10 @@ class ManagementViews(object):
                 resp_user = requests.get('{url}/users/{usr}'.format(url=self.magpie_url, usr=user),
                                          cookies=self.request.cookies)
                 check_response(resp_user)
-                user_email = resp_user.json()['email']
+                if LooseVersion(__meta__.__version__) >= LooseVersion('0.6.3'):
+                    user_email = resp_user.json()['user']['email']
+                else:
+                    user_email = resp_user.json()['email']
                 emails.append(user_email)
             return emails
         except Exception as e:

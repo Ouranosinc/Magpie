@@ -1,11 +1,10 @@
-from magpie import *
 from magpie.api.api_except import *
 from magpie.api.api_rest_schemas import *
 from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
 from magpie.api.management.user.user_formats import *
 from magpie.definitions.ziggurat_definitions import *
-from services import service_type_dict
-import models
+from magpie.services import service_type_dict
+from magpie import models
 
 
 def create_user(user_name, password, email, group_name, db_session):
