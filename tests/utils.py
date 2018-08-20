@@ -1,10 +1,12 @@
-import six
 import pyramid
 import requests
+import six
+from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from webtest import TestApp
 from webtest.response import TestResponse
-from magpie import __meta__, constants, db, services, magpiectl
+from magpie import __meta__, db, services, magpiectl
+from magpie.constants import get_constant
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -15,7 +17,7 @@ def config_setup_from_ini(config_ini_file_path):
 
 def get_test_magpie_app():
     # parse settings from ini file to pass them to the application
-    config = config_setup_from_ini(constants.MAGPIE_INI_FILE_PATH)
+    config = config_setup_from_ini(get_constant('MAGPIE_INI_FILE_PATH'))
     # required redefinition because root models' location is not the same from within this test file
     config.add_settings({'ziggurat_foundations.model_locations.User': 'models:User',
                          'ziggurat_foundations.model_locations.user': 'models:User', })
@@ -26,6 +28,12 @@ def get_test_magpie_app():
     # create the test application
     app = TestApp(magpiectl.main({}, **config.registry.settings))
     return app
+
+
+def get_hostname(app_or_url):
+    if isinstance(app_or_url, TestApp):
+        app_or_url = get_constant('MAGPIE_URL', settings=app_or_url.app.registry.settings, settings_name='magpie.url')
+    return urlparse(app_or_url).hostname
 
 
 def get_headers_content_type(app_or_url, content_type):
@@ -115,10 +123,9 @@ def check_or_try_login_user(app_or_url, username=None, password=None, provider='
 
     if isinstance(app_or_url, TestApp):
         resp = app_or_url.get('/session', headers=headers)
-        body = resp.json
     else:
         resp = requests.get('{}/session'.format(app_or_url), headers=headers)
-        body = resp.json()
+    body = get_json_body(resp)
 
     if resp.status_code != 200:
         raise Exception('cannot retrieve logged in user information')
@@ -400,13 +407,14 @@ class TestSetup(object):
     def get_ExistingTestServiceInfo(test_class):
         route = '/services/{svc}'.format(svc=test_class.test_service_name)
         resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
-        return resp.json()[test_class.test_service_name]
+        json_body = get_json_body(resp)
+        return json_body[test_class.test_service_name]
 
     @staticmethod
     def get_ExistingTestServiceDirectResources(test_class):
         route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
         resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
-        json_body = resp.json()
+        json_body = get_json_body(resp)
         resources = json_body[test_class.test_service_name]['resources']
         return [resources[res] for res in resources]
 

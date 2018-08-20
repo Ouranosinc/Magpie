@@ -3,7 +3,6 @@ import pytest
 import pyramid.testing
 import yaml
 import six
-from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from magpie.api.api_rest_schemas import SwaggerGenerator
 from magpie.constants import get_constant
@@ -131,7 +130,10 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         resp = utils.test_request(cls.url, 'GET', '/services/project-api',
                                   headers=cls.json_headers, cookies=cls.cookies)
         json_body = utils.check_response_basic_info(resp, 200)
-        cls.test_service_resource_id = json_body[cls.test_service_name]['resource_id']
+        if LooseVersion(cls.version) >= LooseVersion('0.6.3'):
+            cls.test_service_resource_id = json_body[cls.test_service_name]['resource']['resource_id']
+        else:
+            cls.test_service_resource_id = json_body[cls.test_service_name]['resource_id']
 
         cls.test_resource_name = u'magpie-unittest-resource'
         test_service_resource_types = service_type_dict[cls.test_service_type].resource_types_permissions.keys()
@@ -390,6 +392,9 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         resources_prior = utils.TestSetup.get_ExistingTestServiceDirectResources(self)
         resources_prior_ids = [res['resource_id'] for res in resources_prior]
         json_body = utils.TestSetup.create_TestServiceResource(self)
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            utils.check_val_is_in('resource', json_body)
+            json_body = json_body['resource']
         utils.check_val_is_in('resource_id', json_body)
         utils.check_val_is_in('resource_name', json_body)
         utils.check_val_is_in('resource_type', json_body)
@@ -405,6 +410,9 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         service_id = utils.TestSetup.get_ExistingTestServiceInfo(self)['resource_id']
         extra_data = {"parent_id": service_id}
         json_body = utils.TestSetup.create_TestServiceResource(self, extra_data)
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            utils.check_val_is_in('resource', json_body)
+            json_body = json_body['resource']
         utils.check_val_is_in('resource_id', json_body)
         utils.check_val_is_in('resource_name', json_body)
         utils.check_val_is_in('resource_type', json_body)
@@ -419,7 +427,10 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         json_body = utils.TestSetup.create_TestServiceResource(self)
         resources = utils.TestSetup.get_ExistingTestServiceDirectResources(self)
         resources_ids = [res['resource_id'] for res in resources]
-        test_resource_id = json_body['resource_id']
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            test_resource_id = json_body['resource']['resource_id']
+        else:
+            test_resource_id = json_body['resource_id']
         utils.check_val_is_in(test_resource_id, resources_ids,
                               msg="service resource must exist to create children resource")
 
@@ -479,7 +490,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
             svc_name = svc['service_name']
             if svc_name in self.test_services_info:
                 utils.check_val_equal(svc['service_type'], self.test_services_info[svc_name]['type'])
-                hostname = urlparse(self.url).hostname
+                hostname = utils.get_hostname(self.url)
                 twitcher_svc_url = get_twitcher_protected_service_url(svc_name, hostname=hostname)
                 utils.check_val_equal(svc['public_url'], twitcher_svc_url)
                 svc_url = self.test_services_info[svc_name]['url'].replace('${HOSTNAME}', hostname)
@@ -525,7 +536,10 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
     def test_PostResources_ChildrenResource(self):
         resource_info = utils.TestSetup.create_TestServiceResource(self)
-        direct_resource_id = resource_info['resource_id']
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            direct_resource_id = resource_info['resource']['resource_id']
+        else:
+            direct_resource_id = resource_info['resource_id']
 
         data = {
             "resource_name": self.test_resource_name,
@@ -545,7 +559,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
             "resource_type": self.test_resource_type,
         }
         resp = utils.test_request(self.url, 'POST', '/resources',
-                                  headers=self.json_headers, cookies=self.cookies, data=data)
+                                  headers=self.json_headers, cookies=self.cookies, data=data, expect_errors=True)
         json_body = utils.check_response_basic_info(resp, 422)
         utils.check_error_param_structure(json_body, paramName='parent_id', paramValue=repr(None), version=self.version)
 
@@ -553,7 +567,10 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
     def test_DeleteResource(self):
         json_body = utils.TestSetup.create_TestServiceResource(self)
-        resource_id = json_body['resource_id']
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            resource_id = json_body['resource']['resource_id']
+        else:
+            resource_id = json_body['resource_id']
 
         route = '/resources/{res_id}'.format(res_id=resource_id)
         resp = utils.test_request(self.url, 'DELETE', route, headers=self.json_headers, cookies=self.cookies)
