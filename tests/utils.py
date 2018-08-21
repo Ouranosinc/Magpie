@@ -235,7 +235,7 @@ def check_response_basic_info(response, expected_code=200, expected_type='applic
     check_val_equal(json_body['type'], expected_type, msg="Parameter `type` should match the HTTP Content-Type header.")
     check_val_not_equal(json_body['detail'], '', msg="Parameter `detail` should not be empty.")
 
-    if response.status_code >= 400:
+    if response.status_code in [401, 404, 500]:
         check_val_is_in('request_url', json_body)
         check_val_is_in('route_name', json_body)
         check_val_is_in('method', json_body)
@@ -305,7 +305,7 @@ def check_post_resource_structure(json_body, resource_name, resource_type, versi
         check_val_is_in('resource_type', json_body['resource'])
         check_val_is_in('resource_id', json_body['resource'])
         check_val_equal(json_body['resource']['resource_name'], resource_name)
-        check_val_equal(json_body['resource']['resource_name'], resource_type)
+        check_val_equal(json_body['resource']['resource_type'], resource_type)
         check_val_type(json_body['resource']['resource_id'], int)
     else:
         check_val_is_in('resource_name', json_body)

@@ -99,11 +99,11 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
         status = status or (not type(param) == ofType)
     if status:
         if withParam:
-            content[u'param'] = {u'value': str(param) if type(param) in six.string_types else repr(param)}
+            content[u'param'] = {u'value': str(param)}
             if paramName is not None:
                 content[u'param'][u'name'] = str(paramName)
             if paramCompare is not None:
-                content[u'param'][u'compare'] = repr(paramCompare)
+                content[u'param'][u'compare'] = str(paramCompare)
         raise_http(httpError, httpKWArgs=httpKWArgs, detail=msgOnFail, content=content, contentType=contentType)
 
 

@@ -130,10 +130,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         resp = utils.test_request(cls.url, 'GET', '/services/project-api',
                                   headers=cls.json_headers, cookies=cls.cookies)
         json_body = utils.check_response_basic_info(resp, 200)
-        if LooseVersion(cls.version) >= LooseVersion('0.6.3'):
-            cls.test_service_resource_id = json_body[cls.test_service_name]['resource']['resource_id']
-        else:
-            cls.test_service_resource_id = json_body[cls.test_service_name]['resource_id']
+        cls.test_service_resource_id = json_body[cls.test_service_name]['resource_id']
 
         cls.test_resource_name = u'magpie-unittest-resource'
         test_service_resource_types = service_type_dict[cls.test_service_type].resource_types_permissions.keys()
@@ -320,7 +317,8 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def test_GetUser_missing(self):
         utils.TestSetup.check_NonExistingTestUser(self)
         route = '/users/{usr}'.format(usr=self.test_user_name)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, 
+                                  cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 404)
 
     @pytest.mark.users
@@ -384,7 +382,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
             json_body = utils.check_response_basic_info(resp, 200)
             utils.check_val_is_in('permission_names', json_body)
             utils.check_val_type(json_body['permission_names'], list)
-            utils.check_all_equal(json_body['permission_names'], service_perms)
+            utils.check_all_equal(json_body['permission_names'], service_perms, any_order=True)
 
     @pytest.mark.services
     @unittest.skipUnless(runner.MAGPIE_TEST_SERVICES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('services'))
@@ -442,6 +440,10 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
             "parent_id": test_resource_id
         }
         json_body = utils.TestSetup.create_TestServiceResource(self, data_override)
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            utils.check_val_is_in('resource', json_body)
+            utils.check_val_type(json_body['resource'], dict)
+            json_body = json_body['resource']
         utils.check_val_is_in('resource_id', json_body)
         utils.check_val_not_in(json_body['resource_id'], resources_ids)
         utils.check_val_is_in('resource_name', json_body)
@@ -471,7 +473,8 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         utils.TestSetup.create_TestServiceResource(self)
         route = '/services/{svc}/resources'.format(svc=self.test_service_name)
         data = {"resource_name": self.test_resource_name, "resource_type": self.test_resource_type}
-        resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers, cookies=self.cookies, json=data)
+        resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers,
+                                  cookies=self.cookies, json=data, expect_errors=True)
         json_body = utils.check_response_basic_info(resp, 409)
         utils.check_error_param_structure(json_body, version=self.version,
                                           isParamValueLiteralUnicode=True, paramCompareExists=True,
