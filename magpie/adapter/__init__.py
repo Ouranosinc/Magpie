@@ -26,7 +26,7 @@ class MagpieAdapter(AdapterInterface):
     def jobstore_factory(self, registry, database=None):
         # no reimplementation of jobs on magpie side
         # simply return the default twitcher job store
-        return DefaultAdapter.jobstore_factory(registry, database)
+        return DefaultAdapter().jobstore_factory(registry, database)
 
     def owssecurity_factory(self, registry):
         return MagpieOWSSecurity()
