@@ -21,7 +21,7 @@ class MagpieAdapter(AdapterInterface):
     def processstore_factory(self, registry, database=None):
         # no reimplementation of processes on magpie side
         # simply return the default twitcher process store
-        return DefaultAdapter.processstore_factory(registry, database)
+        return DefaultAdapter().processstore_factory(registry, database)
 
     def jobstore_factory(self, registry, database=None):
         # no reimplementation of jobs on magpie side
