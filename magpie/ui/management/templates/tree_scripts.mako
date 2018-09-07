@@ -50,6 +50,7 @@ li.Collapsed {
             % endif
                 <div class="tree_item">${key}</div>
                 <input type="hidden" value=${tree[key]['id']} name="resource_id">
+                <input type="hidden" value=${tree[key].get('remote_path', '')} name="remote_path">
                 ${item_renderer(key, tree[key], level)}
             </li>
         </form>

@@ -4,6 +4,7 @@ from magpie.common import str2bool
 from magpie.services import service_type_dict
 from magpie.models import resource_type_dict
 from magpie.ui.management import check_response
+from magpie.ui.management.sync_resources import merge_db_and_remote_resources
 from magpie.ui.home import add_template_data
 from magpie import register, __meta__
 from distutils.version import LooseVersion
@@ -474,6 +475,9 @@ class ManagementViews(object):
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
             elif u'resource_id' in self.request.POST:
+                remote_path = self.request.POST.get('remote_path')
+                if remote_path:
+                    res_id = self.add_external_resource(cur_svc_type, group_name, remote_path)
                 self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
             else:
                 self.edit_group_users(group_name)
@@ -486,15 +490,48 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
+        service_url = self.get_service_data(cur_svc_type)['service_url']
+        resources = merge_db_and_remote_resources(res_perms, service_url, cur_svc_type)
+
         group_info[u'group_name'] = group_name
         group_info[u'cur_svc_type'] = cur_svc_type
         group_info[u'users'] = self.get_user_names()
         group_info[u'members'] = self.get_group_users(group_name)
         group_info[u'svc_types'] = svc_types
         group_info[u'cur_svc_type'] = cur_svc_type
-        group_info[u'resources'] = res_perms
+        group_info[u'resources'] = resources
         group_info[u'permissions'] = res_perm_names
         return add_template_data(self.request, data=group_info)
+
+    def add_external_resource(self, service, group_name, resource_path):
+        try:
+            res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(group_name,
+                                                                                          services=[service],
+                                                                                          service_type=service,
+                                                                                          is_user=False)
+        except Exception as e:
+            raise HTTPBadRequest(detail=repr(e))
+
+        def parse_resources_and_put(resources, path, parent_id=None):
+            current_name = path.pop(0)
+            if current_name in resources:
+                res_id = parse_resources_and_put(resources[current_name]['children'],
+                                                 path,
+                                                 parent_id=resources[current_name]['id'])
+            else:
+                resources_url = '{url}/resources'.format(url=self.magpie_url)
+                data = {
+                    'resource_name': current_name,
+                    'resource_type': "directory",
+                    'parent_id': parent_id,
+                }
+                response = check_response(requests.post(resources_url, data=data, cookies=self.request.cookies))
+                res_id = response.json()['resource']['resource_id']
+                if path:
+                    res_id = parse_resources_and_put({}, path, parent_id=res_id)
+            return res_id
+
+        return parse_resources_and_put(res_perms, resource_path.split("/")[1:])
 
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
     def view_services(self):
