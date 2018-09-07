@@ -490,7 +490,7 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        service_url = self.get_service_data(cur_svc_type)['service_url']
+        service_url = services[list(services)[0]].get('service_url', '')
         resources = merge_db_and_remote_resources(res_perms, service_url, cur_svc_type)
 
         group_info[u'group_name'] = group_name
