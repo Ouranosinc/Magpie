@@ -19,8 +19,8 @@ def merge_db_and_remote_resources(current_resources, service_url, service_name):
         merged_resources = traverse_and_merge_ressources(current_resources, external_resources)
 
         return merged_resources
-    else:
-        return current_resources
+
+    return current_resources
 
 
 def thredds_get_references(url, depth=0, **kwargs):

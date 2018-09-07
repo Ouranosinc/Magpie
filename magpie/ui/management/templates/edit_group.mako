@@ -15,6 +15,17 @@
             </div>
         % endif
     %endfor
+    % if not value.get('matches_remote', True):
+        <form id="delete_resource_${value['id']}" action="${request.path}" method="post">
+            <div class="tree_button">
+                <input type="submit" class="button delete" value="Clean" name="clean_resource">
+            </div>
+            <p class="tree_item_message">
+                <img title="This resource is absent from the remote server."
+                     src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" />
+            </p>
+        </form>
+    % endif
     % if level == 0:
         <div class="tree_button">
             <input type="submit" class="tree_button goto_service" value="Edit Service" name="goto_service">

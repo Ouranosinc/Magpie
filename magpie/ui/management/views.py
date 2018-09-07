@@ -474,11 +474,14 @@ class ManagementViews(object):
                 return HTTPFound(self.request.route_url('edit_group', **group_info))
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
-            elif u'resource_id' in self.request.POST:
+            elif u'permission' in self.request.POST:
                 remote_path = self.request.POST.get('remote_path')
                 if remote_path:
                     res_id = self.add_external_resource(cur_svc_type, group_name, remote_path)
                 self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
+            elif u'clean_resource' in self.request.POST:
+                url = '{url}/resources/{resource_id}'.format(url=self.magpie_url, resource_id=res_id)
+                check_response(requests.delete(url, cookies=self.request.cookies))
             else:
                 self.edit_group_users(group_name)
 

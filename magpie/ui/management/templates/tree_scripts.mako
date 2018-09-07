@@ -51,6 +51,7 @@ li.Collapsed {
                 <div class="tree_item">${key}</div>
                 <input type="hidden" value=${tree[key]['id']} name="resource_id">
                 <input type="hidden" value=${tree[key].get('remote_path', '')} name="remote_path">
+                <input type="hidden" value=${tree[key].get('matches_remote', '')} name="matches_remote">
                 ${item_renderer(key, tree[key], level)}
             </li>
         </form>
