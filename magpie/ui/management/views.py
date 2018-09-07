@@ -494,15 +494,23 @@ class ManagementViews(object):
             raise HTTPBadRequest(detail=repr(e))
 
         service_url = services[list(services)[0]].get('service_url', '')
-        resources = merge_db_and_remote_resources(res_perms, service_url, cur_svc_type)
 
+        error_message = None
+
+        try:
+            res_perms = merge_db_and_remote_resources(res_perms, service_url, cur_svc_type)
+        except Exception:
+            error_message = ("Couldn't get resources from the remote service ({}) "
+                             "Only local resources are displayed. ".format(service_url))
+
+        group_info[u'error_message'] = error_message
         group_info[u'group_name'] = group_name
         group_info[u'cur_svc_type'] = cur_svc_type
         group_info[u'users'] = self.get_user_names()
         group_info[u'members'] = self.get_group_users(group_name)
         group_info[u'svc_types'] = svc_types
         group_info[u'cur_svc_type'] = cur_svc_type
-        group_info[u'resources'] = resources
+        group_info[u'resources'] = res_perms
         group_info[u'permissions'] = res_perm_names
         return add_template_data(self.request, data=group_info)
 

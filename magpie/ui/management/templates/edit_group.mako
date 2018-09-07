@@ -110,11 +110,14 @@
 
     <div class="current_tab_panel">
         <div class="clear"/>
+        %if error_message:
+            <div class="alert danger visible">${error_message}</div>
+        %endif
         <div class="tree_header">
-        <div class="tree_item">Resources</div>
-        %for perm in permissions:
-            <div class="perm_title">${perm}</div>
-        %endfor
+            <div class="tree_item">Resources</div>
+            %for perm in permissions:
+                <div class="perm_title">${perm}</div>
+            %endfor
         </div>
         <div class="tree">
             ${tree.render_tree(render_item, resources)}
