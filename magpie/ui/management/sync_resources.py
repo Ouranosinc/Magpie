@@ -7,6 +7,7 @@ To implement a new service, see the _SyncServiceInterface class.
 import abc
 import copy
 
+import requests
 import threddsclient
 
 
@@ -17,6 +18,7 @@ def merge_local_and_remote_resources(resources_local, service_name, service_url)
 
     synchronizers = {
         "thredds": _SyncServiceThreads(service_url),
+        "geoserver-api": _SyncServiceGeoserver(service_url),
     }
 
     sync_service = synchronizers.get(service_name.lower(), _SyncServiceDefault())
@@ -119,6 +121,24 @@ class _SyncServiceInterface:
         :return: The returned dictionary must be validated by 'is_valid_resource_schema'
         """
         pass
+
+
+class _SyncServiceGeoserver:
+    def __init__(self, geoserver_url):
+        self.geoserver_url = geoserver_url
+
+    def get_resources(self):
+        # Only workspaces are fetched for now
+        workspaces_url = "{}/{}".format(self.geoserver_url, "workspaces")
+        resp = requests.get(workspaces_url, headers={"Accept": "application/json"})
+        resp.raise_for_status()
+        workspaces_list = resp.json().get("workspaces", {}).get("workspace", {})
+
+        workspaces = {w["name"]: {"children": {}} for w in workspaces_list}
+
+        resources = {"geoserver-api": {"children": workspaces}}
+        assert _is_valid_resource_schema(resources), "Error in Interface implementation"
+        return resources
 
 
 class _SyncServiceThreads(_SyncServiceInterface):
