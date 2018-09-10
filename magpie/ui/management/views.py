@@ -1,18 +1,21 @@
-import requests
 from magpie.definitions.pyramid_definitions import *
-from magpie import USER_NAME_MAX_LENGTH, ANONYMOUS_USER, USERS_GROUP
-from services import service_type_dict
-from models import resource_type_dict
+from magpie.constants import get_constant
+from magpie.common import str2bool
+from magpie.services import service_type_dict
+from magpie.models import resource_type_dict
 from magpie.ui.management import check_response
 from magpie.ui.home import add_template_data
-import register
+from magpie import register, __meta__
+from distutils.version import LooseVersion
+import requests
 import json
 
 
 class ManagementViews(object):
     def __init__(self, request):
         self.request = request
-        self.magpie_url = self.request.registry.settings['magpie.url']
+        self.magpie_url = get_constant('magpie.url', settings=self.request.registry.settings,
+                                       raise_missing=True, raise_not_set=True)
 
     def get_all_groups(self, first_default_group=None):
         try:
@@ -62,7 +65,10 @@ class ManagementViews(object):
                 resp_user = requests.get('{url}/users/{usr}'.format(url=self.magpie_url, usr=user),
                                          cookies=self.request.cookies)
                 check_response(resp_user)
-                user_email = resp_user.json()['email']
+                if LooseVersion(__meta__.__version__) >= LooseVersion('0.6.3'):
+                    user_email = resp_user.json()['user']['email']
+                else:
+                    user_email = resp_user.json()['email']
                 emails.append(user_email)
             return emails
         except Exception as e:
@@ -169,11 +175,11 @@ class ManagementViews(object):
 
     @view_config(route_name='add_user', renderer='templates/add_user.mako')
     def add_user(self):
-
+        users_group = get_constant('MAGPIE_USERS_GROUP')
         return_data = {u'conflict_group_name': False, u'conflict_user_name': False, u'conflict_user_email': False,
                        u'invalid_user_name': False, u'invalid_user_email': False, u'invalid_password': False,
                        u'too_long_user_name': False, u'form_user_name': u'', u'form_user_email': u'',
-                       u'user_groups': self.get_all_groups(first_default_group=USERS_GROUP)}
+                       u'user_groups': self.get_all_groups(first_default_group=users_group)}
         check_data = [u'conflict_group_name', u'conflict_user_name', u'conflict_email',
                       u'invalid_user_name', u'invalid_email', u'invalid_password']
 
@@ -195,7 +201,7 @@ class ManagementViews(object):
                 return_data[u'conflict_user_email'] = True
             if user_email == '':
                 return_data[u'invalid_user_email'] = True
-            if len(user_name) > USER_NAME_MAX_LENGTH:
+            if len(user_name) > get_constant('MAGPIE_USER_NAME_MAX_LENGTH'):
                 return_data[u'too_long_user_name'] = True
             if user_name in self.get_user_names():
                 return_data[u'conflict_user_name'] = True
@@ -225,7 +231,7 @@ class ManagementViews(object):
 
         user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
-        all_groups = self.get_all_groups(first_default_group=USERS_GROUP)
+        all_groups = self.get_all_groups(first_default_group=get_constant('MAGPIE_USERS_GROUP'))
 
         user_resp = requests.get(user_url, cookies=self.request.cookies)
         check_response(user_resp)
@@ -242,7 +248,7 @@ class ManagementViews(object):
             requires_update_name = False
 
             if u'inherited_permissions' in self.request.POST:
-                inherited_permissions = register.str2bool(self.request.POST[u'inherited_permissions'])
+                inherited_permissions = str2bool(self.request.POST[u'inherited_permissions'])
                 user_info[u'inherited_permissions'] = inherited_permissions
 
             if u'delete' in self.request.POST:
@@ -321,10 +327,10 @@ class ManagementViews(object):
             return HTTPFound(self.request.route_url('edit_group', group_name=group_name, cur_svc_type='default'))
 
         groups_info = {}
-        groups = self.get_all_groups()
+        groups = sorted(self.get_all_groups())
         [groups_info.setdefault(grp, {u'members': len(self.get_group_users(grp))}) for grp in groups if grp != u'']
 
-        return add_template_data(self.request, {u'group_names': sorted(groups_info)})
+        return add_template_data(self.request, {u'group_names': groups_info})
 
     @view_config(route_name='add_group', renderer='templates/add_group.mako')
     def add_group(self):
@@ -557,7 +563,7 @@ class ManagementViews(object):
         # apply default state if arriving on the page for the first time
         # future editions on the page will transfer the last saved state
         service_push_show = cur_svc_type in register.SERVICES_PHOENIX_ALLOWED
-        service_push = register.str2bool(self.request.POST.get('service_push', service_push_show))
+        service_push = str2bool(self.request.POST.get('service_push', service_push_show))
 
         service_info = {u'edit_mode': u'no_edit', u'service_name': service_name, u'service_url': service_url,
                         u'public_url': register.get_twitcher_protected_service_url(service_name),

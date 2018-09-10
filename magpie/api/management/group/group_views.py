@@ -32,6 +32,15 @@ def create_group(request):
                       content={u'group': format_group(new_group, basic_info=True)})
 
 
+@GroupAPI.get(tags=[GroupsTag], response_schemas=Group_GET_responses)
+@view_config(route_name=GroupAPI.name, request_method='GET')
+def get_group(request):
+    """Get group information."""
+    group = get_group_matchdict_checked(request, group_name_key='group_name')
+    return valid_http(httpSuccess=HTTPOk, detail=Group_GET_OkResponseSchema.description,
+                      content={u'group': format_group(group)})
+
+
 @GroupAPI.put(schema=Group_PUT_RequestSchema(), tags=[GroupsTag], response_schemas=Group_PUT_responses)
 @view_config(route_name=GroupAPI.name, request_method='PUT')
 def edit_group(request):
@@ -41,7 +50,7 @@ def edit_group(request):
     verify_param(new_group_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail=Group_PUT_Name_NotAcceptableResponseSchema.description)
     verify_param(len(new_group_name), isIn=True, httpError=HTTPNotAcceptable,
-                 paramCompare=range(1, 1 + USER_NAME_MAX_LENGTH),
+                 paramCompare=range(1, 1 + MAGPIE_USER_NAME_MAX_LENGTH),
                  msgOnFail=Group_PUT_Size_NotAcceptableResponseSchema.description)
     verify_param(new_group_name, notEqual=True, httpError=HTTPNotAcceptable,
                  paramCompare=group.group_name, msgOnFail=Group_PUT_Same_NotAcceptableResponseSchema.description)

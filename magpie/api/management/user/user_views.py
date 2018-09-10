@@ -57,19 +57,11 @@ def update_user_view(request):
 
 
 @UserAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas=User_GET_responses)
+@LoggedUserAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas=LoggedUser_GET_responses)
 @view_config(route_name=UserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_view(request):
     """Get user information by name."""
-    user = get_user_matchdict_checked(request)
-    return valid_http(httpSuccess=HTTPOk, detail=User_GET_OkResponseSchema.description,
-                      content={u'user': format_user(user)})
-
-
-@LoggedUserAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas=LoggedUser_GET_responses)
-@view_config(route_name=LoggedUserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_logged_user_view(request):
-    """Get logged user information."""
-    user = get_user(request, LOGGED_USER)
+    user = get_user_matchdict_checked_or_logged(request)
     return valid_http(httpSuccess=HTTPOk, detail=User_GET_OkResponseSchema.description,
                       content={u'user': format_user(user)})
 
@@ -80,7 +72,7 @@ def get_logged_user_view(request):
 @view_config(route_name=UserAPI.name, request_method='DELETE')
 def delete_user(request):
     """Delete a user by name."""
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     db = request.db
     evaluate_call(lambda: db.delete(user), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail=User_DELETE_ForbiddenResponseSchema.description)
@@ -93,7 +85,7 @@ def delete_user(request):
 @view_config(route_name=UserGroupsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_groups(request):
     """List all groups a user belongs to."""
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     group_names = get_user_groups_checked(request, user)
     return valid_http(httpSuccess=HTTPOk, detail=UserGroups_GET_OkResponseSchema.description,
                       content={u'group_names': group_names})
@@ -106,7 +98,7 @@ def get_user_groups(request):
 def assign_user_group(request):
     """Assign a user to a group."""
     db = request.db
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     group = get_group_matchdict_checked(request)
     new_user_group = models.UserGroup(group_id=group.id, user_id=user.id)
 
@@ -124,7 +116,7 @@ def assign_user_group(request):
 def delete_user_group(request):
     """Remove a user from a group."""
     db = request.db
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     group = get_group_matchdict_checked(request)
 
     def del_usr_grp(usr, grp):
@@ -140,7 +132,7 @@ def delete_user_group(request):
 
 
 def get_user_resources_runner(request, inherited_group_resources_permissions=True):
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     inherit_perms = inherited_group_resources_permissions
     db = request.db
 
@@ -190,7 +182,7 @@ def get_user_inherited_resources_view(request):
 
 
 def get_user_resource_permissions_runner(request, inherited_permissions=True):
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     resource = get_resource_matchdict_checked(request, 'resource_id')
     perm_names = get_user_resource_permissions(resource=resource, user=user, db_session=request.db,
                                                inherited_permissions=inherited_permissions)
@@ -226,7 +218,7 @@ def get_user_resource_inherited_permissions_view(request):
 @view_config(route_name=UserResourcePermissionsAPI.name, request_method='POST')
 def create_user_resource_permission_view(request):
     """Create a permission on specific resource for a user."""
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, resource)
     return create_user_resource_permission(perm_name, resource, user.id, request.db)
@@ -239,14 +231,14 @@ def create_user_resource_permission_view(request):
 @view_config(route_name=UserResourcePermissionAPI.name, request_method='DELETE')
 def delete_user_resource_permission_view(request):
     """Delete a permission on a resource for a user (not including his groups permissions)."""
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_matchdict_checked(request, resource)
     return delete_user_resource_permission(perm_name, resource, user.id, request.db)
 
 
 def get_user_services_runner(request, inherited_group_services_permissions):
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     res_perm_dict = get_user_resources_permissions_dict(user, resource_types=['service'], db_session=request.db,
                                                         inherited_permissions=inherited_group_services_permissions)
 
@@ -281,7 +273,7 @@ def get_user_inherited_services_view(request):
 
 
 def get_user_service_permissions_runner(request, inherited_permissions):
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     service = get_service_matchdict_checked(request)
     perms = evaluate_call(lambda: get_user_service_permissions(service=service, user=user, db_session=request.db,
                                                                inherited_permissions=inherited_permissions),
@@ -320,7 +312,7 @@ def get_user_service_inherited_permissions_view(request):
 @view_config(route_name=UserServicePermissionsAPI.name, request_method='POST')
 def create_user_service_permission(request):
     """Create a permission on a service for a user."""
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, service)
     return create_user_resource_permission(perm_name, service, user.id, request.db)
@@ -333,7 +325,7 @@ def create_user_service_permission(request):
 @view_config(route_name=UserServicePermissionAPI.name, request_method='DELETE')
 def delete_user_service_permission(request):
     """Delete a permission on a service for a user (not including his groups permissions)."""
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_multiformat_post_checked(request, service)
     return delete_user_resource_permission(perm_name, service, user.id, request.db)
@@ -347,7 +339,7 @@ def get_user_service_resource_permissions_runner(request, inherited_permissions)
     :param inherited_permissions: only direct permissions if False, else resolve permissions with user and his groups.
     :return:
     """
-    user = get_user_matchdict_checked(request)
+    user = get_user_matchdict_checked_or_logged(request)
     service = get_service_matchdict_checked(request)
     service_perms = get_user_service_permissions(user, service, db_session=request.db,
                                                  inherited_permissions=inherited_permissions)

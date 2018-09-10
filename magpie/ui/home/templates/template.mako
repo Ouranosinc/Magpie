@@ -18,8 +18,8 @@
         <img src="${request.static_url('magpie.ui.home:static/settings_white.png')}">
         Magpie Administration
     </a>
-    %if logged_user:
-        <button class="img_button" type="button" onclick="location.href='${request.route_url('logout')}'">Log out<br/>(${logged_user})</button>
+    %if MAGPIE_LOGGED_USER:
+        <button class="img_button" type="button" onclick="location.href='${request.route_url('logout')}'">Log out<br/>(${MAGPIE_LOGGED_USER})</button>
     %else:
         <button class="img_button" type="button" onclick="location.href='${request.route_url('login')}'">Log In</button>
     %endif

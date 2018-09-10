@@ -1,6 +1,6 @@
-from magpie import MAGPIE_PROVIDERS_CONFIG_PATH, MAGPIE_INI_FILE_PATH
-from register import magpie_register_services_from_config
-from db import get_db_session_from_config_ini
+from magpie.constants import MAGPIE_PROVIDERS_CONFIG_PATH, MAGPIE_INI_FILE_PATH
+from magpie.register import magpie_register_services_from_config
+from magpie.db import get_db_session_from_config_ini
 import argparse
 
 

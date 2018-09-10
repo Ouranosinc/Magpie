@@ -1,8 +1,7 @@
-import models
-from common import *
-from models import resource_factory, resource_type_dict, resource_tree_service
-from services import service_type_dict
-from register import sync_services_phoenix
+from magpie.common import str2bool
+from magpie.models import resource_factory, resource_type_dict, resource_tree_service
+from magpie.services import service_type_dict
+from magpie.register import sync_services_phoenix
 from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.api.api_rest_schemas import *

@@ -1,9 +1,9 @@
-from magpie import *
-from owsrequest import *
+from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.pyramid_definitions import EVERYONE, ALLOW
 from magpie.api.api_except import *
-import models
+from magpie import models
+from owsrequest import *
 
 
 class ServiceI(object):
@@ -43,7 +43,7 @@ class ServiceI(object):
                 for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
                     self.acl.append((outcome, perm_user, perm_name,))
             else:
-                user = UserService.by_user_name(ANONYMOUS_USER, db_session=self.request.db)
+                user = UserService.by_user_name(get_constant('MAGPIE_ANONYMOUS_USER'), db_session=self.request.db)
                 if user is None:
                     raise Exception('No Anonymous user in the database')
                 else:

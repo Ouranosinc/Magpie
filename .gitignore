@@ -15,7 +15,6 @@ docs/magpie.login.rst
 docs/magpie.management.rst
 docs/magpie.tests.rst
 docs/magpie.rst
-env/
 magpieenv/
 magpie/api_docs/
 magpie/api_test/
@@ -28,3 +27,5 @@ magpie/pip-selfcheck.json
 magpie/share/
 magpie.egg-info/
 share/
+/gunicorn.app.wsgiapp
+/sys

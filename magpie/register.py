@@ -1,12 +1,14 @@
+from magpie.services import service_type_dict
+from magpie.common import make_dirs, print_log, raise_log, bool2str
+from magpie.constants import get_constant
+from magpie import models
 import os
 import time
 import yaml
 import subprocess
 import requests
 import transaction
-import models
-from services import service_type_dict
-from common import *
+import logging
 
 LOGGER = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ GETCAPABILITIES_INTERVAL = 10   # delay (s) between 'GetCapabilities' Phoenix ca
 GETCAPABILITIES_ATTEMPTS = 12   # max attempts for 'GetCapabilities' validations
 
 # controls
-SERVICES_MAGPIE  = 'MAGPIE'
+SERVICES_MAGPIE = 'MAGPIE'
 SERVICES_PHOENIX = 'PHOENIX'
 SERVICES_PHOENIX_ALLOWED = ['wps']
 
@@ -77,12 +79,7 @@ def phoenix_update_services(services_dict):
 
 
 def phoenix_login(cookies):
-    try:
-        phoenix_pwd = os.getenv('PHOENIX_PASSWORD')
-        if phoenix_pwd is None:
-            raise ValueError("Environment variable was None", 'PHOENIX_PASSWORD')
-    except Exception as e:
-        raise Exception("Missing environment values [" + repr(e) + "]")
+    phoenix_pwd = get_constant('PHOENIX_PASSWORD')
     phoenix_url = get_phoenix_url()
     login_url = phoenix_url + '/account/login/phoenix'
     login_data = {'password': phoenix_pwd, 'submit': 'submit'}
@@ -154,45 +151,20 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
 
 
 def get_phoenix_url():
-    try:
-        hostname = os.getenv('HOSTNAME')
-        phoenix_port = os.environ.get('PHOENIX_PORT')
-        if hostname is None:
-            raise ValueError("Environment variable was None", 'HOSTNAME')
-        if phoenix_port is None:
-            raise ValueError("Environment variable was None", 'PHOENIX_PORT')
-        if phoenix_port != '':
-            phoenix_port = ':{0}'.format(phoenix_port)
-    except Exception as e:
-        raise Exception("Missing environment values [" + repr(e) + "]")
-    return 'https://{0}{1}'.format(hostname, phoenix_port)
+    hostname = get_constant('HOSTNAME')
+    phoenix_port = get_constant('PHOENIX_PORT', raise_not_set=False)
+    return 'https://{0}{1}'.format(hostname, ':{}'.format(phoenix_port) if phoenix_port else '')
 
 
 def get_magpie_url():
-    try:
-        hostname = os.getenv('HOSTNAME')
-        magpie_port = os.environ.get('MAGPIE_PORT')
-        if hostname is None:
-            raise ValueError("Environment variable was None", 'HOSTNAME')
-        if magpie_port is None:
-            raise ValueError("Environment variable was None", 'MAGPIE_PORT')
-        if magpie_port != '':
-            magpie_port = ':{0}'.format(magpie_port)
-    except Exception as e:
-        raise Exception("Missing environment values [" + repr(e) + "]")
-    return 'http://{0}{1}'.format(hostname, magpie_port)
+    hostname = get_constant('HOSTNAME')
+    magpie_port = get_constant('MAGPIE_PORT', raise_not_set=False)
+    return 'http://{0}{1}'.format(hostname, ':{}'.format(magpie_port) if magpie_port else '')
 
 
 def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
-    try:
-        hostname = hostname or os.getenv('HOSTNAME')
-        twitcher_proxy = os.getenv('TWITCHER_PROTECTED_PATH')
-        if hostname is None:
-            raise ValueError("Environment variable was None", 'HOSTNAME')
-        if twitcher_proxy is None:
-            raise ValueError("Environment variable was None", 'TWITCHER_PROTECTED_PATH')
-    except Exception as e:
-        raise Exception("Missing environment values [" + repr(e) + "]")
+    hostname = hostname or get_constant('HOSTNAME')
+    twitcher_proxy = get_constant('TWITCHER_PROTECTED_PATH', raise_not_set=False)
     if not twitcher_proxy.endswith('/'):
         twitcher_proxy = twitcher_proxy + '/'
     if not twitcher_proxy.startswith('/'):
@@ -261,10 +233,7 @@ def sync_services_phoenix(services_object_dict, services_as_dicts=False):
 
 def magpie_add_register_services_perms(services, statuses, curl_cookies, request_cookies, disable_getcapabilities):
     magpie_url = get_magpie_url()
-    try:
-        login_usr = os.getenv('ANONYMOUS_USER')
-    except Exception as e:
-        raise_log("Missing environment values [" + repr(e) + "]", exception=type(e))
+    login_usr = get_constant('MAGPIE_ANONYMOUS_USER')
 
     for service_name in services:
         svc_available_perms_url = '{magpie}/services/{svc}/permissions' \
@@ -382,7 +351,8 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
                                              force_update=False, update_getcapabilities_permissions=False):
     existing_services = models.Service.all(db_session=db_session)
     existing_services_names = [svc.resource_name for svc in existing_services]
-    anonymous_user = models.User.by_user_name(os.getenv('ANONYMOUS_USER'), db_session=db_session)
+    magpie_anonymous_user = get_constant('MAGPIE_ANONYMOUS_USER')
+    anonymous_user = models.User.by_user_name(magpie_anonymous_user, db_session=db_session)
 
     for svc_name in services_dict:
         svc_new_url = os.path.expandvars(services_dict[svc_name]['url'])
@@ -435,16 +405,8 @@ def magpie_register_services_from_config(service_config_file_path, push_to_phoen
 
     # register services using API POSTs
     if db_session is None:
-        try:
-            admin_usr = os.getenv('ADMIN_USER')
-            admin_pwd = os.getenv('ADMIN_PASSWORD')
-            if admin_usr is None:
-                raise ValueError("Environment variable was None", 'ADMIN_USER')
-            if admin_pwd is None:
-                raise ValueError("Environment variable was None", 'ADMIN_PASSWORD')
-        except Exception as e:
-            raise_log("Missing environment values [" + repr(e) + "]", exception=type(e))
-
+        admin_usr = get_constant('MAGPIE_ADMIN_USER')
+        admin_pwd = get_constant('MAGPIE_ADMIN_PASSWORD')
         magpie_register_services(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat',
                                  force_update=force_update, disable_getcapabilities=disable_getcapabilities)
 

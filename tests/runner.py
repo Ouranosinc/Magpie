@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from magpie.common import str2bool
+from magpie.constants import get_constant
 import sqlalchemy.exc as sa_exc
 import unittest
 import warnings
@@ -14,18 +15,28 @@ test_modules = [
     '{}.test_magpie_ui'.format(test_root_name),
 ]
 
+
+def default_run(option):
+    option_value = str2bool(get_constant(option, raise_missing=False, raise_not_set=False))
+    return True if option_value is None else option_value
+
+
 # run test options
-MAGPIE_TEST_DEFAULTS = str2bool(os.getenv('MAGPIE_TEST_DEFAULTS', True))
-MAGPIE_TEST_LOGIN = str2bool(os.getenv('MAGPIE_TEST_LOGIN', True))
-MAGPIE_TEST_SERVICES = str2bool(os.getenv('MAGPIE_TEST_SERVICES', True))
-MAGPIE_TEST_RESOURCES = str2bool(os.getenv('MAGPIE_TEST_RESOURCES', True))
-MAGPIE_TEST_GROUPS = str2bool(os.getenv('MAGPIE_TEST_GROUPS', True))
-MAGPIE_TEST_USERS = str2bool(os.getenv('MAGPIE_TEST_USERS', True))
-MAGPIE_TEST_STATUS = str2bool(os.getenv('MAGPIE_TEST_STATUS', True))
-MAGPIE_TEST_REMOTE = str2bool(os.getenv('MAGPIE_TEST_REMOTE', True))
-MAGPIE_TEST_LOCAL = str2bool(os.getenv('MAGPIE_TEST_LOCAL', True))
-MAGPIE_TEST_API = str2bool(os.getenv('MAGPIE_TEST_API', True))
-MAGPIE_TEST_UI = str2bool(os.getenv('MAGPIE_TEST_UI', True))
+MAGPIE_TEST_DEFAULTS = default_run('MAGPIE_TEST_DEFAULTS')  # default users, providers and views
+MAGPIE_TEST_LOGIN = default_run('MAGPIE_TEST_LOGIN')
+MAGPIE_TEST_SERVICES = default_run('MAGPIE_TEST_SERVICES')
+MAGPIE_TEST_RESOURCES = default_run('MAGPIE_TEST_RESOURCES')
+MAGPIE_TEST_GROUPS = default_run('MAGPIE_TEST_GROUPS')
+MAGPIE_TEST_USERS = default_run('MAGPIE_TEST_USERS')
+MAGPIE_TEST_STATUS = default_run('MAGPIE_TEST_STATUS')  # validate views found and displayed correctly as per permission
+MAGPIE_TEST_REMOTE = default_run('MAGPIE_TEST_REMOTE')
+MAGPIE_TEST_LOCAL = default_run('MAGPIE_TEST_LOCAL')
+MAGPIE_TEST_API = default_run('MAGPIE_TEST_API')
+MAGPIE_TEST_UI = default_run('MAGPIE_TEST_UI')
+
+
+def MAGPIE_TEST_DISABLED_MESSAGE(option):
+    return "Skip{}tests requested.".format(" '{}' ".format(option) if option else '')
 
 
 def test_suite():

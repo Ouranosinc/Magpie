@@ -10,4 +10,4 @@ def includeme(config):
     config.include('magpie.ui.home')
     config.include('magpie.ui.management')
     config.include('magpie.ui.swagger')
-    config.scan()
+    #config.scan()

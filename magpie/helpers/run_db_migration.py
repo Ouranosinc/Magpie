@@ -1,4 +1,4 @@
-from db import run_database_migration
+from magpie.db import run_database_migration
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ History
 * ServiceAPI to filter read/write of specific GET,POST,etc on route parts
 * ServiceAccess to filter top-level route 'access' permission of a generic service URL
 * properly return values of field `permission_names` under `/services/.*` routes
+* update make procedures and postgres variables specific to magpie
 
 0.5.x
 ---------------------

@@ -1,35 +1,22 @@
-from magpie.definitions.pyramid_definitions import *
 from magpie.api.api_except import *
 from magpie.api.api_rest_schemas import *
-from magpie import __meta__, db
 
 
-@VersionAPI.get(tags=[APITag], api_security=SecurityEveryoneAPI, response_schemas=Version_GET_responses)
-@view_config(route_name='version', request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_version(request):
-    """
-    Version information of the API.
-    """
-    return valid_http(httpSuccess=HTTPOk,
-                      content={u'version': __meta__.__version__, u'db_version': db.get_database_revision(request.db)},
-                      detail=Version_GET_OkResponseSchema.description, contentType='application/json')
-
-
-@notfound_view_config()
+#@notfound_view_config()
 def not_found(request):
     content = get_request_info(request, default_msg=NotFoundResponseSchema.description)
     return raise_http(nothrow=True, httpError=HTTPNotFound, contentType='application/json',
                       detail=content['detail'], content=content)
 
 
-@exception_view_config()
+#@exception_view_config()
 def internal_server_error(request):
     content = get_request_info(request, default_msg=InternalServerErrorResponseSchema.description)
     return raise_http(nothrow=True, httpError=HTTPInternalServerError, contentType='application/json',
                       detail=content['detail'], content=content)
 
 
-@forbidden_view_config()
+#@forbidden_view_config()
 def unauthorized_access(request):
     # if not overridden, default is HTTPForbidden [403], which is for a slightly different situation
     # this better reflects the HTTPUnauthorized [401] user access with specified AuthZ headers
@@ -40,7 +27,8 @@ def unauthorized_access(request):
 
 
 def get_request_info(request, default_msg="undefined"):
-    content = {u'route_name': str(request.upath_info), u'request_url': str(request.url), u'detail': default_msg}
+    content = {u'route_name': str(request.upath_info), u'request_url': str(request.url),
+               u'detail': default_msg, u'method': request.method}
     if hasattr(request, 'exception'):
         if hasattr(request.exception, 'json'):
             if type(request.exception.json) is dict:

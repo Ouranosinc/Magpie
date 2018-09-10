@@ -1,5 +1,5 @@
-from models import resource_tree_service, resource_type_dict
-from services import service_type_dict
+from magpie.models import resource_tree_service, resource_type_dict
+from magpie.services import service_type_dict
 from magpie.api.api_requests import *
 from magpie.api.api_except import *
 from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission

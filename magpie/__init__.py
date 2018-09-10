@@ -1,35 +1,15 @@
 # -*- coding: utf-8 -*-
-
-import os
+import logging
 import sys
-MAGPIE_MODULE_DIR = os.path.abspath(os.path.dirname(__file__))
-MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
-sys.path.insert(0, MAGPIE_MODULE_DIR)
-
-MAGPIE_PROVIDERS_CONFIG_PATH = '{}/providers.cfg'.format(MAGPIE_ROOT)
-MAGPIE_INI_FILE_PATH = '{}/magpie.ini'.format(MAGPIE_MODULE_DIR)
-
-ADMIN_USER = os.getenv('ADMIN_USER', 'admin')
-ADMIN_GROUP = os.getenv('ADMIN_GROUP', 'administrators')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin')
-
-USERS_GROUP = os.getenv('USERS_GROUP', 'users')
-
-ANONYMOUS_USER = os.getenv('ANONYMOUS_USER', 'anonymous')
-ANONYMOUS_GROUP = ANONYMOUS_USER
-ANONYMOUS_PASSWORD = ANONYMOUS_USER
-
-ADMIN_PERM = 'admin'
-#ADMIN_PERM = NO_PERMISSION_REQUIRED
-
-LOGGED_USER = 'current'
-
-# above this length is considered a token,
-# refuse longer username creation
-USER_NAME_MAX_LENGTH = 64
+LOGGER = logging.getLogger(__name__)
 
 
 def includeme(config):
+    # import needs to be here, otherwise ImportError happens during setup.py install (modules not yet installed)
+    from magpie import constants
+    LOGGER.info("Adding MAGPIE_MODULE_DIR='{}' to path.".format(constants.MAGPIE_MODULE_DIR))
+    sys.path.insert(0, constants.MAGPIE_MODULE_DIR)
+
     # include magpie components (all the file which define includeme)
     config.include('cornice')
     config.include('cornice_swagger')

@@ -12,31 +12,15 @@ RUN apt-get update && apt-get install -y \
 	libxslt1-dev \
 	zlib1g-dev \
 	python-pip \
-	git
+	git \
+	vim
 
+ARG MAGPIE_DIR=/opt/local/src/magpie
+ENV MAGPIE_ENV_DIR=$MAGPIE_DIR/env
+WORKDIR $MAGPIE_DIR
 
-RUN pip install --upgrade pip setuptools
-RUN pip install gunicorn
+COPY ./ $MAGPIE_DIR
+RUN make install -f $MAGPIE_DIR/Makefile
+RUN make docs -f $MAGPIE_DIR/Makefile
 
-# change in 'cornice-swagger==0.6.1.dev0' required but not yet deployed as package
-# TODO: remove this operation and move to 'requirements.txt' when available
-RUN git clone https://github.com/Cornices/cornice.ext.swagger cornice_swagger
-RUN pip install cornice_swagger/
-
-COPY requirements.txt /opt/local/src/magpie/requirements.txt
-RUN pip install -r /opt/local/src/magpie/requirements.txt
-COPY ./ /opt/local/src/magpie/
-RUN pip install /opt/local/src/magpie/
-
-RUN make docs -f /opt/local/src/magpie/Makefile
-
-ENV POSTGRES_USER=pavics
-ENV POSTGRES_DB=pavics
-ENV POSTGRES_PASSWORD=qwerty
-ENV POSTGRES_HOST=postgres
-ENV POSTGRES_PORT=5432
-ENV DAEMON_OPTS --nodaemon
-
-CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf", "--nodaemon"]
-#WORKDIR /
-#ENTRYPOINT exec gunicorn -b 0.0.0.0:2001 --paste /opt/local/src/magpie/magpie/magpie.ini
+CMD ["make", "start"]

@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def add_template_data(request, data=None):
     all_data = data or {}
-    logged_user = None
+    MAGPIE_LOGGED_USER = None
 
     try:
         authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
@@ -15,12 +15,12 @@ def add_template_data(request, data=None):
 
         if Authenticated in principals:
             logger.info('User {0} is authenticated'.format(request.user.user_name))
-            logged_user = request.user.user_name
+            MAGPIE_LOGGED_USER = request.user.user_name
     except AttributeError:
         pass
 
-    if logged_user:
-        all_data.update({u'logged_user': logged_user})
+    if MAGPIE_LOGGED_USER:
+        all_data.update({u'MAGPIE_LOGGED_USER': MAGPIE_LOGGED_USER})
     return all_data
 
 

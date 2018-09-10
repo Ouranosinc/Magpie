@@ -18,7 +18,7 @@ from alembic import op
 from alembic.context import get_context
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm import sessionmaker
-from magpie import models, ANONYMOUS_USER, ADMIN_GROUP, USERS_GROUP
+from magpie import models, constants
 from magpie.definitions.ziggurat_definitions import *
 
 Session = sessionmaker()
@@ -39,7 +39,7 @@ def upgrade():
         all_user_group_refs = models.UserGroup.all(db_session=session)
         all_user_res_perms = models.GroupResourcePermission.all(db_session=session)
 
-        ignore_groups = {ADMIN_GROUP, USERS_GROUP}
+        ignore_groups = {constants.MAGPIE_ADMIN_GROUP, constants.MAGPIE_USERS_GROUP}
         user_names = {usr.user_name for usr in all_users}
 
         # parse through 'personal' groups matching an existing user

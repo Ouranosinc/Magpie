@@ -24,20 +24,20 @@ from __init__ import *
 from magpie.api.api_except import *
 from magpie.api.api_rest_schemas import *
 from magpie.api.api_generic import *
-from magpie.common import *
+from magpie.common import print_log, raise_log, str2bool
+from magpie.constants import get_constant
 from magpie.helpers.register_default_users import register_default_users
 from magpie.helpers.register_providers import magpie_register_services_from_config
 from magpie.security import auth_config_from_settings
-from magpie import models, db, __meta__
+from magpie import models, db, constants, __meta__
 
 
 def main(global_config=None, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
-
-    settings['magpie.root'] = MAGPIE_ROOT
-    settings['magpie.module'] = MAGPIE_MODULE_DIR
+    settings['magpie.root'] = constants.MAGPIE_ROOT
+    settings['magpie.module'] = constants.MAGPIE_MODULE_DIR
 
     # migrate db as required and check if database is ready
     if not settings.get('magpie.db_migration_disabled', False):
@@ -54,11 +54,11 @@ def main(global_config=None, **settings):
         time.sleep(2)
         raise_log('Database not ready')
 
-    settings['magpie.phoenix_push'] = str2bool(os.getenv('PHOENIX_PUSH', False))
-
     print_log('Register default providers...', LOGGER)
-    svc_db_session = db.get_db_session_from_config_ini(MAGPIE_INI_FILE_PATH)
-    magpie_register_services_from_config(MAGPIE_PROVIDERS_CONFIG_PATH, push_to_phoenix=settings['magpie.phoenix_push'],
+    svc_db_session = db.get_db_session_from_config_ini(constants.MAGPIE_INI_FILE_PATH)
+    push_phoenix = str2bool(get_constant('PHOENIX_PUSH', settings=settings, settings_name='magpie.phoenix_push',
+                                         raise_missing=False, raise_not_set=False, print_missing=True))
+    magpie_register_services_from_config(constants.MAGPIE_PROVIDERS_CONFIG_PATH, push_to_phoenix=push_phoenix,
                                          force_update=True, disable_getcapabilities=False, db_session=svc_db_session)
 
     print_log('Register default users...')
@@ -66,10 +66,10 @@ def main(global_config=None, **settings):
 
     print_log('Running configurations setup...')
     magpie_url_template = 'http://{hostname}:{port}/magpie'
-    port = os.getenv('MAGPIE_PORT')
+    port = get_constant('MAGPIE_PORT', settings=settings, settings_name='magpie.port')
     if port:
         settings['magpie.port'] = port
-    hostname = os.getenv('HOSTNAME')
+    hostname = get_constant('HOSTNAME')
     if hostname:
         settings['magpie.url'] = magpie_url_template.format(hostname=hostname, port=settings['magpie.port'])
 
@@ -81,28 +81,7 @@ def main(global_config=None, **settings):
     # Don't use scan otherwise modules like 'magpie.adapter' are
     # automatically found and cause import errors on missing packages
     #config.scan('magpie')
-    config.set_default_permission(ADMIN_PERM)
-
-    # include api views
-    print_log('Running api documentation setup...')
-    magpie_api_gen_disabled = os.getenv('MAGPIE_API_GENERATION_DISABLED')
-    if magpie_api_gen_disabled:
-        settings['magpie.api_generation_disabled'] = magpie_api_gen_disabled
-    if 'magpie.api_generation_disabled' not in settings:
-        settings['magpie.api_generation_disabled'] = False
-
-    if not settings['magpie.api_generation_disabled']:
-        magpie_api_path = '{base}{path}'.format(base=settings['magpie.url'], path=SwaggerGenerator.path)
-        config.cornice_enable_openapi_view(
-            api_path=magpie_api_path,
-            title=TitleAPI,
-            description=__meta__.__description__,
-            version=__meta__.__version__
-        )
-        config.add_route(**service_api_route_info(SwaggerGenerator))
-        config.add_view(api_schema, route_name=SwaggerGenerator.name, request_method='GET',
-                        renderer='json', permission=NO_PERMISSION_REQUIRED)
-        config.add_route(**service_api_route_info(SwaggerAPI))
+    config.set_default_permission(MAGPIE_ADMIN_PERMISSION)
 
     print_log('Starting Magpie app...')
     wsgi_app = config.make_wsgi_app()

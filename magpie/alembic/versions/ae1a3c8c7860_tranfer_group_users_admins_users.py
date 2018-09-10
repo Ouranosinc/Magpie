@@ -17,7 +17,7 @@ from alembic import op
 from alembic.context import get_context
 from magpie.definitions.sqlalchemy_definitions import *
 from magpie.definitions.ziggurat_definitions import *
-from magpie import models, ANONYMOUS_USER
+from magpie import models, constants
 
 Session = sessionmaker()
 
@@ -85,12 +85,12 @@ def upgrade():
                         session.delete(user_group)
 
         # remove anonymous group references
-        anonymous_group = GroupService.by_group_name(group_name=ANONYMOUS_USER, db_session=session)
-        if anonymous_group:
+        MAGPIE_ANONYMOUS_GROUP = GroupService.by_group_name(group_name=constants.MAGPIE_ANONYMOUS_USER, db_session=session)
+        if MAGPIE_ANONYMOUS_GROUP:
             for user_group in all_user_group_refs:
-                if user_group.group_id == anonymous_group.id:
+                if user_group.group_id == MAGPIE_ANONYMOUS_GROUP.id:
                     session.delete(user_group)
-            session.delete(anonymous_group)
+            session.delete(MAGPIE_ANONYMOUS_GROUP)
 
         session.commit()
 

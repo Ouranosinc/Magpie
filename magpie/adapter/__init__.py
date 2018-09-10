@@ -6,13 +6,27 @@ from magpie.adapter.magpieservice import *
 from magpie.models import get_user
 from magpie.security import auth_config_from_settings
 from magpie.db import *
+from magpie import __meta__
 import logging
 logger = logging.getLogger(__name__)
 
-class MagpieAdapter(AdapterInterface):
 
-    def servicestore_factory(self, registry, database=None, headers=None):
+class MagpieAdapter(AdapterInterface):
+    def describe_adapter(self):
+        return {"name": self.__class__.__name__, "version": __meta__.__version__}
+
+    def servicestore_factory(self, registry, headers=None):
         return MagpieServiceStore(registry=registry)
+
+    def processstore_factory(self, registry):
+        # no reimplementation of processes on magpie side
+        # simply return the default twitcher process store
+        return DefaultAdapter().processstore_factory(registry)
+
+    def jobstore_factory(self, registry):
+        # no reimplementation of jobs on magpie side
+        # simply return the default twitcher job store
+        return DefaultAdapter().jobstore_factory(registry)
 
     def owssecurity_factory(self, registry):
         return MagpieOWSSecurity()

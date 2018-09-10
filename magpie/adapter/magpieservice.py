@@ -88,7 +88,6 @@ class MagpieServiceStore(ServiceStore):
                 return service
         raise ServiceNotFound
 
-
     def clear_services(self, request=None):
         """
         Magpie store is read-only, use magpie api to delete services

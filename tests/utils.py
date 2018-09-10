@@ -1,11 +1,12 @@
-import six
 import pyramid
 import requests
-from distutils.version import *
+import six
+from six.moves.urllib.parse import urlparse
+from distutils.version import LooseVersion
 from webtest import TestApp
 from webtest.response import TestResponse
-import magpie
-from magpie import __meta__, db, models, services, magpiectl, MAGPIE_INI_FILE_PATH
+from magpie import __meta__, db, services, magpiectl
+from magpie.constants import get_constant
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -16,19 +17,23 @@ def config_setup_from_ini(config_ini_file_path):
 
 def get_test_magpie_app():
     # parse settings from ini file to pass them to the application
-    config = config_setup_from_ini(MAGPIE_INI_FILE_PATH)
+    config = config_setup_from_ini(get_constant('MAGPIE_INI_FILE_PATH'))
     # required redefinition because root models' location is not the same from within this test file
     config.add_settings({'ziggurat_foundations.model_locations.User': 'models:User',
-                         'ziggurat_foundations.model_locations.user': 'models:User'})
+                         'ziggurat_foundations.model_locations.user': 'models:User', })
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
-    # remove API which cause duplicate view errors (?) TODO: figure out why it does so, because it shouldn't
-    config.registry.settings['magpie.api_generation_disabled'] = True
     config.registry.settings['magpie.db_migration_disabled'] = True
     # scan dependencies
     config.include('magpie')
     # create the test application
     app = TestApp(magpiectl.main({}, **config.registry.settings))
     return app
+
+
+def get_hostname(app_or_url):
+    if isinstance(app_or_url, TestApp):
+        app_or_url = get_constant('MAGPIE_URL', settings=app_or_url.app.registry.settings, settings_name='magpie.url')
+    return urlparse(app_or_url).hostname
 
 
 def get_headers_content_type(app_or_url, content_type):
@@ -39,6 +44,12 @@ def get_headers_content_type(app_or_url, content_type):
 
 def get_response_content_types_list(response):
     return [ct.strip() for ct in response.headers['Content-Type'].split(';')]
+
+
+def get_json_body(response):
+    if isinstance(response, TestResponse):
+        return response.json
+    return response.json()
 
 
 def get_service_types_for_version(version):
@@ -84,19 +95,26 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
         elif method == 'DELETE':
             return app_or_url.delete_json(path, **kwargs)
     else:
+        # remove keywords specific to TestApp
+        kwargs.pop('expect_errors', None)
+
         kwargs['json'] = json_body
         url = '{url}{path}'.format(url=app_or_url, path=path)
         return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
 
 
-def check_or_try_login_user(app_or_url, username=None, password=None, headers=None):
+def check_or_try_login_user(app_or_url, username=None, password=None, provider='ziggurat', headers=None,
+                            use_ui_form_submit=False, version=__meta__.__version__):
     """
     Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
 
     :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
     :param username: name of the user to login or None otherwise
     :param password: password to use for login if the user was not already logged in
+    :param provider: provider string to use for login (default: ziggurat, ie: magpie's local signin)
     :param headers: headers to include in the test request
+    :param use_ui_form_submit: use Magpie UI login 'form' to obtain cookies (required for local WebTest.App login)
+    :param version: server or local app version to evaluate responses with backward compatibility
     :return: headers and cookies of the user session or (None, None)
     :raise: Exception on any login/logout failure as required by the caller's specifications (username/password)
     """
@@ -105,32 +123,54 @@ def check_or_try_login_user(app_or_url, username=None, password=None, headers=No
 
     if isinstance(app_or_url, TestApp):
         resp = app_or_url.get('/session', headers=headers)
-        body = resp.json
     else:
         resp = requests.get('{}/session'.format(app_or_url), headers=headers)
-        body = resp.json()
+    body = get_json_body(resp)
 
     if resp.status_code != 200:
         raise Exception('cannot retrieve logged in user information')
 
+    resp_cookies = None
     auth = body.get('authenticated', False)
-    user = body.get('user_name', '')
     if auth is False and username is None:
         return None, None
     if auth is False and username is not None:
-        data = {'user_name': username, 'password': password, 'provider_name': 'ziggurat'}
+        data = {'user_name': username, 'password': password, 'provider_name': provider}
 
         if isinstance(app_or_url, TestApp):
-            resp = app_or_url.post_json('/signin', data, headers=headers)
+            if use_ui_form_submit:
+                resp = app_or_url.get(url='/ui/login')
+                form = resp.forms['login_internal']
+                form['user_name'] = username
+                form['password'] = password
+                form['provider_name'] = provider
+                resp = form.submit('submit')
+                resp_cookies = app_or_url.cookies    # automatically set by form submit
+            else:
+                resp = app_or_url.post_json('/signin', data, headers=headers)
+                resp_cookies = resp.cookies
         else:
             resp = requests.post('{}/signin'.format(app_or_url), json=data, headers=headers)
+            resp_cookies = resp.cookies
 
-        if resp.status_code == 200:
-            return resp.headers, resp.cookies
-        return None, None
+        # response OK (200) if directly from API /signin
+        # response Found (302) if redirected UI /login
+        if resp.status_code < 400:
+            return resp.headers, resp_cookies
 
-    if auth is True and username != user:
-        raise Exception("invalid user")
+    if auth is True:
+        if LooseVersion(version) >= LooseVersion('0.6.3'):
+            logged_user = body.get('user', {}).get('user_name', '')
+        else:
+            logged_user = body.get('user_name', '')
+        if username != logged_user:
+            raise Exception("invalid user")
+        if isinstance(app_or_url, TestApp):
+            resp_cookies = app_or_url.cookies
+        else:
+            resp_cookies = resp.cookies
+
+    return resp.headers, resp_cookies
 
 
 def format_test_val_ref(val, ref, pre='Fail'):
@@ -173,23 +213,34 @@ def check_val_type(val, ref, msg=None):
     assert isinstance(val, ref), msg or format_test_val_ref(val, repr(ref), pre='Type Fail')
 
 
-def check_response_basic_info(response, expected_code=200):
+def check_response_basic_info(response, expected_code=200, expected_type='application/json', expected_method='GET'):
     """
     Validates basic Magpie API response metadata.
+
     :param response: response to validate.
     :param expected_code: status code to validate from the response.
+    :param expected_type: Content-Type to validate from the response.
+    :param expected_method: method 'GET', 'POST', etc. to validate from the response if an error.
     :return: json body of the response for convenience.
     """
-    if isinstance(response, TestResponse):
-        json_body = response.json
-    else:
-        json_body = response.json()
+    json_body = get_json_body(response)
+    check_val_is_in('Content-Type', dict(response.headers), msg="Response doesn't define `Content-Type` header.")
     content_types = get_response_content_types_list(response)
-    check_val_is_in('application/json', content_types)
-    check_val_equal(response.status_code, expected_code)
-    check_val_equal(json_body['code'], expected_code)
-    check_val_equal(json_body['type'], 'application/json')
-    assert json_body['detail'] != ''
+    check_val_equal(response.status_code, expected_code, msg="Response doesn't match expected HTTP status code.")
+    check_val_is_in(expected_type, content_types, msg="Response doesn't match expected HTTP Content-Type header.")
+    check_val_is_in('code', json_body, msg="Parameter `code` should be in response JSON body.")
+    check_val_is_in('type', json_body, msg="Parameter `type` should be in response JSON body.")
+    check_val_is_in('detail', json_body, msg="Parameter `detail` should be in response JSON body.")
+    check_val_equal(json_body['code'], expected_code, msg="Parameter `code` should match the HTTP status code.")
+    check_val_equal(json_body['type'], expected_type, msg="Parameter `type` should match the HTTP Content-Type header.")
+    check_val_not_equal(json_body['detail'], '', msg="Parameter `detail` should not be empty.")
+
+    if response.status_code in [401, 404, 500]:
+        check_val_is_in('request_url', json_body)
+        check_val_is_in('route_name', json_body)
+        check_val_is_in('method', json_body)
+        check_val_equal(json_body['method'], expected_method)
+
     return json_body
 
 
@@ -254,7 +305,7 @@ def check_post_resource_structure(json_body, resource_name, resource_type, versi
         check_val_is_in('resource_type', json_body['resource'])
         check_val_is_in('resource_id', json_body['resource'])
         check_val_equal(json_body['resource']['resource_name'], resource_name)
-        check_val_equal(json_body['resource']['resource_name'], resource_type)
+        check_val_equal(json_body['resource']['resource_type'], resource_type)
         check_val_type(json_body['resource']['resource_id'], int)
     else:
         check_val_is_in('resource_name', json_body)
@@ -273,8 +324,7 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
     :param root_service_id: top-level service id (int)
     :raise any invalid match on expected data field, type or value
     """
-    assert isinstance(resource_dict, dict)
-
+    check_val_type(resource_dict, dict)
     for resource_id in resource_dict:
         check_val_type(resource_id, six.string_types)
         resource_int_id = int(resource_id)  # should by an 'int' string, no error raised
@@ -313,22 +363,31 @@ class TestSetup(object):
         """
         resp = test_request(test_class.url, method, path, cookies=test_class.cookies)
         check_val_equal(resp.status_code, 200)
-        check_val_is_in('Content-Type', resp.headers)
+        check_val_is_in('Content-Type', dict(resp.headers))
         check_val_is_in('text/html', get_response_content_types_list(resp))
         check_val_is_in("Magpie Administration", resp.text)
+
+    @staticmethod
+    def check_Unauthorized(test_class, method, path, content_type='application/json'):
+        """
+        Verifies that Magpie returned an Unauthorized response.
+        Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
+        """
+        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, expect_errors=True)
+        check_response_basic_info(resp, expected_code=401, expected_type=content_type, expected_method=method)
 
     @staticmethod
     def get_AnyServiceOfTestServiceType(test_class):
         route = '/services/types/{}'.format(test_class.test_service_type)
         resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
         check_val_equal(resp.status_code, 200)
-        json_body = resp.json()
+        json_body = get_json_body(resp)
         check_val_is_in('services', json_body)
         check_val_is_in(test_class.test_service_type, json_body['services'])
         check_val_not_equal(len(json_body['services'][test_class.test_service_type]), 0,
                             msg="Missing any required service of type: `{}`".format(test_class.test_service_type))
-        services = json_body['services'][test_class.test_service_type]
-        return services[services.keys()[0]]
+        services_dict = json_body['services'][test_class.test_service_type]
+        return services_dict.values()[0]
 
     @staticmethod
     def create_TestServiceResource(test_class, data_override=None):
@@ -348,13 +407,14 @@ class TestSetup(object):
     def get_ExistingTestServiceInfo(test_class):
         route = '/services/{svc}'.format(svc=test_class.test_service_name)
         resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
-        return resp.json()[test_class.test_service_name]
+        json_body = get_json_body(resp)
+        return json_body[test_class.test_service_name]
 
     @staticmethod
     def get_ExistingTestServiceDirectResources(test_class):
         route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
         resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
-        json_body = resp.json()
+        json_body = get_json_body(resp)
         resources = json_body[test_class.test_service_name]['resources']
         return [resources[res] for res in resources]
 

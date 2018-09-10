@@ -1,5 +1,5 @@
-from register import get_twitcher_protected_service_url
-from services import service_type_dict
+from magpie.register import get_twitcher_protected_service_url
+from magpie.services import service_type_dict
 from magpie.definitions.pyramid_definitions import *
 from magpie.api.api_except import evaluate_call
 from magpie.api.management.resource.resource_utils import crop_tree_with_permission
