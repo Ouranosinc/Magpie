@@ -59,7 +59,7 @@ def _merge_resources(resources_local, resources_remote):
 
     def recurse(_resources_local, _resources_remote, remote_path=""):
         for resource_name_local, values in _resources_local.items():
-            current_path = "/".join([remote_path, resource_name_local])
+            current_path = "/".join([remote_path, str(resource_name_local)])
             matches_remote = resource_name_local in _resources_remote
 
             values["remote_path"] = current_path
@@ -71,7 +71,7 @@ def _merge_resources(resources_local, resources_remote):
 
         for resource_name_remote, values in _resources_remote.items():
             if resource_name_remote not in _resources_local:
-                current_path = "/".join([remote_path, resource_name_remote])
+                current_path = "/".join([remote_path, str(resource_name_remote)])
                 new_resource = {'permission_names': [],
                                 'children': {},
                                 'id': current_path,
@@ -99,8 +99,6 @@ def _is_valid_resource_schema(resources):
     :return: bool
     """
     for resource_name, values in resources.items():
-        if not isinstance(resource_name, basestring):
-            return False
         if 'children' not in values:
             return False
         if not isinstance(values['children'], dict):
