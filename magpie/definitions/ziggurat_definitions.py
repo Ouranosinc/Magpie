@@ -1,7 +1,7 @@
 # import required definitions
 from ziggurat_foundations import ziggurat_model_init
 from ziggurat_foundations.models import groupfinder
-from ziggurat_foundations.models.base import get_db_session
+from ziggurat_foundations.models.base import get_db_session, BaseModel
 from ziggurat_foundations.models.external_identity import ExternalIdentityMixin
 from ziggurat_foundations.models.group import GroupMixin
 from ziggurat_foundations.models.group_permission import GroupPermissionMixin

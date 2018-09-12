@@ -3,7 +3,6 @@ from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.sqlalchemy_definitions import *
 from magpie.api.api_except import *
 
-
 Base = declarative_base()
 
 
@@ -170,11 +169,83 @@ class Route(Resource):
     resource_type_name = u'route'
 
 
+class RemoteResource(BaseModel, Base):
+    __tablename__ = "remote_resources"
+
+    __possible_permissions__ = ()
+    _ziggurat_services = [ResourceTreeService]
+
+    resource_id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
+    service_id = sa.Column(sa.Integer(),
+                           sa.ForeignKey('services.resource_id',
+                                         onupdate='CASCADE',
+                                         ondelete='CASCADE'),
+                           index=True,
+                           nullable=False)
+    parent_id = sa.Column(sa.Integer(),
+                          sa.ForeignKey('remote_resources.resource_id',
+                                        onupdate='CASCADE',
+                                        ondelete='SET NULL'),
+                          nullable=True)
+    ordering = sa.Column(sa.Integer(), default=0, nullable=False)
+    resource_name = sa.Column(sa.Unicode(100), nullable=False)
+    resource_type = sa.Column(sa.Unicode(30), nullable=False)
+
+    def __repr__(self):
+        info = self.resource_type, self.resource_name, self.resource_id, self.ordering, self.parent_id
+        return '<RemoteResource: %s, %s, id: %s position: %s, parent_id: %s>' % info
+
+
+class RemoteResourcesSyncInfo(Base):
+    __tablename__ = "remote_resources_sync_info"
+
+    id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
+    service_id = sa.Column(sa.Integer(),
+                           sa.ForeignKey('services.resource_id',
+                                         onupdate='CASCADE',
+                                         ondelete='CASCADE'),
+                           index=True,
+                           nullable=False)
+    service = relationship("Service", foreign_keys=[service_id])
+    remote_resource_id = sa.Column(sa.Integer(),
+                                   sa.ForeignKey('remote_resources.resource_id', onupdate='CASCADE',
+                                                 ondelete='CASCADE'))
+    last_sync = sa.Column(sa.DateTime(), nullable=True)
+
+    @staticmethod
+    def by_service_id(service_id, session):
+        condition = RemoteResourcesSyncInfo.service_id == service_id
+        service_info = session.query(RemoteResourcesSyncInfo).filter(condition).first()
+        return service_info
+
+    def __repr__(self):
+        last_modified = self.last_sync.strftime("%Y-%m-%dT%H:%M:%S") if self.last_sync else None
+        info = self.service_id, last_modified, self.id
+        return '<RemoteResourcesSyncInfo service_id: %s, last_sync: %s, id: %s>' % info
+
+
+class RemoteResourceTreeService(ResourceTreeService):
+    def __init__(self, service_cls):
+        self.model = RemoteResource
+        super(RemoteResourceTreeService, self).__init__(service_cls)
+
+
+class RemoteResourceTreeServicePostgreSQL(ResourceTreeServicePostgreSQL):
+    """
+    This is necessary, because ResourceTreeServicePostgreSQL.model is the Resource class.
+    If we want to change it for a RemoteResource, we need this class.
+
+    The ResourceTreeService.__init__ call sets the model.
+    """
+    pass
+
+
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
                     UserResourcePermission, GroupResourcePermission, Resource,
                     ExternalIdentity, passwordmanager=None)
 
 resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
+remote_resource_tree_service = RemoteResourceTreeService(RemoteResourceTreeServicePostgreSQL)
 
 resource_type_dict = {
     Service.resource_type_name:     Service,
@@ -204,5 +275,6 @@ def get_all_resource_permission_names():
 def find_children_by_name(name, parent_id, db_session):
     tree_struct = resource_tree_service.from_parent_deeper(parent_id=parent_id, limit_depth=1, db_session=db_session)
     tree_level_entries = [node for node in tree_struct]
-    tree_level_filtered = [node.Resource for node in tree_level_entries if node.Resource.resource_name.lower() == name.lower()]
+    tree_level_filtered = [node.Resource for node in tree_level_entries if
+                           node.Resource.resource_name.lower() == name.lower()]
     return tree_level_filtered.pop() if len(tree_level_filtered) else None

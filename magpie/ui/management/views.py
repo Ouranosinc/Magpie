@@ -4,7 +4,7 @@ from magpie.common import str2bool
 from magpie.services import service_type_dict
 from magpie.models import resource_type_dict
 from magpie.ui.management import check_response
-from magpie.ui.management.sync_resources import merge_local_and_remote_resources
+from magpie.helpers.sync_resources import merge_local_and_remote_resources
 from magpie.ui.home import add_template_data
 from magpie import register, __meta__
 from distutils.version import LooseVersion
@@ -498,7 +498,7 @@ class ManagementViews(object):
         error_message = None
 
         try:
-            res_perms = merge_local_and_remote_resources(res_perms, cur_svc_type, service_url)
+            res_perms = merge_local_and_remote_resources(res_perms, cur_svc_type, self.request.db)
         except Exception:
             error_message = ("Couldn't get resources from the remote service ({}) "
                              "Only local resources are displayed. ".format(service_url))
