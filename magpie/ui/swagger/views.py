@@ -12,9 +12,12 @@ def api_swagger(request):
     """
     swagger_versions_dir = '{}'.format(os.path.abspath(os.path.join(MAGPIE_MODULE_DIR, 'ui/swagger/versions')))
     swagger_ui_path = SwaggerGenerator.path
-    # come back one level if path ends with '/' to properly find json
+    # come back one level if path ends with '/' to properly find json (from Magpie API extra path)
     if request.url.endswith(SwaggerAPI.path + '/'):
         swagger_ui_path = '../{}'.format(swagger_ui_path.lstrip('/'))
+    # remove leading '/' if path is on same level so that json page can be found by relative route
+    elif swagger_ui_path.startswith('/'):
+        swagger_ui_path = swagger_ui_path.rstrip('/')
     return_data = {'api_title': TitleAPI,
                    'api_schema_path': swagger_ui_path,
                    'api_schema_versions_dir': swagger_versions_dir}
