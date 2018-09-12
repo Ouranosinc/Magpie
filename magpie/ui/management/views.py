@@ -399,7 +399,9 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        selected_perms = self.request.POST.getall('permission')
+        permission_selections = self.request.POST.getall('permission')
+        selected_perms = [p.replace("_checked", "") for p in permission_selections if p.endswith("_checked")]
+
         removed_perms = list(set(res_perms) - set(selected_perms))
         new_perms = list(set(selected_perms) - set(res_perms))
 
@@ -482,8 +484,10 @@ class ManagementViews(object):
             elif u'clean_resource' in self.request.POST:
                 url = '{url}/resources/{resource_id}'.format(url=self.magpie_url, resource_id=res_id)
                 check_response(requests.delete(url, cookies=self.request.cookies))
-            else:
+            elif u'member' in self.request.POST:
                 self.edit_group_users(group_name)
+            else:
+                return HTTPBadRequest(detail="Invalid POST request.")
 
         # display resources permissions per service type tab
         try:
