@@ -19,7 +19,7 @@ from magpie import db, models
 
 def merge_local_and_remote_resources(resources_local, service_name, session):
     """Main function to sync resources with remote server"""
-    remote_resources = _query_resources(service_name, session=session)
+    remote_resources = _query_remote_resources_in_database(service_name, session=session)
     merged_resources = _merge_resources(resources_local, remote_resources)
     _sort_resources(merged_resources)
     return merged_resources
@@ -325,9 +325,20 @@ def _get_resource_children(resource, db_session):
     return build_subtree_strut(query)['children']
 
 
-def _query_resources(service_name, session):
+def _format_resource_tree(children):
+    fmt_res_tree = {}
+    for child_id, child_dict in children.items():
+        resource = child_dict[u'node']
+        new_children = child_dict[u'children']
+        resource_dict = {'children': _format_resource_tree(new_children),
+                         'resource_type': resource.resource_type}
+        fmt_res_tree[resource.resource_name] = resource_dict
+    return fmt_res_tree
+
+
+def _query_remote_resources_in_database(service_name, session):
     """
-    Reads remote resources from database. No external request is made.
+    Reads remote resources from the RemoteResources table. No external request is made.
     :param service_name:
     :param session:
     :return: a dictionary of the form defined in '_is_valid_resource_schema'
@@ -339,16 +350,6 @@ def _query_resources(service_name, session):
     main_resource = session.query(models.RemoteResource).filter_by(
         resource_id=sync_info.remote_resource_id).first()
     tree = _get_resource_children(main_resource, session)
-
-    def _format_resource_tree(children):
-        fmt_res_tree = {}
-        for child_id, child_dict in children.items():
-            resource = child_dict[u'node']
-            new_children = child_dict[u'children']
-            resource_dict = {'children': _format_resource_tree(new_children),
-                             'resource_type': resource.resource_type}
-            fmt_res_tree[resource.resource_name] = resource_dict
-        return fmt_res_tree
 
     remote_resources = _format_resource_tree(tree)
     return {service_name: {'children': remote_resources, 'resource_type': 'directory'}}
