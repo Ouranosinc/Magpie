@@ -20,6 +20,7 @@ def merge_local_and_remote_resources(resources_local, service_name, session):
     """Main function to sync resources with remote server"""
     remote_resources = query_resources(service_name, session=session)
     merged_resources = _merge_resources(resources_local, remote_resources)
+    _sort_resources(merged_resources)
     return merged_resources
 
 
@@ -96,10 +97,20 @@ def _is_valid_resource_schema(resources):
     for resource_name, values in resources.items():
         if 'children' not in values:
             return False
-        if not isinstance(values['children'], dict):
+        if not isinstance(values['children'], (OrderedDict, dict)):
             return False
         return _is_valid_resource_schema(values['children'])
     return True
+
+
+def _sort_resources(resources):
+    """
+    Sorts a resource dictionary by using OrderedDict
+    :return: None
+    """
+    for resource_name, values in resources.items():
+        values['children'] = OrderedDict(sorted(values['children'].iteritems()))
+        return _sort_resources(values['children'])
 
 
 class _SyncServiceInterface:
