@@ -57,7 +57,7 @@ def _merge_resources(resources_local, resources_remote):
             current_path = "/".join([remote_path, str(resource_name_local)])
             matches_remote = resource_name_local in _resources_remote
 
-            values["remote_path"] = current_path if matches_remote else ""
+            values["remote_path"] = "" if matches_remote else current_path
             values["matches_remote"] = matches_remote
 
             resource_remote_children = _resources_remote[resource_name_local]['children'] if matches_remote else {}

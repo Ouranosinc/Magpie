@@ -399,8 +399,7 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        permission_selections = self.request.POST.getall('permission')
-        selected_perms = [p.replace("_checked", "") for p in permission_selections if p.endswith("_checked")]
+        selected_perms = self.request.POST.getall('permission')
 
         removed_perms = list(set(res_perms) - set(selected_perms))
         new_perms = list(set(selected_perms) - set(res_perms))
@@ -476,7 +475,7 @@ class ManagementViews(object):
                 return HTTPFound(self.request.route_url('edit_group', **group_info))
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
-            elif u'permission' in self.request.POST:
+            elif u'edit_permissions' in self.request.POST:
                 remote_path = self.request.POST.get('remote_path')
                 if remote_path:
                     res_id = self.add_external_resource(cur_svc_type, group_name, remote_path)
@@ -528,6 +527,8 @@ class ManagementViews(object):
             raise HTTPBadRequest(detail=repr(e))
 
         def parse_resources_and_put(resources, path, parent_id=None):
+            if not path:
+                return parent_id
             current_name = path.pop(0)
             if current_name in resources:
                 res_id = parse_resources_and_put(resources[current_name]['children'],

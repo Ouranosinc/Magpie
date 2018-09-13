@@ -2,19 +2,17 @@
 <%namespace name="tree" file="ui.management:templates/tree_scripts.mako"/>
 
 <%def name="render_item(key, value, level)">
+    <input type="hidden" value="" name="edit_permissions">
     %for perm in permissions:
-
         <div class="perm_checkbox">
             % if perm in value['permission_names']:
-            <input type="hidden" value="${perm}_unchecked" name="permission"/>
-            <input type="checkbox" value="${perm}_checked" name="permission"
+            <input type="checkbox" value="${perm}" name="permission"
                    onchange="document.getElementById('resource_${value['id']}').submit()" checked>
             % else:
-            <input type="checkbox" value="${perm}_checked" name="permission"
+            <input type="checkbox" value="${perm}" name="permission"
                    onchange="document.getElementById('resource_${value['id']}').submit()">
             % endif
         </div>
-
     %endfor
     % if not value.get('matches_remote', True):
         <form id="delete_resource_${value['id']}" action="${request.path}" method="post">
