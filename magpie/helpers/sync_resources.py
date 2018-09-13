@@ -381,7 +381,7 @@ def fetch_single_service(service_name, session):
 
 def fetch():
     """
-    Main entry point to get all remote resources for each service and write to database.
+    Main function to get all remote resources for each service and write to database.
     """
     url = db.get_db_url()
     engine = create_engine(url)
@@ -395,5 +395,33 @@ def fetch():
     session.close()
 
 
-if __name__ == '__main__':
+def housekeeping():
+    """
+    Clean resources that are in the Resource table but have no
+    group or user permissions associated to them.
+    """
+    url = db.get_db_url()
+    engine = create_engine(url)
+
+    session = Session(bind=engine)
+
+    for resource in session.query(models.Resource):
+        if resource.resource_type_name == 'service':
+            continue
+        if not resource.group_permissions and not resource.user_permissions:
+            session.delete(resource)
+
+    session.commit()
+    session.close()
+
+
+def main():
+    """
+    Main entry point for cron service.
+    """
     fetch()
+    housekeeping()
+
+
+if __name__ == '__main__':
+    main()
