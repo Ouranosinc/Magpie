@@ -29,3 +29,4 @@ python-dotenv
 cornice_swagger>=0.7.0
 cornice
 colander
+requests_file
