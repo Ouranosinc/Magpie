@@ -163,6 +163,24 @@ class _SyncServiceGeoserver:
         return resources
 
 
+class _SyncServiceProjectAPI:
+    def __init__(self, project_api_url):
+        self.project_api_url = project_api_url
+
+    def get_resources(self):
+        # Only workspaces are fetched for now
+        resource_type = "route"
+        projects_url = "/".join([self.project_api_url, "api", "Projects"])
+        resp = requests.get(projects_url)
+        resp.raise_for_status()
+
+        projects = {p["id"]: {"children": {}, "resource_type": resource_type} for p in resp.json()}
+
+        resources = {"project-api": {"children": projects, "resource_type": resource_type}}
+        assert _is_valid_resource_schema(resources), "Error in Interface implementation"
+        return resources
+
+
 class _SyncServiceThreads(_SyncServiceInterface):
     DEPTH_DEFAULT = 2
 
@@ -203,6 +221,7 @@ class _SyncServiceDefault(_SyncServiceInterface):
 SYNC_SERVICES = {
     "thredds": _SyncServiceThreads,
     "geoserver-api": _SyncServiceGeoserver,
+    "project-api": _SyncServiceProjectAPI,
 }
 
 
