@@ -30,3 +30,4 @@ cornice_swagger>=0.7.0
 cornice
 colander
 threddsclient
+humanize

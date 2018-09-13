@@ -1,4 +1,7 @@
+import datetime
 from collections import OrderedDict
+
+import humanize
 
 from magpie.definitions.pyramid_definitions import *
 from magpie.constants import get_constant
@@ -6,7 +9,7 @@ from magpie.common import str2bool
 from magpie.services import service_type_dict
 from magpie.models import resource_type_dict
 from magpie.ui.management import check_response
-from magpie.helpers.sync_resources import merge_local_and_remote_resources
+from magpie.helpers import sync_resources
 from magpie.ui.home import add_template_data
 from magpie import register, __meta__
 from distutils.version import LooseVersion
@@ -484,10 +487,15 @@ class ManagementViews(object):
                     res_id = self.add_external_resource(cur_svc_type, group_name, remote_path)
                 self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
             elif u'clean_resource' in self.request.POST:
-                url = '{url}/resources/{resource_id}'.format(url=self.magpie_url, resource_id=res_id)
-                check_response(requests.delete(url, cookies=self.request.cookies))
+                self.delete_resource(res_id)
             elif u'member' in self.request.POST:
                 self.edit_group_users(group_name)
+            elif u'force_sync' in self.request.POST:
+                sync_resources.fetch_single_service(cur_svc_type, session=self.request.db)
+            elif u'clean_all' in self.request.POST:
+                ids_to_clean = self.request.POST.get('ids_to_clean').split(";")
+                for id_ in ids_to_clean:
+                    self.delete_resource(id_)
             else:
                 return HTTPBadRequest(detail="Invalid POST request.")
 
@@ -499,16 +507,19 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        error_message = None
+        res_perms = sync_resources.merge_local_and_remote_resources(res_perms,
+                                                                    cur_svc_type,
+                                                                    self.request.db)
 
-        try:
-            res_perms = merge_local_and_remote_resources(res_perms, cur_svc_type, self.request.db)
-        except Exception:
-            service_url = services[list(services)[0]].get('service_url', '')
-            error_message = ("Couldn't get resources from the remote service ({}) "
-                             "Only local resources are displayed. ".format(service_url))
+        last_sync_datetime = sync_resources.get_last_sync(cur_svc_type, self.request.db)
+        now = datetime.datetime.now()
+        last_sync = humanize.naturaltime(now - last_sync_datetime) if last_sync_datetime else "Never"
 
-        group_info[u'error_message'] = error_message
+        ids = self.get_ids_to_clean(res_perms)
+
+        group_info[u'error_message'] = None
+        group_info[u'ids_to_clean'] = ";".join(ids)
+        group_info[u'last_sync'] = last_sync
         group_info[u'group_name'] = group_name
         group_info[u'cur_svc_type'] = cur_svc_type
         group_info[u'users'] = self.get_user_names()
@@ -518,6 +529,24 @@ class ManagementViews(object):
         group_info[u'resources'] = res_perms
         group_info[u'permissions'] = res_perm_names
         return add_template_data(self.request, data=group_info)
+
+    def delete_resource(self, res_id):
+        url = '{url}/resources/{resource_id}'.format(url=self.magpie_url, resource_id=res_id)
+        try:
+            check_response(requests.delete(url, cookies=self.request.cookies))
+        except HTTPNotFound:
+            # Some resource ids are already deleted because they were a child
+            # of another just deleted parent resource.
+            # We just skip them.
+            pass
+
+    def get_ids_to_clean(self, resources):
+        ids = []
+        for resource_name, values in resources.iteritems():
+            if "matches_remote" in values and not values["matches_remote"]:
+                ids.append(values['id'])
+            ids += self.get_ids_to_clean(values['children'])
+        return ids
 
     def add_external_resource(self, service, group_name, resource_path):
         try:

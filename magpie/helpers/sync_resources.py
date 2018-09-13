@@ -6,6 +6,7 @@ To implement a new service, see the _SyncServiceInterface class.
 
 import abc
 import copy
+import datetime
 from collections import OrderedDict
 
 import requests
@@ -268,6 +269,8 @@ def _update_db(remote_resources, service_id, session):
     first_item = list(remote_resources)[0]
     add_children(remote_resources[first_item]['children'], sync_info.remote_resource_id)
 
+    sync_info.last_sync = datetime.datetime.now()
+
     session.flush()
 
 
@@ -329,6 +332,16 @@ def _query_resources(service_name, session):
 
     remote_resources = _format_resource_tree(tree)
     return {service_name: {'children': remote_resources}}
+
+
+def get_last_sync(service_name, session):
+    last_sync = None
+    service = models.Service.by_service_name(service_name, db_session=session)
+    _ensure_sync_info_exists(service_name, session)
+    sync_info = models.RemoteResourcesSyncInfo.by_service_id(service.resource_id, session)
+    if sync_info:
+        last_sync = sync_info.last_sync
+    return last_sync
 
 
 def fetch_single_service(service_name, session):
