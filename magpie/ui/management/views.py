@@ -496,13 +496,12 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        service_url = services[list(services)[0]].get('service_url', '')
-
         error_message = None
 
         try:
             res_perms = merge_local_and_remote_resources(res_perms, cur_svc_type, self.request.db)
         except Exception:
+            service_url = services[list(services)[0]].get('service_url', '')
             error_message = ("Couldn't get resources from the remote service ({}) "
                              "Only local resources are displayed. ".format(service_url))
 
