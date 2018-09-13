@@ -39,7 +39,7 @@ def _merge_resources(resources_local, resources_remote):
     if not resources_remote:
         return resources_local
 
-    assert _is_valid_resource_schema(resources_local)
+    assert _is_valid_resource_schema(resources_local, ignore_resource_type=True)
     assert _is_valid_resource_schema(resources_remote)
 
     if not resources_local:
@@ -61,6 +61,7 @@ def _merge_resources(resources_local, resources_remote):
 
             values["remote_path"] = "" if matches_remote else current_path
             values["matches_remote"] = matches_remote
+            values["resource_type"] = _resources_remote[resource_name_local]['children'] if matches_remote else ""
 
             resource_remote_children = _resources_remote[resource_name_local]['children'] if matches_remote else {}
 
@@ -72,6 +73,7 @@ def _merge_resources(resources_local, resources_remote):
                 current_path = "/".join([remote_path, str(resource_name_remote)])
                 new_resource = {'permission_names': [],
                                 'children': {},
+                                'resource_type': values['resource_type'],
                                 'id': current_path,
                                 'remote_path': current_path,
                                 'matches_remote': True}
@@ -80,27 +82,33 @@ def _merge_resources(resources_local, resources_remote):
 
     recurse(merged_resources, resources_remote)
 
+    assert _is_valid_resource_schema(merged_resources)
+
     return merged_resources
 
 
-def _is_valid_resource_schema(resources):
+def _is_valid_resource_schema(resources, ignore_resource_type=False):
     """
     Returns True if the structure of the input dictionary is a tree of the form:
 
-    {'resource_name_1': {'children': {'resource_name_3': {'children': {}},
-                                      'resource_name_4': {'children': {}}
-                                      }
+    {'resource_name_1': {'children': {'resource_name_3': {'children': {}, 'resource_type': ...},
+                                      'resource_name_4': {'children': {}, 'resource_type': ...}
+                                      },
+                         'resource_type': ...
                          },
-     'resource_name_2': {'children': {}}
+     'resource_name_2': {'children': {}, resource_type': ...}
      }
     :return: bool
     """
     for resource_name, values in resources.items():
         if 'children' not in values:
             return False
+        if not ignore_resource_type and 'resource_type' not in values:
+            return False
         if not isinstance(values['children'], (OrderedDict, dict)):
             return False
-        return _is_valid_resource_schema(values['children'])
+        return _is_valid_resource_schema(values['children'],
+                                         ignore_resource_type=ignore_resource_type)
     return True
 
 
@@ -140,9 +148,10 @@ class _SyncServiceGeoserver:
         resp.raise_for_status()
         workspaces_list = resp.json().get("workspaces", {}).get("workspace", {})
 
-        workspaces = {w["name"]: {"children": {}} for w in workspaces_list}
+        workspaces = {w["name"]: {"children": {}, "resource_type": "directory"} for w in workspaces_list}
 
-        resources = {"geoserver-api": {"children": workspaces}}
+        resources = {"geoserver-api": {"children": workspaces,
+                                       "resource_type": "directory"}}
         assert _is_valid_resource_schema(resources), "Error in Interface implementation"
         return resources
 
@@ -159,8 +168,10 @@ class _SyncServiceThreads(_SyncServiceInterface):
         def thredds_get_resources(url, depth, **kwargs):
             cat = threddsclient.read_url(url, **kwargs)
             name = cat.name
-
-            tree_item = {name: {'children': {}}}
+            resource_type = 'directory'
+            if cat.datasets:
+                resource_type = cat.datasets[0].content_type.replace('application/', '')
+            tree_item = {name: {'children': {}, 'resource_type': resource_type}}
 
             if depth > 0:
                 for reference in cat.flat_references():
@@ -169,7 +180,7 @@ class _SyncServiceThreads(_SyncServiceInterface):
             return tree_item
 
         resources = thredds_get_resources(self.thredds_url, self.depth, **self.kwargs)
-        assert _is_valid_resource_schema(resources), "Error in Interface implementation"
+        assert _is_valid_resource_schema(resources), 'Error in Interface implementation'
         return resources
 
 
@@ -258,7 +269,7 @@ def _update_db(remote_resources, service_id, session):
         for resource_name, values in resources.items():
             new_resource = models.RemoteResource(service_id=sync_info.service_id,
                                                  resource_name=unicode(resource_name),
-                                                 resource_type=u"directory",  # todo: fixme
+                                                 resource_type=values['resource_type'],
                                                  parent_id=parent_id,
                                                  ordering=position)
             session.add(new_resource)
@@ -326,12 +337,13 @@ def _query_resources(service_name, session):
         for child_id, child_dict in children.items():
             resource = child_dict[u'node']
             new_children = child_dict[u'children']
-            fmt_res_tree[resource.resource_name] = {}
-            fmt_res_tree[resource.resource_name][u'children'] = _format_resource_tree(new_children)
+            resource_dict = {'children': _format_resource_tree(new_children),
+                             'resource_type': resource.resource_type}
+            fmt_res_tree[resource.resource_name] = resource_dict
         return fmt_res_tree
 
     remote_resources = _format_resource_tree(tree)
-    return {service_name: {'children': remote_resources}}
+    return {service_name: {'children': remote_resources, 'resource_type': 'directory'}}
 
 
 def get_last_sync(service_name, session):
