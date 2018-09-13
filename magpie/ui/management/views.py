@@ -484,7 +484,7 @@ class ManagementViews(object):
             elif u'edit_permissions' in self.request.POST:
                 remote_path = self.request.POST.get('remote_path')
                 if remote_path:
-                    res_id = self.add_external_resource(cur_svc_type, group_name, remote_path)
+                    res_id = self.add_remote_resource(cur_svc_type, group_name, remote_path)
                 self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
             elif u'clean_resource' in self.request.POST:
                 self.delete_resource(res_id)
@@ -548,23 +548,23 @@ class ManagementViews(object):
             ids += self.get_ids_to_clean(values['children'])
         return ids
 
-    def add_external_resource(self, service, group_name, resource_path):
+    def add_remote_resource(self, service_type, group_name, resource_path):
         try:
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(group_name,
-                                                                                          services=[service],
-                                                                                          service_type=service,
+                                                                                          services=[service_type],
+                                                                                          service_type=service_type,
                                                                                           is_user=False)
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        def parse_resources_and_put(resources, path, parent_id=None):
+        def traverse_path_and_post(resources, path, parent_id=None):
             if not path:
                 return parent_id
             current_name = path.pop(0)
             if current_name in resources:
-                res_id = parse_resources_and_put(resources[current_name]['children'],
-                                                 path,
-                                                 parent_id=resources[current_name]['id'])
+                res_id = traverse_path_and_post(resources[current_name]['children'],
+                                                path,
+                                                parent_id=resources[current_name]['id'])
             else:
                 resources_url = '{url}/resources'.format(url=self.magpie_url)
                 data = {
@@ -575,10 +575,10 @@ class ManagementViews(object):
                 response = check_response(requests.post(resources_url, data=data, cookies=self.request.cookies))
                 res_id = response.json()['resource']['resource_id']
                 if path:
-                    res_id = parse_resources_and_put({}, path, parent_id=res_id)
+                    res_id = traverse_path_and_post({}, path, parent_id=res_id)
             return res_id
 
-        return parse_resources_and_put(res_perms, resource_path.split("/")[1:])
+        return traverse_path_and_post(res_perms, resource_path.split("/")[1:])
 
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
     def view_services(self):
