@@ -17,9 +17,9 @@ from sqlalchemy.orm import Session
 from magpie import db, models
 
 
-def merge_local_and_remote_resources(resources_local, service_name, session):
+def merge_local_and_remote_resources(resources_local, service_type, session):
     """Main function to sync resources with remote server"""
-    remote_resources = _query_remote_resources_in_database(service_name, session=session)
+    remote_resources = _query_remote_resources_in_database(service_type, session=session)
     merged_resources = _merge_resources(resources_local, remote_resources)
     _sort_resources(merged_resources)
     return merged_resources
@@ -206,19 +206,18 @@ SYNC_SERVICES = {
 }
 
 
-def _ensure_sync_info_exists(service_name, session):
+def _ensure_sync_info_exists(service_resource_id, session):
     """
     Make sure the RemoteResourcesSyncInfo entry exists in the database.
-    :param service_name:
+    :param service_resource_id:
     :param session:
     """
-    service = models.Service.by_service_name(service_name, db_session=session)
-    service_sync_info = models.RemoteResourcesSyncInfo.by_service_id(service.resource_id, session)
+    service_sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_resource_id, session)
     if not service_sync_info:
-        sync_info = models.RemoteResourcesSyncInfo(service_id=service.resource_id)
+        sync_info = models.RemoteResourcesSyncInfo(service_id=service_resource_id)
         session.add(sync_info)
         session.flush()
-        _create_main_resource(service.resource_id, session)
+        _create_main_resource(service_resource_id, session)
 
 
 def _get_remote_resources(service, service_name):
@@ -336,15 +335,15 @@ def _format_resource_tree(children):
     return fmt_res_tree
 
 
-def _query_remote_resources_in_database(service_name, session):
+def _query_remote_resources_in_database(service_type, session):
     """
     Reads remote resources from the RemoteResources table. No external request is made.
-    :param service_name:
+    :param service_type:
     :param session:
     :return: a dictionary of the form defined in '_is_valid_resource_schema'
     """
-    service = models.Service.by_service_name(service_name, db_session=session)
-    _ensure_sync_info_exists(service_name, session)
+    service = session.query(models.Service).filter_by(type=service_type).first()
+    _ensure_sync_info_exists(service.resource_id, session)
 
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service.resource_id, session)
     main_resource = session.query(models.RemoteResource).filter_by(
@@ -352,30 +351,30 @@ def _query_remote_resources_in_database(service_name, session):
     tree = _get_resource_children(main_resource, session)
 
     remote_resources = _format_resource_tree(tree)
-    return {service_name: {'children': remote_resources, 'resource_type': 'directory'}}
+    return {service_type: {'children': remote_resources, 'resource_type': 'directory'}}
 
 
-def get_last_sync(service_name, session):
+def get_last_sync(service_type, session):
     last_sync = None
-    service = models.Service.by_service_name(service_name, db_session=session)
-    _ensure_sync_info_exists(service_name, session)
+    service = session.query(models.Service).filter_by(type=service_type).first()
+    _ensure_sync_info_exists(service.resource_id, session)
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service.resource_id, session)
     if sync_info:
         last_sync = sync_info.last_sync
     return last_sync
 
 
-def fetch_single_service(service_name, session):
+def fetch_single_service(service_type, session):
     """
     Get remote resources for a single service.
-    :param service_name:
+    :param service_type:
     :param session:
     """
-    service = models.Service.by_service_name(service_name, db_session=session)
-    remote_resources = _get_remote_resources(service, service_name)
+    service = session.query(models.Service).filter_by(type=service_type).first()
+    remote_resources = _get_remote_resources(service, service_type)
     service_id = service.resource_id
     _delete_records(service_id, session)
-    _ensure_sync_info_exists(service_name, session)
+    _ensure_sync_info_exists(service.resource_id, session)
     _update_db(remote_resources, service_id, session)
 
 
