@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from magpie.definitions.pyramid_definitions import *
 from magpie.constants import get_constant
 from magpie.common import str2bool
@@ -360,6 +362,7 @@ class ManagementViews(object):
         for r_id, resource in raw_resources_tree.items():
             perm_names = self.default_get(permission, r_id, [])
             children = self.resource_tree_parser(resource['children'], permission)
+            children = OrderedDict(sorted(children.items()))
             resources_tree[resource['resource_name']] = dict(id=r_id, permission_names=perm_names, children=children)
         return resources_tree
 
