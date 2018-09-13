@@ -464,6 +464,8 @@ class ManagementViews(object):
         cur_svc_type = self.request.matchdict['cur_svc_type']
         group_info = {u'edit_mode': u'no_edit', u'group_name': group_name, u'cur_svc_type': cur_svc_type}
 
+        error_message = None
+
         # move to service or edit requested group/permission changes
         if self.request.method == 'POST':
             res_id = self.request.POST.get('resource_id')
@@ -492,7 +494,10 @@ class ManagementViews(object):
             elif u'member' in self.request.POST:
                 self.edit_group_users(group_name)
             elif u'force_sync' in self.request.POST:
-                sync_resources.fetch_single_service(cur_svc_type, session=self.request.db)
+                try:
+                    sync_resources.fetch_single_service(cur_svc_type, session=self.request.db)
+                except:
+                    error_message = "There was an error when trying to get remote resources."
             elif u'clean_all' in self.request.POST:
                 ids_to_clean = self.request.POST.get('ids_to_clean').split(";")
                 for id_ in ids_to_clean:
@@ -518,9 +523,10 @@ class ManagementViews(object):
 
         ids = self.get_ids_to_clean(res_perms)
 
-        group_info[u'error_message'] = None
+        group_info[u'error_message'] = error_message
         group_info[u'ids_to_clean'] = ";".join(ids)
         group_info[u'last_sync'] = last_sync
+        group_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES
         group_info[u'group_name'] = group_name
         group_info[u'cur_svc_type'] = cur_svc_type
         group_info[u'users'] = self.get_user_names()

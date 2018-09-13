@@ -115,8 +115,13 @@
         <form id="sync_info" action="${request.path}" method="post">
             <p class="panel_line">
                 <span class="panel_entry">Last synchronization with remote service: </span>
-                <span class="panel_value">${last_sync} </span>
-                <input type="submit" value="Sync now" name="force_sync">
+                %if sync_implemented:
+                    <span class="panel_value">${last_sync} </span>
+                    <input type="submit" value="Sync now" name="force_sync">
+                %else:
+                    <span class="panel_value">Not implemented for this service type.</span>
+                %endif
+
             </p>
             %if ids_to_clean:
                 <p class="panel_line">
