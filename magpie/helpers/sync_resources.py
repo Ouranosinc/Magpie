@@ -53,32 +53,38 @@ def _merge_resources(resources_local, resources_remote):
     # don't overwrite the input arguments
     merged_resources = copy.deepcopy(resources_local)
 
-    def recurse(_resources_local, _resources_remote, remote_path=""):
+    def recurse(_resources_local, _resources_remote, remote_path="", remote_type_path=""):
         # loop local resources, looking for matches in remote resources
         for resource_name_local, values in _resources_local.items():
             current_path = "/".join([remote_path, str(resource_name_local)])
+
             matches_remote = resource_name_local in _resources_remote
+            resource_type = _resources_remote[resource_name_local]['resource_type'] if matches_remote else ""
+            current_type_path = "/".join([remote_type_path, resource_type])
 
             values["remote_path"] = "" if matches_remote else current_path
+            values["remote_type_path"] = current_type_path
             values["matches_remote"] = matches_remote
-            values["resource_type"] = _resources_remote[resource_name_local]['children'] if matches_remote else ""
+            values["resource_type"] = resource_type
 
             resource_remote_children = _resources_remote[resource_name_local]['children'] if matches_remote else {}
 
-            recurse(values['children'], resource_remote_children, current_path)
+            recurse(values['children'], resource_remote_children, current_path, current_type_path)
 
         # loop remote resources, looking for matches in local resources
         for resource_name_remote, values in _resources_remote.items():
             if resource_name_remote not in _resources_local:
                 current_path = "/".join([remote_path, str(resource_name_remote)])
+                current_type_path = "/".join([remote_type_path, values['resource_type']])
                 new_resource = {'permission_names': [],
                                 'children': {},
                                 'resource_type': values['resource_type'],
                                 'id': current_path,
                                 'remote_path': current_path,
+                                'remote_type_path': current_type_path,
                                 'matches_remote': True}
                 _resources_local[resource_name_remote] = new_resource
-                recurse(new_resource['children'], values['children'], current_path)
+                recurse(new_resource['children'], values['children'], current_path, current_type_path)
 
     recurse(merged_resources, resources_remote)
 
@@ -143,15 +149,16 @@ class _SyncServiceGeoserver:
 
     def get_resources(self):
         # Only workspaces are fetched for now
+        resource_type = "route"
         workspaces_url = "{}/{}".format(self.geoserver_url, "workspaces")
         resp = requests.get(workspaces_url, headers={"Accept": "application/json"})
         resp.raise_for_status()
         workspaces_list = resp.json().get("workspaces", {}).get("workspace", {})
 
-        workspaces = {w["name"]: {"children": {}, "resource_type": "directory"} for w in workspaces_list}
+        workspaces = {w["name"]: {"children": {}, "resource_type": resource_type} for w in workspaces_list}
 
         resources = {"geoserver-api": {"children": workspaces,
-                                       "resource_type": "directory"}}
+                                       "resource_type": resource_type}}
         assert _is_valid_resource_schema(resources), "Error in Interface implementation"
         return resources
 
@@ -169,8 +176,9 @@ class _SyncServiceThreads(_SyncServiceInterface):
             cat = threddsclient.read_url(url, **kwargs)
             name = cat.name
             resource_type = 'directory'
-            if cat.datasets:
-                resource_type = cat.datasets[0].content_type.replace('application/', '')
+            if cat.datasets and cat.datasets[0].content_type != "application/directory":
+                resource_type = 'file'
+
             tree_item = {name: {'children': {}, 'resource_type': resource_type}}
 
             if depth > 0:
