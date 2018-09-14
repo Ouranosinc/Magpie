@@ -7,13 +7,26 @@ To implement a new service, see the _SyncServiceInterface class.
 import copy
 import datetime
 from collections import OrderedDict, defaultdict
+import logging
+import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from magpie import db, models
+from magpie import db, models, constants
 from magpie.helpers import sync_services
 from magpie.models import resource_tree_service
+
+LOGGER = logging.getLogger(__name__)
+log_path = constants.get_constant("MAGPIE_CRON_LOG")
+log_path = os.path.expandvars(log_path)
+log_path = os.path.expanduser(log_path)
+file_handler = logging.FileHandler(log_path)
+file_handler.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s %(levelname)8s %(message)s")
+file_handler.setFormatter(formatter)
+LOGGER.addHandler(file_handler)
+LOGGER.setLevel(logging.INFO)
 
 SYNC_SERVICES_TYPES = defaultdict(lambda: sync_services._SyncServiceDefault)
 # noinspection PyTypeChecker
@@ -281,10 +294,13 @@ def fetch_single_service(service, session):
     :param service: (models.Service)
     :param session:
     """
+    LOGGER.info("Requesting remote resources")
     remote_resources = _get_remote_resources(service)
     service_id = service.resource_id
+    LOGGER.info("Deleting RemoteResource records for service: %s" % service.resource_name)
     _delete_records(service_id, session)
     _ensure_sync_info_exists(service.resource_id, session)
+    LOGGER.info("Writing RemoteResource records to database")
     _update_db(remote_resources, service_id, session)
 
 
@@ -292,12 +308,16 @@ def fetch():
     """
     Main function to get all remote resources for each service and write to database.
     """
+    LOGGER.info("Getting database url")
     url = db.get_db_url()
+
+    LOGGER.debug("Database url: %s" % url)
     engine = create_engine(url)
 
     session = Session(bind=engine)
 
     for service_type in SYNC_SERVICES_TYPES:
+        LOGGER.info("Fetching data for service type: %s" % service_type)
         fetch_all_services_by_type(service_type, session)
 
     session.commit()
@@ -332,9 +352,27 @@ def main():
     """
     Main entry point for cron service.
     """
-    if db.is_database_ready():
+    LOGGER.info("Magpie cron started.")
+    db_ready = db.is_database_ready()
+    if not db_ready:
+        LOGGER.info("Database isn't ready")
+        return
+
+    try:
+        LOGGER.info("Starting to fetch data for all service types")
         fetch()
+    except Exception:
+        LOGGER.exception("There was an error when fetching the data from the remote services")
+        raise
+
+    try:
+        LOGGER.info("Starting housekeeping script")
         housekeeping()
+    except Exception:
+        LOGGER.exception("There was an error running the housekeeping script")
+        raise
+
+    LOGGER.info("Success, exiting.")
 
 
 if __name__ == '__main__':
