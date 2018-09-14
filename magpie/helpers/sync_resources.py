@@ -4,17 +4,23 @@ Sychronize local and remote resources.
 To implement a new service, see the _SyncServiceInterface class.
 """
 
-import abc
 import copy
 import datetime
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
-import requests
-import threddsclient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from magpie import db, models
+from magpie.helpers import sync_services
+
+SYNC_SERVICES = defaultdict(lambda: sync_services._SyncServiceDefault)
+# noinspection PyTypeChecker
+SYNC_SERVICES.update({
+    "thredds": sync_services._SyncServiceThreads,
+    "geoserver-api": sync_services._SyncServiceGeoserver,
+    "project-api": sync_services._SyncServiceProjectAPI,
+})
 
 
 def merge_local_and_remote_resources(resources_local, service_type, session):
@@ -33,14 +39,14 @@ def _merge_resources(resources_local, resources_remote):
         - matches_remote: True or False depending if the resource is present on the remote server
         - id: set to the value of 'remote_path' if the resource if remote only
 
-    returns a dictionary of the form validated by 'is_valid_resource_schema'
+    returns a dictionary of the form validated by 'sync_services.is_valid_resource_schema'
 
     """
     if not resources_remote:
         return resources_local
 
-    assert _is_valid_resource_schema(resources_local, ignore_resource_type=True)
-    assert _is_valid_resource_schema(resources_remote)
+    assert sync_services.is_valid_resource_schema(resources_local, ignore_resource_type=True)
+    assert sync_services.is_valid_resource_schema(resources_remote)
 
     if not resources_local:
         raise ValueError("The resources must contain at least the service name.")
@@ -88,141 +94,20 @@ def _merge_resources(resources_local, resources_remote):
 
     recurse(merged_resources, resources_remote)
 
-    assert _is_valid_resource_schema(merged_resources)
+    assert sync_services.is_valid_resource_schema(merged_resources)
 
     return merged_resources
 
 
-def _is_valid_resource_schema(resources, ignore_resource_type=False):
-    """
-    Returns True if the structure of the input dictionary is a tree of the form:
-
-    {'resource_name_1': {'children': {'resource_name_3': {'children': {}, 'resource_type': ...},
-                                      'resource_name_4': {'children': {}, 'resource_type': ...}
-                                      },
-                         'resource_type': ...
-                         },
-     'resource_name_2': {'children': {}, resource_type': ...}
-     }
-    :return: bool
-    """
-    for resource_name, values in resources.items():
-        if 'children' not in values:
-            return False
-        if not ignore_resource_type and 'resource_type' not in values:
-            return False
-        if not isinstance(values['children'], (OrderedDict, dict)):
-            return False
-        return _is_valid_resource_schema(values['children'],
-                                         ignore_resource_type=ignore_resource_type)
-    return True
-
-
 def _sort_resources(resources):
     """
-    Sorts a resource dictionary of the type validated by '_is_valid_resource_schema'
+    Sorts a resource dictionary of the type validated by 'sync_services.is_valid_resource_schema'
     by using an OrderedDict
     :return: None
     """
     for resource_name, values in resources.items():
         values['children'] = OrderedDict(sorted(values['children'].iteritems()))
         return _sort_resources(values['children'])
-
-
-class _SyncServiceInterface:
-    __metaclass__ = abc.ABCMeta
-
-    @abc.abstractmethod
-    def get_resources(self):
-        """
-        This is the function actually fetching the data from the remote service.
-        Implement this for every specific service.
-
-        :return: The returned dictionary must be validated by 'is_valid_resource_schema'
-        """
-        pass
-
-
-class _SyncServiceGeoserver:
-    def __init__(self, geoserver_url):
-        self.geoserver_url = geoserver_url
-
-    def get_resources(self):
-        # Only workspaces are fetched for now
-        resource_type = "route"
-        workspaces_url = "{}/{}".format(self.geoserver_url, "workspaces")
-        resp = requests.get(workspaces_url, headers={"Accept": "application/json"})
-        resp.raise_for_status()
-        workspaces_list = resp.json().get("workspaces", {}).get("workspace", {})
-
-        workspaces = {w["name"]: {"children": {}, "resource_type": resource_type} for w in workspaces_list}
-
-        resources = {"geoserver-api": {"children": workspaces,
-                                       "resource_type": resource_type}}
-        assert _is_valid_resource_schema(resources), "Error in Interface implementation"
-        return resources
-
-
-class _SyncServiceProjectAPI:
-    def __init__(self, project_api_url):
-        self.project_api_url = project_api_url
-
-    def get_resources(self):
-        # Only workspaces are fetched for now
-        resource_type = "route"
-        projects_url = "/".join([self.project_api_url, "api", "Projects"])
-        resp = requests.get(projects_url)
-        resp.raise_for_status()
-
-        projects = {p["id"]: {"children": {}, "resource_type": resource_type} for p in resp.json()}
-
-        resources = {"project-api": {"children": projects, "resource_type": resource_type}}
-        assert _is_valid_resource_schema(resources), "Error in Interface implementation"
-        return resources
-
-
-class _SyncServiceThreads(_SyncServiceInterface):
-    DEPTH_DEFAULT = 2
-
-    def __init__(self, thredds_url, depth=DEPTH_DEFAULT, **kwargs):
-        self.thredds_url = thredds_url
-        self.depth = depth
-        self.kwargs = kwargs  # kwargs is passed to the requests.get method.
-
-    def get_resources(self):
-        def thredds_get_resources(url, depth, **kwargs):
-            cat = threddsclient.read_url(url, **kwargs)
-            name = cat.name
-            resource_type = 'directory'
-            if cat.datasets and cat.datasets[0].content_type != "application/directory":
-                resource_type = 'file'
-
-            tree_item = {name: {'children': {}, 'resource_type': resource_type}}
-
-            if depth > 0:
-                for reference in cat.flat_references():
-                    tree_item[name]['children'].update(thredds_get_resources(reference.url, depth - 1, **kwargs))
-
-            return tree_item
-
-        resources = thredds_get_resources(self.thredds_url, self.depth, **self.kwargs)
-        assert _is_valid_resource_schema(resources), 'Error in Interface implementation'
-        return resources
-
-
-class _SyncServiceDefault(_SyncServiceInterface):
-    def __init__(self, _):
-        pass
-
-    def get_resources(self):
-        return {}
-
-
-SYNC_SERVICES = {
-    "thredds": _SyncServiceThreads,
-    "geoserver-api": _SyncServiceGeoserver,
-    "project-api": _SyncServiceProjectAPI,
-}
 
 
 def _ensure_sync_info_exists(service_resource_id, session):
@@ -249,7 +134,7 @@ def _get_remote_resources(service, service_name):
     service_url = service.url
     if service_url.endswith("/"):  # remove trailing slash
         service_url = service_url[:-1]
-    sync_service = SYNC_SERVICES.get(service_name.lower(), _SyncServiceDefault)(service_url)
+    sync_service = SYNC_SERVICES.get(service_name.lower(), sync_services._SyncServiceDefault)(service_url)
     return sync_service.get_resources()
 
 
@@ -359,7 +244,7 @@ def _query_remote_resources_in_database(service_type, session):
     Reads remote resources from the RemoteResources table. No external request is made.
     :param service_type:
     :param session:
-    :return: a dictionary of the form defined in '_is_valid_resource_schema'
+    :return: a dictionary of the form defined in 'sync_services.is_valid_resource_schema'
     """
     service = session.query(models.Service).filter_by(type=service_type).first()
     _ensure_sync_info_exists(service.resource_id, session)
@@ -437,8 +322,9 @@ def main():
     """
     Main entry point for cron service.
     """
-    fetch()
-    housekeeping()
+    if db.is_database_ready():
+        fetch()
+        housekeeping()
 
 
 if __name__ == '__main__':
