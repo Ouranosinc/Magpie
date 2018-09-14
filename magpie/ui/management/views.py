@@ -483,14 +483,15 @@ class ManagementViews(object):
                 return HTTPFound(self.request.route_url('edit_group', **group_info))
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
+            elif u'clean_resource' in self.request.POST:
+                # 'clean_resource' must be above 'edit_permissions' because they're in the same form.
+                self.delete_resource(res_id)
             elif u'edit_permissions' in self.request.POST:
                 remote_path = self.request.POST.get('remote_path')
                 if remote_path:
                     remote_type_path = self.request.POST.get('remote_type_path')
                     res_id = self.add_remote_resource(cur_svc_type, group_name, remote_path, remote_type_path)
                 self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
-            elif u'clean_resource' in self.request.POST:
-                self.delete_resource(res_id)
             elif u'member' in self.request.POST:
                 self.edit_group_users(group_name)
             elif u'force_sync' in self.request.POST:
