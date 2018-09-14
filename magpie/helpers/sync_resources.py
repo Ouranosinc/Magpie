@@ -14,18 +14,18 @@ from sqlalchemy.orm import Session
 from magpie import db, models
 from magpie.helpers import sync_services
 
-SYNC_SERVICES = defaultdict(lambda: sync_services._SyncServiceDefault)
+SYNC_SERVICES_TYPES = defaultdict(lambda: sync_services._SyncServiceDefault)
 # noinspection PyTypeChecker
-SYNC_SERVICES.update({
+SYNC_SERVICES_TYPES.update({
     "thredds": sync_services._SyncServiceThreads,
     "geoserver-api": sync_services._SyncServiceGeoserver,
     "project-api": sync_services._SyncServiceProjectAPI,
 })
 
 
-def merge_local_and_remote_resources(resources_local, service_type, session):
+def merge_local_and_remote_resources(resources_local, service_type, service_name, session):
     """Main function to sync resources with remote server"""
-    remote_resources = _query_remote_resources_in_database(service_type, session=session)
+    remote_resources = _query_remote_resources_in_database(service_type, service_name, session=session)
     merged_resources = _merge_resources(resources_local, remote_resources)
     _sort_resources(merged_resources)
     return merged_resources
@@ -50,11 +50,6 @@ def _merge_resources(resources_local, resources_remote):
 
     if not resources_local:
         raise ValueError("The resources must contain at least the service name.")
-
-    # The first item is the service name. It is skipped so that only the resources are compared.
-    service_name = resources_local.keys()[0]
-    _, remote_values = resources_remote.popitem()
-    resources_remote = {service_name: remote_values}
 
     # don't overwrite the input arguments
     merged_resources = copy.deepcopy(resources_local)
@@ -124,17 +119,18 @@ def _ensure_sync_info_exists(service_resource_id, session):
         _create_main_resource(service_resource_id, session)
 
 
-def _get_remote_resources(service, service_name):
+def _get_remote_resources(service):
     """
-    Request rmeote resources, depending on service type.
-    :param service:
-    :param service_name:
+    Request remote resources, depending on service type.
+    :param service: (models.Service)
     :return:
     """
     service_url = service.url
     if service_url.endswith("/"):  # remove trailing slash
         service_url = service_url[:-1]
-    sync_service = SYNC_SERVICES.get(service_name.lower(), sync_services._SyncServiceDefault)(service_url)
+
+    sync_service_class = SYNC_SERVICES_TYPES.get(service.type.lower(), sync_services._SyncServiceDefault)
+    sync_service = sync_service_class(service.resource_name, service_url)
     return sync_service.get_resources()
 
 
@@ -239,14 +235,14 @@ def _format_resource_tree(children):
     return fmt_res_tree
 
 
-def _query_remote_resources_in_database(service_type, session):
+def _query_remote_resources_in_database(service_type, service_name, session):
     """
     Reads remote resources from the RemoteResources table. No external request is made.
     :param service_type:
     :param session:
     :return: a dictionary of the form defined in 'sync_services.is_valid_resource_schema'
     """
-    service = session.query(models.Service).filter_by(type=service_type).first()
+    service = session.query(models.Service).filter_by(type=service_type, resource_name=service_name).first()
     _ensure_sync_info_exists(service.resource_id, session)
 
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service.resource_id, session)
@@ -255,7 +251,7 @@ def _query_remote_resources_in_database(service_type, session):
     tree = _get_resource_children(main_resource, session)
 
     remote_resources = _format_resource_tree(tree)
-    return {service_type: {'children': remote_resources, 'resource_type': 'directory'}}
+    return {service_name: {'children': remote_resources, 'resource_type': 'directory'}}
 
 
 def get_last_sync(service_type, session):
@@ -268,14 +264,23 @@ def get_last_sync(service_type, session):
     return last_sync
 
 
-def fetch_single_service(service_type, session):
+def fetch_all_services_by_type(service_type, session):
     """
-    Get remote resources for a single service.
+    Get remote resources for all services of a certain type.
     :param service_type:
     :param session:
     """
-    service = session.query(models.Service).filter_by(type=service_type).first()
-    remote_resources = _get_remote_resources(service, service_type)
+    for service in session.query(models.Service).filter_by(type=service_type):
+        fetch_single_service(service, session)
+
+
+def fetch_single_service(service, session):
+    """
+    Get remote resources for a single service.
+    :param service: (models.Service)
+    :param session:
+    """
+    remote_resources = _get_remote_resources(service)
     service_id = service.resource_id
     _delete_records(service_id, session)
     _ensure_sync_info_exists(service.resource_id, session)
@@ -291,8 +296,8 @@ def fetch():
 
     session = Session(bind=engine)
 
-    for service_name in SYNC_SERVICES:
-        fetch_single_service(service_name, session)
+    for service_type in SYNC_SERVICES_TYPES:
+        fetch_all_services_by_type(service_type, session)
 
     session.commit()
     session.close()

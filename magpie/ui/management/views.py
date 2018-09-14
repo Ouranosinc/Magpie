@@ -398,7 +398,7 @@ class ManagementViews(object):
     def edit_user_or_group_resource_permissions(self, user_or_group_name, resource_id, is_user=False):
         usr_grp_type = 'users' if is_user else 'groups'
         res_perms_url = '{url}/{grp_type}/{grp}/resources/{res_id}/permissions' \
-                        .format(url=self.magpie_url, grp_type=usr_grp_type, grp=user_or_group_name, res_id=resource_id)
+            .format(url=self.magpie_url, grp_type=usr_grp_type, grp=user_or_group_name, res_id=resource_id)
         try:
             res_perms_resp = requests.get(res_perms_url, cookies=self.request.cookies)
             res_perms = res_perms_resp.json()['permission_names']
@@ -495,9 +495,10 @@ class ManagementViews(object):
                 self.edit_group_users(group_name)
             elif u'force_sync' in self.request.POST:
                 try:
-                    sync_resources.fetch_single_service(cur_svc_type, session=self.request.db)
-                except:
-                    error_message = "There was an error when trying to get remote resources."
+                    sync_resources.fetch_all_services_by_type(cur_svc_type, session=self.request.db)
+                except Exception as e:
+                    error_message = "There was an error when trying to get remote resources. "
+                    error_message += "({})".format(repr(e))
             elif u'clean_all' in self.request.POST:
                 ids_to_clean = self.request.POST.get('ids_to_clean').split(";")
                 for id_ in ids_to_clean:
@@ -513,9 +514,12 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        res_perms = sync_resources.merge_local_and_remote_resources(res_perms,
-                                                                    cur_svc_type,
-                                                                    self.request.db)
+        for service_name in services:
+            resources_for_service = sync_resources.merge_local_and_remote_resources(res_perms,
+                                                                                    cur_svc_type,
+                                                                                    service_name,
+                                                                                    self.request.db)
+            res_perms[service_name] = resources_for_service[service_name]
 
         last_sync_datetime = sync_resources.get_last_sync(cur_svc_type, self.request.db)
         now = datetime.datetime.now()
@@ -526,7 +530,7 @@ class ManagementViews(object):
         group_info[u'error_message'] = error_message
         group_info[u'ids_to_clean'] = ";".join(ids)
         group_info[u'last_sync'] = last_sync
-        group_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES
+        group_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES_TYPES
         group_info[u'group_name'] = group_name
         group_info[u'cur_svc_type'] = cur_svc_type
         group_info[u'users'] = self.get_user_names()
@@ -635,7 +639,7 @@ class ManagementViews(object):
                     u'service_url': service_url,
                     u'service_type': service_type,
                     u'service_push': service_push}
-            check_response(requests.post(self.magpie_url+'/services', data=data, cookies=self.request.cookies))
+            check_response(requests.post(self.magpie_url + '/services', data=data, cookies=self.request.cookies))
             return HTTPFound(self.request.route_url('view_services', cur_svc_type=service_type))
 
         services_keys_sorted = sorted(service_type_dict)

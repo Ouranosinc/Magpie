@@ -45,7 +45,8 @@ class _SyncServiceInterface:
 
 
 class _SyncServiceGeoserver:
-    def __init__(self, geoserver_url):
+    def __init__(self, service_name, geoserver_url):
+        self.service_name = service_name
         self.geoserver_url = geoserver_url
 
     def get_resources(self):
@@ -58,14 +59,15 @@ class _SyncServiceGeoserver:
 
         workspaces = {w["name"]: {"children": {}, "resource_type": resource_type} for w in workspaces_list}
 
-        resources = {"geoserver-api": {"children": workspaces,
-                                       "resource_type": resource_type}}
+        resources = {self.service_name: {"children": workspaces,
+                                         "resource_type": resource_type}}
         assert is_valid_resource_schema(resources), "Error in Interface implementation"
         return resources
 
 
 class _SyncServiceProjectAPI:
-    def __init__(self, project_api_url):
+    def __init__(self, service_name, project_api_url):
+        self.service_name = service_name
         self.project_api_url = project_api_url
 
     def get_resources(self):
@@ -77,7 +79,7 @@ class _SyncServiceProjectAPI:
 
         projects = {p["id"]: {"children": {}, "resource_type": resource_type} for p in resp.json()}
 
-        resources = {"project-api": {"children": projects, "resource_type": resource_type}}
+        resources = {self.service_name: {"children": projects, "resource_type": resource_type}}
         assert is_valid_resource_schema(resources), "Error in Interface implementation"
         return resources
 
@@ -85,7 +87,8 @@ class _SyncServiceProjectAPI:
 class _SyncServiceThreads(_SyncServiceInterface):
     DEPTH_DEFAULT = 3
 
-    def __init__(self, thredds_url, depth=DEPTH_DEFAULT, **kwargs):
+    def __init__(self, service_name, thredds_url, depth=DEPTH_DEFAULT, **kwargs):
+        self.service_name = service_name
         self.thredds_url = thredds_url
         self.depth = depth
         self.kwargs = kwargs  # kwargs is passed to the requests.get method.
@@ -94,6 +97,8 @@ class _SyncServiceThreads(_SyncServiceInterface):
         def thredds_get_resources(url, depth, **kwargs):
             cat = threddsclient.read_url(url, **kwargs)
             name = cat.name
+            if depth == self.depth:
+                name = self.service_name
             resource_type = 'directory'
             if cat.datasets and cat.datasets[0].content_type != "application/directory":
                 resource_type = 'file'
@@ -112,7 +117,7 @@ class _SyncServiceThreads(_SyncServiceInterface):
 
 
 class _SyncServiceDefault(_SyncServiceInterface):
-    def __init__(self, _):
+    def __init__(self, *_):
         pass
 
     def get_resources(self):
