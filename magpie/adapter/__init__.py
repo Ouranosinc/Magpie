@@ -28,6 +28,16 @@ class MagpieAdapter(AdapterInterface):
         # simply return the default twitcher job store
         return DefaultAdapter().jobstore_factory(registry)
 
+    def quotestore_factory(self, registry):
+        # no reimplementation of quotes on magpie side
+        # simply return the default twitcher quote store
+        return DefaultAdapter().quotestore_factory(registry)
+
+    def billstore_factory(self, registry):
+        # no reimplementation of bills on magpie side
+        # simply return the default twitcher bill store
+        return DefaultAdapter().billstore_factory(registry)
+
     def owssecurity_factory(self, registry):
         return MagpieOWSSecurity()
 
