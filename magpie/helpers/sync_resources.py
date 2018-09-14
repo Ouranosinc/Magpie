@@ -63,8 +63,8 @@ def _merge_resources(resources_local, resources_remote):
             resource_type = _resources_remote[resource_name_local]['resource_type'] if matches_remote else ""
             current_type_path = "/".join([remote_type_path, resource_type])
 
-            values["remote_path"] = "" if matches_remote else current_path
-            values["remote_type_path"] = current_type_path
+            values["remote_path"] = current_path if matches_remote else ""
+            values["remote_type_path"] = current_type_path if matches_remote else ""
             values["matches_remote"] = matches_remote
             values["resource_type"] = resource_type
 
