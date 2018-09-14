@@ -588,7 +588,7 @@ class ManagementViews(object):
                 response = check_response(requests.post(resources_url, data=data, cookies=self.request.cookies))
                 res_id = response.json()['resource']['resource_id']
                 if path:
-                    res_id = traverse_path_and_post({}, path, parent_id=res_id)
+                    res_id = traverse_path_and_post({}, path, type_path, parent_id=res_id)
             return res_id
 
         path_list = resource_path.split("/")[1:]
