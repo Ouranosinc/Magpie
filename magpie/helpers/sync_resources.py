@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from magpie import db, models
 from magpie.helpers import sync_services
+from magpie.models import resource_tree_service
 
 SYNC_SERVICES_TYPES = defaultdict(lambda: sync_services._SyncServiceDefault)
 # noinspection PyTypeChecker
@@ -313,11 +314,15 @@ def housekeeping():
 
     session = Session(bind=engine)
 
-    for resource in session.query(models.Resource):
+    # loop the resource tree by reversed ordering (starting from the leaves)
+    # if the resource doesn't have any children or permissions, delete it
+    for resource in session.query(models.Resource).order_by(models.Resource.ordering.desc()):
         if resource.resource_type_name == 'service':
             continue
-        if not resource.group_permissions and not resource.user_permissions:
-            session.delete(resource)
+        n_children = resource_tree_service.count_children(resource.resource_id, session)
+        if n_children == 0:
+            if not resource.group_permissions and not resource.user_permissions:
+                session.delete(resource)
 
     session.commit()
     session.close()
