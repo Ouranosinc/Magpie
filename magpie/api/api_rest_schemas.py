@@ -61,13 +61,6 @@ SwaggerAPI = Service(
     path='/api',
     name='swagger_schema_ui',
     description="{} documentation".format(TitleAPI))
-# trailing '/' allows the route to work on all following routes:
-# - '/api'
-# - '/api/'
-# - '/magpie/api'
-# - '/magpie/api/' (final '/' added automatically by application)
-SwaggerAPI_extra_name = SwaggerAPI.name + '_extra'
-SwaggerAPI_extra_path = SwaggerAPI.path + '/'
 UsersAPI = Service(
     path='/users',
     name='Users')
