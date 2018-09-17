@@ -239,6 +239,12 @@ class ManagementViews(object):
         own_groups = self.get_user_groups(user_name)
         all_groups = self.get_all_groups(first_default_group=get_constant('MAGPIE_USERS_GROUP'))
 
+        error_message = None
+
+        # Until the api is modified to make it possible to request from the RemoteResource table,
+        # we have to access the database directly here
+        session = self.request.db
+
         user_resp = requests.get(user_url, cookies=self.request.cookies)
         check_response(user_resp)
         user_info = user_resp.json()['user']
@@ -312,12 +318,22 @@ class ManagementViews(object):
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(
                 user_name, services, cur_svc_type, is_user=True, is_inherited_permissions=inherited_permissions)
-            user_info[u'cur_svc_type'] = cur_svc_type
-            user_info[u'svc_types'] = svc_types
-            user_info[u'resources'] = res_perms
-            user_info[u'permissions'] = res_perm_names
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
+
+        for service_name in services:
+            resources_for_service = sync_resources.merge_local_and_remote_resources(res_perms,
+                                                                                    cur_svc_type,
+                                                                                    service_name,
+                                                                                    session)
+            res_perms[service_name] = resources_for_service[service_name]
+
+        user_info[u'error_message'] = error_message
+        user_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES_TYPES
+        user_info[u'cur_svc_type'] = cur_svc_type
+        user_info[u'svc_types'] = svc_types
+        user_info[u'resources'] = res_perms
+        user_info[u'permissions'] = res_perm_names
 
         return add_template_data(self.request, data=user_info)
 
