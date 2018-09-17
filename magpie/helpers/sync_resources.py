@@ -18,15 +18,6 @@ from magpie.helpers import sync_services
 from magpie.models import resource_tree_service
 
 LOGGER = logging.getLogger(__name__)
-log_path = constants.get_constant("MAGPIE_CRON_LOG")
-log_path = os.path.expandvars(log_path)
-log_path = os.path.expanduser(log_path)
-file_handler = logging.FileHandler(log_path)
-file_handler.setLevel(logging.INFO)
-formatter = logging.Formatter("%(asctime)s %(levelname)8s %(message)s")
-file_handler.setFormatter(formatter)
-LOGGER.addHandler(file_handler)
-LOGGER.setLevel(logging.INFO)
 
 SYNC_SERVICES_TYPES = defaultdict(lambda: sync_services._SyncServiceDefault)
 # noinspection PyTypeChecker
@@ -348,24 +339,34 @@ def housekeeping():
     session.close()
 
 
+def setup_cron_logger():
+    log_path = constants.get_constant("MAGPIE_CRON_LOG")
+    log_path = os.path.expandvars(log_path)
+    log_path = os.path.expanduser(log_path)
+    file_handler = logging.FileHandler(log_path)
+    file_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s %(levelname)8s %(message)s")
+    file_handler.setFormatter(formatter)
+    LOGGER.addHandler(file_handler)
+    LOGGER.setLevel(logging.INFO)
+
+
 def main():
     """
     Main entry point for cron service.
     """
+    setup_cron_logger()
+
     LOGGER.info("Magpie cron started.")
-    db_ready = db.is_database_ready()
-    if not db_ready:
-        LOGGER.info("Database isn't ready")
-        return
 
     try:
+        db_ready = db.is_database_ready()
+        if not db_ready:
+            LOGGER.info("Database isn't ready")
+            return
         LOGGER.info("Starting to fetch data for all service types")
         fetch()
-    except Exception:
-        LOGGER.exception("There was an error when fetching the data from the remote services")
-        raise
 
-    try:
         LOGGER.info("Starting housekeeping script")
         housekeeping()
     except Exception:

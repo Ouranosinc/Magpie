@@ -1,0 +1,1 @@
+0 * * * * root python -c 'from magpie.helpers.sync_resources import main; main()' > ~/magpie_cron_status.log 2>&1
