@@ -272,6 +272,14 @@ class ManagementViews(object):
                 # 'clean_resource' must be above 'edit_permissions' because they're in the same form.
                 self.delete_resource(res_id)
             elif u'edit_permissions' in self.request.POST:
+                remote_path = self.request.POST.get('remote_path')
+                if remote_path:
+                    remote_type_path = self.request.POST.get('remote_type_path')
+                    res_id = self.add_remote_resource(cur_svc_type,
+                                                      user_name,
+                                                      remote_path,
+                                                      remote_type_path,
+                                                      is_user=True)
                 self.edit_user_or_group_resource_permissions(user_name, res_id, is_user=True)
             elif u'edit_group_membership' in self.request.POST:
                 is_edit_group_membership = True
@@ -583,12 +591,12 @@ class ManagementViews(object):
             ids += self.get_ids_to_clean(values['children'])
         return ids
 
-    def add_remote_resource(self, service_type, group_name, resource_path, remote_type_path):
+    def add_remote_resource(self, service_type, user_or_group, resource_path, remote_type_path, is_user=False):
         try:
-            res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(group_name,
+            res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(user_or_group,
                                                                                           services=[service_type],
                                                                                           service_type=service_type,
-                                                                                          is_user=False)
+                                                                                          is_user=is_user)
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
