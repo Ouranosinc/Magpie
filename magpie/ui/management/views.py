@@ -299,6 +299,12 @@ class ManagementViews(object):
             elif u'save_email' in self.request.POST:
                 user_info[u'email'] = self.request.POST.get(u'new_user_email')
                 is_save_user_info = True
+            elif u'force_sync' in self.request.POST:
+                try:
+                    sync_resources.fetch_all_services_by_type(cur_svc_type, session=session)
+                except Exception as e:
+                    error_message = "There was an error when trying to get remote resources. "
+                    error_message += "({})".format(repr(e))
 
             if is_save_user_info:
                 check_response(requests.put(user_url, data=user_info, cookies=self.request.cookies))
@@ -339,7 +345,12 @@ class ManagementViews(object):
                                                                                     session)
             res_perms[service_name] = resources_for_service[service_name]
 
+        last_sync_datetime = sync_resources.get_last_sync(cur_svc_type, session)
+        now = datetime.datetime.now()
+        last_sync = humanize.naturaltime(now - last_sync_datetime) if last_sync_datetime else "Never"
+
         user_info[u'error_message'] = error_message
+        user_info[u'last_sync'] = last_sync
         user_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES_TYPES
         user_info[u'cur_svc_type'] = cur_svc_type
         user_info[u'svc_types'] = svc_types

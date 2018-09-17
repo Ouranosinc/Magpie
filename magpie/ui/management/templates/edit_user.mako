@@ -163,6 +163,20 @@
 
     <div class="current_tab_panel">
         <div class="clear"/>
+        %if error_message:
+            <div class="alert danger visible">${error_message}</div>
+        %endif
+        <form id="sync_info" action="${request.path}" method="post">
+            <p class="panel_line">
+                <span class="panel_entry">Last synchronization with remote service: </span>
+                %if sync_implemented:
+                    <span class="panel_value">${last_sync} </span>
+                    <input type="submit" value="Sync now" name="force_sync">
+                %else:
+                    <span class="panel_value">Not implemented for this service type.</span>
+                %endif
+            </p>
+        </form>
         <div class="tree_header">
         <div class="tree_item">Resources</div>
         %for perm in permissions:
