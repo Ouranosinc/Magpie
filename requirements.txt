@@ -31,3 +31,4 @@ cornice
 colander
 threddsclient
 humanize
+requests_file
