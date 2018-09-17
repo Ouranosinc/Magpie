@@ -466,6 +466,10 @@ class ManagementViews(object):
 
         error_message = None
 
+        # Until the api is modified to make it possible to request from the RemoteResource table,
+        # we have to access the database directly here
+        session = self.request.db
+
         # move to service or edit requested group/permission changes
         if self.request.method == 'POST':
             res_id = self.request.POST.get('resource_id')
@@ -496,7 +500,7 @@ class ManagementViews(object):
                 self.edit_group_users(group_name)
             elif u'force_sync' in self.request.POST:
                 try:
-                    sync_resources.fetch_all_services_by_type(cur_svc_type, session=self.request.db)
+                    sync_resources.fetch_all_services_by_type(cur_svc_type, session=session)
                 except Exception as e:
                     error_message = "There was an error when trying to get remote resources. "
                     error_message += "({})".format(repr(e))
@@ -519,10 +523,10 @@ class ManagementViews(object):
             resources_for_service = sync_resources.merge_local_and_remote_resources(res_perms,
                                                                                     cur_svc_type,
                                                                                     service_name,
-                                                                                    self.request.db)
+                                                                                    session)
             res_perms[service_name] = resources_for_service[service_name]
 
-        last_sync_datetime = sync_resources.get_last_sync(cur_svc_type, self.request.db)
+        last_sync_datetime = sync_resources.get_last_sync(cur_svc_type, session)
         now = datetime.datetime.now()
         last_sync = humanize.naturaltime(now - last_sync_datetime) if last_sync_datetime else "Never"
 
