@@ -268,7 +268,10 @@ class ManagementViews(object):
                 return HTTPFound(self.request.route_url('view_users'))
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
-            elif u'resource_id' in self.request.POST:
+            elif u'clean_resource' in self.request.POST:
+                # 'clean_resource' must be above 'edit_permissions' because they're in the same form.
+                self.delete_resource(res_id)
+            elif u'edit_permissions' in self.request.POST:
                 self.edit_user_or_group_resource_permissions(user_name, res_id, is_user=True)
             elif u'edit_group_membership' in self.request.POST:
                 is_edit_group_membership = True

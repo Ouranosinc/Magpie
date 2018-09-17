@@ -3,6 +3,7 @@
 <%namespace name="tree" file="ui.management:templates/tree_scripts.mako"/>
 
 <%def name="render_item(key, value, level)">
+    <input type="hidden" value="" name="edit_permissions">
     %for perm in permissions:
         % if perm in value['permission_names']:
             <div class="perm_checkbox">
@@ -24,6 +25,15 @@
             </div>
         % endif
     %endfor
+    % if not value.get('matches_remote', True):
+        <div class="tree_button">
+            <input type="submit" class="button warning" value="Clean" name="clean_resource">
+        </div>
+        <p class="tree_item_message">
+            <img title="This resource is absent from the remote server."
+                 src="${request.static_url('magpie.ui.home:static/warning_exclamation_orange.png')}" />
+        </p>
+    % endif
     % if level == 0:
         <div class="tree_button">
             <input type="submit" class="tree_button goto_service" value="Edit Service" name="goto_service">
