@@ -43,19 +43,18 @@ class MagpieServiceStore(ServiceStore):
         """
         raise NotImplementedError
 
-    #TODO Now only wps are returned as well as fetch_by_ulr... fetch_by_name has been patched to support other service_type
     def list_services(self, request=None):
         """
         Lists all services registered in magpie.
         """
         my_services = []
-        response = requests.get('{url}/services/types/wps'.format(url=self.magpie_url),
+        response = requests.get('{url}/users/current/services'.format(url=self.magpie_url),
                                 cookies=request.cookies)
         if response.status_code != 200:
             raise response.raise_for_status()
         services = json.loads(response.text)
-        if 'wps' in services['services']:
-            for key, service in services['services']['wps'].items():
+        for service_type in services['services']:
+            for key, service in services['services'][service_type].items():
                 my_services.append(Service(url=service['service_url'],
                                            name=service['service_name'],
                                            type=service['service_type']))
@@ -65,17 +64,10 @@ class MagpieServiceStore(ServiceStore):
         """
         Gets service for given ``name`` from magpie.
         """
-        response = requests.get('{url}/services/{name}'.format(url=self.magpie_url, name=name),
-                                cookies=request.cookies)
-        if response.status_code == 404:
-            raise ServiceNotFound
-        if response.status_code != 200:
-            raise response.raise_for_status()
-        services = json.loads(response.text)
-        if name in services:
-            return Service(url=services[name]['service_url'],
-                           name=services[name]['service_name'],
-                           type=services[name]['service_type'])
+        services = self.list_services(request=request)
+        for service in services:
+            if service.name == name:
+                return service
         raise ServiceNotFound
 
     def fetch_by_url(self, url, request=None):
