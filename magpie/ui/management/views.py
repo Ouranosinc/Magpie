@@ -305,6 +305,10 @@ class ManagementViews(object):
                 except Exception as e:
                     error_message = "There was an error when trying to get remote resources. "
                     error_message += "({})".format(repr(e))
+            elif u'clean_all' in self.request.POST:
+                ids_to_clean = self.request.POST.get('ids_to_clean').split(";")
+                for id_ in ids_to_clean:
+                    self.delete_resource(id_)
 
             if is_save_user_info:
                 check_response(requests.put(user_url, data=user_info, cookies=self.request.cookies))
@@ -349,7 +353,10 @@ class ManagementViews(object):
         now = datetime.datetime.now()
         last_sync = humanize.naturaltime(now - last_sync_datetime) if last_sync_datetime else "Never"
 
+        ids = self.get_ids_to_clean(res_perms)
+
         user_info[u'error_message'] = error_message
+        user_info[u'ids_to_clean'] = ";".join(ids)
         user_info[u'last_sync'] = last_sync
         user_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES_TYPES
         user_info[u'cur_svc_type'] = cur_svc_type

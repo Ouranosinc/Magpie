@@ -176,6 +176,14 @@
                     <span class="panel_value">Not implemented for this service type.</span>
                 %endif
             </p>
+            %if ids_to_clean:
+                <p class="panel_line">
+                    <span class="panel_entry">Note: </span>
+                    <span class="panel_value">Some resources are absent from the remote server </span>
+                    <input type="hidden" value="${ids_to_clean}" name="ids_to_clean">
+                    <input type="submit" class="button warning" value="Clean all" name="clean_all">
+                </p>
+            %endif
         </form>
         <div class="tree_header">
         <div class="tree_item">Resources</div>
