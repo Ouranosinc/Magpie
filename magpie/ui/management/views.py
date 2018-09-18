@@ -566,7 +566,7 @@ class ManagementViews(object):
         info = self.merge_remote_resources(cur_svc_type, res_perms, services, session)
         res_perms, ids_to_clean, last_sync_humanized, last_sync_delta = info
 
-        out_of_sync = last_sync_delta > datetime.timedelta(hours=3) if last_sync_delta else False
+        out_of_sync = last_sync_delta > OUT_OF_SYNC if last_sync_delta else False
 
         if out_of_sync:
             error_message = "There seems to be an issue synchronizing resources from this service."
@@ -607,9 +607,10 @@ class ManagementViews(object):
         if any(last_sync_datetimes):
             last_sync_datetime = min(filter(bool, last_sync_datetimes))
             now = datetime.datetime.now()
-            last_sync_humanized = humanize.naturaltime(now - last_sync_datetime)
             last_sync_delta = now - last_sync_datetime
-            ids_to_clean = self.get_ids_to_clean(res_perms)
+            last_sync_humanized = humanize.naturaltime(last_sync_delta)
+            for service in merged_resources.values():
+                ids_to_clean += self.get_ids_to_clean(service['children'])
         return merged_resources, ids_to_clean, last_sync_humanized, last_sync_delta
 
     def delete_resource(self, res_id):
