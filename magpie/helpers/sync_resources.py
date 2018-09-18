@@ -261,9 +261,9 @@ def _query_remote_resources_in_database(service_type, service_name, session):
     return {service_name: {'children': remote_resources, 'resource_type': 'directory'}}
 
 
-def get_last_sync(service_type, session):
+def get_last_sync(service_type, service_name, session):
     last_sync = None
-    service = session.query(models.Service).filter_by(type=service_type).first()
+    service = session.query(models.Service).filter_by(type=service_type, resource_name=service_name).first()
     _ensure_sync_info_exists(service.resource_id, session)
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service.resource_id, session)
     if sync_info:

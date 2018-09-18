@@ -343,21 +343,13 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        for service_name in services:
-            resources_for_service = sync_resources.merge_local_and_remote_resources(res_perms,
-                                                                                    cur_svc_type,
-                                                                                    service_name,
-                                                                                    session)
-            res_perms[service_name] = resources_for_service[service_name]
-
-        last_sync_datetime = sync_resources.get_last_sync(cur_svc_type, session)
-        now = datetime.datetime.now()
-        last_sync = humanize.naturaltime(now - last_sync_datetime) if last_sync_datetime else "Never"
-
-        ids = self.get_ids_to_clean(res_perms)
+        ids_to_clean, last_sync = self.merge_remote_resources(cur_svc_type,
+                                                              res_perms,
+                                                              services,
+                                                              session)
 
         user_info[u'error_message'] = error_message
-        user_info[u'ids_to_clean'] = ";".join(ids)
+        user_info[u'ids_to_clean'] = ";".join(ids_to_clean)
         user_info[u'last_sync'] = last_sync
         user_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES_TYPES
         user_info[u'cur_svc_type'] = cur_svc_type
@@ -566,21 +558,13 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        for service_name in services:
-            resources_for_service = sync_resources.merge_local_and_remote_resources(res_perms,
-                                                                                    cur_svc_type,
-                                                                                    service_name,
-                                                                                    session)
-            res_perms[service_name] = resources_for_service[service_name]
-
-        last_sync_datetime = sync_resources.get_last_sync(cur_svc_type, session)
-        now = datetime.datetime.now()
-        last_sync = humanize.naturaltime(now - last_sync_datetime) if last_sync_datetime else "Never"
-
-        ids = self.get_ids_to_clean(res_perms)
+        ids_to_clean, last_sync = self.merge_remote_resources(cur_svc_type,
+                                                              res_perms,
+                                                              services,
+                                                              session)
 
         group_info[u'error_message'] = error_message
-        group_info[u'ids_to_clean'] = ";".join(ids)
+        group_info[u'ids_to_clean'] = ";".join(ids_to_clean)
         group_info[u'last_sync'] = last_sync
         group_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES_TYPES
         group_info[u'group_name'] = group_name
@@ -592,6 +576,26 @@ class ManagementViews(object):
         group_info[u'resources'] = res_perms
         group_info[u'permissions'] = res_perm_names
         return add_template_data(self.request, data=group_info)
+
+    def merge_remote_resources(self, cur_svc_type, res_perms, services, session):
+        ids_to_clean = []
+        last_sync_datetimes = []
+        last_sync = "Never"
+        for service_name in services:
+            resources_for_service = sync_resources.merge_local_and_remote_resources(res_perms,
+                                                                                    cur_svc_type,
+                                                                                    service_name,
+                                                                                    session)
+            res_perms[service_name] = resources_for_service[service_name]
+
+            last_sync_service = sync_resources.get_last_sync(cur_svc_type, service_name, session)
+            last_sync_datetimes.append(last_sync_service)
+        if any(last_sync_datetimes):
+            last_sync_datetime = min(filter(bool, last_sync_datetimes))
+            now = datetime.datetime.now()
+            last_sync = humanize.naturaltime(now - last_sync_datetime)
+            ids_to_clean = self.get_ids_to_clean(res_perms)
+        return ids_to_clean, last_sync
 
     def delete_resource(self, res_id):
         url = '{url}/resources/{resource_id}'.format(url=self.magpie_url, resource_id=res_id)
