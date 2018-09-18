@@ -315,30 +315,6 @@ def fetch():
     session.close()
 
 
-def housekeeping():
-    """
-    Clean resources that are in the Resource table but have no
-    group or user permissions associated to them.
-    """
-    url = db.get_db_url()
-    engine = create_engine(url)
-
-    session = Session(bind=engine)
-
-    # loop the resource tree by reversed ordering (starting from the leaves)
-    # if the resource doesn't have any children or permissions, delete it
-    for resource in session.query(models.Resource).order_by(models.Resource.ordering.desc()):
-        if resource.resource_type_name == 'service':
-            continue
-        n_children = resource_tree_service.count_children(resource.resource_id, session)
-        if n_children == 0:
-            if not resource.group_permissions and not resource.user_permissions:
-                session.delete(resource)
-
-    session.commit()
-    session.close()
-
-
 def setup_cron_logger():
     log_path = constants.get_constant("MAGPIE_CRON_LOG")
     log_path = os.path.expandvars(log_path)
@@ -366,9 +342,6 @@ def main():
             return
         LOGGER.info("Starting to fetch data for all service types")
         fetch()
-
-        LOGGER.info("Starting housekeeping script")
-        housekeeping()
     except Exception:
         LOGGER.exception("There was an error running the housekeeping script")
         raise
