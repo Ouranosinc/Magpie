@@ -21,6 +21,8 @@ LOGGER = logging.getLogger(__name__)
 
 CRON_SERVICE = False
 
+OUT_OF_SYNC = datetime.timedelta(hours=3)
+
 SYNC_SERVICES_TYPES = defaultdict(lambda: sync_services._SyncServiceDefault)
 # noinspection PyTypeChecker
 SYNC_SERVICES_TYPES.update({

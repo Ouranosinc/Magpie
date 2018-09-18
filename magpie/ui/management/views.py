@@ -6,6 +6,7 @@ import humanize
 from magpie.definitions.pyramid_definitions import *
 from magpie.constants import get_constant
 from magpie.common import str2bool
+from magpie.helpers.sync_resources import OUT_OF_SYNC
 from magpie.services import service_type_dict
 from magpie.models import resource_type_dict
 from magpie.ui.management import check_response
@@ -343,15 +344,19 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        res_perms, ids_to_clean, last_sync = self.merge_remote_resources(cur_svc_type,
-                                                                         res_perms,
-                                                                         services,
-                                                                         session)
+        info = self.merge_remote_resources(cur_svc_type, res_perms, services, session)
+        res_perms, ids_to_clean, last_sync_humanized, last_sync_delta = info
+
+        out_of_sync = last_sync_delta > OUT_OF_SYNC if last_sync_delta else False
+
+        if out_of_sync:
+            error_message = "There seems to be an issue synchronizing resources from this service."
 
         user_info[u'error_message'] = error_message
         user_info[u'ids_to_clean'] = ";".join(ids_to_clean)
-        user_info[u'last_sync'] = last_sync
+        user_info[u'last_sync'] = last_sync_humanized
         user_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES_TYPES
+        user_info[u'out_of_sync'] = out_of_sync
         user_info[u'cur_svc_type'] = cur_svc_type
         user_info[u'svc_types'] = svc_types
         user_info[u'resources'] = res_perms
@@ -558,15 +563,19 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        res_perms, ids_to_clean, last_sync = self.merge_remote_resources(cur_svc_type,
-                                                                         res_perms,
-                                                                         services,
-                                                                         session)
+        info = self.merge_remote_resources(cur_svc_type, res_perms, services, session)
+        res_perms, ids_to_clean, last_sync_humanized, last_sync_delta = info
+
+        out_of_sync = last_sync_delta > datetime.timedelta(hours=3) if last_sync_delta else False
+
+        if out_of_sync:
+            error_message = "There seems to be an issue synchronizing resources from this service."
 
         group_info[u'error_message'] = error_message
         group_info[u'ids_to_clean'] = ";".join(ids_to_clean)
-        group_info[u'last_sync'] = last_sync
+        group_info[u'last_sync'] = last_sync_humanized
         group_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES_TYPES
+        group_info[u'out_of_sync'] = out_of_sync
         group_info[u'group_name'] = group_name
         group_info[u'cur_svc_type'] = cur_svc_type
         group_info[u'users'] = self.get_user_names()
@@ -580,25 +589,28 @@ class ManagementViews(object):
     def merge_remote_resources(self, cur_svc_type, res_perms, services, session):
         ids_to_clean = []
         last_sync_datetimes = []
-        last_sync = "Never"
+        last_sync_humanized = "Never"
+        last_sync_delta = None
 
         merged_resources = {}
 
         for service_name in services:
+            last_sync = sync_resources.get_last_sync(cur_svc_type, service_name, session)
+            last_sync_datetimes.append(last_sync)
+
             resources_for_service = sync_resources.merge_local_and_remote_resources(res_perms,
                                                                                     cur_svc_type,
                                                                                     service_name,
                                                                                     session)
             merged_resources[service_name] = resources_for_service[service_name]
 
-            last_sync_service = sync_resources.get_last_sync(cur_svc_type, service_name, session)
-            last_sync_datetimes.append(last_sync_service)
         if any(last_sync_datetimes):
             last_sync_datetime = min(filter(bool, last_sync_datetimes))
             now = datetime.datetime.now()
-            last_sync = humanize.naturaltime(now - last_sync_datetime)
+            last_sync_humanized = humanize.naturaltime(now - last_sync_datetime)
+            last_sync_delta = now - last_sync_datetime
             ids_to_clean = self.get_ids_to_clean(res_perms)
-        return merged_resources, ids_to_clean, last_sync
+        return merged_resources, ids_to_clean, last_sync_humanized, last_sync_delta
 
     def delete_resource(self, res_id):
         url = '{url}/resources/{resource_id}'.format(url=self.magpie_url, resource_id=res_id)

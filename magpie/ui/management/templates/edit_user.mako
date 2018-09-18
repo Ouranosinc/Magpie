@@ -176,7 +176,7 @@
                     <span class="panel_value">Not implemented for this service type.</span>
                 %endif
             </p>
-            %if ids_to_clean:
+            %if ids_to_clean and not out_of_sync:
                 <p class="panel_line">
                     <span class="panel_entry">Note: </span>
                     <span class="panel_value">Some resources are absent from the remote server </span>
