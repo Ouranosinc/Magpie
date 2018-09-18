@@ -294,11 +294,13 @@ class ManagementViews(object):
                 selected_groups = self.request.POST.getall('member')
                 removed_groups = list(set(own_groups) - set(selected_groups))
                 new_groups = list(set(selected_groups) - set(own_groups))
-                url_group = '{url}/users/{usr}/groups/{grp}'.format(url=self.magpie_url, usr=user_name, grp='{grp}')
                 for group in removed_groups:
-                    check_response(requests.delete(url_group.format(grp=group), cookies=self.request.cookies))
+                    url_group = '{url}/users/{usr}/groups/{grp}'.format(url=self.magpie_url, usr=user_name, grp=group)
+                    check_response(requests.delete(url_group, cookies=self.request.cookies))
                 for group in new_groups:
-                    check_response(requests.post(url_group.format(grp=group), cookies=self.request.cookies))
+                    url_group = '{url}/users/{usr}/groups'.format(url=self.magpie_url, usr=user_name)
+                    data = {'group_name': group}
+                    check_response(requests.post(url_group, data=data, cookies=self.request.cookies))
                 user_info[u'own_groups'] = self.get_user_groups(user_name)
 
         # display resources permissions per service type tab
@@ -382,11 +384,13 @@ class ManagementViews(object):
         removed_members = list(set(current_members) - set(selected_members))
         new_members = list(set(selected_members) - set(current_members))
 
-        url_base = '{url}/users/{usr}/groups/{grp}'.format(url=self.magpie_url, usr='{usr}', grp=group_name)
-        for user in removed_members:
-            check_response(requests.delete(url_base.format(usr=user), cookies=self.request.cookies))
-        for user in new_members:
-            check_response(requests.post(url_base.format(usr=user), cookies=self.request.cookies))
+        for user_name in removed_members:
+            url_group = '{url}/users/{usr}/groups/{grp}'.format(url=self.magpie_url, usr=user_name, grp=group_name)
+            check_response(requests.delete(url_group, cookies=self.request.cookies))
+        for user_name in new_members:
+            url_group = '{url}/users/{usr}/groups'.format(url=self.magpie_url, usr=user_name)
+            data = {'group_name': group_name}
+            check_response(requests.post(url_group, data=data, cookies=self.request.cookies))
 
     def edit_user_or_group_resource_permissions(self, user_or_group_name, resource_id, is_user=False):
         usr_grp_type = 'users' if is_user else 'groups'
