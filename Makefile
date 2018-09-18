@@ -143,7 +143,12 @@ install: sysinstall
 	@echo "Installing Magpie..."
 	python setup.py install
 
+.PHONY: cron
+cron:
+	@echo "Starting Cron service..."
+	cron
+
 .PHONY: start
-start: install
+start: cron install
 	@echo "Starting Magpie..."
 	exec gunicorn -b 0.0.0.0:2001 --paste "$(CUR_DIR)/magpie/magpie.ini" --workers 10 --preload

@@ -28,6 +28,4 @@ ADD magpie-cron /etc/cron.d/magpie-cron
 RUN chmod 0644 /etc/cron.d/magpie-cron
 RUN touch ~/magpie_cron_status.log
 
-CMD env >> /etc/environment && \
-    cron && \
-    make start
+CMD make start
