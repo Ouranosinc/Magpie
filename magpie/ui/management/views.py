@@ -241,6 +241,7 @@ class ManagementViews(object):
 
         error_message = None
 
+        # Todo:
         # Until the api is modified to make it possible to request from the RemoteResource table,
         # we have to access the database directly here
         session = self.request.db
@@ -511,6 +512,7 @@ class ManagementViews(object):
 
         error_message = None
 
+        # Todo:
         # Until the api is modified to make it possible to request from the RemoteResource table,
         # we have to access the database directly here
         session = self.request.db
