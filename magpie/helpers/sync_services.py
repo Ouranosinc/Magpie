@@ -44,8 +44,9 @@ class _SyncServiceInterface:
         pass
 
 
-class _SyncServiceGeoserver:
+class _SyncServiceGeoserver(_SyncServiceInterface):
     def __init__(self, service_name, geoserver_url):
+        super(_SyncServiceGeoserver, self).__init__()
         self.service_name = service_name
         self.geoserver_url = geoserver_url
 
@@ -65,8 +66,9 @@ class _SyncServiceGeoserver:
         return resources
 
 
-class _SyncServiceProjectAPI:
+class _SyncServiceProjectAPI(_SyncServiceInterface):
     def __init__(self, service_name, project_api_url):
+        super(_SyncServiceProjectAPI, self).__init__()
         self.service_name = service_name
         self.project_api_url = project_api_url
 
@@ -88,6 +90,7 @@ class _SyncServiceThreads(_SyncServiceInterface):
     DEPTH_DEFAULT = 3
 
     def __init__(self, service_name, thredds_url, depth=DEPTH_DEFAULT, **kwargs):
+        super(_SyncServiceThreads, self).__init__()
         self.service_name = service_name
         self.thredds_url = thredds_url
         self.depth = depth
@@ -118,6 +121,7 @@ class _SyncServiceThreads(_SyncServiceInterface):
 
 class _SyncServiceDefault(_SyncServiceInterface):
     def __init__(self, *_):
+        super(_SyncServiceDefault, self).__init__()
         pass
 
     def get_resources(self):
