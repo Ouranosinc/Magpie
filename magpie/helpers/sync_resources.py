@@ -32,6 +32,8 @@ SYNC_SERVICES_TYPES.update({
 
 def merge_local_and_remote_resources(resources_local, service_type, service_name, session):
     """Main function to sync resources with remote server"""
+    if not get_last_sync(service_type, service_name, session):
+        return resources_local
     remote_resources = _query_remote_resources_in_database(service_type, service_name, session=session)
     merged_resources = _merge_resources(resources_local, remote_resources)
     _sort_resources(merged_resources)
