@@ -343,10 +343,10 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        ids_to_clean, last_sync = self.merge_remote_resources(cur_svc_type,
-                                                              res_perms,
-                                                              services,
-                                                              session)
+        res_perms, ids_to_clean, last_sync = self.merge_remote_resources(cur_svc_type,
+                                                                         res_perms,
+                                                                         services,
+                                                                         session)
 
         user_info[u'error_message'] = error_message
         user_info[u'ids_to_clean'] = ";".join(ids_to_clean)
@@ -558,10 +558,10 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        ids_to_clean, last_sync = self.merge_remote_resources(cur_svc_type,
-                                                              res_perms,
-                                                              services,
-                                                              session)
+        res_perms, ids_to_clean, last_sync = self.merge_remote_resources(cur_svc_type,
+                                                                         res_perms,
+                                                                         services,
+                                                                         session)
 
         group_info[u'error_message'] = error_message
         group_info[u'ids_to_clean'] = ";".join(ids_to_clean)
@@ -581,12 +581,15 @@ class ManagementViews(object):
         ids_to_clean = []
         last_sync_datetimes = []
         last_sync = "Never"
+
+        merged_resources = {}
+
         for service_name in services:
             resources_for_service = sync_resources.merge_local_and_remote_resources(res_perms,
                                                                                     cur_svc_type,
                                                                                     service_name,
                                                                                     session)
-            res_perms[service_name] = resources_for_service[service_name]
+            merged_resources[service_name] = resources_for_service[service_name]
 
             last_sync_service = sync_resources.get_last_sync(cur_svc_type, service_name, session)
             last_sync_datetimes.append(last_sync_service)
@@ -595,7 +598,7 @@ class ManagementViews(object):
             now = datetime.datetime.now()
             last_sync = humanize.naturaltime(now - last_sync_datetime)
             ids_to_clean = self.get_ids_to_clean(res_perms)
-        return ids_to_clean, last_sync
+        return merged_resources, ids_to_clean, last_sync
 
     def delete_resource(self, res_id):
         url = '{url}/resources/{resource_id}'.format(url=self.magpie_url, resource_id=res_id)
