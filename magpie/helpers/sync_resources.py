@@ -19,6 +19,8 @@ from magpie.models import resource_tree_service
 
 LOGGER = logging.getLogger(__name__)
 
+CRON_SERVICE = False
+
 SYNC_SERVICES_TYPES = defaultdict(lambda: sync_services._SyncServiceDefault)
 # noinspection PyTypeChecker
 SYNC_SERVICES_TYPES.update({
@@ -276,7 +278,15 @@ def fetch_all_services_by_type(service_type, session):
     :param session:
     """
     for service in session.query(models.Service).filter_by(type=service_type):
-        fetch_single_service(service, session)
+        # noinspection PyBroadException
+        try:
+            fetch_single_service(service, session)
+        except:
+            if CRON_SERVICE:
+                LOGGER.exception("There was an error when fetching data from the url: %s" % service.url)
+                pass
+            else:
+                raise
 
 
 def fetch_single_service(service, session):
@@ -331,6 +341,9 @@ def main():
     """
     Main entry point for cron service.
     """
+    global CRON_SERVICE
+    CRON_SERVICE = True
+
     setup_cron_logger()
 
     LOGGER.info("Magpie cron started.")
@@ -343,7 +356,7 @@ def main():
         LOGGER.info("Starting to fetch data for all service types")
         fetch()
     except Exception:
-        LOGGER.exception("There was an error running the housekeeping script")
+        LOGGER.exception("An error occured")
         raise
 
     LOGGER.info("Success, exiting.")
