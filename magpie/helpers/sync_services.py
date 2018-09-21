@@ -96,10 +96,16 @@ class _SyncServiceThreads(_SyncServiceInterface):
         self.depth = depth
         self.kwargs = kwargs  # kwargs is passed to the requests.get method.
 
+    def _resource_id(self, resource):
+        id_ = resource.name
+        if len(resource.datasets) > 0:
+            id_ = resource.datasets[0].ID.split("/")[-1]
+        return id_
+
     def get_resources(self):
         def thredds_get_resources(url, depth, **kwargs):
             cat = threddsclient.read_url(url, **kwargs)
-            name = cat.name
+            name = self._resource_id(cat)
             if depth == self.depth:
                 name = self.service_name
             resource_type = 'directory'
