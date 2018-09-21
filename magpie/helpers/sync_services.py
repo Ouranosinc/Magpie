@@ -4,8 +4,6 @@ from collections import OrderedDict
 import requests
 import threddsclient
 
-THREDDS_DEPTH_DEFAULT = 3
-
 
 def is_valid_resource_schema(resources, ignore_resource_type=False):
     """
@@ -35,6 +33,17 @@ def is_valid_resource_schema(resources, ignore_resource_type=False):
 class _SyncServiceInterface:
     __metaclass__ = abc.ABCMeta
 
+    def __init__(self, service_name, url):
+        self.service_name = service_name
+        self.url = url
+
+    @abc.abstractproperty
+    def max_depth(self):
+        """
+        The max depth at which remote resources are fetched
+        :return: (int)
+        """
+
     @abc.abstractmethod
     def get_resources(self):
         """
@@ -47,15 +56,14 @@ class _SyncServiceInterface:
 
 
 class _SyncServiceGeoserver(_SyncServiceInterface):
-    def __init__(self, service_name, geoserver_url):
-        super(_SyncServiceGeoserver, self).__init__()
-        self.service_name = service_name
-        self.geoserver_url = geoserver_url
+    @property
+    def max_depth(self):
+        return None
 
     def get_resources(self):
         # Only workspaces are fetched for now
         resource_type = "route"
-        workspaces_url = "{}/{}".format(self.geoserver_url, "workspaces")
+        workspaces_url = "{}/{}".format(self.url, "workspaces")
         resp = requests.get(workspaces_url, headers={"Accept": "application/json"})
         resp.raise_for_status()
         workspaces_list = resp.json().get("workspaces", {}).get("workspace", {})
@@ -69,15 +77,14 @@ class _SyncServiceGeoserver(_SyncServiceInterface):
 
 
 class _SyncServiceProjectAPI(_SyncServiceInterface):
-    def __init__(self, service_name, project_api_url):
-        super(_SyncServiceProjectAPI, self).__init__()
-        self.service_name = service_name
-        self.project_api_url = project_api_url
+    @property
+    def max_depth(self):
+        return None
 
     def get_resources(self):
         # Only workspaces are fetched for now
         resource_type = "route"
-        projects_url = "/".join([self.project_api_url, "api", "Projects"])
+        projects_url = "/".join([self.url, "api", "Projects"])
         resp = requests.get(projects_url)
         resp.raise_for_status()
 
@@ -89,24 +96,22 @@ class _SyncServiceProjectAPI(_SyncServiceInterface):
 
 
 class _SyncServiceThreads(_SyncServiceInterface):
-    def __init__(self, service_name, thredds_url, depth=THREDDS_DEPTH_DEFAULT, **kwargs):
-        super(_SyncServiceThreads, self).__init__()
-        self.service_name = service_name
-        self.thredds_url = thredds_url
-        self.depth = depth
-        self.kwargs = kwargs  # kwargs is passed to the requests.get method.
+    @property
+    def max_depth(self):
+        return 3
 
-    def _resource_id(self, resource):
+    @staticmethod
+    def _resource_id(resource):
         id_ = resource.name
         if len(resource.datasets) > 0:
             id_ = resource.datasets[0].ID.split("/")[-1]
         return id_
 
     def get_resources(self):
-        def thredds_get_resources(url, depth, **kwargs):
-            cat = threddsclient.read_url(url, **kwargs)
+        def thredds_get_resources(url, depth):
+            cat = threddsclient.read_url(url)
             name = self._resource_id(cat)
-            if depth == self.depth:
+            if depth == self.max_depth:
                 name = self.service_name
             resource_type = 'directory'
             if cat.datasets and cat.datasets[0].content_type != "application/directory":
@@ -116,19 +121,19 @@ class _SyncServiceThreads(_SyncServiceInterface):
 
             if depth > 0:
                 for reference in cat.flat_references():
-                    tree_item[name]['children'].update(thredds_get_resources(reference.url, depth - 1, **kwargs))
+                    tree_item[name]['children'].update(thredds_get_resources(reference.url, depth - 1))
 
             return tree_item
 
-        resources = thredds_get_resources(self.thredds_url, self.depth, **self.kwargs)
+        resources = thredds_get_resources(self.url, self.max_depth)
         assert is_valid_resource_schema(resources), 'Error in Interface implementation'
         return resources
 
 
 class _SyncServiceDefault(_SyncServiceInterface):
-    def __init__(self, *_):
-        super(_SyncServiceDefault, self).__init__()
-        pass
+    @property
+    def max_depth(self):
+        return None
 
     def get_resources(self):
         return {}

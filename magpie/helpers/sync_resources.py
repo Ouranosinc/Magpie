@@ -15,8 +15,6 @@ from sqlalchemy.orm import Session
 
 from magpie import db, models, constants
 from magpie.helpers import sync_services
-from magpie.helpers.sync_services import THREDDS_DEPTH_DEFAULT
-from magpie.models import resource_tree_service
 
 LOGGER = logging.getLogger(__name__)
 
@@ -32,18 +30,24 @@ SYNC_SERVICES_TYPES.update({
     "project-api": sync_services._SyncServiceProjectAPI,
 })
 
+# try to instantiate classes right away
+for sync_service_class in SYNC_SERVICES_TYPES.values():
+    name, url = "", ""
+    sync_service_class(name, url)
+
 
 def merge_local_and_remote_resources(resources_local, service_type, service_name, session):
     """Main function to sync resources with remote server"""
     if not get_last_sync(service_type, service_name, session):
         return resources_local
     remote_resources = _query_remote_resources_in_database(service_type, service_name, session=session)
-    merged_resources = _merge_resources(resources_local, remote_resources)
+    max_depth = _get_max_depth(service_type)
+    merged_resources = _merge_resources(resources_local, remote_resources, max_depth)
     _sort_resources(merged_resources)
     return merged_resources
 
 
-def _merge_resources(resources_local, resources_remote):
+def _merge_resources(resources_local, resources_remote, max_depth=None):
     """
     Merge resources_local and resources_remote, adding the following keys to the output:
 
@@ -72,7 +76,7 @@ def _merge_resources(resources_local, resources_remote):
             current_path = "/".join([remote_path, str(resource_name_local)])
 
             depth = current_path.count("/")
-            deeper_than_fetched = depth >= THREDDS_DEPTH_DEFAULT
+            deeper_than_fetched = depth >= max_depth if max_depth is not None else False
 
             matches_remote = resource_name_local in _resources_remote
             resource_type = _resources_remote[resource_name_local]['resource_type'] if matches_remote else ""
@@ -248,6 +252,11 @@ def _format_resource_tree(children):
                          'resource_type': resource.resource_type}
         fmt_res_tree[resource.resource_name] = resource_dict
     return fmt_res_tree
+
+
+def _get_max_depth(service_type):
+    name, url = "", ""
+    return SYNC_SERVICES_TYPES[service_type](name, url).max_depth
 
 
 def _query_remote_resources_in_database(service_type, service_name, session):
