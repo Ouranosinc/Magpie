@@ -24,8 +24,11 @@ COPY ./ $MAGPIE_DIR
 RUN make install -f $MAGPIE_DIR/Makefile
 RUN make docs -f $MAGPIE_DIR/Makefile
 
+# magpie cron service
 ADD magpie-cron /etc/cron.d/magpie-cron
 RUN chmod 0644 /etc/cron.d/magpie-cron
 RUN touch ~/magpie_cron_status.log
+# set /etc/environment so that cron runs using the environment variables set by docker
+RUN env >> /etc/environment
 
 CMD make start
