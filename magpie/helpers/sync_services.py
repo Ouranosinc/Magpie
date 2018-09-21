@@ -4,6 +4,8 @@ from collections import OrderedDict
 import requests
 import threddsclient
 
+THREDDS_DEPTH_DEFAULT = 3
+
 
 def is_valid_resource_schema(resources, ignore_resource_type=False):
     """
@@ -87,9 +89,7 @@ class _SyncServiceProjectAPI(_SyncServiceInterface):
 
 
 class _SyncServiceThreads(_SyncServiceInterface):
-    DEPTH_DEFAULT = 3
-
-    def __init__(self, service_name, thredds_url, depth=DEPTH_DEFAULT, **kwargs):
+    def __init__(self, service_name, thredds_url, depth=THREDDS_DEPTH_DEFAULT, **kwargs):
         super(_SyncServiceThreads, self).__init__()
         self.service_name = service_name
         self.thredds_url = thredds_url

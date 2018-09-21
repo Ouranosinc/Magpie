@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from magpie import db, models, constants
 from magpie.helpers import sync_services
+from magpie.helpers.sync_services import THREDDS_DEPTH_DEFAULT
 from magpie.models import resource_tree_service
 
 LOGGER = logging.getLogger(__name__)
@@ -70,13 +71,16 @@ def _merge_resources(resources_local, resources_remote):
         for resource_name_local, values in _resources_local.items():
             current_path = "/".join([remote_path, str(resource_name_local)])
 
+            depth = current_path.count("/")
+            deeper_than_fetched = depth >= THREDDS_DEPTH_DEFAULT
+
             matches_remote = resource_name_local in _resources_remote
             resource_type = _resources_remote[resource_name_local]['resource_type'] if matches_remote else ""
             current_type_path = "/".join([remote_type_path, resource_type])
 
             values["remote_path"] = current_path if matches_remote else ""
             values["remote_type_path"] = current_type_path if matches_remote else ""
-            values["matches_remote"] = matches_remote
+            values["matches_remote"] = matches_remote or deeper_than_fetched
             values["resource_type"] = resource_type
 
             resource_remote_children = _resources_remote[resource_name_local]['children'] if matches_remote else {}
@@ -367,4 +371,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    fetch()
