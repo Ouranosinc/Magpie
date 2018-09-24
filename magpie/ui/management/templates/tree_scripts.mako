@@ -42,7 +42,7 @@ li.Collapsed {
     <ul>
      %for key in tree:
         <div class="clear"/>
-        <form id="resource_${tree[key]['id']}" action="${request.path}" method="post">
+        <form id="resource_${tree[key]['id']}_${tree[key].get('remote_id', '')}" action="${request.path}" method="post">
             % if tree[key]['children']:
             <li class="Expanded">
             % else:
@@ -50,8 +50,7 @@ li.Collapsed {
             % endif
                 <div class="tree_item">${key}</div>
                 <input type="hidden" value=${tree[key]['id']} name="resource_id">
-                <input type="hidden" value=${tree[key].get('remote_path', '')} name="remote_path">
-                <input type="hidden" value=${tree[key].get('remote_type_path', '')} name="remote_type_path">
+                <input type="hidden" value=${tree[key].get('remote_id', '')} name="remote_id">
                 <input type="hidden" value=${tree[key].get('matches_remote', '')} name="matches_remote">
                 ${item_renderer(key, tree[key], level)}
             </li>

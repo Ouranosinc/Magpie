@@ -51,9 +51,8 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
     """
     Merge resources_local and resources_remote, adding the following keys to the output:
 
-        - remote_path: '/' separated string representing the remote path of the resource
+        - remote_id: id of the RemoteResource
         - matches_remote: True or False depending if the resource is present on the remote server
-        - id: set to the value of 'remote_path' if the resource if remote only
 
     returns a dictionary of the form validated by 'sync_services.is_valid_resource_schema'
 
@@ -61,7 +60,7 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
     if not resources_remote:
         return resources_local
 
-    assert sync_services.is_valid_resource_schema(resources_local, ignore_resource_type=True)
+    assert sync_services.is_valid_resource_schema(resources_local)
     assert sync_services.is_valid_resource_schema(resources_remote)
 
     if not resources_local:
@@ -70,41 +69,29 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
     # don't overwrite the input arguments
     merged_resources = copy.deepcopy(resources_local)
 
-    def recurse(_resources_local, _resources_remote, remote_path="", remote_type_path=""):
+    def recurse(_resources_local, _resources_remote, depth=0):
         # loop local resources, looking for matches in remote resources
         for resource_name_local, values in _resources_local.items():
-            current_path = "/".join([remote_path, str(resource_name_local)])
-
-            depth = current_path.count("/")
+            matches_remote = resource_name_local in _resources_remote
+            remote_id = _resources_remote.get(resource_name_local, {}).get('remote_id', '')
             deeper_than_fetched = depth >= max_depth if max_depth is not None else False
 
-            matches_remote = resource_name_local in _resources_remote
-            resource_type = _resources_remote[resource_name_local]['resource_type'] if matches_remote else ""
-            current_type_path = "/".join([remote_type_path, resource_type])
-
-            values["remote_path"] = current_path if matches_remote else ""
-            values["remote_type_path"] = current_type_path if matches_remote else ""
-            values["matches_remote"] = matches_remote or deeper_than_fetched
-            values["resource_type"] = resource_type
+            values['remote_id'] = remote_id
+            values['matches_remote'] = matches_remote or deeper_than_fetched
 
             resource_remote_children = _resources_remote[resource_name_local]['children'] if matches_remote else {}
-
-            recurse(values['children'], resource_remote_children, current_path, current_type_path)
+            recurse(values['children'], resource_remote_children, depth + 1)
 
         # loop remote resources, looking for matches in local resources
         for resource_name_remote, values in _resources_remote.items():
             if resource_name_remote not in _resources_local:
-                current_path = "/".join([remote_path, str(resource_name_remote)])
-                current_type_path = "/".join([remote_type_path, values['resource_type']])
                 new_resource = {'permission_names': [],
                                 'children': {},
-                                'resource_type': values['resource_type'],
-                                'id': current_path,
-                                'remote_path': current_path,
-                                'remote_type_path': current_type_path,
+                                'id': None,
+                                'remote_id': values['remote_id'],
                                 'matches_remote': True}
                 _resources_local[resource_name_remote] = new_resource
-                recurse(new_resource['children'], values['children'], current_path, current_type_path)
+                recurse(new_resource['children'], values['children'], depth + 1)
 
     recurse(merged_resources, resources_remote)
 
@@ -249,7 +236,7 @@ def _format_resource_tree(children):
         resource = child_dict[u'node']
         new_children = child_dict[u'children']
         resource_dict = {'children': _format_resource_tree(new_children),
-                         'resource_type': resource.resource_type}
+                         'remote_id': resource.resource_id}
         fmt_res_tree[resource.resource_name] = resource_dict
     return fmt_res_tree
 
@@ -275,7 +262,7 @@ def _query_remote_resources_in_database(service_type, service_name, session):
     tree = _get_resource_children(main_resource, session)
 
     remote_resources = _format_resource_tree(tree)
-    return {service_name: {'children': remote_resources, 'resource_type': 'directory'}}
+    return {service_name: {'children': remote_resources, 'remote_id': main_resource.resource_id}}
 
 
 def get_last_sync(service_type, service_name, session):

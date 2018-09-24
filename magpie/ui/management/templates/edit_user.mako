@@ -8,7 +8,7 @@
         % if perm in value['permission_names']:
             <div class="perm_checkbox">
                 <input type="checkbox" value="${perm}" name="permission"
-                       onchange="document.getElementById('resource_${value['id']}').submit()" checked
+                       onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()" checked
                 %if inherited_permissions:
                     disabled
                 %endif
@@ -17,7 +17,7 @@
         % else:
             <div class="perm_checkbox">
                 <input type="checkbox" value="${perm}" name="permission"
-                       onchange="document.getElementById('resource_${value['id']}').submit()"
+                       onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()"
                 %if inherited_permissions:
                     disabled
                 %endif

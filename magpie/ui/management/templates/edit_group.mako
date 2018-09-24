@@ -7,10 +7,10 @@
         <div class="perm_checkbox">
             % if perm in value['permission_names']:
             <input type="checkbox" value="${perm}" name="permission"
-                   onchange="document.getElementById('resource_${value['id']}').submit()" checked>
+                   onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()" checked>
             % else:
             <input type="checkbox" value="${perm}" name="permission"
-                   onchange="document.getElementById('resource_${value['id']}').submit()">
+                   onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()">
             % endif
         </div>
     %endfor

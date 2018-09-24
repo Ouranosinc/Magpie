@@ -5,28 +5,24 @@ import requests
 import threddsclient
 
 
-def is_valid_resource_schema(resources, ignore_resource_type=False):
+def is_valid_resource_schema(resources):
     """
     Returns True if the structure of the input dictionary is a tree of the form:
 
-    {'resource_name_1': {'children': {'resource_name_3': {'children': {}, 'resource_type': ...},
-                                      'resource_name_4': {'children': {}, 'resource_type': ...}
+    {'resource_name_1': {'children': {'resource_name_3': {'children': {}},
+                                      'resource_name_4': {'children': {}}
                                       },
-                         'resource_type': ...
                          },
-     'resource_name_2': {'children': {}, resource_type': ...}
+     'resource_name_2': {'children': {}}
      }
     :return: bool
     """
     for resource_name, values in resources.items():
         if 'children' not in values:
             return False
-        if not ignore_resource_type and 'resource_type' not in values:
-            return False
         if not isinstance(values['children'], (OrderedDict, dict)):
             return False
-        return is_valid_resource_schema(values['children'],
-                                        ignore_resource_type=ignore_resource_type)
+        return is_valid_resource_schema(values['children'])
     return True
 
 

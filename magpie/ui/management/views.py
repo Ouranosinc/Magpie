@@ -8,7 +8,7 @@ from magpie.constants import get_constant
 from magpie.common import str2bool
 from magpie.helpers.sync_resources import OUT_OF_SYNC
 from magpie.services import service_type_dict
-from magpie.models import resource_type_dict
+from magpie.models import resource_type_dict, remote_resource_tree_service
 from magpie.ui.management import check_response
 from magpie.helpers import sync_resources
 from magpie.ui.home import add_template_data
@@ -274,14 +274,9 @@ class ManagementViews(object):
                 # 'clean_resource' must be above 'edit_permissions' because they're in the same form.
                 self.delete_resource(res_id)
             elif u'edit_permissions' in self.request.POST:
-                remote_path = self.request.POST.get('remote_path')
-                if remote_path:
-                    remote_type_path = self.request.POST.get('remote_type_path')
-                    res_id = self.add_remote_resource(cur_svc_type,
-                                                      user_name,
-                                                      remote_path,
-                                                      remote_type_path,
-                                                      is_user=True)
+                if not res_id or res_id == 'None':
+                    remote_id = int(self.request.POST.get('remote_id'))
+                    res_id = self.add_remote_resource(cur_svc_type, user_name, remote_id, is_user=True)
                 self.edit_user_or_group_resource_permissions(user_name, res_id, is_user=True)
             elif u'edit_group_membership' in self.request.POST:
                 is_edit_group_membership = True
@@ -535,10 +530,9 @@ class ManagementViews(object):
                 # 'clean_resource' must be above 'edit_permissions' because they're in the same form.
                 self.delete_resource(res_id)
             elif u'edit_permissions' in self.request.POST:
-                remote_path = self.request.POST.get('remote_path')
-                if remote_path:
-                    remote_type_path = self.request.POST.get('remote_type_path')
-                    res_id = self.add_remote_resource(cur_svc_type, group_name, remote_path, remote_type_path)
+                if not res_id or res_id == 'None':
+                    remote_id = int(self.request.POST.get('remote_id'))
+                    res_id = self.add_remote_resource(cur_svc_type, group_name, remote_id, is_user=False)
                 self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
             elif u'member' in self.request.POST:
                 self.edit_group_users(group_name)
@@ -631,7 +625,7 @@ class ManagementViews(object):
             ids += self.get_ids_to_clean(values['children'])
         return ids
 
-    def add_remote_resource(self, service_type, user_or_group, resource_path, remote_type_path, is_user=False):
+    def add_remote_resource(self, service_type, user_or_group, remote_id, is_user=False):
         try:
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(user_or_group,
                                                                                           services=[service_type],
@@ -640,32 +634,33 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        def traverse_path_and_post(resources, path, type_path, parent_id=None):
-            if not path:
-                return parent_id
-            current_name = path.pop(0)
-            current_type = type_path.pop(0)
-            if current_name in resources:
-                res_id = traverse_path_and_post(resources[current_name]['children'],
-                                                path,
-                                                type_path,
-                                                parent_id=resources[current_name]['id'])
+        # Todo:
+        # Until the api is modified to make it possible to request from the RemoteResource table,
+        # we have to access the database directly here
+        session = self.request.db
+
+        # get the parent resources for this remote_id
+        parents = remote_resource_tree_service.path_upper(remote_id, db_session=session)
+        parents = list(reversed(list(parents)))
+
+        parent_id = None
+        current_resources = res_perms
+        for remote_resource in parents:
+            name = remote_resource.resource_name
+            if name in current_resources:
+                parent_id = current_resources[name]['id']
+                current_resources = current_resources[name]['children']
             else:
-                resources_url = '{url}/resources'.format(url=self.magpie_url)
                 data = {
-                    'resource_name': current_name,
-                    'resource_type': current_type,
+                    'resource_name': name,
+                    'resource_type': remote_resource.resource_type,
                     'parent_id': parent_id,
                 }
+                resources_url = '{url}/resources'.format(url=self.magpie_url)
                 response = check_response(requests.post(resources_url, data=data, cookies=self.request.cookies))
-                res_id = response.json()['resource']['resource_id']
-                if path:
-                    res_id = traverse_path_and_post({}, path, type_path, parent_id=res_id)
-            return res_id
+                parent_id = response.json()['resource']['resource_id']
 
-        path_list = resource_path.split("/")[1:]
-        remote_type_path_list = remote_type_path.split("/")[1:]
-        return traverse_path_and_post(res_perms, path_list, remote_type_path_list)
+        return parent_id
 
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
     def view_services(self):
