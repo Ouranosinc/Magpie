@@ -336,6 +336,30 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
     @pytest.mark.groups
     @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
+    def test_PostUserGroup_assign(self):
+        route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
+        data = {'group_name': get_constant('MAGPIE_ANONYMOUS_GROUP')}
+        resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers, cookies=self.cookies, data=data)
+        utils.check_response_basic_info(resp, 201)
+
+    @pytest.mark.groups
+    @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
+    def test_PostUserGroup_not_found(self):
+        route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
+        data = {'group_name': 'not_found'}
+        resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers, cookies=self.cookies, data=data)
+        utils.check_response_basic_info(resp, 404)
+
+    @pytest.mark.groups
+    @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
+    def test_PostUserGroup_conflict(self):
+        route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
+        data = {'group_name': get_constant('MAGPIE_ADMIN_GROUP')}
+        resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers, cookies=self.cookies, data=data)
+        utils.check_response_basic_info(resp, 409)
+
+    @pytest.mark.groups
+    @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
     def test_GetGroupUsers(self):
         route = '/groups/{grp}/users'.format(grp=get_constant('MAGPIE_ADMIN_GROUP'))
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
