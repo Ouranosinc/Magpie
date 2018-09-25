@@ -9,11 +9,13 @@ def format_resource(resource, permissions=None, basic_info=False):
         if info:
             return {
                 u'resource_name': str(res.resource_name),
+                u'resource_display_name': res.resource_display_name.encode('utf-8'),
                 u'resource_type': str(res.resource_type),
                 u'resource_id': res.resource_id
             }
         return {
             u'resource_name': str(res.resource_name),
+            u'resource_display_name': res.resource_display_name.encode('utf-8'),
             u'resource_type': str(res.resource_type),
             u'resource_id': res.resource_id,
             u'parent_id': res.parent_id,
