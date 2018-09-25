@@ -17,10 +17,10 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('resources', sa.Column('display_name', sa.Unicode(100), nullable=True))
-    op.add_column('remote_resources', sa.Column('display_name', sa.Unicode(100), nullable=True))
+    op.add_column('resources', sa.Column('resource_display_name', sa.Unicode(100), nullable=True))
+    op.add_column('remote_resources', sa.Column('resource_display_name', sa.Unicode(100), nullable=True))
 
 
 def downgrade():
-    op.drop_column('resources', 'display_name')
-    op.drop_column('remote_resources', 'display_name')
+    op.drop_column('resources', 'resource_display_name')
+    op.drop_column('remote_resources', 'resource_display_name')
