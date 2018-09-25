@@ -86,7 +86,7 @@ class _SyncServiceProjectAPI(_SyncServiceInterface):
 
         projects = {p["id"]: {"children": {},
                               "resource_type": resource_type,
-                              "display_name": p["name"]}
+                              "resource_display_name": p["name"]}
                     for p in resp.json()}
 
         resources = {self.service_name: {"children": projects, "resource_type": resource_type}}
