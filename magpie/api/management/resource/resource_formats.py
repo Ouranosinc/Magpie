@@ -6,23 +6,25 @@ from magpie.api.api_except import evaluate_call
 
 def format_resource(resource, permissions=None, basic_info=False):
     def fmt_res(res, perms, info):
-        if info:
-            return {
-                u'resource_name': str(res.resource_name),
-                u'resource_display_name': res.resource_display_name.encode('utf-8'),
-                u'resource_type': str(res.resource_type),
-                u'resource_id': res.resource_id
-            }
-        return {
-            u'resource_name': str(res.resource_name),
-            u'resource_display_name': res.resource_display_name.encode('utf-8'),
+        resource_name = str(res.resource_name)
+        resource_display_name = resource_name
+        if res.resource_display_name:
+            resource_display_name = res.resource_display_name.encode('utf-8')
+
+        result = {
+            u'resource_name': resource_name,
+            u'resource_display_name': resource_display_name,
             u'resource_type': str(res.resource_type),
-            u'resource_id': res.resource_id,
-            u'parent_id': res.parent_id,
-            u'root_service_id': res.root_service_id,
-            u'children': {},
-            u'permission_names': list() if perms is None else sorted(perms)
+            u'resource_id': res.resource_id
         }
+        if not info:
+            result.update({
+                u'parent_id': res.parent_id,
+                u'root_service_id': res.root_service_id,
+                u'children': {},
+                u'permission_names': list() if perms is None else sorted(perms)
+            })
+        return result
 
     return evaluate_call(
         lambda: fmt_res(resource, permissions, basic_info),

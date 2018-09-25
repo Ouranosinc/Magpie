@@ -238,9 +238,10 @@ def _format_resource_tree(children):
     for child_id, child_dict in children.items():
         resource = child_dict[u'node']
         new_children = child_dict[u'children']
+        resource_display_name = resource.resource_display_name or resource.resource_name
         resource_dict = {'children': _format_resource_tree(new_children),
                          'remote_id': resource.resource_id,
-                         'resource_display_name': resource.resource_display_name}
+                         'resource_display_name': resource_display_name}
         fmt_res_tree[resource.resource_name] = resource_dict
     return fmt_res_tree
 
