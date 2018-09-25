@@ -527,13 +527,15 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
         data = {
             "resource_name": self.test_resource_name,
+            "resource_display_name": self.test_resource_name,
             "resource_type": self.test_resource_type,
             "parent_id": service_resource_id
         }
         resp = utils.test_request(self.url, 'POST', '/resources',
                                   headers=self.json_headers, cookies=self.cookies, data=data)
         json_body = utils.check_response_basic_info(resp, 201)
-        utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type, self.version)
+        utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
+                                            self.test_resource_name, self.version)
 
     @pytest.mark.resources
     @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
@@ -546,13 +548,15 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
         data = {
             "resource_name": self.test_resource_name,
+            "resource_display_name": self.test_resource_name,
             "resource_type": self.test_resource_type,
             "parent_id": direct_resource_id
         }
         resp = utils.test_request(self.url, 'POST', '/resources',
                                   headers=self.json_headers, cookies=self.cookies, data=data)
         json_body = utils.check_response_basic_info(resp, 201)
-        utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type, self.version)
+        utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
+                                            self.test_resource_name, self.version)
 
     @pytest.mark.resources
     @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
