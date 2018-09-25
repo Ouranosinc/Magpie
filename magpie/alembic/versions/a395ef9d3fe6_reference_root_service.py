@@ -52,7 +52,7 @@ def upgrade():
             op.add_column('resources', sa.Column('root_service_id', sa.Integer(), nullable=True))
 
         # add existing resource references to their root service, loop through reference tree chain
-        all_resources = session.query(models.Resource)
+        all_resources = session.query(models.Resource.parent_id)
         for resource in all_resources:
             service_resource = get_resource_root_service(resource, session)
             if service_resource.resource_id != resource.resource_id:
