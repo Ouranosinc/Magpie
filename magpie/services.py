@@ -287,24 +287,6 @@ class ServiceAPI(ServiceI):
         return u'write'
 
 
-class ServiceGeoserverAPI(ServiceAPI):
-    def __init__(self, service, request):
-        super(ServiceGeoserverAPI, self).__init__(service, request)
-
-    @property
-    def __acl__(self):
-        return ServiceAPI.route_acl.fget(self)
-
-
-class ServiceProjectAPI(ServiceAPI):
-    def __init__(self, service, request):
-        super(ServiceProjectAPI, self).__init__(service, request)
-
-    @property
-    def __acl__(self):
-        return ServiceAPI.route_acl.fget(self, sub_api_route='api')
-
-
 class ServiceWFS(ServiceI):
 
     permission_names = [
@@ -411,10 +393,9 @@ class ServiceTHREDDS(ServiceI):
 
 service_type_dict = {
     u'access':          ServiceAccess,
-    u'geoserver-api':   ServiceGeoserverAPI,
+    u'api':             ServiceAPI,
     u'geoserverwms':    ServiceGeoserver,
     u'ncwms':           ServiceNCWMS2,
-    u'project-api':     ServiceProjectAPI,
     u'thredds':         ServiceTHREDDS,
     u'wfs':             ServiceWFS,
     u'wps':             ServiceWPS,
