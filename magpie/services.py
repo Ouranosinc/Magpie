@@ -282,7 +282,7 @@ class ServiceAPI(ServiceI):
         return self.acl
 
     def permission_requested(self):
-        if self.request.method == 'GET':
+        if self.request.method.upper() in ['GET', 'HEAD']:
             return u'read'
         return u'write'
 
