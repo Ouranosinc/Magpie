@@ -247,6 +247,12 @@ class ManagementViews(object):
         # we have to access the database directly here
         session = self.request.db
 
+        try:
+            # The service type is 'default'. This function replaces cur_svc_type with the first service type.
+            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
+        except Exception as e:
+            raise HTTPBadRequest(detail=repr(e))
+
         user_resp = requests.get(user_url, cookies=self.request.cookies)
         check_response(user_resp)
         user_info = user_resp.json()['user']
@@ -333,7 +339,6 @@ class ManagementViews(object):
 
         # display resources permissions per service type tab
         try:
-            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(
                 user_name, services, cur_svc_type, is_user=True, is_inherited_permissions=inherited_permissions)
         except Exception as e:
@@ -507,6 +512,12 @@ class ManagementViews(object):
         # we have to access the database directly here
         session = self.request.db
 
+        try:
+            # The service type is 'default'. This function replaces cur_svc_type with the first service type.
+            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
+        except Exception as e:
+            raise HTTPBadRequest(detail=repr(e))
+
         # move to service or edit requested group/permission changes
         if self.request.method == 'POST':
             res_id = self.request.POST.get('resource_id')
@@ -549,7 +560,6 @@ class ManagementViews(object):
 
         # display resources permissions per service type tab
         try:
-            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(group_name, services,
                                                                                           cur_svc_type, is_user=False)
         except Exception as e:
