@@ -36,11 +36,11 @@ for sync_service_class in SYNC_SERVICES_TYPES.values():
     sync_service_class(name, url)
 
 
-def merge_local_and_remote_resources(resources_local, service_type, service_name, session):
+def merge_local_and_remote_resources(resources_local, service_type, service_id, session):
     """Main function to sync resources with remote server"""
-    if not get_last_sync(service_type, service_name, session):
+    if not get_last_sync(service_id, session):
         return resources_local
-    remote_resources = _query_remote_resources_in_database(service_type, service_name, session=session)
+    remote_resources = _query_remote_resources_in_database(service_id, session=session)
     max_depth = _get_max_depth(service_type)
     merged_resources = _merge_resources(resources_local, remote_resources, max_depth)
     _sort_resources(merged_resources)
@@ -246,30 +246,29 @@ def _get_max_depth(service_type):
     return SYNC_SERVICES_TYPES[service_type](name, url).max_depth
 
 
-def _query_remote_resources_in_database(service_type, service_name, session):
+def _query_remote_resources_in_database(service_id, session):
     """
     Reads remote resources from the RemoteResources table. No external request is made.
     :param service_type:
     :param session:
     :return: a dictionary of the form defined in 'sync_services.is_valid_resource_schema'
     """
-    service = session.query(models.Service).filter_by(type=service_type, resource_name=service_name).first()
-    _ensure_sync_info_exists(service.resource_id, session)
+    service = session.query(models.Service).filter_by(resource_id=service_id).first()
+    _ensure_sync_info_exists(service_id, session)
 
-    sync_info = models.RemoteResourcesSyncInfo.by_service_id(service.resource_id, session)
+    sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)
     main_resource = session.query(models.RemoteResource).filter_by(
         resource_id=sync_info.remote_resource_id).first()
     tree = _get_resource_children(main_resource, session)
 
     remote_resources = _format_resource_tree(tree)
-    return {service_name: {'children': remote_resources, 'remote_id': main_resource.resource_id}}
+    return {service.resource_name: {'children': remote_resources, 'remote_id': main_resource.resource_id}}
 
 
-def get_last_sync(service_type, service_name, session):
+def get_last_sync(service_id, session):
     last_sync = None
-    service = session.query(models.Service).filter_by(type=service_type, resource_name=service_name).first()
-    _ensure_sync_info_exists(service.resource_id, session)
-    sync_info = models.RemoteResourcesSyncInfo.by_service_id(service.resource_id, session)
+    _ensure_sync_info_exists(service_id, session)
+    sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)
     if sync_info:
         last_sync = sync_info.last_sync
     return last_sync

@@ -339,13 +339,11 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        info = self.merge_remote_resources(cur_svc_type, res_perms, services, session)
-        res_perms, ids_to_clean, last_sync_humanized, last_sync_delta = info
-
-        out_of_sync = last_sync_delta > OUT_OF_SYNC if last_sync_delta else False
+        info = self.get_remote_resources_info(cur_svc_type, res_perms, services, session)
+        res_perms, ids_to_clean, last_sync_humanized, out_of_sync = info
 
         if out_of_sync:
-            error_message = "There seems to be an issue synchronizing resources from this service."
+            error_message = self.make_out_of_sync_message(out_of_sync)
 
         user_info[u'error_message'] = error_message
         user_info[u'ids_to_clean'] = ";".join(ids_to_clean)
@@ -557,13 +555,11 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        info = self.merge_remote_resources(cur_svc_type, res_perms, services, session)
-        res_perms, ids_to_clean, last_sync_humanized, last_sync_delta = info
-
-        out_of_sync = last_sync_delta > OUT_OF_SYNC if last_sync_delta else False
+        info = self.get_remote_resources_info(cur_svc_type, res_perms, services, session)
+        res_perms, ids_to_clean, last_sync_humanized, out_of_sync = info
 
         if out_of_sync:
-            error_message = "There seems to be an issue synchronizing resources from this service."
+            error_message = self.make_out_of_sync_message(out_of_sync)
 
         group_info[u'error_message'] = error_message
         group_info[u'ids_to_clean'] = ";".join(ids_to_clean)
@@ -580,32 +576,43 @@ class ManagementViews(object):
         group_info[u'permissions'] = res_perm_names
         return add_template_data(self.request, data=group_info)
 
-    def merge_remote_resources(self, cur_svc_type, res_perms, services, session):
-        ids_to_clean = []
-        last_sync_datetimes = []
+    def make_out_of_sync_message(self, out_of_sync):
+        this = "this service" if len(out_of_sync) == 1 else "these services"
+        error_message = ("There seems to be an issue synchronizing resources from "
+                         "{}: {}".format(this, ",".join(out_of_sync)))
+        return error_message
+
+    def get_remote_resources_info(self, cur_svc_type, res_perms, services, session):
         last_sync_humanized = "Never"
-        last_sync_delta = None
+        ids_to_clean, out_of_sync = [], []
+        now = datetime.datetime.now()
 
-        merged_resources = {}
-
-        for service_name in services:
-            last_sync = sync_resources.get_last_sync(cur_svc_type, service_name, session)
-            last_sync_datetimes.append(last_sync)
-
-            resources_for_service = sync_resources.merge_local_and_remote_resources(res_perms,
-                                                                                    cur_svc_type,
-                                                                                    service_name,
-                                                                                    session)
-            merged_resources[service_name] = resources_for_service[service_name]
+        service_ids = [s["resource_id"] for s in services.values()]
+        last_sync_datetimes = self.get_last_sync_datetimes(service_ids, session)
 
         if any(last_sync_datetimes):
             last_sync_datetime = min(filter(bool, last_sync_datetimes))
-            now = datetime.datetime.now()
-            last_sync_delta = now - last_sync_datetime
-            last_sync_humanized = humanize.naturaltime(last_sync_delta)
-            for service in merged_resources.values():
-                ids_to_clean += self.get_ids_to_clean(service['children'])
-        return merged_resources, ids_to_clean, last_sync_humanized, last_sync_delta
+            last_sync_humanized = humanize.naturaltime(now - last_sync_datetime)
+            res_perms = self.merge_remote_resources(cur_svc_type, res_perms, services, session)
+
+        for last_sync, service_name in zip(last_sync_datetimes, services):
+            if last_sync:
+                ids_to_clean += self.get_ids_to_clean(res_perms[service_name]["children"])
+                if now - last_sync > OUT_OF_SYNC:
+                    out_of_sync.append(service_name)
+        return res_perms, ids_to_clean, last_sync_humanized, out_of_sync
+
+    def merge_remote_resources(self, cur_svc_type, res_perms, services, session):
+        merged_resources = {}
+        for service_name, service_values in services.items():
+            service_id = service_values["resource_id"]
+            merge = sync_resources.merge_local_and_remote_resources
+            resources_for_service = merge(res_perms, cur_svc_type, service_id, session)
+            merged_resources[service_name] = resources_for_service[service_name]
+        return merged_resources
+
+    def get_last_sync_datetimes(self, service_ids, session):
+        return [sync_resources.get_last_sync(s, session) for s in service_ids]
 
     def delete_resource(self, res_id):
         url = '{url}/resources/{resource_id}'.format(url=self.magpie_url, resource_id=res_id)
