@@ -135,7 +135,7 @@ def _get_remote_resources(service):
     if service_url.endswith("/"):  # remove trailing slash
         service_url = service_url[:-1]
 
-    sync_service_class = SYNC_SERVICES_TYPES.get(service.type.lower(), sync_services._SyncServiceDefault)
+    sync_service_class = SYNC_SERVICES_TYPES.get(service.sync_type.lower(), sync_services._SyncServiceDefault)
     sync_service = sync_service_class(service.resource_name, service_url)
     return sync_service.get_resources()
 
