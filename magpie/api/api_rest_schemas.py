@@ -477,6 +477,11 @@ class ResourceBodySchema(colander.MappingSchema):
         description="Name of the resource",
         example="thredds"
     )
+    resource_display_name = colander.SchemaNode(
+        colander.String(),
+        description="Display name of the resource",
+        example="Birdhouse Thredds Data Server"
+    )
     resource_type = colander.SchemaNode(
         colander.String(),
         description="Type of the resource",
@@ -665,6 +670,11 @@ class Resources_POST_BodySchema(colander.MappingSchema):
     resource_name = colander.SchemaNode(
         colander.String(),
         description="Name of the resource to create"
+    )
+    resource_display_name = colander.SchemaNode(
+        colander.String(),
+        description="Display name of the resource to create, defaults to resource_name.",
+        missing=colander.drop
     )
     resource_type = colander.SchemaNode(
         colander.String(),
