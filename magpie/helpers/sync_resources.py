@@ -107,7 +107,7 @@ def _sort_resources(resources):
     :return: None
     """
     for resource_name, values in resources.items():
-        values['children'] = OrderedDict(sorted(values['children'].iteritems()))
+        values['children'] = OrderedDict(sorted(values['children'].items()))
         return _sort_resources(values['children'])
 
 

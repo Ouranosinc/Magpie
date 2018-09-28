@@ -619,7 +619,7 @@ class ManagementViews(object):
 
     def get_ids_to_clean(self, resources):
         ids = []
-        for resource_name, values in resources.iteritems():
+        for resource_name, values in resources.items():
             if "matches_remote" in values and not values["matches_remote"]:
                 ids.append(values['id'])
             ids += self.get_ids_to_clean(values['children'])
