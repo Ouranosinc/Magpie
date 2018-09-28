@@ -258,9 +258,8 @@ class ServiceAPI(ServiceI):
 
     @property
     def __acl__(self):
-        raise NotImplementedError
+        return self.route_acl()
 
-    @property
     def route_acl(self, sub_api_route=None):
         self.expand_acl(self.service, self.request.user)
 
