@@ -4,6 +4,7 @@ from magpie.api.api_requests import *
 from magpie.api.api_rest_schemas import *
 from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import *
+from magpie.api.management.group.group_utils import *
 from magpie.api.management.service.service_formats import format_service, format_service_resources
 
 
@@ -99,7 +100,14 @@ def assign_user_group(request):
     """Assign a user to a group."""
     db = request.db
     user = get_user_matchdict_checked_or_logged(request)
-    group = get_group_matchdict_checked(request)
+
+    group_name = get_value_multiformat_post_checked(request, 'group_name')
+    group = evaluate_call(lambda: zig.GroupService.by_group_name(group_name, db_session=request.db),
+                          fallback=lambda: request.db.rollback(),
+                          httpError=HTTPForbidden, msgOnFail=UserGroups_POST_ForbiddenResponseSchema.description)
+    verify_param(group, notNone=True, httpError=HTTPNotFound,
+                 msgOnFail=UserGroups_POST_GroupNotFoundResponseSchema.description)
+
     new_user_group = models.UserGroup(group_id=group.id, user_id=user.id)
 
     evaluate_call(lambda: db.add(new_user_group), fallback=lambda: db.rollback(),
