@@ -195,7 +195,7 @@ def create_service_direct_resource(request):
     """Register a new resource directly under a service."""
     service = get_service_matchdict_checked(request)
     resource_name = get_multiformat_post(request, 'resource_name')
-    resource_display_name = get_multiformat_post(request, 'resource_display_name')
+    resource_display_name = get_multiformat_post(request, 'resource_display_name', default=resource_name)
     resource_type = get_multiformat_post(request, 'resource_type')
     parent_id = get_multiformat_post(request, 'parent_id')  # no check because None/empty is allowed
     if not parent_id:

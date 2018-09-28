@@ -539,6 +539,24 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
     @pytest.mark.resources
     @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
+    def test_PostResources_DirectServiceResource(self):
+        service_info = utils.TestSetup.get_ExistingTestServiceInfo(self)
+        service_resource_id = service_info['resource_id']
+
+        data = {
+            "resource_name": self.test_resource_name,
+            # resource_display_name should default to self.test_resource_name,
+            "resource_type": self.test_resource_type,
+            "parent_id": service_resource_id
+        }
+        resp = utils.test_request(self.url, 'POST', '/resources',
+                                  headers=self.json_headers, cookies=self.cookies, data=data)
+        json_body = utils.check_response_basic_info(resp, 201)
+        utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
+                                            self.test_resource_name, self.version)
+
+    @pytest.mark.resources
+    @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
     def test_PostResources_ChildrenResource(self):
         resource_info = utils.TestSetup.create_TestServiceResource(self)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
