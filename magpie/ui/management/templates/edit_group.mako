@@ -112,7 +112,7 @@
         %endif
         <form id="sync_info" action="${request.path}" method="post">
             <p class="panel_line">
-                <span class="panel_entry">Last synchronization with remote service: </span>
+                <span class="panel_entry">Last synchronization with remote services: </span>
                 %if sync_implemented:
                     <span class="panel_value">${last_sync} </span>
                     <input type="submit" value="Sync now" name="force_sync">
