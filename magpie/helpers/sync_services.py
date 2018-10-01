@@ -80,7 +80,7 @@ class _SyncServiceProjectAPI(_SyncServiceInterface):
     def get_resources(self):
         # Only workspaces are fetched for now
         resource_type = "route"
-        projects_url = "/".join([self.url, "api", "Projects"])
+        projects_url = "/".join([self.url, "Projects"])
         resp = requests.get(projects_url)
         resp.raise_for_status()
 

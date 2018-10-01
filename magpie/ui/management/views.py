@@ -282,7 +282,8 @@ class ManagementViews(object):
             elif u'edit_permissions' in self.request.POST:
                 if not res_id or res_id == 'None':
                     remote_id = int(self.request.POST.get('remote_id'))
-                    res_id = self.add_remote_resource(cur_svc_type, user_name, remote_id, is_user=True)
+                    services_names = [s['service_name'] for s in services.values()]
+                    res_id = self.add_remote_resource(cur_svc_type, services_names, user_name, remote_id, is_user=True)
                 self.edit_user_or_group_resource_permissions(user_name, res_id, is_user=True)
             elif u'edit_group_membership' in self.request.POST:
                 is_edit_group_membership = True
@@ -303,11 +304,14 @@ class ManagementViews(object):
                 user_info[u'email'] = self.request.POST.get(u'new_user_email')
                 is_save_user_info = True
             elif u'force_sync' in self.request.POST:
-                try:
-                    sync_resources.fetch_all_services_by_type(cur_svc_type, session=session)
-                except Exception as e:
-                    error_message = "There was an error when trying to get remote resources. "
-                    error_message += "({})".format(repr(e))
+                errors = []
+                for service_info in services.values():
+                    try:
+                        sync_resources.fetch_single_service(service_info['resource_id'], session)
+                    except Exception:
+                        errors.append(service_info['service_name'])
+                if errors:
+                    error_message += self.make_sync_error_message(errors)
             elif u'clean_all' in self.request.POST:
                 ids_to_clean = self.request.POST.get('ids_to_clean').split(";")
                 for id_ in ids_to_clean:
@@ -346,16 +350,19 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        info = self.get_remote_resources_info(cur_svc_type, res_perms, services, session)
+        sync_types = [s["service_sync_type"] for s in services.values()]
+        sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
+
+        info = self.get_remote_resources_info(res_perms, services, session)
         res_perms, ids_to_clean, last_sync_humanized, out_of_sync = info
 
         if out_of_sync:
-            error_message = self.make_out_of_sync_message(out_of_sync)
+            error_message = self.make_sync_error_message(out_of_sync)
 
         user_info[u'error_message'] = error_message
         user_info[u'ids_to_clean'] = ";".join(ids_to_clean)
         user_info[u'last_sync'] = last_sync_humanized
-        user_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES_TYPES
+        user_info[u'sync_implemented'] = sync_implemented
         user_info[u'out_of_sync'] = out_of_sync
         user_info[u'cur_svc_type'] = cur_svc_type
         user_info[u'svc_types'] = svc_types
@@ -509,7 +516,7 @@ class ManagementViews(object):
         cur_svc_type = self.request.matchdict['cur_svc_type']
         group_info = {u'edit_mode': u'no_edit', u'group_name': group_name, u'cur_svc_type': cur_svc_type}
 
-        error_message = None
+        error_message = ""
 
         # Todo:
         # Until the api is modified to make it possible to request from the RemoteResource table,
@@ -545,16 +552,21 @@ class ManagementViews(object):
             elif u'edit_permissions' in self.request.POST:
                 if not res_id or res_id == 'None':
                     remote_id = int(self.request.POST.get('remote_id'))
-                    res_id = self.add_remote_resource(cur_svc_type, group_name, remote_id, is_user=False)
+                    services_names = [s['service_name'] for s in services.values()]
+                    res_id = self.add_remote_resource(cur_svc_type, services_names, group_name, remote_id, is_user=False)
                 self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
             elif u'member' in self.request.POST:
                 self.edit_group_users(group_name)
             elif u'force_sync' in self.request.POST:
-                try:
-                    sync_resources.fetch_all_services_by_type(cur_svc_type, session=session)
-                except Exception as e:
-                    error_message = "There was an error when trying to get remote resources. "
-                    error_message += "({})".format(repr(e))
+                errors = []
+                for service_info in services.values():
+                    try:
+                        sync_resources.fetch_single_service(service_info['resource_id'], session)
+                    except Exception:
+                        errors.append(service_info['service_name'])
+                if errors:
+                    error_message += self.make_sync_error_message(errors)
+
             elif u'clean_all' in self.request.POST:
                 ids_to_clean = self.request.POST.get('ids_to_clean').split(";")
                 for id_ in ids_to_clean:
@@ -569,16 +581,19 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        info = self.get_remote_resources_info(cur_svc_type, res_perms, services, session)
+        sync_types = [s["service_sync_type"] for s in services.values()]
+        sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
+
+        info = self.get_remote_resources_info(res_perms, services, session)
         res_perms, ids_to_clean, last_sync_humanized, out_of_sync = info
 
         if out_of_sync:
-            error_message = self.make_out_of_sync_message(out_of_sync)
+            error_message = self.make_sync_error_message(out_of_sync)
 
         group_info[u'error_message'] = error_message
         group_info[u'ids_to_clean'] = ";".join(ids_to_clean)
         group_info[u'last_sync'] = last_sync_humanized
-        group_info[u'sync_implemented'] = cur_svc_type in sync_resources.SYNC_SERVICES_TYPES
+        group_info[u'sync_implemented'] = sync_implemented
         group_info[u'out_of_sync'] = out_of_sync
         group_info[u'group_name'] = group_name
         group_info[u'cur_svc_type'] = cur_svc_type
@@ -590,13 +605,13 @@ class ManagementViews(object):
         group_info[u'permissions'] = res_perm_names
         return add_template_data(self.request, data=group_info)
 
-    def make_out_of_sync_message(self, out_of_sync):
-        this = "this service" if len(out_of_sync) == 1 else "these services"
+    def make_sync_error_message(self, service_names):
+        this = "this service" if len(service_names) == 1 else "these services"
         error_message = ("There seems to be an issue synchronizing resources from "
-                         "{}: {}".format(this, ",".join(out_of_sync)))
+                         "{}: {}".format(this, ", ".join(service_names)))
         return error_message
 
-    def get_remote_resources_info(self, cur_svc_type, res_perms, services, session):
+    def get_remote_resources_info(self, res_perms, services, session):
         last_sync_humanized = "Never"
         ids_to_clean, out_of_sync = [], []
         now = datetime.datetime.now()
@@ -607,7 +622,7 @@ class ManagementViews(object):
         if any(last_sync_datetimes):
             last_sync_datetime = min(filter(bool, last_sync_datetimes))
             last_sync_humanized = humanize.naturaltime(now - last_sync_datetime)
-            res_perms = self.merge_remote_resources(cur_svc_type, res_perms, services, session)
+            res_perms = self.merge_remote_resources(res_perms, services, session)
 
         for last_sync, service_name in zip(last_sync_datetimes, services):
             if last_sync:
@@ -616,12 +631,12 @@ class ManagementViews(object):
                     out_of_sync.append(service_name)
         return res_perms, ids_to_clean, last_sync_humanized, out_of_sync
 
-    def merge_remote_resources(self, cur_svc_type, res_perms, services, session):
+    def merge_remote_resources(self, res_perms, services, session):
         merged_resources = {}
         for service_name, service_values in services.items():
             service_id = service_values["resource_id"]
             merge = sync_resources.merge_local_and_remote_resources
-            resources_for_service = merge(res_perms, cur_svc_type, service_id, session)
+            resources_for_service = merge(res_perms, service_values["service_sync_type"], service_id, session)
             merged_resources[service_name] = resources_for_service[service_name]
         return merged_resources
 
@@ -646,10 +661,10 @@ class ManagementViews(object):
             ids += self.get_ids_to_clean(values['children'])
         return ids
 
-    def add_remote_resource(self, service_type, user_or_group, remote_id, is_user=False):
+    def add_remote_resource(self, service_type, services_names, user_or_group, remote_id, is_user=False):
         try:
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(user_or_group,
-                                                                                          services=[service_type],
+                                                                                          services=services_names,
                                                                                           service_type=service_type,
                                                                                           is_user=is_user)
         except Exception as e:

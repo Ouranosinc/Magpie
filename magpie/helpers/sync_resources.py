@@ -36,12 +36,12 @@ for sync_service_class in SYNC_SERVICES_TYPES.values():
     sync_service_class(name, url)
 
 
-def merge_local_and_remote_resources(resources_local, service_type, service_id, session):
+def merge_local_and_remote_resources(resources_local, service_sync_type, service_id, session):
     """Main function to sync resources with remote server"""
     if not get_last_sync(service_id, session):
         return resources_local
     remote_resources = _query_remote_resources_in_database(service_id, session=session)
-    max_depth = _get_max_depth(service_type)
+    max_depth = _get_max_depth(service_sync_type)
     merged_resources = _merge_resources(resources_local, remote_resources, max_depth)
     _sort_resources(merged_resources)
     return merged_resources
@@ -295,9 +295,11 @@ def fetch_all_services_by_type(service_type, session):
 def fetch_single_service(service, session):
     """
     Get remote resources for a single service.
-    :param service: (models.Service)
+    :param service: (models.Service) or service_id
     :param session:
     """
+    if isinstance(service, int):
+        service = session.query(models.Service).filter_by(resource_id=service).first()
     LOGGER.info("Requesting remote resources")
     remote_resources = _get_remote_resources(service)
     service_id = service.resource_id
