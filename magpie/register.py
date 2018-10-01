@@ -359,7 +359,8 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
     for svc_name, svc_values in services_dict.items():
         svc_new_url = os.path.expandvars(svc_values['url'])
         svc_type = svc_values['type']
-        svc_sync_type = svc_values['sync_type']
+
+        svc_sync_type = svc_values.get('sync_type', svc_values['title'])
         if force_update and svc_name in existing_services_names:
             svc = models.Service.by_service_name(svc_name, db_session=db_session)
             if svc.url == svc_new_url:
