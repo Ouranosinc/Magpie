@@ -179,7 +179,9 @@ class Workspace(Resource):
 class Route(Resource):
     __mapper_args__ = {u'polymorphic_identity': u'route'}
     permission_names = [u'read',
-                        u'write']
+                        u'write',
+                        u'read-match',
+                        u'write-match']
     resource_type_name = u'route'
 
 

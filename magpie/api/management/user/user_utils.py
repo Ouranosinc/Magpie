@@ -5,6 +5,7 @@ from magpie.api.management.user.user_formats import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.services import service_type_dict
 from magpie import models
+from collections import OrderedDict
 
 
 def create_user(user_name, password, email, group_name, db_session):
@@ -79,7 +80,7 @@ def get_user_resource_permissions(user, resource, db_session, inherited_permissi
         if not inherited_permissions:
             res_perm_tuple_list = filter_user_permission(res_perm_tuple_list, user)
         permission_names = [permission.perm_name for permission in res_perm_tuple_list]
-    return list(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
+    return sorted(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
 
 def get_user_service_permissions(user, service, db_session, inherited_permissions=True):
@@ -90,7 +91,7 @@ def get_user_service_permissions(user, service, db_session, inherited_permission
         if not inherited_permissions:
             svc_perm_tuple_list = filter_user_permission(svc_perm_tuple_list, user)
         permission_names = [permission.perm_name for permission in svc_perm_tuple_list]
-    return list(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
+    return sorted(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
 
 def get_user_resources_permissions_dict(user, db_session, resource_types=None,
@@ -101,7 +102,7 @@ def get_user_resources_permissions_dict(user, db_session, resource_types=None,
                                                              resource_types=resource_types, db_session=db_session)
     if not inherited_permissions:
         res_perm_tuple_list = filter_user_permission(res_perm_tuple_list, user)
-    resources_permissions_dict = {}
+    resources_permissions_dict = OrderedDict()
     for res_perm in res_perm_tuple_list:
         if res_perm.resource.resource_id not in resources_permissions_dict:
             resources_permissions_dict[res_perm.resource.resource_id] = [res_perm.perm_name]
@@ -110,7 +111,7 @@ def get_user_resources_permissions_dict(user, db_session, resource_types=None,
 
     # remove any duplicates that could be incorporated by multiple groups
     for res_id in resources_permissions_dict:
-        resources_permissions_dict[res_id] = list(set(resources_permissions_dict[res_id]))
+        resources_permissions_dict[res_id] = sorted(set(resources_permissions_dict[res_id]))
 
     return resources_permissions_dict
 

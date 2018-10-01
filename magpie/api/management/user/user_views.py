@@ -5,6 +5,7 @@ from magpie.api.api_rest_schemas import *
 from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import *
 from magpie.api.management.group.group_utils import *
+from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.api.management.service.service_formats import format_service, format_service_resources
 
 

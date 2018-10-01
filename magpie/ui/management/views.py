@@ -483,17 +483,20 @@ class ManagementViews(object):
         svc_perm_url = '{url}/services/types/{svc_type}'.format(url=self.magpie_url, svc_type=service_type)
         resp_svc_type = check_response(requests.get(svc_perm_url, cookies=self.request.cookies))
         resp_available_svc_types = resp_svc_type.json()['services'][service_type]
+
+        # remove possible duplicate permissions from different services
         resources_permission_names = set()
         for svc in resp_available_svc_types:
             resources_permission_names.update(set(resp_available_svc_types[svc]['permission_names']))
-        resources_permission_names = list(resources_permission_names)
+        # inverse sort so that displayed permissions are sorted, since added from right to left in tree view
+        resources_permission_names = sorted(resources_permission_names, reverse=True)
 
-        resources = {}
-        for service in services:
+        resources = OrderedDict()
+        for service in sorted(services):
             if not service:
                 continue
 
-            permission = {}
+            permission = OrderedDict()
             try:
                 raw_perms = resp_group_perms_json['resources'][service_type][service]
                 permission[raw_perms['resource_id']] = raw_perms['permission_names']
@@ -505,9 +508,10 @@ class ManagementViews(object):
                                                          .format(url=self.magpie_url, svc=service),
                                                          cookies=self.request.cookies))
             raw_resources = resp_resources.json()[service]
-            resources[service] = dict(id=raw_resources['resource_id'],
-                                      permission_names=self.default_get(permission, raw_resources['resource_id'], []),
-                                      children=self.resource_tree_parser(raw_resources['resources'], permission))
+            resources[service] = OrderedDict(
+                id=raw_resources['resource_id'],
+                permission_names=self.default_get(permission, raw_resources['resource_id'], []),
+                children=self.resource_tree_parser(raw_resources['resources'], permission))
         return resources_permission_names, resources
 
     @view_config(route_name='edit_group', renderer='templates/edit_group.mako')
