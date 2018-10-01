@@ -97,7 +97,7 @@ setup(
     # -- script entry points -----------------------------------------------
     entry_points="""\
           [paste.app_factory]
-          main = magpie.magpiectl:main
+          main = magpiectl:main
           [console_scripts]
           """,
 )

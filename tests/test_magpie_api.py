@@ -52,7 +52,7 @@ class TestMagpieAPI_UsersAuth_Local(ti.TestMagpieAPI_UsersAuth_Interface):
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
 
-@unittest.skip
+
 @pytest.mark.api
 @pytest.mark.local
 @unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))

@@ -16,7 +16,7 @@ from tests import utils, runner
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
 
-@unittest.skip
+
 @pytest.mark.ui
 @pytest.mark.local
 @unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
@@ -40,7 +40,7 @@ class TestMagpieUI_NoAuth_Local(ti.TestMagpieUI_NoAuth_Interface):
         cls.test_service_type = 'wps'
         cls.test_service_name = 'flyingpigeon'
 
-@unittest.skip
+
 @pytest.mark.ui
 @pytest.mark.local
 @unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
