@@ -352,14 +352,14 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
 
 def magpie_register_services_with_db_session(services_dict, db_session, push_to_phoenix=False,
                                              force_update=False, update_getcapabilities_permissions=False):
-    existing_services = models.Service.all(db_session=db_session)
-    existing_services_names = [svc.resource_name for svc in existing_services]
+    existing_services_names = [n[0] for n in db_session.query(models.Service.resource_name)]
     magpie_anonymous_user = get_constant('MAGPIE_ANONYMOUS_USER')
     anonymous_user = models.User.by_user_name(magpie_anonymous_user, db_session=db_session)
 
-    for svc_name in services_dict:
-        svc_new_url = os.path.expandvars(services_dict[svc_name]['url'])
-        svc_type = services_dict[svc_name]['type']
+    for svc_name, svc_values in services_dict.items():
+        svc_new_url = os.path.expandvars(svc_values['url'])
+        svc_type = svc_values['type']
+        svc_sync_type = svc_values['sync_type']
         if force_update and svc_name in existing_services_names:
             svc = models.Service.by_service_name(svc_name, db_session=db_session)
             if svc.url == svc_new_url:
@@ -372,13 +372,17 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
             print_log("Skipping service [{svc}] (conflict)" .format(svc=svc_name))
         else:
             print_log("Adding service [{svc}]".format(svc=svc_name))
-            svc = models.Service(resource_name=svc_name, resource_type=u'service', url=svc_new_url, type=svc_type)
+            svc = models.Service(resource_name=svc_name,
+                                 resource_type=u'service',
+                                 url=svc_new_url,
+                                 type=svc_type,
+                                 sync_type=svc_sync_type)
             db_session.add(svc)
 
         if update_getcapabilities_permissions and anonymous_user is None:
             print_log("Cannot update 'getcapabilities' permission of non existing anonymous user", level=logging.WARN)
         elif update_getcapabilities_permissions and 'getcapabilities' in service_type_dict[svc_type].permission_names:
-            svc = models.Service.by_service_name(svc_name, db_session=db_session)
+            svc = db_session.query(models.Service.resource_id).filter_by(resource_name=svc_name).first()
             svc_perm_getcapabilities = models.UserResourcePermissionService.by_resource_user_and_perm(
                 user_id=anonymous_user.id, perm_name='getcapabilities',
                 resource_id=svc.resource_id, db_session=db_session
