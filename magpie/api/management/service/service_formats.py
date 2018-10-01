@@ -13,6 +13,7 @@ def format_service(service, permissions=None):
             u'service_url': str(svc.url),
             u'service_name': str(svc.resource_name),
             u'service_type': str(svc.type),
+            u'service_sync_type': str(svc.sync_type),
             u'resource_id': svc.resource_id,
             u'permission_names': sorted(service_type_dict[svc.type].permission_names if perms is None else perms)
         }

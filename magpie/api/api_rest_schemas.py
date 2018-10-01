@@ -455,6 +455,11 @@ class ServiceBodySchema(colander.MappingSchema):
         description="Type of the service",
         example="thredds"
     )
+    service_sync_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of resource synchronization implementation.",
+        example="thredds"
+    )
     public_url = colander.SchemaNode(
         colander.String(),
         description="Proxy URL available for public access with permissions",
@@ -853,6 +858,11 @@ class Services_POST_BodySchema(colander.MappingSchema):
         example="my_service"
     )
     service_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the service to create",
+        example="wps"
+    )
+    service_sync_type = colander.SchemaNode(
         colander.String(),
         description="Type of the service to create",
         example="wps"
