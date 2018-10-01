@@ -17,8 +17,8 @@ sys.path.insert(0, root_dir)
 from alembic import op
 from alembic.context import get_context
 from magpie.definitions.sqlalchemy_definitions import *
-from magpie.models import Service
-from magpie.alembic.utils import has_column
+# from magpie.models import Service
+from sqlalchemy.sql import table
 
 Session = sessionmaker()
 
@@ -31,42 +31,53 @@ depends_on = None
 
 def upgrade():
     context = get_context()
-    session = Session(bind=op.get_bind())
     if isinstance(context.connection.engine.dialect, PGDialect):
         # add 'sync_type' column if missing
-        if not has_column(context, 'services', 'sync_type'):
-            op.add_column('services', sa.Column('sync_type', sa.UnicodeText(), nullable=True))
+        op.add_column('services', sa.Column('sync_type', sa.UnicodeText(), nullable=True))
+
+        services = table('services',
+                         sa.Column('url', sa.UnicodeText()),
+                         sa.Column('type', sa.UnicodeText()),
+                         sa.Column('sync_type', sa.UnicodeText()),
+                         )
 
         # transfer 'api' service types
-        session.query(Service). \
-            filter(Service.type == 'project-api'). \
-            update({Service.type: 'api',
-                    Service.url: Service.url + '/api',
-                    Service.sync_type: 'project-api'}, synchronize_session=False)
-        session.query(Service). \
-            filter(Service.type == 'geoserver-api'). \
-            update({Service.type: 'api',
-                    Service.sync_type: 'geoserver-api'}, synchronize_session=False)
-        session.commit()
+        op.execute(services.
+                   update().
+                   where(services.c.type == op.inline_literal('project-api')).
+                   values({'type': op.inline_literal('api'),
+                           'url': op.inline_literal(str(services.c.url) + '/api'),
+                           'sync_type': op.inline_literal('project-api')
+                           })
+                   )
+        op.execute(services.
+                   update().
+                   where(services.c.type == op.inline_literal('geoserver-api')).
+                   values({'type': op.inline_literal('api'),
+                           'sync_type': op.inline_literal('geoserver-api')
+                           })
+                   )
 
 
 def downgrade():
-    context = get_context()
-    session = Session(bind=op.get_bind())
-    if isinstance(context.connection.engine.dialect, PGDialect):
-        # transfer 'api' service types
-        services_project_api = session.query(Service).filter(Service.sync_type == 'project-api')
-        for svc in services_project_api:
-            svc_url = svc.url.rstrip('/api')
-            session.query(Service). \
-                filter(Service.resource_id == svc.resource_id). \
-                update({Service.type: 'project-api', Service.url: svc_url}, synchronize_session=False)
-        session.flush()
-        session.query(Service). \
-            filter(Service.sync_type == 'geoserver-api'). \
-            update({Service.type: 'geoserver-api'}, synchronize_session=False)
-        session.flush()
-        # drop 'sync_type' column
-        if has_column(context, 'services', 'sync_type'):
-            op.drop_column('services', 'sync_type')
-        session.commit()
+    op.drop_column('services', 'sync_type')
+
+    service = table('old_service',
+                    sa.Column('url', sa.UnicodeText()),
+                    sa.Column('type', sa.UnicodeText()),
+                    )
+
+    # transfer 'api' service types
+    op.execute(service.
+               update().
+               where(service.c.type == op.inline_literal('project-api')).
+               values({'type': op.inline_literal('project-api'),
+                       'url': op.inline_literal(str(service.c.url).rstrip('/api')),
+                       })
+               )
+    op.execute(service.
+               update().
+               where(service.c.type == op.inline_literal('geoserver-api')).
+               values({'type': op.inline_literal('geoserver-api'),
+                       })
+               )
