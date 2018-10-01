@@ -18,6 +18,7 @@ from alembic.context import get_context
 from magpie.definitions.sqlalchemy_definitions import *
 from magpie import models
 from magpie.api.management.resource.resource_utils import get_resource_root_service
+from magpie.alembic.utils import has_column
 
 Session = sessionmaker()
 
@@ -41,14 +42,7 @@ def upgrade():
     if isinstance(context.connection.engine.dialect, PGDialect):
 
         # check if column exists, add it otherwise
-        inspector = reflection.Inspector.from_engine(context.connection.engine)
-        has_root_service_column = False
-        for column in inspector.get_columns(table_name='resources'):
-            if 'root_service_id' in column['name']:
-                has_root_service_column = True
-                break
-
-        if not has_root_service_column:
+        if has_column(context, 'resources', 'root_service_id'):
             op.add_column('resources', sa.Column('root_service_id', sa.Integer(), nullable=True))
 
         # add existing resource references to their root service, loop through reference tree chain
@@ -61,4 +55,7 @@ def upgrade():
 
 
 def downgrade():
-    pass
+    context = get_context()
+    if isinstance(context.connection.engine.dialect, PGDialect):
+        if has_column(context, 'resources', 'root_service_id'):
+            op.drop_column('resources', 'root_service_id')

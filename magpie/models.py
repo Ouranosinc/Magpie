@@ -106,8 +106,22 @@ class Service(Resource):
     __mapper_args__ = {u'polymorphic_identity': u'service', u'inherit_condition': resource_id == Resource.resource_id}
 
     # ... your own properties....
-    url = sa.Column(sa.UnicodeText(), unique=True)  # http://localhost:8083
-    type = sa.Column(sa.UnicodeText())  # wps, wms, thredds, ...
+
+    @declared_attr
+    def url(self):
+        # http://localhost:8083
+        return sa.Column(sa.UnicodeText(), unique=True)
+
+    @declared_attr
+    def type(self):
+        # wps, wms, thredds, ...
+        return sa.Column(sa.UnicodeText())
+
+    @declared_attr
+    def sync_type(self):
+        # project-api, geoserver-api, ...
+        return sa.Column(sa.UnicodeText(), nullable=True)
+
     resource_type_name = u'service'
 
     @staticmethod
