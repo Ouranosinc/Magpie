@@ -240,7 +240,7 @@ class ManagementViews(object):
         own_groups = self.get_user_groups(user_name)
         all_groups = self.get_all_groups(first_default_group=get_constant('MAGPIE_USERS_GROUP'))
 
-        error_message = None
+        error_message = ""
 
         # Todo:
         # Until the api is modified to make it possible to request from the RemoteResource table,
