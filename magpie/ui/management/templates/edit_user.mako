@@ -9,7 +9,7 @@
             <div class="perm_checkbox">
                 <input type="checkbox" value="${perm}" name="permission"
                        onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()" checked
-                %if inherited_permissions:
+                %if inherit_groups_permissions:
                     disabled
                 %endif
                 >
@@ -18,7 +18,7 @@
             <div class="perm_checkbox">
                 <input type="checkbox" value="${perm}" name="permission"
                        onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()"
-                %if inherited_permissions:
+                %if inherit_groups_permissions:
                     disabled
                 %endif
                 >
@@ -139,14 +139,14 @@
 <h3>Permissions</h3>
 
 <form id="toggle_visible_perms" action="${request.path}" method="post">
-    <input type="checkbox" value="${inherited_permissions}" name="toggle_inherited_permissions"
+    <input type="checkbox" value="${inherit_groups_permissions}" name="toggle_inherit_groups_permissions"
            onchange="document.getElementById('toggle_visible_perms').submit()"
-    %if inherited_permissions:
+    %if inherit_groups_permissions:
         checked>
-        <input type="hidden" value="False" name="inherited_permissions"/>
+        <input type="hidden" value="False" name="inherit_groups_permissions"/>
     %else:
         >
-        <input type="hidden" value="True" name="inherited_permissions"/>
+        <input type="hidden" value="True" name="inherit_groups_permissions"/>
     %endif
     View inherited group permissions
 </form>

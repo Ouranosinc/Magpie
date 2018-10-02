@@ -162,10 +162,3 @@ def get_query_param(request, case_insensitive_key, default=None):
                 return value.lower()
             return value
     return default
-
-
-def get_query_inherit_checked(request, case_insensitive_key):
-    inherit = get_query_param(request, case_insensitive_key) or 'inherit'
-    verify_param(inherit, isIn=True, paramName=case_insensitive_key, paramCompare=['inherit', 'direct'],
-                 httpError=HTTPBadRequest, msgOnFail="Invalid query parameter is not one of allowed values.")
-    return inherit == 'inherit'

@@ -48,7 +48,7 @@ class MagpieServiceStore(ServiceStore):
         Lists all services registered in magpie.
         """
         my_services = []
-        path = '/users/current/services?groups=inherit&resources=inherit'
+        path = '/users/current/services?inherit=True&cascade=True'
         response = requests.get('{url}{path}'.format(url=self.magpie_url, path=path),
                                 cookies=request.cookies)
         if response.status_code != 200:

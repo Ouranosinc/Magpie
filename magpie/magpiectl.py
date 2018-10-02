@@ -5,7 +5,7 @@
 Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations
 """
 
-# -- Standard library --403------------------------------------------------------
+# -- Standard library --------------------------------------------------------
 import argparse
 import time
 import warnings

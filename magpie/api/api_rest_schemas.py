@@ -80,7 +80,7 @@ UserResourcesAPI = Service(
     path='/users/{user_name}/resources',
     name='UserResources')
 UserResourceInheritedPermissionsAPI = Service(
-    path='/users/{user_name}/resources/{resource_id}/inherited_permissions',
+    path='/users/{user_name}/resources/{resource_id}/inherit_groups_permissions',
     name='UserResourceInheritedPermissions')
 UserResourcePermissionAPI = Service(
     path='/users/{user_name}/resources/{resource_id}/permissions/{permission_name}',
@@ -91,6 +91,9 @@ UserResourcePermissionsAPI = Service(
 UserResourceTypesAPI = Service(
     path='/users/{user_name}/resources/types/{resource_type}',
     name='UserResourceTypes')
+UserInheritedServicesAPI = Service(
+    path='/users/{user_name}/inherited_services',
+    name='UserInheritedServices')
 UserServicesAPI = Service(
     path='/users/{user_name}/services',
     name='UserServices')
@@ -104,7 +107,7 @@ UserServiceResourcesAPI = Service(
     path='/users/{user_name}/services/{service_name}/resources',
     name='UserServiceResources')
 UserServiceInheritedPermissionsAPI = Service(
-    path='/users/{user_name}/services/{service_name}/inherited_permissions',
+    path='/users/{user_name}/services/{service_name}/inherit_groups_permissions',
     name='UserServiceInheritedPermissions')
 UserServicePermissionsAPI = Service(
     path='/users/{user_name}/services/{service_name}/permissions',
@@ -128,7 +131,7 @@ LoggedUserResourcesAPI = Service(
     path=LoggedUserBase + '/resources',
     name='LoggedUserResources')
 LoggedUserResourceInheritedPermissionsAPI = Service(
-    path=LoggedUserBase + '/resources/{resource_id}/inherited_permissions',
+    path=LoggedUserBase + '/resources/{resource_id}/inherit_groups_permissions',
     name='LoggedUserResourceInheritedPermissions')
 LoggedUserResourcePermissionAPI = Service(
     path=LoggedUserBase + '/resources/{resource_id}/permissions/{permission_name}',
@@ -139,6 +142,9 @@ LoggedUserResourcePermissionsAPI = Service(
 LoggedUserResourceTypesAPI = Service(
     path=LoggedUserBase + '/resources/types/{resource_type}',
     name='LoggedUserResourceTypes')
+LoggedUserInheritedServicesAPI = Service(
+    path=LoggedUserBase + '/inherited_services',
+    name='LoggedUserInheritedServices')
 LoggedUserServicesAPI = Service(
     path=LoggedUserBase + '/services',
     name='LoggedUserServices')
@@ -149,7 +155,7 @@ LoggedUserServiceResourcesAPI = Service(
     path=LoggedUserBase + '/services/{service_name}/resources',
     name='LoggedUserServiceResources')
 LoggedUserServiceInheritedPermissionsAPI = Service(
-    path=LoggedUserBase + '/services/{service_name}/inherited_permissions',
+    path=LoggedUserBase + '/services/{service_name}/inherit_groups_permissions',
     name='LoggedUserServiceInheritedPermissions')
 LoggedUserServicePermissionsAPI = Service(
     path=LoggedUserBase + '/services/{service_name}/permissions',
@@ -248,11 +254,11 @@ class HeaderRequestSchema(colander.MappingSchema):
     content_type.name = 'Content-Type'
 
 
-QueryInheritGroups = colander.SchemaNode(
-    colander.String(), default='inherit', validator=colander.OneOf(['inherit', 'direct']), missing=colander.drop,
+QueryInheritGroupsPermissions = colander.SchemaNode(
+    colander.Boolean(), default=False, missing=colander.drop,
     description='User groups memberships inheritance to resolve service resource permissions.')
-QueryInheritResources = colander.SchemaNode(
-    colander.String(), default='inherit', validator=colander.OneOf(['inherit', 'direct']), missing=colander.drop,
+QueryCascadeResourcesPermissions = colander.SchemaNode(
+    colander.Boolean(), default=False, missing=colander.drop,
     description='Display any service that has at least one sub-resource user permission, '
                 'or only services that have user permissions directly set on them.', )
 
@@ -1530,6 +1536,15 @@ class UserServiceResources_GET_OkResponseSchema(colander.MappingSchema):
     body = UserServiceResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
+class UserServicePermissions_GET_QuerySchema(colander.MappingSchema):
+    inherit = QueryInheritGroupsPermissions
+
+
+class UserServiceResources_GET_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    querystring = UserServicePermissions_GET_QuerySchema()
+
+
 class UserServicePermissions_POST_RequestBodySchema(colander.MappingSchema):
     permission_name = colander.SchemaNode(colander.String(), description="Name of the permission to create.")
 
@@ -1545,8 +1560,8 @@ class UserServicePermission_DELETE_RequestSchema(colander.MappingSchema):
 
 
 class UserServices_GET_QuerySchema(colander.MappingSchema):
-    resources = QueryInheritResources
-    groups = QueryInheritGroups
+    cascade = QueryCascadeResourcesPermissions
+    inherit = QueryInheritGroupsPermissions
     list = colander.SchemaNode(
         colander.Boolean(), default=False, missing=colander.drop,
         description='Return services as a list of dicts. Default is a dict by service type, and by service name.')
@@ -1568,9 +1583,7 @@ class UserServices_GET_OkResponseSchema(colander.MappingSchema):
 
 
 class UserServicePermissions_GET_QuerySchema(colander.MappingSchema):
-    groups = colander.SchemaNode(
-        colander.String(), default='inherit', validator=colander.OneOf(['inherit', 'direct']), missing=colander.drop,
-        description='User groups memberships inheritance to resolve service resource permissions.')
+    inherit = QueryInheritGroupsPermissions
 
 
 class UserServicePermissions_GET_RequestSchema(colander.MappingSchema):
