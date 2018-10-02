@@ -3,6 +3,7 @@ from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.twitcher_definitions import *
 from magpie.adapter.magpieowssecurity import *
 from magpie.adapter.magpieservice import *
+from magpie.adapter.magpieprocess import *
 from magpie.models import get_user
 from magpie.security import auth_config_from_settings
 from magpie.db import *
@@ -19,11 +20,7 @@ class MagpieAdapter(AdapterInterface):
         return MagpieServiceStore(registry=registry)
 
     def processstore_factory(self, registry):
-        # no reimplementation of processes on magpie side if 'default'
-        # simply return the default twitcher process store
-
-
-        return DefaultAdapter().processstore_factory(registry)
+        return MagpieProcessStore(registry=registry)
 
     def jobstore_factory(self, registry):
         # no reimplementation of jobs on magpie side
