@@ -152,3 +152,20 @@ def get_value_matchdict_checked(request, key):
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
                  paramName=key, msgOnFail=UnprocessableEntityResponseSchema.description)
     return val
+
+
+def get_query_param(request, case_insensitive_key, default=None):
+    for p in request.params:
+        if p.lower() == case_insensitive_key:
+            value = request.params.get(p)
+            if isinstance(value, six.string_types):
+                return value.lower()
+            return value
+    return default
+
+
+def get_query_inherit_checked(request, case_insensitive_key):
+    inherit = get_query_param(request, case_insensitive_key) or 'inherit'
+    verify_param(inherit, isIn=True, paramName=case_insensitive_key, paramCompare=['inherit', 'direct'],
+                 httpError=HTTPBadRequest, msgOnFail="Invalid query parameter is not one of allowed values.")
+    return inherit == 'inherit'
