@@ -9,7 +9,7 @@ import json
 LOGGER = logging.getLogger("TWITCHER")
 
 from magpie.definitions.twitcher_definitions import *
-from magpie.definitions.pyramid_definitions import ConfigurationError, HTTPOk, HTTPCreated, HTTPNotFound
+from magpie.definitions.pyramid_definitions import ConfigurationError, HTTPOk, HTTPCreated, HTTPNotFound, HTTPConflict
 
 # import 'process' elements separately than 'twitcher_definitions' because not defined in master
 from twitcher.config import get_twitcher_configuration, TWITCHER_CONFIGURATION_EMS
@@ -111,11 +111,13 @@ class MagpieProcessStore(ProcessStore):
                 path = '{host}/groups/users/resources/{id}/permissions/{perm}' \
                        .format(host=self.magpie_url, id=process_res_id, perm='read')
                 reps = requests.delete(path, cookies=request.cookies)
+                # permission is not set if deleted or non existing
                 if reps.status_code not in (HTTPOk.code, HTTPNotFound.code):
                     raise reps.raise_for_status()
 
             elif visibility == VISIBILITY_PUBLIC:
                 path = '{host}/groups/users/resources/{id}/permissions'.format(host=self.magpie_url, id=process_res_id)
                 reps = requests.post(path, cookies=request.cookies, data={u'permission_name': u'read'})
-                if reps.status_code not in (HTTPOk.code, HTTPCreated.code):
+                # permission is set if created or already exists
+                if reps.status_code not in (HTTPCreated.code, HTTPConflict.code):
                     raise reps.raise_for_status()
