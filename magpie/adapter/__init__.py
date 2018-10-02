@@ -20,6 +20,8 @@ class MagpieAdapter(AdapterInterface):
         return MagpieServiceStore(registry=registry)
 
     def processstore_factory(self, registry):
+        if get_twitcher_configuration(registry.settings) == TWITCHER_CONFIGURATION_DEFAULT:
+            return DefaultAdapter().processstore_factory(registry)
         return MagpieProcessStore(registry=registry)
 
     def jobstore_factory(self, registry):
