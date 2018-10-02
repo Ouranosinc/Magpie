@@ -100,7 +100,7 @@ class MagpieProcessStore(ProcessStore):
         If twitcher is in EMS mode, also modify magpie permissions of corresponding process access point.
         """
         # write visibility to store to remain consistent in processes structures even if using magpie permissions
-        processstore_defaultfactory(request.registry).set_visibility(process_id, request)
+        processstore_defaultfactory(request.registry).set_visibility(process_id, visibility, request)
 
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
             process_res_id = self._get_process_resource_id(process_id, request)
