@@ -8,7 +8,6 @@ from magpie.api.management.group.group_utils import *
 from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.api.management.service.service_formats import format_service, format_service_resources
 from magpie.common import str2bool
-from zope.deprecation import deprecate
 import logging
 LOGGER = logging.getLogger(__name__)
 
@@ -185,8 +184,6 @@ def get_user_resources_view(request):
     return get_user_resources_runner(request, inherited_group_resources_permissions=inherit_groups_perms)
 
 
-@deprecate("Route deprecated: [{0}], Instead Use: [{1}]"
-           .format(UserInheritedResourcesAPI.path, UserResourcesAPI.path + "?inherit=true"))
 @UserInheritedResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
                                response_schemas=UserResources_GET_responses)
 @LoggedUserInheritedResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
@@ -215,8 +212,6 @@ def get_user_resource_permissions_view(request):
                       content={u'permission_names': sorted(perm_names)})
 
 
-@deprecate("Route deprecated: [{0}], Instead Use: [{1}]"
-           .format(UserResourceInheritedPermissionsAPI.path, UserResourcePermissionsAPI.path + "?inherit=true"))
 @UserResourceInheritedPermissionsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
                                          response_schemas=UserResourcePermissions_GET_responses)
 @LoggedUserResourceInheritedPermissionsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
@@ -282,8 +277,6 @@ def get_user_services_view(request):
                       content={u'services': svc_json})
 
 
-@deprecate("Route deprecated: [{0}], Instead Use: [{1}]"
-           .format(LoggedUserInheritedServicesAPI.path, LoggedUserServicesAPI.path + "?inherit=true"))
 @UserInheritedServicesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
                               response_schemas=UserServices_GET_responses)
 @LoggedUserInheritedServicesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
@@ -299,8 +292,6 @@ def get_user_inherited_services_view(request):
                       content={u'services': svc_json})
 
 
-@deprecate("Route deprecated: [{0}], Instead Use: [{1}]"
-           .format(UserServiceInheritedPermissionsAPI.path, UserServicePermissionsAPI.path + "?inherit=true"))
 @UserServiceInheritedPermissionsAPI.get(schema=UserServicePermissions_GET_RequestSchema,
                                         tags=[UsersTag], api_security=SecurityEveryoneAPI,
                                         response_schemas=UserServicePermissions_GET_responses)
@@ -375,7 +366,8 @@ def get_user_service_resource_permissions_runner(request, inherit_groups_permiss
     Resource permissions a user as on a specific service
 
     :param request:
-    :param inherit_groups_permissions: only direct permissions if False, else resolve permissions with user and his groups.
+    :param inherit_groups_permissions:
+        only direct permissions if False, otherwise resolve permissions with user and his groups.
     :return:
     """
     user = get_user_matchdict_checked_or_logged(request)
@@ -408,8 +400,6 @@ def get_user_service_resources_view(request):
     return get_user_service_resource_permissions_runner(request, inherit_groups_permissions=inherit_groups_perms)
 
 
-@deprecate("Route deprecated: [{0}], Instead Use: [{1}]"
-           .format(UserServiceInheritedResourcesAPI.path, UserServiceResourcesAPI.path + "?inherit=true"))
 @UserServiceInheritedResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
                                       response_schemas=UserServiceResources_GET_responses)
 @LoggedUserServiceInheritedResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
