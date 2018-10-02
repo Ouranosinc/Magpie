@@ -80,7 +80,7 @@ UserResourcesAPI = Service(
     path='/users/{user_name}/resources',
     name='UserResources')
 UserResourceInheritedPermissionsAPI = Service(
-    path='/users/{user_name}/resources/{resource_id}/inherit_groups_permissions',
+    path='/users/{user_name}/resources/{resource_id}/inherited_permissions',
     name='UserResourceInheritedPermissions')
 UserResourcePermissionAPI = Service(
     path='/users/{user_name}/resources/{resource_id}/permissions/{permission_name}',
@@ -107,7 +107,7 @@ UserServiceResourcesAPI = Service(
     path='/users/{user_name}/services/{service_name}/resources',
     name='UserServiceResources')
 UserServiceInheritedPermissionsAPI = Service(
-    path='/users/{user_name}/services/{service_name}/inherit_groups_permissions',
+    path='/users/{user_name}/services/{service_name}/inherited_permissions',
     name='UserServiceInheritedPermissions')
 UserServicePermissionsAPI = Service(
     path='/users/{user_name}/services/{service_name}/permissions',
@@ -131,7 +131,7 @@ LoggedUserResourcesAPI = Service(
     path=LoggedUserBase + '/resources',
     name='LoggedUserResources')
 LoggedUserResourceInheritedPermissionsAPI = Service(
-    path=LoggedUserBase + '/resources/{resource_id}/inherit_groups_permissions',
+    path=LoggedUserBase + '/resources/{resource_id}/inherited_permissions',
     name='LoggedUserResourceInheritedPermissions')
 LoggedUserResourcePermissionAPI = Service(
     path=LoggedUserBase + '/resources/{resource_id}/permissions/{permission_name}',
@@ -155,7 +155,7 @@ LoggedUserServiceResourcesAPI = Service(
     path=LoggedUserBase + '/services/{service_name}/resources',
     name='LoggedUserServiceResources')
 LoggedUserServiceInheritedPermissionsAPI = Service(
-    path=LoggedUserBase + '/services/{service_name}/inherit_groups_permissions',
+    path=LoggedUserBase + '/services/{service_name}/inherited_permissions',
     name='LoggedUserServiceInheritedPermissions')
 LoggedUserServicePermissionsAPI = Service(
     path=LoggedUserBase + '/services/{service_name}/permissions',
@@ -1536,13 +1536,13 @@ class UserServiceResources_GET_OkResponseSchema(colander.MappingSchema):
     body = UserServiceResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class UserServicePermissions_GET_QuerySchema(colander.MappingSchema):
+class UserServiceResources_GET_QuerySchema(colander.MappingSchema):
     inherit = QueryInheritGroupsPermissions
 
 
 class UserServiceResources_GET_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
-    querystring = UserServicePermissions_GET_QuerySchema()
+    querystring = UserServiceResources_GET_QuerySchema()
 
 
 class UserServicePermissions_POST_RequestBodySchema(colander.MappingSchema):
