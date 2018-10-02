@@ -1334,13 +1334,13 @@ class UserGroups_POST_CreatedResponseSchema(colander.MappingSchema):
 class UserGroups_POST_GroupNotFoundResponseSchema(colander.MappingSchema):
     description = "Can't find the group to assign to."
     header = HeaderResponseSchema()
-    body = BaseBodySchema(code=HTTPNotFound.code, description=description)
+    body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
 class UserGroups_POST_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Group query by name refused by db."
     header = HeaderResponseSchema()
-    body = BaseBodySchema(code=HTTPForbidden.code, description=description)
+    body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class UserGroups_POST_ConflictResponseSchema(colander.MappingSchema):
