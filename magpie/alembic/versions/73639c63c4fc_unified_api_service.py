@@ -19,6 +19,7 @@ from alembic.context import get_context
 from magpie.definitions.sqlalchemy_definitions import *
 # from magpie.models import Service
 from sqlalchemy.sql import table
+from sqlalchemy import func
 
 Session = sessionmaker()
 
@@ -46,7 +47,7 @@ def upgrade():
                    update().
                    where(services.c.type == op.inline_literal('project-api')).
                    values({'type': op.inline_literal('api'),
-                           'url': op.inline_literal(str(services.c.url) + '/api'),
+                           'url': services.c.url + "/api",
                            'sync_type': op.inline_literal('project-api')
                            })
                    )
@@ -60,24 +61,25 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column('services', 'sync_type')
-
-    service = table('old_service',
+    service = table('services',
                     sa.Column('url', sa.UnicodeText()),
                     sa.Column('type', sa.UnicodeText()),
+                    sa.Column('sync_type', sa.UnicodeText()),
                     )
 
     # transfer 'api' service types
     op.execute(service.
                update().
-               where(service.c.type == op.inline_literal('project-api')).
+               where(service.c.sync_type == op.inline_literal('project-api')).
                values({'type': op.inline_literal('project-api'),
-                       'url': op.inline_literal(str(service.c.url).rstrip('/api')),
+                       'url': func.replace(service.c.url, '/api', ''),
                        })
                )
     op.execute(service.
                update().
-               where(service.c.type == op.inline_literal('geoserver-api')).
+               where(service.c.sync_type == op.inline_literal('geoserver-api')).
                values({'type': op.inline_literal('geoserver-api'),
                        })
                )
+
+    op.drop_column('services', 'sync_type')
