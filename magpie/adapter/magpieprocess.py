@@ -43,41 +43,85 @@ class MagpieProcessStore(ProcessStore):
             #If magpie.url does not exist, calling strip fct over None will raise this issue
             raise ConfigurationError('magpie.url config cannot be found')
 
-    def save_process(self, process, overwrite=True, request=None):
-        """Delegate execution to default twitcher process store."""
-        return processstore_defaultfactory(request.registry).save_process(process, overwrite, request)
+    def _get_process_resources(self, request):
+        """
+        Gets all 'process' resources corresponding to results under 'ems/processes/{id}'.
+        Only visible processes (resources with 'read' permissions of group 'users') are returned.
 
-    def delete_process(self, process_id, request=None):
-        """Delegate execution to default twitcher process store."""
-        return processstore_defaultfactory(request.registry).delete_process(process_id, request)
-
-    def list_processes(self, request=None):
-        """Delegate execution to default twitcher process store."""
-        return processstore_defaultfactory(request.registry).list_processes(request)
-
-    def fetch_by_id(self, process_id, request=None):
-        """Delegate execution to default twitcher process store."""
-        return processstore_defaultfactory(request.registry).fetch_by_id(process_id, request)
-
-    def _get_process_resource_id(self, process_id, request):
+        :return: list of twitcher 'process' instances filtered by relevant magpie resources with permissions set.
+        """
         resp = requests.get('{host}/groups/users/resources'.format(host=self.magpie_url), cookies=request.cookies)
         if resp.status_code != HTTPOk.code:
             raise resp.raise_for_status()
         try:
             ems_resources = resp.json()['resources']['api']['ems']['resources']
-            ems_processes = None
             for res_id in ems_resources:
                 if ems_resources[res_id]['resource_name'] == 'processes':
                     ems_processes = ems_resources[res_id]['children']
-                    break
-            if not ems_processes:
-                raise ProcessNotFound("Could not find processes resource endpoint for visibility retrieval.")
-            for process_res_id in ems_processes:
-                if ems_processes[process_res_id]['resource_name'] == process_id:
-                    return ems_processes[process_res_id]['resource_id']
+                    return ems_processes
+        except KeyError:
+            raise ProcessNotFound("Could not find processes resource endpoint for visibility retrieval.")
+        return list()
+
+    def _get_process_resource_id(self, process_id, ems_processes_resources):
+        """
+        Searches for a 'process' resource corresponding to 'ems/processes/{id}'.
+        Only visible processes (resources with 'read' permissions of group 'users') are returned.
+
+        :returns: id of the found 'process' resource, or None.
+        """
+        if not ems_processes_resources:
+            raise ProcessNotFound("Could not find processes resource endpoint for visibility retrieval.")
+        try:
+            for process_res_id in ems_processes_resources:
+                if ems_processes_resources[process_res_id]['resource_name'] == process_id:
+                    return ems_processes_resources[process_res_id]['resource_id']
         except KeyError:
             raise ProcessNotFound('Could not find process `{}` resource for visibility retrieval.'.format(process_id))
         return None
+
+    def save_process(self, process, overwrite=True, request=None):
+        """Delegate execution to default twitcher process store."""
+        return processstore_defaultfactory(request.registry).save_process(process, overwrite, request)
+
+    def delete_process(self, process_id, request=None):
+        """
+        Delete a process.
+
+        If twitcher is not in EMS mode, simply delegate execution to default twitcher process store.
+        If twitcher is in EMS mode, user requesting deletion must have sufficient permissions in magpie to do so.
+        """
+        try:
+
+
+            resp = requests.delete('{host}/resources'.format(host=self.magpie_url), cookies=request.cookies)
+            if resp.status_code != HTTPOk.code:
+                raise resp.raise_for_status()
+
+        return processstore_defaultfactory(request.registry).delete_process(process_id, request)
+
+    def list_processes(self, request=None):
+        """
+        List processes.
+
+        If twitcher is not in EMS mode, simply delegate execution to default twitcher process store.
+        If twitcher is in EMS mode, filter by corresponding resources with read permissions.
+        """
+        process_list = processstore_defaultfactory(request.registry).list_processes(request)
+        if self.twitcher_config != TWITCHER_CONFIGURATION_EMS:
+            return process_list
+
+        ems_processes = self._get_process_resources(request)
+        ems_processes_visible = list()
+        for process in process_list:
+            # if id is returned, filtered group resource permission was set, therefore visibility is permitted
+            if self._get_process_resource_id(process.id, ems_processes):
+                ems_processes_visible.append(process)
+        return ems_processes_visible
+
+    def fetch_by_id(self, process_id, request=None):
+        """Delegate execution to default twitcher process store."""
+        return processstore_defaultfactory(request.registry).fetch_by_id(process_id, request)
 
     def get_visibility(self, process_id, request=None):
         """
@@ -89,7 +133,8 @@ class MagpieProcessStore(ProcessStore):
         if self.twitcher_config != TWITCHER_CONFIGURATION_EMS:
             return processstore_defaultfactory(request.registry).get_visibility(process_id, request)
 
-        process_res_id = self._get_process_resource_id(process_id, request)
+        ems_processes = self._get_process_resources(request)
+        process_res_id = self._get_process_resource_id(process_id, ems_processes)
         return VISIBILITY_PUBLIC if process_res_id is not None else VISIBILITY_PRIVATE
 
     def set_visibility(self, process_id, visibility, request=None):
@@ -103,7 +148,8 @@ class MagpieProcessStore(ProcessStore):
         processstore_defaultfactory(request.registry).set_visibility(process_id, visibility, request)
 
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
-            process_res_id = self._get_process_resource_id(process_id, request)
+            ems_processes = self._get_process_resources(request)
+            process_res_id = self._get_process_resource_id(process_id, ems_processes)
             if not process_res_id:
                 raise ProcessNotFound('Could not find process `{}` resource to change visibility.'.format(process_id))
 
