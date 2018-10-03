@@ -567,7 +567,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
     @pytest.mark.resources
     @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
-    def test_PostResources_DirectServiceResource(self):
+    def test_PostResources_DirectServiceResourceOptional(self):
         service_info = utils.TestSetup.get_ExistingTestServiceInfo(self)
         service_resource_id = service_info['resource_id']
 
