@@ -3,6 +3,15 @@
 History
 =======
 
+0.7.x
+---------------------
+
+`Magpie REST API latest documentation`_
+
+* add service resource auto-sync feature
+* return user/group services if any sub-resource has permissions
+* [WIP] add inherited resource permission with querystring (deprecate `inherited_<>` routes)
+
 0.6.x
 ---------------------
 
@@ -97,3 +106,4 @@ History
 .. _Magpie REST API 0.4.x documentation: magpie_api_0.4.x_
 .. _Magpie REST API 0.5.x documentation: magpie_api_0.5.x_
 .. _Magpie REST API 0.6.x documentation: magpie_api_0.6.x_
+.. _Magpie REST API latest documentation: _magpie_api_latest

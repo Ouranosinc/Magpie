@@ -152,3 +152,13 @@ def get_value_matchdict_checked(request, key):
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
                  paramName=key, msgOnFail=UnprocessableEntityResponseSchema.description)
     return val
+
+
+def get_query_param(request, case_insensitive_key, default=None):
+    for p in request.params:
+        if p.lower() == case_insensitive_key:
+            value = request.params.get(p)
+            if isinstance(value, six.string_types):
+                return value.lower()
+            return value
+    return default

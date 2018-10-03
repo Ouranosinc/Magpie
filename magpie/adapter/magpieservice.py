@@ -6,7 +6,7 @@ from six.moves.urllib.parse import urlparse
 import logging
 import requests
 import json
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger("TWITCHER")
 
 from magpie.definitions.twitcher_definitions import *
 from magpie.definitions.pyramid_definitions import ConfigurationError
@@ -48,7 +48,8 @@ class MagpieServiceStore(ServiceStore):
         Lists all services registered in magpie.
         """
         my_services = []
-        response = requests.get('{url}/users/current/services'.format(url=self.magpie_url),
+        path = '/users/current/services?inherit=True&cascade=True'
+        response = requests.get('{url}{path}'.format(url=self.magpie_url, path=path),
                                 cookies=request.cookies)
         if response.status_code != 200:
             raise response.raise_for_status()

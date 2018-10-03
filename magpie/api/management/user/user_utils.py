@@ -1,5 +1,6 @@
 from magpie.api.api_except import *
 from magpie.api.api_rest_schemas import *
+from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
 from magpie.api.management.user.user_formats import *
 from magpie.definitions.ziggurat_definitions import *
@@ -71,35 +72,92 @@ def filter_user_permission(resource_permission_tuple_list, user):
                   resource_permission_tuple_list)
 
 
-def get_user_resource_permissions(user, resource, db_session, inherited_permissions=True):
+def get_user_resource_permissions(user, resource, db_session, inherit_groups_permissions=True):
     if resource.owner_user_id == user.id:
         permission_names = models.resource_type_dict[resource.type].permission_names
     else:
         res_perm_tuple_list = resource.perms_for_user(user, db_session=db_session)
-        if not inherited_permissions:
+        if not inherit_groups_permissions:
             res_perm_tuple_list = filter_user_permission(res_perm_tuple_list, user)
         permission_names = [permission.perm_name for permission in res_perm_tuple_list]
-    return list(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
+    return sorted(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
 
-def get_user_service_permissions(user, service, db_session, inherited_permissions=True):
+def get_user_services(user, db_session, cascade_resources=False,
+                      inherit_groups_permissions=False, format_as_list=False):
+    """
+    Returns services by type with corresponding services by name containing sub-dict information.
+
+    :param user: user for which to find services
+    :param db_session: database session connection
+    :param cascade_resources:
+        If `False`, return only services with *Direct* user permissions on their corresponding service-resource.
+        Otherwise, return every service that has at least one sub-resource with user permissions.
+    :param inherit_groups_permissions:
+        If `False`, return only user-specific service/sub-resources permissions.
+        Otherwise, resolve inherited permissions using all groups the user is member of.
+    :param format_as_list:
+        returns as list of service dict information (not grouped by type and by name)
+    :return: only services which the user as *Direct* or *Inherited* permissions, according to `inherit_from_resources`
+    :rtype:
+        dict of services by type with corresponding services by name containing sub-dict information,
+        unless `format_as_dict` is `True`
+    """
+    resource_type = None if cascade_resources else ['service']
+    res_perm_dict = get_user_resources_permissions_dict(user, resource_types=resource_type, db_session=db_session,
+                                                        inherit_groups_permissions=inherit_groups_permissions)
+
+    services = {}
+    for resource_id, perms in res_perm_dict.items():
+        svc = models.Service.by_resource_id(resource_id=resource_id, db_session=db_session)
+        if svc.resource_type != 'service' and cascade_resources:
+            svc = models.Service.by_resource_id(resource_id=svc.root_service_id, db_session=db_session)
+            perms = service_type_dict[svc.type].permission_names
+        if svc.type not in services:
+            services[svc.type] = {}
+        if svc.resource_name not in services[svc.type]:
+            services[svc.type][svc.resource_name] = format_service(svc, perms)
+
+    if not format_as_list:
+        return services
+
+    services_list = list()
+    for svc_type in services:
+        for svc_name in services[svc_type]:
+            services_list.append(services[svc_type][svc_name])
+    return services_list
+
+
+def get_user_service_permissions(user, service, db_session, inherit_groups_permissions=True):
     if service.owner_user_id == user.id:
         permission_names = service_type_dict[service.type].permission_names
     else:
         svc_perm_tuple_list = service.perms_for_user(user, db_session=db_session)
-        if not inherited_permissions:
+        if not inherit_groups_permissions:
             svc_perm_tuple_list = filter_user_permission(svc_perm_tuple_list, user)
         permission_names = [permission.perm_name for permission in svc_perm_tuple_list]
-    return list(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
+    return sorted(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
 
 def get_user_resources_permissions_dict(user, db_session, resource_types=None,
-                                        resource_ids=None, inherited_permissions=True):
+                                        resource_ids=None, inherit_groups_permissions=True):
+    """
+    Creates a dictionary of resources by id with corresponding permissions of the user.
+
+    :param user: user for which to find services
+    :param db_session: database session connection
+    :param resource_types: (list) filter the search query with specified resource types
+    :param resource_ids: (list) filter the search query with specified resource ids
+    :param inherit_groups_permissions:
+        If `False`, return only user-specific resource permissions.
+        Otherwise, resolve inherited permissions using all groups the user is member of.
+    :return: only services which the user as *Direct* or *Inherited* permissions, according to `inherit_from_resources`
+    """
     verify_param(user, notNone=True, httpError=HTTPNotFound,
                  msgOnFail=UserResourcePermissions_GET_NotFoundResponseSchema.description)
     res_perm_tuple_list = user.resources_with_possible_perms(resource_ids=resource_ids,
                                                              resource_types=resource_types, db_session=db_session)
-    if not inherited_permissions:
+    if not inherit_groups_permissions:
         res_perm_tuple_list = filter_user_permission(res_perm_tuple_list, user)
     resources_permissions_dict = {}
     for res_perm in res_perm_tuple_list:
@@ -110,17 +168,17 @@ def get_user_resources_permissions_dict(user, db_session, resource_types=None,
 
     # remove any duplicates that could be incorporated by multiple groups
     for res_id in resources_permissions_dict:
-        resources_permissions_dict[res_id] = list(set(resources_permissions_dict[res_id]))
+        resources_permissions_dict[res_id] = sorted(set(resources_permissions_dict[res_id]))
 
     return resources_permissions_dict
 
 
-def get_user_service_resources_permissions_dict(user, service, db_session, inherited_permissions=True):
+def get_user_service_resources_permissions_dict(user, service, db_session, inherit_groups_permissions=True):
     resources_under_service = models.resource_tree_service.from_parent_deeper(parent_id=service.resource_id,
                                                                               db_session=db_session)
     resource_ids = [resource.Resource.resource_id for resource in resources_under_service]
     return get_user_resources_permissions_dict(user, db_session, resource_types=None, resource_ids=resource_ids,
-                                               inherited_permissions=inherited_permissions)
+                                               inherit_groups_permissions=inherit_groups_permissions)
 
 
 def check_user_info(user_name, email, password, group_name):
