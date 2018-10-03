@@ -57,11 +57,11 @@ class MagpieProcessStore(ProcessStore):
     def _get_process_resources(self, request):
         """
         Gets all 'process' resources corresponding to results under 'ems/processes/{id}'.
-        Only visible processes (resources with 'read' permissions of group 'users') are returned.
+        Only visible processes filtered by inherited user/group 'read' permissions are returned.
 
         :return: list of twitcher 'process' instances filtered by relevant magpie resources with permissions set.
         """
-        path = '{host}/groups/users/resources'.format(host=self.magpie_url)
+        path = '{host}/users/current/resources?inherit=true'.format(host=self.magpie_url)
         resp = requests.get(path, cookies=request.cookies, headers=json_headers)
         LOGGER.debug('Looking for resources on: `{}`.'.format(path))
         if resp.status_code != HTTPOk.code:
@@ -98,13 +98,14 @@ class MagpieProcessStore(ProcessStore):
         LOGGER.debug("Could not find resource: `{}`.".format(process_id))
         return None
 
-    def _create_resource(self, resource_name, resource_parent_id, permission_names, request):
+    def _create_resource(self, resource_name, resource_parent_id, group_name, permission_names, request):
         """
         Creates a resource under another parent resource, and sets basic user permissions on it.
 
         :param resource_name: (str) name of the resource to create.
         :param resource_parent_id: (int) id of the parent resource under which to create `resource_name`.
-        :param permission_names: (None, str, iterator) permissions to apply to the created resource, if any.
+        :param group_name: (str) name of the group for which to apply permissions to the created resource, if any.
+        :param permission_names: (None, str, iterator) group permissions to apply to the created resource, if any.
         :param request: calling request for headers and credentials
         :returns: id of the created resource
         """
@@ -116,17 +117,19 @@ class MagpieProcessStore(ProcessStore):
                 raise resp.raise_for_status()
             res_id = resp.json()['resource']['resource_id']
 
-            if permission_names is None:
-                permission_names = []
-            if isinstance(permission_names, six.string_types):
-                permission_names = [permission_names]
+            if isinstance(group_name, six.string_types):
+                if permission_names is None:
+                    permission_names = []
+                if isinstance(permission_names, six.string_types):
+                    permission_names = [permission_names]
 
-            for perm in permission_names:
-                data = {u'permission_name': perm}
-                path = '{host}/users/current/resources/{id}/permissions'.format(host=self.magpie_url, id=res_id)
-                resp = requests.post(path, data=data, cookies=request.cookies, headers=json_headers)
-                if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
-                    raise resp.raise_for_status()
+                for perm in permission_names:
+                    data = {u'permission_name': perm}
+                    path = '{host}/groups/{grp}/resources/{id}/permissions' \
+                           .format(host=self.magpie_url, grp=group_name, id=res_id)
+                    resp = requests.post(path, data=data, cookies=request.cookies, headers=json_headers)
+                    if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
+                        raise resp.raise_for_status()
 
             return res_id
         except KeyError:
@@ -151,7 +154,7 @@ class MagpieProcessStore(ProcessStore):
                 raise ProcessRegistrationError('Failed retrieving EMS service resource.')
 
             try:
-                # get resource id of route '/processes', create it as necessary
+                # get resource id of route '/ems/processes', create it as necessary
                 path = '{host}/resources/{id}'.format(host=self.magpie_url, id=ems_res_id)
                 resp = requests.get(path, cookies=request.cookies, headers=json_headers)
                 if resp.status_code != HTTPOk.code:
@@ -165,18 +168,16 @@ class MagpieProcessStore(ProcessStore):
                 if not processes_res_id:
                     # all members of 'users' group can query '/ems/processes' (read exact route match),
                     # but visibility of each process will be filtered by specific '/ems/processes/{id}' permissions
-                    processes_res_id = self._create_resource(u'processes', ems_res_id, u'read-match', request)
-                    data = {u'permission_name': u'read-match'}
-                    path = '{host}/groups/users/resources/{id}'.format(host=self.magpie_url, id=processes_res_id)
-                    resp = requests.post(path, data=data, cookies=request.cookies, headers=json_headers)
-                    if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
-                        raise resp.raise_for_status()
+                    processes_res_id = self._create_resource(u'processes', ems_res_id, u'users', u'read-match', request)
             except KeyError:
                 raise ProcessRegistrationError('Failed retrieving EMS processes resource.')
 
             # create resource id of route '/ems/processes/{id}' and set minimal permissions
-            # use (read/write) permissions so that user creating the process can execute any sub-route request on it
-            self._create_resource(process.id, processes_res_id, [u'read', u'write'], request)
+            # use read permission so that users can execute any sub-route GET request on it
+            process_res_id = self._create_resource(process.id, processes_res_id, u'users', u'read', request)
+            # create resource id of route '/ems/processes/{id}/jobs' and set minimal permissions
+            # use write-match permission so that users can ONLY execute a job (cannot DELETE process, job, etc.)
+            self._create_resource(u'jobs', process_res_id, u'users', u'write-match', request)
 
         return processstore_defaultfactory(request.registry).save_process(process, overwrite, request)
 
