@@ -50,9 +50,26 @@ class MagpieProcessStore(ProcessStore):
                 LOGGER.warn("Missing scheme from MagpieServiceStore url, new value: '{}'".format(self.magpie_url))
 
             self.twitcher_config = get_twitcher_configuration(registry.settings)
+            self.twitcher_service_url = None
         except AttributeError:
             #If magpie.url does not exist, calling strip fct over None will raise this issue
             raise ConfigurationError('magpie.url config cannot be found')
+
+    def _get_service_public_url(self, request):
+        if not self.twitcher_service_url and self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
+            # use generic 'current' user route to fetch service URL to ensure that even
+            # a user with minimal privileges will still return a match
+            path = '{host}/users/current/services?inherit=true&cascade=true'.format(host=self.magpie_url)
+            resp = requests.get(path, cookies=request.cookies, headers=json_headers)
+            if resp.status_code != HTTPOk.code:
+                raise resp.raise_for_status()
+            try:
+                self.twitcher_service_url = resp.json()['services']['api']['ems']['public_url']
+            except KeyError:
+                raise ProcessNotFound("Could not find resource `processes` endpoint for visibility retrieval.")
+            LOGGER.debug("Could not find resource: `processes`.")
+        return self.twitcher_service_url
+
 
     def _get_process_resources(self, request):
         """
@@ -95,8 +112,9 @@ class MagpieProcessStore(ProcessStore):
                 if ems_processes_resources[process_res_id]['resource_name'] == process_id:
                     LOGGER.debug("Found process resource: `{}`.".format(process_id))
 
-                    # if GET is permitted (200) on corresponding magpie resource route, twitcher process is visible
-                    path = '{host}/users/current/resources/{id}'.format(host=self.magpie_url, id=process_res_id)
+                    # if read permission is granted on corresponding magpie resource route, twitcher
+                    # '/ems/process/{process_id}' will be accessible, otherwise unauthorized is a private process
+                    path = '{host}/processes/{id}'.format(host=self._get_service_public_url(request), id=process_id)
                     resp = requests.get(path, cookies=request.cookies, headers=json_headers)
                     if resp.status_code == HTTPOk.code:
                         return ems_processes_resources[process_res_id]['resource_id']
