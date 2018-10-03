@@ -10,6 +10,7 @@ import argparse
 import time
 import warnings
 import logging
+import logging.config
 LOGGER = logging.getLogger(__name__)
 
 # -- Definitions
