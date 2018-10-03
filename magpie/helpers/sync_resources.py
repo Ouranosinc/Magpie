@@ -89,6 +89,7 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
                                 'children': {},
                                 'id': None,
                                 'remote_id': values['remote_id'],
+                                'resource_display_name': values.get('resource_display_name', resource_name_remote),
                                 'matches_remote': True}
                 _resources_local[resource_name_remote] = new_resource
                 recurse(new_resource['children'], values['children'], depth + 1)
@@ -180,8 +181,10 @@ def _update_db(remote_resources, service_id, session):
 
     def add_children(resources, parent_id, position=0):
         for resource_name, values in resources.items():
+            resource_display_name = unicode(values.get('resource_display_name', resource_name))
             new_resource = models.RemoteResource(service_id=sync_info.service_id,
                                                  resource_name=unicode(resource_name),
+                                                 resource_display_name=resource_display_name,
                                                  resource_type=values['resource_type'],
                                                  parent_id=parent_id,
                                                  ordering=position)
@@ -235,8 +238,10 @@ def _format_resource_tree(children):
     for child_id, child_dict in children.items():
         resource = child_dict[u'node']
         new_children = child_dict[u'children']
+        resource_display_name = resource.resource_display_name or resource.resource_name
         resource_dict = {'children': _format_resource_tree(new_children),
-                         'remote_id': resource.resource_id}
+                         'remote_id': resource.resource_id,
+                         'resource_display_name': resource_display_name}
         fmt_res_tree[resource.resource_name] = resource_dict
     return fmt_res_tree
 

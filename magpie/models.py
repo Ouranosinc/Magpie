@@ -40,6 +40,8 @@ class Resource(ResourceMixin, Base):
     permission_names = []
     child_resource_allowed = True
 
+    resource_display_name = sa.Column(sa.Unicode(100), nullable=True)
+
     # reference to top-most service under which the resource is nested
     # if the resource is the service, id is None (NULL)
     @declared_attr
@@ -205,6 +207,7 @@ class RemoteResource(BaseModel, Base):
                           nullable=True)
     ordering = sa.Column(sa.Integer(), default=0, nullable=False)
     resource_name = sa.Column(sa.Unicode(100), nullable=False)
+    resource_display_name = sa.Column(sa.Unicode(100), nullable=True)
     resource_type = sa.Column(sa.Unicode(30), nullable=False)
 
     def __repr__(self):

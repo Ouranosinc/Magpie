@@ -48,7 +48,7 @@ li.Collapsed {
             % else:
             <li class="NoChild">
             % endif
-                <div class="tree_item">${key}</div>
+                <div class="tree_item">${tree[key].get('resource_display_name', key)}</div>
                 <input type="hidden" value="${tree[key]['id']}" name="resource_id">
                 <input type="hidden" value="${tree[key].get('remote_id', '')}" name="remote_id">
                 <input type="hidden" value="${tree[key].get('matches_remote', '')}" name="matches_remote">

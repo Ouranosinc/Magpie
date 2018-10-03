@@ -84,7 +84,10 @@ class _SyncServiceProjectAPI(_SyncServiceInterface):
         resp = requests.get(projects_url)
         resp.raise_for_status()
 
-        projects = {p["id"]: {"children": {}, "resource_type": resource_type} for p in resp.json()}
+        projects = {p["id"]: {"children": {},
+                              "resource_type": resource_type,
+                              "resource_display_name": p["name"]}
+                    for p in resp.json()}
 
         resources = {self.service_name: {"children": projects, "resource_type": resource_type}}
         assert is_valid_resource_schema(resources), "Error in Interface implementation"

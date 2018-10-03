@@ -416,7 +416,10 @@ class ManagementViews(object):
             perm_names = self.default_get(permission, r_id, [])
             children = self.resource_tree_parser(resource['children'], permission)
             children = OrderedDict(sorted(children.items()))
-            resources_tree[resource['resource_name']] = dict(id=r_id, permission_names=perm_names, children=children)
+            resources_tree[resource['resource_name']] = dict(id=r_id,
+                                                             permission_names=perm_names,
+                                                             resource_display_name=resource['resource_display_name'],
+                                                             children=children)
         return resources_tree
 
     def perm_tree_parser(self, raw_perm_tree):
@@ -693,6 +696,7 @@ class ManagementViews(object):
             else:
                 data = {
                     'resource_name': name,
+                    'resource_display_name': remote_resource.resource_display_name,
                     'resource_type': remote_resource.resource_type,
                     'parent_id': parent_id,
                 }
