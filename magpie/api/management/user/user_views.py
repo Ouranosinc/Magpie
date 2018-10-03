@@ -298,7 +298,7 @@ def get_user_inherited_services_view(request):
 @LoggedUserServiceInheritedPermissionsAPI.get(schema=UserServicePermissions_GET_RequestSchema,
                                               tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
                                               response_schemas=LoggedUserServicePermissions_GET_responses)
-@view_config(route_name=UserServicePermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserServiceInheritedPermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_inherited_permissions_view(request):
     """List all permissions a user has on a service using all his inherited user and groups permissions."""
     LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"
