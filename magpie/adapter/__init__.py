@@ -2,8 +2,8 @@ from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.twitcher_definitions import *
 from magpie.adapter.magpieowssecurity import *
-from magpie.adapter.magpieservice import *
-from magpie.adapter.magpieprocess import *
+from magpie.adapter.magpieprocess import MagpieProcessStore
+from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.models import get_user
 from magpie.security import auth_config_from_settings
 from magpie.db import *
@@ -20,8 +20,6 @@ class MagpieAdapter(AdapterInterface):
         return MagpieServiceStore(registry=registry)
 
     def processstore_factory(self, registry):
-        if get_twitcher_configuration(registry.settings) == TWITCHER_CONFIGURATION_DEFAULT:
-            return DefaultAdapter().processstore_factory(registry)
         return MagpieProcessStore(registry=registry)
 
     def jobstore_factory(self, registry):
