@@ -56,12 +56,10 @@ class MagpieProcessStore(ProcessStore):
 
     def _get_process_resources(self, request):
         """
-        Gets all 'process' resources corresponding to results under 'ems/processes/{id}'.
-        Only visible processes filtered by inherited user/group 'read' permissions are returned.
-
-        :return: list of twitcher 'process' instances filtered by relevant magpie resources with permissions set.
+        Gets all 'process' resources corresponding to results under '/ems/processes'.
+        Resources are not filtered by user permissions.
         """
-        path = '{host}/users/current/resources?inherit=true'.format(host=self.magpie_url)
+        path = '{host}/resources'.format(host=self.magpie_url)
         resp = requests.get(path, cookies=request.cookies, headers=json_headers)
         LOGGER.debug('Looking for resources on: `{}`.'.format(path))
         if resp.status_code != HTTPOk.code:
@@ -79,19 +77,33 @@ class MagpieProcessStore(ProcessStore):
         LOGGER.debug("Could not find resource: `processes`.")
         return list()
 
-    def _get_process_resource_id(self, process_id, ems_processes_resources):
+    def _get_process_resource_id(self, process_id, ems_processes_resources, request):
         """
         Searches for a 'process' resource corresponding to 'ems/processes/{id}'.
-        Only visible processes (resources with 'read' permissions of group 'users') are returned.
+        Only visible processes are returned (resources with reading permission assigned to request user).
 
         :returns: id of the found 'process' resource, or None.
+        :raises:
+            HTTPException if not matching Ok or Unauthorized statuses.
+            ProcessNotFound if some response parsing error occurred.
         """
         if not ems_processes_resources:
             raise ProcessNotFound("Could not parse undefined processes resource endpoint for visibility retrieval.")
         try:
             for process_res_id in ems_processes_resources:
+                # find the requested process resource by matching ids
                 if ems_processes_resources[process_res_id]['resource_name'] == process_id:
-                    return ems_processes_resources[process_res_id]['resource_id']
+                    LOGGER.debug("Found process resource: `{}`.".format(process_id))
+
+                    # if GET is permitted (200) on corresponding magpie resource route, twitcher process is visible
+                    path = '{host}/users/current/resources/{id}'.format(host=self.magpie_url, id=process_res_id)
+                    resp = requests.get(path, cookies=request.cookies, headers=json_headers)
+                    if resp.status_code == HTTPOk.code:
+                        return ems_processes_resources[process_res_id]['resource_id']
+                    elif resp.status_code == HTTPUnauthorized.code:
+                        return None
+                    else:
+                        raise resp.raise_for_status()
         except KeyError:
             LOGGER.debug("Content of ems processes resources: `{!r}`.".format(ems_processes_resources))
             raise ProcessNotFound("Could not find process `{}` resource for visibility retrieval.".format(process_id))
@@ -190,7 +202,7 @@ class MagpieProcessStore(ProcessStore):
         """
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
             resources = self._get_process_resources(request)
-            resource_id = self._get_process_resource_id(process_id, resources)
+            resource_id = self._get_process_resource_id(process_id, resources, request)
             if not resource_id:
                 raise ProcessNotFound('Could not find process `{}` resource for deletion.'.format(process_id))
 
@@ -217,7 +229,7 @@ class MagpieProcessStore(ProcessStore):
         ems_processes_visible = list()
         for process in process_list:
             # if id is returned, filtered group resource permission was set, therefore visibility is permitted
-            if self._get_process_resource_id(process.id, ems_processes):
+            if self._get_process_resource_id(process.id, ems_processes, request):
                 ems_processes_visible.append(process)
         return ems_processes_visible
 
@@ -244,7 +256,7 @@ class MagpieProcessStore(ProcessStore):
             return processstore_defaultfactory(request.registry).get_visibility(process_id, request)
 
         ems_processes = self._get_process_resources(request)
-        process_res_id = self._get_process_resource_id(process_id, ems_processes)
+        process_res_id = self._get_process_resource_id(process_id, ems_processes, request)
         return VISIBILITY_PUBLIC if process_res_id is not None else VISIBILITY_PRIVATE
 
     def set_visibility(self, process_id, visibility, request=None):
@@ -256,7 +268,7 @@ class MagpieProcessStore(ProcessStore):
         """
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
             ems_processes = self._get_process_resources(request)
-            process_res_id = self._get_process_resource_id(process_id, ems_processes)
+            process_res_id = self._get_process_resource_id(process_id, ems_processes, request)
             if not process_res_id:
                 raise ProcessNotFound('Could not find process `{}` resource to change visibility.'.format(process_id))
 
