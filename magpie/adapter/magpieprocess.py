@@ -58,7 +58,9 @@ class MagpieProcessStore(ProcessStore):
 
         :return: list of twitcher 'process' instances filtered by relevant magpie resources with permissions set.
         """
-        resp = requests.get('{host}/groups/users/resources'.format(host=self.magpie_url), cookies=request.cookies)
+        path = '{host}/groups/users/resources'.format(host=self.magpie_url)
+        resp = requests.get(path, cookies=request.cookies)
+        LOGGER.debug('Looking for resources on: `{}`.'.format(path))
         if resp.status_code != HTTPOk.code:
             raise resp.raise_for_status()
         try:
@@ -69,6 +71,7 @@ class MagpieProcessStore(ProcessStore):
                     return ems_processes
         except KeyError:
             raise ProcessNotFound("Could not find processes resource endpoint for visibility retrieval.")
+        LOGGER.debug('Could not find resource: `processes`.')
         return list()
 
     def _get_process_resource_id(self, process_id, ems_processes_resources):
@@ -79,13 +82,14 @@ class MagpieProcessStore(ProcessStore):
         :returns: id of the found 'process' resource, or None.
         """
         if not ems_processes_resources:
-            raise ProcessNotFound("Could not find processes resource endpoint for visibility retrieval.")
+            raise ProcessNotFound("Could not parse undefined processes resource endpoint for visibility retrieval.")
         try:
             for process_res_id in ems_processes_resources:
                 if ems_processes_resources[process_res_id]['resource_name'] == process_id:
                     return ems_processes_resources[process_res_id]['resource_id']
         except KeyError:
             raise ProcessNotFound('Could not find process `{}` resource for visibility retrieval.'.format(process_id))
+        LOGGER.debug('Could not find resource: `{}`.'.format(process_id))
         return None
 
     def _create_resource(self, resource_name, resource_parent_id, permission_names, request):
@@ -197,6 +201,7 @@ class MagpieProcessStore(ProcessStore):
         If twitcher is in EMS mode, filter by corresponding resources with read permissions.
         """
         process_list = processstore_defaultfactory(request.registry).list_processes(request)
+        LOGGER.debug('Found processes: {!r}.'.format(process_list))
         if self.twitcher_config != TWITCHER_CONFIGURATION_EMS:
             return process_list
 
