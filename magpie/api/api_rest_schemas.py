@@ -375,42 +375,42 @@ class InternalServerErrorResponseSchema(colander.MappingSchema):
 
 
 class ProvidersListSchema(colander.SequenceSchema):
-    item = colander.SchemaNode(
+    provider_name = colander.SchemaNode(
         colander.String(),
         description="Available login providers.",
-        example=["ziggurat", "openid"],
+        example="openid",
     )
 
 
 class ResourceTypesListSchema(colander.SequenceSchema):
-    item = colander.SchemaNode(
+    resource_type = colander.SchemaNode(
         colander.String(),
         description="Available resource type under root service.",
-        example=["file", "dictionary"],
+        example="file",
     )
 
 
 class GroupNamesListSchema(colander.SequenceSchema):
-    item = colander.SchemaNode(
+    group_name = colander.SchemaNode(
         colander.String(),
         description="List of groups depending on context.",
-        example=["anonymous"]
+        example="administrators"
     )
 
 
 class UserNamesListSchema(colander.SequenceSchema):
-    item = colander.SchemaNode(
+    user_name = colander.SchemaNode(
         colander.String(),
         description="Users registered in the db",
-        example=["anonymous", "admin", "toto"]
+        example="bob"
     )
 
 
 class PermissionListSchema(colander.SequenceSchema):
-    item = colander.SchemaNode(
+    permission_name = colander.SchemaNode(
         colander.String(),
         description="Permissions applicable to the service/resource",
-        example=["read", "write"]
+        example="read"
     )
 
 
@@ -423,7 +423,9 @@ class UserBodySchema(colander.MappingSchema):
         colander.String(),
         description="Email of the user.",
         example="toto@mail.com")
-    group_names = GroupNamesListSchema()
+    group_names = GroupNamesListSchema(
+        example=['administrators', 'users']
+    )
 
 
 class GroupBodySchema(colander.MappingSchema):
@@ -445,7 +447,10 @@ class GroupBodySchema(colander.MappingSchema):
         description="Number of users member of the group.",
         example=2,
         missing=colander.drop)
-    user_names = UserNamesListSchema(missing=colander.drop)
+    user_names = UserNamesListSchema(
+        example=['alice', 'bob'],
+        missing=colander.drop
+    )
 
 
 class ServiceBodySchema(colander.MappingSchema):
@@ -453,7 +458,9 @@ class ServiceBodySchema(colander.MappingSchema):
         colander.Integer(),
         description="Resource identification number",
     )
-    permission_names = PermissionListSchema()
+    permission_names = PermissionListSchema(
+        example=['read', 'write']
+    )
     service_name = colander.SchemaNode(
         colander.String(),
         description="Name of the service",
