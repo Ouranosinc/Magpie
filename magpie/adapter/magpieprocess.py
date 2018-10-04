@@ -18,6 +18,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPConflict,
     HTTPUnauthorized,
     HTTPInternalServerError,
+    asbool
 )
 
 # import 'process' elements separately than 'twitcher_definitions' because not defined in master
@@ -48,7 +49,7 @@ class MagpieProcessStore(ProcessStore):
                 LOGGER.warn("Missing scheme from MagpieServiceStore url, new value: '{}'".format(self.magpie_url))
 
             self.twitcher_config = get_twitcher_configuration(registry.settings)
-            self.twitcher_ssl_verify = registry.settings.get('twitcher.ows_proxy_ssl_verify', True)
+            self.twitcher_ssl_verify = asbool(registry.settings.get('twitcher.ows_proxy_ssl_verify', True))
             self.json_headers = {'Accept': 'application/json'}
             self.twitcher_service_url = None
         except AttributeError:
