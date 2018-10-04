@@ -113,16 +113,20 @@ class MagpieProcessStore(ProcessStore):
                     LOGGER.debug("Found process resource: `{}`.".format(process_id))
 
                     # if read permission is granted on corresponding magpie resource route, twitcher
-                    # '/ems/process/{process_id}' will be accessible, otherwise unauthorized is a private process
-                    path = '{host}/processes/{id}'.format(host=self._get_service_public_url(request), id=process_id)
+                    # '/ems/process/{process_id}' will be accessible, otherwise unauthorized on private process
+                    # NB:
+                    #   - cannot test directly GET '/ems/process/{process_id}' for 401 because it causes circular calls
+                    #   - must test with current user (not '/resources') because he might not have administrator access
+                    path = '{host}/users/current/resources/{id}/permissions?inherit=true' \
+                           .format(host=self.magpie_url, id=process_res_id)
                     resp = requests.get(path, cookies=request.cookies,
                                         headers=self.json_headers, verify=self.twitcher_ssl_verify)
-                    if resp.status_code == HTTPOk.code:
-                        return ems_processes_resources[process_res_id]['resource_id']
-                    elif resp.status_code == HTTPUnauthorized.code:
-                        return None
-                    else:
+                    if resp.status_code != HTTPOk.code:
                         raise resp.raise_for_status()
+                    user_process_permissions = resp.json()['permission_names']
+                    if 'read' in user_process_permissions or 'read-match' in user_process_permissions:
+                        return ems_processes_resources[process_res_id]['resource_id']
+                    return None
         except KeyError:
             LOGGER.debug("Content of ems processes resources: `{!r}`.".format(ems_processes_resources))
             raise ProcessNotFound("Could not find process `{}` resource for visibility retrieval.".format(process_id))
