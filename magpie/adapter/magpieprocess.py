@@ -27,9 +27,6 @@ from twitcher.store.base import ProcessStore
 from twitcher.visibility import VISIBILITY_PUBLIC, VISIBILITY_PRIVATE
 
 
-json_headers = {'Accept': 'application/json'}
-
-
 class MagpieProcessStore(ProcessStore):
     """
     Registry for OWS processes.
@@ -50,6 +47,8 @@ class MagpieProcessStore(ProcessStore):
                 LOGGER.warn("Missing scheme from MagpieServiceStore url, new value: '{}'".format(self.magpie_url))
 
             self.twitcher_config = get_twitcher_configuration(registry.settings)
+            self.twitcher_ssl_verify = registry.settings.get('twitcher.ows_proxy_ssl_verify', True)
+            self.json_headers = {'Accept': 'application/json'}
             self.twitcher_service_url = None
         except AttributeError:
             #If magpie.url does not exist, calling strip fct over None will raise this issue
@@ -60,7 +59,8 @@ class MagpieProcessStore(ProcessStore):
             # use generic 'current' user route to fetch service URL to ensure that even
             # a user with minimal privileges will still return a match
             path = '{host}/users/current/services?inherit=true&cascade=true'.format(host=self.magpie_url)
-            resp = requests.get(path, cookies=request.cookies, headers=json_headers)
+            resp = requests.get(path, cookies=request.cookies,
+                                headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code != HTTPOk.code:
                 raise resp.raise_for_status()
             try:
@@ -70,14 +70,14 @@ class MagpieProcessStore(ProcessStore):
             LOGGER.debug("Could not find resource: `processes`.")
         return self.twitcher_service_url
 
-
     def _get_process_resources(self, request):
         """
         Gets all 'process' resources corresponding to results under '/ems/processes'.
         Resources are not filtered by user permissions.
         """
         path = '{host}/resources'.format(host=self.magpie_url)
-        resp = requests.get(path, cookies=request.cookies, headers=json_headers)
+        resp = requests.get(path, cookies=request.cookies,
+                            headers=self.json_headers, verify=self.twitcher_ssl_verify)
         LOGGER.debug('Looking for resources on: `{}`.'.format(path))
         if resp.status_code != HTTPOk.code:
             raise resp.raise_for_status()
@@ -115,7 +115,8 @@ class MagpieProcessStore(ProcessStore):
                     # if read permission is granted on corresponding magpie resource route, twitcher
                     # '/ems/process/{process_id}' will be accessible, otherwise unauthorized is a private process
                     path = '{host}/processes/{id}'.format(host=self._get_service_public_url(request), id=process_id)
-                    resp = requests.get(path, cookies=request.cookies, headers=json_headers)
+                    resp = requests.get(path, cookies=request.cookies,
+                                        headers=self.json_headers, verify=self.twitcher_ssl_verify)
                     if resp.status_code == HTTPOk.code:
                         return ems_processes_resources[process_res_id]['resource_id']
                     elif resp.status_code == HTTPUnauthorized.code:
@@ -142,7 +143,8 @@ class MagpieProcessStore(ProcessStore):
         try:
             data = {u'parent_id': resource_parent_id, u'resource_name': resource_name, u'resource_type': u'route'}
             path = '{host}/resources'.format(host=self.magpie_url)
-            resp = requests.post(path, data=data, cookies=request.cookies, headers=json_headers)
+            resp = requests.post(path, data=data, cookies=request.cookies,
+                                 headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code != HTTPCreated.code:
                 raise resp.raise_for_status()
             res_id = resp.json()['resource']['resource_id']
@@ -157,7 +159,8 @@ class MagpieProcessStore(ProcessStore):
                     data = {u'permission_name': perm}
                     path = '{host}/groups/{grp}/resources/{id}/permissions' \
                            .format(host=self.magpie_url, grp=group_name, id=res_id)
-                    resp = requests.post(path, data=data, cookies=request.cookies, headers=json_headers)
+                    resp = requests.post(path, data=data, cookies=request.cookies,
+                                         headers=self.json_headers, verify=self.twitcher_ssl_verify)
                     if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
                         raise resp.raise_for_status()
 
@@ -176,7 +179,8 @@ class MagpieProcessStore(ProcessStore):
             try:
                 # get resource id of ems service
                 path = '{host}/services/ems'.format(host=self.magpie_url)
-                resp = requests.get(path, cookies=request.cookies, headers=json_headers)
+                resp = requests.get(path, cookies=request.cookies,
+                                    headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 if resp.status_code != HTTPOk.code:
                     raise resp.raise_for_status()
                 ems_res_id = resp.json()['ems']['resource_id']
@@ -186,7 +190,8 @@ class MagpieProcessStore(ProcessStore):
             try:
                 # get resource id of route '/ems/processes', create it as necessary
                 path = '{host}/resources/{id}'.format(host=self.magpie_url, id=ems_res_id)
-                resp = requests.get(path, cookies=request.cookies, headers=json_headers)
+                resp = requests.get(path, cookies=request.cookies,
+                                    headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 if resp.status_code != HTTPOk.code:
                     raise resp.raise_for_status()
                 processes_res_id = None
@@ -225,7 +230,8 @@ class MagpieProcessStore(ProcessStore):
                 raise ProcessNotFound('Could not find process `{}` resource for deletion.'.format(process_id))
 
             path = '{host}/resources/{id}'.format(host=self.magpie_url, id=resource_id)
-            resp = requests.delete(path, cookies=request.cookies, headers=json_headers)
+            resp = requests.delete(path, cookies=request.cookies,
+                                   headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code != HTTPOk.code:
                 raise resp.raise_for_status()
 
@@ -293,7 +299,8 @@ class MagpieProcessStore(ProcessStore):
             if visibility == VISIBILITY_PRIVATE:
                 path = '{host}/groups/users/resources/{id}/permissions/{perm}' \
                        .format(host=self.magpie_url, id=process_res_id, perm='read')
-                reps = requests.delete(path, cookies=request.cookies, headers=json_headers)
+                reps = requests.delete(path, cookies=request.cookies,
+                                       headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 # permission is not set if deleted or non existing
                 if reps.status_code not in (HTTPOk.code, HTTPNotFound.code):
                     raise reps.raise_for_status()
@@ -301,7 +308,8 @@ class MagpieProcessStore(ProcessStore):
             elif visibility == VISIBILITY_PUBLIC:
                 path = '{host}/groups/users/resources/{id}/permissions'.format(host=self.magpie_url, id=process_res_id)
                 data = {u'permission_name': u'read'}
-                reps = requests.post(path, data=data, cookies=request.cookies, headers=json_headers)
+                reps = requests.post(path, data=data, cookies=request.cookies,
+                                     headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 # permission is set if created or already exists
                 if reps.status_code not in (HTTPCreated.code, HTTPConflict.code):
                     raise reps.raise_for_status()
