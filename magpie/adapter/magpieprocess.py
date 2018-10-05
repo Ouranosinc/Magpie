@@ -280,7 +280,7 @@ class MagpieProcessStore(ProcessStore):
 
         return processstore_defaultfactory(request.registry).delete_process(process_id, request)
 
-    def list_processes(self, request=None):
+    def list_processes(self, visibility=None, request=None):
         """
         List publicly visible processes.
 
@@ -290,7 +290,7 @@ class MagpieProcessStore(ProcessStore):
             - administrators: return everything
             - any other group: return only visible processes
         """
-        visibility_filter = VISIBILITY_PUBLIC
+        visibility_filter = visibility
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
             path = '{host}/users/{usr}/groups'.format(host=self.magpie_url, usr=self.magpie_current)
             resp = requests.get(path, cookies=request.cookies,
@@ -301,6 +301,8 @@ class MagpieProcessStore(ProcessStore):
                 groups_memberships = resp.json()['group_names']
                 if self.magpie_admin in groups_memberships:
                     visibility_filter = visibility_values
+                else:
+                    visibility_filter = VISIBILITY_PUBLIC
             except KeyError:
                 raise ProcessNotFound("Failed retrieving processes read permissions for listing.")
             except Exception as ex:
@@ -321,7 +323,7 @@ class MagpieProcessStore(ProcessStore):
             using twitcher proxy, magpie user/group permissions on corresponding resource (/ems/processes/{process_id})
             will automatically handle Ok/Unauthorized responses using the API route's read access.
         """
-        return processstore_defaultfactory(request.registry).fetch_by_id(process_id, request)
+        return processstore_defaultfactory(request.registry).fetch_by_id(process_id, request=request)
 
     def get_visibility(self, process_id, request=None):
         """
@@ -332,7 +334,7 @@ class MagpieProcessStore(ProcessStore):
             using twitcher proxy, only administrators get read permissions on '/ems/processes/{process_id}/visibility'
             any other level user will get unauthorized on this route
         """
-        return processstore_defaultfactory(request.registry).get_visibility(process_id, request)
+        return processstore_defaultfactory(request.registry).get_visibility(process_id, request=request)
 
     def set_visibility(self, process_id, visibility, request=None):
         """
@@ -381,4 +383,4 @@ class MagpieProcessStore(ProcessStore):
                 # use write-match permission so that users can ONLY execute a job (cannot DELETE process, job, etc.)
                 self._set_resource_permissions(jobs_res_id, self.magpie_users, u'write-match', request)
 
-        processstore_defaultfactory(request.registry).set_visibility(process_id, visibility, request)
+        processstore_defaultfactory(request.registry).set_visibility(process_id, visibility=visibility, request=request)
