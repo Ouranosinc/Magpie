@@ -2,13 +2,13 @@ from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.twitcher_definitions import *
 from magpie.adapter.magpieowssecurity import *
-from magpie.adapter.magpieservice import *
+from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.models import get_user
 from magpie.security import auth_config_from_settings
 from magpie.db import *
 from magpie import __meta__
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("TWITCHER")
 
 
 class MagpieAdapter(AdapterInterface):
@@ -19,9 +19,9 @@ class MagpieAdapter(AdapterInterface):
         return MagpieServiceStore(registry=registry)
 
     def processstore_factory(self, registry):
-        # no reimplementation of processes on magpie side
-        # simply return the default twitcher process store
-        return DefaultAdapter().processstore_factory(registry)
+        # import here to avoid import errors on default twitcher not implementing processes
+        from magpie.adapter.magpieprocess import MagpieProcessStore
+        return MagpieProcessStore(registry=registry)
 
     def jobstore_factory(self, registry):
         # no reimplementation of jobs on magpie side

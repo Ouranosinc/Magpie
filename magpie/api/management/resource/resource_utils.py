@@ -125,7 +125,7 @@ def get_resource_root_service(resource, db_session):
     return None
 
 
-def create_resource(resource_name, resource_type, parent_id, db_session):
+def create_resource(resource_name, resource_display_name, resource_type, parent_id, db_session):
     verify_param(resource_name, paramName=u'resource_name', notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `resource_name` specified for child resource creation.")
     verify_param(resource_type, paramName=u'resource_type', notNone=True, notEmpty=True, httpError=HTTPBadRequest,
@@ -142,6 +142,7 @@ def create_resource(resource_name, resource_type, parent_id, db_session):
     root_service = check_valid_service_resource(parent_resource, resource_type, db_session)
     new_resource = resource_factory(resource_type=resource_type,
                                     resource_name=resource_name,
+                                    resource_display_name=resource_display_name or resource_name,
                                     root_service_id=root_service.resource_id,
                                     parent_id=parent_resource.resource_id)
 

@@ -288,12 +288,13 @@ def check_error_param_structure(json_body, paramValue=Null, paramName=Null, para
             check_val_equal(json_body['paramCompare'], paramCompare)
 
 
-def check_post_resource_structure(json_body, resource_name, resource_type, version=None):
+def check_post_resource_structure(json_body, resource_name, resource_type, resource_display_name, version=None):
     """
     Validates POST /resource response information based on different Magpie version formats.
     :param json_body: json body of the response to validate.
     :param resource_name: name of the resource to validate.
     :param resource_type: type of the resource to validate.
+    :param resource_display_name: display name of the resource to validate.
     :param version: version of application/remote server to use for format validation, use local Magpie version if None.
     :raise failing condition
     """
@@ -302,9 +303,11 @@ def check_post_resource_structure(json_body, resource_name, resource_type, versi
         check_val_is_in('resource', json_body)
         check_val_type(json_body['resource'], dict)
         check_val_is_in('resource_name', json_body['resource'])
+        check_val_is_in('resource_display_name', json_body['resource'])
         check_val_is_in('resource_type', json_body['resource'])
         check_val_is_in('resource_id', json_body['resource'])
         check_val_equal(json_body['resource']['resource_name'], resource_name)
+        check_val_equal(json_body['resource']['resource_display_name'], resource_display_name)
         check_val_equal(json_body['resource']['resource_type'], resource_type)
         check_val_type(json_body['resource']['resource_id'], int)
     else:
@@ -340,6 +343,8 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
         check_val_equal(resource_info['parent_id'], parent_resource_id)
         check_val_is_in('resource_name', resource_info)
         check_val_type(resource_info['resource_name'], six.string_types)
+        check_val_is_in('resource_display_name', resource_info)
+        check_val_type(resource_info['resource_display_name'], six.string_types)
         check_val_is_in('permission_names', resource_info)
         check_val_type(resource_info['permission_names'], list)
         check_val_is_in('children', resource_info)

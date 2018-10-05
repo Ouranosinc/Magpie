@@ -258,12 +258,12 @@ class ServiceAPI(ServiceI):
 
     @property
     def __acl__(self):
-        raise NotImplementedError
+        return self.route_acl()
 
-    @property
     def route_acl(self, sub_api_route=None):
         self.expand_acl(self.service, self.request.user)
 
+        match_index = 0
         route_parts = self.request.path.split('/')
         route_api_base = self.service.resource_name if sub_api_route is None else sub_api_route
 
@@ -273,36 +273,31 @@ class ServiceAPI(ServiceI):
             if len(route_parts) - 1 > api_idx:
                 route_parts = route_parts[api_idx + 1::]
                 route_child = self.service
+
+                # process read/write inheritance permission access
                 while route_child and route_parts:
                     part_name = route_parts.pop(0)
                     route_res_id = route_child.resource_id
                     route_child = models.find_children_by_name(part_name, parent_id=route_res_id,
                                                                db_session=self.request.db)
+                    match_index = len(self.acl)
                     self.expand_acl(route_child, self.request.user)
+
+        # process read/write-match specific permission access
+        # (convert exact route '-match' to read/write only if matching last item's permissions)
+        for i in range(match_index, len(self.acl)):
+            if self.acl[i][2] == 'read-match':
+                self.acl[i] = (self.acl[i][0], self.acl[i][1], 'read')
+            if self.acl[i][2] == 'write-match':
+                self.acl[i] = (self.acl[i][0], self.acl[i][1], 'write')
+
         return self.acl
 
     def permission_requested(self):
-        if self.request.method == 'GET':
+        # only read/write are used for 'real' access control, '-match' permissions must be updated accordingly
+        if self.request.method.upper() in ['GET', 'HEAD']:
             return u'read'
         return u'write'
-
-
-class ServiceGeoserverAPI(ServiceAPI):
-    def __init__(self, service, request):
-        super(ServiceGeoserverAPI, self).__init__(service, request)
-
-    @property
-    def __acl__(self):
-        return ServiceAPI.route_acl.fget(self)
-
-
-class ServiceProjectAPI(ServiceAPI):
-    def __init__(self, service, request):
-        super(ServiceProjectAPI, self).__init__(service, request)
-
-    @property
-    def __acl__(self):
-        return ServiceAPI.route_acl.fget(self, sub_api_route='api')
 
 
 class ServiceWFS(ServiceI):
@@ -411,10 +406,9 @@ class ServiceTHREDDS(ServiceI):
 
 service_type_dict = {
     u'access':          ServiceAccess,
-    u'geoserver-api':   ServiceGeoserverAPI,
+    u'api':             ServiceAPI,
     u'geoserverwms':    ServiceGeoserver,
     u'ncwms':           ServiceNCWMS2,
-    u'project-api':     ServiceProjectAPI,
     u'thredds':         ServiceTHREDDS,
     u'wfs':             ServiceWFS,
     u'wps':             ServiceWPS,

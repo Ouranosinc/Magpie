@@ -1,9 +1,16 @@
+import datetime
+from collections import OrderedDict
+
+import humanize
+
 from magpie.definitions.pyramid_definitions import *
 from magpie.constants import get_constant
 from magpie.common import str2bool
+from magpie.helpers.sync_resources import OUT_OF_SYNC
 from magpie.services import service_type_dict
-from magpie.models import resource_type_dict
+from magpie.models import resource_type_dict, remote_resource_tree_service
 from magpie.ui.management import check_response
+from magpie.helpers import sync_resources
 from magpie.ui.home import add_template_data
 from magpie import register, __meta__
 from distutils.version import LooseVersion
@@ -227,11 +234,24 @@ class ManagementViews(object):
     def edit_user(self):
         user_name = self.request.matchdict['user_name']
         cur_svc_type = self.request.matchdict['cur_svc_type']
-        inherited_permissions = self.request.matchdict.get('inherited_permissions', False)
+        inherit_groups_permissions = self.request.matchdict.get('inherit_groups_permissions', False)
 
         user_url = '{url}/users/{usr}'.format(url=self.magpie_url, usr=user_name)
         own_groups = self.get_user_groups(user_name)
         all_groups = self.get_all_groups(first_default_group=get_constant('MAGPIE_USERS_GROUP'))
+
+        error_message = ""
+
+        # Todo:
+        # Until the api is modified to make it possible to request from the RemoteResource table,
+        # we have to access the database directly here
+        session = self.request.db
+
+        try:
+            # The service type is 'default'. This function replaces cur_svc_type with the first service type.
+            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
+        except Exception as e:
+            raise HTTPBadRequest(detail=repr(e))
 
         user_resp = requests.get(user_url, cookies=self.request.cookies)
         check_response(user_resp)
@@ -239,7 +259,7 @@ class ManagementViews(object):
         user_info[u'edit_mode'] = u'no_edit'
         user_info[u'own_groups'] = own_groups
         user_info[u'groups'] = all_groups
-        user_info[u'inherited_permissions'] = inherited_permissions
+        user_info[u'inherit_groups_permissions'] = inherit_groups_permissions
 
         if self.request.method == 'POST':
             res_id = self.request.POST.get(u'resource_id')
@@ -247,16 +267,23 @@ class ManagementViews(object):
             is_save_user_info = False
             requires_update_name = False
 
-            if u'inherited_permissions' in self.request.POST:
-                inherited_permissions = str2bool(self.request.POST[u'inherited_permissions'])
-                user_info[u'inherited_permissions'] = inherited_permissions
+            if u'inherit_groups_permissions' in self.request.POST:
+                inherit_groups_permissions = str2bool(self.request.POST[u'inherit_groups_permissions'])
+                user_info[u'inherit_groups_permissions'] = inherit_groups_permissions
 
             if u'delete' in self.request.POST:
                 check_response(requests.delete(user_url, cookies=self.request.cookies))
                 return HTTPFound(self.request.route_url('view_users'))
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
-            elif u'resource_id' in self.request.POST:
+            elif u'clean_resource' in self.request.POST:
+                # 'clean_resource' must be above 'edit_permissions' because they're in the same form.
+                self.delete_resource(res_id)
+            elif u'edit_permissions' in self.request.POST:
+                if not res_id or res_id == 'None':
+                    remote_id = int(self.request.POST.get('remote_id'))
+                    services_names = [s['service_name'] for s in services.values()]
+                    res_id = self.add_remote_resource(cur_svc_type, services_names, user_name, remote_id, is_user=True)
                 self.edit_user_or_group_resource_permissions(user_name, res_id, is_user=True)
             elif u'edit_group_membership' in self.request.POST:
                 is_edit_group_membership = True
@@ -276,6 +303,19 @@ class ManagementViews(object):
             elif u'save_email' in self.request.POST:
                 user_info[u'email'] = self.request.POST.get(u'new_user_email')
                 is_save_user_info = True
+            elif u'force_sync' in self.request.POST:
+                errors = []
+                for service_info in services.values():
+                    try:
+                        sync_resources.fetch_single_service(service_info['resource_id'], session)
+                    except Exception:
+                        errors.append(service_info['service_name'])
+                if errors:
+                    error_message += self.make_sync_error_message(errors)
+            elif u'clean_all' in self.request.POST:
+                ids_to_clean = self.request.POST.get('ids_to_clean').split(";")
+                for id_ in ids_to_clean:
+                    self.delete_resource(id_)
 
             if is_save_user_info:
                 check_response(requests.put(user_url, data=user_info, cookies=self.request.cookies))
@@ -305,15 +345,29 @@ class ManagementViews(object):
 
         # display resources permissions per service type tab
         try:
-            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(
-                user_name, services, cur_svc_type, is_user=True, is_inherited_permissions=inherited_permissions)
-            user_info[u'cur_svc_type'] = cur_svc_type
-            user_info[u'svc_types'] = svc_types
-            user_info[u'resources'] = res_perms
-            user_info[u'permissions'] = res_perm_names
+                user_name, services, cur_svc_type, is_user=True, is_inherit_groups_permissions=inherit_groups_permissions)
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
+
+        sync_types = [s["service_sync_type"] for s in services.values()]
+        sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
+
+        info = self.get_remote_resources_info(res_perms, services, session)
+        res_perms, ids_to_clean, last_sync_humanized, out_of_sync = info
+
+        if out_of_sync:
+            error_message = self.make_sync_error_message(out_of_sync)
+
+        user_info[u'error_message'] = error_message
+        user_info[u'ids_to_clean'] = ";".join(ids_to_clean)
+        user_info[u'last_sync'] = last_sync_humanized
+        user_info[u'sync_implemented'] = sync_implemented
+        user_info[u'out_of_sync'] = out_of_sync
+        user_info[u'cur_svc_type'] = cur_svc_type
+        user_info[u'svc_types'] = svc_types
+        user_info[u'resources'] = res_perms
+        user_info[u'permissions'] = res_perm_names
 
         return add_template_data(self.request, data=user_info)
 
@@ -361,7 +415,11 @@ class ManagementViews(object):
         for r_id, resource in raw_resources_tree.items():
             perm_names = self.default_get(permission, r_id, [])
             children = self.resource_tree_parser(resource['children'], permission)
-            resources_tree[resource['resource_name']] = dict(id=r_id, permission_names=perm_names, children=children)
+            children = OrderedDict(sorted(children.items()))
+            resources_tree[resource['resource_name']] = dict(id=r_id,
+                                                             permission_names=perm_names,
+                                                             resource_display_name=resource['resource_display_name'],
+                                                             children=children)
         return resources_tree
 
     def perm_tree_parser(self, raw_perm_tree):
@@ -395,7 +453,7 @@ class ManagementViews(object):
     def edit_user_or_group_resource_permissions(self, user_or_group_name, resource_id, is_user=False):
         usr_grp_type = 'users' if is_user else 'groups'
         res_perms_url = '{url}/{grp_type}/{grp}/resources/{res_id}/permissions' \
-                        .format(url=self.magpie_url, grp_type=usr_grp_type, grp=user_or_group_name, res_id=resource_id)
+            .format(url=self.magpie_url, grp_type=usr_grp_type, grp=user_or_group_name, res_id=resource_id)
         try:
             res_perms_resp = requests.get(res_perms_url, cookies=self.request.cookies)
             res_perms = res_perms_resp.json()['permission_names']
@@ -403,6 +461,7 @@ class ManagementViews(object):
             raise HTTPBadRequest(detail=repr(e))
 
         selected_perms = self.request.POST.getall('permission')
+
         removed_perms = list(set(res_perms) - set(selected_perms))
         new_perms = list(set(selected_perms) - set(res_perms))
 
@@ -414,9 +473,9 @@ class ManagementViews(object):
             check_response(requests.post(res_perms_url, data=data, cookies=self.request.cookies))
 
     def get_user_or_group_resources_permissions_dict(self, user_or_group_name, services, service_type,
-                                                     is_user=False, is_inherited_permissions=False):
+                                                     is_user=False, is_inherit_groups_permissions=False):
         user_or_group_type = 'users' if is_user else 'groups'
-        inherit_type = 'inherited_' if is_inherited_permissions and is_user else ''
+        inherit_type = 'inherited_' if is_inherit_groups_permissions and is_user else ''
 
         group_perms_url = '{url}/{usr_grp_type}/{usr_grp}/{inherit}resources' \
             .format(url=self.magpie_url, usr_grp_type=user_or_group_type,
@@ -427,17 +486,20 @@ class ManagementViews(object):
         svc_perm_url = '{url}/services/types/{svc_type}'.format(url=self.magpie_url, svc_type=service_type)
         resp_svc_type = check_response(requests.get(svc_perm_url, cookies=self.request.cookies))
         resp_available_svc_types = resp_svc_type.json()['services'][service_type]
+
+        # remove possible duplicate permissions from different services
         resources_permission_names = set()
         for svc in resp_available_svc_types:
             resources_permission_names.update(set(resp_available_svc_types[svc]['permission_names']))
-        resources_permission_names = list(resources_permission_names)
+        # inverse sort so that displayed permissions are sorted, since added from right to left in tree view
+        resources_permission_names = sorted(resources_permission_names, reverse=True)
 
-        resources = {}
-        for service in services:
+        resources = OrderedDict()
+        for service in sorted(services):
             if not service:
                 continue
 
-            permission = {}
+            permission = OrderedDict()
             try:
                 raw_perms = resp_group_perms_json['resources'][service_type][service]
                 permission[raw_perms['resource_id']] = raw_perms['permission_names']
@@ -449,9 +511,10 @@ class ManagementViews(object):
                                                          .format(url=self.magpie_url, svc=service),
                                                          cookies=self.request.cookies))
             raw_resources = resp_resources.json()[service]
-            resources[service] = dict(id=raw_resources['resource_id'],
-                                      permission_names=self.default_get(permission, raw_resources['resource_id'], []),
-                                      children=self.resource_tree_parser(raw_resources['resources'], permission))
+            resources[service] = OrderedDict(
+                id=raw_resources['resource_id'],
+                permission_names=self.default_get(permission, raw_resources['resource_id'], []),
+                children=self.resource_tree_parser(raw_resources['resources'], permission))
         return resources_permission_names, resources
 
     @view_config(route_name='edit_group', renderer='templates/edit_group.mako')
@@ -459,6 +522,19 @@ class ManagementViews(object):
         group_name = self.request.matchdict['group_name']
         cur_svc_type = self.request.matchdict['cur_svc_type']
         group_info = {u'edit_mode': u'no_edit', u'group_name': group_name, u'cur_svc_type': cur_svc_type}
+
+        error_message = ""
+
+        # Todo:
+        # Until the api is modified to make it possible to request from the RemoteResource table,
+        # we have to access the database directly here
+        session = self.request.db
+
+        try:
+            # The service type is 'default'. This function replaces cur_svc_type with the first service type.
+            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
+        except Exception as e:
+            raise HTTPBadRequest(detail=repr(e))
 
         # move to service or edit requested group/permission changes
         if self.request.method == 'POST':
@@ -477,19 +553,55 @@ class ManagementViews(object):
                 return HTTPFound(self.request.route_url('edit_group', **group_info))
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
-            elif u'resource_id' in self.request.POST:
+            elif u'clean_resource' in self.request.POST:
+                # 'clean_resource' must be above 'edit_permissions' because they're in the same form.
+                self.delete_resource(res_id)
+            elif u'edit_permissions' in self.request.POST:
+                if not res_id or res_id == 'None':
+                    remote_id = int(self.request.POST.get('remote_id'))
+                    services_names = [s['service_name'] for s in services.values()]
+                    res_id = self.add_remote_resource(cur_svc_type, services_names, group_name, remote_id, is_user=False)
                 self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
-            else:
+            elif u'member' in self.request.POST:
                 self.edit_group_users(group_name)
+            elif u'force_sync' in self.request.POST:
+                errors = []
+                for service_info in services.values():
+                    try:
+                        sync_resources.fetch_single_service(service_info['resource_id'], session)
+                    except Exception:
+                        errors.append(service_info['service_name'])
+                if errors:
+                    error_message += self.make_sync_error_message(errors)
+
+            elif u'clean_all' in self.request.POST:
+                ids_to_clean = self.request.POST.get('ids_to_clean').split(";")
+                for id_ in ids_to_clean:
+                    self.delete_resource(id_)
+            else:
+                return HTTPBadRequest(detail="Invalid POST request.")
 
         # display resources permissions per service type tab
         try:
-            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(group_name, services,
                                                                                           cur_svc_type, is_user=False)
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
+        sync_types = [s["service_sync_type"] for s in services.values()]
+        sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
+
+        info = self.get_remote_resources_info(res_perms, services, session)
+        res_perms, ids_to_clean, last_sync_humanized, out_of_sync = info
+
+        if out_of_sync:
+            error_message = self.make_sync_error_message(out_of_sync)
+
+        group_info[u'error_message'] = error_message
+        group_info[u'ids_to_clean'] = ";".join(ids_to_clean)
+        group_info[u'last_sync'] = last_sync_humanized
+        group_info[u'sync_implemented'] = sync_implemented
+        group_info[u'out_of_sync'] = out_of_sync
         group_info[u'group_name'] = group_name
         group_info[u'cur_svc_type'] = cur_svc_type
         group_info[u'users'] = self.get_user_names()
@@ -499,6 +611,100 @@ class ManagementViews(object):
         group_info[u'resources'] = res_perms
         group_info[u'permissions'] = res_perm_names
         return add_template_data(self.request, data=group_info)
+
+    def make_sync_error_message(self, service_names):
+        this = "this service" if len(service_names) == 1 else "these services"
+        error_message = ("There seems to be an issue synchronizing resources from "
+                         "{}: {}".format(this, ", ".join(service_names)))
+        return error_message
+
+    def get_remote_resources_info(self, res_perms, services, session):
+        last_sync_humanized = "Never"
+        ids_to_clean, out_of_sync = [], []
+        now = datetime.datetime.now()
+
+        service_ids = [s["resource_id"] for s in services.values()]
+        last_sync_datetimes = self.get_last_sync_datetimes(service_ids, session)
+
+        if any(last_sync_datetimes):
+            last_sync_datetime = min(filter(bool, last_sync_datetimes))
+            last_sync_humanized = humanize.naturaltime(now - last_sync_datetime)
+            res_perms = self.merge_remote_resources(res_perms, services, session)
+
+        for last_sync, service_name in zip(last_sync_datetimes, services):
+            if last_sync:
+                ids_to_clean += self.get_ids_to_clean(res_perms[service_name]["children"])
+                if now - last_sync > OUT_OF_SYNC:
+                    out_of_sync.append(service_name)
+        return res_perms, ids_to_clean, last_sync_humanized, out_of_sync
+
+    def merge_remote_resources(self, res_perms, services, session):
+        merged_resources = {}
+        for service_name, service_values in services.items():
+            service_id = service_values["resource_id"]
+            merge = sync_resources.merge_local_and_remote_resources
+            resources_for_service = merge(res_perms, service_values["service_sync_type"], service_id, session)
+            merged_resources[service_name] = resources_for_service[service_name]
+        return merged_resources
+
+    def get_last_sync_datetimes(self, service_ids, session):
+        return [sync_resources.get_last_sync(s, session) for s in service_ids]
+
+    def delete_resource(self, res_id):
+        url = '{url}/resources/{resource_id}'.format(url=self.magpie_url, resource_id=res_id)
+        try:
+            check_response(requests.delete(url, cookies=self.request.cookies))
+        except HTTPNotFound:
+            # Some resource ids are already deleted because they were a child
+            # of another just deleted parent resource.
+            # We just skip them.
+            pass
+
+    def get_ids_to_clean(self, resources):
+        ids = []
+        for resource_name, values in resources.items():
+            if "matches_remote" in values and not values["matches_remote"]:
+                ids.append(values['id'])
+            ids += self.get_ids_to_clean(values['children'])
+        return ids
+
+    def add_remote_resource(self, service_type, services_names, user_or_group, remote_id, is_user=False):
+        try:
+            res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(user_or_group,
+                                                                                          services=services_names,
+                                                                                          service_type=service_type,
+                                                                                          is_user=is_user)
+        except Exception as e:
+            raise HTTPBadRequest(detail=repr(e))
+
+        # Todo:
+        # Until the api is modified to make it possible to request from the RemoteResource table,
+        # we have to access the database directly here
+        session = self.request.db
+
+        # get the parent resources for this remote_id
+        parents = remote_resource_tree_service.path_upper(remote_id, db_session=session)
+        parents = list(reversed(list(parents)))
+
+        parent_id = None
+        current_resources = res_perms
+        for remote_resource in parents:
+            name = remote_resource.resource_name
+            if name in current_resources:
+                parent_id = current_resources[name]['id']
+                current_resources = current_resources[name]['children']
+            else:
+                data = {
+                    'resource_name': name,
+                    'resource_display_name': remote_resource.resource_display_name,
+                    'resource_type': remote_resource.resource_type,
+                    'parent_id': parent_id,
+                }
+                resources_url = '{url}/resources'.format(url=self.magpie_url)
+                response = check_response(requests.post(resources_url, data=data, cookies=self.request.cookies))
+                parent_id = response.json()['resource']['resource_id']
+
+        return parent_id
 
     @view_config(route_name='view_services', renderer='templates/view_services.mako')
     def view_services(self):
@@ -544,7 +750,7 @@ class ManagementViews(object):
                     u'service_url': service_url,
                     u'service_type': service_type,
                     u'service_push': service_push}
-            check_response(requests.post(self.magpie_url+'/services', data=data, cookies=self.request.cookies))
+            check_response(requests.post(self.magpie_url + '/services', data=data, cookies=self.request.cookies))
             return HTTPFound(self.request.route_url('view_services', cur_svc_type=service_type))
 
         services_keys_sorted = sorted(service_type_dict)

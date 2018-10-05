@@ -42,9 +42,10 @@ def get_resource_view(request):
 def create_resource_view(request):
     """Register a new resource."""
     resource_name = get_value_multiformat_post_checked(request, 'resource_name')
+    resource_display_name = get_multiformat_any(request, 'resource_display_name', default=resource_name)
     resource_type = get_value_multiformat_post_checked(request, 'resource_type')
     parent_id = get_value_multiformat_post_checked(request, 'parent_id')
-    return create_resource(resource_name, resource_type, parent_id, request.db)
+    return create_resource(resource_name, resource_display_name, resource_type, parent_id, request.db)
 
 
 @ResourceAPI.delete(schema=Resource_DELETE_RequestSchema(), tags=[ResourcesTag],

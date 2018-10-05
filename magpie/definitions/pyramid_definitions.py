@@ -16,6 +16,7 @@ from pyramid.httpexceptions import (
     HTTPUnprocessableEntity,
     HTTPInternalServerError,
 )
+from pyramid.settings import asbool
 from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy
 from pyramid.response import Response, FileResponse
 from pyramid.view import (

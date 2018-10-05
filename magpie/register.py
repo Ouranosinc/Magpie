@@ -163,18 +163,19 @@ def get_magpie_url():
 
 
 def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
-    hostname = hostname or get_constant('HOSTNAME')
     twitcher_proxy_url = get_constant('TWITCHER_PROTECTED_URL', raise_not_set=False)
-    if twitcher_proxy_url:
-        return twitcher_proxy_url
-    twitcher_proxy = get_constant('TWITCHER_PROTECTED_PATH', raise_not_set=False)
-    if not twitcher_proxy.endswith('/'):
-        twitcher_proxy = twitcher_proxy + '/'
-    if not twitcher_proxy.startswith('/'):
-        twitcher_proxy = '/' + twitcher_proxy
-    if not twitcher_proxy.startswith('/twitcher'):
-        twitcher_proxy = '/twitcher' + twitcher_proxy
-    return "https://{0}{1}{2}".format(hostname, twitcher_proxy, magpie_service_name)
+    if not twitcher_proxy_url:
+        twitcher_proxy = get_constant('TWITCHER_PROTECTED_PATH', raise_not_set=False)
+        if not twitcher_proxy.endswith('/'):
+            twitcher_proxy = twitcher_proxy + '/'
+        if not twitcher_proxy.startswith('/'):
+            twitcher_proxy = '/' + twitcher_proxy
+        if not twitcher_proxy.startswith('/twitcher'):
+            twitcher_proxy = '/twitcher' + twitcher_proxy
+        hostname = hostname or get_constant('HOSTNAME')
+        twitcher_proxy_url = "https://{0}{1}".format(hostname, twitcher_proxy)
+    twitcher_proxy_url.rstrip('/')
+    return "{0}/{1}".format(twitcher_proxy_url, magpie_service_name)
 
 
 def register_services(register_service_url, services_dict, cookies,
@@ -352,14 +353,15 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
 
 def magpie_register_services_with_db_session(services_dict, db_session, push_to_phoenix=False,
                                              force_update=False, update_getcapabilities_permissions=False):
-    existing_services = models.Service.all(db_session=db_session)
-    existing_services_names = [svc.resource_name for svc in existing_services]
+    existing_services_names = [n[0] for n in db_session.query(models.Service.resource_name)]
     magpie_anonymous_user = get_constant('MAGPIE_ANONYMOUS_USER')
     anonymous_user = models.User.by_user_name(magpie_anonymous_user, db_session=db_session)
 
-    for svc_name in services_dict:
-        svc_new_url = os.path.expandvars(services_dict[svc_name]['url'])
-        svc_type = services_dict[svc_name]['type']
+    for svc_name, svc_values in services_dict.items():
+        svc_new_url = os.path.expandvars(svc_values['url'])
+        svc_type = svc_values['type']
+
+        svc_sync_type = svc_values.get('sync_type')
         if force_update and svc_name in existing_services_names:
             svc = models.Service.by_service_name(svc_name, db_session=db_session)
             if svc.url == svc_new_url:
@@ -368,17 +370,22 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
                 print_log("Service URL update [{url_old}] => [{url_new}] ({svc})"
                           .format(url_old=svc.url, url_new=svc_new_url, svc=svc_name))
                 svc.url = svc_new_url
+            svc.sync_type = svc_sync_type
         elif not force_update and svc_name in existing_services_names:
             print_log("Skipping service [{svc}] (conflict)" .format(svc=svc_name))
         else:
             print_log("Adding service [{svc}]".format(svc=svc_name))
-            svc = models.Service(resource_name=svc_name, resource_type=u'service', url=svc_new_url, type=svc_type)
+            svc = models.Service(resource_name=svc_name,
+                                 resource_type=u'service',
+                                 url=svc_new_url,
+                                 type=svc_type,
+                                 sync_type=svc_sync_type)
             db_session.add(svc)
 
         if update_getcapabilities_permissions and anonymous_user is None:
             print_log("Cannot update 'getcapabilities' permission of non existing anonymous user", level=logging.WARN)
         elif update_getcapabilities_permissions and 'getcapabilities' in service_type_dict[svc_type].permission_names:
-            svc = models.Service.by_service_name(svc_name, db_session=db_session)
+            svc = db_session.query(models.Service.resource_id).filter_by(resource_name=svc_name).first()
             svc_perm_getcapabilities = models.UserResourcePermissionService.by_resource_user_and_perm(
                 user_id=anonymous_user.id, perm_name='getcapabilities',
                 resource_id=svc.resource_id, db_session=db_session
