@@ -116,7 +116,7 @@ def get_user_services(user, db_session, cascade_resources=False,
         if svc.type not in services:
             services[svc.type] = {}
         if svc.resource_name not in services[svc.type]:
-            services[svc.type][svc.resource_name] = format_service(svc, perms)
+            services[svc.type][svc.resource_name] = format_service(svc, perms, show_private_url=False)
 
     if not format_as_list:
         return services

@@ -6,9 +6,9 @@ from magpie.api.management.resource.resource_utils import crop_tree_with_permiss
 from magpie.api.management.resource.resource_formats import get_resource_children, format_resource_tree
 
 
-def format_service(service, permissions=None):
+def format_service(service, permissions=None, show_private_url=False):
     def fmt_svc(svc, perms):
-        return {
+        svc_info = {
             u'public_url': str(get_twitcher_protected_service_url(svc.resource_name)),
             u'service_url': str(svc.url),
             u'service_name': str(svc.resource_name),
@@ -17,6 +17,9 @@ def format_service(service, permissions=None):
             u'resource_id': svc.resource_id,
             u'permission_names': sorted(service_type_dict[svc.type].permission_names if perms is None else perms)
         }
+        if show_private_url:
+            svc_info[u'service_url'] = str(svc.url)
+        return svc_info
 
     return evaluate_call(
         lambda: fmt_svc(service, permissions),
@@ -26,14 +29,15 @@ def format_service(service, permissions=None):
     )
 
 
-def format_service_resources(service, db_session, service_perms=None, resources_perms_dict=None, display_all=False):
+def format_service_resources(service, db_session, service_perms=None,
+                             resources_perms_dict=None, display_all=False, show_private_url=True):
     def fmt_svc_res(svc, db, svc_perms, res_perms, show_all):
         tree = get_resource_children(svc, db)
         if not show_all:
             tree, resource_id_list_remain = crop_tree_with_permission(tree, res_perms.keys())
 
         svc_perms = service_type_dict[svc.type].permission_names if svc_perms is None else svc_perms
-        svc_res = format_service(svc, svc_perms)
+        svc_res = format_service(svc, svc_perms, show_private_url=show_private_url)
         svc_res[u'resources'] = format_resource_tree(tree, resources_perms_dict=res_perms, db_session=db)
         return svc_res
 
@@ -41,5 +45,5 @@ def format_service_resources(service, db_session, service_perms=None, resources_
         lambda: fmt_svc_res(service, db_session, service_perms, resources_perms_dict, display_all),
         fallback=db_session.rollback(), httpError=HTTPInternalServerError,
         msgOnFail="Failed to format service resources tree",
-        content=format_service(service, service_perms)
+        content=format_service(service, service_perms, show_private_url=show_private_url)
     )
