@@ -9,7 +9,7 @@ import json
 LOGGER = logging.getLogger("TWITCHER")
 
 from magpie.definitions.twitcher_definitions import *
-from magpie.definitions.pyramid_definitions import ConfigurationError
+from magpie.definitions.pyramid_definitions import ConfigurationError, HTTPOk
 
 
 class MagpieServiceStore(ServiceStore):
@@ -51,7 +51,7 @@ class MagpieServiceStore(ServiceStore):
         path = '/users/current/services?inherit=True&cascade=True'
         response = requests.get('{url}{path}'.format(url=self.magpie_url, path=path),
                                 cookies=request.cookies)
-        if response.status_code != 200:
+        if response.status_code != HTTPOk.code:
             raise response.raise_for_status()
         services = json.loads(response.text)
         for service_type in services['services']:
