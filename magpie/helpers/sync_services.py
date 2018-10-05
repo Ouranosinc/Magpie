@@ -66,8 +66,12 @@ class _SyncServiceGeoserver(_SyncServiceInterface):
 
         workspaces = {w["name"]: {"children": {}, "resource_type": resource_type} for w in workspaces_list}
 
-        resources = {self.service_name: {"children": workspaces,
+        workspace_tree = {"workspaces": {"children": workspaces,
                                          "resource_type": resource_type}}
+
+        resources = {"geoserver-api": {"children": workspace_tree,
+                                       "resource_type": resource_type}}
+
         assert is_valid_resource_schema(resources), "Error in Interface implementation"
         return resources
 
