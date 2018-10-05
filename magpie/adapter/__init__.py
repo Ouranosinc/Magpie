@@ -8,7 +8,7 @@ from magpie.security import auth_config_from_settings
 from magpie.db import *
 from magpie import __meta__
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("TWITCHER")
 
 
 class MagpieAdapter(AdapterInterface):
