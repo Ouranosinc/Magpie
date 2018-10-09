@@ -1,6 +1,6 @@
 from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
-from magpie.api.esgf import esgfopenid
+from magpie.api.login import esgfopenid, wso2
 from magpie.constants import get_constant
 from magpie import models
 from authomatic import Authomatic, provider_id
@@ -27,45 +27,48 @@ def auth_config_from_settings(settings):
     return config
 
 
-def authomatic(request):
+def authomatic_setup(request):
+    magpie_secret = get_constant('MAGPIE_SECRET', settings=request.registry.settings, settings_name='magpie.secret')
     return Authomatic(
-        config=authomatic_config(request),
-        secret='randomsecretstring',
+        config=authomatic_config(),
+        secret=magpie_secret,
         report_errors=True,
-        logging_level=logger.level)
+        logging_level=logger.level
+    )
 
 
-def authomatic_config(request):
+def authomatic_config():
 
     DEFAULTS = {
         'popup': True,
     }
 
     OPENID = {
-        'openid': {
+        'OpenID': {
             'class_': openid.OpenID,
         },
     }
 
     ESGF = {
-        'dkrz': {
+        'DKRZ': {
             'class_': esgfopenid.ESGFOpenID,
+            'provider': 'dkrz',
             'hostname': 'esgf-data.dkrz.de',
         },
-        'ipsl': {
+        'IPSL': {
             'class_': esgfopenid.ESGFOpenID,
-            'hostname': 'esgf-node.ipsl.fr',
+            'hostname': 'providers-node.ipsl.fr',
         },
-        'badc': {
+        'BADC': {
             'class_': esgfopenid.ESGFOpenID,
             'hostname': 'ceda.ac.uk',
             'provider_url': 'https://{hostname}/openid/{username}'
         },
-        'pcmdi': {
+        'PCMDI': {
             'class_': esgfopenid.ESGFOpenID,
-            'hostname': 'esgf-node.llnl.gov',
+            'hostname': 'providers-node.llnl.gov',
         },
-        'smhi': {
+        'SMHI': {
             'class_': esgfopenid.ESGFOpenID,
             'hostname': 'esg-dn1.nsc.liu.se',
         },
@@ -73,8 +76,11 @@ def authomatic_config(request):
 
     github_consumer_key = os.getenv('GITHUB_CLIENT_ID', '#####')
     github_consumer_secret = os.getenv('GITHUB_CLIENT_SECRET', '#####')
+    wso2_hostname = os.getenv('WSO2_HOSTNAME')
+    wso2_consumer_key = os.getenv('WSO2_CLIENT_ID', '#####')
+    wso2_consumer_secret = os.getenv('WSO2_CLIENT_SECRET', '#####')
     OAUTH2 = {
-        'github': {
+        'GitHub': {
             'class_': oauth2.GitHub,
             'consumer_key': github_consumer_key,
             'consumer_secret': github_consumer_secret,
@@ -86,6 +92,15 @@ def authomatic_config(request):
                 'Get your watched repos': ('GET', 'https://api.github.com/user/subscriptions'),
             },
         },
+        'WSO2': {
+            'class_': wso2.WSO2,
+            'hostname': wso2_hostname,
+            'consumer_key': wso2_consumer_key,
+            'consumer_secret': wso2_consumer_secret,
+            #'access_headers': {},
+            'id': provider_id(),
+            'scope': wso2.WSO2.user_info_scope,
+        }
     }
 
     # Concatenate the configs.

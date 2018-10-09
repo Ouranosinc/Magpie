@@ -27,7 +27,10 @@ class MyFetcher(Urllib2Fetcher):
 
 class ESGFOpenID(OpenID):
     """
-    ESGF :class:`.OpenID` provider with a common provider url template ``"https://{hostname}/esgf-idp/openid/{username}"``.
+    ESGF - Earth System Grid Federation
+
+    :class:`authomatic.providers.openid.OpenID` provider with a common provider url template :
+    ``https://{hostname}/{provider}-idp/idp/{username}``.
     """
 
     def __init__(self, *args, **kwargs):
@@ -38,12 +41,13 @@ class ESGFOpenID(OpenID):
             The hostname of the ESGF OpenID provider. Default: localhost
 
         :param provider_url:
-            The provider identifier url template. Default: https://{hostname}/esgf-idp/openid/{username}
+            The provider identifier url template. Default: https://{hostname}/{provider}-idp/idp/{username}
         """
         super(ESGFOpenID, self).__init__(*args, **kwargs)
 
         self.hostname = self._kwarg(kwargs, 'hostname', 'localhost')
-        self.provider_url = self._kwarg(kwargs, 'provider_url', 'https://{hostname}/esgf-idp/openid/{username}')
+        self.provider = self._kwarg(kwargs, 'provider', 'providers')
+        self.provider_url = self._kwarg(kwargs, 'provider_url', 'https://{hostname}/{provider}-idp/openid/{username}')
 
         # if username is given set provider identifier using the provider url
         if 'username' in self.params:

@@ -1,7 +1,7 @@
 from authomatic.adapters import WebObAdapter
 from authomatic.providers import oauth1, oauth2, openid
 from authomatic import Authomatic, provider_id
-from security import authomatic
+from magpie.security import authomatic_setup, authomatic_config
 from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import *
 from magpie.api.api_except import *
@@ -11,42 +11,27 @@ from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import create_user
 import requests
 
-
-external_providers_config = {
-    'openid': {
-        'class_': openid.OpenID,    # OpenID provider dependent on the python-openid package.
-    },
-    'github': {
-        'class_': oauth2.GitHub,
-        'consumer_key': '##########',
-        'consumer_secret': '##########',
-        'id': provider_id(),
-        'scope': oauth2.GitHub.user_info_scope,
-        '_apis': {
-            'Get your events': ('GET', 'https://api.github.com/users/{user.username}/events'),
-            'Get your watched repos': ('GET', 'https://api.github.com/user/subscriptions'),
-        },
-    },
-    'dkrz': {
-    },
-    'ipsl': {
-    },
-    'badc': {
-    },
-    'pcmdi': {
-    },
-    'smhi': {
-    },
-}
-
-external_providers_authomatic = Authomatic(config=external_providers_config,
-                                           secret=get_constant('MAGPIE_SECRET'))
-external_providers = external_providers_config.keys()
+external_providers = sorted(set(authomatic_config().keys()) - {'__defaults__'})
 internal_providers = [u'ziggurat']
 providers = internal_providers + external_providers
 
 
-@view_config(route_name='signin_external', request_method='POST', permission=NO_PERMISSION_REQUIRED)
+def process_sign_in_external(request, username, provider):
+    if provider.lower() == 'openid':
+        query_field = dict(id=username)
+    elif provider.lower() == 'github':
+        query_field = dict(login_field=username)
+    else:
+        query_field = dict(username=username)
+
+    came_from = request.POST.get('came_from', '/')
+    request.response.set_cookie('homepage_route', came_from)
+    external_login_route = request.route_url(ProviderSigninAPI.name, provider_name=provider, _query=query_field)
+
+    return HTTPFound(location=external_login_route, headers=request.response.headers)
+
+
+@view_config(route_name=ProviderSigninAPI.name, request_method='POST', permission=NO_PERMISSION_REQUIRED)
 def sign_in_external(request):
     provider_name = get_value_multiformat_post_checked(request, 'provider_name')
     user_name = get_value_multiformat_post_checked(request, 'user_name')
@@ -54,18 +39,7 @@ def sign_in_external(request):
                  httpError=HTTPNotAcceptable, content={u'provider_name': str(provider_name), u'providers': providers},
                  msgOnFail="Invalid: `provider_name` not found within available providers.")
 
-    if provider_name == 'openid':
-        query_field = dict(id=user_name)
-    elif provider_name == 'github':
-        query_field = dict(login_field=user_name)
-    else:
-        query_field = dict(username=user_name)
-
-    came_from = request.POST.get('came_from', '/')
-    request.response.set_cookie('homepage_route', came_from)
-    external_login_route = request.route_url('external_login', provider_name=provider_name, _query=query_field)
-
-    return HTTPFound(location=external_login_route, headers=request.response.headers)
+    return process_sign_in_external(request, user_name, provider_name)
 
 
 @view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
@@ -73,7 +47,7 @@ def sign_in(request):
     """Signs in a user session."""
     provider_name = get_value_multiformat_post_checked(request, 'provider_name')
     user_name = get_value_multiformat_post_checked(request, 'user_name')
-    password = get_multiformat_post(request, 'password')   # no check since password is None for external login#
+    password = get_multiformat_post(request, 'password')   # no check since password is None for external login
 
     verify_param(provider_name, paramName=u'provider_name', paramCompare=providers, isIn=True,
                  httpError=HTTPNotAcceptable, content={u'provider_name': str(provider_name), u'providers': providers},
@@ -92,10 +66,9 @@ def sign_in(request):
         raise_http(httpError=HTTPUnauthorized, detail="Login failure.")
 
     elif provider_name in external_providers:
-        return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
-                                                                u'password': password,
-                                                                u'provider_name': provider_name}),
-                             httpError=HTTPInternalServerError, content={u'provider': provider_name},
+        return evaluate_call(lambda: process_sign_in_external(request, user_name, provider_name),
+                             httpError=HTTPInternalServerError,
+                             content={u'user_name': user_name,  u'provider': provider_name},
                              msgOnFail="Error occurred while signing in with external provider")
 
 
@@ -167,7 +140,7 @@ def sign_out(request):
     return valid_http(httpSuccess=HTTPOk, detail="Sign out successful.", httpKWArgs={'headers': forget(request)})
 
 
-@view_config(route_name='external_login', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=ProviderSigninAPI.name, permission=NO_PERMISSION_REQUIRED)
 def authomatic_login(request):
     #_authomatic = authomatic(request)
     open_id_provider_name = request.matchdict.get('provider_name')
@@ -175,6 +148,7 @@ def authomatic_login(request):
     # Start the login procedure.
 
     response = Response()
+    external_providers_authomatic = authomatic_setup(request)
     result = external_providers_authomatic.login(WebObAdapter(request, response), open_id_provider_name)
     #result = _authomatic.login(WebObAdapter(request, response), open_id_provider_name)
 
@@ -213,7 +187,7 @@ def authomatic_login(request):
     '200': Session_GET_OkResponseSchema(),
     '500': Session_GET_InternalServerErrorResponseSchema()
 })
-@view_config(route_name='session', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=SessionAPI.name, permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
     """Get information about current session."""
     def _get_session(req):
@@ -231,10 +205,12 @@ def get_session(request):
     return valid_http(httpSuccess=HTTPOk, detail=Session_GET_OkResponseSchema.description, content=session_json)
 
 
-@view_config(route_name='providers', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@ProvidersAPI.get(tags=[LoginTag], response_schemas={
+    '200': Providers_GET_OkResponseSchema(),
+})
+@view_config(route_name=ProvidersAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_providers(request):
     """Get list of login providers."""
     return valid_http(httpSuccess=HTTPOk, detail=Providers_GET_OkResponseSchema.description,
-                      content={u'provider_names': sorted(providers),
-                               u'internal_providers': sorted(internal_providers),
-                               u'external_providers': sorted(external_providers)})
+                      content={u'providers': {u'internal': sorted(internal_providers),
+                                              u'external': sorted(external_providers), }})

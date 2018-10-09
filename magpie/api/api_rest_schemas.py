@@ -226,6 +226,12 @@ ServiceResourceAPI = Service(
 ServiceResourceTypesAPI = Service(
     path='/services/types/{service_type}/resources/types',
     name='ServiceResourceTypes')
+ProvidersAPI = Service(
+    path='/providers',
+    name='Providers')
+ProviderSigninAPI = Service(
+    path='/providers/{provider_name}/signin',
+    name='ProviderSignin')
 SessionAPI = Service(
     path='/session',
     name='Session')
@@ -1986,13 +1992,16 @@ class Session_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
     body = InternalServerErrorResponseSchema()
 
 
+class ProvidersBodySchema(colander.MappingSchema):
+    internal = ProvidersListSchema()
+    external = ProvidersListSchema()
+
+
 class Providers_GET_ResponseBodySchema(BaseResponseBodySchema):
-    provider_names = ProvidersListSchema()
-    internal_providers = ProvidersListSchema()
-    external_providers = ProvidersListSchema()
+    providers = ProvidersBodySchema()
 
 
-class Providers_GET_OkResponseSchema(BaseResponseBodySchema):
+class Providers_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get providers successful."
     header = HeaderResponseSchema()
     body = Providers_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
