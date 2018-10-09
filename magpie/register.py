@@ -174,7 +174,7 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
             twitcher_proxy = '/twitcher' + twitcher_proxy
         hostname = hostname or get_constant('HOSTNAME')
         twitcher_proxy_url = "https://{0}{1}".format(hostname, twitcher_proxy)
-    twitcher_proxy_url.rstrip('/')
+    twitcher_proxy_url = twitcher_proxy_url.rstrip('/')
     return "{0}/{1}".format(twitcher_proxy_url, magpie_service_name)
 
 
