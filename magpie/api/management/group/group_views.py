@@ -189,7 +189,8 @@ def get_group_service_resources_view(request):
         db_session=request.db,
         service_perms=svc_perms,
         resources_perms_dict=res_perms,
-        display_all=False
+        display_all=False,
+        show_private_url=False,
     )
     return valid_http(httpSuccess=HTTPOk, detail=GroupServiceResources_GET_OkResponseSchema.description,
                       content={u'service': svc_res_json})

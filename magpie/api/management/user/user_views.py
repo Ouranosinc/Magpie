@@ -162,7 +162,8 @@ def get_user_resources_runner(request, inherited_group_resources_permissions=Tru
                 db_session=db,
                 service_perms=svc_perms,
                 resources_perms_dict=res_perms_dict,
-                display_all=False
+                display_all=False,
+                show_private_url=False,
             )
         return json_res
 
@@ -381,7 +382,8 @@ def get_user_service_resource_permissions_runner(request, inherit_groups_permiss
         db_session=request.db,
         service_perms=service_perms,
         resources_perms_dict=resources_perms_dict,
-        display_all=False
+        display_all=False,
+        show_private_url=False,
     )
     return valid_http(httpSuccess=HTTPOk, detail=UserServiceResources_GET_OkResponseSchema.description,
                       content={u'service': user_svc_res_json})

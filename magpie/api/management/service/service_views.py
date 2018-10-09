@@ -39,7 +39,7 @@ def get_services_runner(request):
         services = get_services_by_type(service_type, db_session=request.db)
         json_response[service_type] = {}
         for service in services:
-            json_response[service_type][service.resource_name] = format_service(service)
+            json_response[service_type][service.resource_name] = format_service(service, show_private_url=False)
 
     return valid_http(httpSuccess=HTTPOk, detail=Services_GET_OkResponseSchema.description,
                       content={u'services': json_response})
@@ -77,9 +77,10 @@ def register_service(request):
 
     evaluate_call(lambda: add_service_magpie_and_phoenix(service, service_push, request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                  msgOnFail=Services_POST_ForbiddenResponseSchema.description, content=format_service(service))
+                  msgOnFail=Services_POST_ForbiddenResponseSchema.description,
+                  content=format_service(service, show_private_url=True))
     return valid_http(httpSuccess=HTTPCreated, detail=Services_POST_CreatedResponseSchema.description,
-                      content={u'service': format_service(service)})
+                      content={u'service': format_service(service, show_private_url=True)})
 
 
 @ServiceAPI.put(schema=Service_PUT_RequestBodySchema(), tags=[ServicesTag], response_schemas=Service_PUT_responses)
@@ -107,23 +108,23 @@ def update_service(request):
                      msgOnFail=Service_PUT_ConflictResponseSchema.description,
                      content={u'service_name': str(svc_name)})
 
-    def update_service_magpie_and_phoenix(svc, new_name, new_url, svc_push, db_session):
-        svc.resource_name = new_name
-        svc.url = new_url
-        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED \
-        and 'getcapabilities' in service_type_dict[svc.type].permission_names:
+    def update_service_magpie_and_phoenix(_svc, new_name, new_url, svc_push, db_session):
+        _svc.resource_name = new_name
+        _svc.url = new_url
+        has_getcap = 'getcapabilities' in service_type_dict[_svc.type].permission_names
+        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED and has_getcap:
             # (re)apply getcapabilities to updated service to ensure updated push
-            add_service_getcapabilities_perms(svc, db_session)
+            add_service_getcapabilities_perms(_svc, db_session)
             sync_services_phoenix(db_session.query(models.Service))  # push all services
 
-    old_svc_content = format_service(service)
+    old_svc_content = format_service(service, show_private_url=True)
     err_svc_content = {u'service': old_svc_content, u'new_service_name': svc_name, u'new_service_url': svc_url}
     evaluate_call(lambda: update_service_magpie_and_phoenix(service, svc_name, svc_url, service_push, request.db),
                   fallback=lambda: request.db.rollback(),
                   httpError=HTTPForbidden, msgOnFail=Service_PUT_ForbiddenResponseSchema.description,
                   content=err_svc_content)
     return valid_http(httpSuccess=HTTPOk, detail=Service_PUT_OkResponseSchema.description,
-                      content={u'service': format_service(service)})
+                      content={u'service': format_service(service, show_private_url=True)})
 
 
 @ServiceAPI.get(tags=[ServicesTag], response_schemas=Service_GET_responses)
@@ -132,7 +133,7 @@ def get_service(request):
     """Get a service information."""
     service = get_service_matchdict_checked(request)
     return valid_http(httpSuccess=HTTPOk, detail=Service_GET_OkResponseSchema.description,
-                      content={service.resource_name: format_service(service)})
+                      content={service.resource_name: format_service(service, show_private_url=True)})
 
 
 @ServiceAPI.delete(schema=Service_DELETE_RequestSchema(), tags=[ServicesTag], response_schemas=Service_DELETE_responses)
@@ -141,7 +142,7 @@ def unregister_service(request):
     """Unregister a service."""
     service = get_service_matchdict_checked(request)
     service_push = str2bool(get_multiformat_delete(request, 'service_push', default=False))
-    svc_content = format_service(service)
+    svc_content = format_service(service, show_private_url=True)
     evaluate_call(lambda: resource_tree_service.delete_branch(resource_id=service.resource_id, db_session=request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail="Delete service from resource tree failed.", content=svc_content)
@@ -162,7 +163,7 @@ def unregister_service(request):
 def get_service_permissions(request):
     """List all applicable permissions for a service."""
     service = get_service_matchdict_checked(request)
-    svc_content = format_service(service)
+    svc_content = format_service(service, show_private_url=True)
     svc_perms = evaluate_call(lambda: service_type_dict[service.type].permission_names,
                               fallback=request.db.rollback(), httpError=HTTPNotAcceptable, content=svc_content,
                               msgOnFail=ServicePermissions_GET_NotAcceptableResponseSchema.description)
@@ -183,7 +184,7 @@ def delete_service_resource_view(request):
 def get_service_resources_view(request):
     """List all resources registered under a service."""
     service = get_service_matchdict_checked(request)
-    svc_res_json = format_service_resources(service, db_session=request.db, display_all=True)
+    svc_res_json = format_service_resources(service, db_session=request.db, display_all=True, show_private_url=True)
     return valid_http(httpSuccess=HTTPOk, detail=ServiceResources_GET_OkResponseSchema.description,
                       content={str(service.resource_name): svc_res_json})
 

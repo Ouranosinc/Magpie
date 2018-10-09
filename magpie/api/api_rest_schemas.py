@@ -520,7 +520,7 @@ class ResourceBodySchema(colander.MappingSchema):
         default=colander.null,  # if no parent
         missing=colander.drop   # if not returned (basic_info = True)
     )
-    permission_names = PermissionListSchema()
+    permission_names = PermissionListSchema(example=['read', 'write'])
     permission_names.default = colander.null  # if no parent
     permission_names.missing = colander.drop  # if not returned (basic_info = True)
 
@@ -749,7 +749,7 @@ class Resources_POST_ConflictResponseSchema(colander.MappingSchema):
 
 
 class ResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema()
+    permission_names = PermissionListSchema(example=['read', 'write'])
 
 
 class ResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):
@@ -1002,7 +1002,7 @@ class Service_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
 
 
 class ServicePermissions_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema()
+    permission_names = PermissionListSchema(example=['read', 'write'])
 
 
 class ServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
@@ -1411,7 +1411,7 @@ class UserResources_GET_NotFoundResponseSchema(colander.MappingSchema):
 
 
 class UserResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema()
+    permission_names = PermissionListSchema(example=['read', 'write'])
 
 
 class UserResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):
@@ -1609,7 +1609,7 @@ class UserServicePermissions_GET_RequestSchema(colander.MappingSchema):
 
 
 class UserServicePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema()
+    permission_names = PermissionListSchema(example=['read', 'write'])
 
 
 class UserServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
@@ -1798,7 +1798,7 @@ class GroupServices_InternalServerErrorResponseSchema(colander.MappingSchema):
 
 
 class GroupServicePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema()
+    permission_names = PermissionListSchema(example=['read', 'write'])
 
 
 class GroupServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
@@ -1914,7 +1914,7 @@ class GroupResources_GET_InternalServerErrorResponseSchema(colander.MappingSchem
 
 
 class GroupResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permissions_names = PermissionListSchema()
+    permissions_names = PermissionListSchema(example=['read', 'write'])
 
 
 class GroupResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):

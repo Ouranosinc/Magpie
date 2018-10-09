@@ -29,7 +29,8 @@ def get_group_resources(group, db_session):
             db_session=db_session,
             service_perms=svc_perms,
             resources_perms_dict=res_perm_dict,
-            display_all=False
+            display_all=False,
+            show_private_url=False,
         )
     return json_response
 
@@ -119,7 +120,7 @@ def get_group_services(resources_permissions_dict, db_session):
         svc_name = str(svc.resource_name)
         if svc_type not in grp_svc_dict:
             grp_svc_dict[svc_type] = {}
-        grp_svc_dict[svc_type][svc_name] = format_service(svc, perms)
+        grp_svc_dict[svc_type][svc_name] = format_service(svc, perms, show_private_url=False)
     return grp_svc_dict
 
 
