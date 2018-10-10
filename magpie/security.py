@@ -30,60 +30,68 @@ def auth_config_from_settings(settings):
 def authomatic_setup(request):
     magpie_secret = get_constant('MAGPIE_SECRET', settings=request.registry.settings, settings_name='magpie.secret')
     return Authomatic(
-        config=authomatic_config(),
+        config=authomatic_config(request),
         secret=magpie_secret,
         report_errors=True,
         logging_level=logger.level
     )
 
 
-def authomatic_config():
+def authomatic_config(request=None):
 
     DEFAULTS = {
         'popup': True,
     }
 
     OPENID = {
-        'OpenID': {
+        'openid': {
             'class_': openid.OpenID,
+            'display_name': 'OpenID',
         },
     }
 
     ESGF = {
-        'DKRZ': {
+        'dkrz': {
             'class_': esgfopenid.ESGFOpenID,
             'provider': 'dkrz',
             'hostname': 'esgf-data.dkrz.de',
+            'display_name': 'DKRZ',
         },
-        'IPSL': {
+        'ipsl': {
             'class_': esgfopenid.ESGFOpenID,
             'hostname': 'providers-node.ipsl.fr',
+            'display_name': 'IPSL',
         },
-        'BADC': {
+        'badc': {
             'class_': esgfopenid.ESGFOpenID,
             'hostname': 'ceda.ac.uk',
-            'provider_url': 'https://{hostname}/openid/{username}'
+            'provider_url': 'https://{hostname}/openid/{username}',
+            'display_name': 'BADC',
         },
-        'PCMDI': {
+        'pcmdi': {
             'class_': esgfopenid.ESGFOpenID,
             'hostname': 'providers-node.llnl.gov',
+            'display_name': 'PCMDI',
         },
-        'SMHI': {
+        'smhi': {
             'class_': esgfopenid.ESGFOpenID,
             'hostname': 'esg-dn1.nsc.liu.se',
+            'display_name': 'SMHI',
         },
     }
 
-    github_consumer_key = os.getenv('GITHUB_CLIENT_ID', '#####')
-    github_consumer_secret = os.getenv('GITHUB_CLIENT_SECRET', '#####')
-    wso2_hostname = os.getenv('WSO2_HOSTNAME')
-    wso2_consumer_key = os.getenv('WSO2_CLIENT_ID', '#####')
-    wso2_consumer_secret = os.getenv('WSO2_CLIENT_SECRET', '#####')
+    github_consumer_key = get_constant('GITHUB_CLIENT_ID', '#####')
+    github_consumer_secret = get_constant('GITHUB_CLIENT_SECRET', '#####')
+    wso2_hostname = get_constant('WSO2_HOSTNAME')
+    wso2_consumer_key = get_constant('WSO2_CLIENT_ID', '#####')
+    wso2_consumer_secret = get_constant('WSO2_CLIENT_SECRET', '#####')
     OAUTH2 = {
-        'GitHub': {
+        'github': {
             'class_': oauth2.GitHub,
+            'display_name': 'GitHub',
             'consumer_key': github_consumer_key,
             'consumer_secret': github_consumer_secret,
+            'redirect_uri': request.application_url if request else None,
             'access_headers': {'User-Agent': 'Magpie'},
             'id': provider_id(),
             'scope': oauth2.GitHub.user_info_scope,
@@ -92,11 +100,13 @@ def authomatic_config():
                 'Get your watched repos': ('GET', 'https://api.github.com/user/subscriptions'),
             },
         },
-        'WSO2': {
+        'wso2': {
             'class_': wso2.WSO2,
+            'display_name': 'WSO2',
             'hostname': wso2_hostname,
             'consumer_key': wso2_consumer_key,
             'consumer_secret': wso2_consumer_secret,
+            'redirect_uri': request.application_url if request else None,
             #'access_headers': {},
             'id': provider_id(),
             'scope': wso2.WSO2.user_info_scope,
@@ -110,3 +120,12 @@ def authomatic_config():
     config.update(ESGF)
     config['__defaults__'] = DEFAULTS
     return config
+
+
+def get_provider_names():
+    provider_names = {}
+    config = authomatic_config()
+    for provider in config.keys():
+        if provider != '__defaults__':
+            provider_names[provider] = config[provider].get('display_name', provider)
+    return provider_names

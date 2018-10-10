@@ -12,12 +12,12 @@ class LoginViews(object):
     def get_internal_providers(self):
         resp = requests.get(self.magpie_url + '/providers')
         check_response(resp)
-        return resp.json()['internal_providers']
+        return resp.json()['providers']['internal']
 
     def get_external_providers(self):
         resp = requests.get(self.magpie_url + '/providers')
         check_response(resp)
-        return resp.json()['external_providers']
+        return resp.json()['providers']['external']
 
     @view_config(route_name='login', renderer='templates/login.mako', permission=NO_PERMISSION_REQUIRED)
     def login(self):
