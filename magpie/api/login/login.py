@@ -30,11 +30,12 @@ def process_sign_in_external(request, username, provider):
 
     came_from = request.POST.get('came_from', '/')
     request.response.set_cookie('homepage_route', came_from)
-    #external_login_route = request.route_url(ProviderSigninAPI.name, provider_name=provider_name, _query=query_field)
-    external_login_route = request.route_url(ProviderSigninAPI.name, provider_name=provider_name)
+    external_login_route = request.route_url(ProviderSigninAPI.name, provider_name=provider_name, _query=query_field)
+    #external_login_route = request.route_url(ProviderSigninAPI.name, provider_name=provider_name)
 
-    resp = requests.get(external_login_route, headers={'redirect_uri': request.application_url}, allow_redirects=True)
-    return HTTPFound(resp.request.application_url, headers=resp.request.headers)
+    #resp = requests.get(external_login_route, headers={'redirect_uri': request.application_url}, allow_redirects=True)
+    #return HTTPFound(resp.request.application_url, headers=resp.request.headers)
+    #return HTTPFound(location=external_login_route, headers=resp.headers)
 
     #subreq = request.copy()
     #subreq.path_info = external_login_route
@@ -43,7 +44,7 @@ def process_sign_in_external(request, username, provider):
     #except Exception as ex:
     #    print(ex)
 
-    #return HTTPFound(location=external_login_route, headers=request.response.headers)
+    return HTTPFound(location=external_login_route, headers=request.response.headers)
 
 
 def verify_provider(provider_name):
@@ -150,7 +151,9 @@ def login_success_external(request, external_user_name, external_id, email, prov
     # If redirection given
 
     homepage_route = '/' if 'homepage_route' not in request.cookies else str(request.cookies['homepage_route'])
-
+    #resp = HTTPFound(location='localhost:2001/magpie', headers=headers)
+    #resp.set_cookie('came_from', 'localhost:2001/magpie')
+    #return resp
     return valid_http(httpSuccess=HTTPFound, detail="External login homepage route found.",
                       content={u'homepage_route': homepage_route},
                       httpKWArgs={'location': homepage_route, 'headers': headers})

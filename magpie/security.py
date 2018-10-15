@@ -53,8 +53,8 @@ def authomatic_config(request=None):
     ESGF = {
         'dkrz': {
             'class_': esgfopenid.ESGFOpenID,
-            'provider': 'dkrz',
             'hostname': 'esgf-data.dkrz.de',
+            'provider_url': 'https://{hostname}/esgf-idp/openid/{username}',
             'display_name': 'DKRZ',
         },
         'ipsl': {
