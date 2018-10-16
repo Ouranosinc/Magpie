@@ -1,7 +1,8 @@
-import requests
 from magpie.definitions.pyramid_definitions import *
 from magpie.ui.management import check_response
 from magpie.ui.home import add_template_data
+from magpie.api.api_rest_schemas import SigninAPI
+import requests
 
 
 class LoginViews(object):
@@ -39,11 +40,11 @@ class LoginViews(object):
                     pyr_res = Response(body=response.content, headers=response.headers)
                     for cookie in response.cookies:
                         pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
-                    if response.url != self.magpie_url:
+                    if response.url != '{}{}'.format(self.magpie_url, SigninAPI.path):
                         # login page of a provider (ex: GitHub login)
                         return HTTPTemporaryRedirect(response.url, headers=pyr_res.headers)
-                    # return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
-                    return HTTPFound(location=response.url, headers=pyr_res.headers)
+                    return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
+                    # return HTTPFound(location=response.url, headers=pyr_res.headers)
                 else:
                     return_data[u'invalid_credentials'] = True
                     return add_template_data(self.request, return_data)

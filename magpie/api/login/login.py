@@ -184,27 +184,12 @@ def authomatic_login(request):
         elif result.user:
             if not (result.user.name and result.user.id):
                 result.user.update()
-            provider_name = result.provider.name.lower()
-            # Hooray, we have the user!
-            if provider_name in ['openid', 'dkrz', 'ipsl', 'smhi', 'badc', 'pcmdi', 'wso2']:
-                # TODO: change login_id ... more infos ...
-                return login_success_external(request,
-                                              external_id=result.user.id,
-                                              email=result.user.email,
-                                              provider_name=result.provider.name,
-                                              external_user_name=result.user.name)
-            elif provider_name == 'github':
-                # TODO: fix email ... get more infos ... which login_id?
-                login_id = "{0.username}@github.com".format(result.user)
-                # email = "{0.username}@github.com".format(result.user)
-                # get extra info
-                if result.user.credentials:
-                    pass
-                return login_success_external(request,
-                                              external_id=login_id,
-                                              email=result.user.email,
-                                              provider_name=result.provider.name,
-                                              external_user_name=result.user.name)
+            # create/retrieve the user using found details from login provider
+            return login_success_external(request,
+                                          external_id=result.user.username or result.user.id,
+                                          email=result.user.email,
+                                          provider_name=result.provider.name,
+                                          external_user_name=result.user.name)
 
     return response
 
