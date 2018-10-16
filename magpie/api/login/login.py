@@ -23,6 +23,8 @@ def process_sign_in_external(request, username, provider):
     elif provider_name == 'github':
         query_field = None
         #query_field = dict(login_field=username)
+    elif provider_name == 'wso2':
+        query_field = {}
     else:
         query_field = dict(username=username)
 
@@ -161,7 +163,7 @@ def login_success_external(request, external_user_name, external_id, email, prov
 @view_config(route_name=ProviderSigninAPI.name, permission=NO_PERMISSION_REQUIRED)
 def authomatic_login(request):
     """Signs in a user session using an external provider."""
-    #_authomatic = authomatic(request)
+
     provider_name = request.matchdict.get('provider_name')
     verify_provider(provider_name)
 
@@ -184,7 +186,7 @@ def authomatic_login(request):
                 result.user.update()
             provider_name = result.provider.name.lower()
             # Hooray, we have the user!
-            if provider_name in ['openid', 'dkrz', 'ipsl', 'smhi', 'badc', 'pcmdi']:
+            if provider_name in ['openid', 'dkrz', 'ipsl', 'smhi', 'badc', 'pcmdi', 'wso2']:
                 # TODO: change login_id ... more infos ...
                 return login_success_external(request,
                                               external_id=result.user.id,

@@ -79,17 +79,12 @@ def authomatic_config(request=None):
         },
     }
 
-    github_consumer_key = get_constant('GITHUB_CLIENT_ID', '#####')
-    github_consumer_secret = get_constant('GITHUB_CLIENT_SECRET', '#####')
-    wso2_hostname = get_constant('WSO2_HOSTNAME')
-    wso2_consumer_key = get_constant('WSO2_CLIENT_ID', '#####')
-    wso2_consumer_secret = get_constant('WSO2_CLIENT_SECRET', '#####')
     OAUTH2 = {
         'github': {
             'class_': oauth2.GitHub,
             'display_name': 'GitHub',
-            'consumer_key': github_consumer_key,
-            'consumer_secret': github_consumer_secret,
+            'consumer_key': get_constant('GITHUB_CLIENT_ID', '#####'),
+            'consumer_secret': get_constant('GITHUB_CLIENT_SECRET', '#####'),
             'redirect_uri': request.application_url if request else None,
             'access_headers': {'User-Agent': 'Magpie'},
             'id': provider_id(),
@@ -102,11 +97,10 @@ def authomatic_config(request=None):
         'wso2': {
             'class_': wso2.WSO2,
             'display_name': 'WSO2',
-            'hostname': wso2_hostname,
-            'consumer_key': wso2_consumer_key,
-            'consumer_secret': wso2_consumer_secret,
-            'redirect_uri': request.application_url if request else None,
-            #'access_headers': {},
+            'hostname': get_constant('WSO2_HOSTNAME'),
+            'consumer_key': get_constant('WSO2_CLIENT_ID', '#####'),
+            'consumer_secret': get_constant('WSO2_CLIENT_SECRET', '#####'),
+            'redirect_uri': '{}/providers/wso2/signin'.format(request.application_url) if request else None,
             'id': provider_id(),
             'scope': wso2.WSO2.user_info_scope,
         }
