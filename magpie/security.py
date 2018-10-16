@@ -86,9 +86,9 @@ def authomatic_config(request=None):
             'consumer_key': get_constant('GITHUB_CLIENT_ID', '#####'),
             'consumer_secret': get_constant('GITHUB_CLIENT_SECRET', '#####'),
             'redirect_uri': request.application_url if request else None,
+            #'redirect_uri': '{}/providers/github/signin'.format(request.application_url) if request else None,
             'access_headers': {'User-Agent': 'Magpie'},
             'id': provider_id(),
-            'scope': oauth2.GitHub.user_info_scope,
             '_apis': {
                 'Get your events': ('GET', 'https://api.github.com/users/{user.username}/events'),
                 'Get your watched repos': ('GET', 'https://api.github.com/user/subscriptions'),
@@ -102,7 +102,6 @@ def authomatic_config(request=None):
             'consumer_secret': get_constant('WSO2_CLIENT_SECRET', '#####'),
             'redirect_uri': '{}/providers/wso2/signin'.format(request.application_url) if request else None,
             'id': provider_id(),
-            'scope': wso2.WSO2.user_info_scope,
         }
     }
 

@@ -16,6 +16,17 @@
                onclick="this.parentElement.style.display='none';">
     </form>
 </div>
+%elif error:
+<div class="alert danger visible" id="Login_ErrorFailureAlert">
+    <h3 class="alert_title danger">Login Error!</h3>
+    <p>
+        Login procedure generated an unhandled error.
+    </p>
+    <form action="${request.path}" method="post">
+        <input type="submit" class="button cancel" name="close" value="Close"
+               onclick="this.parentElement.style.display='none';">
+    </form>
+</div>
 %endif
 
 <h1>Log in</h1>
@@ -28,7 +39,7 @@
         <tr>
             <td>Username:</td>
             <div class="input_container">
-                <td><input type="text" name="user_name" value="${user_name}" class="equal_width"></td>
+                <td><input type="text" name="user_name" value="${user_name_internal}" class="equal_width"></td>
             </div>
             <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
@@ -51,7 +62,7 @@
         <tr>
             <td>Username:</td>
             <div class="input_container">
-                <td><input type="text" name="user_name" class="equal_width"></td>
+                <td><input type="text" name="user_name" value="${user_name_external}" class="equal_width"></td>
             </div>
             <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
@@ -61,6 +72,9 @@
                 <td><select name="provider_name" class="equal_width">
                     %for provider in external_providers:
                         <option value="${provider}">${provider}</option>
+                        %if provider == provider_name:
+                        <option selected="selected">${provider}</option>
+                        %endif
                     %endfor
                 </select></td>
             </div>
