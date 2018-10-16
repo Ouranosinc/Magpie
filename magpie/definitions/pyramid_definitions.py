@@ -6,6 +6,7 @@ from pyramid.httpexceptions import (
     HTTPOk,
     HTTPCreated,
     HTTPFound,
+    HTTPTemporaryRedirect,
     HTTPBadRequest,
     HTTPUnauthorized,
     HTTPForbidden,

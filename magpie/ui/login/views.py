@@ -35,11 +35,15 @@ class LoginViews(object):
                     data_to_send[key] = self.request.POST.get(key)
 
                 response = requests.post(signin_url, data=data_to_send, allow_redirects=True)
-                if response.status_code == HTTPOk.code:
+                if response.status_code in (HTTPOk.code, HTTPFound.code):
                     pyr_res = Response(body=response.content, headers=response.headers)
                     for cookie in response.cookies:
                         pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
-                    return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
+                    if response.url != self.magpie_url:
+                        # login page of a provider (ex: GitHub login)
+                        return HTTPTemporaryRedirect(response.url, headers=pyr_res.headers)
+                    # return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
+                    return HTTPFound(location=response.url, headers=pyr_res.headers)
                 else:
                     return_data[u'invalid_credentials'] = True
                     return add_template_data(self.request, return_data)

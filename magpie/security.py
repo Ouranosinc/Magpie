@@ -5,7 +5,6 @@ from magpie.constants import get_constant
 from magpie import models
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
-import os
 import logging
 logger = logging.getLogger(__name__)
 

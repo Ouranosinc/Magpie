@@ -1,8 +1,5 @@
 from authomatic.adapters import WebObAdapter
-from authomatic.providers import oauth1, oauth2, openid
-from authomatic import Authomatic, provider_id
-from magpie.security import authomatic_config, authomatic_setup, get_provider_names
-from magpie.constants import get_constant
+from magpie.security import authomatic_setup, get_provider_names
 from magpie.definitions.ziggurat_definitions import *
 from magpie.api.api_except import *
 from magpie.api.api_requests import *
@@ -24,7 +21,8 @@ def process_sign_in_external(request, username, provider):
     if provider_name == 'openid':
         query_field = dict(id=username)
     elif provider_name == 'github':
-        query_field = dict(login_field=username)
+        query_field = None
+        #query_field = dict(login_field=username)
     else:
         query_field = dict(username=username)
 
@@ -171,6 +169,11 @@ def authomatic_login(request):
     response = Response()
     external_providers_authomatic = authomatic_setup(request)
     result = external_providers_authomatic.login(WebObAdapter(request, response), provider_name)
+
+    if result is None:
+        if response.location is not None:
+            return HTTPTemporaryRedirect(location=response.location, headers=response.headers)
+        return response
 
     if result:
         if result.error:
