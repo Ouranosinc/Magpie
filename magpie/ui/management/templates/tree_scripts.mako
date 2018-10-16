@@ -41,7 +41,7 @@ li.Collapsed {
 <%def name="render_tree(item_renderer, tree, level = 0)">
     <ul>
      %for key in tree:
-        <div class="clear"/>
+         <div class="clear"></div>
         <form id="resource_${tree[key]['id']}_${tree[key].get('remote_id', '')}" action="${request.path}" method="post">
             % if tree[key]['children']:
             <li class="Expanded">

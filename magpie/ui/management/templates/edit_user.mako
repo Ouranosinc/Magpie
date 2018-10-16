@@ -162,7 +162,7 @@
     %endfor
 
     <div class="current_tab_panel">
-        <div class="clear"/>
+        <div class="clear"></div>
         %if error_message:
             <div class="alert danger visible">${error_message}</div>
         %endif

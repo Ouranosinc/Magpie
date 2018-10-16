@@ -159,7 +159,7 @@
                     <div class="panel_title">Resources</div>
                 </div>
                 <div>
-                    <div class="clear"/>
+                    <div class="clear"></div>
                     <div class="tree">
                         ${tree.render_tree(render_item, resources)}
                     </div>
