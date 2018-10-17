@@ -1,6 +1,6 @@
 from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
-from magpie.api.login import esgfopenid, wso2
+from magpie.api.login import esgfopenid, wso2, github
 from magpie.constants import get_constant
 from magpie import models
 from authomatic import Authomatic, provider_id
@@ -81,7 +81,7 @@ def authomatic_config(request=None):
 
     OAUTH2 = {
         'github': {
-            'class_': oauth2.GitHub,
+            'class_': github.GitHub,
             'display_name': 'GitHub',
             'consumer_key': get_constant('GITHUB_CLIENT_ID', '#####'),
             'consumer_secret': get_constant('GITHUB_CLIENT_SECRET', '#####'),
