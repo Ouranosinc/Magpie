@@ -7,6 +7,8 @@ class WSO2(OAuth2):
     user_authorization_url = ''
     user_info_url = ''
     url = ''
+    # remove headers from oauth2/token request that doesn't want body/header authorization credentials.
+    _x_use_authorization_header = False
 
     def __init__(self, *args, **kwargs):
         super(WSO2, self).__init__(*args, **kwargs)
@@ -17,13 +19,6 @@ class WSO2(OAuth2):
         self.user_info_url = '{}/oauth2/userinfo'.format(self.hostname)
         self.user_info_scope = ['openid']
         self.scope = ['openid']
-
-    @classmethod
-    def _x_request_elements_filter(cls, request_type, request_elements, credentials):
-        """Remove headers from oauth2/token request that doesn't want body/header authorization credentials."""
-        if request_type == cls.ACCESS_TOKEN_REQUEST_TYPE:
-            request_elements.headers.pop('Authorization', None)
-        return request_elements
 
     supported_user_attributes = SupportedUserAttributes(
         country=True,

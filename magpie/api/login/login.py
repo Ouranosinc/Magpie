@@ -170,6 +170,10 @@ def authomatic_login(request):
     # Start the login procedure
     response = Response()
     external_providers_authomatic = authomatic_setup(request)
+
+    #if 'access_token' in request.params:
+    #    request.params['code'] = request.params['access_token']
+
     result = external_providers_authomatic.login(WebObAdapter(request, response), provider_name)
 
     if result is None:
