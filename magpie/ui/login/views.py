@@ -51,7 +51,7 @@ class LoginViews(object):
                         pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
                     is_external = response.url != '{}{}'.format(self.magpie_url, SigninAPI.path)
                     if is_external:
-                        return HTTPTemporaryRedirect(response.url, headers=pyr_res.headers)
+                        return HTTPFound(response.url, headers=pyr_res.headers)
                     return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
                 elif response.status_code == HTTPUnauthorized.code:
                     return_data[u'invalid_credentials'] = True

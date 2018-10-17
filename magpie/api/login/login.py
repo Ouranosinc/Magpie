@@ -44,7 +44,7 @@ def process_sign_in_external(request, username, provider):
     #except Exception as ex:
     #    print(ex)
 
-    return HTTPFound(location=external_login_route, headers=request.response.headers)
+    return HTTPTemporaryRedirect(location=external_login_route, headers=request.response.headers)
 
 
 def verify_provider(provider_name):
