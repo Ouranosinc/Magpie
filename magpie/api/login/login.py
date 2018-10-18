@@ -120,7 +120,7 @@ def login_failure(request, reason=None):
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):
     """Create new user with an External Identity"""
-    internal_user_name = external_user_name + '_' + provider_name
+    internal_user_name = external_id + '_' + provider_name
     internal_user_name = internal_user_name.replace(" ", '_')
     group_name = get_constant('MAGPIE_USERS_GROUP')
     create_user(internal_user_name, password=None, email=email, group_name=group_name, db_session=db_session)
@@ -139,16 +139,14 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
 
 
 def login_success_external(request, external_user_name, external_id, email, provider_name):
-    # find user by external_id = login_id
-    # replace user from mongodb by user ziggurat and connect to externalId
+    # find possibly already registered user by external_id/provider
     user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name, request.db)
     if user is None:
         # create new user with an External Identity
         user = new_user_external(external_user_name=external_user_name, external_id=external_id,
                                  email=email, provider_name=provider_name, db_session=request.db)
-    # set a header to remember (set-cookie) -> this is the important line
+    # set a header to remember user (set-cookie)
     headers = remember(request, user.id)
-    # If redirection given
 
     homepage_route = '/' if 'homepage_route' not in request.cookies else str(request.cookies['homepage_route'])
     #resp = HTTPFound(location='localhost:2001/magpie', headers=headers)
@@ -186,6 +184,8 @@ def authomatic_login(request):
             # Login procedure finished with an error.
             return login_failure(request, reason=result.error.message)
         elif result.user:
+            # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
+            # update the user to get more info.
             if not (result.user.name and result.user.id):
                 result.user.update()
             # create/retrieve the user using found details from login provider
