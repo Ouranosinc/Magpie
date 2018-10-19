@@ -36,8 +36,11 @@ class MagpieOWSSecurity(OWSSecurityInterface):
 
     @staticmethod
     def update_request_cookies(request):
-        # ensure login of the user and update the request cookies if twitcher is in a special configuration
-        # only update if Magpie 'auth_tkt' is missing and can be retrieved from 'access_token'
+        """
+        Ensure login of the user and update the request cookies if twitcher is in a special configuration.
+        Only update if Magpie `auth_tkt` is missing and can be retrieved from `access_token` in `Authorization` header.
+        Counter-validate the login procedure by calling Magpie's `/session` which should indicated a logged user.
+        """
         not_default = get_twitcher_configuration(request.registry.settings) != TWITCHER_CONFIGURATION_DEFAULT
         if not_default and 'Authorization' in request.headers and 'auth_tkt' not in request.cookies:
             ssl_verify = asbool(request.registry.settings.get('twitcher.ows_proxy_ssl_verify', True))
