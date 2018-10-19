@@ -2039,13 +2039,24 @@ class ProviderSignin_GET_HeaderRequestSchema(HeaderRequestSchema):
                     "Supported format is 'Authorization: Bearer MyF4ncy4ccEsT0k3n'")
     HomepageRoute = colander.SchemaNode(
         colander.String(), missing=colander.drop, example="/session", default='Magpie UI Homepage',
-        description="Alternative redirection homepage after signin. Must be a relative path to Magpie.")
+        description="Alternative redirection homepage after signin. "
+                    "Must be a relative path to Magpie for security reasons.")
     HomepageRoute.name = "Homepage-Route"
 
 
 class ProviderSignin_GET_RequestSchema(colander.MappingSchema):
     provider_name = ProviderNameParameter
     header = ProviderSignin_GET_HeaderRequestSchema()
+
+
+class ProviderSignin_GET_FoundResponseBodySchema(BaseResponseBodySchema):
+    homepage_route = colander.SchemaNode(colander.String(), description="Route to be used for following redirection.")
+
+
+class ProviderSignin_GET_FoundResponseSchema(colander.MappingSchema):
+    description = "External login homepage route found. Temporary status before redirection to 'Homepage-Route' header."
+    header = HeaderResponseSchema()
+    body = ProviderSignin_GET_FoundResponseBodySchema(code=HTTPFound.code, description=description)
 
 
 class ProviderSignin_GET_BadRequestResponseBodySchema(ErrorResponseBodySchema):
@@ -2062,6 +2073,12 @@ class ProviderSignin_GET_UnauthorizedResponseSchema(colander.MappingSchema):
     description = "Unauthorized 'UserInfo' update using provided Authorization headers."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPUnauthorized.code, description=description)
+
+
+class ProviderSignin_GET_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Forbidden 'Homepage-Route' host not matching Magpie refused for security reasons."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class ProviderSignin_GET_NotFoundResponseBodySchema(ErrorResponseBodySchema):
@@ -2576,8 +2593,10 @@ Providers_GET_responses = {
     '200': Providers_GET_OkResponseSchema(),
 }
 ProviderSignin_GET_responses = {
+    '302': ProviderSignin_GET_FoundResponseSchema(),
     '400': ProviderSignin_GET_BadRequestResponseSchema(),
     '401': ProviderSignin_GET_UnauthorizedResponseSchema(),
+    '403': ProviderSignin_GET_ForbiddenResponseSchema(),
     '404': ProviderSignin_GET_NotFoundResponseSchema(),
     '500': InternalServerErrorResponseSchema()
 }

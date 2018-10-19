@@ -8,6 +8,7 @@ from magpie.api.api_requests import *
 from magpie.api.api_rest_schemas import *
 from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import create_user
+from six.moves.urllib.parse import urlparse
 import requests
 
 
@@ -39,14 +40,6 @@ def process_sign_in_external(request, username, provider):
 def verify_provider(provider_name):
     verify_param(provider_name, paramName=u'provider_name', paramCompare=MAGPIE_PROVIDER_KEYS, isIn=True,
                  httpError=HTTPNotFound, msgOnFail=ProviderSignin_GET_NotFoundResponseSchema.description)
-
-
-@view_config(route_name='signin_external', request_method='POST', permission=NO_PERMISSION_REQUIRED)
-def sign_in_external(request):
-    provider_name = get_value_multiformat_post_checked(request, 'provider_name')
-    user_name = get_value_multiformat_post_checked(request, 'user_name')
-    verify_provider(provider_name)
-    return process_sign_in_external(request, user_name, provider_name)
 
 
 @SigninAPI.post(schema=Signin_POST_RequestSchema(), tags=[LoginTag], response_schemas=Signin_POST_responses)
@@ -137,13 +130,20 @@ def login_success_external(request, external_user_name, external_id, email, prov
     # set a header to remember user (set-cookie)
     headers = remember(request, user.id)
 
+    # redirect to 'Homepage-Route' header only if corresponding to Magpie host
     if 'homepage_route' in request.cookies:
         homepage_route = str(request.cookies['homepage_route'])
     elif 'Homepage-Route' in request.headers:
         homepage_route = str(request.headers['Homepage-Route'])
     else:
         homepage_route = '/'
-    return valid_http(httpSuccess=HTTPFound, detail="External login homepage route found.",
+    header_host = urlparse(homepage_route).hostname
+    magpie_host = request.registry.settings.get('magpie.url')
+    if header_host and header_host != magpie_host:
+        raise_http(httpError=HTTPForbidden, detail=ProviderSignin_GET_ForbiddenResponseSchema.description)
+    if not header_host:
+        homepage_route = magpie_host + ('/' if not homepage_route.startswith('/') else '') + homepage_route
+    return valid_http(httpSuccess=HTTPFound, detail=ProviderSignin_GET_FoundResponseSchema.description,
                       content={u'homepage_route': homepage_route},
                       httpKWArgs={'location': homepage_route, 'headers': headers})
 
@@ -154,7 +154,7 @@ def login_success_external(request, external_user_name, external_id, email, prov
 def authomatic_login(request):
     """Signs in a user session using an external provider."""
 
-    provider_name = request.matchdict.get('provider_name')
+    provider_name = request.matchdict.get('provider_name', '').lower()
     verify_provider(provider_name)
     authomatic_handler = authomatic_setup(request)
     response = Response()
