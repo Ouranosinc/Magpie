@@ -75,8 +75,8 @@ MAGPIE_POSTGRES_DB = os.getenv('MAGPIE_POSTGRES_DB', 'magpiedb')
 # ===========================
 MAGPIE_ADMIN_PERMISSION = 'admin'
 #MAGPIE_ADMIN_PERMISSION = NO_PERMISSION_REQUIRED
-
 MAGPIE_LOGGED_USER = 'current'
+MAGPIE_DEFAULT_PROVIDER = 'ziggurat'
 
 # above this length is considered a token,
 # refuse longer username creation

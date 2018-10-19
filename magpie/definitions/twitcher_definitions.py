@@ -1,5 +1,6 @@
 from twitcher.adapter.base import AdapterInterface
 from twitcher.adapter.default import DefaultAdapter
+from twitcher.config import get_twitcher_configuration, TWITCHER_CONFIGURATION_DEFAULT
 from twitcher.owsproxy import owsproxy
 from twitcher.owssecurity import OWSSecurityInterface
 from twitcher.owsexceptions import OWSAccessForbidden

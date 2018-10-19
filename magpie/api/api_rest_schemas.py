@@ -1,6 +1,11 @@
 from magpie.definitions.cornice_definitions import *
 from magpie.definitions.pyramid_definitions import *
-from magpie.constants import MAGPIE_LOGGED_USER, MAGPIE_USER_NAME_MAX_LENGTH, MAGPIE_ADMIN_PERMISSION
+from magpie.constants import (
+    MAGPIE_LOGGED_USER,
+    MAGPIE_USER_NAME_MAX_LENGTH,
+    MAGPIE_ADMIN_PERMISSION,
+    MAGPIE_DEFAULT_PROVIDER
+)
 from magpie import __meta__
 import six
 
@@ -226,12 +231,31 @@ ServiceResourceAPI = Service(
 ServiceResourceTypesAPI = Service(
     path='/services/types/{service_type}/resources/types',
     name='ServiceResourceTypes')
+ProvidersAPI = Service(
+    path='/providers',
+    name='Providers')
+ProviderSigninAPI = Service(
+    path='/providers/{provider_name}/signin',
+    name='ProviderSignin')
+SigninAPI = Service(
+    path='/signin',
+    name='signin')
+SignoutAPI = Service(
+    path='/signout',
+    name='signout')
 SessionAPI = Service(
     path='/session',
     name='Session')
 VersionAPI = Service(
     path='/version',
     name='Version')
+
+
+# Common path parameters
+GroupNameParameter = colander.SchemaNode(colander.String(), description="Registered user group.")
+UserNameParameter = colander.SchemaNode(colander.String(), description="Registered local user.")
+ProviderNameParameter = colander.SchemaNode(colander.String(), description="External identity provider.",
+                                            validator=colander.OneOf([]))
 
 
 class HeaderResponseSchema(colander.MappingSchema):
@@ -310,10 +334,10 @@ class ErrorVerifyParamBodySchema(colander.MappingSchema):
         missing=colander.drop)
 
 
-class ErrorRequestInfoBodySchema(BaseResponseBodySchema):
-    def __init__(self, **kw):
-        super(ErrorRequestInfoBodySchema, self).__init__(**kw)
-        assert kw.get('code') >= 400
+class ErrorResponseBodySchema(BaseResponseBodySchema):
+    def __init__(self, code, description, **kw):
+        super(ErrorResponseBodySchema, self).__init__(code, description, **kw)
+        assert code >= 400
 
     route_name = colander.SchemaNode(
         colander.String(),
@@ -329,7 +353,7 @@ class ErrorRequestInfoBodySchema(BaseResponseBodySchema):
         example="GET")
 
 
-class InternalServerErrorResponseBodySchema(ErrorRequestInfoBodySchema):
+class InternalServerErrorResponseBodySchema(ErrorResponseBodySchema):
     def __init__(self, **kw):
         kw['code'] = HTTPInternalServerError.code
         super(InternalServerErrorResponseBodySchema, self).__init__(**kw)
@@ -353,13 +377,13 @@ class UnauthorizedResponseSchema(colander.MappingSchema):
 class NotFoundResponseSchema(colander.MappingSchema):
     description = "The route resource could not be found."
     header = HeaderResponseSchema()
-    body = ErrorRequestInfoBodySchema(code=HTTPNotFound.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
 class MethodNotAllowedResponseSchema(colander.MappingSchema):
     description = "The method is not allowed for this resource."
     header = HeaderResponseSchema()
-    body = ErrorRequestInfoBodySchema(code=HTTPMethodNotAllowed.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPMethodNotAllowed.code, description=description)
 
 
 class UnprocessableEntityResponseSchema(colander.MappingSchema):
@@ -371,7 +395,7 @@ class UnprocessableEntityResponseSchema(colander.MappingSchema):
 class InternalServerErrorResponseSchema(colander.MappingSchema):
     description = "Internal Server Error. Unhandled exception occurred."
     header = HeaderResponseSchema()
-    body = ErrorRequestInfoBodySchema(code=HTTPInternalServerError.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
 
 
 class ProvidersListSchema(colander.SequenceSchema):
@@ -1961,6 +1985,12 @@ class GroupServicePermission_DELETE_ForbiddenResponseSchema(colander.MappingSche
     body = GroupServicePermission_DELETE_ResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
+class Signout_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Sign out successful."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
 class GroupServicePermission_DELETE_NotFoundResponseSchema(colander.MappingSchema):
     description = "Permission not found for corresponding group and resource."
     header = HeaderResponseSchema()
@@ -1986,16 +2016,147 @@ class Session_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
     body = InternalServerErrorResponseSchema()
 
 
+class ProvidersBodySchema(colander.MappingSchema):
+    internal = ProvidersListSchema()
+    external = ProvidersListSchema()
+
+
 class Providers_GET_ResponseBodySchema(BaseResponseBodySchema):
-    provider_names = ProvidersListSchema()
-    internal_providers = ProvidersListSchema()
-    external_providers = ProvidersListSchema()
+    providers = ProvidersBodySchema()
 
 
-class Providers_GET_OkResponseSchema(BaseResponseBodySchema):
+class Providers_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get providers successful."
     header = HeaderResponseSchema()
     body = Providers_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class ProviderSignin_GET_HeaderRequestSchema(HeaderRequestSchema):
+    Authorization = colander.SchemaNode(
+        colander.String(), missing=colander.drop, example="Bearer MyF4ncy4ccEsT0k3n",
+        description="Access token to employ for direct signin with external provider bypassing the login procedure. "
+                    "Access token must have been validated with the corresponding provider beforehand. "
+                    "Supported format is 'Authorization: Bearer MyF4ncy4ccEsT0k3n'")
+    HomepageRoute = colander.SchemaNode(
+        colander.String(), missing=colander.drop, example="/session", default='Magpie UI Homepage',
+        description="Alternative redirection homepage after signin. "
+                    "Must be a relative path to Magpie for security reasons.")
+    HomepageRoute.name = "Homepage-Route"
+
+
+class ProviderSignin_GET_RequestSchema(colander.MappingSchema):
+    provider_name = ProviderNameParameter
+    header = ProviderSignin_GET_HeaderRequestSchema()
+
+
+class ProviderSignin_GET_FoundResponseBodySchema(BaseResponseBodySchema):
+    homepage_route = colander.SchemaNode(colander.String(), description="Route to be used for following redirection.")
+
+
+class ProviderSignin_GET_FoundResponseSchema(colander.MappingSchema):
+    description = "External login homepage route found. Temporary status before redirection to 'Homepage-Route' header."
+    header = HeaderResponseSchema()
+    body = ProviderSignin_GET_FoundResponseBodySchema(code=HTTPFound.code, description=description)
+
+
+class ProviderSignin_GET_BadRequestResponseBodySchema(ErrorResponseBodySchema):
+    reason = colander.SchemaNode(colander.String(), description="Additional detail about the error.")
+
+
+class ProviderSignin_GET_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Incorrectly formed 'Authorization: Bearer <access_token>' header."
+    header = HeaderResponseSchema()
+    body = ProviderSignin_GET_BadRequestResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class ProviderSignin_GET_UnauthorizedResponseSchema(colander.MappingSchema):
+    description = "Unauthorized 'UserInfo' update using provided Authorization headers."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPUnauthorized.code, description=description)
+
+
+class ProviderSignin_GET_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Forbidden 'Homepage-Route' host not matching Magpie refused for security reasons."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+class ProviderSignin_GET_NotFoundResponseBodySchema(ErrorResponseBodySchema):
+    param = ErrorVerifyParamBodySchema()
+    provider_name = colander.SchemaNode(colander.String())
+    providers = ProvidersListSchema()
+
+
+class ProviderSignin_GET_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Invalid `provider_name` not found within available providers."
+    header = HeaderResponseSchema()
+    body = ProviderSignin_GET_NotFoundResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class Signin_POST_RequestBodySchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(colander.String(), description="User name to use for sign in.")
+    password = colander.SchemaNode(colander.String(), description="Password to use for sign in.")
+    provider_name = colander.SchemaNode(colander.String(), description="Provider to use for sign in.",
+                                        default=MAGPIE_DEFAULT_PROVIDER, missing=colander.drop)
+
+
+class Signin_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    body = Signin_POST_RequestBodySchema()
+
+
+class Signin_POST_OkResponseSchema(colander.MappingSchema):
+    description = "Login successful."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class Signin_POST_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Could not retrieve `user_name`."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class Signin_POST_UnauthorizedResponseSchema(colander.MappingSchema):
+    description = "Login failure."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPUnauthorized.code, description=description)
+
+
+class Signin_POST_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Could not verify `user_name`."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+class Signin_POST_NotAcceptableResponseSchema(colander.MappingSchema):
+    description = "Undefined `user_name`."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
+
+
+class Signin_POST_ConflictResponseBodySchema(ErrorResponseBodySchema):
+    provider_name = colander.SchemaNode(colander.String())
+    internal_user_name = colander.SchemaNode(colander.String())
+    external_user_name = colander.SchemaNode(colander.String())
+    external_id = colander.SchemaNode(colander.String())
+
+
+class Signin_POST_ConflictResponseSchema(colander.MappingSchema):
+    description = "Add external user identity refused by db because it already exists."
+    header = HeaderResponseSchema()
+    body = Signin_POST_ConflictResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
+class Signin_POST_InternalServerErrorBodySchema(InternalServerErrorResponseBodySchema):
+    user_name = colander.SchemaNode(colander.String(), description="Specified user retrieved from the request.")
+    provider_name = colander.SchemaNode(colander.String(), description="Specified provider retrieved from the request.")
+
+
+class Signin_POST_InternalServerErrorResponseSchema(colander.MappingSchema):
+    description = "Error occurred while signing in with external provider."
+    header = HeaderResponseSchema()
+    body = InternalServerErrorResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
 
 class Version_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -2428,6 +2589,35 @@ GroupResourcePermissions_GET_responses = {
     '422': UnprocessableEntityResponseSchema(),
 }
 GroupResourcePermission_DELETE_responses = GroupServicePermission_DELETE_responses
+Providers_GET_responses = {
+    '200': Providers_GET_OkResponseSchema(),
+}
+ProviderSignin_GET_responses = {
+    '302': ProviderSignin_GET_FoundResponseSchema(),
+    '400': ProviderSignin_GET_BadRequestResponseSchema(),
+    '401': ProviderSignin_GET_UnauthorizedResponseSchema(),
+    '403': ProviderSignin_GET_ForbiddenResponseSchema(),
+    '404': ProviderSignin_GET_NotFoundResponseSchema(),
+    '500': InternalServerErrorResponseSchema()
+}
+Signin_POST_responses = {
+    '200': Signin_POST_OkResponseSchema(),
+    '400': Signin_POST_BadRequestResponseSchema(),
+    '401': Signin_POST_UnauthorizedResponseSchema(),
+    '403': Signin_POST_ForbiddenResponseSchema(),
+    '404': ProviderSignin_GET_NotFoundResponseSchema(),
+    '406': Signin_POST_NotAcceptableResponseSchema(),
+    '409': Signin_POST_ConflictResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+    '500': Signin_POST_InternalServerErrorResponseSchema(),
+}
+Signout_GET_responses = {
+    '200': Signout_GET_OkResponseSchema(),
+}
+Session_GET_responses = {
+    '200': Session_GET_OkResponseSchema(),
+    '500': Session_GET_InternalServerErrorResponseSchema()
+}
 Version_GET_responses = {
     '200': Version_GET_OkResponseSchema()
 }

@@ -44,8 +44,8 @@ def get_permission_multiformat_post_checked(request, service_resource, permissio
     return perm_name
 
 
-def get_value_multiformat_post_checked(request, key):
-    val = get_multiformat_any(request, key)
+def get_value_multiformat_post_checked(request, key, default=None):
+    val = get_multiformat_any(request, key, default=default)
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
                  paramName=key, msgOnFail=UnprocessableEntityResponseSchema.description)
     return val

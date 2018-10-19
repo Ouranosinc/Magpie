@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-    <title>Magpie admin area</title>
+    <title>Magpie Administration</title>
     <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans" />
     <link rel="shortcut icon" type="image/x-icon" href="${request.static_url('magpie.ui.home:static/settings.png')}" />
@@ -14,19 +14,31 @@
 <body>
 
 <div class="header">
-    <a href="${request.route_url('home')}">
-        <img src="${request.static_url('magpie.ui.home:static/settings_white.png')}">
-        Magpie Administration
-    </a>
-    %if MAGPIE_LOGGED_USER:
-        <button class="img_button" type="button" onclick="location.href='${request.route_url('logout')}'">Log out<br/>(${MAGPIE_LOGGED_USER})</button>
-    %else:
-        <button class="img_button" type="button" onclick="location.href='${request.route_url('login')}'">Log In</button>
-    %endif
+    <div>
+        <a href="${request.route_url('home')}">
+            <div id="image_container">
+                <div id="image_background"><img src="${request.static_url('magpie.ui.home:static/settings_white.png')}"></div>
+                <div id="image_overlay"><img src="${request.static_url('magpie.ui.home:static/magpie.png')}"></div>
+            </div>
+            <div id="title_header">Magpie Administration</div>
+        </a>
+        <div style="float: right;">
+            %if MAGPIE_LOGGED_USER:
+            <button class="img_button" type="button" onclick="location.href='${request.route_url('logout')}'">Log Out</button>
+            %else:
+            <button class="img_button" type="button" onclick="location.href='${request.route_url('login')}'">Log In</button>
+            %endif
+        </div>
+    </div>
     <div class="clear"></div>
-    <ul class="breadcrumb">
-        <%block name="breadcrumb"/>
-    </ul>
+    <div>
+        <ul class="breadcrumb">
+            <%block name="breadcrumb"/>
+        </ul>
+        %if MAGPIE_LOGGED_USER:
+        <div style="float: right;">Logged in: ${MAGPIE_LOGGED_USER}</div>
+        %endif
+    </div>
 </div>
 
 <div class="content">

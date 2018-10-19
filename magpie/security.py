@@ -1,11 +1,10 @@
 from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
-from magpie.api.esgf import esgfopenid
+from magpie.api.login import esgfopenid, wso2
 from magpie.constants import get_constant
 from magpie import models
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
-import os
 import logging
 logger = logging.getLogger(__name__)
 
@@ -27,15 +26,17 @@ def auth_config_from_settings(settings):
     return config
 
 
-def authomatic(request):
+def authomatic_setup(request):
+    magpie_secret = get_constant('MAGPIE_SECRET', settings=request.registry.settings, settings_name='magpie.secret')
     return Authomatic(
         config=authomatic_config(request),
-        secret='randomsecretstring',
+        secret=magpie_secret,
         report_errors=True,
-        logging_level=logger.level)
+        logging_level=logger.level
+    )
 
 
-def authomatic_config(request):
+def authomatic_config(request=None):
 
     DEFAULTS = {
         'popup': True,
@@ -44,6 +45,7 @@ def authomatic_config(request):
     OPENID = {
         'openid': {
             'class_': openid.OpenID,
+            'display_name': 'OpenID',
         },
     }
 
@@ -51,41 +53,56 @@ def authomatic_config(request):
         'dkrz': {
             'class_': esgfopenid.ESGFOpenID,
             'hostname': 'esgf-data.dkrz.de',
+            'provider_url': 'https://{hostname}/esgf-idp/openid/{username}',
+            'display_name': 'DKRZ',
         },
         'ipsl': {
             'class_': esgfopenid.ESGFOpenID,
-            'hostname': 'esgf-node.ipsl.fr',
+            'hostname': 'providers-node.ipsl.fr',
+            'display_name': 'IPSL',
         },
         'badc': {
             'class_': esgfopenid.ESGFOpenID,
             'hostname': 'ceda.ac.uk',
-            'provider_url': 'https://{hostname}/openid/{username}'
+            'provider_url': 'https://{hostname}/openid/{username}',
+            'display_name': 'BADC',
         },
         'pcmdi': {
             'class_': esgfopenid.ESGFOpenID,
-            'hostname': 'esgf-node.llnl.gov',
+            'hostname': 'providers-node.llnl.gov',
+            'display_name': 'PCMDI',
         },
         'smhi': {
             'class_': esgfopenid.ESGFOpenID,
             'hostname': 'esg-dn1.nsc.liu.se',
+            'display_name': 'SMHI',
         },
     }
 
-    github_consumer_key = os.getenv('GITHUB_CLIENT_ID', '#####')
-    github_consumer_secret = os.getenv('GITHUB_CLIENT_SECRET', '#####')
     OAUTH2 = {
         'github': {
             'class_': oauth2.GitHub,
-            'consumer_key': github_consumer_key,
-            'consumer_secret': github_consumer_secret,
+            'display_name': 'GitHub',
+            'consumer_key': get_constant('GITHUB_CLIENT_ID', '#####'),
+            'consumer_secret': get_constant('GITHUB_CLIENT_SECRET', '#####'),
+            'redirect_uri': request.application_url if request else None,
+            #'redirect_uri': '{}/providers/github/signin'.format(request.application_url) if request else None,
             'access_headers': {'User-Agent': 'Magpie'},
             'id': provider_id(),
-            'scope': oauth2.GitHub.user_info_scope,
             '_apis': {
                 'Get your events': ('GET', 'https://api.github.com/users/{user.username}/events'),
                 'Get your watched repos': ('GET', 'https://api.github.com/user/subscriptions'),
             },
         },
+        'wso2': {
+            'class_': wso2.WSO2,
+            'display_name': 'WSO2',
+            'hostname': get_constant('WSO2_HOSTNAME'),
+            'consumer_key': get_constant('WSO2_CLIENT_ID', '#####'),
+            'consumer_secret': get_constant('WSO2_CLIENT_SECRET', '#####'),
+            'redirect_uri': '{}/providers/wso2/signin'.format(request.application_url) if request else None,
+            'id': provider_id(),
+        }
     }
 
     # Concatenate the configs.
@@ -95,3 +112,12 @@ def authomatic_config(request):
     config.update(ESGF)
     config['__defaults__'] = DEFAULTS
     return config
+
+
+def get_provider_names():
+    provider_names = {}
+    config = authomatic_config()
+    for provider in config.keys():
+        if provider != '__defaults__':
+            provider_names[provider] = config[provider].get('display_name', provider)
+    return provider_names

@@ -1,87 +1,59 @@
 from authomatic.adapters import WebObAdapter
-from authomatic.providers import oauth1, oauth2, openid
-from authomatic import Authomatic, provider_id
-from security import authomatic
-from magpie.constants import get_constant
+from authomatic.core import LoginResult, Credentials, resolve_provider_class
+from authomatic.exceptions import OAuth2Error
+from magpie.security import authomatic_setup, get_provider_names
 from magpie.definitions.ziggurat_definitions import *
 from magpie.api.api_except import *
 from magpie.api.api_requests import *
 from magpie.api.api_rest_schemas import *
 from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import create_user
+from six.moves.urllib.parse import urlparse
 import requests
 
 
-external_providers_config = {
-    'openid': {
-        'class_': openid.OpenID,    # OpenID provider dependent on the python-openid package.
-    },
-    'github': {
-        'class_': oauth2.GitHub,
-        'consumer_key': '##########',
-        'consumer_secret': '##########',
-        'id': provider_id(),
-        'scope': oauth2.GitHub.user_info_scope,
-        '_apis': {
-            'Get your events': ('GET', 'https://api.github.com/users/{user.username}/events'),
-            'Get your watched repos': ('GET', 'https://api.github.com/user/subscriptions'),
-        },
-    },
-    'dkrz': {
-    },
-    'ipsl': {
-    },
-    'badc': {
-    },
-    'pcmdi': {
-    },
-    'smhi': {
-    },
-}
-
-external_providers_authomatic = Authomatic(config=external_providers_config,
-                                           secret=get_constant('MAGPIE_SECRET'))
-external_providers = external_providers_config.keys()
-internal_providers = [u'ziggurat']
-providers = internal_providers + external_providers
+# dictionaries of {'provider_id': 'provider_display_name'}
+default_provider = get_constant('MAGPIE_DEFAULT_PROVIDER')
+MAGPIE_INTERNAL_PROVIDERS = {default_provider: default_provider.capitalize()}
+MAGPIE_EXTERNAL_PROVIDERS = get_provider_names()
+MAGPIE_PROVIDER_KEYS = MAGPIE_INTERNAL_PROVIDERS.keys() + MAGPIE_EXTERNAL_PROVIDERS.keys()
 
 
-@view_config(route_name='signin_external', request_method='POST', permission=NO_PERMISSION_REQUIRED)
-def sign_in_external(request):
-    provider_name = get_value_multiformat_post_checked(request, 'provider_name')
-    user_name = get_value_multiformat_post_checked(request, 'user_name')
-    verify_param(provider_name, paramName=u'provider_name', paramCompare=providers, isIn=True,
-                 httpError=HTTPNotAcceptable, content={u'provider_name': str(provider_name), u'providers': providers},
-                 msgOnFail="Invalid: `provider_name` not found within available providers.")
-
+def process_sign_in_external(request, username, provider):
+    provider_name = provider.lower()
     if provider_name == 'openid':
-        query_field = dict(id=user_name)
+        query_field = dict(id=username)
     elif provider_name == 'github':
-        query_field = dict(login_field=user_name)
+        query_field = None
+        #query_field = dict(login_field=username)
+    elif provider_name == 'wso2':
+        query_field = {}
     else:
-        query_field = dict(username=user_name)
+        query_field = dict(username=username)
 
     came_from = request.POST.get('came_from', '/')
     request.response.set_cookie('homepage_route', came_from)
-    external_login_route = request.route_url('external_login', provider_name=provider_name, _query=query_field)
+    external_login_route = request.route_url(ProviderSigninAPI.name, provider_name=provider_name, _query=query_field)
+    return HTTPTemporaryRedirect(location=external_login_route, headers=request.response.headers)
 
-    return HTTPFound(location=external_login_route, headers=request.response.headers)
+
+def verify_provider(provider_name):
+    verify_param(provider_name, paramName=u'provider_name', paramCompare=MAGPIE_PROVIDER_KEYS, isIn=True,
+                 httpError=HTTPNotFound, msgOnFail=ProviderSignin_GET_NotFoundResponseSchema.description)
 
 
-@view_config(route_name='signin', request_method='POST', permission=NO_PERMISSION_REQUIRED)
+@SigninAPI.post(schema=Signin_POST_RequestSchema(), tags=[LoginTag], response_schemas=Signin_POST_responses)
+@view_config(route_name=SigninAPI.name, request_method='POST', permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
     """Signs in a user session."""
-    provider_name = get_value_multiformat_post_checked(request, 'provider_name')
+    provider_name = get_value_multiformat_post_checked(request, 'provider_name', default=default_provider).lower()
     user_name = get_value_multiformat_post_checked(request, 'user_name')
-    password = get_multiformat_post(request, 'password')   # no check since password is None for external login#
+    password = get_multiformat_post(request, 'password')   # no check since password is None for external login
+    verify_provider(provider_name)
 
-    verify_param(provider_name, paramName=u'provider_name', paramCompare=providers, isIn=True,
-                 httpError=HTTPNotAcceptable, content={u'provider_name': str(provider_name), u'providers': providers},
-                 msgOnFail="Invalid `provider_name` not found within available providers")
-
-    if provider_name in internal_providers:
-        signin_internal_url = '{}/signin_internal'.format(request.application_url)
-        signin_internal_data = {u'user_name': user_name, u'password': password}
+    if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
+        signin_internal_url = '{host}{path}'.format(host=request.application_url, path='/signin_internal')
+        signin_internal_data = {u'user_name': user_name, u'password': password, u'provider_name': provider_name}
         signin_response = requests.post(signin_internal_url, data=signin_internal_data, allow_redirects=True)
 
         if signin_response.status_code == HTTPOk.code:
@@ -89,131 +61,163 @@ def sign_in(request):
             for cookie in signin_response.cookies:
                 pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
             return pyramid_response
-        raise_http(httpError=HTTPUnauthorized, detail="Login failure.")
+        login_failure(request)
 
-    elif provider_name in external_providers:
-        return evaluate_call(lambda: sign_in_external(request, {u'user_name': user_name,
-                                                                u'password': password,
-                                                                u'provider_name': provider_name}),
-                             httpError=HTTPInternalServerError, content={u'provider': provider_name},
-                             msgOnFail="Error occurred while signing in with external provider")
+    elif provider_name in MAGPIE_EXTERNAL_PROVIDERS.keys():
+        return evaluate_call(lambda: process_sign_in_external(request, user_name, provider_name),
+                             httpError=HTTPInternalServerError,
+                             content={u'user_name': user_name,  u'provider_name': provider_name},
+                             msgOnFail=Signin_POST_InternalServerErrorResponseSchema.description)
 
 
+# swagger responses referred in `sign_in`
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
 def login_success_ziggurat(request):
     # headers contains login authorization cookie
-    return valid_http(httpSuccess=HTTPOk, detail="Login successful.", httpKWArgs={'headers': request.context.headers})
+    return valid_http(httpSuccess=HTTPOk, httpKWArgs={'headers': request.context.headers},
+                      detail=Signin_POST_OkResponseSchema.description, )
 
 
-def new_user_external(external_user_name, external_id, email, provider_name, db_session):
-    """Create new user with an External Identity"""
-    local_user_name = external_user_name + '_' + provider_name
-    local_user_name = local_user_name.replace(" ", '_')
-    group_name = get_constant('MAGPIE_USERS_GROUP')
-    create_user(local_user_name, password=None, email=email, group_name=group_name, db_session=db_session)
-
-    user = UserService.by_user_name(local_user_name, db_session=db_session)
-    ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
-                                          local_user_id=user.id, provider_name=provider_name)
-    evaluate_call(lambda: db_session.add(ex_identity), fallback=lambda: db_session.rollback(),
-                  httpError=HTTPConflict, msgOnFail="Add external user refused by db",
-                  content={u'provider_name': str(provider_name), u'local_user_name': str(local_user_name)})
-    user.external_identities.append(ex_identity)
-    return user
-
-
-def login_success_external(request, external_user_name, external_id, email, provider_name):
-    # find user by external_id = login_id
-    # replace user from mongodb by user ziggurat and connect to externalId
-    user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name, request.db)
-    if user is None:
-        # create new user with an External Identity
-        user = new_user_external(external_user_name=external_user_name, external_id=external_id,
-                                 email=email, provider_name=provider_name, db_session=request.db)
-    # set a header to remember (set-cookie) -> this is the important line
-    headers = remember(request, user.id)
-    # If redirection given
-
-    homepage_route = '/' if 'homepage_route' not in request.cookies else str(request.cookies['homepage_route'])
-
-    return valid_http(httpSuccess=HTTPFound, detail="External login homepage route found",
-                      content={u'homepage_route': homepage_route},
-                      httpKWArgs={'location': homepage_route, 'headers': headers})
-
-
+# swagger responses referred in `sign_in`
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
 def login_failure(request, reason=None):
     httpError = HTTPUnauthorized
     if reason is None:
         httpError = HTTPNotAcceptable
-        reason = 'Undefined `user_name`.'
+        reason = Signin_POST_NotAcceptableResponseSchema.description
         user_name = request.POST.get('user_name')
         if user_name is None:
             httpError = HTTPBadRequest
-            reason = 'Could not retrieve `user_name`.'
+            reason = Signin_POST_BadRequestResponseSchema.description
         else:
             user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
-                                           fallback=lambda: request.db.rollback(),
-                                           httpError=HTTPForbidden, msgOnFail="Could not verify `user_name`.")
+                                           fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                                           msgOnFail=Signin_POST_ForbiddenResponseSchema.description)
             if user_name in user_name_list:
                 httpError = HTTPUnauthorized
-                reason = 'Incorrect password.'
-    raise_http(httpError=httpError, detail="Login failure", content={u'reason': str(reason)})
+                reason = "Incorrect credentials."
+    raise_http(httpError=httpError, content={u'reason': str(reason)},
+               detail=Signin_POST_UnauthorizedResponseSchema.description)
 
 
-@view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
-def sign_out(request):
-    """Signs out the current user session."""
-    return valid_http(httpSuccess=HTTPOk, detail="Sign out successful.", httpKWArgs={'headers': forget(request)})
+def new_user_external(external_user_name, external_id, email, provider_name, db_session):
+    """Create new user with an External Identity"""
+    internal_user_name = external_id + '_' + provider_name
+    internal_user_name = internal_user_name.replace(" ", '_')
+    group_name = get_constant('MAGPIE_USERS_GROUP')
+    create_user(internal_user_name, password=None, email=email, group_name=group_name, db_session=db_session)
+
+    user = UserService.by_user_name(internal_user_name, db_session=db_session)
+    ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
+                                          local_user_id=user.id, provider_name=provider_name)
+    evaluate_call(lambda: db_session.add(ex_identity), fallback=lambda: db_session.rollback(),
+                  httpError=HTTPConflict, msgOnFail=Signin_POST_ConflictResponseSchema.description,
+                  content={u'provider_name': str(provider_name),
+                           u'internal_user_name': str(internal_user_name),
+                           u'external_user_name': str(external_user_name),
+                           u'external_id': str(external_id)})
+    user.external_identities.append(ex_identity)
+    return user
 
 
-@view_config(route_name='external_login', permission=NO_PERMISSION_REQUIRED)
+def login_success_external(request, external_user_name, external_id, email, provider_name):
+    # find possibly already registered user by external_id/provider
+    user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name, request.db)
+    if user is None:
+        # create new user with an External Identity
+        user = new_user_external(external_user_name=external_user_name, external_id=external_id,
+                                 email=email, provider_name=provider_name, db_session=request.db)
+    # set a header to remember user (set-cookie)
+    headers = remember(request, user.id)
+
+    # redirect to 'Homepage-Route' header only if corresponding to Magpie host
+    if 'homepage_route' in request.cookies:
+        homepage_route = str(request.cookies['homepage_route'])
+    elif 'Homepage-Route' in request.headers:
+        homepage_route = str(request.headers['Homepage-Route'])
+    else:
+        homepage_route = '/'
+    header_host = urlparse(homepage_route).hostname
+    magpie_host = request.registry.settings.get('magpie.url')
+    if header_host and header_host != magpie_host:
+        raise_http(httpError=HTTPForbidden, detail=ProviderSignin_GET_ForbiddenResponseSchema.description)
+    if not header_host:
+        homepage_route = magpie_host + ('/' if not homepage_route.startswith('/') else '') + homepage_route
+    return valid_http(httpSuccess=HTTPFound, detail=ProviderSignin_GET_FoundResponseSchema.description,
+                      content={u'homepage_route': homepage_route},
+                      httpKWArgs={'location': homepage_route, 'headers': headers})
+
+
+@ProviderSigninAPI.get(schema=ProviderSignin_GET_RequestSchema, tags=[LoginTag],
+                       response_schemas=ProviderSignin_GET_responses)
+@view_config(route_name=ProviderSigninAPI.name, permission=NO_PERMISSION_REQUIRED)
 def authomatic_login(request):
-    #_authomatic = authomatic(request)
-    open_id_provider_name = request.matchdict.get('provider_name')
+    """Signs in a user session using an external provider."""
 
-    # Start the login procedure.
-
+    provider_name = request.matchdict.get('provider_name', '').lower()
+    verify_provider(provider_name)
+    authomatic_handler = authomatic_setup(request)
     response = Response()
-    result = external_providers_authomatic.login(WebObAdapter(request, response), open_id_provider_name)
-    #result = _authomatic.login(WebObAdapter(request, response), open_id_provider_name)
+
+    # if we directly have the Authorization header, bypass authomatic login and retrieve 'userinfo' to signin
+    if 'Authorization' in request.headers and 'authomatic' not in request.cookies:
+        provider_config = authomatic_handler.config.get(provider_name, {})
+        ProviderClass = resolve_provider_class(provider_config.get('class_'))
+        provider = ProviderClass(authomatic_handler, adapter=None, provider_name=provider_name)
+        # provide the token user data, let the external provider update it on login afterwards
+        token_type, access_token = request.headers.get('Authorization').split()
+        data = {'access_token': access_token, 'token_type': token_type}
+        cred = Credentials(authomatic_handler.config, token=access_token, token_type=token_type, provider=provider)
+        provider.credentials = cred
+        result = LoginResult(provider)
+        result.provider.user = result.provider._update_or_create_user(data, credentials=cred)
+
+    # otherwise, use the standard login procedure
+    else:
+        result = authomatic_handler.login(WebObAdapter(request, response), provider_name)
+        if result is None:
+            if response.location is not None:
+                return HTTPTemporaryRedirect(location=response.location, headers=response.headers)
+            return response
 
     if result:
         if result.error:
             # Login procedure finished with an error.
             return login_failure(request, reason=result.error.message)
         elif result.user:
+            # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
+            # update the user to get more info.
             if not (result.user.name and result.user.id):
-                result.user.update()
-            # Hooray, we have the user!
-            if result.provider.name in ['openid', 'dkrz', 'ipsl', 'smhi', 'badc', 'pcmdi']:
-                # TODO: change login_id ... more infos ...
-                return login_success_external(request,
-                                              external_id=result.user.id,
-                                              email=result.user.email,
-                                              provider_name=result.provider.name,
-                                              external_user_name=result.user.name)
-            elif result.provider.name == 'github':
-                # TODO: fix email ... get more infos ... which login_id?
-                login_id = "{0.username}@github.com".format(result.user)
-                # email = "{0.username}@github.com".format(result.user)
-                # get extra info
-                if result.user.credentials:
-                    pass
-                return login_success_external(request,
-                                              external_id=login_id,
-                                              email=login_id,
-                                              provider_name=result.provider.name,
-                                              external_user_name=result.user.name)
+                try:
+                    response = result.user.update()
+                # this error can happen if providing incorrectly formed authorization header
+                except OAuth2Error as exc:
+                    raise_http(httpError=HTTPBadRequest, content={u'reason': str(exc.message)},
+                               detail=ProviderSignin_GET_BadRequestResponseSchema.description)
+                # verify that the update procedure succeeded with provided token
+                if 400 <= response.status < 500:
+                    raise_http(httpError=HTTPUnauthorized,
+                               detail=ProviderSignin_GET_UnauthorizedResponseSchema.description)
+            # create/retrieve the user using found details from login provider
+            return login_success_external(request,
+                                          external_id=result.user.username or result.user.id,
+                                          email=result.user.email,
+                                          provider_name=result.provider.name,
+                                          external_user_name=result.user.name)
 
     return response
 
 
-@SessionAPI.get(tags=[LoginTag], response_schemas={
-    '200': Session_GET_OkResponseSchema(),
-    '500': Session_GET_InternalServerErrorResponseSchema()
-})
-@view_config(route_name='session', permission=NO_PERMISSION_REQUIRED)
+@SignoutAPI.get(tags=[LoginTag], response_schemas=Signout_GET_responses)
+@view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
+def sign_out(request):
+    """Signs out the current user session."""
+    return valid_http(httpSuccess=HTTPOk, httpKWArgs={'headers': forget(request)},
+                      detail=Signout_GET_OkResponseSchema.description)
+
+
+@SessionAPI.get(tags=[LoginTag], response_schemas=Session_GET_responses)
+@view_config(route_name=SessionAPI.name, permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
     """Get information about current session."""
     def _get_session(req):
@@ -231,10 +235,10 @@ def get_session(request):
     return valid_http(httpSuccess=HTTPOk, detail=Session_GET_OkResponseSchema.description, content=session_json)
 
 
-@view_config(route_name='providers', request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@ProvidersAPI.get(tags=[LoginTag], response_schemas=Providers_GET_responses)
+@view_config(route_name=ProvidersAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_providers(request):
     """Get list of login providers."""
     return valid_http(httpSuccess=HTTPOk, detail=Providers_GET_OkResponseSchema.description,
-                      content={u'provider_names': sorted(providers),
-                               u'internal_providers': sorted(internal_providers),
-                               u'external_providers': sorted(external_providers)})
+                      content={u'providers': {u'internal': sorted(MAGPIE_INTERNAL_PROVIDERS.values()),
+                                              u'external': sorted(MAGPIE_EXTERNAL_PROVIDERS.values()), }})

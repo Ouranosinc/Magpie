@@ -463,7 +463,6 @@ ul.breadcrumb li a:hover {
 
 .header {
 	background: #000000;
-
     background: black; /* For browsers that do not support gradients */
     background: -webkit-linear-gradient(left bottom, black, gray); /* For Safari 5.1 to 6.0 */
     background: -o-linear-gradient(bottom top, black, gray); /* For Opera 11.1 to 12.0 */
@@ -476,7 +475,7 @@ ul.breadcrumb li a:hover {
     vertical-align: center;
 }
 
-.header>a{
+.header>div>a{
 	color: white;
 	font-size: 3em;
 	text-decoration: none;
@@ -488,6 +487,42 @@ ul.breadcrumb li a:hover {
 	height: 40px;
     width: 100px;
     float: right;
+}
+
+#title_header {
+    position: relative;
+    width: 600px;
+    left: 0.25em;
+}
+
+#image_container {
+    float: left;
+    position: relative;
+    width: 64px;
+    height: 64px;
+}
+
+#image_background {
+    width: inherit;
+    height: inherit;
+}
+
+#image_background>img {
+    width: inherit;
+    height: inherit;
+}
+
+#image_overlay {
+    position: absolute;
+    width: inherit;
+    height: inherit;
+    left: 15px;
+    top: 10px;
+}
+
+#image_overlay>img {
+    width: inherit;
+    height: inherit;
 }
 
 /*---Home---*/
