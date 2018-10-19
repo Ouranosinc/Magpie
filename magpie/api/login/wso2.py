@@ -12,13 +12,13 @@ class WSO2(OAuth2):
 
     def __init__(self, *args, **kwargs):
         super(WSO2, self).__init__(*args, **kwargs)
-        self.hostname = self._kwarg(kwargs, 'hostname', 'localhost')
+        self.hostname = self._kwarg(kwargs, 'hostname', 'https://localhost:9443')
         self.url = self._kwarg(kwargs, 'redirect_uri', 'http://localhost:2001/magpie/providers/wso2/signin')
         self.access_token_url = '{}/oauth2/token'.format(self.hostname)
         self.user_authorization_url = '{}/oauth2/authorize'.format(self.hostname)
         self.user_info_url = '{}/oauth2/userinfo'.format(self.hostname)
-        self.user_info_scope = ['openid']
-        self.scope = ['openid']
+        self.user_info_scope = self._kwarg(kwargs, 'user_info_scope', ['openid'])
+        self.scope = self._kwarg(kwargs, 'scope', ['openid'])
 
     supported_user_attributes = SupportedUserAttributes(
         country=True,
@@ -47,4 +47,6 @@ class WSO2(OAuth2):
         return user
 
 
+# Authomatic provider type ID is generated from this list's indexes!
+# Always append new providers at the end so that ids of existing providers don't change!
 PROVIDER_ID_MAP = [WSO2]

@@ -1,4 +1,6 @@
 from authomatic.adapters import WebObAdapter
+from authomatic.core import LoginResult, Credentials, resolve_provider_class
+from authomatic.exceptions import OAuth2Error
 from magpie.security import authomatic_setup, get_provider_names
 from magpie.definitions.ziggurat_definitions import *
 from magpie.api.api_except import *
@@ -31,19 +33,6 @@ def process_sign_in_external(request, username, provider):
     came_from = request.POST.get('came_from', '/')
     request.response.set_cookie('homepage_route', came_from)
     external_login_route = request.route_url(ProviderSigninAPI.name, provider_name=provider_name, _query=query_field)
-    #external_login_route = request.route_url(ProviderSigninAPI.name, provider_name=provider_name)
-
-    #resp = requests.get(external_login_route, headers={'redirect_uri': request.application_url}, allow_redirects=True)
-    #return HTTPFound(resp.request.application_url, headers=resp.request.headers)
-    #return HTTPFound(location=external_login_route, headers=resp.headers)
-
-    #subreq = request.copy()
-    #subreq.path_info = external_login_route
-    #try:
-    #    resp = request.invoke_subrequest(subreq)
-    #except Exception as ex:
-    #    print(ex)
-
     return HTTPTemporaryRedirect(location=external_login_route, headers=request.response.headers)
 
 
@@ -148,36 +137,48 @@ def login_success_external(request, external_user_name, external_id, email, prov
     # set a header to remember user (set-cookie)
     headers = remember(request, user.id)
 
-    homepage_route = '/' if 'homepage_route' not in request.cookies else str(request.cookies['homepage_route'])
-    #resp = HTTPFound(location='localhost:2001/magpie', headers=headers)
-    #resp.set_cookie('came_from', 'localhost:2001/magpie')
-    #return resp
+    if 'homepage_route' in request.cookies:
+        homepage_route = str(request.cookies['homepage_route'])
+    elif 'Homepage-Route' in request.headers:
+        homepage_route = str(request.headers['Homepage-Route'])
+    else:
+        homepage_route = '/'
     return valid_http(httpSuccess=HTTPFound, detail="External login homepage route found.",
                       content={u'homepage_route': homepage_route},
                       httpKWArgs={'location': homepage_route, 'headers': headers})
 
 
-@ProviderSigninAPI.get(tags=[LoginTag], response_schemas=ProviderSignin_GET_responses)
+@ProviderSigninAPI.get(schema=ProviderSignin_GET_RequestSchema, tags=[LoginTag],
+                       response_schemas=ProviderSignin_GET_responses)
 @view_config(route_name=ProviderSigninAPI.name, permission=NO_PERMISSION_REQUIRED)
 def authomatic_login(request):
     """Signs in a user session using an external provider."""
 
     provider_name = request.matchdict.get('provider_name')
     verify_provider(provider_name)
-
-    # Start the login procedure
+    authomatic_handler = authomatic_setup(request)
     response = Response()
-    external_providers_authomatic = authomatic_setup(request)
 
-    #if 'access_token' in request.params:
-    #    request.params['code'] = request.params['access_token']
+    # if we directly have the Authorization header, bypass authomatic login and retrieve 'userinfo' to signin
+    if 'Authorization' in request.headers and 'authomatic' not in request.cookies:
+        provider_config = authomatic_handler.config.get(provider_name, {})
+        ProviderClass = resolve_provider_class(provider_config.get('class_'))
+        provider = ProviderClass(authomatic_handler, adapter=None, provider_name=provider_name)
+        # provide the token user data, let the external provider update it on login afterwards
+        token_type, access_token = request.headers.get('Authorization').split()
+        data = {'access_token': access_token, 'token_type': token_type}
+        cred = Credentials(authomatic_handler.config, token=access_token, token_type=token_type, provider=provider)
+        provider.credentials = cred
+        result = LoginResult(provider)
+        result.provider.user = result.provider._update_or_create_user(data, credentials=cred)
 
-    result = external_providers_authomatic.login(WebObAdapter(request, response), provider_name)
-
-    if result is None:
-        if response.location is not None:
-            return HTTPTemporaryRedirect(location=response.location, headers=response.headers)
-        return response
+    # otherwise, use the standard login procedure
+    else:
+        result = authomatic_handler.login(WebObAdapter(request, response), provider_name)
+        if result is None:
+            if response.location is not None:
+                return HTTPTemporaryRedirect(location=response.location, headers=response.headers)
+            return response
 
     if result:
         if result.error:
@@ -187,7 +188,16 @@ def authomatic_login(request):
             # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
             # update the user to get more info.
             if not (result.user.name and result.user.id):
-                result.user.update()
+                try:
+                    response = result.user.update()
+                # this error can happen if providing incorrectly formed authorization header
+                except OAuth2Error as exc:
+                    raise_http(httpError=HTTPBadRequest, content={u'reason': str(exc.message)},
+                               detail=ProviderSignin_GET_BadRequestResponseSchema.description)
+                # verify that the update procedure succeeded with provided token
+                if 400 <= response.status < 500:
+                    raise_http(httpError=HTTPUnauthorized,
+                               detail=ProviderSignin_GET_UnauthorizedResponseSchema.description)
             # create/retrieve the user using found details from login provider
             return login_success_external(request,
                                           external_id=result.user.username or result.user.id,

@@ -57,5 +57,6 @@ class ESGFOpenID(OpenID):
         #setDefaultFetcher(MyFetcher())
 
 
+# Authomatic provider type ID is generated from this list's indexes!
+# Always append new providers at the end so that ids of existing providers don't change!
 PROVIDER_ID_MAP = [ESGFOpenID]
-
