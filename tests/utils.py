@@ -1,8 +1,8 @@
-import pyramid
 import requests
 import six
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
+from pyramid.testing import setUp as PyramidSetUp
 from webtest import TestApp
 from webtest.response import TestResponse
 from magpie import __meta__, db, services, magpiectl
@@ -11,16 +11,13 @@ from magpie.constants import get_constant
 
 def config_setup_from_ini(config_ini_file_path):
     settings = db.get_settings_from_config_ini(config_ini_file_path)
-    config = pyramid.testing.setUp(settings=settings)
+    config = PyramidSetUp(settings=settings)
     return config
 
 
 def get_test_magpie_app():
     # parse settings from ini file to pass them to the application
     config = config_setup_from_ini(get_constant('MAGPIE_INI_FILE_PATH'))
-    # required redefinition because root models' location is not the same from within this test file
-    config.add_settings({'ziggurat_foundations.model_locations.User': 'models:User',
-                         'ziggurat_foundations.model_locations.user': 'models:User', })
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
     config.registry.settings['magpie.db_migration_disabled'] = True
     # scan dependencies
@@ -385,8 +382,7 @@ class TestSetup(object):
     def get_AnyServiceOfTestServiceType(test_class):
         route = '/services/types/{}'.format(test_class.test_service_type)
         resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
-        check_val_equal(resp.status_code, 200)
-        json_body = get_json_body(resp)
+        json_body = check_response_basic_info(resp, 200, expected_method='GET')
         check_val_is_in('services', json_body)
         check_val_is_in(test_class.test_service_type, json_body['services'])
         check_val_not_equal(len(json_body['services'][test_class.test_service_type]), 0,
@@ -406,7 +402,7 @@ class TestSetup(object):
         resp = test_request(test_class.url, 'POST', route,
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
-        return check_response_basic_info(resp, 201)
+        return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
     def get_ExistingTestServiceInfo(test_class):
@@ -448,7 +444,7 @@ class TestSetup(object):
         resp = test_request(test_class.url, 'GET', '/services',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies)
-        json_body = check_response_basic_info(resp, 200)
+        json_body = check_response_basic_info(resp, 200, expected_method='GET')
 
         # prepare a flat list of registered services
         services_list = list()
@@ -462,7 +458,7 @@ class TestSetup(object):
         resp = test_request(test_class.url, 'GET', '/users',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies)
-        json_body = check_response_basic_info(resp, 200)
+        json_body = check_response_basic_info(resp, 200, expected_method='GET')
         return json_body['user_names']
 
     @staticmethod
@@ -481,7 +477,7 @@ class TestSetup(object):
         resp = test_request(test_class.url, 'POST', '/users',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
-        return check_response_basic_info(resp, 201)
+        return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
     def delete_TestUser(test_class):
@@ -492,5 +488,5 @@ class TestSetup(object):
             resp = test_request(test_class.url, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
-            check_val_equal(resp.status_code, 200)
+            check_response_basic_info(resp.status_code, 200, expected_method='DELETE')
         TestSetup.check_NonExistingTestUser(test_class)

@@ -1,5 +1,6 @@
 from magpie.definitions.pyramid_definitions import *
-from magpie.models import resource_tree_service, Service
+from magpie.definitions.ziggurat_definitions import ResourceService
+from magpie.models import resource_tree_service
 from magpie.services import service_type_dict
 from magpie.api.api_except import evaluate_call
 
@@ -70,7 +71,7 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, intern
             else:
                 service_id = resource.root_service_id
                 if service_id not in internal_svc_res_perm_dict:
-                    service = Service.by_resource_id(service_id, db_session=db_session)
+                    service = ResourceService.by_resource_id(service_id, db_session=db_session)
                     internal_svc_res_perm_dict[service_id] = service_type_dict[service.type].resource_types_permissions
 
             perms = internal_svc_res_perm_dict[service_id][resource.resource_type]

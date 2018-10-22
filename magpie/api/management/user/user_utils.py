@@ -109,9 +109,9 @@ def get_user_services(user, db_session, cascade_resources=False,
 
     services = {}
     for resource_id, perms in res_perm_dict.items():
-        svc = models.Service.by_resource_id(resource_id=resource_id, db_session=db_session)
+        svc = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
         if svc.resource_type != 'service' and cascade_resources:
-            svc = models.Service.by_resource_id(resource_id=svc.root_service_id, db_session=db_session)
+            svc = ResourceService.by_resource_id(resource_id=svc.root_service_id, db_session=db_session)
             perms = service_type_dict[svc.type].permission_names
         if svc.type not in services:
             services[svc.type] = {}
@@ -132,7 +132,7 @@ def get_user_service_permissions(user, service, db_session, inherit_groups_permi
     if service.owner_user_id == user.id:
         permission_names = service_type_dict[service.type].permission_names
     else:
-        svc_perm_tuple_list = service.perms_for_user(user, db_session=db_session)
+        svc_perm_tuple_list = ResourceService.perms_for_user(service, user, db_session=db_session)
         if not inherit_groups_permissions:
             svc_perm_tuple_list = filter_user_permission(svc_perm_tuple_list, user)
         permission_names = [permission.perm_name for permission in svc_perm_tuple_list]
@@ -155,8 +155,8 @@ def get_user_resources_permissions_dict(user, db_session, resource_types=None,
     """
     verify_param(user, notNone=True, httpError=HTTPNotFound,
                  msgOnFail=UserResourcePermissions_GET_NotFoundResponseSchema.description)
-    res_perm_tuple_list = user.resources_with_possible_perms(resource_ids=resource_ids,
-                                                             resource_types=resource_types, db_session=db_session)
+    res_perm_tuple_list = UserService.resources_with_possible_perms(
+        user, resource_ids=resource_ids,resource_types=resource_types, db_session=db_session)
     if not inherit_groups_permissions:
         res_perm_tuple_list = filter_user_permission(res_perm_tuple_list, user)
     resources_permissions_dict = {}

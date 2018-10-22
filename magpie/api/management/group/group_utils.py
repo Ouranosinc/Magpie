@@ -61,7 +61,8 @@ def create_group_resource_permission(permission_name, resource, group, db_sessio
 
 def get_group_resources_permissions_dict(group, db_session, resource_ids=None, resource_types=None):
     def get_grp_res_perm(grp, db, res_ids, res_types):
-        res_perms_tup = grp.resources_with_possible_perms(resource_ids=res_ids, resource_types=res_types, db_session=db)
+        res_perms_tup = GroupService.resources_with_possible_perms(
+            grp, resource_ids=res_ids, resource_types=res_types, db_session=db)
         res_perms_dict = {}
         for res_perm in res_perms_tup:
             if res_perm.resource.resource_id not in res_perms_dict:
@@ -115,7 +116,7 @@ def delete_group_resource_permission(permission_name, resource, group, db_sessio
 def get_group_services(resources_permissions_dict, db_session):
     grp_svc_dict = {}
     for res_id, perms in resources_permissions_dict.items():
-        svc = models.Service.by_resource_id(resource_id=res_id, db_session=db_session)
+        svc = ResourceService.by_resource_id(resource_id=res_id, db_session=db_session)
         svc_type = str(svc.type)
         svc_name = str(svc.resource_name)
         if svc_type not in grp_svc_dict:
@@ -146,7 +147,7 @@ def get_group_services_permissions(group, db_session, resource_ids=None):
                                                          db_session=db_ses, resource_ids=res_ids)
         grp_svc_perms = []
         for res_id, res_perm in res_perms.items():
-            svc = models.Service.by_resource_id(res_id, db_session=db_ses)
+            svc = ResourceService.by_resource_id(res_id, db_session=db_ses)
             grp_svc_perms.append((svc, res_perm))
         return grp_svc_perms
 

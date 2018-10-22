@@ -80,6 +80,7 @@ def get_db_session_from_config_ini(config_ini_path, ini_main_section_name='app:m
 
 def get_settings_from_config_ini(config_ini_path, ini_main_section_name='app:magpie_app'):
     parser = configparser.ConfigParser()
+    parser.optionxform = lambda option: option  # preserve case of config (ziggurat requires it for 'User' model)
     parser.read([config_ini_path])
     settings = dict(parser.items(ini_main_section_name))
     return settings
