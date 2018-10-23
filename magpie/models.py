@@ -14,7 +14,7 @@ def get_user(request):
     userid = request.unauthenticated_userid
     db_session = get_session_callable(request)
     if userid is not None:
-        return User.by_id(userid, db_session=db_session)
+        return UserService.by_id(userid, db_session=db_session)
 
 
 class Group(GroupMixin, Base):
@@ -36,7 +36,7 @@ class GroupResourcePermission(GroupResourcePermissionMixin, Base):
 class Resource(ResourceMixin, Base):
     # ... your own properties....
 
-    # example implementation of ACLS for pyramid application
+    # example implementation of ACL for pyramid application
     permission_names = []
     child_resource_allowed = True
 
@@ -53,15 +53,14 @@ class Resource(ResourceMixin, Base):
 
     @property
     def __acl__(self):
-        acls = []
+        acl = []
 
         if self.owner_user_id:
-            acls.extend([(ALLOW, self.owner_user_id, ALL_PERMISSIONS,), ])
+            acl.extend([(ALLOW, self.owner_user_id, ALL_PERMISSIONS,), ])
 
         if self.owner_group_id:
-            acls.extend([(ALLOW, "group:%s" % self.owner_group_id,
-                          ALL_PERMISSIONS,), ])
-        return acls
+            acl.extend([(ALLOW, "group:%s" % self.owner_group_id, ALL_PERMISSIONS,), ])
+        return acl
 
 
 class UserPermission(UserPermissionMixin, Base):
@@ -216,7 +215,7 @@ class RemoteResource(BaseModel, Base):
         return '<RemoteResource: %s, %s, id: %s position: %s, parent_id: %s>' % info
 
 
-class RemoteResourcesSyncInfo(Base):
+class RemoteResourcesSyncInfo(BaseModel, Base):
     __tablename__ = "remote_resources_sync_info"
 
     id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
@@ -250,9 +249,9 @@ class RemoteResourceTreeService(ResourceTreeService):
         super(RemoteResourceTreeService, self).__init__(service_cls)
 
 
-class RemoteResourceTreeServicePostgreSQL(ResourceTreeServicePostgreSQL):
+class RemoteResourceTreeServicePostgresSQL(ResourceTreeServicePostgreSQL):
     """
-    This is necessary, because ResourceTreeServicePostgreSQL.model is the Resource class.
+    This is necessary, because ResourceTreeServicePostgresSQL.model is the Resource class.
     If we want to change it for a RemoteResource, we need this class.
 
     The ResourceTreeService.__init__ call sets the model.
@@ -265,7 +264,7 @@ ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
                     ExternalIdentity, passwordmanager=None)
 
 resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
-remote_resource_tree_service = RemoteResourceTreeService(RemoteResourceTreeServicePostgreSQL)
+remote_resource_tree_service = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
 resource_type_dict = {
     Service.resource_type_name:     Service,
@@ -292,9 +291,9 @@ def get_all_resource_permission_names():
     return all_permission_names_list
 
 
-def find_children_by_name(name, parent_id, db_session):
+def find_children_by_name(child_name, parent_id, db_session):
     tree_struct = resource_tree_service.from_parent_deeper(parent_id=parent_id, limit_depth=1, db_session=db_session)
     tree_level_entries = [node for node in tree_struct]
     tree_level_filtered = [node.Resource for node in tree_level_entries if
-                           node.Resource.resource_name.lower() == name.lower()]
+                           node.Resource.resource_name.lower() == child_name.lower()]
     return tree_level_filtered.pop() if len(tree_level_filtered) else None
