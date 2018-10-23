@@ -71,7 +71,8 @@ class MagpieProcessStore(ProcessStore):
         proc_res_id = self._create_resource('processes', ems_res_id)  # admins inherit from parent service permissions
 
         # editors can read/write processes, but will only be able to modify visibility for 'their' (per user) process
-        # permissions of each corresponding process have to be added when created
+        # permissions of each corresponding process have to be added for the requesting user when created
+        self._create_group(self.magpie_editors)
         self._create_resource_permissions(ems_res_id, self.magpie_editors, ['read-match', 'write-match'])
         self._create_resource_permissions(proc_res_id, self.magpie_editors, ['read-match', 'write-match'])
 
@@ -109,6 +110,7 @@ class MagpieProcessStore(ProcessStore):
                                .format(child_resource_name, parent_resource_info['resource_name']))
 
     def _get_service_processes_resource(self):
+        # type: (...) -> List[int, None]
         """
         Finds the magpie resource 'processes' corresponding to '/ems/processes'.
 
@@ -134,6 +136,17 @@ class MagpieProcessStore(ProcessStore):
             raise
         LOGGER.debug("Could not find resource: `processes`.")
         return None
+
+    def _create_group(self, group_name):
+        # type: (str) -> None
+        """Creates group if it doesn't exist."""
+
+        path = '{host}/groups'.format(host=self.magpie_url)
+        resp = requests.post(path, cookies=self._get_admin_cookies(), data={u'group_name': group_name},
+                             headers=self.json_headers, verify=self.twitcher_ssl_verify)
+        if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
+            LOGGER.debug("Group `{}` creation or validation failed.".format(group_name))
+            raise resp.raise_for_status()
 
     def _create_resource_permissions(self, resource_id, group_name, permission_names):
         """
