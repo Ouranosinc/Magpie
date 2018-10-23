@@ -39,7 +39,7 @@ def get_services_runner(request):
         services = get_services_by_type(service_type, db_session=request.db)
         json_response[service_type] = {}
         for service in services:
-            json_response[service_type][service.resource_name] = format_service(service, show_private_url=False)
+            json_response[service_type][service.resource_name] = format_service(service, show_private_url=True)
 
     return valid_http(httpSuccess=HTTPOk, detail=Services_GET_OkResponseSchema.description,
                       content={u'services': json_response})
