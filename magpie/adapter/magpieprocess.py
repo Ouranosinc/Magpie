@@ -43,8 +43,11 @@ class MagpieProcessStore(ProcessStore):
             else:
                 self.magpie_url = 'http://{}'.format(url_parsed.geturl())
                 LOGGER.warn("Missing scheme from MagpieServiceStore url, new value: '{}'".format(self.magpie_url))
-            self.magpie_admin_username = get_constant('MAGPIE_ADMIN_USER')
-            self.magpie_admin_password = get_constant('MAGPIE_ADMIN_PASSWORD')
+            self.magpie_admin_token = None
+            self.magpie_admin_credentials = {
+                'user_name': get_constant('MAGPIE_ADMIN_USER'),
+                'password': get_constant('MAGPIE_ADMIN_PASSWORD'),
+            }
             self.magpie_users = get_constant('MAGPIE_USERS_GROUP')
             self.magpie_editors = get_constant('MAGPIE_EDITOR_GROUP')
             self.magpie_current = get_constant('MAGPIE_LOGGED_USER')
@@ -57,6 +60,16 @@ class MagpieProcessStore(ProcessStore):
             #If magpie.url does not exist, calling strip fct over None will raise this issue
             raise ConfigurationError('magpie.url config cannot be found')
 
+    def _get_admin_cookies(self):
+        if not self.magpie_admin_token:
+            magpie_login_url = '{host}/signin'.format(host=self.magpie_url)
+            resp = requests.post(magpie_login_url, data=self.magpie_admin_credentials,
+                                 headers=self.json_headers, verify=self.twitcher_ssl_verify)
+            if resp.status_code != HTTPOk.code:
+                raise resp.raise_for_status()
+            self.magpie_admin_token = resp.cookies.get('auth_tkt')
+        return [self.magpie_admin_token]
+    """
     def _get_service_public_url(self, request):
         if not self.twitcher_service_url and self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
             # use generic 'current' user route to fetch service URL to ensure that even
@@ -76,17 +89,16 @@ class MagpieProcessStore(ProcessStore):
                 LOGGER.debug("Exception during ems service url retrieval: [{}]".format(repr(ex)))
                 raise
         return self.twitcher_service_url
-
-    def _find_child_resource_id(self, parent_resource_id, child_resource_name, request):
+    """
+    def _find_child_resource_id(self, parent_resource_id, child_resource_name):
         """
         Finds the resource id corresponding to a child resource by name of the specified parent resource.
         :param parent_resource_id: id of the resource from which to search children resources.
         :param child_resource_name: name of the sub resource to find.
-        :param request: calling request for headers and credentials.
         :return:
         """
         path = '{host}/resources/{id}'.format(host=self.magpie_url, id=parent_resource_id)
-        resp = requests.get(path, cookies=request.cookies,
+        resp = requests.get(path, cookies=self._get_admin_cookies(),
                             headers=self.json_headers, verify=self.twitcher_ssl_verify)
         if resp.status_code != HTTPOk.code:
             raise resp.raise_for_status()
@@ -101,15 +113,14 @@ class MagpieProcessStore(ProcessStore):
             raise HTTPNotFound("Could not find resource `{}` under resource `{}`."
                                .format(child_resource_name, parent_resource_info['resource_name']))
 
-    def _get_service_processes_resource(self, request):
+    def _get_service_processes_resource(self):
         """
         Finds the magpie resource 'processes' corresponding to '/ems/processes'.
-        User requesting resources must have administrator permissions in magpie.
 
         :returns: id of the 'processes' resource.
         """
         path = '{host}/resources'.format(host=self.magpie_url)
-        resp = requests.get(path, cookies=request.cookies,
+        resp = requests.get(path, cookies=self._get_admin_cookies(),
                             headers=self.json_headers, verify=self.twitcher_ssl_verify)
         if resp.status_code != HTTPOk.code:
             raise resp.raise_for_status()
@@ -129,14 +140,13 @@ class MagpieProcessStore(ProcessStore):
         LOGGER.debug("Could not find resource: `processes`.")
         return None
 
-    def _create_resource_permissions(self, resource_id, group_name, permission_names, request):
+    def _create_resource_permissions(self, resource_id, group_name, permission_names):
         """
         Creates group permission(s) on a resource.
 
         :param resource_id: (int) magpie id of the resource to apply permissions on.
         :param group_name: (str) name of the group for which to apply permissions, if any.
         :param permission_names: (None, str, iterator) group permissions to apply to the resource, if any.
-        :param request: calling request for headers and credentials
         """
         if permission_names is None:
             permission_names = []
@@ -146,20 +156,19 @@ class MagpieProcessStore(ProcessStore):
             data = {u'permission_name': perm}
             path = '{host}/groups/{grp}/resources/{id}/permissions' \
                 .format(host=self.magpie_url, grp=group_name, id=resource_id)
-            resp = requests.post(path, data=data, cookies=request.cookies,
+            resp = requests.post(path, data=data, cookies=self._get_admin_cookies(),
                                  headers=self.json_headers, verify=self.twitcher_ssl_verify)
             # permission is set if created or already exists
             if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
                 raise resp.raise_for_status()
 
-    def _delete_resource_permissions(self, resource_id, group_name, permission_names, request):
+    def _delete_resource_permissions(self, resource_id, group_name, permission_names):
         """
         Deletes group permission(s) on a resource.
 
         :param resource_id: (int) magpie id of the resource to remove permissions from.
         :param group_name: (str) name of the group for which to apply permissions, if any.
         :param permission_names: (None, str, iterator) group permissions to apply to the resource, if any.
-        :param request: calling request for headers and credentials
         """
         if permission_names is None:
             permission_names = []
@@ -168,13 +177,13 @@ class MagpieProcessStore(ProcessStore):
         for perm in permission_names:
             path = '{host}/groups/{grp}/resources/{id}/permissions/{perm}' \
                    .format(host=self.magpie_url, grp=group_name, id=resource_id, perm=perm)
-            reps = requests.delete(path, cookies=request.cookies,
+            reps = requests.delete(path, cookies=self._get_admin_cookies(),
                                    headers=self.json_headers, verify=self.twitcher_ssl_verify)
             # permission is not set if deleted or non existing
             if reps.status_code not in (HTTPOk.code, HTTPNotFound.code):
                 raise reps.raise_for_status()
 
-    def _create_resource(self, resource_name, resource_parent_id, group_name, permission_names, request):
+    def _create_resource(self, resource_name, resource_parent_id, group_name, permission_names):
         """
         Creates a resource under another parent resource, and sets basic group permissions on it.
         If the resource already exists for some reason, use it instead of the created one, and apply permissions.
@@ -183,22 +192,21 @@ class MagpieProcessStore(ProcessStore):
         :param resource_parent_id: (int) id of the parent resource under which to create `resource_name`.
         :param group_name: (str) name of the group for which to apply permissions to the created resource, if any.
         :param permission_names: (None, str, iterator) group permissions to apply to the created resource, if any.
-        :param request: calling request for headers and credentials
         :returns: id of the created resource
         """
         try:
             data = {u'parent_id': resource_parent_id, u'resource_name': resource_name, u'resource_type': u'route'}
             path = '{host}/resources'.format(host=self.magpie_url)
-            resp = requests.post(path, data=data, cookies=request.cookies,
+            resp = requests.post(path, data=data, cookies=self._get_admin_cookies(),
                                  headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code == HTTPCreated.code:
                 res_id = resp.json()['resource']['resource_id']
             elif resp.status_code == HTTPConflict.code:
-                res_id = self._find_child_resource_id(resource_parent_id, resource_name, request)
+                res_id = self._find_child_resource_id(resource_parent_id, resource_name)
             else:
                 raise resp.raise_for_status()
             if isinstance(group_name, six.string_types):
-                self._create_resource_permissions(res_id, group_name, permission_names, request)
+                self._create_resource_permissions(res_id, group_name, permission_names)
             return res_id
         except KeyError:
             raise ProcessRegistrationError("Failed adding process resource route `{}`.".format(resource_name))
@@ -236,12 +244,12 @@ class MagpieProcessStore(ProcessStore):
 
             try:
                 # get resource id of route '/ems/processes', create it as necessary
-                proc_res_id = self._find_child_resource_id(ems_res_id, 'processes', request)
+                proc_res_id = self._find_child_resource_id(ems_res_id, 'processes')
             except HTTPNotFound:
                 # all members of 'users' group can query '/ems/processes' (read exact route match),
                 # but visibility of each process will be filtered by specific '/ems/processes/{id}' permissions
                 # members of 'administrators' automatically inherit read/write permissions from 'ems' service
-                proc_res_id = self._create_resource(u'processes', ems_res_id, self.magpie_users, u'read-match', request)
+                proc_res_id = self._create_resource(u'processes', ems_res_id, self.magpie_users, u'read-match')
             except KeyError:
                 raise ProcessRegistrationError("Failed retrieving processes resource.")
             except Exception as ex:
@@ -250,8 +258,8 @@ class MagpieProcessStore(ProcessStore):
 
             # create resources of route '/ems/processes/{id}' and '/ems/processes/{id}/jobs'
             # do not apply any permissions at first, so that the process is 'private' by default
-            process_res_id = self._create_resource(process.id, proc_res_id, None, None, request)
-            self._create_resource(u'jobs', process_res_id, None, None, request)
+            process_res_id = self._create_resource(process.id, proc_res_id, None, None)
+            self._create_resource(u'jobs', process_res_id, None, None)
 
         return processstore_defaultfactory(request.registry).save_process(process, overwrite, request)
 
@@ -265,12 +273,12 @@ class MagpieProcessStore(ProcessStore):
             - also delete magpie resources tree corresponding to the process
         """
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
-            ems_processes_id = self._get_service_processes_resource(request)
-            process_res_id = self._find_child_resource_id(ems_processes_id, process_id, request)
+            ems_processes_id = self._get_service_processes_resource()
+            process_res_id = self._find_child_resource_id(ems_processes_id, process_id)
 
             # deleting the top-resource, magpie should automatically handle deletion of all sub-resources/permissions
             path = '{host}/resources/{id}'.format(host=self.magpie_url, id=process_res_id)
-            resp = requests.delete(path, cookies=request.cookies,
+            resp = requests.delete(path, cookies=self._get_admin_cookies(),
                                    headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code != HTTPOk.code:
                 raise resp.raise_for_status()
@@ -343,24 +351,24 @@ class MagpieProcessStore(ProcessStore):
             modify magpie permissions of corresponding process access points according to desired visibility.
         """
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
-            ems_processes_id = self._get_service_processes_resource(request)
-            process_res_id = self._find_child_resource_id(ems_processes_id, process_id, request)
+            ems_processes_id = self._get_service_processes_resource()
+            process_res_id = self._find_child_resource_id(ems_processes_id, process_id)
 
             try:
                 # find resource corresponding to '/ems/processes/{id}/jobs'
-                jobs_res_id = self._find_child_resource_id(process_res_id, 'jobs', request)
+                jobs_res_id = self._find_child_resource_id(process_res_id, 'jobs')
 
                 if visibility == VISIBILITY_PRIVATE:
                     # remove write-match permissions of users on the process, cannot execute POST /jobs anymore
-                    self._delete_resource_permissions(jobs_res_id, self.magpie_users, u'write-match', request)
+                    self._delete_resource_permissions(jobs_res_id, self.magpie_users, u'write-match')
                     # remove user read permissions on the process, cannot GET any info from it, not even see it in list
-                    self._delete_resource_permissions(process_res_id, self.magpie_users, u'read', request)
+                    self._delete_resource_permissions(process_res_id, self.magpie_users, u'read')
 
                 elif visibility == VISIBILITY_PUBLIC:
                     # read permission so that users can make any sub-route GET requests (ex: '/ems/processes/{id}/jobs')
-                    self._create_resource_permissions(process_res_id, self.magpie_users, u'read', request)
+                    self._create_resource_permissions(process_res_id, self.magpie_users, u'read')
                     # use write-match permission so that users can ONLY execute a job (cannot DELETE process, job, etc.)
-                    self._create_resource_permissions(jobs_res_id, self.magpie_users, u'write-match', request)
+                    self._create_resource_permissions(jobs_res_id, self.magpie_users, u'write-match')
 
             except HTTPNotFound:
                 raise ProcessNotFound("Could not find process `{}` jobs resource to set visibility.".format(process_id))
