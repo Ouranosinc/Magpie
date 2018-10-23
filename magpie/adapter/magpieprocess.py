@@ -64,13 +64,16 @@ class MagpieProcessStore(ProcessStore):
         self.twitcher_url = get_twitcher_url(registry.settings)
         self.json_headers = {'Accept': 'application/json'}
 
-        # setup basic configuration ('/ems' service of type 'api', '/ems/processes' resource, admin/editor permissions)
-        allowed_groups = [self.magpie_admin_group, self.magpie_editors]
-        allowed_perms = ['read', 'write']
+        # setup basic configuration ('/ems' service of type 'api', '/ems/processes' resource, admin permissions)
         ems_res_id = self._create_resource(self.magpie_service, resource_parent_id=None, resource_type='service',
                                            extra_data={'service_type': 'api', 'service_url': self.twitcher_url},
-                                           group_names=allowed_groups, permission_names=allowed_perms)
-        self._create_resource('processes', ems_res_id, allowed_groups, permission_names=allowed_perms)
+                                           group_names=self.magpie_admin_group, permission_names=['read', 'write'])
+        proc_res_id = self._create_resource('processes', ems_res_id)  # admins inherit from parent service permissions
+
+        # editors can read/write processes, but will only be able to modify visibility for 'their' (per user) process
+        # permissions of each corresponding process have to be added when created
+        self._create_resource_permissions(ems_res_id, self.magpie_editors, ['read-match', 'write-match'])
+        self._create_resource_permissions(proc_res_id, self.magpie_editors, ['read-match', 'write-match'])
 
     def _get_admin_cookies(self):
         if not self.magpie_admin_token:
