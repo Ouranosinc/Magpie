@@ -1,23 +1,13 @@
 """
 Store adapters to read data from magpie.
 """
-
-from six.moves.urllib.parse import urlparse
-import logging
-import requests
-import six
-LOGGER = logging.getLogger("TWITCHER")
-
 from magpie.constants import get_constant
-from magpie.definitions.twitcher_definitions import *
 from magpie.definitions.pyramid_definitions import (
     ConfigurationError,
     HTTPOk,
     HTTPCreated,
     HTTPNotFound,
     HTTPConflict,
-    HTTPUnauthorized,
-    HTTPInternalServerError,
     asbool
 )
 
@@ -27,6 +17,12 @@ from twitcher.exceptions import ProcessNotFound, ProcessRegistrationError
 from twitcher.store import processstore_defaultfactory
 from twitcher.store.base import ProcessStore
 from twitcher.visibility import VISIBILITY_PUBLIC, VISIBILITY_PRIVATE, visibility_values
+
+from six.moves.urllib.parse import urlparse
+import six
+import requests
+import logging
+LOGGER = logging.getLogger("TWITCHER")
 
 
 class MagpieProcessStore(ProcessStore):
@@ -47,8 +43,10 @@ class MagpieProcessStore(ProcessStore):
             else:
                 self.magpie_url = 'http://{}'.format(url_parsed.geturl())
                 LOGGER.warn("Missing scheme from MagpieServiceStore url, new value: '{}'".format(self.magpie_url))
+            self.magpie_admin_username = get_constant('MAGPIE_ADMIN_USER')
+            self.magpie_admin_password = get_constant('MAGPIE_ADMIN_PASSWORD')
             self.magpie_users = get_constant('MAGPIE_USERS_GROUP')
-            self.magpie_admin = get_constant('MAGPIE_ADMIN_GROUP')
+            self.magpie_editors = get_constant('MAGPIE_EDITOR_GROUP')
             self.magpie_current = get_constant('MAGPIE_LOGGED_USER')
             self.magpie_service = 'ems'
             self.twitcher_config = get_twitcher_configuration(registry.settings)
@@ -268,7 +266,7 @@ class MagpieProcessStore(ProcessStore):
         """
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
             ems_processes_id = self._get_service_processes_resource(request)
-            process_res_id = self._get_process_resource_id(ems_processes_id, process_id, request)
+            process_res_id = self._find_child_resource_id(ems_processes_id, process_id, request)
 
             # deleting the top-resource, magpie should automatically handle deletion of all sub-resources/permissions
             path = '{host}/resources/{id}'.format(host=self.magpie_url, id=process_res_id)
@@ -298,7 +296,7 @@ class MagpieProcessStore(ProcessStore):
                 raise resp.raise_for_status()
             try:
                 groups_memberships = resp.json()['group_names']
-                if self.magpie_admin in groups_memberships:
+                if self.magpie_editors in groups_memberships:
                     visibility_filter = visibility_values
                 else:
                     visibility_filter = VISIBILITY_PUBLIC
