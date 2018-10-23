@@ -78,8 +78,7 @@ def get_user_view(request):
 def delete_user(request):
     """Delete a user by name."""
     user = get_user_matchdict_checked_or_logged(request)
-    db = request.db
-    evaluate_call(lambda: db.delete(user), fallback=lambda: db.rollback(),
+    evaluate_call(lambda: request.db.delete(user), fallback=lambda: request.db.rollback(),
                   httpError=HTTPForbidden, msgOnFail=User_DELETE_ForbiddenResponseSchema.description)
     return valid_http(httpSuccess=HTTPOk, detail=User_DELETE_OkResponseSchema.description)
 
@@ -301,7 +300,8 @@ def get_user_inherited_services_view(request):
 @LoggedUserServiceInheritedPermissionsAPI.get(schema=UserServicePermissions_GET_RequestSchema,
                                               tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
                                               response_schemas=LoggedUserServicePermissions_GET_responses)
-@view_config(route_name=UserServiceInheritedPermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserServiceInheritedPermissionsAPI.name, request_method='GET',
+             permission=NO_PERMISSION_REQUIRED)
 def get_user_service_inherited_permissions_view(request):
     """List all permissions a user has on a service using all his inherited user and groups permissions."""
     LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"

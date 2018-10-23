@@ -170,8 +170,11 @@ def check_or_try_login_user(app_or_url, username=None, password=None, provider='
     return resp.headers, resp_cookies
 
 
-def format_test_val_ref(val, ref, pre='Fail'):
-    return '({0}) Test value: `{1}`, Reference value: `{2}`'.format(pre, val, ref)
+def format_test_val_ref(val, ref, pre='Fail', msg=None):
+    _msg = '({0}) Test value: `{1}`, Reference value: `{2}`'.format(pre, val, ref)
+    if isinstance(msg, six.string_types):
+        _msg = '{}\n{}'.format(msg, _msg)
+    return _msg
 
 
 def all_equal(iter_val, iter_ref, any_order=False):
@@ -187,27 +190,27 @@ def all_equal(iter_val, iter_ref, any_order=False):
 def check_all_equal(iter_val, iter_ref, any_order=False, msg=None):
     r_it_val = repr(iter_val)
     r_it_ref = repr(iter_ref)
-    assert all_equal(iter_val, iter_ref, any_order), msg or format_test_val_ref(r_it_val, r_it_ref, pre='Equal Fail')
+    assert all_equal(iter_val, iter_ref, any_order), format_test_val_ref(r_it_val, r_it_ref, pre='Equal Fail', msg=msg)
 
 
 def check_val_equal(val, ref, msg=None):
-    assert isinstance(ref, null) or val == ref, msg or format_test_val_ref(val, ref, pre='Equal Fail')
+    assert isinstance(ref, null) or val == ref, format_test_val_ref(val, ref, pre='Equal Fail', msg=msg)
 
 
 def check_val_not_equal(val, ref, msg=None):
-    assert isinstance(ref, null) or val != ref, msg or format_test_val_ref(val, ref, pre='Equal Fail')
+    assert isinstance(ref, null) or val != ref, format_test_val_ref(val, ref, pre='Equal Fail', msg=msg)
 
 
 def check_val_is_in(val, ref, msg=None):
-    assert isinstance(ref, null) or val in ref, msg or format_test_val_ref(val, ref, pre='Is In Fail')
+    assert isinstance(ref, null) or val in ref, format_test_val_ref(val, ref, pre='Is In Fail', msg=msg)
 
 
 def check_val_not_in(val, ref, msg=None):
-    assert isinstance(ref, null) or val not in ref, msg or format_test_val_ref(val, ref, pre='Not In Fail')
+    assert isinstance(ref, null) or val not in ref, format_test_val_ref(val, ref, pre='Not In Fail', msg=msg)
 
 
 def check_val_type(val, ref, msg=None):
-    assert isinstance(val, ref), msg or format_test_val_ref(val, repr(ref), pre='Type Fail')
+    assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre='Type Fail', msg=msg)
 
 
 def check_response_basic_info(response, expected_code=200, expected_type='application/json', expected_method='GET'):
@@ -488,5 +491,38 @@ class TestSetup(object):
             resp = test_request(test_class.url, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
-            check_response_basic_info(resp.status_code, 200, expected_method='DELETE')
+            check_response_basic_info(resp, 200, expected_method='DELETE')
         TestSetup.check_NonExistingTestUser(test_class)
+
+    @staticmethod
+    def get_RegisteredGroupsList(test_class):
+        resp = test_request(test_class.url, 'GET', '/groups',
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies)
+        json_body = check_response_basic_info(resp, 200, expected_method='GET')
+        return json_body['group_names']
+
+    @staticmethod
+    def check_NonExistingTestGroup(test_class):
+        groups = TestSetup.get_RegisteredGroupsList(test_class)
+        check_val_not_in(test_class.test_group_name, groups)
+
+    @staticmethod
+    def create_TestGroup(test_class):
+        data = {"group_name": test_class.test_group_name}
+        resp = test_request(test_class.url, 'POST', '/groups',
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies, json=data)
+        return check_response_basic_info(resp, 201, expected_method='POST')
+
+    @staticmethod
+    def delete_TestGroup(test_class):
+        groups = TestSetup.get_RegisteredGroupsList(test_class)
+        # delete as required, skip if non-existing
+        if test_class.test_group_name in groups:
+            route = '/groups/{grp}'.format(grp=test_class.test_group_name)
+            resp = test_request(test_class.url, 'DELETE', route,
+                                headers=test_class.json_headers,
+                                cookies=test_class.cookies)
+            check_response_basic_info(resp, 200, expected_method='DELETE')
+        TestSetup.check_NonExistingTestGroup(test_class)

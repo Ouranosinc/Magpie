@@ -1708,8 +1708,13 @@ class Groups_GET_ForbiddenResponseSchema(colander.MappingSchema):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class Groups_POST_RequestSchema(colander.MappingSchema):
+class Groups_POST_RequestBodySchema(colander.MappingSchema):
     group_name = colander.SchemaNode(colander.String(), description="Name of the group to create.")
+
+
+class Groups_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    body = Groups_POST_RequestBodySchema()
 
 
 class Groups_POST_ResponseBodySchema(BaseResponseBodySchema):

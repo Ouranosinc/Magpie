@@ -136,6 +136,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         assert len(test_service_resource_types), "test service should allow at least 1 sub-resource for test execution"
         cls.test_resource_type = test_service_resource_types[0]
 
+        cls.test_group_name = u'magpie-unittest-dummy-group'
         cls.test_user_name = u'magpie-unittest-toto'
         cls.test_user_group = u'users'
 
@@ -247,20 +248,23 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
                 utils.check_val_is_in('resource_id', svc_dict)
                 utils.check_val_is_in('service_name', svc_dict)
                 utils.check_val_is_in('service_type', svc_dict)
-                utils.check_val_is_in('service_url', svc_dict)
                 utils.check_val_is_in('public_url', svc_dict)
                 utils.check_val_is_in('permission_names', svc_dict)
                 utils.check_val_is_in('resources', svc_dict)
                 utils.check_val_type(svc_dict['resource_id'], int)
                 utils.check_val_type(svc_dict['service_name'], six.string_types)
-                utils.check_val_type(svc_dict['service_url'], six.string_types)
                 utils.check_val_type(svc_dict['service_type'], six.string_types)
                 utils.check_val_type(svc_dict['public_url'], six.string_types)
                 utils.check_val_type(svc_dict['permission_names'], list)
                 utils.check_val_type(svc_dict['resources'], dict)
                 if LooseVersion(self.version) >= LooseVersion('0.7.0'):
                     utils.check_val_is_in('service_sync_type', svc_dict)
-                    utils.check_val_type(svc_dict['service_sync_type'], six.string_types)
+                    utils.check_val_type(svc_dict['service_sync_type'], six.string_types + tuple([type(None)]))
+                    utils.check_val_not_in('service_url', svc_dict,
+                                           msg="Services under user routes shouldn't show private url.")
+                else:
+                    utils.check_val_is_in('service_url', svc_dict)
+                    utils.check_val_type(svc_dict['service_url'], six.string_types)
 
     @pytest.mark.users
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
@@ -296,8 +300,8 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
                 if LooseVersion(self.version) >= LooseVersion('0.7.0'):
                     utils.check_val_is_in('service_sync_type', svc_dict)
                     utils.check_val_type(svc_dict['service_sync_type'], six.string_types)
-                if LooseVersion(self.version) >= LooseVersion('0.7.1'):
-                    utils.check_val_not_in('service_url', svc_dict)
+                    utils.check_val_not_in('service_url', svc_dict,
+                                           msg="Services under user routes shouldn't show private url.")
                 else:
                     utils.check_val_is_in('service_url', svc_dict)
                     utils.check_val_type(svc_dict['service_url'], six.string_types)
@@ -326,7 +330,6 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         if LooseVersion(self.version) >= LooseVersion('0.7.0'):
             utils.check_val_is_in('service_sync_type', svc_dict)
             utils.check_val_type(svc_dict['service_sync_type'], six.string_types)
-        if LooseVersion(self.version) >= LooseVersion('0.7.1'):
             utils.check_val_not_in('service_url', svc_dict)
         else:
             utils.check_val_is_in('service_url', svc_dict)
@@ -409,10 +412,9 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @pytest.mark.groups
     @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
     def test_PostUserGroup_assign(self):
-        route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
-        data = {'group_name': get_constant('MAGPIE_ANONYMOUS_GROUP')}
-        resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers, cookies=self.cookies, data=data)
-        utils.check_response_basic_info(resp, 201, expected_method='POST')
+        utils.TestSetup.delete_TestGroup(self)  # setup as required
+        utils.TestSetup.create_TestGroup(self)  # actual test
+        utils.TestSetup.delete_TestGroup(self)  # cleanup
 
     @pytest.mark.groups
     @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
@@ -444,15 +446,19 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @pytest.mark.groups
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
     def test_GetGroupServices(self):
-        route = '/users/{grp}/services'.format(grp=self.grp)
+        route = '/groups/{grp}/services'.format(grp=self.grp)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('services', json_body)
         services = json_body['services']
         utils.check_val_type(services, dict)
         service_types = utils.get_service_types_for_version(self.version)
-        utils.check_all_equal(services.keys(), service_types, any_order=True)
+        # as of version '0.7.0', visible services depend on the connected user permissions,
+        # so all services types not necessarily returned in the response
+        if LooseVersion(self.version) < LooseVersion('0.7.0'):
+            utils.check_all_equal(services.keys(), service_types, any_order=True)
         for svc_type in services:
+            utils.check_val_is_in(svc_type, service_types)  # one of valid service types
             for svc in services[svc_type]:
                 svc_dict = services[svc_type][svc]
                 utils.check_val_type(svc_dict, dict)
@@ -461,17 +467,14 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
                 utils.check_val_is_in('service_type', svc_dict)
                 utils.check_val_is_in('public_url', svc_dict)
                 utils.check_val_is_in('permission_names', svc_dict)
-                utils.check_val_is_in('resources', svc_dict)
                 utils.check_val_type(svc_dict['resource_id'], int)
                 utils.check_val_type(svc_dict['service_name'], six.string_types)
                 utils.check_val_type(svc_dict['service_type'], six.string_types)
                 utils.check_val_type(svc_dict['public_url'], six.string_types)
                 utils.check_val_type(svc_dict['permission_names'], list)
-                utils.check_val_type(svc_dict['resources'], dict)
                 if LooseVersion(self.version) >= LooseVersion('0.7.0'):
                     utils.check_val_is_in('service_sync_type', svc_dict)
-                    utils.check_val_type(svc_dict['service_sync_type'], six.string_types)
-                if LooseVersion(self.version) >= LooseVersion('0.7.1'):
+                    utils.check_val_type(svc_dict['service_sync_type'], six.string_types + tuple([type(None)]))
                     utils.check_val_not_in('service_url', svc_dict)
                 else:
                     utils.check_val_is_in('service_url', svc_dict)
@@ -501,7 +504,6 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         if LooseVersion(self.version) >= LooseVersion('0.7.0'):
             utils.check_val_is_in('service_sync_type', svc_dict)
             utils.check_val_type(svc_dict['service_sync_type'], six.string_types)
-        if LooseVersion(self.version) >= LooseVersion('0.7.1'):
             utils.check_val_not_in('service_url', svc_dict)
         else:
             utils.check_val_is_in('service_url', svc_dict)
@@ -670,17 +672,15 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
             utils.check_val_is_in(svc_name, registered_svc_names)
 
         # ensure that 'getcapabilities' permission is given to anonymous for applicable services
+        anonymous = get_constant('MAGPIE_ANONYMOUS_USER')
         services_list_getcap = [svc for svc in services_list if 'getcapabilities' in svc['permission_names']]
-        route = '/users/{usr}/services'.format(usr=get_constant('MAGPIE_ANONYMOUS_USER'))
+        route = '/users/{usr}/services'.format(usr=anonymous)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         services_body = json_body['services']
         for svc in services_list_getcap:
             svc_name = svc['service_name']
             svc_type = svc['service_type']
-            if LooseVersion(self.version) >= LooseVersion('0.7.1'):
-                utils.check_val_not_in('service_url', svc, msg="Services under user routes shouldn't show private url.")
-            anonymous = get_constant('MAGPIE_ANONYMOUS_USER')
             msg = "Service `{name}` of type `{type}` is expected to have `{perm}` permissions for user `{usr}`" \
                   .format(name=svc_name, type=svc_type, perm='getcapabilities', usr=anonymous)
             utils.check_val_is_in(svc_name, services_body[svc_type], msg=msg)
