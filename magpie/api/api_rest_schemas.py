@@ -1433,6 +1433,15 @@ class UserGroup_DELETE_NotFoundResponseSchema(colander.MappingSchema):
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
+class UserResources_GET_QuerySchema(colander.MappingSchema):
+    inherit = QueryInheritGroupsPermissions
+
+
+class UserResources_GET_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    querystring = UserResources_GET_QuerySchema()
+
+
 class UserResources_GET_ResponseBodySchema(BaseResponseBodySchema):
     resources = ResourcesSchemaNode()
 
@@ -1452,6 +1461,15 @@ class UserResources_GET_NotFoundResponseSchema(colander.MappingSchema):
     description = "Failed to populate user resources."
     header = HeaderResponseSchema()
     body = UserResources_GET_NotFoundResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class UserResourcePermissions_GET_QuerySchema(colander.MappingSchema):
+    inherit = QueryInheritGroupsPermissions
+
+
+class UserResourcePermissions_GET_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    querystring = UserResourcePermissions_GET_QuerySchema()
 
 
 class UserResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
