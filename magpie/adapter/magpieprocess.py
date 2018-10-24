@@ -69,8 +69,8 @@ class MagpieProcessStore(ProcessStore):
 
         # setup basic configuration ('/ems' service of type 'api', '/ems/processes' resource, admin permissions)
         ems_res_id = self._create_resource(self.magpie_service, resource_parent_id=None, resource_type='service',
-                                           extra_data={'service_type': 'api', 'service_url': self.twitcher_url},
-                                           group_names=self.magpie_admin_group, permission_names=['read', 'write'])
+                                           group_names=self.magpie_admin_group, permission_names=['read', 'write'],
+                                           extra_data={'service_type': 'api', 'service_url': self.twitcher_url})
         proc_res_id = self._create_resource('processes', ems_res_id)  # admins inherit from parent service permissions
 
         # editors can read/write processes, but will only be able to modify visibility for 'their' (per user) process
@@ -91,17 +91,27 @@ class MagpieProcessStore(ProcessStore):
                                  headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code != HTTPOk.code:
                 raise resp.raise_for_status()
-            self.magpie_admin_token = resp.cookies.get('auth_tkt')
-        return [self.magpie_admin_token]
+            self.magpie_admin_token = dict(auth_tkt=resp.cookies.get('auth_tkt'))
+        return self.magpie_admin_token
 
-    def _find_child_resource_id(self, parent_resource_id, child_resource_name):
+    def _find_resource_id(self, parent_resource_id, resource_name):
         # type: (int, str) -> int
         """
-        Finds the resource id corresponding to a child resource by name of the specified parent resource.
+        Finds the resource id corresponding to a child :param:`resource_name` of :param:`parent_resource_id`.
+        If :param:`parent_resource_id` is `None`, suppose the resource is a `service`, search by :param:`resource_name`.
+
         :param parent_resource_id: id of the resource from which to search children resources.
-        :param child_resource_name: name of the sub resource to find.
-        :return:
+        :param resource_name: name of the sub resource to find.
+        :return: found resource id
         """
+        if not parent_resource_id:
+            path = '{host}/services/{svc}'.format(host=self.magpie_url, svc=resource_name)
+            resp = requests.get(path, cookies=self._get_admin_cookies(),
+                                headers=self.json_headers, verify=self.twitcher_ssl_verify)
+            if resp.status_code != HTTPOk.code:
+                raise resp.raise_for_status()
+            return resp.json()[resource_name]['resource_id']
+
         path = '{host}/resources/{id}'.format(host=self.magpie_url, id=parent_resource_id)
         resp = requests.get(path, cookies=self._get_admin_cookies(),
                             headers=self.json_headers, verify=self.twitcher_ssl_verify)
@@ -111,12 +121,12 @@ class MagpieProcessStore(ProcessStore):
         parent_resource_info = resp.json()[str(parent_resource_id)]
         children_resources = parent_resource_info['children']
         for res_id in children_resources:
-            if children_resources[res_id]['resource_name'] == child_resource_name:
+            if children_resources[res_id]['resource_name'] == resource_name:
                 child_res_id = children_resources[res_id]['resource_id']
                 return child_res_id
         if not child_res_id:
             raise HTTPNotFound("Could not find resource `{}` under resource `{}`."
-                               .format(child_resource_name, parent_resource_info['resource_name']))
+                               .format(resource_name, parent_resource_info['resource_name']))
 
     def _get_service_processes_resource(self):
         # type: (...) -> Union[int, None]
@@ -167,6 +177,10 @@ class MagpieProcessStore(ProcessStore):
         :param group_names: name of the group(s) for which to apply permissions, if Any.
         :param user_names: name of the user(s) for which to apply permissions, if Any.
         """
+        if not user_names:
+            user_names = list()
+        if not group_names:
+            group_names = list()
         if isinstance(user_names, six.string_types):
             user_names = [user_names]
         if isinstance(group_names, six.string_types):
@@ -195,6 +209,10 @@ class MagpieProcessStore(ProcessStore):
         :param group_names: name of the group(s) for which to apply permissions, if Any.
         :param user_names: name of the user(s) for which to apply permissions, if Any.
         """
+        if not user_names:
+            user_names = list()
+        if not group_names:
+            group_names = list()
         if isinstance(user_names, six.string_types):
             user_names = [user_names]
         if isinstance(group_names, six.string_types):
@@ -235,15 +253,16 @@ class MagpieProcessStore(ProcessStore):
             data = {u'parent_id': resource_parent_id, u'resource_name': resource_name, u'resource_type': resource_type}
             post_type = 'resources'
             if resource_type == 'service':
-                post_type = resource_type
+                post_type = 'services'
                 data.update(extra_data or {})
+                data.update({'service_name': resource_name})
             path = '{host}/{type}'.format(host=self.magpie_url, type=post_type)
             resp = requests.post(path, data=data, cookies=self._get_admin_cookies(),
                                  headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code == HTTPCreated.code:
                 res_id = resp.json()['resource']['resource_id']
             elif resp.status_code == HTTPConflict.code:
-                res_id = self._find_child_resource_id(resource_parent_id, resource_name)
+                res_id = self._find_resource_id(resource_parent_id, resource_name)
             else:
                 raise resp.raise_for_status()
             if group_names is not None and permission_names is not None:
@@ -287,7 +306,7 @@ class MagpieProcessStore(ProcessStore):
 
             # create resources of sub-routes '/{process_id}', '/{process_id}/jobs', '/{process_id}/quotations'
             # do not apply any users/editors permissions at first, so that the process is 'private' by default
-            proc_res_id = self._find_child_resource_id(ems_res_id, 'processes')
+            proc_res_id = self._find_resource_id(ems_res_id, 'processes')
             process_res_id = self._create_resource(process.id, proc_res_id)
             self._create_resource(u'jobs', process_res_id)
 
@@ -314,7 +333,7 @@ class MagpieProcessStore(ProcessStore):
         """
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
             ems_processes_id = self._get_service_processes_resource()
-            process_res_id = self._find_child_resource_id(ems_processes_id, process_id)
+            process_res_id = self._find_resource_id(ems_processes_id, process_id)
 
             # deleting the top-resource, magpie should automatically handle deletion of all sub-resources/permissions
             path = '{host}/resources/{id}'.format(host=self.magpie_url, id=process_res_id)
@@ -353,7 +372,7 @@ class MagpieProcessStore(ProcessStore):
                 if self.magpie_admin_group not in groups_memberships:
                     ems_processes_id = self._get_service_processes_resource()
                     for i, process in enumerate(process_list):
-                        process_res_id = self._find_child_resource_id(ems_processes_id, process.id)
+                        process_res_id = self._find_resource_id(ems_processes_id, process.id)
                         # use inherited flag to consider both user and group permissions on the resource
                         path = '{host}/users/{usr}/resources/{res}/permissions?inherit=true' \
                                .format(host=self.magpie_url, usr=self.magpie_current, res=process_res_id)
@@ -411,9 +430,9 @@ class MagpieProcessStore(ProcessStore):
             try:
                 # find resources corresponding to each route part of '/ems/processes/{id}/[jobs|quotations]'
                 ems_processes_id = self._get_service_processes_resource()
-                process_res_id = self._find_child_resource_id(ems_processes_id, process_id)
-                jobs_res_id = self._find_child_resource_id(process_res_id, 'jobs')
-                quotes_res_id = self._find_child_resource_id(process_res_id, 'quotations')
+                process_res_id = self._find_resource_id(ems_processes_id, process_id)
+                jobs_res_id = self._find_resource_id(process_res_id, 'jobs')
+                quotes_res_id = self._find_resource_id(process_res_id, 'quotations')
                 groups = [self.magpie_users, self.magpie_editors]
 
                 if visibility == VISIBILITY_PRIVATE:
