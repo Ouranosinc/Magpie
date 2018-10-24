@@ -39,7 +39,7 @@ class ServiceI(object):
             # Custom acl
 
             if user:
-                permissions = resource.perms_for_user(user)
+                permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
                 for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
                     self.acl.append((outcome, perm_user, perm_name,))
             else:
@@ -47,7 +47,7 @@ class ServiceI(object):
                 if user is None:
                     raise Exception('No Anonymous user in the database')
                 else:
-                    permissions = resource.perms_for_user(user)
+                    permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
                     for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
                         self.acl.append((outcome, EVERYONE, perm_name,))
 
