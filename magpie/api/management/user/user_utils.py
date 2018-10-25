@@ -53,7 +53,7 @@ def create_user_resource_permission(permission_name, resource, user_id, db_sessi
                  msgOnFail=UserResourcePermissions_POST_ConflictResponseSchema.description)
 
     new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id, perm_name=permission_name)
-    verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable, 
+    verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
                  content={u'resource_id': resource_id, u'user_id': user_id},
                  msgOnFail=UserResourcePermissions_POST_NotAcceptableResponseSchema.description)
     evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),

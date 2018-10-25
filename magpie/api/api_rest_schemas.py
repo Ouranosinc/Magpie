@@ -738,8 +738,7 @@ class Resources_POST_RequestBodySchema(colander.MappingSchema):
 
 
 class Resource_POST_ResponseBodySchema(BaseResponseBodySchema):
-    resource_id = Resource_ChildResourceWithChildrenContainerBodySchema()
-    resource_id.name = '{resource_id}'
+    resource = Resource_ChildResourceWithChildrenContainerBodySchema()
 
 
 class Resources_POST_CreatedResponseSchema(colander.MappingSchema):
