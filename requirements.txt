@@ -33,3 +33,4 @@ threddsclient==0.3.4
 humanize
 requests_file
 webtest
+typing
