@@ -3,7 +3,7 @@ from magpie.definitions.pyramid_definitions import *
 from magpie.services import service_factory
 from magpie.models import Service
 from magpie.api.api_except import evaluate_call, verify_param
-from magpie.adapter import get_magpie_url
+from magpie.adapter.utils import get_magpie_url
 import requests
 import logging
 LOGGER = logging.getLogger("TWITCHER")

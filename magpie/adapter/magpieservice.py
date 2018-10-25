@@ -4,7 +4,7 @@ Store adapters to read data from magpie.
 
 from magpie.definitions.twitcher_definitions import *
 from magpie.definitions.pyramid_definitions import HTTPOk, asbool
-from magpie.adapter import get_admin_cookies, get_magpie_url
+from magpie.adapter.utils import get_admin_cookies, get_magpie_url
 import requests
 import logging
 LOGGER = logging.getLogger("TWITCHER")

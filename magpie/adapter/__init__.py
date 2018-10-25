@@ -4,42 +4,11 @@ from magpie.definitions.twitcher_definitions import *
 from magpie.adapter.magpieowssecurity import *
 from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.models import get_user
-from magpie.constants import get_constant
 from magpie.security import auth_config_from_settings
 from magpie.db import *
 from magpie import __meta__
-from six.moves.urllib.parse import urlparse
-from typing import Dict
 import logging
-logger = logging.getLogger("TWITCHER")
-
-
-def get_admin_cookies(magpie_url, verify=True):
-    # type: (str, bool) -> Dict[str,str]
-    magpie_login_url = '{}/signin'.format(magpie_url)
-    cred = {'user_name': get_constant('MAGPIE_ADMIN_USER'), 'password': get_constant('MAGPIE_ADMIN_PASSWORD')}
-    resp = requests.post(magpie_login_url, data=cred, headers='application/json', verify=verify)
-    if resp.status_code != HTTPOk.code:
-        raise resp.raise_for_status()
-    return dict(auth_tkt=resp.cookies.get('auth_tkt'))
-
-
-def get_magpie_url(registry):
-    # type: (Registry) -> str
-    try:
-        # add 'http' scheme to url if omitted from config since further 'requests' calls fail without it
-        # mostly for testing when only 'localhost' is specified
-        # otherwise twitcher config should explicitly define it in MAGPIE_URL
-        url_parsed = urlparse(registry.settings.get('magpie.url').strip('/'))
-        if url_parsed.scheme in ['http', 'https']:
-            return url_parsed.geturl()
-        else:
-            magpie_url = 'http://{}'.format(url_parsed.geturl())
-            LOGGER.warn("Missing scheme from registry url, new value: '{}'".format(magpie_url))
-            return magpie_url
-    except AttributeError:
-        # If magpie.url does not exist, calling strip fct over None will raise this issue
-        raise ConfigurationError('magpie.url config cannot be found')
+LOGGER = logging.getLogger("TWITCHER")
 
 
 class MagpieAdapter(AdapterInterface):
@@ -66,14 +35,14 @@ class MagpieAdapter(AdapterInterface):
         # Disable rpcinterface which is conflicting with postgres db
         settings['twitcher.rpcinterface'] = False
 
-        logger.info('Loading MagpieAdapter config')
+        LOGGER.info('Loading MagpieAdapter config')
         config = auth_config_from_settings(settings)
         config.set_request_property(get_user, 'user', reify=True)
         self.owsproxy_config(settings, config)
         return config
 
     def owsproxy_config(self, settings, config):
-        logger.info('Loading MagpieAdapter owsproxy config')
+        LOGGER.info('Loading MagpieAdapter owsproxy config')
 
         # use pyramid_tm to hook the transaction lifecycle to the request
         config.include('pyramid_tm')
@@ -89,7 +58,7 @@ class MagpieAdapter(AdapterInterface):
             reify=True
         )
 
-        logger.info('Adding MagpieAdapter owsproxy routes and views')
+        LOGGER.info('Adding MagpieAdapter owsproxy routes and views')
         protected_path = settings.get('twitcher.ows_proxy_protected_path', '/ows')
         config.add_route('owsproxy', protected_path + '/{service_name}')
         config.add_route('owsproxy_extra', protected_path + '/{service_name}/{extra_path:.*}')
