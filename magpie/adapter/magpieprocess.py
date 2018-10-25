@@ -2,6 +2,7 @@
 Store adapters to read data from magpie.
 """
 from magpie.adapter.utils import get_magpie_url, get_admin_cookies
+from magpie.api.api_except import raise_http
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,
@@ -95,8 +96,9 @@ class MagpieProcessStore(ProcessStore):
                 child_res_id = children_resources[res_id]['resource_id']
                 return child_res_id
         if not child_res_id:
-            raise HTTPNotFound("Could not find resource `{}` under resource `{}`."
-                               .format(resource_name, parent_resource_info['resource_name']))
+            detail = "Could not find resource `{}` under resource `{}`." \
+                     .format(resource_name, parent_resource_info['resource_name'])
+            raise_http(httpError=HTTPNotFound, detail=detail)
 
     def _get_service_processes_resource(self):
         # type: (...) -> Union[int, None]
@@ -342,7 +344,13 @@ class MagpieProcessStore(ProcessStore):
                 if self.magpie_admin_group not in groups_memberships:
                     ems_processes_id = self._get_service_processes_resource()
                     for i, process in enumerate(process_list):
-                        process_res_id = self._find_resource_id(ems_processes_id, process.id)
+                        # if the resource cannot be found, permissions are definitely not set, remove it from the list
+                        try:
+                            process_res_id = self._find_resource_id(ems_processes_id, process.id)
+                        except HTTPNotFound:
+                            del process_list[i]
+                            continue
+
                         # use inherited flag to consider both user and group permissions on the resource
                         path = '{host}/users/{usr}/resources/{res}/permissions?inherit=true' \
                                .format(host=self.magpie_url, usr=self.magpie_current, res=process_res_id)
