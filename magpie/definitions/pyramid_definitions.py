@@ -19,6 +19,7 @@ from pyramid.httpexceptions import (
     HTTPInternalServerError,
 )
 from pyramid.settings import asbool
+from pyramid.registry import Registry
 from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy
 from pyramid.response import Response, FileResponse
 from pyramid.view import (
