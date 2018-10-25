@@ -281,7 +281,7 @@ class MagpieProcessStore(ProcessStore):
             self._create_resource(u'jobs', process_res_id)
 
             # current editor user is the only one allowed to edit his process (except admins), get is name from session
-            resp = requests.get('{host}/session'.format(host=self.magpie_url), cookies=self.magpie_admin_token,
+            resp = requests.get('{host}/session'.format(host=self.magpie_url), cookies=request.cookies,  # current user
                                 headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if not resp.status_code == HTTPOk.code:
                 raise resp.raise_for_status()
