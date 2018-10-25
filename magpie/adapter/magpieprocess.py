@@ -1,9 +1,9 @@
 """
 Store adapters to read data from magpie.
 """
+from magpie.adapter.utils import get_magpie_url, get_admin_cookies
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import (
-    ConfigurationError,
     HTTPOk,
     HTTPCreated,
     HTTPNotFound,
@@ -20,9 +20,7 @@ from twitcher.exceptions import ProcessNotFound, ProcessRegistrationError
 from twitcher.store import processstore_defaultfactory
 from twitcher.store.base import ProcessStore
 from twitcher.visibility import VISIBILITY_PUBLIC, VISIBILITY_PRIVATE, visibility_values
-
 from typing import List, Optional, Iterable, Union
-from six.moves.urllib.parse import urlparse
 import six
 import requests
 import logging
@@ -38,32 +36,15 @@ class MagpieProcessStore(ProcessStore):
 
     def __init__(self, registry):
         # type: (Registry) -> None
-        try:
-            # add 'http' scheme to url if omitted from config since further 'requests' calls fail without it
-            # mostly for testing when only 'localhost' is specified
-            # otherwise twitcher config should explicitly define it in MAGPIE_URL
-            url_parsed = urlparse(registry.settings.get('magpie.url').strip('/'))
-            if url_parsed.scheme in ['http', 'https']:
-                self.magpie_url = url_parsed.geturl()
-            else:
-                self.magpie_url = 'http://{}'.format(url_parsed.geturl())
-                LOGGER.warn("Missing scheme from MagpieServiceStore url, new value: '{}'".format(self.magpie_url))
-        except AttributeError:
-            # If magpie.url does not exist, calling strip fct over None will raise this issue
-            raise ConfigurationError('magpie.url config cannot be found')
-
-        self.magpie_admin_token = None
-        self.magpie_admin_credentials = {
-            'user_name': get_constant('MAGPIE_ADMIN_USER'),
-            'password': get_constant('MAGPIE_ADMIN_PASSWORD'),
-        }
+        self.magpie_url = get_magpie_url(registry)
+        self.twitcher_ssl_verify = asbool(registry.settings.get('twitcher.ows_proxy_ssl_verify', True))
+        self.magpie_admin_token = get_admin_cookies(self.magpie_url, self.twitcher_ssl_verify)
         self.magpie_admin_group = get_constant('MAGPIE_ADMIN_GROUP')
         self.magpie_users = get_constant('MAGPIE_USERS_GROUP')
         self.magpie_editors = get_constant('MAGPIE_EDITOR_GROUP')
         self.magpie_current = get_constant('MAGPIE_LOGGED_USER')
         self.magpie_service = 'ems'
         self.twitcher_config = get_twitcher_configuration(registry.settings)
-        self.twitcher_ssl_verify = asbool(registry.settings.get('twitcher.ows_proxy_ssl_verify', True))
         self.twitcher_url = get_twitcher_url(registry.settings)
         self.json_headers = {'Accept': 'application/json'}
 
@@ -83,17 +64,6 @@ class MagpieProcessStore(ProcessStore):
         self._create_resource_permissions(ems_res_id, 'read-match', group_names=self.magpie_users)
         self._create_resource_permissions(proc_res_id, 'read-match', group_names=self.magpie_users)
 
-    def _get_admin_cookies(self):
-        # type: (...) -> List[object]
-        if not self.magpie_admin_token:
-            magpie_login_url = '{host}/signin'.format(host=self.magpie_url)
-            resp = requests.post(magpie_login_url, data=self.magpie_admin_credentials,
-                                 headers=self.json_headers, verify=self.twitcher_ssl_verify)
-            if resp.status_code != HTTPOk.code:
-                raise resp.raise_for_status()
-            self.magpie_admin_token = dict(auth_tkt=resp.cookies.get('auth_tkt'))
-        return self.magpie_admin_token
-
     def _find_resource_id(self, parent_resource_id, resource_name):
         # type: (int, str) -> int
         """
@@ -106,14 +76,14 @@ class MagpieProcessStore(ProcessStore):
         """
         if not parent_resource_id:
             path = '{host}/services/{svc}'.format(host=self.magpie_url, svc=resource_name)
-            resp = requests.get(path, cookies=self._get_admin_cookies(),
+            resp = requests.get(path, cookies=self.magpie_admin_token,
                                 headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code != HTTPOk.code:
                 raise resp.raise_for_status()
             return resp.json()[resource_name]['resource_id']
 
         path = '{host}/resources/{id}'.format(host=self.magpie_url, id=parent_resource_id)
-        resp = requests.get(path, cookies=self._get_admin_cookies(),
+        resp = requests.get(path, cookies=self.magpie_admin_token,
                             headers=self.json_headers, verify=self.twitcher_ssl_verify)
         if resp.status_code != HTTPOk.code:
             raise resp.raise_for_status()
@@ -136,7 +106,7 @@ class MagpieProcessStore(ProcessStore):
         :returns: id of the 'processes' resource.
         """
         path = '{host}/resources'.format(host=self.magpie_url)
-        resp = requests.get(path, cookies=self._get_admin_cookies(),
+        resp = requests.get(path, cookies=self.magpie_admin_token,
                             headers=self.json_headers, verify=self.twitcher_ssl_verify)
         if resp.status_code != HTTPOk.code:
             raise resp.raise_for_status()
@@ -161,7 +131,7 @@ class MagpieProcessStore(ProcessStore):
         """Creates group if it doesn't exist."""
 
         path = '{host}/groups'.format(host=self.magpie_url)
-        resp = requests.post(path, cookies=self._get_admin_cookies(), data={u'group_name': group_name},
+        resp = requests.post(path, cookies=self.magpie_admin_token, data={u'group_name': group_name},
                              headers=self.json_headers, verify=self.twitcher_ssl_verify)
         if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
             LOGGER.debug("Group `{}` creation or validation failed.".format(group_name))
@@ -193,7 +163,7 @@ class MagpieProcessStore(ProcessStore):
             for usr_grp, usr_grp_id in user_group_tuples:
                 path = '{host}/{usr_grp}/{id}/resources/{res_id}/permissions' \
                        .format(host=self.magpie_url, usr_grp=usr_grp, id=usr_grp_id, res_id=resource_id)
-                resp = requests.post(path, data=data, cookies=self._get_admin_cookies(),
+                resp = requests.post(path, data=data, cookies=self.magpie_admin_token,
                                      headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 # permission is set if created or already exists
                 if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
@@ -224,7 +194,7 @@ class MagpieProcessStore(ProcessStore):
             for usr_grp, usr_grp_id in user_group_tuples:
                 path = '{host}/{usr_grp}/{id}/resources/{res_id}/permissions/{perm}' \
                        .format(host=self.magpie_url, usr_grp=usr_grp, id=usr_grp_id, res_id=resource_id, perm=perm)
-                reps = requests.delete(path, cookies=self._get_admin_cookies(),
+                reps = requests.delete(path, cookies=self.magpie_admin_token,
                                        headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 # permission is not set if deleted or non existing
                 if reps.status_code not in (HTTPOk.code, HTTPNotFound.code):
@@ -257,7 +227,7 @@ class MagpieProcessStore(ProcessStore):
                 data.update(extra_data or {})
                 data.update({'service_name': resource_name})
             path = '{host}/{type}'.format(host=self.magpie_url, type=post_type)
-            resp = requests.post(path, data=data, cookies=self._get_admin_cookies(),
+            resp = requests.post(path, data=data, cookies=self.magpie_admin_token,
                                  headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code == HTTPCreated.code:
                 res_id = resp.json()['resource']['resource_id']
@@ -293,7 +263,7 @@ class MagpieProcessStore(ProcessStore):
             try:
                 # get resource id of ems service
                 path = '{host}/services/{svc}'.format(host=self.magpie_url, svc=self.magpie_service)
-                resp = requests.get(path, cookies=self._get_admin_cookies(),
+                resp = requests.get(path, cookies=self.magpie_admin_token,
                                     headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 if resp.status_code != HTTPOk.code:
                     raise resp.raise_for_status()
@@ -311,7 +281,7 @@ class MagpieProcessStore(ProcessStore):
             self._create_resource(u'jobs', process_res_id)
 
             # current editor user is the only one allowed to edit his process (except admins), get is name from session
-            resp = requests.get('{host}/session'.format(host=self.magpie_url), cookies=self._get_admin_cookies(),
+            resp = requests.get('{host}/session'.format(host=self.magpie_url), cookies=self.magpie_admin_token,
                                 headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if not resp.status_code == HTTPOk.code:
                 raise resp.raise_for_status()
@@ -337,7 +307,7 @@ class MagpieProcessStore(ProcessStore):
 
             # deleting the top-resource, magpie should automatically handle deletion of all sub-resources/permissions
             path = '{host}/resources/{id}'.format(host=self.magpie_url, id=process_res_id)
-            resp = requests.delete(path, cookies=self._get_admin_cookies(),
+            resp = requests.delete(path, cookies=self.magpie_admin_token,
                                    headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code != HTTPOk.code:
                 raise resp.raise_for_status()
