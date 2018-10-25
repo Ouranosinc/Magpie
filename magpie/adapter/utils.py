@@ -11,7 +11,7 @@ def get_admin_cookies(magpie_url, verify=True):
     # type: (str, bool) -> Dict[str,str]
     magpie_login_url = '{}/signin'.format(magpie_url)
     cred = {'user_name': get_constant('MAGPIE_ADMIN_USER'), 'password': get_constant('MAGPIE_ADMIN_PASSWORD')}
-    resp = requests.post(magpie_login_url, data=cred, headers='application/json', verify=verify)
+    resp = requests.post(magpie_login_url, data=cred, headers={'Accept': 'application/json'}, verify=verify)
     if resp.status_code != HTTPOk.code:
         raise resp.raise_for_status()
     return dict(auth_tkt=resp.cookies.get('auth_tkt'))
