@@ -2,14 +2,18 @@ from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.pyramid_definitions import EVERYONE, ALLOW
 from magpie.api.api_except import *
+from magpie.owsrequest import *
 from magpie import models
-from owsrequest import *
+from typing import List, Dict
 
 
 class ServiceI(object):
-    permission_names = []   # global permissions allowed for the service (top-level resource)
-    params_expected = []    # derived services must have 'request' at least for 'permission_requested' method
-    resource_types_permissions = {}     # dict of list for each corresponding allowed resource permissions
+    # required request parameters for the service
+    params_expected = []                # type: List[str]
+    # global permissions allowed for the service (top-level resource)
+    permission_names = []               # type: List[str]
+    # dict of list for each corresponding allowed resource permissions
+    resource_types_permissions = {}     # type: Dict[str,List[str]]
 
     # make 'property' getter from derived classes
     class __metaclass__(type):
@@ -36,7 +40,6 @@ class ServiceI(object):
         if resource:
             for ace in resource.__acl__:
                 self.acl.append(ace)
-            # Custom acl
 
             if user:
                 permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
@@ -154,7 +157,6 @@ class ServiceNCWMS2(ServiceWMS):
             # https://colibri.crim.ca/twitcher/ows/proxy/ncWMS2/wms?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0&DATASET=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc
             if 'dataset' in self.parser.params.keys():
                 netcdf_file = self.parser.params['dataset']
-            # replace output/ with birdhouse/
 
         elif permission_requested == 'getmap':
             # https://colibri.crim.ca/ncWMS2/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image%2Fpng&TRANSPARENT=TRUE&ABOVEMAXCOLOR=extend&STYLES=default-scalar%2Fseq-Blues&LAYERS=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc/PCP&EPSG=4326
