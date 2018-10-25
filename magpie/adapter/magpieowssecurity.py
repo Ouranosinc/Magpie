@@ -12,7 +12,7 @@ LOGGER = logging.getLogger("TWITCHER")
 class MagpieOWSSecurity(OWSSecurityInterface):
 
     def __init__(self, registry):
-        super(MagpieOWSSecurity, self).__init__(registry=registry)
+        super(MagpieOWSSecurity, self).__init__()
         self.magpie_url = get_magpie_url(registry)
         self.twitcher_ssl_verify = asbool(registry.settings.get('twitcher.ows_proxy_ssl_verify', True))
         self.twitcher_protected_path = registry.settings.get('twitcher.ows_proxy_protected_path', '/ows')
