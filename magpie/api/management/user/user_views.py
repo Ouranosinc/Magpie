@@ -48,7 +48,7 @@ def update_user_view(request):
     check_user_info(new_user_name, new_email, new_password, group_name=new_user_name)
 
     if user.user_name != new_user_name:
-        evaluate_call(lambda: models.User.by_user_name(new_user_name, db_session=request.db),
+        evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
                       fallback=lambda: request.db.rollback(),
                       httpError=HTTPConflict, msgOnFail=User_PUT_ConflictResponseSchema.description)
         user.user_name = new_user_name
@@ -78,8 +78,7 @@ def get_user_view(request):
 def delete_user(request):
     """Delete a user by name."""
     user = get_user_matchdict_checked_or_logged(request)
-    db = request.db
-    evaluate_call(lambda: db.delete(user), fallback=lambda: db.rollback(),
+    evaluate_call(lambda: request.db.delete(user), fallback=lambda: request.db.rollback(),
                   httpError=HTTPForbidden, msgOnFail=User_DELETE_ForbiddenResponseSchema.description)
     return valid_http(httpSuccess=HTTPOk, detail=User_DELETE_OkResponseSchema.description)
 
@@ -102,7 +101,6 @@ def get_user_groups(request):
 @view_config(route_name=UserGroupsAPI.name, request_method='POST')
 def assign_user_group(request):
     """Assign a user to a group."""
-    db = request.db
     user = get_user_matchdict_checked_or_logged(request)
 
     group_name = get_value_multiformat_post_checked(request, 'group_name')
@@ -111,13 +109,16 @@ def assign_user_group(request):
                           httpError=HTTPForbidden, msgOnFail=UserGroups_POST_ForbiddenResponseSchema.description)
     verify_param(group, notNone=True, httpError=HTTPNotFound,
                  msgOnFail=UserGroups_POST_GroupNotFoundResponseSchema.description)
+    verify_param(user.id, paramCompare=[usr.id for usr in group.users], notIn=True, httpError=HTTPConflict,
+                 content={u'user_name': user.user_name, u'group_name': group.group_name},
+                 msgOnFail=UserGroups_POST_ConflictResponseSchema.description)
 
-    new_user_group = models.UserGroup(group_id=group.id, user_id=user.id)
-
-    evaluate_call(lambda: db.add(new_user_group), fallback=lambda: db.rollback(),
-                  httpError=HTTPConflict, msgOnFail=UserGroups_POST_ConflictResponseSchema.description,
+    evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),
+                  fallback=lambda: request.db.rollback(),
+                  httpError=HTTPForbidden, msgOnFail=UserGroups_POST_RelationshipForbiddenResponseSchema.description,
                   content={u'user_name': user.user_name, u'group_name': group.group_name})
-    return valid_http(httpSuccess=HTTPCreated, detail=UserGroups_POST_CreatedResponseSchema.description)
+    return valid_http(httpSuccess=HTTPCreated, detail=UserGroups_POST_CreatedResponseSchema.description,
+                      content={u'user_name': user.user_name, u'group_name': group.group_name})
 
 
 @UserGroupAPI.delete(schema=UserGroup_DELETE_RequestSchema(), tags=[UsersTag],
@@ -299,7 +300,8 @@ def get_user_inherited_services_view(request):
 @LoggedUserServiceInheritedPermissionsAPI.get(schema=UserServicePermissions_GET_RequestSchema,
                                               tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
                                               response_schemas=LoggedUserServicePermissions_GET_responses)
-@view_config(route_name=UserServiceInheritedPermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=UserServiceInheritedPermissionsAPI.name, request_method='GET',
+             permission=NO_PERMISSION_REQUIRED)
 def get_user_service_inherited_permissions_view(request):
     """List all permissions a user has on a service using all his inherited user and groups permissions."""
     LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"

@@ -9,7 +9,7 @@ Sphinx==1.3.1
 #cryptography==1.9
 PyYAML>=3.11
 pyramid==1.8.3
-ziggurat-foundations==0.7.1
+ziggurat-foundations==0.8.1
 pyramid_tm==2.2
 pyramid_chameleon==0.3
 pyramid_mako>=1.0.2
@@ -20,7 +20,7 @@ psycopg2>=2.7.1
 lxml>=3.7
 bcrypt==3.1.3
 futures==3.1.1
-zope.sqlalchemy
+zope.sqlalchemy==1.0
 gunicorn==19.8.1
 alembic==0.9.6
 paste
@@ -32,3 +32,5 @@ colander
 threddsclient==0.3.4
 humanize
 requests_file
+webtest
+typing

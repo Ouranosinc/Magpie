@@ -5,19 +5,42 @@ The OWSRequest is based on pywps code:
 * https://github.com/geopython/pywps/blob/master/pywps/app/WPSRequest.py
 """
 
+from magpie.api.api_except import raise_http
+from pyramid.httpexceptions import HTTPMethodNotAllowed
+from requests import Request
 import lxml.etree
-from pyramid.httpexceptions import HTTPBadRequest
+import json
 import logging
 logger = logging.getLogger(__name__)
 
 
 def ows_parser_factory(request):
-    if request.method == 'GET':
-        return Get(request)
-    elif request.method == 'POST':
-        return Post(request)
+    # type: (Request) -> OWSParser
+    """
+    Retrieve the appropriate OWS Request parser using the Content-Type header.
+    Default to JSON if no Content-Type is specified or if it is 'text/plain' but can be parsed as JSON.
+    Otherwise, use the GET/POST WPS parsers.
+    """
+    content_type = request.headers.get('Content-Type', 'application/json')
+    if content_type == 'text/plain':
+        try:
+            if request.body:
+                # raises if parsing fails
+                json.loads(request.body)
+            content_type = 'application/json'
+        except ValueError:
+            pass
+    if content_type == 'application/json':
+        return JSONParser(request)
     else:
-        raise HTTPBadRequest()
+        if request.method == 'GET':
+            return WPSGet(request)
+        elif request.method == 'POST':
+            return WPSPost(request)
+
+    # method not supported, raise using the specified content type header
+    raise_http(httpError=HTTPMethodNotAllowed, contentType=content_type,
+               detail="Method not implemented by Magpie OWSParser.")
 
 
 class OWSParser(object):
@@ -35,17 +58,16 @@ class OWSParser(object):
         raise NotImplementedError
 
 
-class Get(OWSParser):
+class WPSGet(OWSParser):
 
     def _request_params(self):
         new_params = {}
         for param in self.request.params:
-            # new_params[param.lower()] = self.request.params.getone(param)
             new_params[param.lower()] = self.request.params[param].lower()
         return new_params
 
     def __init__(self, request):
-        super(Get, self).__init__(request)
+        super(WPSGet, self).__init__(request)
         self.all_params = self._request_params()
 
     def _get_param_value(self, param):
@@ -65,10 +87,10 @@ def lxml_strip_ns(tree):
             node.tag = node.tag.split('}', 1)[1]
 
 
-class Post(OWSParser):
+class WPSPost(OWSParser):
 
     def __init__(self, request):
-        super(Post, self).__init__(request)
+        super(WPSPost, self).__init__(request)
         try:
             self.document = lxml.etree.fromstring(self.request.body)
             lxml_strip_ns(self.document)
@@ -82,3 +104,9 @@ class Post(OWSParser):
             return self.document.tag.lower()
         else:
             return None
+
+
+class JSONParser(OWSParser):
+    def _get_param_value(self, param):
+        param = param or ''  # in case None
+        return self.params.get(param.lower(), '').lower()

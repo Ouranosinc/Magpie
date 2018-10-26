@@ -3,6 +3,7 @@ from magpie.definitions.pyramid_definitions import *
 from magpie.services import service_factory
 from magpie.models import Service
 from magpie.api.api_except import evaluate_call, verify_param
+from magpie.adapter.utils import get_magpie_url
 import requests
 import logging
 LOGGER = logging.getLogger("TWITCHER")
@@ -10,10 +11,15 @@ LOGGER = logging.getLogger("TWITCHER")
 
 class MagpieOWSSecurity(OWSSecurityInterface):
 
+    def __init__(self, registry):
+        super(MagpieOWSSecurity, self).__init__()
+        self.magpie_url = get_magpie_url(registry)
+        self.twitcher_ssl_verify = asbool(registry.settings.get('twitcher.ows_proxy_ssl_verify', True))
+        self.twitcher_protected_path = registry.settings.get('twitcher.ows_proxy_protected_path', '/ows')
+
     def check_request(self, request):
-        twitcher_protected_path = request.registry.settings.get('twitcher.ows_proxy_protected_path', '/ows')
-        if request.path.startswith(twitcher_protected_path):
-            service_name = parse_service_name(request.path, twitcher_protected_path)
+        if request.path.startswith(self.twitcher_protected_path):
+            service_name = parse_service_name(request.path, self.twitcher_protected_path)
             service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=request.db),
                                     fallback=lambda: request.db.rollback(),
                                     httpError=HTTPForbidden, msgOnFail="Service query by name refused by db")
@@ -34,8 +40,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                 if not has_permission:
                     raise OWSAccessForbidden("Not authorized to access this resource.")
 
-    @staticmethod
-    def update_request_cookies(request):
+    def update_request_cookies(self, request):
         """
         Ensure login of the user and update the request cookies if twitcher is in a special configuration.
         Only update if Magpie `auth_tkt` is missing and can be retrieved from `access_token` in `Authorization` header.
@@ -43,14 +48,13 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         """
         not_default = get_twitcher_configuration(request.registry.settings) != TWITCHER_CONFIGURATION_DEFAULT
         if not_default and 'Authorization' in request.headers and 'auth_tkt' not in request.cookies:
-            ssl_verify = asbool(request.registry.settings.get('twitcher.ows_proxy_ssl_verify', True))
             magpie_url = request.registry.settings.get('magpie.url')
             magpie_prov = request.params.get('provider', 'WSO2')
             magpie_auth = '{host}/providers/{provider}/signin'.format(host=magpie_url, provider=magpie_prov)
             headers = request.headers
             headers['Homepage-Route'] = '/session'
             headers['Accept'] = 'application/json'
-            auth_resp = requests.get(magpie_auth, headers=headers, verify=ssl_verify)
+            auth_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)
             if auth_resp.status_code != HTTPOk.code:
                 raise auth_resp.raise_for_status()
             if not auth_resp.json().get('authenticated') or 'auth_tkt' not in auth_resp.request._cookies:

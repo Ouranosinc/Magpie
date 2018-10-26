@@ -2,9 +2,7 @@ from magpie.common import str2bool
 from magpie.models import resource_factory, resource_type_dict, resource_tree_service
 from magpie.services import service_type_dict
 from magpie.register import sync_services_phoenix
-from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
-from magpie.api.api_rest_schemas import *
 from magpie.api.api_requests import *
 from magpie.api.api_except import verify_param, evaluate_call, raise_http, valid_http
 from magpie.api.management.resource.resource_formats import format_resource
@@ -98,7 +96,7 @@ def get_resource_permissions(resource, db_session):
         return service_type_dict[service.type].permission_names
 
     # otherwise obtain root level service to infer sub-resource permissions
-    service = models.Service.by_resource_id(resource.root_service_id, db_session=db_session)
+    service = ResourceService.by_resource_id(resource.root_service_id, db_session=db_session)
     verify_param(service.resource_type, isEqual=True, httpError=HTTPNotAcceptable,
                  paramName=u'resource_type', paramCompare=u'service',
                  msgOnFail=UserResourcePermissions_GET_NotAcceptableRootServiceResponseSchema.description)

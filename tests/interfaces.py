@@ -33,7 +33,7 @@ class TestMagpieAPI_NoAuth_Interface(unittest.TestCase):
     @unittest.skipUnless(runner.MAGPIE_TEST_LOGIN, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('login'))
     def test_GetSession_Anonymous(self):
         resp = utils.test_request(self.url, 'GET', '/session', headers=self.json_headers)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(json_body['authenticated'], False)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             utils.check_val_not_in('user', json_body)
@@ -44,7 +44,7 @@ class TestMagpieAPI_NoAuth_Interface(unittest.TestCase):
 
     def test_GetVersion(self):
         resp = utils.test_request(self.url, 'GET', '/version', headers=self.json_headers)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('db_version', json_body)
         utils.check_val_is_in('version', json_body)
         # server not necessarily at latest version, ensure at least format
@@ -58,7 +58,7 @@ class TestMagpieAPI_NoAuth_Interface(unittest.TestCase):
     def test_GetCurrentUser(self):
         logged_user = get_constant('MAGPIE_LOGGED_USER')
         resp = utils.test_request(self.url, 'GET', '/users/{}'.format(logged_user), headers=self.json_headers)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             utils.check_val_equal(json_body['user']['user_name'], self.usr)
         else:
@@ -125,11 +125,10 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
         cls.test_service_name = u'project-api'
         cls.test_service_type = cls.test_services_info[cls.test_service_name]['type']
-        utils.check_val_is_in(cls.test_service_type, cls.test_services_info)
 
-        resp = utils.test_request(cls.url, 'GET', '/services/project-api',
+        resp = utils.test_request(cls.url, 'GET', '/services/{}'.format(cls.test_service_name),
                                   headers=cls.json_headers, cookies=cls.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         cls.test_service_resource_id = json_body[cls.test_service_name]['resource_id']
 
         cls.test_resource_name = u'magpie-unittest-resource'
@@ -137,6 +136,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         assert len(test_service_resource_types), "test service should allow at least 1 sub-resource for test execution"
         cls.test_resource_type = test_service_resource_types[0]
 
+        cls.test_group_name = u'magpie-unittest-dummy-group'
         cls.test_user_name = u'magpie-unittest-toto'
         cls.test_user_group = u'users'
 
@@ -167,7 +167,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @unittest.skipUnless(runner.MAGPIE_TEST_LOGIN, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('login'))
     def test_GetSession_Administrator(self):
         resp = utils.test_request(self.url, 'GET', '/session', headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(json_body['authenticated'], True)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             utils.check_val_is_in('user', json_body)
@@ -185,7 +185,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
     def test_GetUsers(self):
         resp = utils.test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('user_names', json_body)
         utils.check_val_type(json_body['user_names'], list)
         utils.check_val_equal(len(json_body['user_names']) > 1, True)     # should have more than only 'anonymous'
@@ -198,7 +198,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @unittest.skipUnless(runner.MAGPIE_TEST_DEFAULTS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('defaults'))
     def test_ValidateDefaultUsers(self):
         resp = utils.test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         users = json_body['user_names']
         utils.check_val_is_in(get_constant('MAGPIE_ANONYMOUS_USER'), users)
         utils.check_val_is_in(get_constant('MAGPIE_ADMIN_USER'), users)
@@ -207,7 +207,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def check_GetUserResourcesPermissions(cls, user_name):
         route = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=cls.test_service_resource_id, usr=user_name)
         resp = utils.test_request(cls.url, 'GET', route, headers=cls.json_headers, cookies=cls.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('permission_names', json_body)
         utils.check_val_type(json_body['permission_names'], list)
 
@@ -226,7 +226,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def test_GetCurrentUserGroups(self):
         resp = utils.test_request(self.url, 'GET', '/users/current/groups',
                                   headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('group_names', json_body)
         utils.check_val_type(json_body['group_names'], list)
         utils.check_val_is_in(get_constant('MAGPIE_ADMIN_GROUP'), json_body['group_names'])
@@ -236,7 +236,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def test_GetUserInheritedResources(self):
         route = '/users/{usr}/inherited_resources'.format(usr=self.usr)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('resources', json_body)
         utils.check_val_type(json_body['resources'], dict)
         service_types = utils.get_service_types_for_version(self.version)
@@ -248,33 +248,40 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
                 utils.check_val_is_in('resource_id', svc_dict)
                 utils.check_val_is_in('service_name', svc_dict)
                 utils.check_val_is_in('service_type', svc_dict)
-                utils.check_val_is_in('service_url', svc_dict)
                 utils.check_val_is_in('public_url', svc_dict)
                 utils.check_val_is_in('permission_names', svc_dict)
                 utils.check_val_is_in('resources', svc_dict)
                 utils.check_val_type(svc_dict['resource_id'], int)
                 utils.check_val_type(svc_dict['service_name'], six.string_types)
-                utils.check_val_type(svc_dict['service_url'], six.string_types)
                 utils.check_val_type(svc_dict['service_type'], six.string_types)
                 utils.check_val_type(svc_dict['public_url'], six.string_types)
                 utils.check_val_type(svc_dict['permission_names'], list)
                 utils.check_val_type(svc_dict['resources'], dict)
                 if LooseVersion(self.version) >= LooseVersion('0.7.0'):
                     utils.check_val_is_in('service_sync_type', svc_dict)
-                    utils.check_val_type(svc_dict['service_sync_type'], six.string_types)
+                    utils.check_val_type(svc_dict['service_sync_type'], six.string_types + tuple([type(None)]))
+                    utils.check_val_not_in('service_url', svc_dict,
+                                           msg="Services under user routes shouldn't show private url.")
+                else:
+                    utils.check_val_is_in('service_url', svc_dict)
+                    utils.check_val_type(svc_dict['service_url'], six.string_types)
 
     @pytest.mark.users
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
     def test_GetUserServices(self):
         route = '/users/{usr}/services'.format(usr=self.usr)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('services', json_body)
         services = json_body['services']
         utils.check_val_type(services, dict)
         service_types = utils.get_service_types_for_version(self.version)
-        utils.check_all_equal(services.keys(), service_types, any_order=True)
+        # as of version '0.7.0', visible services depend on the connected user permissions,
+        # so all services types not necessarily returned in the response
+        if LooseVersion(self.version) < LooseVersion('0.7.0'):
+            utils.check_all_equal(services.keys(), service_types, any_order=True)
         for svc_type in services:
+            utils.check_val_is_in(svc_type, service_types)  # one of valid service types
             for svc in services[svc_type]:
                 svc_dict = services[svc_type][svc]
                 utils.check_val_type(svc_dict, dict)
@@ -293,8 +300,8 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
                 if LooseVersion(self.version) >= LooseVersion('0.7.0'):
                     utils.check_val_is_in('service_sync_type', svc_dict)
                     utils.check_val_type(svc_dict['service_sync_type'], six.string_types)
-                if LooseVersion(self.version) >= LooseVersion('0.7.1'):
-                    utils.check_val_not_in('service_url', svc_dict)
+                    utils.check_val_not_in('service_url', svc_dict,
+                                           msg="Services under user routes shouldn't show private url.")
                 else:
                     utils.check_val_is_in('service_url', svc_dict)
                     utils.check_val_type(svc_dict['service_url'], six.string_types)
@@ -304,7 +311,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def test_GetUserServiceResources(self):
         route = '/users/{usr}/services/{svc}/resources'.format(usr=self.usr, svc=self.test_service_name)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('service', json_body)
         svc_dict = json_body['service']
         utils.check_val_type(svc_dict, dict)
@@ -323,7 +330,6 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         if LooseVersion(self.version) >= LooseVersion('0.7.0'):
             utils.check_val_is_in('service_sync_type', svc_dict)
             utils.check_val_type(svc_dict['service_sync_type'], six.string_types)
-        if LooseVersion(self.version) >= LooseVersion('0.7.1'):
             utils.check_val_not_in('service_url', svc_dict)
         else:
             utils.check_val_is_in('service_url', svc_dict)
@@ -352,7 +358,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
         route = '/users/{usr}'.format(usr=self.test_user_name)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             utils.check_val_is_in('user', json_body)
             utils.check_val_is_in('user_name', json_body['user'])
@@ -376,7 +382,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         route = '/users/{usr}'.format(usr=self.test_user_name)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers,
                                   cookies=self.cookies, expect_errors=True)
-        utils.check_response_basic_info(resp, 404)
+        utils.check_response_basic_info(resp, 404, expected_method='GET')
 
     @pytest.mark.users
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
@@ -385,7 +391,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         logged_user = get_constant('MAGPIE_LOGGED_USER')
         resp = utils.test_request(self.url, 'GET', '/users/{}'.format(logged_user),
                                   headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             utils.check_val_equal(json_body['user']['user_name'], self.usr)
         else:
@@ -397,7 +403,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @unittest.skipUnless(runner.MAGPIE_TEST_DEFAULTS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('defaults'))
     def test_ValidateDefaultGroups(self):
         resp = utils.test_request(self.url, 'GET', '/groups', headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         groups = json_body['group_names']
         utils.check_val_is_in(get_constant('MAGPIE_ANONYMOUS_GROUP'), groups)
         utils.check_val_is_in(get_constant('MAGPIE_USERS_GROUP'), groups)
@@ -406,10 +412,9 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @pytest.mark.groups
     @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
     def test_PostUserGroup_assign(self):
-        route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
-        data = {'group_name': get_constant('MAGPIE_ANONYMOUS_GROUP')}
-        resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers, cookies=self.cookies, data=data)
-        utils.check_response_basic_info(resp, 201)
+        utils.TestSetup.delete_TestGroup(self)  # setup as required
+        utils.TestSetup.create_TestGroup(self)  # actual test
+        utils.TestSetup.delete_TestGroup(self)  # cleanup
 
     @pytest.mark.groups
     @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
@@ -417,7 +422,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
         data = {'group_name': 'not_found'}
         resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers, cookies=self.cookies, data=data)
-        utils.check_response_basic_info(resp, 404)
+        utils.check_response_basic_info(resp, 404, expected_method='POST')
 
     @pytest.mark.groups
     @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
@@ -425,14 +430,14 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
         data = {'group_name': get_constant('MAGPIE_ADMIN_GROUP')}
         resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers, cookies=self.cookies, data=data)
-        utils.check_response_basic_info(resp, 409)
+        utils.check_response_basic_info(resp, 409, expected_method='POST')
 
     @pytest.mark.groups
     @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
     def test_GetGroupUsers(self):
         route = '/groups/{grp}/users'.format(grp=get_constant('MAGPIE_ADMIN_GROUP'))
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('user_names', json_body)
         utils.check_val_type(json_body['user_names'], list)
         utils.check_val_is_in(get_constant('MAGPIE_ADMIN_USER'), json_body['user_names'])
@@ -441,15 +446,19 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @pytest.mark.groups
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
     def test_GetGroupServices(self):
-        route = '/users/{grp}/services'.format(grp=self.grp)
+        route = '/groups/{grp}/services'.format(grp=self.grp)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('services', json_body)
         services = json_body['services']
         utils.check_val_type(services, dict)
         service_types = utils.get_service_types_for_version(self.version)
-        utils.check_all_equal(services.keys(), service_types, any_order=True)
+        # as of version '0.7.0', visible services depend on the connected user permissions,
+        # so all services types not necessarily returned in the response
+        if LooseVersion(self.version) < LooseVersion('0.7.0'):
+            utils.check_all_equal(services.keys(), service_types, any_order=True)
         for svc_type in services:
+            utils.check_val_is_in(svc_type, service_types)  # one of valid service types
             for svc in services[svc_type]:
                 svc_dict = services[svc_type][svc]
                 utils.check_val_type(svc_dict, dict)
@@ -458,17 +467,14 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
                 utils.check_val_is_in('service_type', svc_dict)
                 utils.check_val_is_in('public_url', svc_dict)
                 utils.check_val_is_in('permission_names', svc_dict)
-                utils.check_val_is_in('resources', svc_dict)
                 utils.check_val_type(svc_dict['resource_id'], int)
                 utils.check_val_type(svc_dict['service_name'], six.string_types)
                 utils.check_val_type(svc_dict['service_type'], six.string_types)
                 utils.check_val_type(svc_dict['public_url'], six.string_types)
                 utils.check_val_type(svc_dict['permission_names'], list)
-                utils.check_val_type(svc_dict['resources'], dict)
                 if LooseVersion(self.version) >= LooseVersion('0.7.0'):
                     utils.check_val_is_in('service_sync_type', svc_dict)
-                    utils.check_val_type(svc_dict['service_sync_type'], six.string_types)
-                if LooseVersion(self.version) >= LooseVersion('0.7.1'):
+                    utils.check_val_type(svc_dict['service_sync_type'], six.string_types + tuple([type(None)]))
                     utils.check_val_not_in('service_url', svc_dict)
                 else:
                     utils.check_val_is_in('service_url', svc_dict)
@@ -479,7 +485,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def test_GetGroupServiceResources(self):
         route = '/groups/{grp}/services/{svc}/resources'.format(grp=self.grp, svc=self.test_service_name)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('service', json_body)
         svc_dict = json_body['service']
         utils.check_val_type(svc_dict, dict)
@@ -498,7 +504,6 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         if LooseVersion(self.version) >= LooseVersion('0.7.0'):
             utils.check_val_is_in('service_sync_type', svc_dict)
             utils.check_val_type(svc_dict['service_sync_type'], six.string_types)
-        if LooseVersion(self.version) >= LooseVersion('0.7.1'):
             utils.check_val_not_in('service_url', svc_dict)
         else:
             utils.check_val_is_in('service_url', svc_dict)
@@ -509,7 +514,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def test_GetServiceResources(self):
         route = '/services/{svc}/resources'.format(svc=self.test_service_name)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         svc_dict = json_body[self.test_service_name]
         utils.check_val_is_in(self.test_service_name, json_body)
         utils.check_val_type(json_body[self.test_service_name], dict)
@@ -541,7 +546,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
             service_perms = service_type_dict[svc['service_type']].permission_names
             route = '/services/{svc}/permissions'.format(svc=svc_name)
             resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-            json_body = utils.check_response_basic_info(resp, 200)
+            json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
             utils.check_val_is_in('permission_names', json_body)
             utils.check_val_type(json_body['permission_names'], list)
             utils.check_all_equal(json_body['permission_names'], service_perms, any_order=True)
@@ -618,7 +623,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         child_resource_id = json_body['resource_id']
         route = '/resources/{res_id}'.format(res_id=child_resource_id)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in(str(child_resource_id), json_body)
         resource_body = json_body[str(child_resource_id)]
         utils.check_val_equal(resource_body['root_service_id'], service_root_id)
@@ -637,7 +642,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         data = {"resource_name": self.test_resource_name, "resource_type": self.test_resource_type}
         resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers,
                                   cookies=self.cookies, json=data, expect_errors=True)
-        json_body = utils.check_response_basic_info(resp, 409)
+        json_body = utils.check_response_basic_info(resp, 409, expected_method='POST')
         utils.check_error_param_structure(json_body, version=self.version,
                                           isParamValueLiteralUnicode=True, paramCompareExists=True,
                                           paramValue=self.test_resource_name, paramName=u'resource_name')
@@ -667,17 +672,15 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
             utils.check_val_is_in(svc_name, registered_svc_names)
 
         # ensure that 'getcapabilities' permission is given to anonymous for applicable services
+        anonymous = get_constant('MAGPIE_ANONYMOUS_USER')
         services_list_getcap = [svc for svc in services_list if 'getcapabilities' in svc['permission_names']]
-        route = '/users/{usr}/services'.format(usr=get_constant('MAGPIE_ANONYMOUS_USER'))
+        route = '/users/{usr}/services'.format(usr=anonymous)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         services_body = json_body['services']
         for svc in services_list_getcap:
             svc_name = svc['service_name']
             svc_type = svc['service_type']
-            if LooseVersion(self.version) >= LooseVersion('0.7.1'):
-                utils.check_val_not_in('service_url', svc, msg="Services under user routes shouldn't show private url.")
-            anonymous = get_constant('MAGPIE_ANONYMOUS_USER')
             msg = "Service `{name}` of type `{type}` is expected to have `{perm}` permissions for user `{usr}`" \
                   .format(name=svc_name, type=svc_type, perm='getcapabilities', usr=anonymous)
             utils.check_val_is_in(svc_name, services_body[svc_type], msg=msg)
@@ -697,7 +700,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         }
         resp = utils.test_request(self.url, 'POST', '/resources',
                                   headers=self.json_headers, cookies=self.cookies, data=data)
-        json_body = utils.check_response_basic_info(resp, 201)
+        json_body = utils.check_response_basic_info(resp, 201, expected_method='POST')
         utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
                                             self.test_resource_name, self.version)
 
@@ -715,7 +718,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         }
         resp = utils.test_request(self.url, 'POST', '/resources',
                                   headers=self.json_headers, cookies=self.cookies, data=data)
-        json_body = utils.check_response_basic_info(resp, 201)
+        json_body = utils.check_response_basic_info(resp, 201, expected_method='POST')
         utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
                                             self.test_resource_name, self.version)
 
@@ -736,7 +739,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         }
         resp = utils.test_request(self.url, 'POST', '/resources',
                                   headers=self.json_headers, cookies=self.cookies, data=data)
-        json_body = utils.check_response_basic_info(resp, 201)
+        json_body = utils.check_response_basic_info(resp, 201, expected_method='POST')
         utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
                                             self.test_resource_name, self.version)
 
@@ -749,7 +752,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         }
         resp = utils.test_request(self.url, 'POST', '/resources',
                                   headers=self.json_headers, cookies=self.cookies, data=data, expect_errors=True)
-        json_body = utils.check_response_basic_info(resp, 422)
+        json_body = utils.check_response_basic_info(resp, 422, expected_method='POST')
         utils.check_error_param_structure(json_body, paramName='parent_id', paramValue=repr(None), version=self.version)
 
     @pytest.mark.resources
@@ -763,7 +766,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
         route = '/resources/{res_id}'.format(res_id=resource_id)
         resp = utils.test_request(self.url, 'DELETE', route, headers=self.json_headers, cookies=self.cookies)
-        utils.check_response_basic_info(resp, 200)
+        utils.check_response_basic_info(resp, 200, expected_method='DELETE')
         utils.TestSetup.check_NonExistingTestResource(self)
 
 

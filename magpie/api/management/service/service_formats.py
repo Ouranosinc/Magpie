@@ -10,7 +10,6 @@ def format_service(service, permissions=None, show_private_url=False):
     def fmt_svc(svc, perms):
         svc_info = {
             u'public_url': str(get_twitcher_protected_service_url(svc.resource_name)),
-            u'service_url': str(svc.url),
             u'service_name': str(svc.resource_name),
             u'service_type': str(svc.type),
             u'service_sync_type': svc.sync_type,

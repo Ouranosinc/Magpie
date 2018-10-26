@@ -12,17 +12,17 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
     if not GroupService.by_group_name(group_name, db_session=db_session):
         new_group = models.Group(group_name=group_name)
         db_session.add(new_group)
-    registered_group = models.Group.by_group_name(group_name=group_name, db_session=db_session)
+    registered_group = GroupService.by_group_name(group_name=group_name, db_session=db_session)
 
     registered_user = UserService.by_user_name(user_name, db_session=db_session)
     if not registered_user:
         new_user = models.User(user_name=user_name, email=email)
-        new_user.set_password(password)
-        new_user.regenerate_security_code()
+        UserService.set_password(new_user, password)
+        UserService.regenerate_security_code(new_user)
         db_session.add(new_user)
         registered_user = UserService.by_user_name(user_name, db_session=db_session)
     else:
-        print_log(user_name+' already exist', level=logging.DEBUG)
+        print_log('User `{}` already exist'.format(user_name), level=logging.DEBUG)
 
     try:
         # ensure the reference between user/group exists (user joined the group)

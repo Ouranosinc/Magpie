@@ -1381,19 +1381,39 @@ class UserGroups_POST_CreatedResponseSchema(colander.MappingSchema):
 class UserGroups_POST_GroupNotFoundResponseSchema(colander.MappingSchema):
     description = "Can't find the group to assign to."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
 class UserGroups_POST_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Group query by name refused by db."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+class UserGroups_POST_RelationshipForbiddenResponseSchema(colander.MappingSchema):
+    description = "User-Group relationship creation refused by db."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+class UserGroups_POST_ConflictResponseBodySchema(ErrorResponseBodySchema):
+    param = ErrorVerifyParamBodySchema()
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the user in the user-group relationship",
+        example="toto",
+    )
+    group_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the group in the user-group relationship",
+        example="users",
+    )
 
 
 class UserGroups_POST_ConflictResponseSchema(colander.MappingSchema):
     description = "User already belongs to this group."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPConflict.code, description=description)
+    body = UserGroups_POST_ConflictResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
 class UserGroup_DELETE_RequestSchema(colander.MappingSchema):
@@ -1410,7 +1430,7 @@ class UserGroup_DELETE_OkResponseSchema(colander.MappingSchema):
 class UserGroup_DELETE_NotFoundResponseSchema(colander.MappingSchema):
     description = "Invalid user-group combination for delete."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
 class UserResources_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1479,7 +1499,7 @@ class UserResourcePermissions_GET_NotAcceptableResourceTypeResponseSchema(coland
 class UserResourcePermissions_GET_NotFoundResponseSchema(colander.MappingSchema):
     description = "Specified user not found to obtain resource permissions."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
 class UserResourcePermissions_POST_RequestBodySchema(colander.MappingSchema):
@@ -1645,31 +1665,31 @@ class UserServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
 class UserServicePermissions_GET_NotFoundResponseSchema(colander.MappingSchema):
     description = "Could not find permissions using specified `service_name` and `user_name`."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
 class Group_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Group query by name refused by db."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class Group_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
     description = "Group name not found in db."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
 class Groups_CheckInfo_NotFoundResponseSchema(colander.MappingSchema):
     description = "User name not found in db."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
 class Groups_CheckInfo_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Failed to obtain groups of user."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class Groups_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1685,11 +1705,16 @@ class Groups_GET_OkResponseSchema(colander.MappingSchema):
 class Groups_GET_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Obtain group names refused by db."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+class Groups_POST_RequestBodySchema(colander.MappingSchema):
+    group_name = colander.SchemaNode(colander.String(), description="Name of the group to create.")
 
 
 class Groups_POST_RequestSchema(colander.MappingSchema):
-    group_name = colander.SchemaNode(colander.String(), description="Name of the group to create.")
+    header = HeaderRequestSchema()
+    body = Groups_POST_RequestBodySchema()
 
 
 class Groups_POST_ResponseBodySchema(BaseResponseBodySchema):
@@ -1717,7 +1742,7 @@ class Groups_POST_ForbiddenAddResponseSchema(colander.MappingSchema):
 class Groups_POST_ConflictResponseSchema(colander.MappingSchema):
     description = "Group name matches an already existing group name."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPConflict.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
 class Group_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1733,7 +1758,7 @@ class Group_GET_OkResponseSchema(colander.MappingSchema):
 class Group_GET_NotFoundResponseSchema(colander.MappingSchema):
     description = "Group name was not found."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
 class Group_PUT_RequestSchema(colander.MappingSchema):
@@ -1749,26 +1774,26 @@ class Group_PUT_OkResponseSchema(colander.MappingSchema):
 class Group_PUT_Name_NotAcceptableResponseSchema(colander.MappingSchema):
     description = "Invalid `group_name` value specified."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
 
 class Group_PUT_Size_NotAcceptableResponseSchema(colander.MappingSchema):
     description = "Invalid `group_name` length specified (>{length} characters)." \
         .format(length=MAGPIE_USER_NAME_MAX_LENGTH)
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
 
 class Group_PUT_Same_NotAcceptableResponseSchema(colander.MappingSchema):
     description = "Invalid `group_name` must be different than current name."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
 
 class Group_PUT_ConflictResponseSchema(colander.MappingSchema):
     description = "Group name already exists."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPConflict.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
 class Group_DELETE_RequestSchema(colander.MappingSchema):
@@ -1785,7 +1810,7 @@ class Group_DELETE_OkResponseSchema(colander.MappingSchema):
 class Group_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Delete group forbidden by db."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class GroupUsers_GET_OkResponseSchema(colander.MappingSchema):
@@ -1797,7 +1822,7 @@ class GroupUsers_GET_OkResponseSchema(colander.MappingSchema):
 class GroupUsers_GET_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Failed to obtain group user names from db."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class GroupServices_GET_ResponseBodySchema(BaseResponseBodySchema):

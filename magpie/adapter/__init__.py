@@ -8,7 +8,7 @@ from magpie.security import auth_config_from_settings
 from magpie.db import *
 from magpie import __meta__
 import logging
-logger = logging.getLogger("TWITCHER")
+LOGGER = logging.getLogger("TWITCHER")
 
 
 class MagpieAdapter(AdapterInterface):
@@ -29,20 +29,20 @@ class MagpieAdapter(AdapterInterface):
         return DefaultAdapter().jobstore_factory(registry)
 
     def owssecurity_factory(self, registry):
-        return MagpieOWSSecurity()
+        return MagpieOWSSecurity(registry=registry)
 
     def configurator_factory(self, settings):
         # Disable rpcinterface which is conflicting with postgres db
         settings['twitcher.rpcinterface'] = False
 
-        logger.info('Loading MagpieAdapter config')
+        LOGGER.info('Loading MagpieAdapter config')
         config = auth_config_from_settings(settings)
         config.set_request_property(get_user, 'user', reify=True)
         self.owsproxy_config(settings, config)
         return config
 
     def owsproxy_config(self, settings, config):
-        logger.info('Loading MagpieAdapter owsproxy config')
+        LOGGER.info('Loading MagpieAdapter owsproxy config')
 
         # use pyramid_tm to hook the transaction lifecycle to the request
         config.include('pyramid_tm')
@@ -58,7 +58,7 @@ class MagpieAdapter(AdapterInterface):
             reify=True
         )
 
-        logger.info('Adding MagpieAdapter owsproxy routes and views')
+        LOGGER.info('Adding MagpieAdapter owsproxy routes and views')
         protected_path = settings.get('twitcher.ows_proxy_protected_path', '/ows')
         config.add_route('owsproxy', protected_path + '/{service_name}')
         config.add_route('owsproxy_extra', protected_path + '/{service_name}/{extra_path:.*}')

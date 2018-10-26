@@ -2,6 +2,7 @@ from magpie.services import service_type_dict
 from magpie.common import make_dirs, print_log, raise_log, bool2str
 from magpie.constants import get_constant
 from magpie import models
+from magpie.definitions.ziggurat_definitions import UserService, UserResourcePermissionService
 import os
 import time
 import yaml
@@ -355,7 +356,7 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
                                              force_update=False, update_getcapabilities_permissions=False):
     existing_services_names = [n[0] for n in db_session.query(models.Service.resource_name)]
     magpie_anonymous_user = get_constant('MAGPIE_ANONYMOUS_USER')
-    anonymous_user = models.User.by_user_name(magpie_anonymous_user, db_session=db_session)
+    anonymous_user = UserService.by_user_name(magpie_anonymous_user, db_session=db_session)
 
     for svc_name, svc_values in services_dict.items():
         svc_new_url = os.path.expandvars(svc_values['url'])
@@ -386,7 +387,7 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
             print_log("Cannot update 'getcapabilities' permission of non existing anonymous user", level=logging.WARN)
         elif update_getcapabilities_permissions and 'getcapabilities' in service_type_dict[svc_type].permission_names:
             svc = db_session.query(models.Service.resource_id).filter_by(resource_name=svc_name).first()
-            svc_perm_getcapabilities = models.UserResourcePermissionService.by_resource_user_and_perm(
+            svc_perm_getcapabilities = UserResourcePermissionService.by_resource_user_and_perm(
                 user_id=anonymous_user.id, perm_name='getcapabilities',
                 resource_id=svc.resource_id, db_session=db_session
             )

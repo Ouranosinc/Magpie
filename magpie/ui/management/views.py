@@ -325,9 +325,11 @@ class ManagementViews(object):
 
             if requires_update_name:
                 # re-fetch user groups as current user-group will have changed on new user_name
-                user_info[u'own_groups'] = self.get_user_groups(user_info[u'user_name'])
+                user_name = user_info[u'user_name']
+                user_info[u'own_groups'] = self.get_user_groups(user_name)
                 # return immediately with updated URL to user with new name
-                return HTTPFound(self.request.route_url('edit_user', **user_info))
+                users_url = self.request.route_url('edit_user', user_name=user_name, cur_svc_type=cur_svc_type)
+                return HTTPMovedPermanently(location=users_url)
 
             # edits to groups checkboxes
             if is_edit_group_membership:

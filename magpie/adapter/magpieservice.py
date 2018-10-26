@@ -2,14 +2,12 @@
 Store adapters to read data from magpie.
 """
 
-from six.moves.urllib.parse import urlparse
-import logging
-import requests
-import json
-LOGGER = logging.getLogger("TWITCHER")
-
 from magpie.definitions.twitcher_definitions import *
-from magpie.definitions.pyramid_definitions import ConfigurationError, HTTPOk
+from magpie.definitions.pyramid_definitions import HTTPOk, asbool
+from magpie.adapter.utils import get_admin_cookies, get_magpie_url
+import requests
+import logging
+LOGGER = logging.getLogger("TWITCHER")
 
 
 class MagpieServiceStore(ServiceStore):
@@ -17,19 +15,9 @@ class MagpieServiceStore(ServiceStore):
     Registry for OWS services. Uses magpie to fetch service url and attributes.
     """
     def __init__(self, registry):
-        try:
-            # add 'http' scheme to url if omitted from config since further 'requests' calls fail without it
-            # mostly for testing when only 'localhost' is specified
-            # otherwise twitcher config should explicitly define it in MAGPIE_URL
-            url_parsed = urlparse(registry.settings.get('magpie.url').strip('/'))
-            if url_parsed.scheme in ['http', 'https']:
-                self.magpie_url = url_parsed.geturl()
-            else:
-                self.magpie_url = 'http://{}'.format(url_parsed.geturl())
-                LOGGER.warn("Missing scheme from MagpieServiceStore url, new value: '{}'".format(self.magpie_url))
-        except AttributeError:
-            #If magpie.url does not exist, calling strip fct over None will raise this issue
-            raise ConfigurationError('magpie.url config cannot be found')
+        self.magpie_url = get_magpie_url(registry)
+        self.twitcher_ssl_verify = asbool(registry.settings.get('twitcher.ows_proxy_ssl_verify', True))
+        self.magpie_admin_token = get_admin_cookies(self.magpie_url, self.twitcher_ssl_verify)
 
     def save_service(self, service, overwrite=True, request=None):
         """
@@ -47,19 +35,19 @@ class MagpieServiceStore(ServiceStore):
         """
         Lists all services registered in magpie.
         """
-        my_services = []
-        path = '/users/current/services?inherit=True&cascade=True'
-        response = requests.get('{url}{path}'.format(url=self.magpie_url, path=path),
-                                cookies=request.cookies)
-        if response.status_code != HTTPOk.code:
-            raise response.raise_for_status()
-        services = json.loads(response.text)
-        for service_type in services['services']:
-            for key, service in services['services'][service_type].items():
-                my_services.append(Service(url=service['service_url'],
-                                           name=service['service_name'],
-                                           type=service['service_type']))
-        return my_services
+        # obtain admin access since 'service_url' is only provided on admin routes
+        services = []
+        path = '{}/services'.format(self.magpie_url)
+        resp = requests.get(path, cookies=self.magpie_admin_token, headers={'Accept': 'application/json'})
+        if resp.status_code != HTTPOk.code:
+            raise resp.raise_for_status()
+        json_body = resp.json()
+        for service_type in json_body['services']:
+            for key, service in json_body['services'][service_type].items():
+                services.append(Service(url=service['service_url'],
+                                        name=service['service_name'],
+                                        type=service['service_type']))
+        return services
 
     def fetch_by_name(self, name, request=None):
         """
