@@ -47,6 +47,18 @@ class WSO2(OAuth2):
         return user
 
 
+    def _fetch(self, url, method='GET', params=None, headers=None, body='', max_redirects=5, content_parser=None):
+        
+        try:
+            return super(WSO2, self)._fetch(url, method, params, headers, body, max_redirects, content_parser)
+        except Exception as ex:
+            import logging
+            import traceback
+            LOGGER = logging.getLogger(__name__)
+            LOGGER.debug(repr(ex))
+            LOGGER.exception("Fetch error", exc_info=True)
+
+
 # Authomatic provider type ID is generated from this list's indexes!
 # Always append new providers at the end so that ids of existing providers don't change!
 PROVIDER_ID_MAP = [WSO2]

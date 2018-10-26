@@ -10,6 +10,8 @@ from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import create_user
 from six.moves.urllib.parse import urlparse
 import requests
+import logging
+LOGGER = logging.getLogger(__name__)
 
 
 # dictionaries of {'provider_id': 'provider_display_name'}
@@ -183,6 +185,13 @@ def authomatic_login(request):
     if result:
         if result.error:
             # Login procedure finished with an error.
+            LOGGER.debug("Login failure with error. [{!r}]".format(result.error.to_dict()))
+            LOGGER.debug("Result user dict: {}".format(result.user.to_dict() if result.user else None))
+            LOGGER.debug("Result user json: {}".format(result.user.to_json() if result.user else None))
+            LOGGER.debug('Response: {!r}'.format(response))
+            LOGGER.debug('Response Location: {!r}'.format(response.location))
+            LOGGER.debug('Response Headers: {!r}'.format(response.headers))
+            LOGGER.debug('Response Body: {!r}'.format(response.body))
             return login_failure(request, reason=result.error.message)
         elif result.user:
             # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
@@ -192,10 +201,12 @@ def authomatic_login(request):
                     response = result.user.update()
                 # this error can happen if providing incorrectly formed authorization header
                 except OAuth2Error as exc:
+                    LOGGER.debug("Login failure with Authorization header.")
                     raise_http(httpError=HTTPBadRequest, content={u'reason': str(exc.message)},
                                detail=ProviderSignin_GET_BadRequestResponseSchema.description)
                 # verify that the update procedure succeeded with provided token
                 if 400 <= response.status < 500:
+                    LOGGER.debug("Login failure with invalid token.")
                     raise_http(httpError=HTTPUnauthorized,
                                detail=ProviderSignin_GET_UnauthorizedResponseSchema.description)
             # create/retrieve the user using found details from login provider
@@ -204,7 +215,7 @@ def authomatic_login(request):
                                           email=result.user.email,
                                           provider_name=result.provider.name,
                                           external_user_name=result.user.name)
-
+    LOGGER.debug('Reached end of login function. Response: {!r}'.format(response))
     return response
 
 
