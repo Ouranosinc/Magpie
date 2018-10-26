@@ -35,4 +35,4 @@ webtest
 typing
 #authomatic==0.1.0.post1
 # until fix merged and deployed
--e git+https://github.com/fmigneault/authomatic.git@httplib-port#egg=authomatic
+-e git+https://github.com/fmigneault/authomatic.git@httplib-port#egg=Authomatic-0.1.0.post1
