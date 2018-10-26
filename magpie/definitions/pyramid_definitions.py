@@ -18,6 +18,7 @@ from pyramid.httpexceptions import (
     HTTPUnprocessableEntity,
     HTTPInternalServerError,
 )
+from pyramid.registry import Registry
 from pyramid.settings import asbool
 from pyramid.registry import Registry
 from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy

@@ -429,9 +429,10 @@ class TestSetup(object):
         check_val_not_in(test_class.test_resource_name, resources_names)
 
     @staticmethod
-    def delete_TestServiceResource(test_class):
+    def delete_TestServiceResource(test_class, override_resource_name=None):
+        resource_name = override_resource_name or test_class.test_resource_name
         resources = TestSetup.get_ExistingTestServiceDirectResources(test_class)
-        test_resource = filter(lambda r: r['resource_name'] == test_class.test_resource_name, resources)
+        test_resource = filter(lambda r: r['resource_name'] == resource_name, resources)
         # delete as required, skip if non-existing
         if len(test_resource) > 0:
             resource_id = test_resource[0]['resource_id']

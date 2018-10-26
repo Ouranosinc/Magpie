@@ -132,9 +132,13 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         cls.test_service_resource_id = json_body[cls.test_service_name]['resource_id']
 
         cls.test_resource_name = u'magpie-unittest-resource'
-        test_service_resource_types = service_type_dict[cls.test_service_type].resource_types_permissions.keys()
-        assert len(test_service_resource_types), "test service should allow at least 1 sub-resource for test execution"
+        test_service_res_perm_dict = service_type_dict[cls.test_service_type].resource_types_permissions
+        test_service_resource_types = test_service_res_perm_dict.keys()
+        assert len(test_service_resource_types), "test service must allow at least 1 sub-resource for test execution"
         cls.test_resource_type = test_service_resource_types[0]
+        test_service_resource_perms = test_service_res_perm_dict[cls.test_resource_type]
+        assert len(test_service_resource_perms), "test service must allow at least 1 sub-permission for test execution"
+        cls.test_resource_perm = test_service_resource_perms[0]
 
         cls.test_group_name = u'magpie-unittest-dummy-group'
         cls.test_user_name = u'magpie-unittest-toto'
@@ -204,12 +208,14 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         utils.check_val_is_in(get_constant('MAGPIE_ADMIN_USER'), users)
 
     @classmethod
-    def check_GetUserResourcesPermissions(cls, user_name):
-        route = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=cls.test_service_resource_id, usr=user_name)
+    def check_GetUserResourcesPermissions(cls, user_name, resource_id=None):
+        resource_id = resource_id or cls.test_service_resource_id
+        route = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=resource_id, usr=user_name)
         resp = utils.test_request(cls.url, 'GET', route, headers=cls.json_headers, cookies=cls.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('permission_names', json_body)
         utils.check_val_type(json_body['permission_names'], list)
+        return json_body['permission_names']
 
     @pytest.mark.users
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
@@ -220,6 +226,61 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
     def test_GetUserResourcesPermissions(self):
         self.check_GetUserResourcesPermissions(self.usr)
+
+    @pytest.mark.users
+    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    def test_PostUserResourcesPermissions_Created(self):
+        resource_name = 'post_res_perm_created'
+        utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
+
+        data = {'resource_name': resource_name}
+        body = utils.TestSetup.create_TestServiceResource(self, data_override=data)
+        test_res_id = body['resource']['resource_id']
+
+        # test permission creation
+        path = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=test_res_id, usr=self.usr)
+        data = {u'permission_name': self.test_resource_perm}
+        resp = utils.test_request(self.url, 'POST', path, data=data, headers=self.json_headers, cookies=self.cookies)
+        json_body = utils.check_response_basic_info(resp, 201, expected_method='POST')
+        utils.check_val_is_in('permission_name', json_body)
+        utils.check_val_is_in('resource_id', json_body)
+        utils.check_val_is_in('user_id', json_body)
+        utils.check_val_type(json_body['permission_name'], six.string_types)
+        utils.check_val_type(json_body['resource_id'], int)
+        utils.check_val_type(json_body['user_id'], int)
+
+        # cleanup (delete sub resource should remove child permission)
+        utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
+
+    @pytest.mark.users
+    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    def test_PostUserResourcesPermissions_Conflict(self):
+        resource_name = 'post_res_perm_conflict'
+        utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
+
+        data = {'resource_name': resource_name}
+        body = utils.TestSetup.create_TestServiceResource(self, data_override=data)
+        test_res_id = body['resource']['resource_id']
+
+        path = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=test_res_id, usr=self.usr)
+        data = {u'permission_name': self.test_resource_perm}
+        utils.test_request(self.url, 'POST', path, data=data, headers=self.json_headers, cookies=self.cookies)
+        perms = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_res_id)
+        utils.check_val_is_in(self.test_resource_perm, perms,
+                              msg="Can't test for conflicting permissions if it doesn't exist first.")
+
+        resp = utils.test_request(self.url, 'POST', path, data=data, headers=self.json_headers, cookies=self.cookies,
+                                  expect_errors=True)
+        json_body = utils.check_response_basic_info(resp, 409, expected_method='POST')
+        utils.check_val_is_in('permission_name', json_body)
+        utils.check_val_is_in('resource_id', json_body)
+        utils.check_val_is_in('user_id', json_body)
+        utils.check_val_type(json_body['permission_name'], six.string_types)
+        utils.check_val_type(json_body['resource_id'], int)
+        utils.check_val_type(json_body['user_id'], int)
+
+        # cleanup (delete sub resource should remove child permission)
+        utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
 
     @pytest.mark.users
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
