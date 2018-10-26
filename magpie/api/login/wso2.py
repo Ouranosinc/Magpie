@@ -48,7 +48,7 @@ class WSO2(OAuth2):
 
 
     def _fetch(self, url, method='GET', params=None, headers=None, body='', max_redirects=5, content_parser=None):
-        
+
         try:
             return super(WSO2, self)._fetch(url, method, params, headers, body, max_redirects, content_parser)
         except Exception as ex:
