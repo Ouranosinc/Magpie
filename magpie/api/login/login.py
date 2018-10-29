@@ -157,8 +157,8 @@ def authomatic_login(request):
     """Signs in a user session using an external provider."""
 
     provider_name = request.matchdict.get('provider_name', '').lower()
-    verify_provider(provider_name)
     authomatic_handler = authomatic_setup(request)
+    verify_provider(provider_name)
     response = Response()
 
     # if we directly have the Authorization header, bypass authomatic login and retrieve 'userinfo' to signin
