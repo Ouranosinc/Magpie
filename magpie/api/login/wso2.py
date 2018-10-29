@@ -46,7 +46,7 @@ class WSO2(OAuth2):
         user.link = data.get('url')
         return user
 
-
+"""
     # TODO: for debug, remove
     def _fetch(self, url, method='GET', params=None, headers=None, body='', max_redirects=5, content_parser=None):
         try:
@@ -138,7 +138,7 @@ class WSO2(OAuth2):
             LOGGER = logging.getLogger(__name__)
             LOGGER.debug(repr(ex))
             LOGGER.exception("Fetch error", exc_info=True)
-
+"""
 
 # Authomatic provider type ID is generated from this list's indexes!
 # Always append new providers at the end so that ids of existing providers don't change!

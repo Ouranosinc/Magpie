@@ -101,6 +101,7 @@ def authomatic_config(request=None):
             'hostname': get_constant('WSO2_HOSTNAME', **_get_const_info),
             'consumer_key': get_constant('WSO2_CLIENT_ID', **_get_const_info),
             'consumer_secret': get_constant('WSO2_CLIENT_SECRET', **_get_const_info),
+            'certificate_file': get_constant('WSO2_CERTIFICATE_FILE', **_get_const_info),
             'redirect_uri': '{}/providers/wso2/signin'.format(request.application_url) if request else None,
             'id': provider_id(),
         }
