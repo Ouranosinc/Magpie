@@ -186,12 +186,6 @@ def authomatic_login(request):
         if result.error:
             # Login procedure finished with an error.
             LOGGER.debug("Login failure with error. [{!r}]".format(result.error.to_dict()))
-            LOGGER.debug("Result user dict: {}".format(result.user.to_dict() if result.user else None))
-            LOGGER.debug("Result user json: {}".format(result.user.to_json() if result.user else None))
-            LOGGER.debug('Response: {!r}'.format(response))
-            LOGGER.debug('Response Location: {!r}'.format(response.location))
-            LOGGER.debug('Response Headers: {!r}'.format(response.headers))
-            LOGGER.debug('Response Body: {!r}'.format(response.body))
             return login_failure(request, reason=result.error.message)
         elif result.user:
             # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
