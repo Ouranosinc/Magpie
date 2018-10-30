@@ -186,7 +186,8 @@ def authomatic_login(request):
         if result:
             if result.error:
                 # Login procedure finished with an error.
-                LOGGER.debug("Login failure with error. [{!r}]".format(result.error.to_dict()))
+                error = result.error.to_dict() if hasattr(result.error, 'to_dict') else result.error
+                LOGGER.debug("Login failure with error. [{!r}]".format(error))
                 return login_failure(request, reason=result.error.message)
             elif result.user:
                 # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
