@@ -135,8 +135,7 @@ class WSO2(OAuth2):
                 remaining_redirects = max_redirects - 1
 
                 LOGGER.warn(u'Redirecting to {0}'.format(url))
-                LOGGER.warn(u'Remaining redirects: {0}'
-                          .format(remaining_redirects))
+                LOGGER.warn(u'Remaining redirects: {0}'.format(remaining_redirects))
 
                 # Call this method again.
                 response = self._fetch(url=location,
