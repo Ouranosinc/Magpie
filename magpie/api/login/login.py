@@ -211,8 +211,9 @@ def authomatic_login(request):
                                               provider_name=result.provider.name,
                                               external_user_name=result.user.name)
     except Exception as exc:
-        LOGGER.exception("Unhandled error during external provider `{}` login. [{!r}]"
-                         .format(provider_name, exc), exc_info=True)
+        exc_msg = "Unhandled error during external provider `{}` login. [{!s}]".format(provider_name, exc)
+        LOGGER.exception(exc_msg, exc_info=True)
+        raise_http(httpError=HTTPInternalServerError, detail=exc_msg)
 
     LOGGER.debug('Reached end of login function. Response: {!r}'.format(response))
     return response

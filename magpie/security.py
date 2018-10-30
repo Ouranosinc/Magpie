@@ -6,7 +6,7 @@ from magpie import models
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
 import logging
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger('magpie.authomatic')
 
 
 def auth_config_from_settings(settings):
@@ -31,8 +31,9 @@ def authomatic_setup(request):
     return Authomatic(
         config=authomatic_config(request),
         secret=magpie_secret,
+        logger=LOGGER,
         report_errors=True,
-        logging_level=logger.level
+        logging_level=LOGGER.level
     )
 
 
