@@ -7,6 +7,7 @@ from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
 import logging
 LOGGER = logging.getLogger('magpie.authomatic')
+LOGGER.setLevel(logging.DEBUG)
 
 
 def auth_config_from_settings(settings):
