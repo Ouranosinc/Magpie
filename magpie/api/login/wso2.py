@@ -59,6 +59,104 @@ class WSO2(OAuth2):
         user.link = data.get('url')
         return user
 
+    def _fetch(self, url, method='GET', params=None, headers=None,
+               body='', max_redirects=5, content_parser=None,
+               certificate_file=None, ssl_verify=True):
+        import ssl
+        import authomatic
+        from authomatic.six.moves import urllib_parse as parse, http_client.authomatic
+        from authomatic.exceptions import FetchError
+        LOGGER = logging.getLogger(__name__)
+
+        # 'magic' using _kwarg method
+        # pylint:disable=no-member
+        params = params or {}
+        params.update(self.access_params)
+
+        headers = headers or {}
+        headers.update(self.access_headers)
+
+        url_parsed = parse.urlsplit(url)
+        query = parse.urlencode(params)
+
+        if method in ('POST', 'PUT', 'PATCH'):
+            if not body:
+                # Put querystring to body
+                body = query
+                query = ''
+                headers.update(
+                    {'Content-Type': 'application/x-www-form-urlencoded'})
+        request_path = parse.urlunsplit(
+            ('', '', url_parsed.path or '', query or '', ''))
+
+        LOGGER.warn(u' \u251C\u2500 host: {0}'.format(url_parsed.hostname))
+        LOGGER.warn(u' \u251C\u2500 path: {0}'.format(request_path))
+        LOGGER.warn(u' \u251C\u2500 method: {0}'.format(method))
+        LOGGER.warn(u' \u251C\u2500 body: {0}'.format(body))
+        LOGGER.warn(u' \u251C\u2500 params: {0}'.format(params))
+        LOGGER.warn(u' \u251C\u2500 headers: {0}'.format(headers))
+        LOGGER.warn(u' \u2514\u2500 certificate: {0}'.format(certificate_file))
+        LOGGER.warn(u' \u2514\u2500 SSL verify: {0}'.format(ssl_verify))
+
+        # Connect
+        if url_parsed.scheme.lower() == 'https':
+            context = None if ssl_verify else ssl._create_unverified_context()
+            cert_file = certificate_file if ssl_verify else None
+
+            LOGGER.warn(u' \u2514\u2500 cert_file: {0}'.format(cert_file))
+            LOGGER.warn(u' \u2514\u2500 context: {0!r}'.format(context))
+            connection = http_client.HTTPSConnection(
+                url_parsed.hostname,
+                port=url_parsed.port,
+                cert_file=cert_file,
+                context=context)
+        else:
+            connection = http_client.HTTPConnection(
+                url_parsed.hostname,
+                port=url_parsed.port)
+
+        try:
+            connection.request(method, request_path, body, headers)
+        except Exception as e:
+            raise FetchError('Fetching URL failed',
+                             original_message=str(e),
+                             url=request_path)
+
+        response = connection.getresponse()
+        location = response.getheader('Location')
+
+        if response.status in (300, 301, 302, 303, 307) and location:
+            if location == url:
+                raise FetchError('Url redirects to itself!',
+                                 url=location,
+                                 status=response.status)
+
+            elif max_redirects > 0:
+                remaining_redirects = max_redirects - 1
+
+                LOGGER.warn(u'Redirecting to {0}'.format(url))
+                LOGGER.warn(u'Remaining redirects: {0}'
+                          .format(remaining_redirects))
+
+                # Call this method again.
+                response = self._fetch(url=location,
+                                       params=params,
+                                       method=method,
+                                       headers=headers,
+                                       max_redirects=remaining_redirects)
+
+            else:
+                raise FetchError('Max redirects reached!',
+                                 url=location,
+                                 status=response.status)
+        else:
+            LOGGER.warn(u'Got response:')
+            LOGGER.warn(u' \u251C\u2500 url: {0}'.format(url))
+            LOGGER.warn(u' \u251C\u2500 status: {0}'.format(response.status))
+            LOGGER.warn(u' \u2514\u2500 headers: {0}'.format(response.getheaders()))
+
+        return authomatic.core.Response(response, content_parser)
+
 
 # Authomatic provider type ID is generated from this list's indexes!
 # Always append new providers at the end so that ids of existing providers don't change!
