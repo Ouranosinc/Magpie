@@ -88,7 +88,7 @@ MAGPIE_USER_NAME_MAX_LENGTH = 64
 # ===========================
 
 
-def get_constant(name, settings=None, settings_name=None,
+def get_constant(name, settings=None, settings_name=None, default_value=None,
                  raise_missing=True, print_missing=False, raise_not_set=True):
     """
     Search in order for matched value of `name` :
@@ -99,10 +99,11 @@ def get_constant(name, settings=None, settings_name=None,
     :param name: key to search for a value
     :param settings: wsgi app settings
     :param settings_name: alternative name for `settings` if specified
+    :param default_value: default value to be returned if not found anywhere, and exception raises are disabled.
     :param raise_missing: raise exception if key is not found anywhere
     :param print_missing: print message if key is not found anywhere, return None
     :param raise_not_set: raise an exception if the found key is None, search until last case if previous are None
-    :returns: found value or None
+    :returns: found value or :param:`default_value`
     :raises: according message based on options (by default raise missing/None value)
     """
     magpie_globals = globals()
@@ -134,4 +135,4 @@ def get_constant(name, settings=None, settings_name=None,
         raise_log("Constant could not be found: {}".format(name), level=logging.ERROR)
     if missing and print_missing:
         print_log("Constant could not be found: {}".format(name), level=logging.WARN)
-    return magpie_value
+    return magpie_value or default_value
