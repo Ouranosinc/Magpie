@@ -21,11 +21,8 @@ class WSO2(OAuth2):
         self.user_info_url = '{}/oauth2/userinfo'.format(self.hostname)
         self.user_info_scope = self._kwarg(kwargs, 'user_info_scope', ['openid'])
         self.scope = self._kwarg(kwargs, 'scope', ['openid'])
-
-        # settings
-        provider_settings = self.settings.config.get(self.name)
-        self.cert = self._kwarg(kwargs, 'certificate_file', provider_settings.get('certificate_file', None))
-        self.verify = self._kwarg(kwargs, 'ssl_verify', provider_settings.get('ssl_verify', True))
+        self.cert = self._kwarg(kwargs, 'certificate_file', None)
+        self.verify = self._kwarg(kwargs, 'ssl_verify', True)
 
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(logging.DEBUG)
