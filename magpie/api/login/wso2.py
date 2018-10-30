@@ -64,7 +64,7 @@ class WSO2(OAuth2):
                certificate_file=None, ssl_verify=True):
         import ssl
         import authomatic
-        from authomatic.six.moves import urllib_parse as parse, http_client.authomatic
+        from authomatic.six.moves import urllib_parse as parse, http_client
         from authomatic.exceptions import FetchError
         LOGGER = logging.getLogger(__name__)
 
