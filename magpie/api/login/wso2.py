@@ -56,36 +56,6 @@ class WSO2(OAuth2):
         user.link = data.get('url')
         return user
 
-    def _fetch(self, url, method='GET', params=None, headers=None,
-               body='', max_redirects=5, content_parser=None,
-               certificate_file=None, ssl_verify=True):
-
-        resp = super(WSO2, self)._fetch(url, method, params, headers, body, max_redirects, content_parser,
-                                        certificate_file, ssl_verify)
-
-        from authomatic.six.moves import urllib_parse as parse
-        url_parsed = parse.urlsplit(url)
-        query = parse.urlencode(params)
-        if method in ('POST', 'PUT', 'PATCH'):
-            if not body:
-                # Put querystring to body
-                body = query
-                query = ''
-                headers.update(
-                    {'Content-Type': 'application/x-www-form-urlencoded'})
-        request_path = parse.urlunsplit(('', '', url_parsed.path or '', query or '', ''))
-        LOGGER = logging.getLogger(__name__)
-        LOGGER.warn(u' ==> host: {0}'.format(url_parsed.hostname))
-        LOGGER.warn(u' ==> path: {0}'.format(request_path))
-        LOGGER.warn(u' ==> method: {0}'.format(method))
-        LOGGER.warn(u' ==> body: {0}'.format(body))
-        LOGGER.warn(u' ==> params: {0}'.format(params))
-        LOGGER.warn(u' ==> headers: {0}'.format(headers))
-        LOGGER.warn(u' ==> certificate: {0}'.format(certificate_file))
-        LOGGER.warn(u' ==> SSL verify: {0}'.format(ssl_verify))
-
-        return resp
-
 
 # Authomatic provider type ID is generated from this list's indexes!
 # Always append new providers at the end so that ids of existing providers don't change!
