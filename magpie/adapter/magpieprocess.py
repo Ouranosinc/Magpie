@@ -281,6 +281,7 @@ class MagpieProcessStore(ProcessStore):
             proc_res_id = self._find_resource_id(ems_res_id, 'processes')
             process_res_id = self._create_resource(process.id, proc_res_id)
             self._create_resource(u'jobs', process_res_id)
+            self._create_resource(u'quotations', process_res_id)
 
             # current editor user is the only one allowed to edit his process (except admins), get is name from session
             resp = requests.get('{host}/session'.format(host=self.magpie_url), cookies=request.cookies,  # current user
