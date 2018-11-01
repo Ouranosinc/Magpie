@@ -6,7 +6,8 @@ from magpie import models
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
 import logging
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger('magpie.authomatic')
+LOGGER.setLevel(logging.DEBUG)
 
 
 def auth_config_from_settings(settings):
@@ -31,8 +32,9 @@ def authomatic_setup(request):
     return Authomatic(
         config=authomatic_config(request),
         secret=magpie_secret,
+        logger=LOGGER,
         report_errors=True,
-        logging_level=logger.level
+        logging_level=LOGGER.level
     )
 
 
@@ -101,6 +103,8 @@ def authomatic_config(request=None):
             'hostname': get_constant('WSO2_HOSTNAME', **_get_const_info),
             'consumer_key': get_constant('WSO2_CLIENT_ID', **_get_const_info),
             'consumer_secret': get_constant('WSO2_CLIENT_SECRET', **_get_const_info),
+            'certificate_file': get_constant('WSO2_CERTIFICATE_FILE', **_get_const_info) or None,  # replace if == ''
+            'ssl_verify': asbool(get_constant('WSO2_SSL_VERIFY', default_value=True, **_get_const_info)),
             'redirect_uri': '{}/providers/wso2/signin'.format(request.application_url) if request else None,
             'id': provider_id(),
         }

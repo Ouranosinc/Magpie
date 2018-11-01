@@ -1,5 +1,7 @@
 from authomatic.providers.oauth2 import OAuth2
 from authomatic.core import SupportedUserAttributes
+from os import path
+import logging
 
 
 class WSO2(OAuth2):
@@ -19,6 +21,14 @@ class WSO2(OAuth2):
         self.user_info_url = '{}/oauth2/userinfo'.format(self.hostname)
         self.user_info_scope = self._kwarg(kwargs, 'user_info_scope', ['openid'])
         self.scope = self._kwarg(kwargs, 'scope', ['openid'])
+        self.cert = self._kwarg(kwargs, 'certificate_file', None)
+        self.verify = self._kwarg(kwargs, 'ssl_verify', True)
+
+        self._logger = logging.getLogger(__name__)
+        self._logger.setLevel(logging.DEBUG)
+
+        if self.verify and self.cert and not path.isfile(self.cert):
+            raise ValueError("Specified WSO2 certificate file cannot be found. [path: {!r}]".format(self.cert))
 
     supported_user_attributes = SupportedUserAttributes(
         country=True,

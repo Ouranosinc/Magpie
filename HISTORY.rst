@@ -10,7 +10,8 @@ History
 
 * add service resource auto-sync feature
 * return user/group services if any sub-resource has permissions
-* [WIP] add inherited resource permission with querystring (deprecate `inherited_<>` routes)
+* add inherited resource permission with querystring (deprecate `inherited_<>` routes warnings)
+* fix external providers login support (validated for DKRZ, GitHub and WSO2)
 
 0.6.x
 ---------------------

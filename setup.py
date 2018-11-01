@@ -27,8 +27,10 @@ with open('requirements.txt', 'r') as requirements_file:
     for line in requirements_file:
         if 'git+https' in line:
             pkg = line.split('#')[-1]
-            LINKS.add(line.strip() + '-0')
+            LINKS.add(line.strip())
             REQUIREMENTS.add(pkg.replace('egg=', '').rstrip())
+        elif line.startswith('http'):
+            LINKS.add(line.strip())
         else:
             REQUIREMENTS.add(line.strip())
 

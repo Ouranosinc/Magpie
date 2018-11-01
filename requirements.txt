@@ -13,7 +13,6 @@ ziggurat-foundations==0.8.1
 pyramid_tm==2.2
 pyramid_chameleon==0.3
 pyramid_mako>=1.0.2
-authomatic==0.1.0.post1
 python-openid==2.2.5
 requests
 psycopg2>=2.7.1
@@ -34,3 +33,8 @@ humanize
 requests_file
 webtest
 typing
+#authomatic==0.1.0.post1
+# until fix merged and deployed
+#-e git+https://github.com/fmigneault/authomatic.git@httplib-port#egg=Authomatic
+https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic
+

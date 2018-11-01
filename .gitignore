@@ -26,6 +26,7 @@ magpie/local/
 magpie/pip-selfcheck.json
 magpie/share/
 magpie.egg-info/
+src/
 share/
 /gunicorn.app.wsgiapp
 /sys
