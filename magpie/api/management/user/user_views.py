@@ -144,20 +144,28 @@ def delete_user_group(request):
     return valid_http(httpSuccess=HTTPOk, detail=UserGroup_DELETE_OkResponseSchema.description)
 
 
-def get_user_resources_runner(request, inherited_group_resources_permissions=True):
+@UserResourcesAPI.get(schema=UserResources_GET_RequestSchema(),
+                      tags=[UsersTag], api_security=SecurityEveryoneAPI,
+                      response_schemas=UserResources_GET_responses)
+@LoggedUserResourcesAPI.get(schema=UserResources_GET_RequestSchema(),
+                            tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                            response_schemas=LoggedUserResources_GET_responses)
+@view_config(route_name=UserResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_resources_view(request):
+    """List all resources a user has permissions on."""
+    inherit_groups_perms = str2bool(get_query_param(request, 'inherit'))
     user = get_user_matchdict_checked_or_logged(request)
-    inherit_perms = inherited_group_resources_permissions
     db = request.db
 
     def build_json_user_resource_tree(usr):
         json_res = {}
         for svc in models.Service.all(db_session=db):
-            svc_perms = get_user_service_permissions(user=usr, service=svc, db_session=db,
-                                                     inherit_groups_permissions=inherit_perms)
+            svc_perms = get_user_service_permissions(
+                user=usr, service=svc, db_session=db, inherit_groups_permissions=inherit_groups_perms)
             if svc.type not in json_res:
                 json_res[svc.type] = {}
-            res_perms_dict = get_user_service_resources_permissions_dict(user=usr, service=svc, db_session=db,
-                                                                         inherit_groups_permissions=inherit_perms)
+            res_perms_dict = get_user_service_resources_permissions_dict(
+                user=usr, service=svc, db_session=db, inherit_groups_permissions=inherit_groups_perms)
             json_res[svc.type][svc.resource_name] = format_service_resources(
                 svc,
                 db_session=db,
@@ -176,35 +184,28 @@ def get_user_resources_runner(request, inherited_group_resources_permissions=Tru
                       content={u'resources': usr_res_dict})
 
 
-@UserResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas=UserResources_GET_responses)
-@LoggedUserResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                            response_schemas=LoggedUserResources_GET_responses)
-@view_config(route_name=UserResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_user_resources_view(request):
-    """List all resources a user has direct permission on (not including his groups permissions)."""
-    inherit_groups_perms = str2bool(get_query_param(request, 'inherit'))
-    return get_user_resources_runner(request, inherited_group_resources_permissions=inherit_groups_perms)
-
-
 @UserInheritedResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
                                response_schemas=UserResources_GET_responses)
 @LoggedUserInheritedResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
                                      response_schemas=LoggedUserResources_GET_responses)
 @view_config(route_name=UserInheritedResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_inherited_resources_view(request):
-    """List all resources a user has permission on with his inherited user and groups permissions."""
+    """[DEPRECATED: use '/users/{user_name}/resources?inherit=true']
+    List all resources a user has permissions on with his inherited user and groups permissions."""
     LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"
                 .format(UserInheritedResourcesAPI.path, UserResourcesAPI.path + "?inherit=true"))
-    return get_user_resources_runner(request, inherited_group_resources_permissions=True)
+    return HTTPMovedPermanently(location=request.path.replace('/inherited_resources', '/resources?inherit=true'))
 
 
-@UserResourcePermissionsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
+@UserResourcePermissionsAPI.get(schema=UserResourcePermissions_GET_RequestSchema(),
+                                tags=[UsersTag], api_security=SecurityEveryoneAPI,
                                 response_schemas=UserResourcePermissions_GET_responses)
-@LoggedUserResourcePermissionsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+@LoggedUserResourcePermissionsAPI.get(schema=UserResourcePermissions_GET_RequestSchema(),
+                                      tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
                                       response_schemas=LoggedUserResourcePermissions_GET_responses)
 @view_config(route_name=UserResourcePermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_resource_permissions_view(request):
-    """List all direct permissions a user has on a specific resource (not including his groups permissions)."""
+    """List all permissions a user has on a specific resource."""
     user = get_user_matchdict_checked_or_logged(request)
     resource = get_resource_matchdict_checked(request, 'resource_id')
     inherit_groups_perms = str2bool(get_query_param(request, 'inherit'))
@@ -221,16 +222,11 @@ def get_user_resource_permissions_view(request):
 @view_config(route_name=UserResourceInheritedPermissionsAPI.name, request_method='GET',
              permission=NO_PERMISSION_REQUIRED)
 def get_user_resource_inherit_groups_permissions_view(request):
-    """List all permissions a user has on a specific resource with his inherited user and groups permissions."""
+    """[DEPRECATED: use '/users/{user_name}/resources/{resource_id}/permissions?inherit=true']
+    List all permissions a user has on a specific resource with his inherited user and groups permissions."""
     LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"
                 .format(UserResourceInheritedPermissionsAPI.path, UserResourcePermissionsAPI.path + "?inherit=true"))
-
-    user = get_user_matchdict_checked_or_logged(request)
-    resource = get_resource_matchdict_checked(request, 'resource_id')
-    perm_names = get_user_resource_permissions(resource=resource, user=user, db_session=request.db,
-                                               inherit_groups_permissions=True)
-    return valid_http(httpSuccess=HTTPOk, detail=UserResourcePermissions_GET_OkResponseSchema.description,
-                      content={u'permission_names': sorted(perm_names)})
+    return HTTPMovedPermanently(location=request.path.replace('/inherited_permissions', '/permissions?inherit=true'))
 
 
 @UserResourcePermissionsAPI.post(schema=UserResourcePermissions_POST_RequestSchema(), tags=[UsersTag],
@@ -252,7 +248,7 @@ def create_user_resource_permission_view(request):
                                         response_schemas=LoggedUserResourcePermission_DELETE_responses)
 @view_config(route_name=UserResourcePermissionAPI.name, request_method='DELETE')
 def delete_user_resource_permission_view(request):
-    """Delete a permission on a resource for a user (not including his groups permissions)."""
+    """Delete a direct permission on a resource for a user (not including his groups permissions)."""
     user = get_user_matchdict_checked_or_logged(request)
     resource = get_resource_matchdict_checked(request)
     perm_name = get_permission_matchdict_checked(request, resource)
@@ -265,7 +261,7 @@ def delete_user_resource_permission_view(request):
                            response_schemas=LoggedUserServices_GET_responses)
 @view_config(route_name=UserServicesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_services_view(request):
-    """List all services a user has permission on."""
+    """List all services a user has permissions on."""
     user = get_user_matchdict_checked_or_logged(request)
     cascade_resources = str2bool(get_query_param(request, 'cascade'))
     inherit_groups_perms = str2bool(get_query_param(request, 'inherit'))
@@ -285,13 +281,11 @@ def get_user_services_view(request):
                                     response_schemas=LoggedUserServices_GET_responses)
 @view_config(route_name=UserInheritedServicesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_inherited_services_view(request):
-    """List all services a user has permission on with his inherited user and groups permissions."""
+    """[DEPRECATED: use '/users/{user_name}/services?inherit=true']
+    List all services a user has permissions on with his inherited user and groups permissions."""
     LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"
                 .format(LoggedUserInheritedServicesAPI.path, LoggedUserServicesAPI.path + "?inherit=true"))
-    user = get_user_matchdict_checked_or_logged(request)
-    svc_json = get_user_services(user, db_session=request.db, cascade_resources=False, inherit_groups_permissions=True)
-    return valid_http(httpSuccess=HTTPOk, detail=UserServices_GET_OkResponseSchema.description,
-                      content={u'services': svc_json})
+    return HTTPMovedPermanently(location=request.path.replace('/inherited_services', '/services?inherit=true'))
 
 
 @UserServiceInheritedPermissionsAPI.get(schema=UserServicePermissions_GET_RequestSchema,
@@ -303,18 +297,11 @@ def get_user_inherited_services_view(request):
 @view_config(route_name=UserServiceInheritedPermissionsAPI.name, request_method='GET',
              permission=NO_PERMISSION_REQUIRED)
 def get_user_service_inherited_permissions_view(request):
-    """List all permissions a user has on a service using all his inherited user and groups permissions."""
+    """[DEPRECATED: use '/users/{user_name}/services/{service_name}/permissions?inherit=true']
+    List all permissions a user has on a service using all his inherited user and groups permissions."""
     LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"
                 .format(UserServiceInheritedPermissionsAPI.path, UserServicePermissionsAPI.path + "?inherit=true"))
-    user = get_user_matchdict_checked_or_logged(request)
-    service = get_service_matchdict_checked(request)
-    perms = evaluate_call(lambda: get_user_service_permissions(service=service, user=user, db_session=request.db,
-                                                               inherit_groups_permissions=True),
-                          fallback=lambda: request.db.rollback(), httpError=HTTPNotFound,
-                          msgOnFail=UserServicePermissions_GET_NotFoundResponseSchema.description,
-                          content={u'service_name': str(service.resource_name), u'user_name': str(user.user_name)})
-    return valid_http(httpSuccess=HTTPOk, detail=UserServicePermissions_GET_OkResponseSchema.description,
-                      content={u'permission_names': sorted(perms)})
+    return HTTPMovedPermanently(location=request.path.replace('/inherited_permissions', '/permissions?inherit=true'))
 
 
 @UserServicePermissionsAPI.get(schema=UserServicePermissions_GET_RequestSchema,
@@ -364,21 +351,22 @@ def delete_user_service_permission(request):
     return delete_user_resource_permission(perm_name, service, user.id, request.db)
 
 
-def get_user_service_resource_permissions_runner(request, inherit_groups_permissions):
-    """
-    Resource permissions a user as on a specific service
-
-    :param request:
-    :param inherit_groups_permissions:
-        only direct permissions if False, otherwise resolve permissions with user and his groups.
-    :return:
-    """
+@UserServiceResourcesAPI.get(schema=UserServiceResources_GET_RequestSchema,
+                             tags=[UsersTag], api_security=SecurityEveryoneAPI,
+                             response_schemas=UserServiceResources_GET_responses)
+@LoggedUserServiceResourcesAPI.get(schema=UserServiceResources_GET_RequestSchema,
+                                   tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
+                                   response_schemas=LoggedUserServiceResources_GET_responses)
+@view_config(route_name=UserServiceResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+def get_user_service_resources_view(request):
+    """List all resources under a service a user has permission on."""
+    inherit_groups_perms = str2bool(get_query_param(request, 'inherit'))
     user = get_user_matchdict_checked_or_logged(request)
     service = get_service_matchdict_checked(request)
     service_perms = get_user_service_permissions(
-        user, service, db_session=request.db, inherit_groups_permissions=inherit_groups_permissions)
+        user, service, db_session=request.db, inherit_groups_permissions=inherit_groups_perms)
     resources_perms_dict = get_user_service_resources_permissions_dict(
-        user, service, db_session=request.db, inherit_groups_permissions=inherit_groups_permissions)
+        user, service, db_session=request.db, inherit_groups_permissions=inherit_groups_perms)
     user_svc_res_json = format_service_resources(
         service=service,
         db_session=request.db,
@@ -391,27 +379,14 @@ def get_user_service_resource_permissions_runner(request, inherit_groups_permiss
                       content={u'service': user_svc_res_json})
 
 
-@UserServiceResourcesAPI.get(schema=UserServiceResources_GET_RequestSchema,
-                             tags=[UsersTag], api_security=SecurityEveryoneAPI,
-                             response_schemas=UserServiceResources_GET_responses)
-@LoggedUserServiceResourcesAPI.get(schema=UserServiceResources_GET_RequestSchema,
-                                   tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                                   response_schemas=LoggedUserServiceResources_GET_responses)
-@view_config(route_name=UserServiceResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
-def get_user_service_resources_view(request):
-    """List all resources under a service a user has permission on."""
-    inherit_groups_perms = str2bool(get_query_param(request, 'inherit'))
-    return get_user_service_resource_permissions_runner(request, inherit_groups_permissions=inherit_groups_perms)
-
-
 @UserServiceInheritedResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
                                       response_schemas=UserServiceResources_GET_responses)
 @LoggedUserServiceInheritedResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
                                             response_schemas=LoggedUserServiceResources_GET_responses)
 @view_config(route_name=UserServiceInheritedResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_inherited_resources_view(request):
-    """List all resources under a service a user has permission on using all his inherited user and groups
-    permissions."""
+    """[DEPRECATED: use '/users/{user_name}/services/{service_name}/resources?inherit=true']
+    List all resources under a service a user has permission on using all his inherited user and groups permissions."""
     LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"
                 .format(UserServiceInheritedResourcesAPI.path, UserServiceResourcesAPI.path + "?inherit=true"))
-    return get_user_service_resource_permissions_runner(request, inherit_groups_permissions=True)
+    return HTTPMovedPermanently(location=request.path.replace('/inherited_resources', '/resources?inherit=true'))

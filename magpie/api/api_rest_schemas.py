@@ -738,8 +738,7 @@ class Resources_POST_RequestBodySchema(colander.MappingSchema):
 
 
 class Resource_POST_ResponseBodySchema(BaseResponseBodySchema):
-    resource_id = Resource_ChildResourceWithChildrenContainerBodySchema()
-    resource_id.name = '{resource_id}'
+    resource = Resource_ChildResourceWithChildrenContainerBodySchema()
 
 
 class Resources_POST_CreatedResponseSchema(colander.MappingSchema):
@@ -1433,6 +1432,15 @@ class UserGroup_DELETE_NotFoundResponseSchema(colander.MappingSchema):
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
+class UserResources_GET_QuerySchema(colander.MappingSchema):
+    inherit = QueryInheritGroupsPermissions
+
+
+class UserResources_GET_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    querystring = UserResources_GET_QuerySchema()
+
+
 class UserResources_GET_ResponseBodySchema(BaseResponseBodySchema):
     resources = ResourcesSchemaNode()
 
@@ -1452,6 +1460,15 @@ class UserResources_GET_NotFoundResponseSchema(colander.MappingSchema):
     description = "Failed to populate user resources."
     header = HeaderResponseSchema()
     body = UserResources_GET_NotFoundResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class UserResourcePermissions_GET_QuerySchema(colander.MappingSchema):
+    inherit = QueryInheritGroupsPermissions
+
+
+class UserResourcePermissions_GET_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    querystring = UserResourcePermissions_GET_QuerySchema()
 
 
 class UserResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1531,27 +1548,34 @@ class UserResourcePermissions_POST_ResponseBodySchema(BaseResponseBodySchema):
         description="permission_name of the created user-resource-permission reference.")
 
 
-class UserResourcePermissions_POST_ParamResponseBodySchema(colander.MappingSchema):
-    name = colander.SchemaNode(colander.String(), description="Specified parameter.", example='permission_name')
-    value = colander.SchemaNode(colander.String(), description="Specified parameter value.")
-
-
-class UserResourcePermissions_POST_BadResponseBodySchema(BaseResponseBodySchema):
-    resource_type = colander.SchemaNode(colander.String(), description="Specified resource_type.")
-    resource_name = colander.SchemaNode(colander.String(), description="Specified resource_name.")
-    param = UserResourcePermissions_POST_ParamResponseBodySchema()
-
-
 class UserResourcePermissions_POST_CreatedResponseSchema(colander.MappingSchema):
     description = "Create user resource permission successful."
     header = HeaderResponseSchema()
     body = UserResourcePermissions_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
 
 
+class UserResourcePermissions_POST_ParamResponseBodySchema(colander.MappingSchema):
+    name = colander.SchemaNode(colander.String(), description="Specified parameter.", example='permission_name')
+    value = colander.SchemaNode(colander.String(), description="Specified parameter value.")
+
+
+class UserResourcePermissions_POST_BadResponseBodySchema(BaseResponseBodySchema):
+    user_name = colander.SchemaNode(colander.String(), description="Specified user name.")
+    resource_id = colander.SchemaNode(colander.String(), description="Specified resource id.")
+    permission_name = colander.SchemaNode(colander.String(), description="Specified permission name.")
+    param = UserResourcePermissions_POST_ParamResponseBodySchema(missing=colander.drop)
+
+
 class UserResourcePermissions_POST_BadRequestResponseSchema(colander.MappingSchema):
     description = "Permission not allowed for specified `resource_type`."
     header = HeaderResponseSchema()
-    body = UserResourcePermissions_POST_BadResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
+    body = UserResourcePermissions_POST_BadResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class UserResourcePermissions_POST_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Creation of permission on resource for user refused by db."
+    header = HeaderResponseSchema()
+    body = UserResourcePermissions_POST_BadResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class UserResourcePermissions_POST_NotAcceptableResponseSchema(colander.MappingSchema):
@@ -1561,7 +1585,7 @@ class UserResourcePermissions_POST_NotAcceptableResponseSchema(colander.MappingS
 
 
 class UserResourcePermissions_POST_ConflictResponseSchema(colander.MappingSchema):
-    description = "Permission already exist on resource for user, cannot add to db."
+    description = "Permission already exist on resource for user."
     header = HeaderResponseSchema()
     body = UserResourcePermissions_POST_ResponseBodySchema(code=HTTPConflict.code, description=description)
 
@@ -2395,6 +2419,7 @@ UserResourcePermissions_POST_responses = {
     '201': UserResourcePermissions_POST_CreatedResponseSchema(),
     '400': UserResourcePermissions_POST_BadRequestResponseSchema(),
     '401': UnauthorizedResponseSchema(),
+    '403': UserResourcePermissions_POST_ForbiddenResponseSchema(),
     '406': UserResourcePermissions_POST_NotAcceptableResponseSchema(),
     '409': UserResourcePermissions_POST_ConflictResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),

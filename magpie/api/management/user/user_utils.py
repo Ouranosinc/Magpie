@@ -46,13 +46,18 @@ def create_user(user_name, password, email, group_name, db_session):
 def create_user_resource_permission(permission_name, resource, user_id, db_session):
     check_valid_service_resource_permission(permission_name, resource, db_session)
     resource_id = resource.resource_id
-    new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id)
-    verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable, paramName=u'permission_name',
+    existing_perm = UserResourcePermissionService.by_resource_user_and_perm(
+        user_id=user_id, resource_id=resource_id, perm_name=permission_name, db_session=db_session)
+    verify_param(existing_perm, isNone=True, httpError=HTTPConflict,
+                 content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name},
+                 msgOnFail=UserResourcePermissions_POST_ConflictResponseSchema.description)
+
+    new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id, perm_name=permission_name)
+    verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
                  content={u'resource_id': resource_id, u'user_id': user_id},
                  msgOnFail=UserResourcePermissions_POST_NotAcceptableResponseSchema.description)
-    new_perm.perm_name = permission_name
     evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
-                  httpError=HTTPConflict, msgOnFail=UserResourcePermissions_POST_ConflictResponseSchema.description,
+                  httpError=HTTPForbidden, msgOnFail=UserResourcePermissions_POST_ForbiddenResponseSchema.description,
                   content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
     return valid_http(httpSuccess=HTTPCreated, detail=UserResourcePermissions_POST_CreatedResponseSchema.description,
                       content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
