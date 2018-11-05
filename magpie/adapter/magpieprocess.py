@@ -232,7 +232,10 @@ class MagpieProcessStore(ProcessStore):
             resp = requests.post(path, data=data, cookies=self.magpie_admin_token,
                                  headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code == HTTPCreated.code:
-                res_id = resp.json()['resource']['resource_id']
+                if resource_type == 'service':
+                    res_id = self._find_resource_id(resource_parent_id, resource_name)
+                else:
+                    res_id = resp.json()['resource']['resource_id']
             elif resp.status_code == HTTPConflict.code:
                 res_id = self._find_resource_id(resource_parent_id, resource_name)
             else:
