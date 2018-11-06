@@ -291,8 +291,12 @@ class MagpieProcessStore(ProcessStore):
                                 headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if not resp.status_code == HTTPOk.code:
                 raise resp.raise_for_status()
-            user_name = resp.json()['user']['user_name']
-            self._create_resource_permissions(process_res_id, ['read', 'write'], user_names=user_name)
+            try:
+                user_name = resp.json()['user']['user_name']
+                self._create_resource_permissions(process_res_id, ['read', 'write'], user_names=user_name)
+            except KeyError:
+                # If the request is anonymous do not create the permission
+                pass
 
         return processstore_defaultfactory(request.registry).save_process(process, overwrite, request)
 
