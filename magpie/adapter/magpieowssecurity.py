@@ -5,7 +5,6 @@ from magpie.models import Service
 from magpie.api.api_except import evaluate_call, verify_param
 from magpie.adapter.utils import get_magpie_url
 from requests.cookies import RequestsCookieJar
-from copy import deepcopy
 import requests
 import logging
 LOGGER = logging.getLogger("TWITCHER")
@@ -53,7 +52,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             magpie_url = request.registry.settings.get('magpie.url')
             magpie_prov = request.params.get('provider', 'WSO2')
             magpie_auth = '{host}/providers/{provider}/signin'.format(host=magpie_url, provider=magpie_prov)
-            headers = deepcopy(request.headers)
+            headers = dict(request.headers)
             headers.update({'Homepage-Route': '/session', 'Accept': 'application/json'})
             session_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)
             if session_resp.status_code != HTTPOk.code:
