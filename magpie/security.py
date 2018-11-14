@@ -16,7 +16,7 @@ def auth_config_from_settings(settings):
                                         settings_name='magpie.cookie_expire', default_value=None,
                                         raise_missing=False, raise_not_set=False, print_missing=True)
     magpie_cookie_name = get_constant('MAGPIE_COOKIE_NAME', settings=settings,
-                                      settings_name='magpie.token_name', default_value='auth_tkt',
+                                      settings_name='magpie.cookie_name', default_value='auth_tkt',
                                       raise_missing=False, raise_not_set=False, print_missing=True)
     authn_policy = AuthTktAuthenticationPolicy(
         magpie_secret,
@@ -26,7 +26,7 @@ def auth_config_from_settings(settings):
         http_only=True,
         # Automatically refresh the cookie unless inactivity reached 'timeout'
         timeout=magpie_cookie_expire,
-        reissue_time=int(magpie_cookie_expire / 10) if magpie_cookie_expire else None,
+        reissue_time=int(magpie_cookie_expire) / 10 if magpie_cookie_expire else None,
     )
     authz_policy = ACLAuthorizationPolicy()
 
