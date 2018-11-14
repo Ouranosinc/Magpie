@@ -5,6 +5,7 @@ from magpie.models import Service
 from magpie.api.api_except import evaluate_call, verify_param
 from magpie.adapter.utils import get_magpie_url
 from requests.cookies import RequestsCookieJar
+from six.moves.urllib.parse import urlparse
 import requests
 import logging
 LOGGER = logging.getLogger("TWITCHER")
@@ -49,16 +50,17 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         """
         not_default = get_twitcher_configuration(request.registry.settings) != TWITCHER_CONFIGURATION_DEFAULT
         if not_default and 'Authorization' in request.headers and 'auth_tkt' not in request.cookies:
-            magpie_url = request.registry.settings.get('magpie.url')
             magpie_prov = request.params.get('provider', 'WSO2')
-            magpie_auth = '{host}/providers/{provider}/signin'.format(host=magpie_url, provider=magpie_prov)
+            magpie_auth = '{host}/providers/{provider}/signin'.format(host=self.magpie_url, provider=magpie_prov)
             headers = dict(request.headers)
             headers.update({'Homepage-Route': '/session', 'Accept': 'application/json'})
             session_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)
             if session_resp.status_code != HTTPOk.code:
                 raise session_resp.raise_for_status()
+            # need to use specific domain to differentiate between `.{hostname}` and `{hostname}` variations
+            magpie_domain = urlparse(self.magpie_url).hostname
             # noinspection PyProtectedMember
-            session_cookies = RequestsCookieJar.get(session_resp.request._cookies, 'auth_tkt')
+            session_cookies = RequestsCookieJar.get(session_resp.request._cookies, 'auth_tkt', domain=magpie_domain)
             if not session_resp.json().get('authenticated') or not session_cookies:
                 raise OWSAccessForbidden("Not authorized to access this resource.")
             request.cookies.update({'auth_tkt': session_cookies})

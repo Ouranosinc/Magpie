@@ -13,6 +13,7 @@ History
 * add inherited resource permission with querystring (deprecate `inherited_<>` routes warnings)
 * hide service private URL on non administrator level requests
 * fix external providers login support (validated for DKRZ, GitHub and WSO2)
+* make cookies expire-able by setting `MAGPIE_COOKIE_EXPIRE` and provide cookie only on http (JS CSRF attack protection)
 * update `MagpieAdapter.MagpieOWSSecurity` for WSO2 seamless integration with Authentication header token
 * update `MagpieAdapter.MagpieProcess` for automatic handling of REST-API WPS process route access permissions
 * update `MagpieAdapter.MagpieService` accordingly to inherited resources and service URL changes
