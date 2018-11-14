@@ -11,7 +11,12 @@ History
 * add service resource auto-sync feature
 * return user/group services if any sub-resource has permissions
 * add inherited resource permission with querystring (deprecate `inherited_<>` routes warnings)
+* hide service private URL on non administrator level requests
 * fix external providers login support (validated for DKRZ, GitHub and WSO2)
+* update `MagpieAdapter.MagpieOWSSecurity` for WSO2 seamless integration with Authentication header token
+* update `MagpieAdapter.MagpieProcess` for automatic handling of REST-API WPS process route access permissions
+* update `MagpieAdapter.MagpieService` accordingly to inherited resources and service URL changes
+* bug fixes related to postgres DB entry conflicting inserts and validations
 
 0.6.x
 ---------------------
