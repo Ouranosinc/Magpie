@@ -57,7 +57,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             session_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)
             if session_resp.status_code != HTTPOk.code:
                 raise session_resp.raise_for_status()
-            session_token = RequestsCookieJar.get(session_resp.cookies, 'auth_tkt', domain=self.magpie_url)
-            if not session_resp.json().get('authenticated') or not session_token:
+            # noinspection PyProtectedMember
+            session_cookies = RequestsCookieJar.get(session_resp.request._cookies, 'auth_tkt')
+            if not session_resp.json().get('authenticated') or not session_cookies:
                 raise OWSAccessForbidden("Not authorized to access this resource.")
-            request.cookies['auth_tkt'] = session_token
+            request.cookies.update({'auth_tkt': session_cookies})
