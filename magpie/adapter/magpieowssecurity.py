@@ -4,6 +4,7 @@ from magpie.services import service_factory
 from magpie.models import Service
 from magpie.api.api_except import evaluate_call, verify_param
 from magpie.adapter.utils import get_magpie_url
+from magpie.constants import get_constant
 from requests.cookies import RequestsCookieJar
 from six.moves.urllib.parse import urlparse
 import requests
@@ -44,12 +45,13 @@ class MagpieOWSSecurity(OWSSecurityInterface):
 
     def update_request_cookies(self, request):
         """
-        Ensure login of the user and update the request cookies if twitcher is in a special configuration.
-        Only update if Magpie `auth_tkt` is missing and can be retrieved from `access_token` in `Authorization` header.
+        Ensure login of the user and update the request cookies if Twitcher is in a special configuration.
+        Only update if `MAGPIE_COOKIE_NAME` is missing and is retrievable from `access_token` in `Authorization` header.
         Counter-validate the login procedure by calling Magpie's `/session` which should indicated a logged user.
         """
+        token_name = get_constant('MAGPIE_COOKIE_NAME', settings_name=request.registry.settings)
         not_default = get_twitcher_configuration(request.registry.settings) != TWITCHER_CONFIGURATION_DEFAULT
-        if not_default and 'Authorization' in request.headers and 'auth_tkt' not in request.cookies:
+        if not_default and 'Authorization' in request.headers and token_name not in request.cookies:
             magpie_prov = request.params.get('provider', 'WSO2')
             magpie_auth = '{host}/providers/{provider}/signin'.format(host=self.magpie_url, provider=magpie_prov)
             headers = dict(request.headers)
@@ -57,10 +59,13 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             session_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)
             if session_resp.status_code != HTTPOk.code:
                 raise session_resp.raise_for_status()
-            # need to use specific domain to differentiate between `.{hostname}` and `{hostname}` variations
-            magpie_domain = urlparse(self.magpie_url).hostname
+
+            # use specific domain to differentiate between `.{hostname}` and `{hostname}` variations if applicable
             # noinspection PyProtectedMember
-            session_cookies = RequestsCookieJar.get(session_resp.request._cookies, 'auth_tkt', domain=magpie_domain)
+            request_cookies = session_resp.request._cookies
+            magpie_cookies = filter(lambda cookie: cookie.name == token_name, request_cookies)
+            magpie_domain = urlparse(self.magpie_url).hostname if len(magpie_cookies) > 1 else None
+            session_cookies = RequestsCookieJar.get(request_cookies, token_name, domain=magpie_domain)
             if not session_resp.json().get('authenticated') or not session_cookies:
                 raise OWSAccessForbidden("Not authorized to access this resource.")
-            request.cookies.update({'auth_tkt': session_cookies})
+            request.cookies.update({token_name: session_cookies})

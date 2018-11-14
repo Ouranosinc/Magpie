@@ -81,7 +81,7 @@ def main(global_config=None, **settings):
     # Don't use scan otherwise modules like 'magpie.adapter' are
     # automatically found and cause import errors on missing packages
     #config.scan('magpie')
-    config.set_default_permission(MAGPIE_ADMIN_PERMISSION)
+    config.set_default_permission(get_constant('MAGPIE_ADMIN_PERMISSION'))
 
     print_log('Starting Magpie app...')
     wsgi_app = config.make_wsgi_app()
