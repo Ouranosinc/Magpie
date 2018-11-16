@@ -58,7 +58,9 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             headers.update({'Homepage-Route': '/session', 'Accept': 'application/json'})
             session_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)
             if session_resp.status_code != HTTPOk.code:
-                raise session_resp.raise_for_status()
+                raise OWSAccessForbidden("Not authorized to access this resource. " +
+                                         "Provider login failed with following reason: [{}]"
+                                         .format(session_resp.reason))
 
             # use specific domain to differentiate between `.{hostname}` and `{hostname}` variations if applicable
             # noinspection PyProtectedMember
@@ -67,5 +69,6 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             magpie_domain = urlparse(self.magpie_url).hostname if len(magpie_cookies) > 1 else None
             session_cookies = RequestsCookieJar.get(request_cookies, token_name, domain=magpie_domain)
             if not session_resp.json().get('authenticated') or not session_cookies:
-                raise OWSAccessForbidden("Not authorized to access this resource.")
+                raise OWSAccessForbidden("Not authorized to access this resource. " +
+                                         "Session authentication could not be verified.")
             request.cookies.update({token_name: session_cookies})

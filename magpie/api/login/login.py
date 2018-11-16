@@ -173,6 +173,7 @@ def authomatic_login(request):
             cred = Credentials(authomatic_handler.config, token=access_token, token_type=token_type, provider=provider)
             provider.credentials = cred
             result = LoginResult(provider)
+            # noinspection PyProtectedMember
             result.provider.user = result.provider._update_or_create_user(data, credentials=cred)
 
         # otherwise, use the standard login procedure
