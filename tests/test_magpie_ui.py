@@ -33,7 +33,8 @@ class TestMagpieUI_NoAuth_Local(ti.TestMagpieUI_NoAuth_Interface):
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
         cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
-        cls.json_headers = utils.get_headers_content_type(cls.app, 'application/json')
+        cls.json_headers = utils.get_headers(cls.app, {'Accept': 'application/json',
+                                                       'Content-Type': 'application/json'})
         cls.cookies = None
         cls.test_user = get_constant('MAGPIE_ANONYMOUS_USER')
         cls.test_group = get_constant('MAGPIE_ANONYMOUS_GROUP')
@@ -59,7 +60,8 @@ class TestMagpieUI_AdminAuth_Local(ti.TestMagpieUI_AdminAuth_Interface):
         cls.pwd = get_constant('MAGPIE_TEST_ADMIN_PASSWORD')
         cls.app = utils.get_test_magpie_app()
         cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
-        cls.json_headers = utils.get_headers_content_type(cls.url, 'application/json')
+        cls.json_headers = utils.get_headers(cls.app, {'Accept': 'application/json',
+                                                       'Content-Type': 'application/json'})
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
         # TODO: fix UI views so that they can be 'found' directly in the WebTest.TestApp
@@ -87,7 +89,8 @@ class TestMagpieUI_NoAuth_Remote(ti.TestMagpieUI_NoAuth_Interface):
     @classmethod
     def setUpClass(cls):
         cls.url = get_constant('MAGPIE_TEST_REMOTE_SERVER_URL')
-        cls.json_headers = utils.get_headers_content_type(cls.url, 'application/json')
+        cls.json_headers = utils.get_headers(cls.url, {'Accept': 'application/json',
+                                                       'Content-Type': 'application/json'})
         cls.cookies = None
         cls.usr = get_constant('MAGPIE_ANONYMOUS_USER')
         cls.version = utils.TestSetup.get_Version(cls)
@@ -114,7 +117,8 @@ class TestMagpieUI_AdminAuth_Remote(ti.TestMagpieUI_AdminAuth_Interface):
         cls.url = get_constant('MAGPIE_TEST_REMOTE_SERVER_URL')
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
         cls.require = "cannot run tests without logged in '{}' user".format(get_constant('MAGPIE_ADMIN_GROUP'))
-        cls.json_headers = utils.get_headers_content_type(cls.url, 'application/json')
+        cls.json_headers = utils.get_headers(cls.url, {'Accept': 'application/json',
+                                                       'Content-Type': 'application/json'})
         cls.check_requirements()
         cls.version = utils.TestSetup.get_Version(cls)
         cls.test_user = get_constant('MAGPIE_ANONYMOUS_USER')

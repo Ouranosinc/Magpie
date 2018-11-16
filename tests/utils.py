@@ -1,4 +1,5 @@
 import requests
+import json
 import six
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
@@ -33,10 +34,10 @@ def get_hostname(app_or_url):
     return urlparse(app_or_url).hostname
 
 
-def get_headers_content_type(app_or_url, content_type):
+def get_headers(app_or_url, header_dict):
     if isinstance(app_or_url, TestApp):
-        return [('Content-Type', content_type)]
-    return {'Content-Type': content_type}
+        return header_dict.items()
+    return header_dict
 
 
 def get_response_content_types_list(response):
@@ -65,6 +66,7 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
     :return: response of the request
     """
     method = method.upper()
+    status = kwargs.pop('status', None)
 
     # obtain json body from any json/data/body/params kw and empty {} if not specified
     # reapply with the expected webtest/requests method kw afterward
@@ -83,14 +85,22 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
                 app_or_url.cookies.update(cookies)
 
         kwargs['params'] = json_body
-        if method == 'GET':
-            return app_or_url.get(path, **kwargs)
-        elif method == 'POST':
-            return app_or_url.post_json(path, **kwargs)
-        elif method == 'PUT':
-            return app_or_url.put_json(path, **kwargs)
-        elif method == 'DELETE':
-            return app_or_url.delete_json(path, **kwargs)
+
+        # convert JSON body as required
+        if json_body is not None:
+            kwargs.update({'params': json.dumps(json_body, cls=json.JSONEncoder)})
+        if status and status >= 300:
+            kwargs.update({'expect_errors': True})
+        resp = app_or_url._gen_request(method, path, **kwargs)
+        # automatically follow the redirect if any and evaluate its response
+        max_redirect = kwargs.get('max_redirects', 5)
+        while 300 <= resp.status_code < 400 and max_redirect > 0:
+            resp = resp.follow()
+            max_redirect -= 1
+        assert max_redirect >= 0, "Maximum follow redirects reached."
+        # test status accordingly if specified
+        assert resp.status_code == status or status is None, "Response not matching the expected status code."
+        return resp
     else:
         # remove keywords specific to TestApp
         kwargs.pop('expect_errors', None)

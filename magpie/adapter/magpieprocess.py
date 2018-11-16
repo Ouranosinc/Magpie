@@ -47,7 +47,7 @@ class MagpieProcessStore(ProcessStore):
         self.magpie_service = 'ems'
         self.twitcher_config = get_twitcher_configuration(registry.settings)
         self.twitcher_url = get_twitcher_url(registry.settings)
-        self.json_headers = {'Accept': 'application/json'}
+        self.json_headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
 
         # setup basic configuration ('/ems' service of type 'api', '/ems/processes' resource, admin permissions)
         ems_res_id = self._create_resource(self.magpie_service, resource_parent_id=None, resource_type='service',
@@ -316,10 +316,10 @@ class MagpieProcessStore(ProcessStore):
                 ems_processes_id = self._get_service_processes_resource()
                 process_res_id = self._find_resource_id(ems_processes_id, process_id)
 
-                # deleting the top-resource, magpie should automatically handle deletion of all sub-resources/permissions
+                # delete the top-resource, magpie should automatically handle deletion of all sub-resources/permissions
                 path = '{host}/resources/{id}'.format(host=self.magpie_url, id=process_res_id)
                 resp = requests.delete(path, cookies=self.magpie_admin_token,
-                                   headers=self.json_headers, verify=self.twitcher_ssl_verify)
+                                       headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 if resp.status_code != HTTPOk.code:
                     raise resp.raise_for_status()
             except HTTPNotFound:
@@ -379,7 +379,7 @@ class MagpieProcessStore(ProcessStore):
                 LOGGER.debug("Exception during processes listing: [{}]".format(repr(ex)))
                 raise
 
-        LOGGER.debug("Found visible processes: {!s}.".format(process_list))
+        LOGGER.debug("Found visible processes: {!s}.".format([process.id for process in process_list]))
         return process_list
 
     def fetch_by_id(self, process_id, request=None):

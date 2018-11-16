@@ -295,7 +295,10 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @pytest.mark.users
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
     def test_GetUserInheritedResources(self):
-        route = '/users/{usr}/inherited_resources'.format(usr=self.usr)
+        if LooseVersion(self.version) >= LooseVersion('0.7.0'):
+            route = '/users/{usr}/inherited_resources'.format(usr=self.usr)
+        else:
+            route = '/users/{usr}/resources?inherit=true'.format(usr=self.usr)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('resources', json_body)
@@ -482,7 +485,8 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def test_PostUserGroup_not_found(self):
         route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
         data = {'group_name': 'not_found'}
-        resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers, cookies=self.cookies, data=data)
+        resp = utils.test_request(self.url, 'POST', route, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies, data=data)
         utils.check_response_basic_info(resp, 404, expected_method='POST')
 
     @pytest.mark.groups
@@ -490,7 +494,8 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def test_PostUserGroup_conflict(self):
         route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
         data = {'group_name': get_constant('MAGPIE_ADMIN_GROUP')}
-        resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers, cookies=self.cookies, data=data)
+        resp = utils.test_request(self.url, 'POST', route,  expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies, data=data)
         utils.check_response_basic_info(resp, 409, expected_method='POST')
 
     @pytest.mark.groups

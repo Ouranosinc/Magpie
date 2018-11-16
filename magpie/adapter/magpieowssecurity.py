@@ -25,8 +25,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             service_name = parse_service_name(request.path, self.twitcher_protected_path)
             service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=request.db),
                                     fallback=lambda: request.db.rollback(),
-                                    httpError=HTTPForbidden, msgOnFail="Service query by name refused by db")
-            verify_param(service, notNone=True, httpError=HTTPNotFound, msgOnFail="Service name not found in db")
+                                    httpError=HTTPForbidden, msgOnFail="Service query by name refused by db.")
+            verify_param(service, notNone=True, httpError=HTTPNotFound, msgOnFail="Service name not found in db.")
 
             # return a specific type of service, ex: ServiceWPS with all the acl (loaded according to the service_type)
             service_specific = service_factory(service, request)
@@ -41,7 +41,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                 principals = authn_policy.effective_principals(request)
                 has_permission = authz_policy.permits(service_specific, principals, permission_requested)
                 if not has_permission:
-                    raise OWSAccessForbidden("Not authorized to access this resource.")
+                    raise OWSAccessForbidden("Not authorized to access this resource. " +
+                                             "User does not meet required permissions.")
 
     def update_request_cookies(self, request):
         """
@@ -59,7 +60,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             session_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)
             if session_resp.status_code != HTTPOk.code:
                 raise OWSAccessForbidden("Not authorized to access this resource. " +
-                                         "Provider login failed with following reason: [{}]"
+                                         "Provider login failed with following reason: [{}]."
                                          .format(session_resp.reason))
 
             # use specific domain to differentiate between `.{hostname}` and `{hostname}` variations if applicable
