@@ -56,7 +56,8 @@ def sign_in(request):
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
         signin_internal_url = request.route_url('ziggurat.routes.sign_in')
         signin_internal_data = {u'user_name': user_name, u'password': password, u'provider_name': provider_name}
-        signin_response = requests.post(signin_internal_url, data=signin_internal_data, allow_redirects=True, verify=False)
+        signin_response = requests.post(signin_internal_url, data=signin_internal_data,
+                                        allow_redirects=True, verify=False)
 
         if signin_response.status_code == HTTPOk.code:
             pyramid_response = Response(body=signin_response.content, headers=signin_response.headers)
