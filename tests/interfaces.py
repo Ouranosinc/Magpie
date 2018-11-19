@@ -102,9 +102,11 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        utils.TestSetup.delete_TestServiceResource(cls)
-        utils.TestSetup.delete_TestUser(cls)
         pyramid.testing.tearDown()
+
+    def tearDown(self):
+        utils.TestSetup.delete_TestServiceResource(self)
+        utils.TestSetup.delete_TestUser(self)
 
     @classmethod
     def check_requirements(cls):
@@ -414,6 +416,95 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
         users = utils.TestSetup.get_RegisteredUsersList(self)
         utils.check_val_is_in(self.test_user_name, users)
+
+    @pytest.mark.users
+    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    def test_PutUsers_nothing(self):
+        utils.TestSetup.create_TestUser(self)
+        route = '/users/{usr}'.format(usr=self.test_user_name)
+        resp = utils.test_request(self.url, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data={},
+                                  expect_errors=True)
+        utils.check_response_basic_info(resp, 400, expected_method='PUT')
+
+    @pytest.mark.users
+    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    def test_PutUsers_username(self):
+        utils.TestSetup.create_TestUser(self)
+        new_name = self.test_user_name + '-new'
+        data = {'user_name': new_name}
+        route = '/users/{usr}'.format(usr=self.test_user_name)
+        resp = utils.test_request(self.url, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data=data)
+        utils.check_response_basic_info(resp, 200, expected_method='PUT')
+
+        # validate change of user name
+        route = '/users/{usr}'.format(usr=new_name)
+        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method='GET')
+        utils.check_val_equal(body['user']['user_name'], new_name)
+
+        # validate effective new user name
+        data = {'user_name': new_name, 'password': self.test_user_name}
+        resp = utils.test_request(self.url, 'POST', '/signin', headers=self.json_headers, data=data)
+        utils.check_response_basic_info(resp, 200, expected_method='POST')
+        resp = utils.test_request(self.url, 'GET', '/session', headers=self.json_headers, cookies=resp.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method='GET')
+        utils.check_val_equal(body['authenticated'], True)
+        utils.check_val_equal(body['user']['user_name'], new_name)
+
+        # validate ineffective previous user name
+        route = '/users/{usr}'.format(usr=self.test_user_name)
+        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies,
+                                  expect_errors=True)
+        utils.check_response_basic_info(resp, 404, expected_method='GET')
+        data = {'user_name': self.test_user_name, 'password': self.test_user_name}
+        resp = utils.test_request(self.url, 'POST', '/signin', headers=self.json_headers, data=data,
+                                  expect_errors=True)
+        if LooseVersion(self.version) >= LooseVersion('0.7.8'):
+            utils.check_response_basic_info(resp, 401, expected_method='POST')
+        else:
+            utils.check_response_basic_info(resp, 400, expected_method='POST')
+
+    @pytest.mark.users
+    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    def test_PutUsers_email(self):
+        utils.TestSetup.create_TestUser(self)
+        new_email = 'toto@new-email.lol'
+        data = {'email': new_email}
+        route = '/users/{usr}'.format(usr=self.test_user_name)
+        resp = utils.test_request(self.url, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data=data)
+        utils.check_response_basic_info(resp, 200, expected_method='PUT')
+
+        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method='GET')
+        utils.check_val_equal(body['user']['email'], new_email)
+
+    @pytest.mark.users
+    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    def test_PutUsers_password(self):
+        utils.TestSetup.create_TestUser(self)
+        old_password = self.test_user_name
+        new_password = 'n0t-SO-ez-2-Cr4cK'
+        data = {'password': new_password}
+        route = '/users/{usr}'.format(usr=self.test_user_name)
+        resp = utils.test_request(self.url, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data=data)
+        utils.check_response_basic_info(resp, 200, expected_method='PUT')
+
+        # validate that the new password is effective
+        data = {'user_name': self.test_user_name, 'password': new_password}
+        resp = utils.test_request(self.url, 'POST', '/signin', headers=self.json_headers, data=data)
+        utils.check_response_basic_info(resp, 200, expected_method='POST')
+        resp = utils.test_request(self.url, 'GET', '/session', headers=self.json_headers, cookies=resp.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method='GET')
+        utils.check_val_equal(body['authenticated'], True)
+        utils.check_val_equal(body['user']['user_name'], self.test_user_name)
+
+        # validate that previous password is ineffective
+        data = {'user_name': self.test_user_name, 'password': old_password}
+        resp = utils.test_request(self.url, 'POST', '/signin', headers=self.json_headers, data=data, expect_errors=True)
+        if LooseVersion(self.version) >= LooseVersion('0.7.8'):
+            utils.check_response_basic_info(resp, 401, expected_method='POST')
+        else:
+            utils.check_response_basic_info(resp, 400, expected_method='POST')
 
     @pytest.mark.users
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))

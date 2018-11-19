@@ -3,6 +3,7 @@ from authomatic.core import LoginResult, Credentials, resolve_provider_class
 from authomatic.exceptions import OAuth2Error
 from magpie.security import authomatic_setup, get_provider_names
 from magpie.definitions.ziggurat_definitions import *
+from magpie.api.api_generic import get_request_info
 from magpie.api.api_except import *
 from magpie.api.api_requests import *
 from magpie.api.api_rest_schemas import *
@@ -64,7 +65,7 @@ def sign_in(request):
             for cookie in signin_response.cookies:
                 pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
             return pyramid_response
-        login_failure(request)
+        login_failure(request, "Incorrect credentials.")
 
     elif provider_name in MAGPIE_EXTERNAL_PROVIDERS.keys():
         return evaluate_call(lambda: process_sign_in_external(request, user_name, provider_name),
@@ -78,7 +79,7 @@ def sign_in(request):
 def login_success_ziggurat(request):
     # headers contains login authorization cookie
     return valid_http(httpSuccess=HTTPOk, httpKWArgs={'headers': request.context.headers},
-                      detail=Signin_POST_OkResponseSchema.description, )
+                      detail=Signin_POST_OkResponseSchema.description)
 
 
 # swagger responses referred in `sign_in`
@@ -99,8 +100,9 @@ def login_failure(request, reason=None):
             if user_name in user_name_list:
                 httpError = HTTPUnauthorized
                 reason = "Incorrect credentials."
-    raise_http(httpError=httpError, content={u'reason': str(reason)},
-               detail=Signin_POST_UnauthorizedResponseSchema.description)
+    content = get_request_info(request, default_msg=Signin_POST_UnauthorizedResponseSchema.description)
+    content.update({u'reason': str(reason)})
+    raise_http(httpError=httpError, content=content, detail=Signin_POST_UnauthorizedResponseSchema.description)
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):

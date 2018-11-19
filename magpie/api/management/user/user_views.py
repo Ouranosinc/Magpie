@@ -41,11 +41,17 @@ def create_user_view(request):
 def update_user_view(request):
     """Update user information by user name."""
     user = get_user_matchdict_checked(request, user_name_key='user_name')
-    new_user_name = get_multiformat_post(request, 'user_name')
-    new_email = get_multiformat_post(request, 'email')
-    new_password = get_multiformat_post(request, 'password')
-    new_password = user.user_password if new_password is None else new_password
+    new_user_name = get_multiformat_post(request, 'user_name', default=user.user_name)
+    new_email = get_multiformat_post(request, 'email', default=user.email)
+    new_password = get_multiformat_post(request, 'password', default=user.user_password)
     check_user_info(new_user_name, new_email, new_password, group_name=new_user_name)
+
+    update_username = user.user_name != new_user_name
+    update_password = user.user_password != new_password
+    update_email = user.email != new_email
+    verify_param(any([update_username, update_password, update_email]), isTrue=True, httpError=HTTPBadRequest,
+                 content={u'user_name': user.user_name},
+                 msgOnFail=User_PUT_BadRequestResponseSchema.description)
 
     if user.user_name != new_user_name:
         evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
@@ -55,8 +61,8 @@ def update_user_view(request):
     if user.email != new_email:
         user.email = new_email
     if user.user_password != new_password and new_password is not None:
-        user.set_password(new_password)
-        user.regenerate_security_code()
+        UserService.set_password(user, new_password)
+        UserService.regenerate_security_code(user)
 
     return valid_http(httpSuccess=HTTPOk, detail=Users_PUT_OkResponseSchema.description)
 
