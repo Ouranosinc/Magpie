@@ -133,7 +133,7 @@ class MagpieProcessStore(ProcessStore):
         """Creates group if it doesn't exist."""
 
         path = '{host}/groups'.format(host=self.magpie_url)
-        resp = requests.post(path, cookies=self.magpie_admin_token, data={u'group_name': group_name},
+        resp = requests.post(path, cookies=self.magpie_admin_token, json={u'group_name': group_name},
                              headers=self.json_headers, verify=self.twitcher_ssl_verify)
         if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
             LOGGER.debug("Group `{}` creation or validation failed.".format(group_name))
@@ -165,7 +165,7 @@ class MagpieProcessStore(ProcessStore):
             for usr_grp, usr_grp_id in user_group_tuples:
                 path = '{host}/{usr_grp}/{id}/resources/{res_id}/permissions' \
                        .format(host=self.magpie_url, usr_grp=usr_grp, id=usr_grp_id, res_id=resource_id)
-                resp = requests.post(path, data=data, cookies=self.magpie_admin_token,
+                resp = requests.post(path, json=data, cookies=self.magpie_admin_token,
                                      headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 # permission is set if created or already exists
                 if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
@@ -229,7 +229,7 @@ class MagpieProcessStore(ProcessStore):
                 data.update(extra_data or {})
                 data.update({'service_name': resource_name})
             path = '{host}/{type}'.format(host=self.magpie_url, type=post_type)
-            resp = requests.post(path, data=data, cookies=self.magpie_admin_token,
+            resp = requests.post(path, json=data, cookies=self.magpie_admin_token,
                                  headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code == HTTPCreated.code:
                 if resource_type == 'service':
