@@ -11,6 +11,7 @@ import logging
 LOGGER = logging.getLogger("TWITCHER")
 
 
+# noinspection PyAbstractClass
 class MagpieAdapter(AdapterInterface):
     def describe_adapter(self):
         return {"name": self.__class__.__name__, "version": __meta__.__version__}
