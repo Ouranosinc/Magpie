@@ -54,9 +54,11 @@ def update_user_view(request):
                  msgOnFail=User_PUT_BadRequestResponseSchema.description)
 
     if user.user_name != new_user_name:
-        evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
-                      fallback=lambda: request.db.rollback(),
-                      httpError=HTTPConflict, msgOnFail=User_PUT_ConflictResponseSchema.description)
+        existing_user = evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
+                                      fallback=lambda: request.db.rollback(),
+                                      httpError=HTTPForbidden, msgOnFail=User_PUT_ForbiddenResponseSchema.description)
+        verify_param(existing_user, isNone=True, httpError=HTTPConflict,
+                     msgOnFail=User_PUT_ConflictResponseSchema.description)
         user.user_name = new_user_name
     if user.email != new_email:
         user.email = new_email
