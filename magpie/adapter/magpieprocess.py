@@ -49,7 +49,7 @@ class MagpieProcessStore(ProcessStore):
         self.twitcher_url = get_twitcher_url(registry.settings)
         self.json_headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
 
-        # setup basic configuration ('/ems' service of type 'api', '/ems/processes' resource, admin permissions)
+        # setup basic configuration ('/ems' service of type 'api', '/ems/processes' resource, admin full permissions)
         ems_res_id = self._create_resource(self.magpie_service, resource_parent_id=None, resource_type='service',
                                            group_names=self.magpie_admin_group, permission_names=['read', 'write'],
                                            extra_data={'service_type': 'api', 'service_url': self.twitcher_url})
@@ -133,7 +133,7 @@ class MagpieProcessStore(ProcessStore):
         """Creates group if it doesn't exist."""
 
         path = '{host}/groups'.format(host=self.magpie_url)
-        resp = requests.post(path, cookies=self.magpie_admin_token, data={u'group_name': group_name},
+        resp = requests.post(path, cookies=self.magpie_admin_token, json={u'group_name': group_name},
                              headers=self.json_headers, verify=self.twitcher_ssl_verify)
         if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
             LOGGER.debug("Group `{}` creation or validation failed.".format(group_name))
@@ -165,7 +165,7 @@ class MagpieProcessStore(ProcessStore):
             for usr_grp, usr_grp_id in user_group_tuples:
                 path = '{host}/{usr_grp}/{id}/resources/{res_id}/permissions' \
                        .format(host=self.magpie_url, usr_grp=usr_grp, id=usr_grp_id, res_id=resource_id)
-                resp = requests.post(path, data=data, cookies=self.magpie_admin_token,
+                resp = requests.post(path, json=data, cookies=self.magpie_admin_token,
                                      headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 # permission is set if created or already exists
                 if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
@@ -229,7 +229,7 @@ class MagpieProcessStore(ProcessStore):
                 data.update(extra_data or {})
                 data.update({'service_name': resource_name})
             path = '{host}/{type}'.format(host=self.magpie_url, type=post_type)
-            resp = requests.post(path, data=data, cookies=self.magpie_admin_token,
+            resp = requests.post(path, json=data, cookies=self.magpie_admin_token,
                                  headers=self.json_headers, verify=self.twitcher_ssl_verify)
             if resp.status_code == HTTPCreated.code:
                 if resource_type == 'service':
@@ -333,54 +333,26 @@ class MagpieProcessStore(ProcessStore):
         """
         List publicly visible processes according to the requesting user's user/group permissions.
 
-        Delegate execution to default twitcher process store.
+        Delegate execution to default twitcher process store to retrieve visibility values per process.
         If twitcher is not in EMS mode, filter by only visible processes using specified :param:`visibility`.
-        If twitcher is in EMS mode, filter according to magpie user and group permissions:
-            - administrators: return everything
-            - user has permission (directly or inherited from groups): return corresponding processes
-            - any other group: return only publicly visible processes
+        If twitcher is in EMS mode, filter processes according to magpie user and inherited group permissions.
         """
         visibility_filter = visibility if self.twitcher_config != TWITCHER_CONFIGURATION_EMS else visibility_values
         store = processstore_defaultfactory(request.registry)
-        process_list = store.list_processes(visibility=visibility_filter, request=request)
+        processes = store.list_processes(visibility=visibility_filter, request=request)
 
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
-            path = '{host}/users/{usr}/groups'.format(host=self.magpie_url, usr=self.magpie_current)
-            resp = requests.get(path, cookies=request.cookies,
-                                headers=self.json_headers, verify=self.twitcher_ssl_verify)
-            if resp.status_code != HTTPOk.code:
-                raise resp.raise_for_status()
             try:
-                groups_memberships = resp.json()['group_names']
-                # admins get everything, otherwise filter accordingly
-                if self.magpie_admin_group not in groups_memberships:
-                    ems_processes_id = self._get_service_processes_resource()
-                    for i, process in enumerate(process_list):
-                        # if the resource cannot be found, permissions are definitely not set, remove it from the list
-                        try:
-                            process_res_id = self._find_resource_id(ems_processes_id, process.id)
-                        except HTTPNotFound:
-                            del process_list[i]
-                            continue
-
-                        # use inherited flag to consider both user and group permissions on the resource
-                        path = '{host}/users/{usr}/resources/{res}/permissions?inherit=true' \
-                               .format(host=self.magpie_url, usr=self.magpie_current, res=process_res_id)
-                        resp = requests.get(path, cookies=request.cookies,
-                                            headers=self.json_headers, verify=self.twitcher_ssl_verify)
-                        if resp.status_code != HTTPOk.code:
-                            raise resp.raise_for_status()
-                        perms = resp.json()['permission_names']
-                        if 'read' not in perms and 'read-match' not in perms:
-                            del process_list[i]  # remove from the list if none of the 'read' permissions
+                ems_processes_id = self._get_service_processes_resource()
+                processes = filter(lambda p: self.is_visible_by_user(ems_processes_id, p.id, request), processes)
             except KeyError:
                 raise ProcessNotFound("Failed retrieving processes read permissions for listing.")
             except Exception as ex:
                 LOGGER.debug("Exception during processes listing: [{}]".format(repr(ex)))
                 raise
 
-        LOGGER.debug("Found visible processes: {!s}.".format([process.id for process in process_list]))
-        return process_list
+        LOGGER.debug("Found visible processes: {!s}.".format([process.id for process in processes]))
+        return processes
 
     def fetch_by_id(self, process_id, request=None):
         # type: (int, Optional[requests.Request]) -> Union[Process, None]
@@ -393,6 +365,32 @@ class MagpieProcessStore(ProcessStore):
             will automatically handle Ok/Unauthorized responses using the API route's read access.
         """
         return processstore_defaultfactory(request.registry).fetch_by_id(process_id, request=request)
+
+    def is_visible_by_user(self, ems_processes_id, process_id, request):
+        # type: (int, str, requests.Request) -> bool
+        """
+        Verifies if the user (according to cookies from the request) can see a given process by id.
+
+        :param ems_processes_id: Magpie resource id corresponding to '/ems/processes'.
+        :param process_id: identifier of the WPS process.
+        :param request: request to identify which user the visibility permissions has to be tested for.
+        """
+        # if the resource cannot be found, permissions are definitely not set, so it is not visible
+        try:
+            process_res_id = self._find_resource_id(ems_processes_id, process_id)
+        except HTTPNotFound:
+            return False
+
+        # use inherited flag to consider both user and group permissions on the resource
+        path = '{host}/users/{usr}/resources/{res}/permissions?inherit=true' \
+               .format(host=self.magpie_url, usr=self.magpie_current, res=process_res_id)
+        resp = requests.get(path, cookies=request.cookies, headers=self.json_headers, verify=self.twitcher_ssl_verify)
+        if resp.status_code != HTTPOk.code:
+            raise resp.raise_for_status()
+        perms = resp.json()['permission_names']
+        if 'read' not in perms and 'read-match' not in perms:
+            return False
+        return True
 
     def get_visibility(self, process_id, request=None):
         # type: (int, Optional[requests.Request]) -> str

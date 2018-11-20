@@ -1246,8 +1246,16 @@ class Users_PUT_OkResponseSchema(colander.MappingSchema):
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-# PUT method uses same sub-function as POST method (same responses)
-User_PUT_ForbiddenResponseSchema = Users_POST_ForbiddenResponseSchema
+class User_PUT_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Missing new user parameters to update."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class User_PUT_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Failed user verification with db."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class User_PUT_ConflictResponseSchema(colander.MappingSchema):
@@ -2455,11 +2463,11 @@ LoggedUser_GET_responses = {
 }
 LoggedUser_PUT_responses = {
     '200': Users_PUT_OkResponseSchema(),
-    '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
+    '400': User_PUT_BadRequestResponseSchema(),
     '401': UnauthorizedResponseSchema(),
-    '403': UserGroup_GET_ForbiddenResponseSchema(),
+    '403': User_PUT_ForbiddenResponseSchema(),
     '406': UserGroup_GET_NotAcceptableResponseSchema(),
-    '409': Users_CheckInfo_Login_ConflictResponseSchema(),
+    '409': User_PUT_ConflictResponseSchema(),
 }
 LoggedUser_DELETE_responses = {
     '200': User_DELETE_OkResponseSchema(),

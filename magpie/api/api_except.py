@@ -11,7 +11,7 @@ RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 
 def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWArgs=None, msgOnFail="",
                  content=None, contentType='application/json',
-                 notNone=False, notEmpty=False, notIn=False, notEqual=False,
+                 notNone=False, notEmpty=False, notIn=False, notEqual=False, isTrue=False, isFalse=False,
                  isNone=False,  isEmpty=False,  isIn=False,  isEqual=False, ofType=None,
                  withParam=True, paramName=None):
     """
@@ -21,10 +21,10 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
     Exceptions are generated using the standard output method.
 
     :param param: (bool) parameter value to evaluate
-    :param paramName: (str) name of the tested parameter returned in response if specified for debugging purposes
     :param paramCompare:
         other value(s) to test against, can be an iterable (single value resolved as iterable unless None)
-        to test for None type, use `isNone`/`notNone` flags instead or `paramCompare`=[None]
+        to test for None type, use `isNone`/`notNone` flags instead or `paramCompare=None`
+    :param paramName: (str) name of the tested parameter returned in response if specified for debugging purposes
     :param httpError: (HTTPError) derived exception to raise on test failure (default: `HTTPNotAcceptable`)
     :param httpKWArgs: (dict) additional keyword arguments to pass to `httpError` if called in case of HTTP exception
     :param msgOnFail: (str) message details to return in HTTP exception if flag condition failed
@@ -34,6 +34,8 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
     :param notEmpty: (bool) test that `param` is an empty string
     :param notIn: (bool) test that `param` does not exist in `paramCompare` values
     :param notEqual: (bool) test that `param` is not equal to `paramCompare` value
+    :param isTrue: (bool) test that `param` is `True`
+    :param isFalse: (bool) test that `param` is `False`
     :param isNone: (bool) test that `param` is None type
     :param isEmpty: (bool) test `param` for an empty string
     :param isIn: (bool) test that `param` exists in `paramCompare` values
@@ -56,6 +58,10 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
             raise Exception("`notIn` is not a `bool`")
         if type(notEqual) is not bool:
             raise Exception("`notEqual` is not a `bool`")
+        if type(isTrue) is not bool:
+            raise Exception("`isTrue` is not a `bool`")
+        if type(isFalse) is not bool:
+            raise Exception("`isFalse` is not a `bool`")
         if type(isNone) is not bool:
             raise Exception("`isNone` is not a `bool`")
         if type(isEmpty) is not bool:
@@ -78,11 +84,15 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
                    detail="Error occurred during parameter verification")
 
     # evaluate requested parameter combinations
-    status = False
+    status = False  # failure if status is True
     if notNone:
         status = status or (param is None)
     if isNone:
         status = status or (param is not None)
+    if isTrue:
+        status = status or (param is not True)
+    if isFalse:
+        status = status or (param is not False)
     if notEmpty:
         status = status or (param == "")
     if isEmpty:
