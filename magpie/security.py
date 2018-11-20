@@ -6,15 +6,27 @@ from magpie import models
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
 import logging
-LOGGER = logging.getLogger('magpie.authomatic')
-LOGGER.setLevel(logging.DEBUG)
+AUTHOMATIC_LOGGER = logging.getLogger('magpie.authomatic')
+AUTHOMATIC_LOGGER.setLevel(logging.DEBUG)
 
 
 def auth_config_from_settings(settings):
     magpie_secret = get_constant('MAGPIE_SECRET', settings=settings, settings_name='magpie.secret')
+    magpie_cookie_expire = get_constant('MAGPIE_COOKIE_EXPIRE', settings=settings,
+                                        settings_name='magpie.cookie_expire', default_value=None,
+                                        raise_missing=False, raise_not_set=False, print_missing=True)
+    magpie_cookie_name = get_constant('MAGPIE_COOKIE_NAME', settings=settings,
+                                      settings_name='magpie.cookie_name', default_value='auth_tkt',
+                                      raise_missing=False, raise_not_set=False, print_missing=True)
     authn_policy = AuthTktAuthenticationPolicy(
         magpie_secret,
+        cookie_name=magpie_cookie_name,
         callback=groupfinder,
+        # Protect against JavaScript CSRF attacks attempting cookies retrieval
+        http_only=True,
+        # Automatically refresh the cookie unless inactivity reached 'timeout'
+        timeout=magpie_cookie_expire,
+        reissue_time=int(magpie_cookie_expire) / 10 if magpie_cookie_expire else None,
     )
     authz_policy = ACLAuthorizationPolicy()
 
@@ -32,9 +44,9 @@ def authomatic_setup(request):
     return Authomatic(
         config=authomatic_config(request),
         secret=magpie_secret,
-        logger=LOGGER,
+        logger=AUTHOMATIC_LOGGER,
         report_errors=True,
-        logging_level=LOGGER.level
+        logging_level=AUTHOMATIC_LOGGER.level
     )
 
 

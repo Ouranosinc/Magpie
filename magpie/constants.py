@@ -44,6 +44,8 @@ except IOError:
 # variables from magpie.env
 # ===========================
 MAGPIE_SECRET = os.getenv('MAGPIE_SECRET', 'seekrit')
+MAGPIE_COOKIE_NAME = os.getenv('MAGPIE_COOKIE_NAME', 'auth_tkt')
+MAGPIE_COOKIE_EXPIRE = os.getenv('MAGPIE_COOKIE_EXPIRE', None)
 MAGPIE_ADMIN_USER = os.getenv('MAGPIE_ADMIN_USER', 'admin')
 MAGPIE_ADMIN_PASSWORD = os.getenv('MAGPIE_ADMIN_PASSWORD', 'qwerty')
 MAGPIE_ADMIN_EMAIL = '{}@mail.com'.format(MAGPIE_ADMIN_USER)

@@ -14,7 +14,8 @@ def get_admin_cookies(magpie_url, verify=True):
     resp = requests.post(magpie_login_url, data=cred, headers={'Accept': 'application/json'}, verify=verify)
     if resp.status_code != HTTPOk.code:
         raise resp.raise_for_status()
-    return dict(auth_tkt=resp.cookies.get('auth_tkt'))
+    token_name = get_constant('MAGPIE_COOKIE_NAME')
+    return {token_name: resp.cookies.get(token_name)}
 
 
 def get_magpie_url(registry):

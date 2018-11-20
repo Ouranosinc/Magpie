@@ -1,11 +1,6 @@
 from magpie.definitions.cornice_definitions import *
 from magpie.definitions.pyramid_definitions import *
-from magpie.constants import (
-    MAGPIE_LOGGED_USER,
-    MAGPIE_USER_NAME_MAX_LENGTH,
-    MAGPIE_ADMIN_PERMISSION,
-    MAGPIE_DEFAULT_PROVIDER
-)
+from magpie.constants import get_constant
 from magpie import __meta__
 import six
 
@@ -28,7 +23,7 @@ ServicesTag = 'Service'
 
 
 # Security
-SecurityCookieAuthAPI = {'cookieAuth': {'type': 'apiKey', 'in': 'cookie', 'name': 'auth_tkt'}}
+SecurityCookieAuthAPI = {'cookieAuth': {'type': 'apiKey', 'in': 'cookie', 'name': get_constant('MAGPIE_COOKIE_NAME')}}
 SecurityDefinitionsAPI = {'securityDefinitions': SecurityCookieAuthAPI}
 SecurityAdministratorAPI = [{'cookieAuth': []}]
 SecurityEveryoneAPI = [{}]
@@ -45,7 +40,7 @@ def get_security(service, method):
     permission = args.get('permission')
     if permission == NO_PERMISSION_REQUIRED:
         return SecurityEveryoneAPI
-    elif permission == MAGPIE_ADMIN_PERMISSION:
+    elif permission == get_constant('MAGPIE_ADMIN_PERMISSION'):
         return SecurityAdministratorAPI
     # return default admin permission otherwise unless specified form cornice decorator
     return SecurityAdministratorAPI if 'security' not in args else args['security']
@@ -56,7 +51,7 @@ def service_api_route_info(service_api):
     return {'name': service_api.name, 'pattern': service_api.path}
 
 
-LoggedUserBase = '/users/{}'.format(MAGPIE_LOGGED_USER)
+LoggedUserBase = '/users/{}'.format(get_constant('MAGPIE_LOGGED_USER'))
 
 
 SwaggerGenerator = Service(
@@ -1128,7 +1123,7 @@ class Users_CheckInfo_Name_BadRequestResponseSchema(colander.MappingSchema):
 
 class Users_CheckInfo_Size_BadRequestResponseSchema(colander.MappingSchema):
     description = "Invalid `user_name` length specified (>{length} characters)." \
-        .format(length=MAGPIE_USER_NAME_MAX_LENGTH)
+        .format(length=get_constant('MAGPIE_USER_NAME_MAX_LENGTH'))
     header = HeaderResponseSchema()
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
@@ -1803,7 +1798,7 @@ class Group_PUT_Name_NotAcceptableResponseSchema(colander.MappingSchema):
 
 class Group_PUT_Size_NotAcceptableResponseSchema(colander.MappingSchema):
     description = "Invalid `group_name` length specified (>{length} characters)." \
-        .format(length=MAGPIE_USER_NAME_MAX_LENGTH)
+        .format(length=get_constant('MAGPIE_USER_NAME_MAX_LENGTH'))
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
@@ -2146,7 +2141,7 @@ class Signin_POST_RequestBodySchema(colander.MappingSchema):
     user_name = colander.SchemaNode(colander.String(), description="User name to use for sign in.")
     password = colander.SchemaNode(colander.String(), description="Password to use for sign in.")
     provider_name = colander.SchemaNode(colander.String(), description="Provider to use for sign in.",
-                                        default=MAGPIE_DEFAULT_PROVIDER, missing=colander.drop)
+                                        default=get_constant('MAGPIE_DEFAULT_PROVIDER'), missing=colander.drop)
 
 
 class Signin_POST_RequestSchema(colander.MappingSchema):

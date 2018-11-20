@@ -5,33 +5,24 @@
 Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations
 """
 
+# -- Project specific --------------------------------------------------------
+from magpie.common import print_log, raise_log, str2bool
+from magpie.constants import get_constant
+from magpie.definitions.sqlalchemy_definitions import *
+from magpie.helpers.register_default_users import register_default_users
+from magpie.helpers.register_providers import magpie_register_services_from_config
+from magpie.security import auth_config_from_settings
+from magpie import db, constants
+
 # -- Standard library --------------------------------------------------------
-import argparse
 import time
 import warnings
 import logging
 import logging.config
 LOGGER = logging.getLogger(__name__)
 
-# -- Definitions
-from magpie.definitions.alembic_definitions import *
-from magpie.definitions.pyramid_definitions import *
-from magpie.definitions.sqlalchemy_definitions import *
-from magpie.definitions.ziggurat_definitions import *
 
-# -- Project specific --------------------------------------------------------
-from __init__ import *
-from magpie.api.api_except import *
-from magpie.api.api_rest_schemas import *
-from magpie.api.api_generic import *
-from magpie.common import print_log, raise_log, str2bool
-from magpie.constants import get_constant
-from magpie.helpers.register_default_users import register_default_users
-from magpie.helpers.register_providers import magpie_register_services_from_config
-from magpie.security import auth_config_from_settings
-from magpie import models, db, constants, __meta__
-
-
+# noinspection PyUnusedLocal
 def main(global_config=None, **settings):
     """
     This function returns a Pyramid WSGI application.
@@ -81,7 +72,7 @@ def main(global_config=None, **settings):
     # Don't use scan otherwise modules like 'magpie.adapter' are
     # automatically found and cause import errors on missing packages
     #config.scan('magpie')
-    config.set_default_permission(MAGPIE_ADMIN_PERMISSION)
+    config.set_default_permission(get_constant('MAGPIE_ADMIN_PERMISSION'))
 
     print_log('Starting Magpie app...')
     wsgi_app = config.make_wsgi_app()
