@@ -21,7 +21,7 @@ from twitcher.exceptions import ProcessNotFound, ProcessRegistrationError
 from twitcher.store import processstore_defaultfactory
 from twitcher.store.base import ProcessStore
 from twitcher.visibility import VISIBILITY_PUBLIC, VISIBILITY_PRIVATE, visibility_values
-from typing import List, Optional, Iterable, Union
+from typing import List, Optional, Iterable, Union, AnyStr
 import six
 import requests
 import logging
@@ -354,20 +354,27 @@ class MagpieProcessStore(ProcessStore):
         LOGGER.debug("Found visible processes: {!s}.".format([process.id for process in processes]))
         return processes
 
-    def fetch_by_id(self, process_id, request=None):
-        # type: (int, Optional[requests.Request]) -> Union[Process, None]
+    def fetch_by_id(self, process_id, visibility=None, request=None):
+        # type: (int, Optional[AnyStr], Optional[requests.Request]) -> Union[Process, None]
         """
         Get a process if visible for user.
 
         Delegate operation to default twitcher process store.
         If twitcher is in EMS mode:
-            using twitcher proxy, magpie user/group permissions on corresponding resource (/ems/processes/{process_id})
+          - using twitcher proxy, magpie user/group permissions on corresponding resource (/ems/processes/{process_id})
             will automatically handle Ok/Unauthorized responses using the API route's read access.
+          - ignore passed `visibility` if any and infer it from magpie user/group permissions instead
         """
-        return processstore_defaultfactory(request.registry).fetch_by_id(process_id, request=request)
+        if self.twitcher_config == TWITCHER_CONFIGURATION_EMS and visibility:
+            ems_process_id = self._get_service_processes_resource()
+            # override to allow retrieval of process if accessible by user regardless of 'visibility' setting
+            visibility = None if self.is_visible_by_user(ems_process_id, process_id, request) else visibility
+
+        store = processstore_defaultfactory(request.registry)
+        return store.fetch_by_id(process_id, visibility=visibility, request=request)
 
     def is_visible_by_user(self, ems_processes_id, process_id, request):
-        # type: (int, str, requests.Request) -> bool
+        # type: (int, AnyStr, requests.Request) -> bool
         """
         Verifies if the user (according to cookies from the request) can see a given process by id.
 
@@ -393,7 +400,7 @@ class MagpieProcessStore(ProcessStore):
         return True
 
     def get_visibility(self, process_id, request=None):
-        # type: (int, Optional[requests.Request]) -> str
+        # type: (int, Optional[requests.Request]) -> AnyStr
         """
         Get visibility of a process.
 
@@ -405,7 +412,7 @@ class MagpieProcessStore(ProcessStore):
         return processstore_defaultfactory(request.registry).get_visibility(process_id, request=request)
 
     def set_visibility(self, process_id, visibility, request=None):
-        # type: (int, str, Optional[requests.Request]) -> None
+        # type: (int, AnyStr, Optional[requests.Request]) -> None
         """
         Set visibility of a process.
 
