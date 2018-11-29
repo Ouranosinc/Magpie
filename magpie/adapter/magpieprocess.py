@@ -79,15 +79,13 @@ class MagpieProcessStore(ProcessStore):
             path = '{host}/services/{svc}'.format(host=self.magpie_url, svc=resource_name)
             resp = requests.get(path, cookies=self.magpie_admin_token,
                                 headers=self.json_headers, verify=self.twitcher_ssl_verify)
-            if resp.status_code != HTTPOk.code:
-                raise resp.raise_for_status()
+            resp.raise_for_status()
             return resp.json()[resource_name]['resource_id']
 
         path = '{host}/resources/{id}'.format(host=self.magpie_url, id=parent_resource_id)
         resp = requests.get(path, cookies=self.magpie_admin_token,
                             headers=self.json_headers, verify=self.twitcher_ssl_verify)
-        if resp.status_code != HTTPOk.code:
-            raise resp.raise_for_status()
+        resp.raise_for_status()
         child_res_id = None
         parent_resource_info = resp.json()[str(parent_resource_id)]
         children_resources = parent_resource_info['children']
@@ -110,8 +108,7 @@ class MagpieProcessStore(ProcessStore):
         path = '{host}/resources'.format(host=self.magpie_url)
         resp = requests.get(path, cookies=self.magpie_admin_token,
                             headers=self.json_headers, verify=self.twitcher_ssl_verify)
-        if resp.status_code != HTTPOk.code:
-            raise resp.raise_for_status()
+        resp.raise_for_status()
         ems_resources = None
         try:
             ems_resources = resp.json()['resources']['api'][self.magpie_service]['resources']
@@ -137,7 +134,7 @@ class MagpieProcessStore(ProcessStore):
                              headers=self.json_headers, verify=self.twitcher_ssl_verify)
         if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
             LOGGER.debug("Group `{}` creation or validation failed.".format(group_name))
-            raise resp.raise_for_status()
+            resp.raise_for_status()
 
     def _create_resource_permissions(self, resource_id, permission_names, group_names=None, user_names=None):
         # type: (int, Union[str, List[str]], Optional[Union[str, List[str]]], Optional[Union[str, List[str]]]) -> None
@@ -169,7 +166,7 @@ class MagpieProcessStore(ProcessStore):
                                      headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 # permission is set if created or already exists
                 if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
-                    raise resp.raise_for_status()
+                    resp.raise_for_status()
 
     def _delete_resource_permissions(self, resource_id, permission_names, group_names=None, user_names=None):
         # type: (int, Union[str, List[str]], Optional[Union[str, List[str]]], Optional[Union[str, List[str]]]) -> None
@@ -200,7 +197,7 @@ class MagpieProcessStore(ProcessStore):
                                        headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 # permission is not set if deleted or non existing
                 if reps.status_code not in (HTTPOk.code, HTTPNotFound.code):
-                    raise reps.raise_for_status()
+                    reps.raise_for_status()
 
     def _create_resource(self,
                          resource_name,             # type: str
@@ -231,6 +228,7 @@ class MagpieProcessStore(ProcessStore):
             path = '{host}/{type}'.format(host=self.magpie_url, type=post_type)
             resp = requests.post(path, json=data, cookies=self.magpie_admin_token,
                                  headers=self.json_headers, verify=self.twitcher_ssl_verify)
+            res_id = None
             if resp.status_code == HTTPCreated.code:
                 if resource_type == 'service':
                     res_id = self._find_resource_id(resource_parent_id, resource_name)
@@ -239,7 +237,7 @@ class MagpieProcessStore(ProcessStore):
             elif resp.status_code == HTTPConflict.code:
                 res_id = self._find_resource_id(resource_parent_id, resource_name)
             else:
-                raise resp.raise_for_status()
+                resp.raise_for_status()
             if group_names is not None and permission_names is not None:
                 self._create_resource_permissions(res_id, permission_names, group_names=group_names)
             return res_id
@@ -270,8 +268,7 @@ class MagpieProcessStore(ProcessStore):
                 path = '{host}/services/{svc}'.format(host=self.magpie_url, svc=self.magpie_service)
                 resp = requests.get(path, cookies=self.magpie_admin_token,
                                     headers=self.json_headers, verify=self.twitcher_ssl_verify)
-                if resp.status_code != HTTPOk.code:
-                    raise resp.raise_for_status()
+                resp.raise_for_status()
                 ems_res_id = resp.json()[self.magpie_service]['resource_id']
             except KeyError:
                 raise ProcessRegistrationError("Failed retrieving service resource.")
@@ -289,8 +286,7 @@ class MagpieProcessStore(ProcessStore):
             # current editor user is the only one allowed to edit his process (except admins), get is name from session
             resp = requests.get('{host}/session'.format(host=self.magpie_url), cookies=request.cookies,  # current user
                                 headers=self.json_headers, verify=self.twitcher_ssl_verify)
-            if not resp.status_code == HTTPOk.code:
-                raise resp.raise_for_status()
+            resp.raise_for_status()
             try:
                 user_name = resp.json()['user']['user_name']
                 self._create_resource_permissions(process_res_id, ['read', 'write'], user_names=user_name)
@@ -312,19 +308,25 @@ class MagpieProcessStore(ProcessStore):
             - also delete magpie resources tree corresponding to the process
         """
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
+            ems_processes_id = None
             try:
                 ems_processes_id = self._get_service_processes_resource()
-                process_res_id = self._find_resource_id(ems_processes_id, process_id)
+            except (ProcessNotFound, HTTPNotFound):
+                pass
+            try:
+                if self.is_visible_by_user(ems_processes_id, process_id, request) or self.is_admin_user(request):
+                    # override to allow deletion of process if accessible by user regardless of 'visibility' setting
+                    # always allow administrator to do the operation in case of out-of-sync resources or debugging
+                    visibility = None
 
-                # override to allow deletion of process if accessible by user regardless of 'visibility' setting
-                visibility = None if self.is_visible_by_user(ems_processes_id, process_id, request) else visibility
+                    # search for resource, skip cleanup with raised http if not found
+                    process_res_id = self._find_resource_id(ems_processes_id, process_id)
 
-                # delete the top-resource, magpie should automatically handle deletion of all sub-resources/permissions
-                path = '{host}/resources/{id}'.format(host=self.magpie_url, id=process_res_id)
-                resp = requests.delete(path, cookies=self.magpie_admin_token,
-                                       headers=self.json_headers, verify=self.twitcher_ssl_verify)
-                if resp.status_code != HTTPOk.code:
-                    raise resp.raise_for_status()
+                    # delete top-resource, magpie should automatically handle deletion of all sub-resources/permissions
+                    path = '{host}/resources/{id}'.format(host=self.magpie_url, id=process_res_id)
+                    resp = requests.delete(path, cookies=self.magpie_admin_token,
+                                           headers=self.json_headers, verify=self.twitcher_ssl_verify)
+                    resp.raise_for_status()
             except HTTPNotFound:
                 # If for any reason the resource that we want to delete does not exist silently ignore it
                 pass
@@ -371,11 +373,21 @@ class MagpieProcessStore(ProcessStore):
         """
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS and visibility:
             ems_processes_id = self._get_service_processes_resource()
+
             # override to allow retrieval of process if accessible by user regardless of 'visibility' setting
-            visibility = None if self.is_visible_by_user(ems_processes_id, process_id, request) else visibility
+            # always allow administrator to do the operation in case of out-of-sync resources or debugging
+            if self.is_visible_by_user(ems_processes_id, process_id, request) or self.is_admin_user(request):
+                visibility = None
 
         store = processstore_defaultfactory(request.registry)
         return store.fetch_by_id(process_id, visibility=visibility, request=request)
+
+    def is_admin_user(self, request):
+        # type: (requests.Request) -> bool
+        """Verifies if a user has administrator level permissions."""
+        resp = requests.get('{host}/session'.format(host=self.magpie_url), cookies=request.cookies,
+                            headers=self.json_headers, verify=self.twitcher_ssl_verify)
+        return self.magpie_admin_group in resp.json().get('user', {}).get('group_names', [])
 
     def is_visible_by_user(self, ems_processes_id, process_id, request):
         # type: (int, AnyStr, requests.Request) -> bool
@@ -396,8 +408,7 @@ class MagpieProcessStore(ProcessStore):
         path = '{host}/users/{usr}/resources/{res}/permissions?inherit=true' \
                .format(host=self.magpie_url, usr=self.magpie_current, res=process_res_id)
         resp = requests.get(path, cookies=request.cookies, headers=self.json_headers, verify=self.twitcher_ssl_verify)
-        if resp.status_code != HTTPOk.code:
-            raise resp.raise_for_status()
+        resp.raise_for_status()
         perms = resp.json()['permission_names']
         if 'read' not in perms and 'read-match' not in perms:
             return False
