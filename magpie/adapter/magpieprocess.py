@@ -300,8 +300,8 @@ class MagpieProcessStore(ProcessStore):
 
         return processstore_defaultfactory(request.registry).save_process(process, overwrite, request)
 
-    def delete_process(self, process_id, request=None):
-        # type: (int, Optional[requests.Request]) -> bool
+    def delete_process(self, process_id, visibility=None, request=None):
+        # type: (int, Optional[AnyStr], Optional[requests.Request]) -> bool
         """
         Delete a process.
 
@@ -316,6 +316,9 @@ class MagpieProcessStore(ProcessStore):
                 ems_processes_id = self._get_service_processes_resource()
                 process_res_id = self._find_resource_id(ems_processes_id, process_id)
 
+                # override to allow deletion of process if accessible by user regardless of 'visibility' setting
+                visibility = None if self.is_visible_by_user(ems_processes_id, process_id, request) else visibility
+
                 # delete the top-resource, magpie should automatically handle deletion of all sub-resources/permissions
                 path = '{host}/resources/{id}'.format(host=self.magpie_url, id=process_res_id)
                 resp = requests.delete(path, cookies=self.magpie_admin_token,
@@ -326,7 +329,8 @@ class MagpieProcessStore(ProcessStore):
                 # If for any reason the resource that we want to delete does not exist silently ignore it
                 pass
 
-        return processstore_defaultfactory(request.registry).delete_process(process_id, request)
+        store = processstore_defaultfactory(request.registry)
+        return store.delete_process(process_id, visibility=visibility, request=request)
 
     def list_processes(self, visibility=None, request=None):
         # type: (Optional[bool], Optional[requests.Request]) -> List[Process]
@@ -366,9 +370,9 @@ class MagpieProcessStore(ProcessStore):
           - ignore passed `visibility` if any and infer it from magpie user/group permissions instead
         """
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS and visibility:
-            ems_process_id = self._get_service_processes_resource()
+            ems_processes_id = self._get_service_processes_resource()
             # override to allow retrieval of process if accessible by user regardless of 'visibility' setting
-            visibility = None if self.is_visible_by_user(ems_process_id, process_id, request) else visibility
+            visibility = None if self.is_visible_by_user(ems_processes_id, process_id, request) else visibility
 
         store = processstore_defaultfactory(request.registry)
         return store.fetch_by_id(process_id, visibility=visibility, request=request)
