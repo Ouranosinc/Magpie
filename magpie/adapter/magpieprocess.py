@@ -314,9 +314,8 @@ class MagpieProcessStore(ProcessStore):
             except (ProcessNotFound, HTTPNotFound):
                 pass
             try:
-                if self.is_visible_by_user(ems_processes_id, process_id, request) or self.is_admin_user(request):
+                if self.is_visible_by_user(ems_processes_id, process_id, request):
                     # override to allow deletion of process if accessible by user regardless of 'visibility' setting
-                    # always allow administrator to do the operation in case of out-of-sync resources or debugging
                     visibility = None
 
                     # search for resource, skip cleanup with raised http if not found
@@ -375,8 +374,7 @@ class MagpieProcessStore(ProcessStore):
             ems_processes_id = self._get_service_processes_resource()
 
             # override to allow retrieval of process if accessible by user regardless of 'visibility' setting
-            # always allow administrator to do the operation in case of out-of-sync resources or debugging
-            if self.is_visible_by_user(ems_processes_id, process_id, request) or self.is_admin_user(request):
+            if self.is_visible_by_user(ems_processes_id, process_id, request):
                 visibility = None
 
         store = processstore_defaultfactory(request.registry)
@@ -410,8 +408,11 @@ class MagpieProcessStore(ProcessStore):
         resp = requests.get(path, cookies=request.cookies, headers=self.json_headers, verify=self.twitcher_ssl_verify)
         resp.raise_for_status()
         perms = resp.json()['permission_names']
+
+        # user/group must have inherited read/read-match permissions, or
+        # be an administrator even if permissions are not set explicitly
         if 'read' not in perms and 'read-match' not in perms:
-            return False
+            return self.is_admin_user(request)
         return True
 
     def get_visibility(self, process_id, request=None):
