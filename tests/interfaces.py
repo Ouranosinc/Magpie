@@ -115,7 +115,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         assert cls.headers and cls.cookies, cls.require
 
     @classmethod
-    def get_test_values(cls):
+    def setup_test_values(cls):
         services_cfg = yaml.load(open(get_constant('MAGPIE_PROVIDERS_CONFIG_PATH'), 'r'))
         provider_services_info = services_cfg['providers']
         # filter impossible providers from possible previous version of remote server
@@ -210,19 +210,102 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         utils.check_val_is_in(get_constant('MAGPIE_ADMIN_USER'), users)
 
     @classmethod
-    def check_GetUserResourcesPermissions(cls, user_name, resource_id=None):
+    def check_GetUserResourcesPermissions(cls, user_name, resource_id=None, query=None):
         resource_id = resource_id or cls.test_service_resource_id
-        route = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=resource_id, usr=user_name)
+        query = '?{}'.format(query) if query else ''
+        route = '/users/{usr}/resources/{res_id}/permissions{q}'.format(res_id=resource_id, usr=user_name, q=query)
         resp = utils.test_request(cls.url, 'GET', route, headers=cls.json_headers, cookies=cls.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('permission_names', json_body)
         utils.check_val_type(json_body['permission_names'], list)
-        return json_body['permission_names']
+        return json_body
 
     @pytest.mark.users
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
     def test_GetCurrentUserResourcesPermissions(self):
         self.check_GetUserResourcesPermissions(get_constant('MAGPIE_LOGGED_USER'))
+
+    @pytest.mark.users
+    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    def test_GetCurrentUserResourcesPermissions_Queries(self):
+        if LooseVersion(self.version) < LooseVersion('0.7.0'):
+            self.skipTest(reason="Queries not yet implemented in this version.")
+
+        # setup test resources under service with permissions
+        # Service/Resources              | Admin-User | Admin-Group | Anonym-User | Anonym-Group
+        # ---------------------------------------------------------------------------------------
+        # test-service                   | r          | r-m         |             | r
+        #   |- test-resource (parent)    |            | r-m         |             |
+        #       |- test-resource (child) |            |             | r-m         |
+        json_body = utils.TestSetup.create_TestServiceResource(self)
+        test_svc_res_id = self.test_service_resource_id
+        test_parent_res_id = json_body['resource']['resource_id']
+        child_resource_name = self.test_resource_name + "-child"
+        data_override = {
+            "resource_name": child_resource_name,
+            "resource_type": self.test_resource_type,
+            "parent_id": test_parent_res_id
+        }
+        json_body = utils.TestSetup.create_TestServiceResource(self, data_override)
+        test_child_res_id = json_body['resource']['resource_id']
+        anonym_usr = get_constant('MAGPIE_ANONYMOUS_USER')
+        anonym_grp = get_constant('MAGPIE_ANONYMOUS_GROUP')
+
+        perm_recur = self.test_resource_perm
+        perm_match = self.test_resource_perm + "-match"
+        data_recur = {u'permission_name': perm_recur}
+        data_match = {u'permission_name': perm_match}
+        path = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=test_svc_res_id, usr=self.usr)
+        utils.test_request(self.url, 'POST', path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
+        path = '/groups/{grp}/resources/{res_id}/permissions'.format(res_id=test_svc_res_id, grp=self.grp)
+        utils.test_request(self.url, 'POST', path, data=data_match, headers=self.json_headers, cookies=self.cookies)
+        path = '/groups/{grp}/resources/{res_id}/permissions'.format(res_id=test_parent_res_id, grp=self.grp)
+        utils.test_request(self.url, 'POST', path, data=data_match, headers=self.json_headers, cookies=self.cookies)
+        path = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=test_child_res_id, usr=anonym_usr)
+        utils.test_request(self.url, 'POST', path, data=data_match, headers=self.json_headers, cookies=self.cookies)
+        path = '/groups/{grp}/resources/{res_id}/permissions'.format(res_id=test_svc_res_id, grp=anonym_grp)
+        utils.test_request(self.url, 'POST', path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
+
+        # tests
+        q_groups = "inherit=true"
+        q_effect = "effective=true"
+        json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=None)
+        utils.check_val_equal(json_body['permission_names'], [])
+        json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=q_groups)
+        utils.check_val_equal(json_body['permission_names'], [])
+        json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=q_effect)
+        utils.check_val_equal(json_body['permission_names'], [perm_recur])
+        json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=None)
+        utils.check_val_equal(json_body['permission_names'], [])
+        json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=q_groups)
+        utils.check_val_equal(json_body['permission_names'], [perm_match])
+        json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=q_effect)
+        utils.check_val_equal(json_body['permission_names'], [perm_recur])
+        json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=None)
+        utils.check_val_equal(json_body['permission_names'], [perm_recur])
+        json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=q_groups)
+        utils.check_all_equal(json_body['permission_names'], [perm_recur, perm_match], any_order=True)
+        json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=q_effect)
+        utils.check_all_equal(json_body['permission_names'], [perm_recur, perm_match], any_order=True)
+
+        json_body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=None)
+        utils.check_val_equal(json_body['permission_names'], [perm_match])
+        json_body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=q_groups)
+        utils.check_val_equal(json_body['permission_names'], [perm_match])
+        json_body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=q_effect)
+        utils.check_all_equal(json_body['permission_names'], [perm_recur, perm_match], any_order=True)
+        json_body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=None)
+        utils.check_val_equal(json_body['permission_names'], [])
+        json_body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=q_groups)
+        utils.check_val_equal(json_body['permission_names'], [])
+        json_body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=q_effect)
+        utils.check_val_equal(json_body['permission_names'], [perm_recur])
+        json_body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=None)
+        utils.check_val_equal(json_body['permission_names'], [])
+        json_body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=q_groups)
+        utils.check_val_equal(json_body['permission_names'], [perm_recur])
+        json_body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=q_effect)
+        utils.check_val_equal(json_body['permission_names'], [perm_recur])
 
     @pytest.mark.users
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
@@ -267,8 +350,8 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         path = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=test_res_id, usr=self.usr)
         data = {u'permission_name': self.test_resource_perm}
         utils.test_request(self.url, 'POST', path, data=data, headers=self.json_headers, cookies=self.cookies)
-        perms = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_res_id)
-        utils.check_val_is_in(self.test_resource_perm, perms,
+        json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_res_id)
+        utils.check_val_is_in(self.test_resource_perm, json_body['permission_names'],
                               msg="Can't test for conflicting permissions if it doesn't exist first.")
 
         resp = utils.test_request(self.url, 'POST', path, data=data, headers=self.json_headers, cookies=self.cookies,
@@ -356,7 +439,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
                 utils.check_val_is_in('service_type', svc_dict)
                 utils.check_val_is_in('public_url', svc_dict)
                 utils.check_val_is_in('permission_names', svc_dict)
-                utils.check_val_is_in('resources', svc_dict)
+                utils.check_val_is_in('services', svc_dict)
                 utils.check_val_type(svc_dict['resource_id'], int)
                 utils.check_val_type(svc_dict['service_name'], six.string_types)
                 utils.check_val_type(svc_dict['service_type'], six.string_types)
@@ -431,6 +514,13 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def test_PutUsers_username(self):
         utils.TestSetup.create_TestUser(self)
         new_name = self.test_user_name + '-new'
+
+        # cleanup in case the updated username already exists (ex: previous test execution failure)
+        route = '/users/{usr}'.format(usr=new_name)
+        resp = utils.test_request(self.url, 'DELETE', route, headers=self.json_headers, cookies=self.cookies)
+        utils.check_val_is_in(resp.status_code, [200, 404])
+
+        # update existing user name
         data = {'user_name': new_name}
         route = '/users/{usr}'.format(usr=self.test_user_name)
         resp = utils.test_request(self.url, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data=data)

@@ -11,6 +11,7 @@ History
 * add service resource auto-sync feature
 * return user/group services if any sub-resource has permissions
 * add inherited resource permission with querystring (deprecate `inherited_<>` routes warnings)
+* add flag to return `effective` permissions from user resource permissions requests
 * hide service private URL on non administrator level requests
 * fix external providers login support (validated for DKRZ, GitHub and WSO2)
 * make cookies expire-able by setting `MAGPIE_COOKIE_EXPIRE` and provide cookie only on http (JS CSRF attack protection)
@@ -64,7 +65,7 @@ History
 * ncWMS support for getmap, getcapabilities, getmetadata on thredds resource
 * ncWMS2 added to default providers
 * add geoserverwms
-* remove load balanced mallefowl and catalog
+* remove load balanced Malleefowl and Catalog
 * push service provider updates to phoenix on service modification or initial setup with getcapabilities for anonymous
 * major update of `Magpie REST API 0.2.x documentation`_ to match returned codes/messages from 0.2.0 changes
 * normalise additional HTTP request responses omitted from 0.2.0 (404, 500, and other missed responses)

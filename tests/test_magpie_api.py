@@ -82,7 +82,7 @@ class TestMagpieAPI_AdminAuth_Local(ti.TestMagpieAPI_AdminAuth_Interface):
                                                                  use_ui_form_submit=True, version=cls.version)
         cls.require = "cannot run tests without logged in '{}' user".format(cls.grp)
         cls.check_requirements()
-        cls.get_test_values()
+        cls.setup_test_values()
 
 
 @pytest.mark.api
@@ -143,7 +143,7 @@ class TestMagpieAPI_AdminAuth_Remote(ti.TestMagpieAPI_AdminAuth_Interface):
                                                        'Content-Type': 'application/json'})
         cls.version = utils.TestSetup.get_Version(cls)
         cls.check_requirements()
-        cls.get_test_values()
+        cls.setup_test_values()
 
 
 if __name__ == '__main__':

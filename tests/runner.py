@@ -35,6 +35,7 @@ MAGPIE_TEST_API = default_run('MAGPIE_TEST_API')
 MAGPIE_TEST_UI = default_run('MAGPIE_TEST_UI')
 
 
+# noinspection PyPep8Naming
 def MAGPIE_TEST_DISABLED_MESSAGE(option):
     return "Skip{}tests requested.".format(" '{}' ".format(option) if option else '')
 
@@ -62,6 +63,7 @@ def test_suite():
 def run_suite():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=sa_exc.SAWarning)
+        # noinspection PyUnresolvedReferences
         unittest.TextTestRunner().run(test_suite())
 
 
