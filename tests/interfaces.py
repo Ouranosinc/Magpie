@@ -439,13 +439,11 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
                 utils.check_val_is_in('service_type', svc_dict)
                 utils.check_val_is_in('public_url', svc_dict)
                 utils.check_val_is_in('permission_names', svc_dict)
-                utils.check_val_is_in('services', svc_dict)
                 utils.check_val_type(svc_dict['resource_id'], int)
                 utils.check_val_type(svc_dict['service_name'], six.string_types)
                 utils.check_val_type(svc_dict['service_type'], six.string_types)
                 utils.check_val_type(svc_dict['public_url'], six.string_types)
                 utils.check_val_type(svc_dict['permission_names'], list)
-                utils.check_val_type(svc_dict['resources'], dict)
                 if LooseVersion(self.version) >= LooseVersion('0.7.0'):
                     utils.check_val_is_in('service_sync_type', svc_dict)
                     utils.check_val_type(svc_dict['service_sync_type'], six.string_types)

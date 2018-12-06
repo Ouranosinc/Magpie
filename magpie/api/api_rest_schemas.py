@@ -1672,7 +1672,7 @@ class UserServices_GET_ResponseBodySchema(BaseResponseBodySchema):
 class UserServices_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get user services successful."
     header = HeaderResponseSchema()
-    body = UserServices_GET_ResponseBodySchema
+    body = UserServices_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class UserServicePermissions_GET_QuerySchema(colander.MappingSchema):
