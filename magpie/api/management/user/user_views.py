@@ -187,7 +187,8 @@ def get_user_resources_view(request):
     usr_res_dict = evaluate_call(lambda: build_json_user_resource_tree(user),
                                  fallback=lambda: db.rollback(), httpError=HTTPNotFound,
                                  msgOnFail=UserResources_GET_NotFoundResponseSchema.description,
-                                 content={u'user_name': user.user_name, u'resource_types': [u'service']})
+                                 content={u'user_name': user.user_name,
+                                          u'resource_types': [models.Service.resource_type_name]})
     return valid_http(httpSuccess=HTTPOk, detail=UserResources_GET_OkResponseSchema.description,
                       content={u'resources': usr_res_dict})
 

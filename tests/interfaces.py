@@ -280,7 +280,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=q_groups)
         utils.check_val_equal(json_body['permission_names'], [perm_match])
         json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=q_effect)
-        utils.check_val_equal(json_body['permission_names'], [perm_recur])
+        utils.check_all_equal(json_body['permission_names'], [perm_recur, perm_match], any_order=True)
         json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=None)
         utils.check_val_equal(json_body['permission_names'], [perm_recur])
         json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=q_groups)

@@ -1,5 +1,6 @@
 from magpie.api.management.group.group_utils import *
 from magpie.api.api_rest_schemas import *
+from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.pyramid_definitions import view_config
 
@@ -50,7 +51,7 @@ def edit_group(request):
     verify_param(new_group_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail=Group_PUT_Name_NotAcceptableResponseSchema.description)
     verify_param(len(new_group_name), isIn=True, httpError=HTTPNotAcceptable,
-                 paramCompare=range(1, 1 + MAGPIE_USER_NAME_MAX_LENGTH),
+                 paramCompare=range(1, 1 + get_constant('MAGPIE_USER_NAME_MAX_LENGTH')),
                  msgOnFail=Group_PUT_Size_NotAcceptableResponseSchema.description)
     verify_param(new_group_name, notEqual=True, httpError=HTTPNotAcceptable,
                  paramCompare=group.group_name, msgOnFail=Group_PUT_Same_NotAcceptableResponseSchema.description)
@@ -86,7 +87,9 @@ def get_group_users(request):
 def get_group_services_view(request):
     """List all services a group has permission on."""
     group = get_group_matchdict_checked(request)
-    res_perm_dict = get_group_resources_permissions_dict(group, resource_types=[u'service'], db_session=request.db)
+    res_perm_dict = get_group_resources_permissions_dict(group,
+                                                         resource_types=[models.Service.resource_type_name],
+                                                         db_session=request.db)
     grp_svc_json = evaluate_call(lambda: get_group_services(res_perm_dict, request.db),
                                  httpError=HTTPInternalServerError,
                                  msgOnFail=GroupServices_InternalServerErrorResponseSchema.description,

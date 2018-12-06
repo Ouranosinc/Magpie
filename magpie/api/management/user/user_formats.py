@@ -14,5 +14,5 @@ def format_user(user, group_names=None):
         lambda: fmt_usr(user, group_names),
         httpError=HTTPInternalServerError,
         msgOnFail="Failed to format user.",
-        content={u'service': repr(user)}
+        content={u'user': repr(user)}
     )

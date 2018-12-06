@@ -77,12 +77,17 @@ def delete_user_resource_permission(permission_name, resource, user_id, db_sessi
 
 def get_resource_root_service(resource, request):
     # type: (models.Resource, Request) -> ServiceI
-    res_root_svc = ResourceService.by_resource_id(resource.root_service_id, db_session=request.db)
+    """Retrieves the service class corresponding to the specified resource's root service-resource."""
+    if resource.resource_type == models.Service.resource_type_name:
+        res_root_svc = resource
+    else:
+        res_root_svc = ResourceService.by_resource_id(resource.root_service_id, db_session=request.db)
     return service_factory(res_root_svc, request)
 
 
 def filter_user_permission(resource_permission_list, user):
     # type: (List[ResourcePermissionType], models.User) -> List[ResourcePermissionType]
+    """Retrieves only direct user permissions on resources amongst a list of user/group resource/service permissions."""
     return filter(lambda perm: perm.group is None and perm.type == u'user' and perm.user.user_name == user.user_name,
                   resource_permission_list)
 

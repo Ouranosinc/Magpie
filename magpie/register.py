@@ -377,7 +377,7 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
         else:
             print_log("Adding service [{svc}]".format(svc=svc_name))
             svc = models.Service(resource_name=svc_name,
-                                 resource_type=u'service',
+                                 resource_type=models.Service.resource_type_name,
                                  url=svc_new_url,
                                  type=svc_type,
                                  sync_type=svc_sync_type)
