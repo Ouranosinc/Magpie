@@ -403,7 +403,7 @@ class MagpieProcessStore(ProcessStore):
             return False
 
         # use inherited flag to consider both user and group permissions on the resource
-        path = '{host}/users/{usr}/resources/{res}/permissions?inherit=true' \
+        path = '{host}/users/{usr}/resources/{res}/permissions?inherit=true&effective=true' \
                .format(host=self.magpie_url, usr=self.magpie_current, res=process_res_id)
         resp = requests.get(path, cookies=request.cookies, headers=self.json_headers, verify=self.twitcher_ssl_verify)
         resp.raise_for_status()
