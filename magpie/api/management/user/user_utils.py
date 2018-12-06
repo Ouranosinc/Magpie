@@ -4,8 +4,10 @@ from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
 from magpie.api.management.user.user_formats import *
 from magpie.definitions.ziggurat_definitions import *
-from magpie.services import service_type_dict
+from magpie.definitions.pyramid_definitions import Request
+from magpie.services import service_factory, ResourcePermissionType, ServiceI
 from magpie import models
+from typing import Any, AnyStr, Dict, List, Optional, Union
 
 
 def create_user(user_name, password, email, group_name, db_session):
@@ -73,29 +75,56 @@ def delete_user_resource_permission(permission_name, resource, user_id, db_sessi
     return valid_http(httpSuccess=HTTPOk, detail=UserResourcePermissions_DELETE_OkResponseSchema.description)
 
 
-def filter_user_permission(resource_permission_tuple_list, user):
+def get_resource_root_service(resource, request):
+    # type: (models.Resource, Request) -> ServiceI
+    """Retrieves the service class corresponding to the specified resource's root service-resource."""
+    if resource.resource_type == models.Service.resource_type_name:
+        res_root_svc = resource
+    else:
+        res_root_svc = ResourceService.by_resource_id(resource.root_service_id, db_session=request.db)
+    return service_factory(res_root_svc, request)
+
+
+def filter_user_permission(resource_permission_list, user):
+    # type: (List[ResourcePermissionType], models.User) -> List[ResourcePermissionType]
+    """Retrieves only direct user permissions on resources amongst a list of user/group resource/service permissions."""
     return filter(lambda perm: perm.group is None and perm.type == u'user' and perm.user.user_name == user.user_name,
-                  resource_permission_tuple_list)
+                  resource_permission_list)
 
 
-def get_user_resource_permissions(user, resource, db_session, inherit_groups_permissions=True):
+def get_user_resource_permissions(user, resource, request,
+                                  inherit_groups_permissions=True, effective_permissions=False):
+    # type: (models.User, models.Resource, Request, bool, bool) -> List[AnyStr]
+    """
+    Retrieves user resource permissions with or without inherited group permissions.
+    Alternatively retrieves the effective user resource permissions, where group permissions are implied as `True`.
+    """
     if resource.owner_user_id == user.id:
         permission_names = models.resource_type_dict[resource.type].permission_names
     else:
-        res_perm_tuple_list = ResourceService.perms_for_user(resource, user, db_session=db_session)
-        if not inherit_groups_permissions:
-            res_perm_tuple_list = filter_user_permission(res_perm_tuple_list, user)
-        permission_names = [permission.perm_name for permission in res_perm_tuple_list]
+        db_session = request.db
+        if effective_permissions:
+            svc = get_resource_root_service(resource, request)
+            res_perm_list = svc.effective_permissions(resource, user)
+        else:
+            res_perm_list = ResourceService.perms_for_user(resource, user, db_session=db_session)
+            if not inherit_groups_permissions:
+                res_perm_list = filter_user_permission(res_perm_list, user)
+        permission_names = [permission.perm_name for permission in res_perm_list]
     return sorted(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
 
-def get_user_services(user, db_session, cascade_resources=False,
+UserServices = Union[Dict[AnyStr, Dict[AnyStr, Any]], List[Dict[AnyStr, Any]]]
+
+
+def get_user_services(user, request, cascade_resources=False,
                       inherit_groups_permissions=False, format_as_list=False):
+    # type: (models.User, Request, Optional[bool], Optional[bool], Optional[bool]) -> UserServices
     """
     Returns services by type with corresponding services by name containing sub-dict information.
 
     :param user: user for which to find services
-    :param db_session: database session connection
+    :param request: request with database session connection
     :param cascade_resources:
         If `False`, return only services with *Direct* user permissions on their corresponding service-resource.
         Otherwise, return every service that has at least one sub-resource with user permissions.
@@ -109,16 +138,17 @@ def get_user_services(user, db_session, cascade_resources=False,
         dict of services by type with corresponding services by name containing sub-dict information,
         unless `format_as_dict` is `True`
     """
+    db_session = request.db
     resource_type = None if cascade_resources else ['service']
-    res_perm_dict = get_user_resources_permissions_dict(user, resource_types=resource_type, db_session=db_session,
+    res_perm_dict = get_user_resources_permissions_dict(user, resource_types=resource_type, request=request,
                                                         inherit_groups_permissions=inherit_groups_permissions)
 
     services = {}
     for resource_id, perms in res_perm_dict.items():
         svc = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
         if svc.resource_type != 'service' and cascade_resources:
-            svc = ResourceService.by_resource_id(resource_id=svc.root_service_id, db_session=db_session)
-            perms = service_type_dict[svc.type].permission_names
+            svc = get_resource_root_service(svc, request)
+            perms = svc.permission_names
         if svc.type not in services:
             services[svc.type] = {}
         if svc.resource_name not in services[svc.type]:
@@ -134,26 +164,28 @@ def get_user_services(user, db_session, cascade_resources=False,
     return services_list
 
 
-def get_user_service_permissions(user, service, db_session, inherit_groups_permissions=True):
+def get_user_service_permissions(user, service, request, inherit_groups_permissions=True):
+    # type: (models.User, models.Service, Request, Optional[bool]) -> List[AnyStr]
     if service.owner_user_id == user.id:
-        permission_names = service_type_dict[service.type].permission_names
+        permission_names = service_factory(service, request).permission_names
     else:
-        svc_perm_tuple_list = ResourceService.perms_for_user(service, user, db_session=db_session)
+        svc_perm_tuple_list = ResourceService.perms_for_user(service, user, db_session=request.db)
         if not inherit_groups_permissions:
             svc_perm_tuple_list = filter_user_permission(svc_perm_tuple_list, user)
         permission_names = [permission.perm_name for permission in svc_perm_tuple_list]
     return sorted(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
 
-def get_user_resources_permissions_dict(user, db_session, resource_types=None,
+def get_user_resources_permissions_dict(user, request, resource_types=None,
                                         resource_ids=None, inherit_groups_permissions=True):
+    # type: (models.User, Request, Optional[List[AnyStr]], Optional[List[int]], Optional[bool]) -> Dict[AnyStr, Any]
     """
     Creates a dictionary of resources by id with corresponding permissions of the user.
 
     :param user: user for which to find services
-    :param db_session: database session connection
-    :param resource_types: (list) filter the search query with specified resource types
-    :param resource_ids: (list) filter the search query with specified resource ids
+    :param request: request with database session connection
+    :param resource_types: filter the search query with specified resource types
+    :param resource_ids: filter the search query with specified resource ids
     :param inherit_groups_permissions:
         If `False`, return only user-specific resource permissions.
         Otherwise, resolve inherited permissions using all groups the user is member of.
@@ -162,7 +194,7 @@ def get_user_resources_permissions_dict(user, db_session, resource_types=None,
     verify_param(user, notNone=True, httpError=HTTPNotFound,
                  msgOnFail=UserResourcePermissions_GET_NotFoundResponseSchema.description)
     res_perm_tuple_list = UserService.resources_with_possible_perms(
-        user, resource_ids=resource_ids, resource_types=resource_types, db_session=db_session)
+        user, resource_ids=resource_ids, resource_types=resource_types, db_session=request.db)
     if not inherit_groups_permissions:
         res_perm_tuple_list = filter_user_permission(res_perm_tuple_list, user)
     resources_permissions_dict = {}
@@ -179,15 +211,17 @@ def get_user_resources_permissions_dict(user, db_session, resource_types=None,
     return resources_permissions_dict
 
 
-def get_user_service_resources_permissions_dict(user, service, db_session, inherit_groups_permissions=True):
+def get_user_service_resources_permissions_dict(user, service, request, inherit_groups_permissions=True):
+    # type: (models.User, models.Service, Request, bool) -> Dict[AnyStr, Any]
     resources_under_service = models.resource_tree_service.from_parent_deeper(parent_id=service.resource_id,
-                                                                              db_session=db_session)
+                                                                              db_session=request.db)
     resource_ids = [resource.Resource.resource_id for resource in resources_under_service]
-    return get_user_resources_permissions_dict(user, db_session, resource_types=None, resource_ids=resource_ids,
+    return get_user_resources_permissions_dict(user, request, resource_types=None, resource_ids=resource_ids,
                                                inherit_groups_permissions=inherit_groups_permissions)
 
 
 def check_user_info(user_name, email, password, group_name):
+    # type: (Any, Any, Any, Any) -> None
     verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  paramName=u'user_name', msgOnFail=Users_CheckInfo_Name_BadRequestResponseSchema.description)
     verify_param(len(user_name), isIn=True, httpError=HTTPBadRequest,
@@ -204,6 +238,7 @@ def check_user_info(user_name, email, password, group_name):
 
 
 def get_user_groups_checked(request, user):
+    # type: (Request, models.User) -> List[AnyStr]
     verify_param(user, notNone=True, httpError=HTTPNotFound,
                  msgOnFail=Groups_CheckInfo_NotFoundResponseSchema.description)
     db = request.db

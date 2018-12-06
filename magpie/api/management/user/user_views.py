@@ -169,11 +169,11 @@ def get_user_resources_view(request):
         json_res = {}
         for svc in models.Service.all(db_session=db):
             svc_perms = get_user_service_permissions(
-                user=usr, service=svc, db_session=db, inherit_groups_permissions=inherit_groups_perms)
+                user=usr, service=svc, request=request, inherit_groups_permissions=inherit_groups_perms)
             if svc.type not in json_res:
                 json_res[svc.type] = {}
             res_perms_dict = get_user_service_resources_permissions_dict(
-                user=usr, service=svc, db_session=db, inherit_groups_permissions=inherit_groups_perms)
+                user=usr, service=svc, request=request, inherit_groups_permissions=inherit_groups_perms)
             json_res[svc.type][svc.resource_name] = format_service_resources(
                 svc,
                 db_session=db,
@@ -187,7 +187,8 @@ def get_user_resources_view(request):
     usr_res_dict = evaluate_call(lambda: build_json_user_resource_tree(user),
                                  fallback=lambda: db.rollback(), httpError=HTTPNotFound,
                                  msgOnFail=UserResources_GET_NotFoundResponseSchema.description,
-                                 content={u'user_name': user.user_name, u'resource_types': [u'service']})
+                                 content={u'user_name': user.user_name,
+                                          u'resource_types': [models.Service.resource_type_name]})
     return valid_http(httpSuccess=HTTPOk, detail=UserResources_GET_OkResponseSchema.description,
                       content={u'resources': usr_res_dict})
 
@@ -217,8 +218,10 @@ def get_user_resource_permissions_view(request):
     user = get_user_matchdict_checked_or_logged(request)
     resource = get_resource_matchdict_checked(request, 'resource_id')
     inherit_groups_perms = str2bool(get_query_param(request, 'inherit'))
-    perm_names = get_user_resource_permissions(resource=resource, user=user, db_session=request.db,
-                                               inherit_groups_permissions=inherit_groups_perms)
+    effective_perms = str2bool(get_query_param(request, 'effective'))
+    perm_names = get_user_resource_permissions(resource=resource, user=user, request=request,
+                                               inherit_groups_permissions=inherit_groups_perms,
+                                               effective_permissions=effective_perms)
     return valid_http(httpSuccess=HTTPOk, detail=UserResourcePermissions_GET_OkResponseSchema.description,
                       content={u'permission_names': sorted(perm_names)})
 
@@ -275,7 +278,7 @@ def get_user_services_view(request):
     inherit_groups_perms = str2bool(get_query_param(request, 'inherit'))
     format_as_list = str2bool(get_query_param(request, 'list'))
 
-    svc_json = get_user_services(user, db_session=request.db,
+    svc_json = get_user_services(user, request=request,
                                  cascade_resources=cascade_resources,
                                  inherit_groups_permissions=inherit_groups_perms,
                                  format_as_list=format_as_list)
@@ -324,7 +327,7 @@ def get_user_service_permissions_view(request):
     user = get_user_matchdict_checked_or_logged(request)
     service = get_service_matchdict_checked(request)
     inherit_groups_perms = str2bool(get_query_param(request, 'inherit'))
-    perms = evaluate_call(lambda: get_user_service_permissions(service=service, user=user, db_session=request.db,
+    perms = evaluate_call(lambda: get_user_service_permissions(service=service, user=user, request=request,
                                                                inherit_groups_permissions=inherit_groups_perms),
                           fallback=lambda: request.db.rollback(), httpError=HTTPNotFound,
                           msgOnFail=UserServicePermissions_GET_NotFoundResponseSchema.description,
@@ -372,9 +375,9 @@ def get_user_service_resources_view(request):
     user = get_user_matchdict_checked_or_logged(request)
     service = get_service_matchdict_checked(request)
     service_perms = get_user_service_permissions(
-        user, service, db_session=request.db, inherit_groups_permissions=inherit_groups_perms)
+        user, service, request=request, inherit_groups_permissions=inherit_groups_perms)
     resources_perms_dict = get_user_service_resources_permissions_dict(
-        user, service, db_session=request.db, inherit_groups_permissions=inherit_groups_perms)
+        user, service, request=request, inherit_groups_permissions=inherit_groups_perms)
     user_svc_res_json = format_service_resources(
         service=service,
         db_session=request.db,

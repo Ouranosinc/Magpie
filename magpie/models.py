@@ -2,6 +2,7 @@ from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.sqlalchemy_definitions import *
 from magpie.api.api_except import *
+from magpie.permissions import *
 
 Base = declarative_base()
 
@@ -105,7 +106,9 @@ class Service(Resource):
                                           ondelete='CASCADE', ),
                             primary_key=True, )
 
-    __mapper_args__ = {u'polymorphic_identity': u'service', u'inherit_condition': resource_id == Resource.resource_id}
+    resource_type_name = u'service'
+    __mapper_args__ = {u'polymorphic_identity': resource_type_name,
+                       u'inherit_condition': resource_id == Resource.resource_id}
 
     # ... your own properties....
 
@@ -123,8 +126,6 @@ class Service(Resource):
     def sync_type(self):
         # project-api, geoserver-api, ...
         return sa.Column(sa.UnicodeText(), nullable=True)
-
-    resource_type_name = u'service'
 
     @staticmethod
     def by_service_name(service_name, db_session):
@@ -145,46 +146,56 @@ class Service(Resource):
             self.__acl__.append((outcome, perm_user, perm_name,))
 
 
-class File(Resource):
-    __mapper_args__ = {u'polymorphic_identity': u'file'}
-    permission_names = [u'read',
-                        u'write',
-                        u'getcapabilities',
-                        u'getmap',
-                        u'getfeatureinfo',
-                        u'getlegendgraphic',
-                        u'getmetadata']
-    resource_type_name = u'file'
+class Path(object):
+    permission_names = [
+        PERMISSION_READ,
+        PERMISSION_WRITE,
+        PERMISSION_GET_CAPABILITIES,
+        PERMISSION_GET_MAP,
+        PERMISSION_GET_FEATURE_INFO,
+        PERMISSION_GET_LEGEND_GRAPHIC,
+        PERMISSION_GET_METADATA,
+    ]
+
+
+class File(Resource, Path):
     child_resource_allowed = False
+    resource_type_name = u'file'
+    __mapper_args__ = {u'polymorphic_identity': resource_type_name}
 
 
-class Directory(Resource):
-    __mapper_args__ = {u'polymorphic_identity': u'directory'}
-    permission_names = File.permission_names
+class Directory(Resource, Path):
     resource_type_name = u'directory'
+    __mapper_args__ = {u'polymorphic_identity': resource_type_name}
 
 
 class Workspace(Resource):
-    __mapper_args__ = {u'polymorphic_identity': u'workspace'}
-    permission_names = [u'getcapabilities',
-                        u'getmap',
-                        u'getfeatureinfo',
-                        u'getlegendgraphic',
-                        u'getmetadata',
-                        u'describefeaturetype',
-                        u'getfeature',
-                        u'lockfeature',
-                        u'transaction']
     resource_type_name = u'workspace'
+    __mapper_args__ = {u'polymorphic_identity': resource_type_name}
+
+    permission_names = [
+        PERMISSION_GET_CAPABILITIES,
+        PERMISSION_GET_MAP,
+        PERMISSION_GET_FEATURE_INFO,
+        PERMISSION_GET_LEGEND_GRAPHIC,
+        PERMISSION_GET_METADATA,
+        PERMISSION_GET_FEATURE,
+        PERMISSION_DESCRIBE_FEATURE_TYPE,
+        PERMISSION_LOCK_FEATURE,
+        PERMISSION_TRANSACTION,
+    ]
 
 
 class Route(Resource):
-    __mapper_args__ = {u'polymorphic_identity': u'route'}
-    permission_names = [u'read',
-                        u'write',
-                        u'read-match',
-                        u'write-match']
     resource_type_name = u'route'
+    __mapper_args__ = {u'polymorphic_identity': resource_type_name}
+
+    permission_names = [
+        PERMISSION_READ,            # access with inheritance (this route and all under it)
+        PERMISSION_WRITE,           # access with inheritance (this route and all under it)
+        PERMISSION_READ_MATCH,      # access without inheritance (only on this specific route)
+        PERMISSION_WRITE_MATCH,     # access without inheritance (only on this specific route)
+    ]
 
 
 class RemoteResource(BaseModel, Base):

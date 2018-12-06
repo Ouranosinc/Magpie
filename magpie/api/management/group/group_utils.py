@@ -143,7 +143,7 @@ def get_group_service_permissions(group, service, db_session):
 
 def get_group_services_permissions(group, db_session, resource_ids=None):
     def get_grp_svc_perms(grp, db_ses, res_ids):
-        res_perms = get_group_resources_permissions_dict(grp, resource_types=[u'service'],
+        res_perms = get_group_resources_permissions_dict(grp, resource_types=[models.Service.resource_type_name],
                                                          db_session=db_ses, resource_ids=res_ids)
         grp_svc_perms = []
         for res_id, res_perm in res_perms.items():

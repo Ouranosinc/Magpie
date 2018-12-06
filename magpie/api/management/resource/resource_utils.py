@@ -43,7 +43,7 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
     verify_param(root_service, notNone=True, httpError=HTTPInternalServerError,
                  msgOnFail="Failed retrieving `root_service` from db")
     verify_param(root_service.resource_type, isEqual=True, httpError=HTTPInternalServerError,
-                 paramName=u'resource_type', paramCompare=u'service',
+                 paramName=u'resource_type', paramCompare=models.Service.resource_type_name,
                  msgOnFail="Invalid `root_service` retrieved from db is not a service")
     verify_param(service_type_dict[root_service.type].child_resource_allowed, isEqual=True,
                  paramCompare=True, httpError=HTTPNotAcceptable,
@@ -84,6 +84,7 @@ def get_service_or_resource_types(service_resource):
     else:
         raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
                    content={u'service_resource': repr(type(service_resource))})
+    # noinspection PyUnboundLocalVariable
     return svc_res_type_obj, svc_res_type_str
 
 
@@ -98,7 +99,7 @@ def get_resource_permissions(resource, db_session):
     # otherwise obtain root level service to infer sub-resource permissions
     service = ResourceService.by_resource_id(resource.root_service_id, db_session=db_session)
     verify_param(service.resource_type, isEqual=True, httpError=HTTPNotAcceptable,
-                 paramName=u'resource_type', paramCompare=u'service',
+                 paramName=u'resource_type', paramCompare=models.Service.resource_type_name,
                  msgOnFail=UserResourcePermissions_GET_NotAcceptableRootServiceResponseSchema.description)
     service_obj = service_type_dict[service.type]
     verify_param(resource.resource_type, isIn=True, httpError=HTTPNotAcceptable,

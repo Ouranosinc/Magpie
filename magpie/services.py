@@ -1,10 +1,13 @@
 from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import *
-from magpie.definitions.pyramid_definitions import EVERYONE, ALLOW
+from magpie.definitions.pyramid_definitions import EVERYONE, ALLOW, Request
 from magpie.api.api_except import *
+from magpie.permissions import *
 from magpie.owsrequest import *
 from magpie import models
-from typing import List, Dict
+from typing import AnyStr, List, Dict, Union
+
+ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
 
 
 class ServiceI(object):
@@ -12,17 +15,20 @@ class ServiceI(object):
     params_expected = []                # type: List[str]
     # global permissions allowed for the service (top-level resource)
     permission_names = []               # type: List[str]
-    # dict of list for each corresponding allowed resource permissions
+    # dict of list for each corresponding allowed resource permissions (children resources)
     resource_types_permissions = {}     # type: Dict[str,List[str]]
 
     # make 'property' getter from derived classes
     class __metaclass__(type):
         @property
-        def resource_types(cls):  # allowed resources types under the service
+        def resource_types(cls):
+            # type: (...) -> List[AnyStr]
+            """Allowed resources types under the service."""
             return cls.resource_types_permissions.keys()
 
         @property
         def child_resource_allowed(cls):
+            # type: (...) -> bool
             return len(cls.resource_types) > 0
 
     def __init__(self, service, request):
@@ -37,6 +43,7 @@ class ServiceI(object):
         raise NotImplementedError
 
     def expand_acl(self, resource, user):
+        # type: (models.Resource, models.User) -> None
         if resource:
             for ace in resource.__acl__:
                 self.acl.append(ace)
@@ -55,19 +62,36 @@ class ServiceI(object):
                         self.acl.append((outcome, EVERYONE, perm_name,))
 
     def permission_requested(self):
+        # type: (...) -> AnyStr
         try:
             return self.parser.params[u'request']
         except Exception as e:
             # if 'ServiceI', 'params_expected' is empty and will raise a KeyError
             raise NotImplementedError("Exception: [" + repr(e) + "]")
 
+    def effective_permissions(self, resource, user):
+        # type: (models.Resource, models.User) -> List[ResourcePermissionType]
+        """
+        Recursively rewind the resource tree from the specified resource up to the topmost parent service resource
+        and retrieve permissions along the way that should be applied to children when using resource inheritance.
+        """
+        resource_effective_perms = list()
+        while resource is not None:
+            current_resource_perms = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
+            resource_effective_perms.extend(current_resource_perms)
+            if resource.parent_id:
+                resource = ResourceService.by_resource_id(resource.parent_id, db_session=self.request.db)
+            else:
+                resource = None
+        return resource_effective_perms
+
 
 class ServiceWPS(ServiceI):
 
     permission_names = [
-        u'getcapabilities',
-        u'describeprocess',
-        u'execute'
+        PERMISSION_GET_CAPABILITIES,
+        PERMISSION_DESCRIBE_PROCESS,
+        PERMISSION_EXECUTE,
     ]
 
     params_expected = [
@@ -88,13 +112,12 @@ class ServiceWPS(ServiceI):
 
 
 class ServiceWMS(ServiceI):
-
     permission_names = [
-        u'getcapabilities',
-        u'getmap',
-        u'getfeatureinfo',
-        u'getlegendgraphic',
-        u'getmetadata'
+        PERMISSION_GET_CAPABILITIES,
+        PERMISSION_GET_MAP,
+        PERMISSION_GET_FEATURE_INFO,
+        PERMISSION_GET_LEGEND_GRAPHIC,
+        PERMISSION_GET_METADATA,
     ]
 
     params_expected = [
@@ -108,11 +131,11 @@ class ServiceWMS(ServiceI):
 
     resource_types_permissions = {
         models.Workspace.resource_type_name: [
-            u'getcapabilities',
-            u'getmap',
-            u'getfeatureinfo',
-            u'getlegendgraphic',
-            u'getmetadata'
+            PERMISSION_GET_CAPABILITIES,
+            PERMISSION_GET_MAP,
+            PERMISSION_GET_FEATURE_INFO,
+            PERMISSION_GET_LEGEND_GRAPHIC,
+            PERMISSION_GET_METADATA,
         ]
     }
 
@@ -128,18 +151,18 @@ class ServiceNCWMS2(ServiceWMS):
 
     resource_types_permissions = {
         models.File.resource_type_name: [
-            u'getcapabilities',
-            u'getmap',
-            u'getfeatureinfo',
-            u'getlegendgraphic',
-            u'getmetadata'
+            PERMISSION_GET_CAPABILITIES,
+            PERMISSION_GET_MAP,
+            PERMISSION_GET_FEATURE_INFO,
+            PERMISSION_GET_LEGEND_GRAPHIC,
+            PERMISSION_GET_METADATA,
         ],
         models.Directory.resource_type_name: [
-            u'getcapabilities',
-            u'getmap',
-            u'getfeatureinfo',
-            u'getlegendgraphic',
-            u'getmetadata'
+            PERMISSION_GET_CAPABILITIES,
+            PERMISSION_GET_MAP,
+            PERMISSION_GET_FEATURE_INFO,
+            PERMISSION_GET_LEGEND_GRAPHIC,
+            PERMISSION_GET_METADATA,
         ]
     }
 
@@ -153,18 +176,18 @@ class ServiceNCWMS2(ServiceWMS):
         # According to the permission, the resource we want to authorize is not formatted the same way
         permission_requested = self.permission_requested()
         netcdf_file = None
-        if permission_requested == 'getcapabilities':
+        if permission_requested == PERMISSION_GET_CAPABILITIES:
             # https://colibri.crim.ca/twitcher/ows/proxy/ncWMS2/wms?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0&DATASET=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc
             if 'dataset' in self.parser.params.keys():
                 netcdf_file = self.parser.params['dataset']
 
-        elif permission_requested == 'getmap':
+        elif permission_requested == PERMISSION_GET_MAP:
             # https://colibri.crim.ca/ncWMS2/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image%2Fpng&TRANSPARENT=TRUE&ABOVEMAXCOLOR=extend&STYLES=default-scalar%2Fseq-Blues&LAYERS=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc/PCP&EPSG=4326
             netcdf_file = self.parser.params['layers']
             if netcdf_file:
                 netcdf_file = netcdf_file.rsplit('/', 1)[0]
 
-        elif permission_requested == 'getmetadata':
+        elif permission_requested == PERMISSION_GET_METADATA:
             # https://colibri.crim.ca/ncWMS2/wms?request=GetMetadata&item=layerDetails&layerName=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc/PCP
             netcdf_file = self.parser.params['layername']
             if netcdf_file:
@@ -209,7 +232,7 @@ class ServiceGeoserver(ServiceWMS):
         #here we need to check the workspace in the path
 
         request_type = self.permission_requested()
-        if request_type == 'getcapabilities':
+        if request_type == PERMISSION_GET_CAPABILITIES:
             path_elem = self.request.path.split('/')
             wms_idx = path_elem.index('wms')
             if path_elem[wms_idx-1] != 'geoserver':
@@ -230,7 +253,7 @@ class ServiceGeoserver(ServiceWMS):
 
 
 class ServiceAccess(ServiceI):
-    permission_names = ['access']
+    permission_names = [PERMISSION_ACCESS]
     params_expected = []
     resource_types_permissions = {}
 
@@ -243,7 +266,7 @@ class ServiceAccess(ServiceI):
         return self.acl
 
     def permission_requested(self):
-        return 'access'
+        return PERMISSION_ACCESS
 
 
 class ServiceAPI(ServiceI):
@@ -286,30 +309,40 @@ class ServiceAPI(ServiceI):
                     self.expand_acl(route_child, self.request.user)
 
         # process read/write-match specific permission access
-        # (convert exact route '-match' to read/write only if matching last item's permissions)
+        # (convert exact route 'match' to read/write counterparts only if matching last item's permissions)
         for i in range(match_index, len(self.acl)):
-            if self.acl[i][2] == 'read-match':
-                self.acl[i] = (self.acl[i][0], self.acl[i][1], 'read')
-            if self.acl[i][2] == 'write-match':
-                self.acl[i] = (self.acl[i][0], self.acl[i][1], 'write')
+            if self.acl[i][2] == PERMISSION_READ_MATCH:
+                self.acl[i] = (self.acl[i][0], self.acl[i][1], PERMISSION_READ)
+            if self.acl[i][2] == PERMISSION_WRITE_MATCH:
+                self.acl[i] = (self.acl[i][0], self.acl[i][1], PERMISSION_WRITE)
 
         return self.acl
 
     def permission_requested(self):
-        # only read/write are used for 'real' access control, '-match' permissions must be updated accordingly
+        # only read/write are used for 'real' access control, 'match' permissions must be updated accordingly
         if self.request.method.upper() in ['GET', 'HEAD']:
-            return u'read'
-        return u'write'
+            return PERMISSION_READ
+        return PERMISSION_WRITE
+
+    def effective_permissions(self, resource, user):
+        # if 'match' permissions are on the specified 'resource', keep them
+        # otherwise, keep only the non 'match' variations from inherited parent resources permissions
+        resource_effective_perms = super(ServiceAPI, self).effective_permissions(resource, user)
+        return filter(lambda p:
+                      (p.perm_name in [PERMISSION_READ, PERMISSION_WRITE]) or
+                      (p.perm_name in [PERMISSION_READ_MATCH, PERMISSION_WRITE_MATCH]
+                       and p.resource.resource_id == resource.resource_id),
+                      resource_effective_perms)
 
 
 class ServiceWFS(ServiceI):
 
     permission_names = [
-        u'getcapabilities',
-        u'describefeaturetype',
-        u'getfeature',
-        u'lockfeature',
-        u'transaction'
+        PERMISSION_GET_CAPABILITIES,
+        PERMISSION_DESCRIBE_FEATURE_TYPE,
+        PERMISSION_GET_FEATURE,
+        PERMISSION_LOCK_FEATURE,
+        PERMISSION_TRANSACTION,
     ]
 
     params_expected = [
@@ -328,7 +361,7 @@ class ServiceWFS(ServiceI):
     def __acl__(self):
         self.expand_acl(self.service, self.request.user)
         request_type = self.permission_requested()
-        if request_type == 'getcapabilities':
+        if request_type == PERMISSION_GET_CAPABILITIES:
             path_elem = self.request.path.split('/')
             wms_idx = path_elem.index('wfs')
             if path_elem[wms_idx - 1] != 'geoserver':
@@ -351,8 +384,8 @@ class ServiceWFS(ServiceI):
 class ServiceTHREDDS(ServiceI):
 
     permission_names = [
-        u'read',
-        u'write'
+        PERMISSION_READ,
+        PERMISSION_WRITE,
     ]
 
     params_expected = [
@@ -360,14 +393,8 @@ class ServiceTHREDDS(ServiceI):
     ]
 
     resource_types_permissions = {
-        models.Directory.resource_type_name: [
-            u'read',
-            u'write'
-        ],
-        models.File.resource_type_name: [
-            u'read',
-            u'write'
-        ],
+        models.Directory.resource_type_name: permission_names,
+        models.File.resource_type_name: permission_names,
     }
 
     def __init__(self, service, request):
@@ -418,6 +445,8 @@ service_type_dict = {
 
 
 def service_factory(service, request):
+    # type: (models.Service, Request) -> ServiceI
+    """Retrieve the specific service class from the provided database service entry."""
     verify_param(service, ofType=models.Service, httpError=HTTPBadRequest, content={u'service': repr(service)},
                  msgOnFail="Cannot process invalid service object")
     service_type = evaluate_call(lambda: service.type, httpError=HTTPInternalServerError,

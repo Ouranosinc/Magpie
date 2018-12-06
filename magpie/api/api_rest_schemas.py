@@ -273,13 +273,17 @@ class HeaderRequestSchema(colander.MappingSchema):
     content_type.name = 'Content-Type'
 
 
+QueryEffectivePermissions = colander.SchemaNode(
+    colander.Boolean(), default=False, missing=colander.drop,
+    description="User groups effective permissions resolved with corresponding service inheritance functionality. "
+                "(Note: group inheritance is enforced regardless of any `inherit` flag).")
 QueryInheritGroupsPermissions = colander.SchemaNode(
     colander.Boolean(), default=False, missing=colander.drop,
-    description='User groups memberships inheritance to resolve service resource permissions.')
+    description="User groups memberships inheritance to resolve service resource permissions.")
 QueryCascadeResourcesPermissions = colander.SchemaNode(
     colander.Boolean(), default=False, missing=colander.drop,
-    description='Display any service that has at least one sub-resource user permission, '
-                'or only services that have user permissions directly set on them.', )
+    description="Display any service that has at least one sub-resource user permission, "
+                "or only services that have user permissions directly set on them.", )
 
 
 class BaseResponseBodySchema(colander.MappingSchema):
@@ -1467,6 +1471,7 @@ class UserResources_GET_NotFoundResponseSchema(colander.MappingSchema):
 
 class UserResourcePermissions_GET_QuerySchema(colander.MappingSchema):
     inherit = QueryInheritGroupsPermissions
+    effective = QueryEffectivePermissions
 
 
 class UserResourcePermissions_GET_RequestSchema(colander.MappingSchema):
@@ -1667,7 +1672,7 @@ class UserServices_GET_ResponseBodySchema(BaseResponseBodySchema):
 class UserServices_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get user services successful."
     header = HeaderResponseSchema()
-    body = UserServices_GET_ResponseBodySchema
+    body = UserServices_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class UserServicePermissions_GET_QuerySchema(colander.MappingSchema):

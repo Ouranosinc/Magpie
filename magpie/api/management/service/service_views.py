@@ -60,11 +60,13 @@ def register_service(request):
                  httpError=HTTPConflict, msgOnFail=Services_POST_ConflictResponseSchema.description,
                  content={u'service_name': str(service_name)}, paramName=u'service_name')
 
-    service = evaluate_call(lambda: models.Service(resource_name=str(service_name), resource_type=u'service',
+    service = evaluate_call(lambda: models.Service(resource_name=str(service_name),
+                                                   resource_type=models.Service.resource_type_name,
                                                    url=str(service_url), type=str(service_type)),
                             fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                             msgOnFail="Service creation for registration failed.",
-                            content={u'service_name': str(service_name), u'resource_type': u'service',
+                            content={u'service_name': str(service_name),
+                                     u'resource_type': models.Service.resource_type_name,
                                      u'service_url': str(service_url), u'service_type': str(service_type)})
 
     def add_service_magpie_and_phoenix(svc, svc_push, db):

@@ -21,6 +21,7 @@ from pyramid.httpexceptions import (
 from pyramid.registry import Registry
 from pyramid.settings import asbool
 from pyramid.registry import Registry
+from pyramid.request import Request
 from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy
 from pyramid.response import Response, FileResponse
 from pyramid.view import (
