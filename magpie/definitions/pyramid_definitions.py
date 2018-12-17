@@ -17,6 +17,7 @@ from pyramid.httpexceptions import (
     HTTPConflict,
     HTTPUnprocessableEntity,
     HTTPInternalServerError,
+    HTTPNotImplemented,
 )
 from pyramid.registry import Registry
 from pyramid.settings import asbool
