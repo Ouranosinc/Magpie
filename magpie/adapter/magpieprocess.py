@@ -341,8 +341,7 @@ class MagpieProcessStore(ProcessStore):
                 # If for any reason the resource that we want to delete does not exist silently ignore it
                 pass
 
-        store = self.default_process_store
-        return store.delete_process(process_id, visibility=visibility, request=request)
+        return self.default_process_store.delete_process(process_id, visibility=visibility, request=request)
 
     def list_processes(self, visibility=None, request=None):
         # type: (Optional[bool], Optional[requests.Request]) -> List[Process]
@@ -354,8 +353,7 @@ class MagpieProcessStore(ProcessStore):
         If twitcher is in EMS mode, filter processes according to magpie user and inherited group permissions.
         """
         visibility_filter = visibility if self.twitcher_config != TWITCHER_CONFIGURATION_EMS else visibility_values
-        store = self.default_process_store
-        processes = store.list_processes(visibility=visibility_filter, request=request)
+        processes = self.default_process_store.list_processes(visibility=visibility_filter, request=request)
 
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
             try:
@@ -388,8 +386,7 @@ class MagpieProcessStore(ProcessStore):
             if self.is_visible_by_user(ems_processes_id, process_id, request):
                 visibility = None
 
-        store = self.default_process_store
-        return store.fetch_by_id(process_id, visibility=visibility, request=request)
+        return self.default_process_store.fetch_by_id(process_id, visibility=visibility, request=request)
 
     def is_admin_user(self, request):
         # type: (requests.Request) -> bool
