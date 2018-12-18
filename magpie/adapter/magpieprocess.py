@@ -9,6 +9,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPCreated,
     HTTPNotFound,
     HTTPConflict,
+    HTTPNotImplemented,
     asbool,
     Registry,
 )
@@ -18,7 +19,7 @@ from twitcher.utils import get_twitcher_url
 from twitcher.config import get_twitcher_configuration, TWITCHER_CONFIGURATION_EMS
 from twitcher.datatype import Process
 from twitcher.exceptions import ProcessNotFound, ProcessRegistrationError
-from twitcher.store import processstore_defaultfactory
+from twitcher.adapter.default import DefaultAdapter
 from twitcher.store.base import ProcessStore
 from twitcher.visibility import VISIBILITY_PUBLIC, VISIBILITY_PRIVATE, visibility_values
 from typing import List, Optional, Iterable, Union, AnyStr
@@ -37,6 +38,7 @@ class MagpieProcessStore(ProcessStore):
 
     def __init__(self, registry):
         # type: (Registry) -> None
+        super(MagpieProcessStore, self).__init__()
         self.magpie_url = get_magpie_url(registry)
         self.twitcher_ssl_verify = asbool(registry.settings.get('twitcher.ows_proxy_ssl_verify', True))
         self.magpie_admin_token = get_admin_cookies(self.magpie_url, self.twitcher_ssl_verify)
@@ -45,6 +47,7 @@ class MagpieProcessStore(ProcessStore):
         self.magpie_editors = get_constant('MAGPIE_EDITOR_GROUP')
         self.magpie_current = get_constant('MAGPIE_LOGGED_USER')
         self.magpie_service = 'ems'
+        self.default_process_store = DefaultAdapter().processstore_factory(registry)
         self.twitcher_config = get_twitcher_configuration(registry.settings)
         self.twitcher_url = get_twitcher_url(registry.settings)
         self.json_headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
@@ -66,7 +69,7 @@ class MagpieProcessStore(ProcessStore):
         self._create_resource_permissions(proc_res_id, 'read-match', group_names=self.magpie_users)
 
     def _find_resource_id(self, parent_resource_id, resource_name):
-        # type: (int, str) -> int
+        # type: (int, AnyStr) -> int
         """
         Finds the resource id corresponding to a child :param:`resource_name` of :param:`parent_resource_id`.
         If :param:`parent_resource_id` is `None`, suppose the resource is a `service`, search by :param:`resource_name`.
@@ -136,8 +139,12 @@ class MagpieProcessStore(ProcessStore):
             LOGGER.debug("Group `{}` creation or validation failed.".format(group_name))
             resp.raise_for_status()
 
-    def _create_resource_permissions(self, resource_id, permission_names, group_names=None, user_names=None):
-        # type: (int, Union[str, List[str]], Optional[Union[str, List[str]]], Optional[Union[str, List[str]]]) -> None
+    def _create_resource_permissions(self,
+                                     resource_id,       # type: int
+                                     permission_names,  # type: Union[AnyStr, List[AnyStr]]
+                                     group_names=None,  # type: Optional[Union[AnyStr, List[AnyStr]]]
+                                     user_names=None,   # type: Optional[Union[AnyStr, List[AnyStr]]]
+                                     ):                 # type: (...) -> None
         """
         Creates group permission(s) on a resource.
 
@@ -168,8 +175,12 @@ class MagpieProcessStore(ProcessStore):
                 if resp.status_code not in (HTTPCreated.code, HTTPConflict.code):
                     resp.raise_for_status()
 
-    def _delete_resource_permissions(self, resource_id, permission_names, group_names=None, user_names=None):
-        # type: (int, Union[str, List[str]], Optional[Union[str, List[str]]], Optional[Union[str, List[str]]]) -> None
+    def _delete_resource_permissions(self,
+                                     resource_id,       # type: int
+                                     permission_names,  # type: Union[AnyStr, List[AnyStr]]
+                                     group_names=None,  # type: Optional[Union[AnyStr, List[AnyStr]]]
+                                     user_names=None,   # type: Optional[Union[AnyStr, List[AnyStr]]]
+                                     ):                 # type: (...) -> None
         """
         Deletes group permission(s) on a resource.
 
@@ -200,11 +211,11 @@ class MagpieProcessStore(ProcessStore):
                     reps.raise_for_status()
 
     def _create_resource(self,
-                         resource_name,             # type: str
+                         resource_name,             # type: AnyStr
                          resource_parent_id,        # type: int, None
-                         group_names=None,          # type: Optional[Union[str, Iterable[str]]]
-                         permission_names=None,     # type: Optional[Union[str, Iterable[str]]]
-                         resource_type='route',     # type: Optional[str]
+                         group_names=None,          # type: Optional[Union[AnyStr, Iterable[AnyStr]]]
+                         permission_names=None,     # type: Optional[Union[AnyStr, Iterable[AnyStr]]]
+                         resource_type='route',     # type: Optional[AnyStr]
                          extra_data=None,           # type: Optional[dict]
                          ):                         # type: (...) -> int
         """
@@ -294,10 +305,10 @@ class MagpieProcessStore(ProcessStore):
                 # If the request is anonymous do not create the permission
                 pass
 
-        return processstore_defaultfactory(request.registry).save_process(process, overwrite, request)
+        return self.default_process_store.save_process(process, overwrite, request)
 
     def delete_process(self, process_id, visibility=None, request=None):
-        # type: (int, Optional[AnyStr], Optional[requests.Request]) -> bool
+        # type: (AnyStr, Optional[AnyStr], Optional[requests.Request]) -> bool
         """
         Delete a process.
 
@@ -330,7 +341,7 @@ class MagpieProcessStore(ProcessStore):
                 # If for any reason the resource that we want to delete does not exist silently ignore it
                 pass
 
-        store = processstore_defaultfactory(request.registry)
+        store = self.default_process_store
         return store.delete_process(process_id, visibility=visibility, request=request)
 
     def list_processes(self, visibility=None, request=None):
@@ -343,7 +354,7 @@ class MagpieProcessStore(ProcessStore):
         If twitcher is in EMS mode, filter processes according to magpie user and inherited group permissions.
         """
         visibility_filter = visibility if self.twitcher_config != TWITCHER_CONFIGURATION_EMS else visibility_values
-        store = processstore_defaultfactory(request.registry)
+        store = self.default_process_store
         processes = store.list_processes(visibility=visibility_filter, request=request)
 
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
@@ -360,7 +371,7 @@ class MagpieProcessStore(ProcessStore):
         return processes
 
     def fetch_by_id(self, process_id, visibility=None, request=None):
-        # type: (int, Optional[AnyStr], Optional[requests.Request]) -> Union[Process, None]
+        # type: (AnyStr, Optional[AnyStr], Optional[requests.Request]) -> Union[Process, None]
         """
         Get a process if visible for user.
 
@@ -377,7 +388,7 @@ class MagpieProcessStore(ProcessStore):
             if self.is_visible_by_user(ems_processes_id, process_id, request):
                 visibility = None
 
-        store = processstore_defaultfactory(request.registry)
+        store = self.default_process_store
         return store.fetch_by_id(process_id, visibility=visibility, request=request)
 
     def is_admin_user(self, request):
@@ -417,7 +428,7 @@ class MagpieProcessStore(ProcessStore):
         return True
 
     def get_visibility(self, process_id, request=None):
-        # type: (int, Optional[requests.Request]) -> AnyStr
+        # type: (AnyStr, Optional[requests.Request]) -> AnyStr
         """
         Get visibility of a process.
 
@@ -426,10 +437,10 @@ class MagpieProcessStore(ProcessStore):
             using twitcher proxy, only allowed users/groups can read '/ems/processes/{process_id}/visibility'
             any other level user will get unauthorized on this route
         """
-        return processstore_defaultfactory(request.registry).get_visibility(process_id, request=request)
+        return self.default_process_store.get_visibility(process_id, request=request)
 
     def set_visibility(self, process_id, visibility, request=None):
-        # type: (int, AnyStr, Optional[requests.Request]) -> None
+        # type: (AnyStr, AnyStr, Optional[requests.Request]) -> None
         """
         Set visibility of a process.
 
@@ -470,4 +481,7 @@ class MagpieProcessStore(ProcessStore):
                 raise
 
         # update visibility of process, which will also reflect changes to route permissions during 'list_processes'
-        processstore_defaultfactory(request.registry).set_visibility(process_id, visibility=visibility, request=request)
+        self.default_process_store.set_visibility(process_id, visibility=visibility, request=request)
+
+    def clear_processes(self, request=None):
+        raise_http(httpError=HTTPNotImplemented, detail="Clear processes not supported via MagpieAdapter.")
