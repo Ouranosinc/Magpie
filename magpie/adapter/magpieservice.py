@@ -15,6 +15,7 @@ class MagpieServiceStore(ServiceStore):
     Registry for OWS services. Uses magpie to fetch service url and attributes.
     """
     def __init__(self, registry):
+        super(MagpieServiceStore, self).__init__()
         self.magpie_url = get_magpie_url(registry)
         self.twitcher_ssl_verify = asbool(registry.settings.get('twitcher.ows_proxy_ssl_verify', True))
         self.magpie_admin_token = get_admin_cookies(self.magpie_url, self.twitcher_ssl_verify)
