@@ -49,7 +49,7 @@ class MagpieServiceStore(ServiceStore):
                                         type=service['service_type']))
         return services
 
-    def fetch_by_name(self, name, request=None):
+    def fetch_by_name(self, name, visibility=None, request=None):
         """
         Gets service for given ``name`` from magpie.
         """
