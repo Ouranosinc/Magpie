@@ -26,6 +26,7 @@ def create_user(user_name, password, email, group_name, db_session):
                  msgOnFail=User_Check_ConflictResponseSchema.description)
 
     # Create user with specified name and group to assign
+    # noinspection PyArgumentList
     new_user = models.User(user_name=user_name, email=email)
     if password:
         UserService.set_password(new_user, password)
@@ -37,6 +38,7 @@ def create_user(user_name, password, email, group_name, db_session):
                              httpError=HTTPForbidden, msgOnFail=UserNew_POST_ForbiddenResponseSchema.description)
 
     # Assign user to group
+    # noinspection PyArgumentList
     group_entry = models.UserGroup(group_id=group_check.id, user_id=new_user.id)
     evaluate_call(lambda: db.add(group_entry), fallback=lambda: db.rollback(),
                   httpError=HTTPForbidden, msgOnFail=UserGroup_GET_ForbiddenResponseSchema.description)
@@ -54,6 +56,7 @@ def create_user_resource_permission(permission_name, resource, user_id, db_sessi
                  content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name},
                  msgOnFail=UserResourcePermissions_POST_ConflictResponseSchema.description)
 
+    # noinspection PyArgumentList
     new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id, perm_name=permission_name)
     verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
                  content={u'resource_id': resource_id, u'user_id': user_id},

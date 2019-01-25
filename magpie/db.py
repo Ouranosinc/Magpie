@@ -9,24 +9,26 @@ import transaction
 import inspect
 import zope.sqlalchemy
 import logging
-logger = logging.getLogger(__name__)
 
 # import or define all models here to ensure they are attached to the
 # Base.metadata prior to any initialization routines
 from magpie import models
+
+
+logger = logging.getLogger(__name__)
 
 # run configure_mappers after defining all of the models to ensure
 # all relationships can be setup
 configure_mappers()
 
 
-def get_db_url():
+def get_db_url(username=None, password=None, db_host=None, db_port=None, db_name=None):
     return "postgresql://%s:%s@%s:%s/%s" % (
-        constants.MAGPIE_POSTGRES_USER,
-        constants.MAGPIE_POSTGRES_PASSWORD,
-        constants.MAGPIE_POSTGRES_HOST,
-        constants.MAGPIE_POSTGRES_PORT,
-        constants.MAGPIE_POSTGRES_DB,
+        username if username is not None else constants.MAGPIE_POSTGRES_USER,
+        password if password is not None else constants.MAGPIE_POSTGRES_PASSWORD,
+        db_host if db_host is not None else constants.MAGPIE_POSTGRES_HOST,
+        db_port if db_port is not None else constants.MAGPIE_POSTGRES_PORT,
+        db_name if db_name is not None else constants.MAGPIE_POSTGRES_DB,
     )
 
 
@@ -59,7 +61,7 @@ def get_tm_session(session_factory, transaction_manager):
           engine = get_engine(settings)
           session_factory = get_session_factory(engine)
           with transaction.manager:
-              dbsession = get_tm_session(session_factory, transaction.manager)
+              db_session = get_tm_session(session_factory, transaction.manager)
 
     """
     db_session = session_factory()
@@ -104,11 +106,12 @@ def is_database_ready():
 
     for name, obj in inspect.getmembers(models):
         if inspect.isclass(obj):
+            # noinspection PyBroadException
             try:
                 curr_table_name = obj.__tablename__
                 if curr_table_name not in table_names:
                     return False
-            except:
+            except Exception:
                 continue
     return True
 

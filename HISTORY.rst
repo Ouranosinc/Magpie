@@ -3,6 +3,14 @@
 History
 =======
 
+0.8.x
+---------------------
+
+* update MagpieAdapter to match process store changes
+* provide user ID on API routes returning user info
+* attempt db creation on first migration if not existing
+* add permissions config to auto-generate user/group rules on startup
+
 0.7.x
 ---------------------
 

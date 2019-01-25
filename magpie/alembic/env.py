@@ -1,9 +1,12 @@
 from __future__ import with_statement
 from alembic import context
-from magpie.definitions.sqlalchemy_definitions import engine_from_config, pool, create_engine
-from magpie.db import get_db_url
 from logging.config import fileConfig
 from sqlalchemy.schema import MetaData
+from sqlalchemy.engine import create_engine
+from sqlalchemy.exc import OperationalError
+from magpie.db import get_db_url
+from magpie.constants import get_constant
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -14,11 +17,6 @@ config = context.config
 fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-
-
 target_metadata = MetaData(naming_convention={
     "ix": 'ix_%(column_0_label)s',
     "uq": "uq_%(table_name)s_%(column_0_name)s",
@@ -40,13 +38,12 @@ def run_migrations_offline():
     This configures the context with just a URL
     and not an Engine, though an Engine is acceptable
     here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
+    we don't even need a DB-API to be available.
 
     Calls to context.execute() here emit the given string to the
     script output.
 
     """
-    #url = config.get_main_option("sqlalchemy.url")
     url = get_db_url()
     context.configure(
         url=url, target_metadata=target_metadata, literal_binds=True)
@@ -62,12 +59,31 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    #connectable = engine_from_config(
-    #    config.get_section(config.config_ini_section),
-    #    prefix='sqlalchemy.',
-    #    poolclass=pool.NullPool)
-    connectable = create_engine(get_db_url())
+    # test the connection, if database is missing try creating it
+    url = get_db_url()
+    try:
+        connectable = create_engine(url)
+        with connectable.connect():
+            pass
+    except OperationalError as ex:
+        # see for details:
+        #   https://stackoverflow.com/questions/6506578
+        db_name = get_constant('MAGPIE_POSTGRES_DB')
+        if 'database "{}" does not exist'.format(db_name) not in ex.message:
+            raise   # any error is OperationalError, so validate only missing db error
+        db_default_postgres_url = get_db_url(
+            username='postgres',    # only postgres user can connect to default 'postgres' db
+            password='',
+            db_host=get_constant('MAGPIE_POSTGRES_HOST'),
+            db_port=get_constant('MAGPIE_POSTGRES_PORT'),
+            db_name='postgres'
+        )
+        connectable = create_engine(db_default_postgres_url)
+        with connectable.connect() as connection:
+            connection.execute("commit")    # end initial transaction
+            connection.execute("create database {}".format(db_name))
 
+    # retry connection and run migration
     with connectable.connect() as connection:
         context.configure(
             connection=connection,

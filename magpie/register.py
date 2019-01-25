@@ -1,16 +1,19 @@
+from magpie.api.api_rest_schemas import SigninAPI, SignoutAPI, ServicesAPI
 from magpie.services import service_type_dict
 from magpie.common import make_dirs, print_log, raise_log, bool2str
 from magpie.constants import get_constant
 from magpie import models
 from magpie.definitions.ziggurat_definitions import UserService, UserResourcePermissionService
+from magpie.definitions.sqlalchemy_definitions import Session
+from typing import AnyStr, Dict, List, Optional, Tuple, TYPE_CHECKING
 import os
 import time
 import yaml
 import subprocess
 import requests
 import transaction
+import warnings
 import logging
-
 LOGGER = logging.getLogger(__name__)
 
 LOGIN_ATTEMPT = 10              # max attempts for login
@@ -24,6 +27,9 @@ GETCAPABILITIES_ATTEMPTS = 12   # max attempts for 'GetCapabilities' validations
 SERVICES_MAGPIE = 'MAGPIE'
 SERVICES_PHOENIX = 'PHOENIX'
 SERVICES_PHOENIX_ALLOWED = ['wps']
+
+if TYPE_CHECKING:
+    ConfigDict = Dict[AnyStr, Dict[AnyStr, AnyStr]]
 
 
 def login_loop(login_url, cookies_file, data=None, message='Login response'):
@@ -46,9 +52,15 @@ def login_loop(login_url, cookies_file, data=None, message='Login response'):
 
 
 def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Response'):
+    # type: (AnyStr, Optional[AnyStr], Optional[AnyStr], Optional[AnyStr], Optional[AnyStr]) -> Tuple[int, int]
+    """Executes a request using cURL.
+
+    :returns: tuple of the returned system command code and the response http code
+    """
+
     # arg -k allows to ignore insecure SSL errors, ie: access 'https' page not configured for it
-    ###curl_cmd = 'curl -k -L -s -o /dev/null -w "{msg_out} : %{{http_code}}\\n" {params} {url}'
-    ###curl_cmd = curl_cmd.format(msg_out=msg, params=params, url=url)
+    #   curl_cmd = 'curl -k -L -s -o /dev/null -w "{msg_out} : %{{http_code}}\\n" {params} {url}'
+    #   curl_cmd = curl_cmd.format(msg_out=msg, params=params, url=url)
     msg_sep = msg + ": "
     params = ['curl', '-k', '-L', '-s', '-o', '/dev/null', '-w', msg_sep + '%{http_code}']
     if cookie_jar is not None and cookies is not None:
@@ -61,8 +73,8 @@ def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Resp
         params.extend(['--data', form_params])
     params.extend([url])
     curl_out = subprocess.Popen(params, stdout=subprocess.PIPE)
-    curl_msg = curl_out.communicate()[0]
-    curl_err = curl_out.returncode
+    curl_msg = curl_out.communicate()[0]    # type: AnyStr
+    curl_err = curl_out.returncode          # type: int
     http_code = int(curl_msg.split(msg_sep)[1])
     print_log("[{url}] {response}".format(response=curl_msg, url=url))
     return curl_err, http_code
@@ -91,8 +103,8 @@ def phoenix_login(cookies):
 def phoenix_login_check(cookies):
     """
     Since Phoenix always return 200, even on invalid login, 'hack' check unauthorized access.
-    :param cookies:
-    :return:
+    :param cookies: temporary cookies file storage used for login with `phoenix_login`.
+    :return: status indicating if login access was granted with defined credentials.
     """
     no_access_error = "<ExceptionText>Unauthorized: Services failed permission check</ExceptionText>"
     svc_url = get_phoenix_url() + '/services'
@@ -103,6 +115,11 @@ def phoenix_login_check(cookies):
 
 
 def phoenix_remove_services():
+    # type: (...) -> bool
+    """Removes the Phoenix services using temporary cookies retrieved from login with defined `PHOENIX` constants.
+
+    :returns: success status of the procedure.
+    """
     phoenix_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_phoenix')
     error = 0
     try:
@@ -139,10 +156,8 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
                 filtered_services_dict[svc]['type'] = filtered_services_dict[svc]['type'].upper()
 
         # Register services
-        phoenix_url = get_phoenix_url()
-        register_service_url = phoenix_url + '/services/register'
-        success, statuses = register_services(register_service_url, filtered_services_dict,
-                                              phoenix_cookies, 'Phoenix register service', SERVICES_PHOENIX)
+        success, statuses = register_services(SERVICES_PHOENIX, filtered_services_dict,
+                                              phoenix_cookies, 'Phoenix register service')
     except Exception as e:
         print_log("Exception during phoenix register services: [" + repr(e) + "]")
     finally:
@@ -179,14 +194,26 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
     return "{0}/{1}".format(twitcher_proxy_url, magpie_service_name)
 
 
-def register_services(register_service_url, services_dict, cookies,
-                      message='Register response', where=SERVICES_MAGPIE):
+def register_services(where,                        # type: Optional[AnyStr]
+                      services_dict,                # type: Dict[AnyStr, Dict[AnyStr, AnyStr]]
+                      cookies,                      # type: AnyStr
+                      message='Register response',  # type: AnyStr
+                      ):                            # type: (...) -> Tuple[bool, Dict[AnyStr, int]]
+    """
+    Registers services on desired location using provided configurations and access cookies.
+
+    :returns: tuple of overall success and individual http response of each service registration.
+    """
     success = True
+    svc_url = None
     statuses = dict()
+    register_service_url = None
     if where == SERVICES_MAGPIE:
         svc_url_tag = 'service_url'
+        get_magpie_url() + ServicesAPI.path
     elif where == SERVICES_PHOENIX:
         svc_url_tag = 'url'
+        register_service_url = get_phoenix_url() + '/services/register'
     else:
         raise ValueError("Unknown location for service registration", where)
     for service_name in services_dict:
@@ -219,6 +246,7 @@ def sync_services_phoenix(services_object_dict, services_as_dicts=False):
     """
     Syncs Magpie services by pushing updates to Phoenix.
     Services must be one of types specified in SERVICES_PHOENIX_ALLOWED.
+
     :param services_object_dict: dictionary of {svc-name: models.Service} objects containing each service's information
     :param services_as_dicts: alternatively specify `services_object_dict` as dict of {svc-name: {service-info}}
     where {service-info} = {'public_url': <url>, 'service_name': <name>, 'service_type': <type>}
@@ -289,6 +317,8 @@ def magpie_add_register_services_perms(services, statuses, curl_cookies, request
 
 
 def magpie_update_services_conflict(conflict_services, services_dict, request_cookies):
+    # type: (List[AnyStr], ConfigDict, Dict[AnyStr, AnyStr]) -> Dict[AnyStr, int]
+    """Resolve conflicting services by name during registration by updating them only if pointing to different URL."""
     magpie_url = get_magpie_url()
     statuses = dict()
     for svc_name in conflict_services:
@@ -306,16 +336,29 @@ def magpie_update_services_conflict(conflict_services, services_dict, request_co
     return statuses
 
 
-def magpie_register_services(services_dict, push_to_phoenix, user, password, provider,
+def magpie_register_services(services_dict, push_to_phoenix, username, password, provider,
                              force_update=False, disable_getcapabilities=False):
+    # type: (ConfigDict, bool, AnyStr, AnyStr, AnyStr, Optional[bool], Optional[bool]) -> bool
+    """
+    Registers magpie services using the provided services configuration.
+
+    :param services_dict: services configuration definition.
+    :param push_to_phoenix: push registered Magpie services to Phoenix for synced configurations.
+    :param username: login username to use to obtain permissions for services registration.
+    :param password: login password to use to obtain permissions for services registration.
+    :param provider: login provider to use to obtain permissions for services registration.
+    :param force_update: override existing services matched by name
+    :param disable_getcapabilities: do not execute 'GetCapabilities' validation for applicable services.
+    :return: successful operation status
+    """
     magpie_url = get_magpie_url()
     curl_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_magpie')
     session = requests.Session()
     success = False
     try:
         # Need to login first as admin
-        login_url = magpie_url + '/signin'
-        login_data = {'user_name': user, 'password': password, 'provider_name': provider}
+        login_url = magpie_url + SigninAPI.path
+        login_data = {'user_name': username, 'password': password, 'provider_name': provider}
         login_loop(login_url, curl_cookies, login_data, 'Magpie login response')
         login_resp = session.post(login_url, data=login_data)
         if login_resp.status_code != 200:
@@ -324,9 +367,8 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
 
         # Register services
         # Magpie will not overwrite existing services by default, 409 Conflict instead of 201 Created
-        register_service_url = magpie_url + '/services'
-        success, statuses_register = register_services(register_service_url, services_dict, curl_cookies,
-                                                       'Magpie register service', SERVICES_MAGPIE)
+        success, statuses_register = register_services(SERVICES_MAGPIE, services_dict,
+                                                       curl_cookies, 'Magpie register service')
         # Service URL update if conflicting and requested
         if force_update and not success:
             conflict_services = [svc_name for svc_name, http_code in statuses_register.items() if http_code == 409]
@@ -337,7 +379,7 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
         # Phoenix doesn't register the service if it cannot be checked with this request
         magpie_add_register_services_perms(services_dict, statuses_register,
                                            curl_cookies, request_cookies, disable_getcapabilities)
-        session.get(magpie_url + '/signout')
+        session.get(magpie_url + SignoutAPI.path)
 
         # Push updated services to Phoenix
         if push_to_phoenix:
@@ -376,6 +418,7 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
             print_log("Skipping service [{svc}] (conflict)" .format(svc=svc_name))
         else:
             print_log("Adding service [{svc}]".format(svc=svc_name))
+            # noinspection PyArgumentList
             svc = models.Service(resource_name=svc_name,
                                  resource_type=models.Service.resource_type_name,
                                  url=svc_new_url,
@@ -393,6 +436,7 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
             )
             if svc_perm_getcapabilities is None:
                 print_log("Adding 'getcapabilities' permission to anonymous user")
+                # noinspection PyArgumentList
                 svc_perm_getcapabilities = models.UserResourcePermission(
                     user_id=anonymous_user.id, perm_name='getcapabilities', resource_id=svc.resource_id
                 )
@@ -406,13 +450,28 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
     return True
 
 
+def _load_config(path, section):
+    try:
+        cfg = yaml.load(open(path, 'r'))
+        return cfg[section]
+    except KeyError as ex:
+        raise_log("Config file section [{!s}] not found.".format(section), exception=type(ex))
+    except Exception as ex:
+        raise_log("Invalid config file [{!r}]".format(ex), exception=type(ex))
+
+
 def magpie_register_services_from_config(service_config_file_path, push_to_phoenix=False,
                                          force_update=False, disable_getcapabilities=False, db_session=None):
-    try:
-        services_cfg = yaml.load(open(service_config_file_path, 'r'))
-        services = services_cfg['providers']
-    except Exception as e:
-        raise_log("Bad service file + [" + repr(e) + "]", exception=type(e))
+    # type: (AnyStr, Optional[bool], Optional[bool], Optional[bool], Optional[Session]) -> None
+    """
+    Registers Magpie services from a `providers.cfg` file.
+    Uses the provided DB session to directly update service definitions, or uses API request routes as admin.
+    Optionally pushes updates to Phoenix.
+    """
+    services = _load_config(service_config_file_path, 'providers')
+    if not services:
+        warnings.warn("Services configuration are empty.", UserWarning)
+        return
 
     # register services using API POSTs
     if db_session is None:
@@ -426,3 +485,23 @@ def magpie_register_services_from_config(service_config_file_path, push_to_phoen
         magpie_register_services_with_db_session(services, db_session,
                                                  push_to_phoenix=push_to_phoenix, force_update=force_update,
                                                  update_getcapabilities_permissions=not disable_getcapabilities)
+
+
+def magpie_register_permissions_from_config(permissions_config_file_path):
+    permissions = _load_config(permissions_config_file_path, 'permissions')
+    if not permissions:
+        warnings.warn("Permissions configuration are empty.", UserWarning)
+        return
+
+    admin_usr = get_constant('MAGPIE_ADMIN_USER')
+    admin_pwd = get_constant('MAGPIE_ADMIN_PASSWORD')
+    body = {'user_name': admin_usr, 'password': admin_pwd}
+    resp = requests.get(get_magpie_url() + SigninAPI.path, json=body)
+    if not resp.status_code == 200:
+        raise_log("Cannot register Magpie permissions without proper credentials.")
+
+    for perm in permissions:
+        if not isinstance(perm, dict) or not all(f in perm for f in ['permission', 'service', 'resource']):
+            warnings.warn("Invalid permission format for [{!s}].".format(perm), UserWarning)
+            continue
+

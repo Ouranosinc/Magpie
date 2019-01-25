@@ -1,3 +1,2 @@
-magpie.env
-postgres.env
+*.env
 *.pem
