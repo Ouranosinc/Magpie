@@ -223,13 +223,13 @@ class ServiceGeoserver(ServiceWMS):
     def __acl__(self):
         self.expand_acl(self.service, self.request.user)
 
-        #localhost:8087/geoserver/WATERSHED/wms?layers=WATERSHED:BV_1NS&request=getmap
-        #localhost:8087/geoserver/wms?layers=WATERERSHED:BV1_NS&request=getmap
-        #those two request lead to the same thing so, here we need to check the workspace in the layer
+        # localhost:8087/geoserver/WATERSHED/wms?layers=WATERSHED:BV_1NS&request=getmap
+        # localhost:8087/geoserver/wms?layers=WATERERSHED:BV1_NS&request=getmap
+        # those two request lead to the same thing so, here we need to check the workspace in the layer
 
-        #localhost:8087/geoserver/wms?request=getcapabilities (dangerous, get all workspace)
+        # localhost:8087/geoserver/wms?request=getcapabilities (dangerous, get all workspace)
         # localhost:8087/geoserver/WATERSHED/wms?request=getcapabilities (only for the workspace in the path)
-        #here we need to check the workspace in the path
+        # here we need to check the workspace in the path
 
         request_type = self.permission_requested()
         if request_type == PERMISSION_GET_CAPABILITIES:
@@ -244,7 +244,7 @@ class ServiceGeoserver(ServiceWMS):
             workspace_name = layer_name.split(':')[0]
 
         # load workspace resource from the database
-        workspace = models.find_children_by_name(name=workspace_name,
+        workspace = models.find_children_by_name(child_name=workspace_name,
                                                  parent_id=self.service.resource_id,
                                                  db_session=self.request.db)
         if workspace:
@@ -373,7 +373,7 @@ class ServiceWFS(ServiceI):
             workspace_name = layer_name.split(':')[0]
 
         # load workspace resource from the database
-        workspace = models.find_children_by_name(name=workspace_name,
+        workspace = models.find_children_by_name(child_name=workspace_name,
                                                  parent_id=self.service.resource_id,
                                                  db_session=self.request.db)
         if workspace:
@@ -422,7 +422,7 @@ class ServiceTHREDDS(ServiceI):
         while new_child and elems:
             elem_name = elems.pop(0)
             if ".nc" in elem_name:
-                elem_name = elem_name.split(".nc")[0]+".nc"  #in case there is more extension to discard such as .dds
+                elem_name = elem_name.split(".nc")[0]+".nc"  # in case there is more extension to discard such as .dds
             parent_id = new_child.resource_id
             new_child = models.find_children_by_name(elem_name, parent_id=parent_id, db_session=self.request.db)
             self.expand_acl(new_child, self.request.user)

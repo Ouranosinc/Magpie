@@ -60,6 +60,7 @@ def register_service(request):
                  httpError=HTTPConflict, msgOnFail=Services_POST_ConflictResponseSchema.description,
                  content={u'service_name': str(service_name)}, paramName=u'service_name')
 
+    # noinspection PyArgumentList
     service = evaluate_call(lambda: models.Service(resource_name=str(service_name),
                                                    resource_type=models.Service.resource_type_name,
                                                    url=str(service_url), type=str(service_type)),
@@ -188,7 +189,7 @@ def get_service_resources_view(request):
                       content={str(service.resource_name): svc_res_json})
 
 
-@ServiceResourcesAPI.post(schema=ServiceResources_POST_RequestBodySchema, tags=[ServicesTag],
+@ServiceResourcesAPI.post(schema=ServiceResources_POST_RequestSchema, tags=[ServicesTag],
                           response_schemas=ServiceResources_POST_responses)
 @view_config(route_name=ServiceResourcesAPI.name, request_method='POST')
 def create_service_direct_resource(request):
@@ -200,8 +201,8 @@ def create_service_direct_resource(request):
     parent_id = get_multiformat_post(request, 'parent_id')  # no check because None/empty is allowed
     if not parent_id:
         parent_id = service.resource_id
-    return create_resource(resource_name, resource_display_name, resource_type, parent_id=parent_id,
-                           db_session=request.db)
+    return create_resource(resource_name, resource_display_name, resource_type,
+                           parent_id=parent_id, db_session=request.db)
 
 
 @ServiceResourceTypesAPI.get(tags=[ServicesTag], response_schemas=ServiceResource_GET_responses)

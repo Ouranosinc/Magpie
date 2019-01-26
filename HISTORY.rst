@@ -10,6 +10,7 @@ History
 * provide user ID on API routes returning user info
 * attempt db creation on first migration if not existing
 * add permissions config to auto-generate user/group rules on startup
+* fix many invalid or erroneous swagger specifications
 
 0.7.x
 ---------------------

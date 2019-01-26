@@ -2,7 +2,6 @@ from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.api.login import esgfopenid, wso2
 from magpie.constants import get_constant
-from magpie import models
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
 import logging
@@ -30,6 +29,7 @@ def auth_config_from_settings(settings):
     )
     authz_policy = ACLAuthorizationPolicy()
 
+    from magpie import models
     config = Configurator(
         settings=settings,
         root_factory=models.RootFactory,
@@ -101,7 +101,7 @@ def authomatic_config(request=None):
             'consumer_key': get_constant('GITHUB_CLIENT_ID', **_get_const_info),
             'consumer_secret': get_constant('GITHUB_CLIENT_SECRET', **_get_const_info),
             'redirect_uri': request.application_url if request else None,
-            #'redirect_uri': '{}/providers/github/signin'.format(request.application_url) if request else None,
+            # 'redirect_uri': '{}/providers/github/signin'.format(request.application_url) if request else None,
             'access_headers': {'User-Agent': 'Magpie'},
             'id': provider_id(),
             '_apis': {

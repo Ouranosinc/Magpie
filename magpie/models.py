@@ -1,7 +1,7 @@
 from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.sqlalchemy_definitions import *
-from magpie.api.api_except import *
+from magpie.api.api_except import evaluate_call
 from magpie.permissions import *
 
 Base = declarative_base()
@@ -12,10 +12,10 @@ def get_session_callable(request):
 
 
 def get_user(request):
-    userid = request.unauthenticated_userid
+    user_id = request.unauthenticated_userid
     db_session = get_session_callable(request)
-    if userid is not None:
-        return UserService.by_id(userid, db_session=db_session)
+    if user_id is not None:
+        return UserService.by_id(user_id, db_session=db_session)
 
 
 class Group(GroupMixin, Base):

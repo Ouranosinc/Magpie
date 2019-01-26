@@ -127,7 +127,7 @@ def create_group_service_permission(request):
                                   response_schemas=GroupServicePermission_DELETE_responses)
 @view_config(route_name=GroupServicePermissionAPI.name, request_method='DELETE')
 def delete_group_service_permission(request):
-    """Delete a permission from a specific resource for a group."""
+    """Delete a permission from a specific service for a group."""
     group = get_group_matchdict_checked(request)
     service = get_service_matchdict_checked(request)
     perm_name = get_permission_matchdict_checked(request, service)
@@ -168,8 +168,8 @@ def create_group_resource_permission_view(request):
     return create_group_resource_permission(perm_name, resource, group, db_session=request.db)
 
 
-@GroupResourcePermissionAPI.post(schema=GroupResourcePermission_DELETE_RequestSchema(), tags=[GroupsTag],
-                                 response_schemas=GroupResourcePermission_DELETE_responses)
+@GroupResourcePermissionAPI.delete(schema=GroupResourcePermission_DELETE_RequestSchema(), tags=[GroupsTag],
+                                   response_schemas=GroupResourcePermission_DELETE_responses)
 @view_config(route_name=GroupResourcePermissionAPI.name, request_method='DELETE')
 def delete_group_resource_permission_view(request):
     """Delete a permission from a specific resource for a group."""

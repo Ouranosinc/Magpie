@@ -1,27 +1,28 @@
-from magpie.api.api_except import *
-from magpie.api.api_rest_schemas import *
+from magpie.definitions.pyramid_definitions import HTTPUnauthorized, HTTPNotFound, HTTPInternalServerError
+from magpie.api.api_except import raise_http, HTTPServerError
+from magpie.api import api_rest_schemas as s
 
 
-#@notfound_view_config()
+# @notfound_view_config()
 def not_found(request):
-    content = get_request_info(request, default_msg=NotFoundResponseSchema.description)
+    content = get_request_info(request, default_msg=s.NotFoundResponseSchema.description)
     return raise_http(nothrow=True, httpError=HTTPNotFound, contentType='application/json',
                       detail=content['detail'], content=content)
 
 
-#@exception_view_config()
+# @exception_view_config()
 def internal_server_error(request):
-    content = get_request_info(request, default_msg=InternalServerErrorResponseSchema.description)
+    content = get_request_info(request, default_msg=s.InternalServerErrorResponseSchema.description)
     return raise_http(nothrow=True, httpError=HTTPInternalServerError, contentType='application/json',
                       detail=content['detail'], content=content)
 
 
-#@forbidden_view_config()
+# @forbidden_view_config()
 def unauthorized_access(request):
     # if not overridden, default is HTTPForbidden [403], which is for a slightly different situation
     # this better reflects the HTTPUnauthorized [401] user access with specified AuthZ headers
     # [http://www.restapitutorial.com/httpstatuscodes.html]
-    content = get_request_info(request, default_msg=UnauthorizedResponseSchema.description)
+    content = get_request_info(request, default_msg=s.UnauthorizedResponseSchema.description)
     return raise_http(nothrow=True, httpError=HTTPUnauthorized, contentType='application/json',
                       detail=content['detail'], content=content)
 
