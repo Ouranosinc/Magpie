@@ -10,7 +10,10 @@ from magpie.common import print_log, raise_log, str2bool
 from magpie.constants import get_constant
 from magpie.definitions.sqlalchemy_definitions import *
 from magpie.helpers.register_default_users import register_default_users
-from magpie.helpers.register_providers import magpie_register_services_from_config
+from magpie.register import (
+    magpie_register_services_from_config,
+    magpie_register_permissions_from_config,
+)
 from magpie.security import auth_config_from_settings
 from magpie import db, constants
 
@@ -46,15 +49,18 @@ def main(global_config=None, **settings):
         time.sleep(2)
         raise_log('Database not ready')
 
-    print_log('Register default providers...', LOGGER)
-    svc_db_session = db.get_db_session_from_config_ini(constants.MAGPIE_INI_FILE_PATH)
+    print_log('Register default users...')
+    register_default_users()
+
+    print_log('Register configuration providers...', LOGGER)
+    db_session = db.get_db_session_from_config_ini(constants.MAGPIE_INI_FILE_PATH)
     push_phoenix = str2bool(get_constant('PHOENIX_PUSH', settings=settings, settings_name='magpie.phoenix_push',
                                          raise_missing=False, raise_not_set=False, print_missing=True))
     magpie_register_services_from_config(constants.MAGPIE_PROVIDERS_CONFIG_PATH, push_to_phoenix=push_phoenix,
-                                         force_update=True, disable_getcapabilities=False, db_session=svc_db_session)
+                                         force_update=True, disable_getcapabilities=False, db_session=db_session)
 
-    print_log('Register default users...')
-    register_default_users()
+    print_log('Register configuration permissions...', LOGGER)
+    magpie_register_permissions_from_config(constants.MAGPIE_PERMISSIONS_CONFIG_PATH, db_session=db_session)
 
     print_log('Running configurations setup...')
     magpie_url_template = 'http://{hostname}:{port}'

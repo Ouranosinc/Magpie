@@ -3,6 +3,7 @@ from magpie.api.api_rest_schemas import *
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
 from magpie.api.management.user.user_formats import *
+from magpie.definitions.sqlalchemy_definitions import Session
 from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.pyramid_definitions import Request
 from magpie.services import service_factory, ResourcePermissionType, ServiceI
@@ -48,6 +49,11 @@ def create_user(user_name, password, email, group_name, db_session):
 
 
 def create_user_resource_permission(permission_name, resource, user_id, db_session):
+    # type: (AnyStr, models.Resource, models.User, Session) -> HTTPException
+    """
+    Creates a permission on a user/resource combination if it is permitted and not conflicting.
+    :returns: corresponding HTTP response according to the encountered situation.
+    """
     check_valid_service_resource_permission(permission_name, resource, db_session)
     resource_id = resource.resource_id
     existing_perm = UserResourcePermissionService.by_resource_user_and_perm(

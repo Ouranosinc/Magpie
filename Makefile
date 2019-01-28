@@ -141,7 +141,7 @@ sysinstall: clean
 .PHONY: install
 install: sysinstall
 	@echo "Installing Magpie..."
-	python setup.py install
+	pip install $(CUR_DIR)
 
 .PHONY: cron
 cron:
