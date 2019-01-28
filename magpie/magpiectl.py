@@ -17,8 +17,9 @@ from magpie import db, constants
 # -- Standard library --------------------------------------------------------
 import time
 import warnings
+# noinspection PyUnresolvedReferences
 import logging
-import logging.config
+import logging.config   # find config in 'logging.ini'
 LOGGER = logging.getLogger(__name__)
 
 
@@ -56,7 +57,7 @@ def main(global_config=None, **settings):
     register_default_users()
 
     print_log('Running configurations setup...')
-    magpie_url_template = 'http://{hostname}:{port}/magpie'
+    magpie_url_template = 'http://{hostname}:{port}'
     port = get_constant('MAGPIE_PORT', settings=settings, settings_name='magpie.port')
     if port:
         settings['magpie.port'] = port
@@ -71,7 +72,7 @@ def main(global_config=None, **settings):
     config.include('magpie')
     # Don't use scan otherwise modules like 'magpie.adapter' are
     # automatically found and cause import errors on missing packages
-    #config.scan('magpie')
+    # config.scan('magpie')
     config.set_default_permission(get_constant('MAGPIE_ADMIN_PERMISSION'))
 
     print_log('Starting Magpie app...')

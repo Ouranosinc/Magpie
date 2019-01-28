@@ -4,8 +4,8 @@ from magpie.api.api_rest_schemas import (
     ServicesAPI,
     ServiceAPI,
     ServiceResourcesAPI,
-    GroupResourcePermissionAPI,
-    UserResourcePermissionAPI,
+    GroupResourcePermissionsAPI,
+    UserResourcePermissionsAPI,
 )
 from magpie.common import make_dirs, print_log, raise_log, bool2str
 from magpie.constants import get_constant
@@ -22,8 +22,9 @@ import yaml
 import subprocess
 import requests
 import transaction
-import warnings
+# noinspection PyUnresolvedReferences
 import logging
+import logging.config   # find config in 'logging.ini'
 LOGGER = logging.getLogger(__name__)
 
 LOGIN_ATTEMPT = 10              # max attempts for login
@@ -487,7 +488,7 @@ def magpie_register_services_from_config(service_config_file_path, push_to_phoen
     """
     services = _load_config(service_config_file_path, 'providers')
     if not services:
-        warnings.warn("Services configuration are empty.", UserWarning)
+        LOGGER.warning("Services configuration are empty.")
         return
 
     # register services using API POSTs
@@ -504,10 +505,10 @@ def magpie_register_services_from_config(service_config_file_path, push_to_phoen
                                                  update_getcapabilities_permissions=not disable_getcapabilities)
 
 
-def warn_permission(msg, _i, trail="skipping...", detail=None):
+def warn_permission(msg, _i, trail="skipping...", detail=None, level=logging.WARN):
     if detail:
         trail = "{}\nDetail: [{!r}]".format(trail, detail)
-    warnings.warn("{!s} [permission #{}], {}".format(msg, _i, trail), UserWarning)
+    LOGGER.log(level, "{!s} [permission #{}], {}".format(msg, _i, trail))
 
 
 def parse_resource_path(permission_config_entry, entry_index, service_info, cookies):
@@ -572,18 +573,19 @@ def magpie_register_permissions_from_config(permissions_config):
 
     permissions = _load_config(permissions_config, 'permissions')
     if not permissions:
-        warnings.warn("Permissions configuration are empty.", UserWarning)
+        LOGGER.warning("Permissions configuration are empty.")
         return
 
     magpie_url = get_magpie_url()
     admin_usr = get_constant('MAGPIE_ADMIN_USER')
     admin_pwd = get_constant('MAGPIE_ADMIN_PASSWORD')
     body = {'user_name': admin_usr, 'password': admin_pwd}
-    resp = requests.get(magpie_url + SigninAPI.path, json=body)
+    resp = requests.post(magpie_url + SigninAPI.path, json=body)
     if resp.status_code != 200:
         raise_log("Cannot register Magpie permissions without proper credentials.")
     admin_cookies = resp.cookies
 
+    logging.info("Found {} permissions to update.".format(len(permissions)))
     for i, perm in enumerate(permissions):
         # parameter validation
         if not isinstance(perm, dict) or not all(f in perm for f in ['permission', 'service']):
@@ -592,17 +594,17 @@ def magpie_register_permissions_from_config(permissions_config):
         if perm['permission'] not in permissions_supported:
             warn_permission("Unknown permission [{!s}]".format(perm['permission']), i)
             continue
-        if not any(f in perm for f in ['user', 'group']):
+        usr_name = perm.get('user')
+        grp_name = perm.get('group')
+        if not any([usr_name, grp_name]):
             warn_permission("Missing required user and/or group field.", i)
             continue
         if 'action' not in perm:
-            warn_permission("Unspecified action", i, trail="using default...")
+            warn_permission("Unspecified action", i, trail="using default (create)...")
             perm['action'] = 'create'
         if perm['action'] not in ['create', 'remove']:
             warn_permission("Unknown action [{!s}]".format(perm['action']), i)
             continue
-        usr_name = perm['user']
-        grp_name = perm['group']
         svc_name = perm['service']
         svc_path = magpie_url + ServiceAPI.path.format(service_name=svc_name)
         svc_resp = requests.get(svc_path, cookies=admin_cookies)
@@ -617,22 +619,38 @@ def magpie_register_permissions_from_config(permissions_config):
             continue
         if not resource:
             resource = service_info['resource_id']
-        perm_actions = list()
-        #if usr_name:
-
-
-
-
-        #for usr_grp_name, usr_grp_name in [(usr_name, UserResourcePermissionAPI.path.format(user_name=usr_name)),
-        #                                   (grp_name, GroupResourcePermissionAPI.path.format(group_name=grp_name))]:
-        if perm['action'] == 'create':
-            action_func = requests.post
-            action_path = '/permissions'
-        else:
-            action_func = requests.delete
-            action_path = '/permissions/{perm_name}'.format(perm_name=perm['permission'])
-        #if usr_name:
-        #    perm_path =
-
-        #for action, path, perm in perm_actions:
-        #    action(path, json cookies=)
+        perm_paths = list()
+        if usr_name:
+            perm_paths.append(UserResourcePermissionsAPI.path.replace('{user_name}', usr_name))
+        if grp_name:
+            perm_paths.append(GroupResourcePermissionsAPI.path.replace('{group_name}', grp_name))
+        for path in perm_paths:
+            create_perm = perm['action'] == 'create'
+            if create_perm:
+                action_func = requests.post
+                action_path = '{url}{path}'.format(url=magpie_url, path=path)
+                action_body = {'permission_name': perm['permission']}
+            else:
+                action_func = requests.delete
+                action_path = '{url}{path}/{perm_name}'.format(url=magpie_url, path=path, perm_name=perm['permission'])
+                action_body = {}
+            action_path = action_path.format(resource_id=resource)
+            action_resp = action_func(action_path, json=action_body, cookies=admin_cookies)
+            action_code = action_resp.status_code
+            if create_perm:
+                if action_code == 201:
+                    warn_permission("Permission successfully created.", i, level=logging.INFO)
+                elif action_code == 409:
+                    warn_permission("Permission already exists: {!s}".format(perm), i, level=logging.INFO)
+                else:
+                    warn_permission("Unknown response for 'create' permission [{}]: {!s}"
+                                    .format(action_code, perm), i, level=logging.ERROR)
+            else:
+                if action_code == 200:
+                    warn_permission("Permission successfully removed.", i, level=logging.INFO)
+                elif action_code == 404:
+                    warn_permission("Permission successfully removed.", i, level=logging.INFO)
+                else:
+                    warn_permission("Unknown response for 'remove' permission [{}]: {!s}"
+                                    .format(action_code, perm), i, level=logging.ERROR)
+    logging.info("Done processing permissions.")
