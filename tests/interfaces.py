@@ -7,7 +7,7 @@ from distutils.version import LooseVersion
 from magpie.api.api_rest_schemas import SwaggerGenerator
 from magpie.constants import get_constant
 from magpie.services import service_type_dict
-from magpie.register import get_twitcher_protected_service_url
+from magpie.utils import get_twitcher_protected_service_url
 from tests import utils, runner
 
 
@@ -889,8 +889,8 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
                                   cookies=self.cookies, json=data, expect_errors=True)
         json_body = utils.check_response_basic_info(resp, 409, expected_method='POST')
         utils.check_error_param_structure(json_body, version=self.version,
-                                          isParamValueLiteralUnicode=True, paramCompareExists=True,
-                                          paramValue=self.test_resource_name, paramName=u'resource_name')
+                                          is_param_value_literal_unicode=True, param_compare_exists=True,
+                                          param_value=self.test_resource_name, param_name=u'resource_name')
 
     @pytest.mark.services
     @pytest.mark.defaults
@@ -998,7 +998,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         resp = utils.test_request(self.url, 'POST', '/resources',
                                   headers=self.json_headers, cookies=self.cookies, data=data, expect_errors=True)
         json_body = utils.check_response_basic_info(resp, 422, expected_method='POST')
-        utils.check_error_param_structure(json_body, paramName='parent_id', paramValue=repr(None), version=self.version)
+        utils.check_error_param_structure(json_body, param_name='parent_id', param_value=repr(None), version=self.version)
 
     @pytest.mark.resources
     @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))

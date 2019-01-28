@@ -63,6 +63,8 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
     :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
     :param method: request method (GET, POST, PUT, DELETE)
     :param path: test path starting at base path
+    :param timeout: `timeout` to pass down to `request`
+    :param allow_redirects: `allow_redirects` to pass down to `request`
     :return: response of the request
     """
     method = method.upper()
@@ -91,6 +93,7 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
             kwargs.update({'params': json.dumps(json_body, cls=json.JSONEncoder)})
         if status and status >= 300:
             kwargs.update({'expect_errors': True})
+        # noinspection PyProtectedMember
         resp = app_or_url._gen_request(method, path, **kwargs)
         # automatically follow the redirect if any and evaluate its response
         max_redirect = kwargs.get('max_redirects', 5)
@@ -263,16 +266,16 @@ class null(object):
 Null = null()
 
 
-def check_error_param_structure(json_body, paramValue=Null, paramName=Null, paramCompare=Null,
-                                isParamValueLiteralUnicode=False, paramCompareExists=False, version=None):
+def check_error_param_structure(json_body, param_value=Null, param_name=Null, param_compare=Null,
+                                is_param_value_literal_unicode=False, param_compare_exists=False, version=None):
     """
     Validates error response 'param' information based on different Magpie version formats.
     :param json_body: json body of the response to validate.
-    :param paramValue: expected 'value' of param, not verified if <Null>
-    :param paramName: expected 'name' of param, not verified if <Null> or non existing for Magpie version
-    :param paramCompare: expected 'compare'/'paramCompare' value, not verified if <Null>
-    :param isParamValueLiteralUnicode: param value is represented as `u'{paramValue}'` for older Magpie version
-    :param paramCompareExists: verify that 'compare'/'paramCompare' is in the body, not necessarily validating the value
+    :param param_value: expected 'value' of param, not verified if <Null>
+    :param param_name: expected 'name' of param, not verified if <Null> or non existing for Magpie version
+    :param param_compare: expected 'compare'/'paramCompare' value, not verified if <Null>
+    :param is_param_value_literal_unicode: param value is represented as `u'{paramValue}'` for older Magpie version
+    :param param_compare_exists: verify that 'compare'/'paramCompare' is in the body, not validating its actual value
     :param version: version of application/remote server to use for format validation, use local Magpie version if None
     :raise failing condition
     """
@@ -283,19 +286,19 @@ def check_error_param_structure(json_body, paramValue=Null, paramName=Null, para
         check_val_type(json_body['param'], dict)
         check_val_is_in('value', json_body['param'])
         check_val_is_in('name', json_body['param'])
-        check_val_equal(json_body['param']['name'], paramName)
-        check_val_equal(json_body['param']['value'], paramValue)
-        if paramCompareExists:
+        check_val_equal(json_body['param']['name'], param_name)
+        check_val_equal(json_body['param']['value'], param_value)
+        if param_compare_exists:
             check_val_is_in('compare', json_body['param'])
-            check_val_equal(json_body['param']['compare'], paramCompare)
+            check_val_equal(json_body['param']['compare'], param_compare)
     else:
         # unicode representation was explicitly returned in value only when of string type
-        if isParamValueLiteralUnicode and isinstance(paramValue, six.string_types):
-            paramValue = u'u\'{}\''.format(paramValue)
-        check_val_equal(json_body['param'], paramValue)
-        if paramCompareExists:
+        if is_param_value_literal_unicode and isinstance(param_value, six.string_types):
+            param_value = u'u\'{}\''.format(param_value)
+        check_val_equal(json_body['param'], param_value)
+        if param_compare_exists:
             check_val_is_in('paramCompare', json_body)
-            check_val_equal(json_body['paramCompare'], paramCompare)
+            check_val_equal(json_body['paramCompare'], param_compare)
 
 
 def check_post_resource_structure(json_body, resource_name, resource_type, resource_display_name, version=None):
@@ -362,6 +365,7 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
 
 
 # Generic setup and validation methods across unittests
+# noinspection PyPep8Naming
 class TestSetup(object):
     @staticmethod
     def get_Version(test_class):

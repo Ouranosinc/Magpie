@@ -7,11 +7,7 @@ from magpie.api.api_rest_schemas import (
     GroupResourcePermissionsAPI,
     UserResourcePermissionsAPI,
 )
-from magpie.api.management.service.service_formats import format_service_resources, format_service
-from magpie.api.management.resource.resource_utils import create_resource
-from magpie.api.management.user.user_utils import create_user_resource_permission, delete_user_resource_permission
-from magpie.api.management.group.group_utils import create_group_resource_permission, delete_group_resource_permission
-from magpie.common import make_dirs, print_log, raise_log, bool2str
+from magpie.common import make_dirs, print_log, raise_log, bool2str, islambda
 from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import (
     ResourceService,
@@ -20,9 +16,11 @@ from magpie.definitions.ziggurat_definitions import (
     UserResourcePermissionService,
 )
 from magpie.definitions.sqlalchemy_definitions import Session
+from magpie.definitions.pyramid_definitions import HTTPException
 from magpie.permissions import permissions_supported
 from magpie.services import service_type_dict
 from magpie import models
+from magpie.utils import get_twitcher_protected_service_url, get_phoenix_url, get_magpie_url, get_admin_cookies
 from typing import AnyStr, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from requests.cookies import RequestsCookieJar
 import os
@@ -187,34 +185,6 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
         if os.path.isfile(phoenix_cookies):
             os.remove(phoenix_cookies)
     return success, statuses
-
-
-def get_phoenix_url():
-    hostname = get_constant('HOSTNAME')
-    phoenix_port = get_constant('PHOENIX_PORT', raise_not_set=False)
-    return 'https://{0}{1}'.format(hostname, ':{}'.format(phoenix_port) if phoenix_port else '')
-
-
-def get_magpie_url():
-    hostname = get_constant('HOSTNAME')
-    magpie_port = get_constant('MAGPIE_PORT', raise_not_set=False)
-    return 'http://{0}{1}'.format(hostname, ':{}'.format(magpie_port) if magpie_port else '')
-
-
-def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
-    twitcher_proxy_url = get_constant('TWITCHER_PROTECTED_URL', raise_not_set=False)
-    if not twitcher_proxy_url:
-        twitcher_proxy = get_constant('TWITCHER_PROTECTED_PATH', raise_not_set=False)
-        if not twitcher_proxy.endswith('/'):
-            twitcher_proxy = twitcher_proxy + '/'
-        if not twitcher_proxy.startswith('/'):
-            twitcher_proxy = '/' + twitcher_proxy
-        if not twitcher_proxy.startswith('/twitcher'):
-            twitcher_proxy = '/twitcher' + twitcher_proxy
-        hostname = hostname or get_constant('HOSTNAME')
-        twitcher_proxy_url = "https://{0}{1}".format(hostname, twitcher_proxy)
-    twitcher_proxy_url = twitcher_proxy_url.rstrip('/')
-    return "{0}/{1}".format(twitcher_proxy_url, magpie_service_name)
 
 
 def register_services(where,                        # type: Optional[AnyStr]
@@ -560,6 +530,7 @@ def parse_resource_path(permission_config_entry,    # type: ConfigItem
                 res_path = get_magpie_url() + ServiceResourcesAPI.path.format(service_name=svc_name)
                 res_dict = requests.get(res_path, cookies=cookies_or_session).json()[svc_name]['resources']
             else:
+                from magpie.api.management.service.service_formats import format_service_resources
                 svc = models.Service.by_service_name(svc_name, db_session=cookies_or_session)
                 res_dict = format_service_resources(svc, db_session=cookies_or_session)
             parent = None
@@ -584,6 +555,7 @@ def parse_resource_path(permission_config_entry,    # type: ConfigItem
                     # noinspection PyUnboundLocalVariable
                     resp = requests.post(res_path, json=body, cookies=cookies_or_session)
                 else:
+                    from magpie.api.management.resource.resource_utils import create_resource
                     resp = create_resource(res, res, res_type, parent, db_session=cookies_or_session)
                 if resp.status_code != 201:
                     resp.raise_for_status()
@@ -632,24 +604,38 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
 
     def _apply_session(_usr_name=None, _grp_name=None):
         """Apply operation using db session."""
+        from magpie.api.management.user import user_utils as ut
+        from magpie.api.management.group import group_utils as gt
+
         res = ResourceService.by_resource_id(resource_id, db_session=cookies_or_session)
         if _usr_name:
             usr = UserService.by_user_name(_usr_name, db_session=cookies_or_session)
             if create_perm:
-                return create_user_resource_permission(perm_name, res, usr, db_session=cookies_or_session)
+                return ut.create_user_resource_permission(perm_name, res, usr, db_session=cookies_or_session)
             else:
-                return delete_user_resource_permission(perm_name, res, usr, db_session=cookies_or_session)
+                return ut.delete_user_resource_permission(perm_name, res, usr, db_session=cookies_or_session)
         if _grp_name:
             grp = GroupService.by_group_name(_grp_name, db_session=cookies_or_session)
             if create_perm:
-                return create_group_resource_permission(perm_name, res, grp, db_session=cookies_or_session)
+                return gt.create_group_resource_permission(perm_name, res, grp, db_session=cookies_or_session)
             else:
-                return delete_group_resource_permission(perm_name, res, grp, db_session=cookies_or_session)
+                return gt.delete_group_resource_permission(perm_name, res, grp, db_session=cookies_or_session)
 
-    def _validate_response(_resp):
+    def _validate_response(operation):
         """Validate action/operation applied."""
-        if _resp is None:
-            return
+        # handle HTTPException raised
+        if not islambda(operation):
+            raise Exception("invalid use of method")
+        try:
+            _resp = operation()
+            if _resp is None:
+                return
+        except HTTPException as exc:
+            _resp = exc
+        except Exception:
+            raise
+
+        # validation according to status code returned
         if create_perm:
             if _resp.status_code == 201:
                 warn_permission("Permission successfully created.", entry_index, level=logging.INFO)
@@ -673,11 +659,11 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
     grp_name = permission_config_entry.get('group')
 
     if use_request(cookies_or_session):
-        _validate_response(_apply_request(usr_name, None))
-        _validate_response(_apply_request(None, grp_name))
+        _validate_response(lambda: _apply_request(usr_name, None))
+        _validate_response(lambda: _apply_request(None, grp_name))
     else:
-        _validate_response(_apply_session(usr_name, None))
-        _validate_response(_apply_session(None, grp_name))
+        _validate_response(lambda: _apply_session(usr_name, None))
+        _validate_response(lambda: _apply_session(None, grp_name))
 
 
 def magpie_register_permissions_from_config(permissions_config, magpie_url=None, db_session=None):
@@ -700,14 +686,8 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
     if use_request(db_session):
         magpie_url = magpie_url or get_magpie_url()
         logging.debug("Editing permissions using requests to [{}]...".format(magpie_url))
-
-        admin_usr = get_constant('MAGPIE_ADMIN_USER')
-        admin_pwd = get_constant('MAGPIE_ADMIN_PASSWORD')
-        body = {'user_name': admin_usr, 'password': admin_pwd}
-        resp = requests.post(magpie_url + SigninAPI.path, json=body)
-        if resp.status_code != 200:
-            raise_log("Cannot register Magpie permissions without proper credentials.")
-        cookies_or_session = resp.cookies
+        err_msg = "Invalid credentials to register Magpie permissions."
+        cookies_or_session = get_admin_cookies(magpie_url, raise_message=err_msg)
     else:
         logging.debug("Editing permissions using db session...")
         cookies_or_session = db_session
@@ -743,7 +723,12 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
                 continue
             service_info = svc_resp.json()[svc_name]
         else:
-            service_info = format_service(models.Service.by_service_name(svc_name, db_session))
+            svc = models.Service.by_service_name(svc_name, db_session=db_session)
+            if not svc:
+                warn_permission("Unknown service [{!s}]".format(svc_name), i)
+                continue
+            from magpie.api.management.service.service_formats import format_service
+            service_info = format_service(svc)
 
         # apply permission config
         resource_id, found = parse_resource_path(perm, i, service_info, cookies_or_session, magpie_url)

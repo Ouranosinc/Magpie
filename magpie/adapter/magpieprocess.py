@@ -1,7 +1,7 @@
 """
 Store adapters to read data from magpie.
 """
-from magpie.adapter.utils import get_magpie_url, get_admin_cookies
+from magpie.utils import get_magpie_url, get_admin_cookies
 from magpie.api.api_except import raise_http
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import (

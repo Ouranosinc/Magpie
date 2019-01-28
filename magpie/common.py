@@ -3,6 +3,8 @@
 from __future__ import unicode_literals
 from distutils.dir_util import mkpath
 import logging
+import types
+import six
 import os
 
 LOGGER = logging.getLogger(__name__)
@@ -24,6 +26,20 @@ def bool2str(value):
 
 def str2bool(value):
     return True if value in ['on', 'true', 'True', True] else False
+
+
+def islambda(func):
+    return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__
+
+
+def isclass(obj):
+    """
+    Evaluate an object for class type (ie: class definition, not an instance nor any other type).
+
+    :param obj: object to evaluate for class type
+    :return: (bool) indicating if `object` is a class
+    """
+    return isinstance(obj, (type, six.class_types))
 
 
 # alternative to 'makedirs' with 'exists_ok' parameter only available for python>3.5

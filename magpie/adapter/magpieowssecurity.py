@@ -1,10 +1,10 @@
-from magpie.definitions.twitcher_definitions import *
-from magpie.definitions.pyramid_definitions import *
-from magpie.services import service_factory
-from magpie.models import Service
 from magpie.api.api_except import evaluate_call, verify_param
-from magpie.adapter.utils import get_magpie_url
 from magpie.constants import get_constant
+from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.twitcher_definitions import *
+from magpie.models import Service
+from magpie.services import service_factory
+from magpie.utils import get_magpie_url
 from requests.cookies import RequestsCookieJar
 from six.moves.urllib.parse import urlparse
 import requests

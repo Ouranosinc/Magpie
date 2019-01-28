@@ -1,7 +1,6 @@
+from magpie.common import islambda, isclass
 from pyramid.httpexceptions import *
 from sys import exc_info
-import types
-import six
 
 # control variables to avoid infinite recursion in case of
 # major programming error to avoid application hanging
@@ -270,7 +269,7 @@ def validate_params(httpClass, httpBase, detail, content, contentType):
                    contentType='application/json',
                    content={u'caller': {u'content': content,
                                         u'detail': detail,
-                                        u'code': 520,  #'unknown' error
+                                        u'code': 520,  # 'unknown' error
                                         u'type': contentType}})
     # if `httpClass` derives from `httpBase` (ex: `HTTPSuccessful` or `HTTPError`) it is of proper requested type
     # if it derives from `HTTPException`, it *could* be different than base (ex: 2xx instead of 4xx codes)
@@ -365,17 +364,3 @@ def generate_response_http_format(httpClass, httpKWArgs, jsonContent, outputType
                             u'caller': {u'httpKWArgs': repr(httpKWArgs),
                                         u'httpClass': repr(httpClass),
                                         u'outputType': str(outputType)}})
-
-
-def islambda(func):
-    return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__
-
-
-def isclass(obj):
-    """
-    Evaluate an object for class type (ie: class definition, not an instance nor any other type).
-
-    :param obj: object to evaluate for class type
-    :return: (bool) indicating if `object` is a class
-    """
-    return isinstance(obj, (type, six.class_types))
