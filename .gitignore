@@ -29,4 +29,5 @@ magpie.egg-info/
 src/
 share/
 /gunicorn.app.wsgiapp
+downloads/
 /sys

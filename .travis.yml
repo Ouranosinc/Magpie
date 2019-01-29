@@ -1,0 +1,35 @@
+language: python
+python:
+  - "2.7"
+  - "3.5"
+  - "3.6"
+sudo: false
+cache: pip
+env:
+  matrix:
+    - env TARGET=test-local
+    - env TARGET=test-remote
+    - env TARGET=coverage
+before_install:
+  - python --version
+  - uname -a
+  - lsb_release -a
+install:
+  - make install
+  - make version
+script:
+  - make $TARGET
+notifications:
+  email:
+    on_success: never
+    on_failure: always
+jobs:
+  include:
+    - stage: deploy
+      script: echo "Deploying..."
+      deploy:
+        provider: script
+        script: make conda-env docker-push
+        skip_existing: true
+        on:
+          tags: true
