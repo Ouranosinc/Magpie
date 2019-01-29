@@ -106,6 +106,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
     def tearDown(self):
         utils.TestSetup.delete_TestServiceResource(self)
+        utils.TestSetup.delete_TestService(self)
         utils.TestSetup.delete_TestUser(self)
 
     @classmethod
@@ -125,8 +126,16 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
             if provider_services_info[svc_name]['type'] in possible_service_types:
                 cls.test_services_info[svc_name] = provider_services_info[svc_name]
 
-        cls.test_service_name = u'project-api'
-        cls.test_service_type = cls.test_services_info[cls.test_service_name]['type']
+        cls.test_service_name = u'magpie-unittest-service-api'
+        cls.test_service_type = u'api'
+        data = {
+            u'service_name': cls.test_service_name,
+            u'service_type': cls.test_service_type,
+            u'service_url': u'http://localhost:9000/dummy-api'
+        }
+        resp = utils.test_request(cls.url, 'POST', '/services', json=data,
+                                  headers=cls.json_headers, cookies=cls.cookies)
+        utils.check_response_basic_info(resp, 201, expected_method='POST')
 
         resp = utils.test_request(cls.url, 'GET', '/services/{}'.format(cls.test_service_name),
                                   headers=cls.json_headers, cookies=cls.cookies)
@@ -149,6 +158,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def setUp(self):
         self.check_requirements()
         utils.TestSetup.delete_TestServiceResource(self)
+        utils.TestSetup.delete_TestService(self)
         utils.TestSetup.delete_TestUser(self)
 
     def test_GetAPI(self):
@@ -799,7 +809,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @pytest.mark.services
     @unittest.skipUnless(runner.MAGPIE_TEST_SERVICES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('services'))
     def test_PostServiceResources_DirectResource_NoParentID(self):
-        resources_prior = utils.TestSetup.get_ExistingTestServiceDirectResources(self)
+        resources_prior = utils.TestSetup.get_TestServiceDirectResources(self)
         resources_prior_ids = [res['resource_id'] for res in resources_prior]
         json_body = utils.TestSetup.create_TestServiceResource(self)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
@@ -815,7 +825,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @pytest.mark.services
     @unittest.skipUnless(runner.MAGPIE_TEST_SERVICES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('services'))
     def test_PostServiceResources_DirectResource_WithParentID(self):
-        resources_prior = utils.TestSetup.get_ExistingTestServiceDirectResources(self)
+        resources_prior = utils.TestSetup.get_TestServiceDirectResources(self)
         resources_prior_ids = [res['resource_id'] for res in resources_prior]
         service_id = utils.TestSetup.get_ExistingTestServiceInfo(self)['resource_id']
         extra_data = {"parent_id": service_id}
@@ -835,7 +845,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     def test_PostServiceResources_ChildrenResource_ParentID(self):
         # create the direct resource
         json_body = utils.TestSetup.create_TestServiceResource(self)
-        resources = utils.TestSetup.get_ExistingTestServiceDirectResources(self)
+        resources = utils.TestSetup.get_TestServiceDirectResources(self)
         resources_ids = [res['resource_id'] for res in resources]
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             test_resource_id = json_body['resource']['resource_id']
@@ -1012,7 +1022,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         route = '/resources/{res_id}'.format(res_id=resource_id)
         resp = utils.test_request(self.url, 'DELETE', route, headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 200, expected_method='DELETE')
-        utils.TestSetup.check_NonExistingTestResource(self)
+        utils.TestSetup.check_NonExistingTestServiceResource(self)
 
 
 @pytest.mark.ui

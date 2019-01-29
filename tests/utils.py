@@ -424,28 +424,33 @@ class TestSetup(object):
     @staticmethod
     def get_ExistingTestServiceInfo(test_class):
         route = '/services/{svc}'.format(svc=test_class.test_service_name)
-        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
+        resp = test_request(test_class.url, 'GET', route,
+                            headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = get_json_body(resp)
         return json_body[test_class.test_service_name]
 
     @staticmethod
-    def get_ExistingTestServiceDirectResources(test_class):
+    def get_TestServiceDirectResources(test_class, ignore_missing_service=False):
         route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
-        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
+        resp = test_request(test_class.url, 'GET', route,
+                            headers=test_class.json_headers, cookies=test_class.cookies,
+                            expect_errors=ignore_missing_service)
+        if ignore_missing_service and resp.status_code == 404:
+            return []
         json_body = get_json_body(resp)
         resources = json_body[test_class.test_service_name]['resources']
         return [resources[res] for res in resources]
 
     @staticmethod
-    def check_NonExistingTestResource(test_class):
-        resources = TestSetup.get_ExistingTestServiceDirectResources(test_class)
+    def check_NonExistingTestServiceResource(test_class):
+        resources = TestSetup.get_TestServiceDirectResources(test_class, ignore_missing_service=True)
         resources_names = [res['resource_name'] for res in resources]
         check_val_not_in(test_class.test_resource_name, resources_names)
 
     @staticmethod
     def delete_TestServiceResource(test_class, override_resource_name=None):
         resource_name = override_resource_name or test_class.test_resource_name
-        resources = TestSetup.get_ExistingTestServiceDirectResources(test_class)
+        resources = TestSetup.get_TestServiceDirectResources(test_class, ignore_missing_service=True)
         test_resource = filter(lambda r: r['resource_name'] == resource_name, resources)
         # delete as required, skip if non-existing
         if len(test_resource) > 0:
@@ -455,7 +460,27 @@ class TestSetup(object):
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_val_equal(resp.status_code, 200)
-        TestSetup.check_NonExistingTestResource(test_class)
+        TestSetup.check_NonExistingTestServiceResource(test_class)
+
+    @staticmethod
+    def check_NonExistingTestService(test_class):
+        services_info = TestSetup.get_RegisteredServicesList(test_class)
+        services_names = [svc['service_name'] for svc in services_info]
+        check_val_not_in(test_class.test_service_name, services_names)
+
+    @staticmethod
+    def delete_TestService(test_class, override_service_name=None):
+        service_name = override_service_name or test_class.test_service_name
+        services_info = TestSetup.get_RegisteredServicesList(test_class)
+        test_service = filter(lambda r: r['service_name'] == service_name, services_info)
+        # delete as required, skip if non-existing
+        if len(test_service) > 0:
+            route = '/services/{svc_name}'.format(svc_name=test_class.test_service_name)
+            resp = test_request(test_class.url, 'DELETE', route,
+                                headers=test_class.json_headers,
+                                cookies=test_class.cookies)
+            check_val_equal(resp.status_code, 200)
+        TestSetup.check_NonExistingTestService(test_class)
 
     @staticmethod
     def get_RegisteredServicesList(test_class):
