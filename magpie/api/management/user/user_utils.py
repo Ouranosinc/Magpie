@@ -12,16 +12,20 @@ from typing import Any, AnyStr, Dict, List, Optional, Union
 
 
 def create_user(user_name, password, email, group_name, db_session):
-    db = db_session
+    # type: (AnyStr, AnyStr, AnyStr, AnyStr, Session) -> HTTPException
+    """
+    Creates a user if it is permitted and not conflicting.
+    :returns: corresponding HTTP response according to the encountered situation.
+    """
 
     # Check that group already exists
-    group_check = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db),
+    group_check = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db_session),
                                 httpError=HTTPForbidden, msgOnFail=UserGroup_GET_ForbiddenResponseSchema.description)
     verify_param(group_check, notNone=True, httpError=HTTPNotAcceptable,
                  msgOnFail=UserGroup_Check_ForbiddenResponseSchema.description)
 
     # Check if user already exists
-    user_check = evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db),
+    user_check = evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
                                httpError=HTTPForbidden, msgOnFail=User_Check_ForbiddenResponseSchema.description)
     verify_param(user_check, isNone=True, httpError=HTTPConflict,
                  msgOnFail=User_Check_ConflictResponseSchema.description)
@@ -32,16 +36,16 @@ def create_user(user_name, password, email, group_name, db_session):
     if password:
         UserService.set_password(new_user, password)
         UserService.regenerate_security_code(new_user)
-    evaluate_call(lambda: db.add(new_user), fallback=lambda: db.rollback(),
+    evaluate_call(lambda: db_session.add(new_user), fallback=lambda: db_session.rollback(),
                   httpError=HTTPForbidden, msgOnFail=Users_POST_ForbiddenResponseSchema.description)
     # Fetch user to update fields
-    new_user = evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db),
+    new_user = evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db_session),
                              httpError=HTTPForbidden, msgOnFail=UserNew_POST_ForbiddenResponseSchema.description)
 
     # Assign user to group
     # noinspection PyArgumentList
     group_entry = models.UserGroup(group_id=group_check.id, user_id=new_user.id)
-    evaluate_call(lambda: db.add(group_entry), fallback=lambda: db.rollback(),
+    evaluate_call(lambda: db_session.add(group_entry), fallback=lambda: db_session.rollback(),
                   httpError=HTTPForbidden, msgOnFail=UserGroup_GET_ForbiddenResponseSchema.description)
 
     return valid_http(httpSuccess=HTTPCreated, detail=Users_POST_CreatedResponseSchema.description,

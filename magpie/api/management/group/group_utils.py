@@ -37,6 +37,27 @@ def get_group_resources(group, db_session):
     return json_response
 
 
+def create_group(group_name, db_session):
+    # type: (AnyStr, Session) -> models.Group
+    """
+    Creates a group if it is permitted and not conflicting.
+    :returns: corresponding HTTP response according to the encountered situation.
+    """
+    group = GroupService.by_group_name(group_name, db_session=db_session)
+    group_content_error = {u'group_name': str(group_name)}
+    verify_param(group, isNone=True, httpError=HTTPConflict, withParam=False,
+                 msgOnFail=Groups_POST_ConflictResponseSchema.description, content=group_content_error)
+    # noinspection PyArgumentList
+    new_group = evaluate_call(lambda: models.Group(group_name=group_name), fallback=lambda: db_session.rollback(),
+                              httpError=HTTPForbidden, msgOnFail=Groups_POST_ForbiddenCreateResponseSchema.description,
+                              content=group_content_error)
+    evaluate_call(lambda: db_session.add(new_group), fallback=lambda: db_session.rollback(),
+                  httpError=HTTPForbidden, msgOnFail=Groups_POST_ForbiddenAddResponseSchema.description,
+                  content=group_content_error)
+    return valid_http(httpSuccess=HTTPCreated, detail=Groups_POST_CreatedResponseSchema.description,
+                      content={u'group': format_group(new_group, basic_info=True)})
+
+
 def create_group_resource_permission(permission_name, resource, group, db_session):
     # type: (AnyStr, models.Resource, models.Group, Session) -> HTTPException
     """

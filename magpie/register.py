@@ -4,6 +4,8 @@ from magpie.api.api_rest_schemas import (
     ServicesAPI,
     ServiceAPI,
     ServiceResourcesAPI,
+    GroupsAPI,
+    UsersAPI,
     GroupResourcePermissionsAPI,
     UserResourcePermissionsAPI,
 )
@@ -621,7 +623,28 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
             else:
                 return gt.delete_group_resource_permission(perm_name, res, grp, db_session=cookies_or_session)
 
-    def _validate_response(operation):
+    def _apply_profile(_usr_name=None, _grp_name=None):
+        """Creates the user/group profile as required."""
+        usr_data = {'user_name': _usr_name, 'password': '12345', 'email': '{}@mail.com'.format(_usr_name),
+                    'group_name': get_constant('MAGPIE_ANONYMOUS_GROUP')}
+        if use_request(cookies_or_session):
+            if _usr_name:
+                path = '{url}{path}'.format(url=magpie_url, path=UsersAPI.path)
+                return requests.post(path, json=usr_data)
+            if _grp_name:
+                path = '{url}{path}'.format(url=magpie_url, path=GroupsAPI.path)
+                data = {'group_name': _grp_name}
+                return requests.post(path, json=data)
+        else:
+            if _usr_name:
+                from magpie.api.management.user.user_utils import create_user
+                usr_data['db_session'] = cookies_or_session
+                return create_user(**usr_data)
+            if _grp_name:
+                from magpie.api.management.group.group_utils import create_group
+                return create_group(_grp_name, cookies_or_session)
+
+    def _validate_response(operation, is_create, item_type='Permission'):
         """Validate action/operation applied."""
         # handle HTTPException raised
         if not islambda(operation):
@@ -636,19 +659,19 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
             raise
 
         # validation according to status code returned
-        if create_perm:
+        if is_create:
             if _resp.status_code == 201:
-                warn_permission("Permission successfully created.", entry_index, level=logging.INFO)
+                warn_permission("{} successfully created.".format(item_type), entry_index, level=logging.INFO)
             elif _resp.status_code == 409:
-                warn_permission("Permission already exists.", entry_index, level=logging.INFO)
+                warn_permission("{} already exists.".format(item_type), entry_index, level=logging.INFO)
             else:
                 warn_permission("Unknown response [{}]".format(_resp.status_code),
                                 entry_index, permission=permission_config_entry, level=logging.ERROR)
         else:
             if _resp.status_code == 200:
-                warn_permission("Permission successfully removed.", entry_index, level=logging.INFO)
+                warn_permission("{} successfully removed.".format(item_type), entry_index, level=logging.INFO)
             elif _resp.status_code == 404:
-                warn_permission("Permission already removed.", entry_index, level=logging.INFO)
+                warn_permission("{} already removed.".format(item_type), entry_index, level=logging.INFO)
             else:
                 warn_permission("Unknown response [{}]".format(_resp.status_code),
                                 entry_index, permission=permission_config_entry, level=logging.ERROR)
@@ -658,12 +681,15 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
     usr_name = permission_config_entry.get('user')
     grp_name = permission_config_entry.get('group')
 
+    _validate_response(lambda: _apply_profile(usr_name, None), is_create=True)
+    _validate_response(lambda: _apply_profile(None, grp_name), is_create=True)
+
     if use_request(cookies_or_session):
-        _validate_response(lambda: _apply_request(usr_name, None))
-        _validate_response(lambda: _apply_request(None, grp_name))
+        _validate_response(lambda: _apply_request(usr_name, None), is_create=create_perm)
+        _validate_response(lambda: _apply_request(None, grp_name), is_create=create_perm)
     else:
-        _validate_response(lambda: _apply_session(usr_name, None))
-        _validate_response(lambda: _apply_session(None, grp_name))
+        _validate_response(lambda: _apply_session(usr_name, None), is_create=create_perm)
+        _validate_response(lambda: _apply_session(None, grp_name), is_create=create_perm)
 
 
 def magpie_register_permissions_from_config(permissions_config, magpie_url=None, db_session=None):

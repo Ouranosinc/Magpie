@@ -19,18 +19,7 @@ def get_groups(request):
 def create_group(request):
     """Create a group."""
     group_name = get_value_multiformat_post_checked(request, 'group_name')
-    group = GroupService.by_group_name(group_name, db_session=request.db)
-    group_content_error = {u'group_name': str(group_name)}
-    verify_param(group, isNone=True, httpError=HTTPConflict, withParam=False,
-                 msgOnFail=Groups_POST_ConflictResponseSchema.description, content=group_content_error)
-    new_group = evaluate_call(lambda: models.Group(group_name=group_name), fallback=lambda: request.db.rollback(),
-                              httpError=HTTPForbidden, msgOnFail=Groups_POST_ForbiddenCreateResponseSchema.description,
-                              content=group_content_error)
-    evaluate_call(lambda: request.db.add(new_group), fallback=lambda: request.db.rollback(),
-                  httpError=HTTPForbidden, msgOnFail=Groups_POST_ForbiddenAddResponseSchema.description,
-                  content=group_content_error)
-    return valid_http(httpSuccess=HTTPCreated, detail=Groups_POST_CreatedResponseSchema.description,
-                      content={u'group': format_group(new_group, basic_info=True)})
+    return create_group(group_name, request.db)
 
 
 @GroupAPI.get(tags=[GroupsTag], response_schemas=Group_GET_responses)
