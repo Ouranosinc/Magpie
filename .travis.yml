@@ -24,8 +24,11 @@ before_install:
   - uname -a
   - lsb_release -a
   - export APP_NAME=magpie-${TRAVIS_PYTHON_VERSION}
+  - export PATH="$(CONDA_HOME)/bin":$PATH
   - hash -r
   - env
+  - ls -al "$(CONDA_HOME)"
+  - ls -al "$(DOWNLOAD_CACHE)"
   - make sysinstall
 install:
   - make install install-dev
