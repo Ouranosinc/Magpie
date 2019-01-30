@@ -245,8 +245,10 @@ docker-push: docker-build
 
 .PHONY: conda-base
 conda-base:
-	@test -d "$(CONDA_HOME)" || test -d "$(DOWNLOAD_CACHE)" || mkdir "$(DOWNLOAD_CACHE)"
+	@test -d "$(CONDA_HOME)" || test -d "$(DOWNLOAD_CACHE)" || \
+		echo "Creating download directory: $(DOWNLOAD_CACHE)" && mkdir "$(DOWNLOAD_CACHE)"
 	@test -d "$(CONDA_HOME)" || test -f "$(DOWNLOAD_CACHE)/$(FN)" || \
+		echo "Fetching conda distribution from: $(CONDA_URL)/$(FN)" && \
 		curl "$(CONDA_URL)/$(FN)" --insecure --output "$(DOWNLOAD_CACHE)/$(FN)"
 	@test -d "$(CONDA_HOME)" || (bash "$(DOWNLOAD_CACHE)/$(FN)" -b -p "$(CONDA_HOME)" && \
 		echo "Make sure to add '$(CONDA_HOME)/bin' to your PATH variable in '~/.bashrc'.")

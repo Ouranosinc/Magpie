@@ -27,8 +27,7 @@ before_install:
   - export PATH="${CONDA_HOME}/bin":$PATH
   - hash -r
   - env
-  - ls -al "${CONDA_HOME}"
-  - ls -al "${DOWNLOAD_CACHE}"
+  - make conda-base
   - make sysinstall
 install:
   - make install install-dev
