@@ -265,4 +265,4 @@ conda_config: conda-base
 .PHONY: conda-env
 conda-env: conda-base
 	@test -d "$(CONDA_ENV_PATH)" || (echo "Creating conda environment at '$(CONDA_ENV_PATH)'..." && \
-		"$(CONDA_HOME)/bin/conda" env create --file "$(CUR_DIR)/conda-env.yml" -n "$(APP_NAME)")
+		"$(CONDA_HOME)/bin/conda" env create -n "$(APP_NAME)")
