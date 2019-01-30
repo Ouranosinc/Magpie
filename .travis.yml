@@ -4,18 +4,26 @@ python:
   - "3.5"
   - "3.6"
 sudo: false
-cache: pip
+cache:
+  - pip
+  - directories:
+      - $HOME/conda
+      - $HOME/downloads
 # includes PR when base branch = master
 if: branch = master OR tag IS present
 env:
+  global:
+    - CONDA_HOME=$HOME/conda
+    - DOWNLOAD_CACHE=$HOME/downloads
   matrix:
-    - env TARGET=test-local
-    - env TARGET=test-remote
-    - env TARGET=coverage
+    - APP_NAME=magpie-$TRAVIS_PYTHON_VERSION TARGET=test-local
+    - APP_NAME=magpie-$TRAVIS_PYTHON_VERSION TARGET=test-remote
+    - APP_NAME=magpie-$TRAVIS_PYTHON_VERSION TARGET=coverage
 before_install:
   - python --version
   - uname -a
   - lsb_release -a
+  - hash -r
   - make sysinstall
 install:
   - make install install-dev
@@ -23,9 +31,7 @@ install:
 script:
   - make $TARGET
 notifications:
-  email:
-    on_success: never
-    on_failure: always
+  email: false
 jobs:
   include:
     - stage: deploy
