@@ -34,6 +34,15 @@ def main(global_config=None, **settings):
     settings['magpie.root'] = constants.MAGPIE_ROOT
     settings['magpie.module'] = constants.MAGPIE_MODULE_DIR
 
+    # suppress sqlalchemy logging if not in debug for magpie
+    log_lvl = get_constant('MAGPIE_LOG_LEVEL', settings, 'magpie.log_level', default_value=logging.INFO,
+                           raise_missing=False, print_missing=False, raise_not_set=False)
+    log_lvl = logging.getLevelName(log_lvl) if isinstance(log_lvl, int) else log_lvl
+    if log_lvl.upper() != 'DEBUG':
+        sa_log = logging.getLogger('sqlalchemy.engine.base.Engine')
+        sa_log.setLevel(logging.WARN)   # WARN to avoid INFO logs
+    LOGGER.setLevel(log_lvl)
+
     # migrate db as required and check if database is ready
     if not settings.get('magpie.db_migration_disabled', False):
         print_log('Running database migration (as required) ...')

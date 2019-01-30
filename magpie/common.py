@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from distutils.dir_util import mkpath
+# noinspection PyCompatibility
+import configparser
 import logging
 import types
 import six
@@ -49,3 +51,11 @@ def make_dirs(path):
         for subdir in mkpath(dir_path):
             if not os.path.isdir(subdir):
                 os.mkdir(subdir)
+
+
+def get_settings_from_config_ini(config_ini_path, ini_main_section_name='app:magpie_app'):
+    parser = configparser.ConfigParser()
+    parser.optionxform = lambda option: option  # preserve case of config (ziggurat requires it for 'User' model)
+    parser.read([config_ini_path])
+    settings = dict(parser.items(ini_main_section_name))
+    return settings

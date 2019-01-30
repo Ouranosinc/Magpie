@@ -4,7 +4,7 @@ import os
 import shutil
 import dotenv
 import logging
-from magpie.common import str2bool, raise_log, print_log
+from magpie.common import str2bool, raise_log, print_log, get_settings_from_config_ini
 logger = logging.getLogger(__name__)
 
 # ===========================
@@ -41,6 +41,15 @@ except IOError:
     logger.warn("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR))
     pass
 
+# get default configurations from ini file
+_default_log_lvl = 'INFO'
+# noinspection PyBroadException
+try:
+    _settings = get_settings_from_config_ini(MAGPIE_INI_FILE_PATH, ini_main_section_name='logger_magpie')
+    _default_log_lvl = _settings.get('level', _default_log_lvl)
+except Exception:
+    pass
+
 # ===========================
 # variables from magpie.env
 # ===========================
@@ -58,6 +67,7 @@ MAGPIE_ANONYMOUS_GROUP = MAGPIE_ANONYMOUS_USER
 MAGPIE_EDITOR_GROUP = os.getenv('MAGPIE_EDITOR_GROUP', 'editors')
 MAGPIE_USERS_GROUP = os.getenv('MAGPIE_USERS_GROUP', 'users')
 MAGPIE_CRON_LOG = os.getenv('MAGPIE_CRON_LOG', '~/magpie-cron.log')
+MAGPIE_LOG_LEVEL = os.getenv('MAGPIE_LOG_LEVEL', _default_log_lvl)
 PHOENIX_USER = os.getenv('PHOENIX_USER', 'phoenix')
 PHOENIX_PASSWORD = os.getenv('PHOENIX_PASSWORD', 'qwerty')
 PHOENIX_PORT = int(os.getenv('PHOENIX_PORT', 8443))

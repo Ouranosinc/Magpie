@@ -8,7 +8,8 @@ from pyramid.testing import setUp as PyramidSetUp
 from webtest import TestApp
 from webtest.response import TestResponse
 from webob.headers import ResponseHeaders
-from magpie import __meta__, db, services, magpiectl
+from magpie import __meta__, services, magpiectl
+from magpie.common import get_settings_from_config_ini
 from magpie.constants import get_constant
 from typing import AnyStr, Dict, List, Optional, Tuple, Union
 
@@ -21,7 +22,7 @@ ResponseType = Union[TestResponse, Response]
 
 
 def config_setup_from_ini(config_ini_file_path):
-    settings = db.get_settings_from_config_ini(config_ini_file_path)
+    settings = get_settings_from_config_ini(config_ini_file_path)
     config = PyramidSetUp(settings=settings)
     return config
 
