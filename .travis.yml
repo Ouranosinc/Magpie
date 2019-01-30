@@ -16,13 +16,14 @@ env:
     - CONDA_HOME=$HOME/conda
     - DOWNLOAD_CACHE=$HOME/downloads
   matrix:
-    - APP_NAME=magpie-$TRAVIS_PYTHON_VERSION TARGET=test-local
-    - APP_NAME=magpie-$TRAVIS_PYTHON_VERSION TARGET=test-remote
-    - APP_NAME=magpie-$TRAVIS_PYTHON_VERSION TARGET=coverage
+    - TARGET=test-local
+    - TARGET=test-remote
+    - TARGET=coverage
 before_install:
   - python --version
   - uname -a
   - lsb_release -a
+  - export APP_NAME=magpie-${TRAVIS_PYTHON_VERSION}
   - hash -r
   - env
   - make sysinstall
