@@ -2,7 +2,7 @@ wheel==0.23.0
 watchdog==0.8.3
 pluggy
 #cryptography==1.9
-PyYAML>=3.11
+PyYAML>=3.13
 pyramid==1.8.3
 ziggurat-foundations==0.8.1
 pyramid_tm==2.2.1

@@ -8,6 +8,36 @@ Magpie is service for AuthN/AuthZ accessible via a `RestAPI`_ implemented with t
 It allows you to manage User/Group/Resource/permission with a postgres database.
 Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
+
+.. start-badges
+
+.. list-table::
+    :stub-columns: 1
+
+    * - dependencies
+      - | |py_ver| |requires|
+    * - releases
+      - | |version| |commits-since|
+
+.. |py_ver| image:: https://img.shields.io/badge/python-2.7%2C%203.5%2B-blue.svg
+    :alt: Requires Python 2.7, 3.5+
+    :target: https://www.python.org/getit
+
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/0.9.0.svg
+    :alt: Commits since latest release
+    :target: https://github.com/Ouranosinc/Magpie/compare/v0.9.0...master
+
+.. |version| image:: https://img.shields.io/github/tag/ouranosinc/magpie.svg?style=flat
+    :alt: Latest Tag
+    :target: https://github.com/Ouranosinc/Magpie/tree/0.9.0
+
+.. |requires| image:: https://requires.io/github/Ouranosinc/Magpie/requirements.svg?branch=master
+    :alt: Requirements Status
+    :target: https://requires.io/github/Ouranosinc/Magpie/requirements/?branch=master
+
+.. end-badges
+
+
 REST API Documentation
 ======================
 

@@ -13,7 +13,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at francois-xavier.derue@crim.ca.
+Report bugs at francis.charette-migneault@crim.ca.
 
 If you are reporting a bug, please include:
 
@@ -54,7 +54,7 @@ Ready to contribute? Here's how to set up `magpie` for local development.
 2. Install your local copy and use a virtualenv. Assuming you have
    virtualenv installed, this is how you set up your fork for local
    development::
-    
+
     $ cd magpie/
     $ virtualenv -p python 3.5 env
     $ source env/bin/activate.csh

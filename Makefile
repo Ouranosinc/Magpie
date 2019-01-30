@@ -46,6 +46,7 @@ help:
 	@echo "  Cleaning:"
 	@echo "    clean:           remove all build, test, coverage and Python artifacts"
 	@echo "    clean-build:     remove build artifacts"
+	@echo "    clean-docs: 	    remove doc artifacts"
 	@echo "    clean-pyc:       remove Python file artifacts"
 	@echo "    clean-test:      remove test and coverage artifacts"
 	@echo "  Build and deploy:"
@@ -73,7 +74,7 @@ help:
 	@echo "    test-tox:        run tests on every Python version with tox"
 
 .PHONY: clean clean-build clean-pyc clean-test
-clean: clean-build clean-pyc clean-test
+clean: clean-build clean-pyc clean-test clean-docs
 
 clean-build:
 	@echo "Cleaning build artifacts..."
@@ -82,6 +83,10 @@ clean-build:
 	rm -fr .eggs/
 	find . -type f -name '*.egg-info' -exec rm -fr {} +
 	find . -type f -name '*.egg' -exec rm -f {} +
+
+clean-docs:
+	@echo "Cleaning doc artifacts..."
+	"$(MAKE)" -C "$(CUR_DIR)/docs" clean
 
 clean-pyc:
 	@echo "Cleaning Python artifacts..."

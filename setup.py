@@ -34,15 +34,21 @@ with open('requirements.txt', 'r') as requirements_file:
         else:
             REQUIREMENTS.add(line.strip())
 
+TEST_REQUIREMENTS = set()
+with open('requirements-dev.txt', 'r') as requirements_file:
+    for line in requirements_file:
+        if 'git+https' in line:
+            pkg = line.split('#')[-1]
+            LINKS.add(line.strip())
+            REQUIREMENTS.add(pkg.replace('egg=', '').rstrip())
+        elif line.startswith('http'):
+            LINKS.add(line.strip())
+        else:
+            REQUIREMENTS.add(line.strip())
+
 LINKS = list(LINKS)
 REQUIREMENTS = list(REQUIREMENTS)
-
-# put package test requirements here
-TEST_REQUIREMENTS = [
-    'nose==1.3.7',
-    'webtest',
-    'pytest',
-]
+TEST_REQUIREMENTS = list(TEST_REQUIREMENTS)
 
 raw_requirements = set()
 for req in REQUIREMENTS:
@@ -57,7 +63,7 @@ TEST_REQUIREMENTS = list(filtered_test_requirements)
 
 setup(
     # -- meta information --------------------------------------------------
-    name='magpie',
+    name=__meta__.__package__,
     version=__meta__.__version__,
     description=__meta__.__description__,
     long_description=README + '\n\n' + HISTORY,
@@ -69,7 +75,7 @@ setup(
     url=__meta__.__url__,
     platforms=['linux_x86_64'],
     license="ISCL",
-    keywords='magpie',
+    keywords=__meta__.__title__ + ", Authentication, AuthN",
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -80,11 +86,8 @@ setup(
     ],
 
     # -- Package structure -------------------------------------------------
-    #packages=[
-    #    'magpie',
-    #],
     packages=find_packages(),
-    package_dir={'magpie': 'magpie'},
+    package_dir={__meta__.__package__: 'magpie'},
     include_package_data=True,
     install_requires=REQUIREMENTS,
     dependency_links=LINKS,
