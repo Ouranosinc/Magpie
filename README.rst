@@ -16,6 +16,10 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
     * - dependencies
       - | |py_ver| |requires|
+    * - build status
+      - | |travis_latest| |travis_tag|
+    * - docker status
+      - | |docker_build_mode| |docker_build_status|
     * - releases
       - | |version| |commits-since|
 
@@ -34,6 +38,22 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 .. |requires| image:: https://requires.io/github/Ouranosinc/Magpie/requirements.svg?branch=master
     :alt: Requirements Status
     :target: https://requires.io/github/Ouranosinc/Magpie/requirements/?branch=master
+
+.. |travis_latest| image:: https://img.shields.io/travis/Ouranosinc/Magpie/master.svg?label=master
+    :alt: Travis-CI Build Status (master branch)
+    :target: https://travis-ci.com/Ouranosinc/Magpie
+
+.. |travis_tag| image:: https://img.shields.io/travis/Ouranosinc/Magpie/0.9.0.svg?label=0.9.0
+    :alt: Travis-CI Build Status (latest tag)
+    :target: https://github.com/Ouranosinc/Magpie/tree/0.9.0
+
+.. |docker_build_mode| image:: https://img.shields.io/docker/automated/pavics/magpie.svg?label=build
+    :alt: Docker Build Status (latest tag)
+    :target: https://hub.docker.com/r/pavics/magpie/builds
+
+.. |docker_build_status| image:: https://img.shields.io/docker/build/pavics/magpie.svg?label=status
+    :alt: Docker Build Status (latest tag)
+    :target: https://hub.docker.com/r/pavics/magpie/builds
 
 .. end-badges
 

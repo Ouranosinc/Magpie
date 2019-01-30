@@ -9,6 +9,7 @@ History
 * add permissions config to auto-generate user/group rules on startup
 * fix many invalid or erroneous swagger specifications
 * attempt db creation on first migration if not existing
+* add continuous integration testing and deployment
 
 0.8.x
 ---------------------

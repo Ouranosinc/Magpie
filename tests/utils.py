@@ -3,13 +3,21 @@ import json
 import six
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
+from pyramid.response import Response
 from pyramid.testing import setUp as PyramidSetUp
 from webtest import TestApp
 from webtest.response import TestResponse
+from webob.headers import ResponseHeaders
 from magpie import __meta__, db, services, magpiectl
 from magpie.constants import get_constant
+from typing import AnyStr, Dict, List, Optional, Tuple, Union
 
 OptionalStringType = six.string_types + tuple([type(None)])
+HeadersType = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
+CookiesType = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
+OptionalHeaderCookiesType = Union[Tuple[None, None], Tuple[HeadersType, CookiesType]]
+TestAppOrUrlType = Union[AnyStr, TestApp]
+ResponseType = Union[TestResponse, Response]
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -22,6 +30,7 @@ def get_test_magpie_app():
     # parse settings from ini file to pass them to the application
     config = config_setup_from_ini(get_constant('MAGPIE_INI_FILE_PATH'))
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
+    config.include('ziggurat_foundations.ext.pyramid.get_user')
     config.registry.settings['magpie.db_migration_disabled'] = True
     # scan dependencies
     config.include('magpie')
@@ -40,6 +49,22 @@ def get_headers(app_or_url, header_dict):
     if isinstance(app_or_url, TestApp):
         return header_dict.items()
     return header_dict
+
+
+def get_header(header_name, header_container):
+    # type: (AnyStr, Optional[Union[HeadersType, ResponseHeaders]]) -> Union[AnyStr, None]
+    if header_container is None:
+        return None
+    headers = header_container
+    if isinstance(headers, ResponseHeaders):
+        headers = dict(headers)
+    if isinstance(headers, dict):
+        headers = header_container.items()
+    header_name = header_name.lower().replace('-', '_')
+    for h, v in headers:
+        if h.lower().replace('-', '_') == header_name:
+            return v
+    return None
 
 
 def get_response_content_types_list(response):
@@ -88,9 +113,11 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
             if cookies and not app_or_url.cookies:
                 app_or_url.cookies.update(cookies)
 
-        kwargs['params'] = json_body
+        # obtain Content-Type header if specified to ensure it is properly applied
+        kwargs['content_type'] = get_header('Content-Type', kwargs.get('headers'))
 
         # convert JSON body as required
+        kwargs['params'] = json_body
         if json_body is not None:
             kwargs.update({'params': json.dumps(json_body, cls=json.JSONEncoder)})
         if status and status >= 300:
@@ -115,32 +142,46 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
         return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
 
 
-def check_or_try_login_user(app_or_url, username=None, password=None, provider='ziggurat', headers=None,
-                            use_ui_form_submit=False, version=__meta__.__version__):
-    """
-    Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
-
-    :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
-    :param username: name of the user to login or None otherwise
-    :param password: password to use for login if the user was not already logged in
-    :param provider: provider string to use for login (default: ziggurat, ie: magpie's local signin)
-    :param headers: headers to include in the test request
-    :param use_ui_form_submit: use Magpie UI login 'form' to obtain cookies (required for local WebTest.App login)
-    :param version: server or local app version to evaluate responses with backward compatibility
-    :return: headers and cookies of the user session or (None, None)
-    :raise: Exception on any login/logout failure as required by the caller's specifications (username/password)
-    """
-
-    headers = headers or {}
-
+def get_session_user(app_or_url, headers=None):
+    # type: (TestAppOrUrlType, Optional[HeadersType]) -> ResponseType
+    if not headers:
+        headers = get_headers(app_or_url, {'Accept': 'application/json', 'Content-Type': 'application/json'})
     if isinstance(app_or_url, TestApp):
         resp = app_or_url.get('/session', headers=headers)
     else:
         resp = requests.get('{}/session'.format(app_or_url), headers=headers)
-    body = get_json_body(resp)
-
     if resp.status_code != 200:
         raise Exception('cannot retrieve logged in user information')
+    return resp
+
+
+def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrlType
+                            username=None,                  # type: Optional[AnyStr]
+                            password=None,                  # type: Optional[AnyStr]
+                            provider='ziggurat',            # type: Optional[AnyStr]
+                            headers=None,                   # type: Optional[Dict[AnyStr, AnyStr]]
+                            use_ui_form_submit=False,       # type: Optional[bool]
+                            version=__meta__.__version__,   # type: Optional[AnyStr]
+                            ):                              # type: (...) -> OptionalHeaderCookiesType
+    """
+    Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
+    Validates that the logged user (if any), matched the one specified with `username`.
+
+    :param app_or_url: instance of the test application or remote server URL to call
+    :param username: name of the user to login or None otherwise
+    :param password: password to use for login if the user was not already logged in
+    :param provider: provider string to use for login (default: ziggurat, ie: magpie's local signin)
+    :param headers: headers to include in the test request
+    :param use_ui_form_submit: use Magpie UI login 'form' to obtain cookies
+        (required for local `WebTest.App` login, ignored by requests using URL)
+    :param version: server or local app version to evaluate responses with backward compatibility
+    :return: headers and cookies of the user session or (None, None)
+    :raise: Exception on any login failure as required by the caller's specifications (username/password)
+    """
+
+    headers = headers or {}
+    resp = get_session_user(app_or_url, headers)
+    body = get_json_body(resp)
 
     resp_cookies = None
     auth = body.get('authenticated', False)
@@ -183,6 +224,33 @@ def check_or_try_login_user(app_or_url, username=None, password=None, provider='
             resp_cookies = resp.cookies
 
     return resp.headers, resp_cookies
+
+
+def check_or_try_logout_user(app_or_url):
+    # type: (TestAppOrUrlType) -> None
+    """
+    Verifies that any user is logged out, or tries to logout him otherwise.
+
+    :param app_or_url: instance of the test application or remote server URL to call
+    :raise: Exception on any logout failure or incapability to validate logout
+    """
+
+    def _is_logged_out():
+        resp = get_session_user(app_or_url)
+        body = get_json_body(resp)
+        auth = body.get('authenticated', False)
+        return not auth
+
+    if _is_logged_out():
+        return
+    resp_logout = test_request(app_or_url, 'GET', '/ui/logout', allow_redirects=True)
+    if isinstance(app_or_url, TestApp):
+        app_or_url.reset()  # clear app cookies
+    if resp_logout.status_code >= 400:
+        raise Exception("cannot validate logout")
+    if _is_logged_out():
+        return
+    raise Exception("logout did not succeed")
 
 
 def format_test_val_ref(val, ref, pre='Fail', msg=None):
@@ -382,7 +450,7 @@ class TestSetup(object):
         Verifies that the Magpie UI page at very least returned an Ok response with the displayed title.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
-        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=10)
+        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=20)
         check_val_equal(resp.status_code, 200)
         check_val_is_in('Content-Type', dict(resp.headers))
         check_val_is_in('text/html', get_response_content_types_list(resp))
