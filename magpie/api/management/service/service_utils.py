@@ -7,6 +7,19 @@ from magpie.api.api_except import *
 from magpie.api.management.group.group_utils import create_group_resource_permission
 
 
+def create_service(service_name, service_type, service_url, db_session):
+    """Generates an instance to register a new service."""
+    # noinspection PyArgumentList
+    return evaluate_call(lambda: models.Service(resource_name=str(service_name),
+                                                resource_type=models.Service.resource_type_name,
+                                                url=str(service_url), type=str(service_type)),
+                         fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
+                         msgOnFail="Service creation for registration failed.",
+                         content={u'service_name': str(service_name),
+                                  u'resource_type': models.Service.resource_type_name,
+                                  u'service_url': str(service_url), u'service_type': str(service_type)})
+
+
 def get_services_by_type(service_type, db_session):
     verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                  msgOnFail="Invalid `service_type` value '" + str(service_type) + "' specified")

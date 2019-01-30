@@ -60,25 +60,17 @@ def register_service(request):
                  httpError=HTTPConflict, msgOnFail=Services_POST_ConflictResponseSchema.description,
                  content={u'service_name': str(service_name)}, paramName=u'service_name')
 
-    # noinspection PyArgumentList
-    service = evaluate_call(lambda: models.Service(resource_name=str(service_name),
-                                                   resource_type=models.Service.resource_type_name,
-                                                   url=str(service_url), type=str(service_type)),
-                            fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                            msgOnFail="Service creation for registration failed.",
-                            content={u'service_name': str(service_name),
-                                     u'resource_type': models.Service.resource_type_name,
-                                     u'service_url': str(service_url), u'service_type': str(service_type)})
-
-    def add_service_magpie_and_phoenix(svc, svc_push, db):
+    def _add_service_magpie_and_phoenix(svc, svc_push, db):
         db.add(svc)
         if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED:
             sync_services_phoenix(db.query(models.Service))
 
-    evaluate_call(lambda: add_service_magpie_and_phoenix(service, service_push, request.db),
+    service = create_service(service_name, service_type, service_url, db_session=request.db)
+    evaluate_call(lambda: _add_service_magpie_and_phoenix(service, service_push, request.db),
                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                   msgOnFail=Services_POST_ForbiddenResponseSchema.description,
                   content=format_service(service, show_private_url=True))
+
     return valid_http(httpSuccess=HTTPCreated, detail=Services_POST_CreatedResponseSchema.description,
                       content={u'service': format_service(service, show_private_url=True)})
 

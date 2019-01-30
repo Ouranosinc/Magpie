@@ -382,7 +382,7 @@ class TestSetup(object):
         Verifies that the Magpie UI page at very least returned an Ok response with the displayed title.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
-        resp = test_request(test_class.url, method, path, cookies=test_class.cookies)
+        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=10)
         check_val_equal(resp.status_code, 200)
         check_val_is_in('Content-Type', dict(resp.headers))
         check_val_is_in('text/html', get_response_content_types_list(resp))
@@ -476,8 +476,11 @@ class TestSetup(object):
                             headers=test_class.json_headers, cookies=test_class.cookies,
                             expect_errors=True)
         if resp.status_code == 409:
-            return
-        check_response_basic_info(resp, 201, expected_method='POST')
+            resp = test_request(test_class.url, 'GET', '/services',
+                                headers=test_class.json_headers,
+                                cookies=test_class.cookies)
+            return check_response_basic_info(resp, 200, expected_method='GET')
+        return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
     def check_NonExistingTestService(test_class):
