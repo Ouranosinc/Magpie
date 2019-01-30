@@ -5,6 +5,8 @@ python:
   - "3.6"
 sudo: false
 cache: pip
+# includes PR when base branch = master
+if: branch = master OR tag IS present
 env:
   matrix:
     - env TARGET=test-local
@@ -14,8 +16,9 @@ before_install:
   - python --version
   - uname -a
   - lsb_release -a
+  - make sysinstall
 install:
-  - make install
+  - make install install-dev
   - make version
 script:
   - make $TARGET

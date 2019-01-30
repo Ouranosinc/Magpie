@@ -86,7 +86,7 @@ clean-build:
 
 clean-docs:
 	@echo "Cleaning doc artifacts..."
-	"$(MAKE)" -C "$(CUR_DIR)/docs" clean
+	"$(MAKE)" -C "$(CUR_DIR)/docs" clean || true
 
 clean-pyc:
 	@echo "Cleaning Python artifacts..."
