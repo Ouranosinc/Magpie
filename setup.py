@@ -75,7 +75,7 @@ setup(
     url=__meta__.__url__,
     platforms=['linux_x86_64'],
     license="ISCL",
-    keywords=__meta__.__title__ + ", Authentication, AuthN",
+    keywords=__meta__.__title__ + ", Authentication, AuthN, Birdhouse",
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',

@@ -9,6 +9,8 @@ from webtest.response import TestResponse
 from magpie import __meta__, db, services, magpiectl
 from magpie.constants import get_constant
 
+OptionalStringType = six.string_types + tuple([type(None)])
+
 
 def config_setup_from_ini(config_ini_file_path):
     settings = db.get_settings_from_config_ini(config_ini_file_path)
@@ -409,6 +411,7 @@ class TestSetup(object):
 
     @staticmethod
     def create_TestServiceResource(test_class, data_override=None):
+        TestSetup.create_TestService(test_class)
         route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
         data = {
             "resource_name": test_class.test_resource_name,
@@ -461,6 +464,20 @@ class TestSetup(object):
                                 cookies=test_class.cookies)
             check_val_equal(resp.status_code, 200)
         TestSetup.check_NonExistingTestServiceResource(test_class)
+
+    @staticmethod
+    def create_TestService(test_class):
+        data = {
+            u'service_name': test_class.test_service_name,
+            u'service_type': test_class.test_service_type,
+            u'service_url': u'http://localhost:9000/{}'.format(test_class.test_service_name)
+        }
+        resp = test_request(test_class.url, 'POST', '/services', json=data,
+                            headers=test_class.json_headers, cookies=test_class.cookies,
+                            expect_errors=True)
+        if resp.status_code == 409:
+            return
+        check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
     def check_NonExistingTestService(test_class):

@@ -12,9 +12,10 @@ from typing import Any, AnyStr, Dict, List, Optional, Union
 
 
 def create_user(user_name, password, email, group_name, db_session):
-    # type: (AnyStr, AnyStr, AnyStr, AnyStr, Session) -> HTTPException
+    # type: (AnyStr, Union[AnyStr, None], AnyStr, AnyStr, Session) -> HTTPException
     """
     Creates a user if it is permitted and not conflicting.
+    Password must be set to `None` if using external identity.
     :returns: corresponding HTTP response according to the encountered situation.
     """
 

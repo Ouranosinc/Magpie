@@ -3,7 +3,7 @@ import unittest
 
 
 @unittest.skip("not implemented")
-class TestAdapter(unittest.TestCase):
+class TestRegister(unittest.TestCase):
     @pytest.skip("not implemented")
-    def test_adapter(self):
+    def test_register(self):
         pass
