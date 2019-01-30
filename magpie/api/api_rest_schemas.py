@@ -965,6 +965,18 @@ class Services_POST_ConflictResponseSchema(colander.MappingSchema):
     body = BaseResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
+class Services_POST_UnprocessableEntityResponseSchema(colander.MappingSchema):
+    description = "Service creation for registration failed."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
+
+
+class Services_POST_InternalServerErrorResponseSchema(colander.MappingSchema):
+    description = "Service registration status could not be validated."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPInternalServerError.code, description=description)
+
+
 class Service_PUT_ResponseBodySchema(colander.MappingSchema):
     service_name = colander.SchemaNode(
         colander.String(),
@@ -2357,6 +2369,7 @@ Services_POST_responses = {
     '401': UnauthorizedResponseSchema(),
     '403': Services_POST_ForbiddenResponseSchema(),
     '409': Services_POST_ConflictResponseSchema(),
+    '422': Services_POST_UnprocessableEntityResponseSchema(),
 }
 Service_GET_responses = {
     '200': Service_GET_OkResponseSchema(),

@@ -221,8 +221,9 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
     def test_GetCurrentUserResourcesPermissions(self):
         utils.TestSetup.create_TestService(self)
-        utils.TestSetup.create_TestServiceResource(self)
-        self.check_GetUserResourcesPermissions(get_constant('MAGPIE_LOGGED_USER'))
+        json_body = utils.TestSetup.create_TestServiceResource(self)
+        res_id = json_body['resource']['resource_id']
+        self.check_GetUserResourcesPermissions(get_constant('MAGPIE_LOGGED_USER'), res_id)
 
     @pytest.mark.users
     @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
@@ -768,14 +769,14 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         json_body = utils.TestSetup.create_TestService(self)
         utils.check_val_is_in('service', json_body)
         utils.check_val_type(json_body['service'], dict)
-        utils.check_val_is_in('public_url', json_body['service'])
         utils.check_val_is_in('resource_id', json_body['service'])
+        utils.check_val_is_in('public_url', json_body['service'])
         utils.check_val_is_in('service_url', json_body['service'])
         utils.check_val_is_in('service_name', json_body['service'])
         utils.check_val_is_in('service_type', json_body['service'])
         utils.check_val_is_in('permission_names', json_body['service'])
-        utils.check_val_type(json_body['service']['public_url'], six.string_types)
         utils.check_val_type(json_body['service']['resource_id'], int)
+        utils.check_val_type(json_body['service']['public_url'], six.string_types)
         utils.check_val_type(json_body['service']['service_url'], six.string_types)
         utils.check_val_type(json_body['service']['service_name'], six.string_types)
         utils.check_val_type(json_body['service']['service_type'], six.string_types)
