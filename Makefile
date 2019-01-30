@@ -21,7 +21,7 @@ CONDA_ENV ?= $(APP_NAME)
 CONDA_HOME ?= $(HOME)/conda
 CONDA_ENVS_DIR ?= $(CONDA_HOME)/envs
 CONDA_ENV_PATH := $(CONDA_ENVS_DIR)/$(CONDA_ENV)
-DOWNLOAD_CACHE := $(APP_ROOT)/downloads
+DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
 
 # choose conda installer depending on your OS
 CONDA_URL = https://repo.continuum.io/miniconda
@@ -246,7 +246,7 @@ docker-push: docker-build
 .PHONY: conda-base
 conda-base:
 	@test -d "$(CONDA_HOME)" || test -d "$(DOWNLOAD_CACHE)" || \
-		echo "Creating download directory: $(DOWNLOAD_CACHE)" && mkdir "$(DOWNLOAD_CACHE)"
+		echo "Creating download directory: $(DOWNLOAD_CACHE)" && mkdir -p "$(DOWNLOAD_CACHE)"
 	@test -d "$(CONDA_HOME)" || test -f "$(DOWNLOAD_CACHE)/$(FN)" || \
 		echo "Fetching conda distribution from: $(CONDA_URL)/$(FN)" && \
 		curl "$(CONDA_URL)/$(FN)" --insecure --output "$(DOWNLOAD_CACHE)/$(FN)"
@@ -267,4 +267,4 @@ conda_config: conda-base
 .PHONY: conda-env
 conda-env: conda-base
 	@test -d "$(CONDA_ENV_PATH)" || (echo "Creating conda environment at '$(CONDA_ENV_PATH)'..." && \
-		"$(CONDA_HOME)/bin/conda" env create -n "$(APP_NAME)")
+		"$(CONDA_HOME)/bin/conda" env create -n "$(CONDA_ENV)")

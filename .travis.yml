@@ -23,7 +23,7 @@ before_install:
   - python --version
   - uname -a
   - lsb_release -a
-  - export APP_NAME=magpie-${TRAVIS_PYTHON_VERSION}
+  - export CONDA_ENV=magpie-${TRAVIS_PYTHON_VERSION}
   - export PATH="${CONDA_HOME}/bin":$PATH
   - hash -r
   - env
