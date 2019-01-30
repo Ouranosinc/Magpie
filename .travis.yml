@@ -24,6 +24,7 @@ before_install:
   - uname -a
   - lsb_release -a
   - hash -r
+  - env
   - make sysinstall
 install:
   - make install install-dev
