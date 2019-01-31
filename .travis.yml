@@ -29,7 +29,7 @@ postgres:
 before_script:
   - psql -c 'create database magpie;' -U postgres
 before_install:
-  - python --version
+  - python -V
   - uname -a
   - lsb_release -a
   - export PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
@@ -41,6 +41,8 @@ before_install:
   #- conda update -q conda
   #- conda info -a
   - env
+  - python -V
+  - which python
   - make conda-base
   - make sysinstall
   - echo $CONDA_PREFIX

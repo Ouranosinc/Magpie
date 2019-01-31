@@ -208,7 +208,7 @@ sysinstall: clean conda-env
 .PHONY: install
 install: sysinstall
 	@echo "Installing Magpie..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install "$(CUR_DIR)"'
+	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install --force-reinstall "$(CUR_DIR)"'
 
 .PHONY: install-dev
 install-dev: conda-env
