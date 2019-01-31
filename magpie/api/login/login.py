@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 default_provider = get_constant('MAGPIE_DEFAULT_PROVIDER')
 MAGPIE_INTERNAL_PROVIDERS = {default_provider: default_provider.capitalize()}
 MAGPIE_EXTERNAL_PROVIDERS = get_provider_names()
-MAGPIE_PROVIDER_KEYS = MAGPIE_INTERNAL_PROVIDERS.keys() + MAGPIE_EXTERNAL_PROVIDERS.keys()
+MAGPIE_PROVIDER_KEYS = list(MAGPIE_INTERNAL_PROVIDERS.keys()) + list(MAGPIE_EXTERNAL_PROVIDERS.keys())
 
 
 def process_sign_in_external(request, username, provider):
