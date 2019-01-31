@@ -33,7 +33,9 @@ before_install:
   - make conda-base
   - make sysinstall
   - echo $CONDA_PREFIX
+  - echo $CONDA_ENV
   - conda env list
+  - conda init bash
   - conda activate $CONDA_ENV
 install:
   - make install install-dev
@@ -52,3 +54,5 @@ jobs:
         skip_existing: true
         on:
           tags: true
+after_success:
+  - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"

@@ -66,7 +66,8 @@ help:
 	@echo "    migrate:         run postgres database migration with alembic"
 	@echo "    start:           start magpie instance with gunicorn"
 	@echo "  Test and coverage"
-	@echo "    coverage:        check code coverage quickly with the default Python"
+	@echo "    coverage:        check code coverage and generate a report"
+	@echo "    coverage-show:   check code coverage and generate a report served on a web interface"
 	@echo "    lint:            check style with flake8"
 	@echo "    test:            run tests quickly with the default Python"
 	@echo "    test-local:      run only local tests with the default Python"
@@ -131,6 +132,9 @@ coverage: install-dev install
 	@echo "Running coverage analysis..."
 	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage run --source magpie setup.py test || true'
 	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage report -m'
+
+.PHONY: coverage-show
+coverage-show: coverage
 	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage html -d coverage'
 	"$(BROWSER)" "$(CUR_DIR)/coverage/index.html"
 
