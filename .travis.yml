@@ -28,6 +28,7 @@ before_install:
   - uname -a
   - lsb_release -a
   - export CONDA_ENV=magpie-${TRAVIS_PYTHON_VERSION}
+  - export CONDA_PREFIX=$HOME/conda/envs/magpie-${TRAVIS_PYTHON_VERSION}
   - export PATH="${CONDA_HOME}/bin":$PATH
   - hash -r
   #- conda config --set always_yes yes --set changeps1 no
