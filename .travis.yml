@@ -16,9 +16,13 @@ env:
     - CONDA_HOME=$HOME/conda
     - DOWNLOAD_CACHE=$HOME/downloads
   matrix:
-    - TARGET=test-local
-    - TARGET=test-remote
-    - TARGET=coverage
+    - TEST_TARGET=test-local    START_TARGET=
+    - TEST_TARGET=test-remote   START_TARGET=start
+    - TEST_TARGET=coverage      START_TARGET=
+addons:
+  postgresql: "9.6"
+before_script:
+  - psql -c 'create database magpie;' -U postgres
 before_install:
   - python --version
   - uname -a
@@ -40,7 +44,7 @@ install:
   - make install install-dev
   - make version
 script:
-  - make $TARGET
+  - make $START_TARGET $TEST_TARGET
 notifications:
   email: false
 jobs:
