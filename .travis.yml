@@ -21,6 +21,11 @@ env:
     - TEST_TARGET=coverage      START_TARGET=
 addons:
   postgresql: "9.6"
+postgres:
+  adapter: postgresql
+  database: magpie
+  username: postgres
+  password: qwerty
 before_script:
   - psql -c 'create database magpie;' -U postgres
 before_install:
