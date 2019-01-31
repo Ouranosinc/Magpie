@@ -30,16 +30,16 @@ before_install:
   - export CONDA_ENV=magpie-${TRAVIS_PYTHON_VERSION}
   - export PATH="${CONDA_HOME}/bin":$PATH
   - hash -r
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda info -a
+  #- conda config --set always_yes yes --set changeps1 no
+  #- conda update -q conda
+  #- conda info -a
   - env
   - make conda-base
   - make sysinstall
   - echo $CONDA_PREFIX
   - echo $CONDA_ENV
-  - conda env list
-  - conda init bash
+  #- conda env list
+  #- conda init bash
 install:
   - make install install-dev
   - make version
