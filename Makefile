@@ -22,15 +22,15 @@ CONDA_HOME ?= $(HOME)/conda
 CONDA_ENVS_DIR ?= $(CONDA_HOME)/envs
 CONDA_ENV_PATH := $(CONDA_ENVS_DIR)/$(CONDA_ENV)
 DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
-PYTHON_VERSION ?= 2.7
+PYTHON_VERSION ?= `python -c 'import sys; print(sys.version[:5])'`
 
 # choose conda installer depending on your OS
 CONDA_URL = https://repo.continuum.io/miniconda
 OS_NAME := $(shell uname -s || echo "unknown")
 ifeq "$(OS_NAME)" "Linux"
-FN := Miniconda-latest-Linux-x86_64.sh
+FN := Miniconda3-latest-Linux-x86_64.sh
 else ifeq "$(OS_NAME)" "Darwin"
-FN := Miniconda-latest-MacOSX-x86_64.sh
+FN := Miniconda3-latest-MacOSX-x86_64.sh
 else
 FN := unknown
 endif
