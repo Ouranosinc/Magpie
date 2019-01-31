@@ -45,6 +45,7 @@ before_install:
   - make sysinstall
   - echo $CONDA_PREFIX
   - echo $CONDA_ENV
+  - pip install gunicorn
   #- conda env list
   #- conda init bash
   #==== magpie env and constants ===
