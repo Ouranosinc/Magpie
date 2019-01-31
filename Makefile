@@ -247,7 +247,7 @@ docker-push: docker-build
 conda-base:
 	@test -d "$(CONDA_HOME)" || test -d "$(DOWNLOAD_CACHE)" || \
 		(echo "Creating download directory: $(DOWNLOAD_CACHE)" && mkdir -p "$(DOWNLOAD_CACHE)")
-	@test -d "$(CONDA_HOME)" || test -f "$(DOWNLOAD_CACHE)/$(FN)" || \
+	@test -d "$(CONDA_HOME)/bin/conda" || test -f "$(DOWNLOAD_CACHE)/$(FN)" || \
 		(echo "Fetching conda distribution from: $(CONDA_URL)/$(FN)" && \
 		 curl "$(CONDA_URL)/$(FN)" --insecure --output "$(DOWNLOAD_CACHE)/$(FN)")
 	@test -f "$(CONDA_HOME)/bin/conda" || \
