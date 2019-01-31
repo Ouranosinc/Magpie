@@ -274,4 +274,4 @@ conda_config: conda-base
 conda-env: conda-base
 	@test -d "$(CONDA_ENV_PATH)" || \
 		(echo "Creating conda environment at '$(CONDA_ENV_PATH)'..." && \
-		 "$(CONDA_HOME)/bin/conda" create -y -n "$(CONDA_ENV)" python=$PYTHON_VERSION)
+		 "$(CONDA_HOME)/bin/conda" create -y -n "$(CONDA_ENV)" python=$(PYTHON_VERSION))
