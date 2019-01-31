@@ -7,13 +7,12 @@ MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, 'magpie')
 sys.path.insert(0, MAGPIE_MODULE_DIR)
 
-from setuptools import find_packages
+from setuptools import find_packages    # noqa: F401
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-
-from magpie import __meta__
+from magpie import __meta__             # noqa: F401
 
 with open('README.rst') as readme_file:
     README = readme_file.read()
@@ -21,31 +20,28 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     HISTORY = history_file.read().replace('.. :changelog:', '')
 
-LINKS = set()         # See https://github.com/pypa/pip/issues/3610
-REQUIREMENTS = set()  # use set to have unique packages by name
-with open('requirements.txt', 'r') as requirements_file:
-    for line in requirements_file:
-        if 'git+https' in line:
-            pkg = line.split('#')[-1]
-            LINKS.add(line.strip())
-            REQUIREMENTS.add(pkg.replace('egg=', '').rstrip())
-        elif line.startswith('http'):
-            LINKS.add(line.strip())
-        else:
-            REQUIREMENTS.add(line.strip())
 
+def _parse_requirements(file_path, requirements, links):
+    with open(file_path, 'r') as requirements_file:
+        for line in requirements_file:
+            if 'git+https' in line:
+                pkg = line.split('#')[-1]
+                links.add(line.strip())
+                requirements.add(pkg.replace('egg=', '').rstrip())
+            elif line.startswith('http'):
+                links.add(line.strip())
+            else:
+                requirements.add(line.strip())
+
+
+# See https://github.com/pypa/pip/issues/3610
+# use set to have unique packages by name
+LINKS = set()
+REQUIREMENTS = set()
 TEST_REQUIREMENTS = set()
-with open('requirements-dev.txt', 'r') as requirements_file:
-    for line in requirements_file:
-        if 'git+https' in line:
-            pkg = line.split('#')[-1]
-            LINKS.add(line.strip())
-            REQUIREMENTS.add(pkg.replace('egg=', '').rstrip())
-        elif line.startswith('http'):
-            LINKS.add(line.strip())
-        else:
-            REQUIREMENTS.add(line.strip())
-
+_parse_requirements('requirements.txt', REQUIREMENTS, LINKS)
+_parse_requirements('requirements-py{}.txt'.format(sys.version[0]), REQUIREMENTS, LINKS)
+_parse_requirements('requirements-dev.txt', TEST_REQUIREMENTS, LINKS)
 LINKS = list(LINKS)
 REQUIREMENTS = list(REQUIREMENTS)
 TEST_REQUIREMENTS = list(TEST_REQUIREMENTS)
@@ -94,9 +90,9 @@ setup(
     zip_safe=False,
 
     # -- self - tests --------------------------------------------------------
-    #test_suite='nose.collector',
-    #test_suite='tests.test_runner',
-    #test_loader='tests.test_runner:run_suite',
+    # test_suite='nose.collector',
+    # test_suite='tests.test_runner',
+    # test_loader='tests.test_runner:run_suite',
     tests_require=TEST_REQUIREMENTS,
 
     # -- script entry points -----------------------------------------------

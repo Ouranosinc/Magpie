@@ -31,4 +31,3 @@ typing
 # until fix merged and deployed
 #-e git+https://github.com/fmigneault/authomatic.git@httplib-port#egg=Authomatic
 https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic
-
