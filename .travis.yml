@@ -43,6 +43,7 @@ before_install:
   - env
   - python -V
   - which python
+  - which pip
   - make conda-base
   - make sysinstall
   - echo $CONDA_PREFIX

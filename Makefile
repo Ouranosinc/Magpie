@@ -208,7 +208,12 @@ sysinstall: clean conda-env
 .PHONY: install
 install: sysinstall
 	@echo "Installing Magpie..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install --force-reinstall "$(CUR_DIR)"'
+	# TODO: remove when merged
+	# --- ensure fix is applied
+	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; \
+		pip install --force-reinstall "https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic"'
+	# ---
+	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install --upgrade "$(CUR_DIR)"'
 
 .PHONY: install-dev
 install-dev: conda-env
