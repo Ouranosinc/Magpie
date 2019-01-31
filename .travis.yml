@@ -28,12 +28,15 @@ before_install:
   - hash -r
   - env
   - make conda-base
-  - bash -c "conda activate $CONDA_ENV && make sysinstall"
+  - make sysinstall
+  - echo $CONDA_PREFIX
+  - conda info
+  - conda env list
 install:
-  - bash -c "conda activate $CONDA_ENV && make install install-dev"
+  - make install install-dev
   - make version
 script:
-  - bash -c "conda activate $CONDA_ENV && make $TARGET"
+  - make $TARGET
 notifications:
   email: false
 jobs:
