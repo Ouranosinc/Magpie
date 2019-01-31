@@ -69,7 +69,7 @@ def run_migrations_online():
         # see for details:
         #   https://stackoverflow.com/questions/6506578
         db_name = get_constant('MAGPIE_POSTGRES_DB')
-        if 'database "{}" does not exist'.format(db_name) not in ex.message:
+        if 'database "{}" does not exist'.format(db_name) not in str(ex):
             raise   # any error is OperationalError, so validate only missing db error
         db_default_postgres_url = get_db_url(
             username='postgres',    # only postgres user can connect to default 'postgres' db
