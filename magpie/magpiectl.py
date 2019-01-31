@@ -44,7 +44,8 @@ def main(global_config=None, **settings):
     LOGGER.setLevel(log_lvl)
 
     # migrate db as required and check if database is ready
-    if not settings.get('magpie.db_migration_disabled', False):
+    if get_constant('MAGPIE_DB_MIGRATION', settings, 'magpie.db_migration', True,
+                    raise_missing=False, raise_not_set=False, print_missing=True):
         print_log('Running database migration (as required) ...')
         try:
             with warnings.catch_warnings():

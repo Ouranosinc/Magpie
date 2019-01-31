@@ -32,7 +32,7 @@ def get_test_magpie_app():
     config = config_setup_from_ini(get_constant('MAGPIE_INI_FILE_PATH'))
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
     config.include('ziggurat_foundations.ext.pyramid.get_user')
-    config.registry.settings['magpie.db_migration_disabled'] = True
+    config.registry.settings['magpie.db_migration'] = False
     # scan dependencies
     config.include('magpie')
     # create the test application

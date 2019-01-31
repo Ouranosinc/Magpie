@@ -40,6 +40,9 @@ before_install:
   - echo $CONDA_ENV
   #- conda env list
   #- conda init bash
+  #==== magpie env and constants ===
+  - mkdir -p ./env
+  - cp -f ./ci/magpie.env ./env/magpie.env
 install:
   - make install install-dev
   - make version
