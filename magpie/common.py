@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from distutils.dir_util import mkpath
+from typing import AnyStr, Optional, Type
+# noinspection PyProtectedMember
+from logging import _loggerClass as LoggerType
 # noinspection PyCompatibility
 import configparser
 import logging
@@ -18,7 +21,10 @@ def print_log(msg, logger=LOGGER, level=logging.INFO):
 
 
 def raise_log(msg, exception=Exception, logger=LOGGER, level=logging.ERROR):
+    # type: (AnyStr, Optional[Type[Exception]], Optional[LoggerType], Optional[int]) -> None
     logger.log(level, msg)
+    if not hasattr(exception, 'message'):
+        exception = Exception
     raise exception(msg)
 
 

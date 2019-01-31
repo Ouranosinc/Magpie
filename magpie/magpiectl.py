@@ -54,7 +54,7 @@ def main(global_config=None, **settings):
         except ImportError:
             pass
         except Exception as e:
-            raise_log('Database migration failed [{}]'.format(str(e)), exception=e)
+            raise_log('Database migration failed [{}]'.format(str(e)), exception=RuntimeError)
     if not db.is_database_ready():
         time.sleep(2)
         raise_log('Database not ready')
