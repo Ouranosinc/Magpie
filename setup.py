@@ -69,16 +69,17 @@ setup(
     contact=__meta__.__maintainer__,
     contact_email=__meta__.__email__,
     url=__meta__.__url__,
-    platforms=['linux_x86_64'],
-    license="ISCL",
+    platforms=__meta__.__platforms__,
+    license=__meta__.__license__,
     keywords=__meta__.__title__ + ", Authentication, AuthN, Birdhouse",
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: ISC License (ISCL)',
         'Natural Language :: English',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
 
     # -- Package structure -------------------------------------------------

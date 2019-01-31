@@ -26,8 +26,6 @@ postgres:
   database: magpie
   username: postgres
   password: qwerty
-before_script:
-  - psql -c 'create database magpie;' -U postgres
 before_install:
   - python -V
   - uname -a
@@ -37,26 +35,30 @@ before_install:
   - export CONDA_PREFIX=$HOME/conda/envs/magpie-${TRAVIS_PYTHON_VERSION}
   - export PATH=${CONDA_HOME}/bin:$PATH
   - hash -r
-  #- conda config --set always_yes yes --set changeps1 no
-  #- conda update -q conda
-  #- conda info -a
   - env
-  - python -V
-  - which python
-  - which pip
   - make conda-base
   - make sysinstall
   - echo $CONDA_PREFIX
   - echo $CONDA_ENV
-  - pip install gunicorn
-  #- conda env list
-  #- conda init bash
   #==== magpie env and constants ===
   - mkdir -p ./env
   - cp -f ./ci/magpie.env ./env/magpie.env
 install:
+  - pip install gunicorn paste
   - make install install-dev
   - make version
+before_script:
+  - psql -c 'create database magpie;' -U postgres
+  - echo $CONDA_PREFIX
+  - echo $CONDA_ENV
+  - export PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
+  - export CONDA_ENV=magpie-${TRAVIS_PYTHON_VERSION}
+  - export CONDA_PREFIX=$HOME/conda/envs/magpie-${TRAVIS_PYTHON_VERSION}
+  - export PATH=${CONDA_HOME}/bin:$PATH
+  - hash -r
+  - env
+  - echo $CONDA_PREFIX
+  - echo $CONDA_ENV
 script:
   - make $START_TARGET $TEST_TARGET
 notifications:

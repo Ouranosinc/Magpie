@@ -11,3 +11,6 @@ __email__ = 'francis.charette-migneault@crim.ca'
 __url__ = 'https://github.com/Ouranosinc/Magpie'
 __docker__ = 'https://hub.docker.com/r/pavics/magpie'
 __description__ = "Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations"
+__platforms__ = ['linux_x86_64']
+__natural_language__ = 'English'
+__license__ = "ISCL"
