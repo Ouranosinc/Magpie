@@ -39,7 +39,7 @@ def main(global_config=None, **settings):
                            raise_missing=False, print_missing=False, raise_not_set=False)
     log_lvl = logging.getLevelName(log_lvl) if isinstance(log_lvl, int) else log_lvl
     if log_lvl.upper() != 'DEBUG':
-        sa_log = logging.getLogger('sqlalchemy.engine.base.Engine')
+        sa_log = logging.getLogger('sqlalchemy')
         sa_log.setLevel(logging.WARN)   # WARN to avoid INFO logs
     LOGGER.setLevel(log_lvl)
 
