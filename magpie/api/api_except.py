@@ -1,6 +1,7 @@
 from magpie.common import islambda, isclass
 from pyramid.httpexceptions import *
 from sys import exc_info
+import six
 
 # control variables to avoid infinite recursion in case of
 # major programming error to avoid application hanging
@@ -8,6 +9,7 @@ RAISE_RECURSIVE_SAFEGUARD_MAX = 5
 RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 
 
+# noinspection PyPep8Naming
 def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWArgs=None, msgOnFail="",
                  content=None, contentType='application/json',
                  notNone=False, notEmpty=False, notIn=False, notEqual=False, isTrue=False, isFalse=False,
@@ -116,6 +118,7 @@ def verify_param(param, paramCompare=None, httpError=HTTPNotAcceptable, httpKWAr
         raise_http(httpError, httpKWArgs=httpKWArgs, detail=msgOnFail, content=content, contentType=contentType)
 
 
+# noinspection PyPep8Naming
 def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, httpKWArgs=None, msgOnFail="",
                   content=None, contentType='application/json'):
     """
@@ -182,6 +185,7 @@ def evaluate_call(call, fallback=None, httpError=HTTPInternalServerError, httpKW
                contentType=contentType)
 
 
+# noinspection PyPep8Naming
 def valid_http(httpSuccess=HTTPOk, httpKWArgs=None, detail="", content=None, contentType='application/json'):
     """
     Returns successful HTTP with standardized information formatted with content type.
@@ -206,6 +210,7 @@ def valid_http(httpSuccess=HTTPOk, httpKWArgs=None, detail="", content=None, con
     return resp
 
 
+# noinspection PyPep8Naming
 def raise_http(httpError=HTTPInternalServerError, httpKWArgs=None,
                detail="", content=None, contentType='application/json', nothrow=False):
     """
@@ -242,10 +247,12 @@ def raise_http(httpError=HTTPInternalServerError, httpKWArgs=None,
     # reset counter for future calls (don't accumulate for different requests)
     # following raise is the last in the chain since it wasn't triggered by other functions
     RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
-    if nothrow: return resp
+    if nothrow:
+        return resp
     raise resp
 
 
+# noinspection PyPep8Naming
 def validate_params(httpClass, httpBase, detail, content, contentType):
     """
     Validates parameter types and formats required by `valid_http` and `raise_http`.
@@ -262,7 +269,7 @@ def validate_params(httpClass, httpBase, detail, content, contentType):
     # verify input arguments, raise `HTTPInternalServerError` with caller info if invalid
     # cannot be done within a try/except because it would always trigger with `raise_http`
     content = dict() if content is None else content
-    detail = repr(detail) if type(detail) not in [str, unicode] else detail
+    detail = repr(detail) if not isinstance(detail, six.string_types) else detail
     if not isclass(httpClass):
         raise_http(httpError=HTTPInternalServerError,
                    detail="Object specified is not of type `HTTPError`",
@@ -275,8 +282,9 @@ def validate_params(httpClass, httpBase, detail, content, contentType):
     # if it derives from `HTTPException`, it *could* be different than base (ex: 2xx instead of 4xx codes)
     # return 'unknown error' (520) if not of lowest level base `HTTPException`, otherwise use the available code
     httpBase = tuple(httpBase if hasattr(httpBase, '__iter__') else [httpBase])
+    # noinspection PyUnresolvedReferences
     httpCode = httpClass.code if issubclass(httpClass, httpBase) else \
-               httpClass.code if issubclass(httpClass, HTTPException) else 520
+               httpClass.code if issubclass(httpClass, HTTPException) else 520  # noqa: F401
     if not issubclass(httpClass, httpBase):
         raise_http(httpError=HTTPInternalServerError,
                    detail="Invalid `httpBase` derived class specified",
@@ -296,6 +304,7 @@ def validate_params(httpClass, httpBase, detail, content, contentType):
     return httpCode, detail, content
 
 
+# noinspection PyPep8Naming
 def format_content_json_str(httpCode, detail, content, contentType):
     """
     Inserts the code, details, content and type within the body using json format.
@@ -324,6 +333,7 @@ def format_content_json_str(httpCode, detail, content, contentType):
     return json_body
 
 
+# noinspection PyPep8Naming
 def generate_response_http_format(httpClass, httpKWArgs, jsonContent, outputType='text/plain'):
     """
     Formats the HTTP response output according to desired `outputType` using provided HTTP code and content.

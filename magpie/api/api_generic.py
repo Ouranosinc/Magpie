@@ -1,6 +1,7 @@
 from magpie.definitions.pyramid_definitions import HTTPUnauthorized, HTTPNotFound, HTTPInternalServerError
 from magpie.api.api_except import raise_http, HTTPServerError
 from magpie.api import api_rest_schemas as s
+from simplejson import JSONDecodeError
 
 
 # @notfound_view_config()
@@ -31,9 +32,14 @@ def get_request_info(request, default_msg="undefined"):
     content = {u'route_name': str(request.upath_info), u'request_url': str(request.url),
                u'detail': default_msg, u'method': request.method}
     if hasattr(request, 'exception'):
-        if hasattr(request.exception, 'json'):
-            if type(request.exception.json) is dict:
-                content.update(request.exception.json)
+        # handle error raised simply by checking for 'json' property in python 3 when body is invalid
+        has_json = False
+        try:
+            has_json = hasattr(request.exception, 'json')
+        except JSONDecodeError:
+            pass
+        if has_json and isinstance(request.exception.json, dict):
+            content.update(request.exception.json)
         elif isinstance(request.exception, HTTPServerError) and hasattr(request.exception, 'message'):
             content.update({u'exception': str(request.exception.message)})
     elif hasattr(request, 'matchdict'):
