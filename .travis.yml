@@ -45,7 +45,7 @@ before_install:
   - cp -f ./ci/magpie.env ./env/magpie.env
 install:
   # TODO: remove when fixed and merged (see requirements.txt and Makefile)
-  - pip install gunicorn paste
+  - ${CONDA_PREFIX}/bin/pip install gunicorn paste
   - |
     if [ "${TRAVIS_PYTHON_VERSION}" -eq "2.7" ]; then
       ${CONDA_PREFIX}/bin/pip install --upgrade --force-reinstall python-openid && \
@@ -54,7 +54,6 @@ install:
       ${CONDA_PREFIX}/bin/pip install --upgrade --force-reinstall python3-openid && \
       ${CONDA_PREFIX}/bin/pip uninstall python-openid;
     fi
-  - echo "OpenID version: `${CONDA_PREFIX}/bin/python -c 'import openid; print(openid.__version__)'`"
   - make install install-dev
   - make version
 before_script:
