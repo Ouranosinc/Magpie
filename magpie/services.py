@@ -6,30 +6,31 @@ from magpie.permissions import *
 from magpie.owsrequest import *
 from magpie import models
 from typing import AnyStr, List, Dict, Union
+from six import with_metaclass
 
 ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
 
 
-class ServiceI(object):
+class ServiceMeta(type):
+    @property
+    def resource_types(cls):
+        # type: (...) -> List[AnyStr]
+        """Allowed resources types under the service."""
+        return list(cls.resource_types_permissions.keys())
+
+    @property
+    def child_resource_allowed(cls):
+        # type: (...) -> bool
+        return len(cls.resource_types) > 0
+
+
+class ServiceI(with_metaclass(ServiceMeta)):
     # required request parameters for the service
     params_expected = []                # type: List[str]
     # global permissions allowed for the service (top-level resource)
     permission_names = []               # type: List[str]
     # dict of list for each corresponding allowed resource permissions (children resources)
     resource_types_permissions = {}     # type: Dict[str,List[str]]
-
-    # make 'property' getter from derived classes
-    class __metaclass__(type):
-        @property
-        def resource_types(cls):
-            # type: (...) -> List[AnyStr]
-            """Allowed resources types under the service."""
-            return cls.resource_types_permissions.keys()
-
-        @property
-        def child_resource_allowed(cls):
-            # type: (...) -> bool
-            return len(cls.resource_types) > 0
 
     def __init__(self, service, request):
         self.service = service

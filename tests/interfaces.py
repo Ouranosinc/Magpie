@@ -3,6 +3,7 @@ import pytest
 import pyramid.testing
 import yaml
 import six
+from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from magpie.api.api_rest_schemas import SwaggerGenerator
 from magpie.constants import get_constant
@@ -11,9 +12,10 @@ from magpie.utils import get_twitcher_protected_service_url
 from tests import utils, runner
 
 
+# noinspection PyPep8Naming
 @pytest.mark.api
 @unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
-class TestMagpieAPI_NoAuth_Interface(unittest.TestCase):
+class Interface_MagpieAPI_NoAuth(object):
     """
     Interface class for unittests of Magpie API.
     Test any operation that do not require user AuthN/AuthZ.
@@ -67,11 +69,12 @@ class TestMagpieAPI_NoAuth_Interface(unittest.TestCase):
             utils.check_val_equal(json_body['user_name'], self.usr)
 
 
+# noinspection PyPep8Naming
 @unittest.skip("Not implemented.")
 @pytest.mark.skip(reason="Not implemented.")
 @pytest.mark.api
 @unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
-class TestMagpieAPI_UsersAuth_Interface(unittest.TestCase):
+class Interface_MagpieAPI_UsersAuth(unittest.TestCase):
     """
     Interface class for unittests of Magpie API.
     Test any operation that require at least 'Users' group AuthN/AuthZ.
@@ -90,9 +93,10 @@ class TestMagpieAPI_UsersAuth_Interface(unittest.TestCase):
         pyramid.testing.tearDown()
 
 
+# noinspection PyPep8Naming
 @pytest.mark.api
 @unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
-class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
+class Interface_MagpieAPI_AdminAuth(object):
     """
     Interface class for unittests of Magpie API.
     Test any operation that require at least 'administrator' group AuthN/AuthZ.
@@ -140,7 +144,7 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
         cls.test_resource_name = u'magpie-unittest-resource'
         test_service_res_perm_dict = service_type_dict[cls.test_service_type].resource_types_permissions
-        test_service_resource_types = test_service_res_perm_dict.keys()
+        test_service_resource_types = list(test_service_res_perm_dict.keys())
         assert len(test_service_resource_types), "test service must allow at least 1 sub-resource for test execution"
         cls.test_resource_type = test_service_resource_types[0]
         test_service_resource_perms = test_service_res_perm_dict[cls.test_resource_type]
@@ -952,10 +956,16 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
             if svc_name in self.test_services_info:
                 utils.check_val_equal(svc['service_type'], self.test_services_info[svc_name]['type'])
                 hostname = utils.get_hostname(self.url)
-                twitcher_svc_url = get_twitcher_protected_service_url(svc_name, hostname=hostname)
-                utils.check_val_equal(svc['public_url'], twitcher_svc_url)
+                # private service URL should match format of Magpie (schema/host)
                 svc_url = self.test_services_info[svc_name]['url'].replace('${HOSTNAME}', hostname)
                 utils.check_val_equal(svc['service_url'], svc_url)
+                # public service URL should match Twitcher config, but ignore schema that depends on each server config
+                twitcher_svc_url = get_twitcher_protected_service_url(svc_name, hostname=hostname)
+                twitcher_parsed_url = urlparse(twitcher_svc_url)
+                twitcher_test_url = twitcher_parsed_url.netloc + twitcher_parsed_url.path
+                svc_parsed_url = urlparse(svc['public_url'])
+                svc_test_public_url = svc_parsed_url.netloc + svc_parsed_url.path
+                utils.check_val_equal(svc_test_public_url, twitcher_test_url)
 
         # ensure that no providers are missing from registered services
         registered_svc_names = [svc['service_name'] for svc in services_list]
@@ -1064,9 +1074,10 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         utils.TestSetup.check_NonExistingTestServiceResource(self)
 
 
+# noinspection PyPep8Naming
 @pytest.mark.ui
 @unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
-class TestMagpieUI_NoAuth_Interface(unittest.TestCase):
+class Interface_MagpieUI_NoAuth(object):
     """
     Interface class for unittests of Magpie UI.
     Test any operation that do not require user AuthN/AuthZ.
@@ -1155,9 +1166,10 @@ class TestMagpieUI_NoAuth_Interface(unittest.TestCase):
         utils.TestSetup.check_Unauthorized(self, method='POST', path=path)
 
 
+# noinspection PyPep8Naming
 @pytest.mark.ui
 @unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
-class TestMagpieUI_AdminAuth_Interface(unittest.TestCase):
+class Interface_MagpieUI_AdminAuth(object):
     """
     Interface class for unittests of Magpie UI.
     Test any operation that require at least 'administrator' group AuthN/AuthZ.

@@ -22,7 +22,7 @@ import tests.interfaces as ti
 @pytest.mark.local
 @unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
 @unittest.skipUnless(runner.MAGPIE_TEST_LOCAL, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('local'))
-class TestMagpieAPI_NoAuth_Local(ti.TestMagpieAPI_NoAuth_Interface, unittest.TestCase):
+class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.TestCase):
     """
     Test any operation that do not require user AuthN/AuthZ.
     Use a local Magpie test application.
@@ -46,7 +46,7 @@ class TestMagpieAPI_NoAuth_Local(ti.TestMagpieAPI_NoAuth_Interface, unittest.Tes
 @pytest.mark.local
 @unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
 @unittest.skipUnless(runner.MAGPIE_TEST_LOCAL, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('local'))
-class TestMagpieAPI_UsersAuth_Local(ti.TestMagpieAPI_UsersAuth_Interface):
+class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unittest.TestCase):
     """
     Test any operation that require at least 'Users' group AuthN/AuthZ.
     Use a local Magpie test application.
@@ -63,7 +63,7 @@ class TestMagpieAPI_UsersAuth_Local(ti.TestMagpieAPI_UsersAuth_Interface):
 @pytest.mark.local
 @unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
 @unittest.skipUnless(runner.MAGPIE_TEST_LOCAL, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('local'))
-class TestMagpieAPI_AdminAuth_Local(ti.TestMagpieAPI_AdminAuth_Interface):
+class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unittest.TestCase):
     """
     Test any operation that require at least 'Administrator' group AuthN/AuthZ.
     Use a local Magpie test application.
@@ -95,7 +95,7 @@ class TestMagpieAPI_AdminAuth_Local(ti.TestMagpieAPI_AdminAuth_Interface):
 @pytest.mark.remote
 @unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
 @unittest.skipUnless(runner.MAGPIE_TEST_REMOTE, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('remote'))
-class TestMagpieAPI_NoAuth_Remote(ti.TestMagpieAPI_NoAuth_Interface, unittest.TestCase):
+class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.TestCase):
     """
     Test any operation that do not require user AuthN/AuthZ.
     Use an already running remote bird server.
@@ -118,7 +118,7 @@ class TestMagpieAPI_NoAuth_Remote(ti.TestMagpieAPI_NoAuth_Interface, unittest.Te
 @pytest.mark.remote
 @unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
 @unittest.skipUnless(runner.MAGPIE_TEST_LOCAL, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('remote'))
-class TestMagpieAPI_UsersAuth_Remote(ti.TestMagpieAPI_UsersAuth_Interface, unittest.TestCase):
+class TestCase_MagpieAPI_UsersAuth_Remote(ti.Interface_MagpieAPI_UsersAuth, unittest.TestCase):
     """
     Test any operation that require at least 'Users' group AuthN/AuthZ.
     Use an already running remote bird server.
@@ -135,7 +135,7 @@ class TestMagpieAPI_UsersAuth_Remote(ti.TestMagpieAPI_UsersAuth_Interface, unitt
 @pytest.mark.remote
 @unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
 @unittest.skipUnless(runner.MAGPIE_TEST_REMOTE, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('remote'))
-class TestMagpieAPI_AdminAuth_Remote(ti.TestMagpieAPI_AdminAuth_Interface, unittest.TestCase):
+class TestCase_MagpieAPI_AdminAuth_Remote(ti.Interface_MagpieAPI_AdminAuth, unittest.TestCase):
     """
     Test any operation that require at least 'Administrator' group AuthN/AuthZ.
     Use an already running remote bird server.

@@ -358,7 +358,7 @@ class MagpieProcessStore(ProcessStore):
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
             try:
                 ems_processes_id = self._get_service_processes_resource()
-                processes = filter(lambda p: self.is_visible_by_user(ems_processes_id, p.id, request), processes)
+                processes = list(filter(lambda p: self.is_visible_by_user(ems_processes_id, p.id, request), processes))
             except KeyError:
                 raise ProcessNotFound("Failed retrieving processes read permissions for listing.")
             except Exception as ex:

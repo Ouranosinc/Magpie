@@ -21,7 +21,7 @@ import tests.interfaces as ti
 @pytest.mark.local
 @unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
 @unittest.skipUnless(runner.MAGPIE_TEST_LOCAL, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('local'))
-class TestMagpieUI_NoAuth_Local(ti.TestMagpieUI_NoAuth_Interface):
+class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.TestCase):
     """
     Test any operation that do not require user AuthN/AuthZ.
     Use a local Magpie test application.
@@ -46,7 +46,7 @@ class TestMagpieUI_NoAuth_Local(ti.TestMagpieUI_NoAuth_Interface):
 @pytest.mark.local
 @unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
 @unittest.skipUnless(runner.MAGPIE_TEST_LOCAL, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('local'))
-class TestMagpieUI_AdminAuth_Local(ti.TestMagpieUI_AdminAuth_Interface):
+class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittest.TestCase):
     """
     Test any operation that require at least 'administrator' group AuthN/AuthZ.
     Use a local Magpie test application.
@@ -81,7 +81,7 @@ class TestMagpieUI_AdminAuth_Local(ti.TestMagpieUI_AdminAuth_Interface):
 @pytest.mark.remote
 @unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
 @unittest.skipUnless(runner.MAGPIE_TEST_REMOTE, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('remote'))
-class TestMagpieUI_NoAuth_Remote(ti.TestMagpieUI_NoAuth_Interface):
+class TestCase_MagpieUI_NoAuth_Remote(ti.Interface_MagpieUI_NoAuth, unittest.TestCase):
     """
     Test any operation that do not require user AuthN/AuthZ.
     Use an already running remote bird server.
@@ -105,7 +105,7 @@ class TestMagpieUI_NoAuth_Remote(ti.TestMagpieUI_NoAuth_Interface):
 @pytest.mark.remote
 @unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
 @unittest.skipUnless(runner.MAGPIE_TEST_REMOTE, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('remote'))
-class TestMagpieUI_AdminAuth_Remote(ti.TestMagpieUI_AdminAuth_Interface):
+class TestCase_MagpieUI_AdminAuth_Remote(ti.Interface_MagpieUI_AdminAuth, unittest.TestCase):
     """
     Test any operation that require at least 'Administrator' group AuthN/AuthZ.
     Use an already running remote bird server.

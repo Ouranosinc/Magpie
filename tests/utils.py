@@ -476,7 +476,7 @@ class TestSetup(object):
         check_val_not_equal(len(json_body['services'][test_class.test_service_type]), 0,
                             msg="Missing any required service of type: `{}`".format(test_class.test_service_type))
         services_dict = json_body['services'][test_class.test_service_type]
-        return services_dict.values()[0]
+        return list(services_dict.values())[0]
 
     @staticmethod
     def create_TestServiceResource(test_class, data_override=None):
@@ -523,7 +523,7 @@ class TestSetup(object):
     def delete_TestServiceResource(test_class, override_resource_name=None):
         resource_name = override_resource_name or test_class.test_resource_name
         resources = TestSetup.get_TestServiceDirectResources(test_class, ignore_missing_service=True)
-        test_resource = filter(lambda r: r['resource_name'] == resource_name, resources)
+        test_resource = list(filter(lambda r: r['resource_name'] == resource_name, resources))
         # delete as required, skip if non-existing
         if len(test_resource) > 0:
             resource_id = test_resource[0]['resource_id']
@@ -561,7 +561,7 @@ class TestSetup(object):
     def delete_TestService(test_class, override_service_name=None):
         service_name = override_service_name or test_class.test_service_name
         services_info = TestSetup.get_RegisteredServicesList(test_class)
-        test_service = filter(lambda r: r['service_name'] == service_name, services_info)
+        test_service = list(filter(lambda r: r['service_name'] == service_name, services_info))
         # delete as required, skip if non-existing
         if len(test_service) > 0:
             route = '/services/{svc_name}'.format(svc_name=test_class.test_service_name)

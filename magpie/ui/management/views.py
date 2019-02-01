@@ -1,8 +1,3 @@
-import datetime
-from collections import OrderedDict
-
-import humanize
-
 from magpie.api import api_rest_schemas as schemas
 from magpie.definitions.pyramid_definitions import *
 from magpie.constants import get_constant
@@ -14,9 +9,13 @@ from magpie.ui.utils import check_response
 from magpie.helpers import sync_resources
 from magpie.ui.home import add_template_data
 from magpie import register, __meta__
+from collections import OrderedDict
 from distutils.version import LooseVersion
+import datetime
+import humanize
 import requests
 import json
+import six
 
 
 class ManagementViews(object):
@@ -36,7 +35,7 @@ class ManagementViews(object):
         check_response(resp)
         try:
             groups = list(resp.json()['group_names'])
-            if type(first_default_group) is str and first_default_group in groups:
+            if isinstance(first_default_group, six.string_types) and first_default_group in groups:
                 groups.remove(first_default_group)
                 groups.insert(0, first_default_group)
             return groups
@@ -45,7 +44,7 @@ class ManagementViews(object):
 
     def get_group_users(self, group_name):
         try:
-            path = schemas.GroupAPI.path.format(group_name=group_name)
+            path = schemas.GroupUsersAPI.path.format(group_name=group_name)
             resp = requests.get(self.get_url(path), cookies=self.request.cookies)
             check_response(resp)
             return resp.json()['user_names']
@@ -169,7 +168,7 @@ class ManagementViews(object):
         :return: flattened dictionary `resource_dict` of all {id: 'resource_type'}
         :rtype: dict
         """
-        if type(resource_node) is not dict:
+        if not isinstance(resource_node, dict):
             return
         if not len(resource_node) > 0:
             return
@@ -251,9 +250,9 @@ class ManagementViews(object):
 
         error_message = ""
 
-        # Todo:
-        # Until the api is modified to make it possible to request from the RemoteResource table,
-        # we have to access the database directly here
+        # TODO:
+        #   Until the api is modified to make it possible to request from the RemoteResource table,
+        #   we have to access the database directly here
         session = self.request.db
 
         try:
@@ -262,7 +261,7 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        user_url = schemas.UsersAPI.path.format(user_name=user_name)
+        user_url = schemas.UserAPI.path.format(user_name=user_name)
         user_resp = requests.get(self.get_url(user_url), cookies=self.request.cookies)
         check_response(user_resp)
         user_info = user_resp.json()['user']

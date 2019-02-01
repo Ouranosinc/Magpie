@@ -164,8 +164,8 @@ def get_service_resources_view(request):
     """List all resources registered under a service."""
     service = ar.get_service_matchdict_checked(request)
     svc_res_json = sf.format_service_resources(service, db_session=request.db, display_all=True, show_private_url=True)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=ServiceResources_GET_OkResponseSchema.description,
-                         content={str(service.resource_name): svc_res_json})
+    return ax.valid_http(httpSuccess=HTTPOk, content={svc_res_json['service_name']: svc_res_json},
+                         detail=ServiceResources_GET_OkResponseSchema.description)
 
 
 @ServiceResourcesAPI.post(schema=ServiceResources_POST_RequestSchema, tags=[ServicesTag],

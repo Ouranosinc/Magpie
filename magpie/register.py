@@ -539,7 +539,7 @@ def parse_resource_path(permission_config_entry,    # type: ConfigItem
             for res in resource_path.split('/'):
                 if len(res_dict):
                     # resource is specified by id/name
-                    res_id = filter(lambda r: res in [r, res_dict[r]["resource_name"]], res_dict)
+                    res_id = list(filter(lambda r: res in [r, res_dict[r]["resource_name"]], res_dict))
                     if res_id:
                         res_dict = res_dict[res_id[0]]['children']  # update for upcoming sub-resource iteration
                         parent = int(res[0])

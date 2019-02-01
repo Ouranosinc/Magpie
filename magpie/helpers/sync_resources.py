@@ -1,5 +1,5 @@
 """
-Sychronize local and remote resources.
+Synchronize local and remote resources.
 
 To implement a new service, see the _SyncServiceInterface class.
 """
@@ -21,9 +21,9 @@ LOGGER = logging.getLogger(__name__)
 CRON_SERVICE = False
 
 OUT_OF_SYNC = datetime.timedelta(hours=3)
-
+# noinspection PyProtectedMember
 SYNC_SERVICES_TYPES = defaultdict(lambda: sync_services._SyncServiceDefault)
-# noinspection PyTypeChecker
+# noinspection PyTypeChecker, PyProtectedMember
 SYNC_SERVICES_TYPES.update({
     "thredds": sync_services._SyncServiceThreads,
     "geoserver-api": sync_services._SyncServiceGeoserver,
@@ -41,7 +41,7 @@ def merge_local_and_remote_resources(resources_local, service_sync_type, service
     if not get_last_sync(service_id, session):
         return resources_local
     remote_resources = _query_remote_resources_in_database(service_id, session=session)
-    max_depth = _get_max_depth(service_sync_type)
+    max_depth = SYNC_SERVICES_TYPES[service_sync_type]("", "").max_depth
     merged_resources = _merge_resources(resources_local, remote_resources, max_depth)
     _sort_resources(merged_resources)
     return merged_resources
@@ -120,6 +120,7 @@ def _ensure_sync_info_exists(service_resource_id, session):
     """
     service_sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_resource_id, session)
     if not service_sync_info:
+        # noinspection PyArgumentList
         sync_info = models.RemoteResourcesSyncInfo(service_id=service_resource_id)
         session.add(sync_info)
         session.flush()
@@ -136,8 +137,9 @@ def _get_remote_resources(service):
     if service_url.endswith("/"):  # remove trailing slash
         service_url = service_url[:-1]
 
-    sync_service_class = SYNC_SERVICES_TYPES.get(service.sync_type.lower(), sync_services._SyncServiceDefault)
-    sync_service = sync_service_class(service.resource_name, service_url)
+    # noinspection PyProtectedMember
+    sync_svc_cls = SYNC_SERVICES_TYPES.get(service.sync_type.lower(), sync_services._SyncServiceDefault)
+    sync_service = sync_svc_cls(service.resource_name, service_url)
     return sync_service.get_resources()
 
 
@@ -161,8 +163,9 @@ def _create_main_resource(service_id, session):
     :param session:
     """
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)
+    # noinspection PyArgumentList
     main_resource = models.RemoteResource(service_id=service_id,
-                                          resource_name=unicode(sync_info.service.resource_name),
+                                          resource_name=str(sync_info.service.resource_name),
                                           resource_type=u"directory")
     session.add(main_resource)
     session.flush()
@@ -181,9 +184,10 @@ def _update_db(remote_resources, service_id, session):
 
     def add_children(resources, parent_id, position=0):
         for resource_name, values in resources.items():
-            resource_display_name = unicode(values.get('resource_display_name', resource_name))
+            resource_display_name = str(values.get('resource_display_name', resource_name))
+            # noinspection PyArgumentList
             new_resource = models.RemoteResource(service_id=sync_info.service_id,
-                                                 resource_name=unicode(resource_name),
+                                                 resource_name=str(resource_name),
                                                  resource_display_name=resource_display_name,
                                                  resource_type=values['resource_type'],
                                                  parent_id=parent_id,
@@ -246,16 +250,9 @@ def _format_resource_tree(children):
     return fmt_res_tree
 
 
-def _get_max_depth(service_type):
-    name, url = "", ""
-    return SYNC_SERVICES_TYPES[service_type](name, url).max_depth
-
-
 def _query_remote_resources_in_database(service_id, session):
     """
     Reads remote resources from the RemoteResources table. No external request is made.
-    :param service_type:
-    :param session:
     :return: a dictionary of the form defined in 'sync_services.is_valid_resource_schema'
     """
     service = session.query(models.Service).filter_by(resource_id=service_id).first()
@@ -289,7 +286,7 @@ def fetch_all_services_by_type(service_type, session):
         # noinspection PyBroadException
         try:
             fetch_single_service(service, session)
-        except:
+        except Exception:
             if CRON_SERVICE:
                 LOGGER.exception("There was an error when fetching data from the url: %s" % service.url)
                 pass
@@ -320,10 +317,10 @@ def fetch():
     Main function to get all remote resources for each service and write to database.
     """
     LOGGER.info("Getting database url")
-    url = db.get_db_url()
+    db_url = db.get_db_url()
 
-    LOGGER.debug("Database url: %s" % url)
-    engine = create_engine(url)
+    LOGGER.debug("Database url: %s" % db_url)
+    engine = create_engine(db_url)
 
     session = Session(bind=engine)
 
@@ -366,7 +363,7 @@ def main():
         LOGGER.info("Starting to fetch data for all service types")
         fetch()
     except Exception:
-        LOGGER.exception("An error occured")
+        LOGGER.exception("An error occurred")
         raise
 
     LOGGER.info("Success, exiting.")
