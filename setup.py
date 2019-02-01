@@ -94,6 +94,7 @@ setup(
     # test_suite='nose.collector',
     # test_suite='tests.test_runner',
     # test_loader='tests.test_runner:run_suite',
+    test_suite='tests',
     tests_require=TEST_REQUIREMENTS,
 
     # -- script entry points -----------------------------------------------
