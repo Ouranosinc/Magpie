@@ -11,6 +11,7 @@ History
 * attempt db creation on first migration if not existing
 * add continuous integration testing and deployment
 * reduce excessive sqlalchemy logging using `MAGPIE_LOG_LEVEL >= INFO`
+* use schema API route definitions for UI calls
 
 0.8.x
 ---------------------

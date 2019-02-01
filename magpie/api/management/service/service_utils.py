@@ -57,12 +57,12 @@ def get_services_by_type(service_type, db_session):
     ax.verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
                     msgOnFail="Invalid `service_type` value '" + str(service_type) + "' specified")
     services = db_session.query(models.Service).filter(models.Service.type == service_type)
-    return sorted(services)
+    return sorted(services, key=lambda svc: svc.resource_name)
 
 
 def add_service_getcapabilities_perms(service, db_session, group_name=None):
     if service.type in SERVICES_PHOENIX_ALLOWED \
-    and 'getcapabilities' in service_type_dict[service.type].permission_names:
+    and 'getcapabilities' in service_type_dict[service.type].permission_names:  # noqa: F401
         if group_name is None:
             group_name = get_constant('MAGPIE_ANONYMOUS_USER')
         group = GroupService.by_group_name(group_name, db_session=db_session)

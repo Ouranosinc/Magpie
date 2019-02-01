@@ -59,15 +59,14 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
 
 
 def crop_tree_with_permission(children, resource_id_list):
-    for child_id, child_dict in children.items():
+    for child_id, child_dict in list(children.items()):
         new_children = child_dict[u'children']
         children_returned, resource_id_list = crop_tree_with_permission(new_children, resource_id_list)
-        is_in_resource_id_list = child_id in resource_id_list
-        if not is_in_resource_id_list and not children_returned:
+        if child_id not in resource_id_list and not children_returned:
             children.pop(child_id)
-        elif is_in_resource_id_list:
+        elif child_id in resource_id_list:
             resource_id_list.remove(child_id)
-    return children, resource_id_list
+    return dict(children), list(resource_id_list)
 
 
 def get_resource_path(resource_id, db_session):
