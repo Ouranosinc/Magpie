@@ -9,7 +9,8 @@ History
 * add permissions config to auto-generate user/group rules on startup
 * fix many invalid or erroneous swagger specifications
 * attempt db creation on first migration if not existing
-* add continuous integration testing and deployment
+* add continuous integration testing and deployment (with python 2/3 tests)
+* ensure python compatibility for Python 2.7, 3.5, 3.6
 * reduce excessive sqlalchemy logging using `MAGPIE_LOG_LEVEL >= INFO`
 * use schema API route definitions for UI calls
 
