@@ -228,7 +228,8 @@ cron:
 .PHONY: start
 start: install
 	@echo "Starting Magpie..."
-	exec gunicorn -b 0.0.0.0:2001 --paste "$(CUR_DIR)/magpie/magpie.ini" --workers 10 --preload
+	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; \
+		exec gunicorn -b 0.0.0.0:2001 --paste "$(CUR_DIR)/magpie/magpie.ini" --workers 10 --preload'
 
 .PHONY: version
 version:
