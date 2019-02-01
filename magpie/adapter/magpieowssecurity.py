@@ -1,7 +1,20 @@
 from magpie.api.api_except import evaluate_call, verify_param
 from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import *
-from magpie.definitions.twitcher_definitions import *
+from magpie.definitions.pyramid_definitions import (
+    HTTPOk,
+    HTTPNotFound,
+    HTTPForbidden,
+    IAuthenticationPolicy,
+    IAuthorizationPolicy,
+    asbool,
+)
+from magpie.definitions.twitcher_definitions import (
+    OWSSecurityInterface,
+    OWSAccessForbidden,
+    parse_service_name,
+    get_twitcher_configuration,
+    TWITCHER_CONFIGURATION_DEFAULT,
+)
 from magpie.models import Service
 from magpie.services import service_factory
 from magpie.utils import get_magpie_url

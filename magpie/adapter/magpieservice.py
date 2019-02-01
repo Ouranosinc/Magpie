@@ -2,7 +2,7 @@
 Store adapters to read data from magpie.
 """
 
-from magpie.definitions.twitcher_definitions import *
+from magpie.definitions.twitcher_definitions import ServiceStore, Service, ServiceNotFound
 from magpie.definitions.pyramid_definitions import HTTPOk, asbool
 from magpie.utils import get_admin_cookies, get_magpie_url
 import requests

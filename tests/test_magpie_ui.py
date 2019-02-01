@@ -56,6 +56,7 @@ class TestMagpieUI_AdminAuth_Local(ti.TestMagpieUI_AdminAuth_Interface):
 
     @classmethod
     def setUpClass(cls):
+        cls.grp = get_constant('MAGPIE_ADMIN_GROUP')
         cls.usr = get_constant('MAGPIE_TEST_ADMIN_USERNAME')
         cls.pwd = get_constant('MAGPIE_TEST_ADMIN_PASSWORD')
         cls.app = utils.get_test_magpie_app()
@@ -67,7 +68,7 @@ class TestMagpieUI_AdminAuth_Local(ti.TestMagpieUI_AdminAuth_Interface):
         # TODO: fix UI views so that they can be 'found' directly in the WebTest.TestApp
         # NOTE: localhost magpie has to be running for following login call to work
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd, use_ui_form_submit=True)
-        cls.require = "cannot run tests without logged in '{}' user".format(get_constant('MAGPIE_ADMIN_GROUP'))
+        cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()
 
         cls.test_user = get_constant('MAGPIE_ANONYMOUS_USER')

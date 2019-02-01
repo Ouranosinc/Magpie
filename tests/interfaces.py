@@ -21,6 +21,8 @@ class TestMagpieAPI_NoAuth_Interface(unittest.TestCase):
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
 
+    __test__ = False
+
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
@@ -77,6 +79,8 @@ class TestMagpieAPI_UsersAuth_Interface(unittest.TestCase):
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
 
+    __test__ = False
+
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
@@ -95,6 +99,8 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
+
+    __test__ = False
 
     @classmethod
     def setUpClass(cls):
@@ -591,11 +597,6 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         utils.check_or_try_logout_user(self.url)
 
         # validate that the new password is effective
-        #data = {'user_name': self.test_user_name, 'password': new_password}
-        #resp = utils.test_request(self.url, 'POST', '/signin', data=data,
-        #                          headers=self.json_headers, allow_redirects=True)
-        #utils.check_response_basic_info(resp, 200, expected_method='POST')
-
         headers, cookies = utils.check_or_try_login_user(self.url, username=self.test_user_name, password=new_password,
                                                          use_ui_form_submit=True, version=self.version)
         resp = utils.test_request(self.url, 'GET', '/session', headers=headers, cookies=cookies)
@@ -605,12 +606,6 @@ class TestMagpieAPI_AdminAuth_Interface(unittest.TestCase):
         utils.check_or_try_logout_user(self.url)
 
         # validate that previous password is ineffective
-        #data = {'user_name': self.test_user_name, 'password': old_password}
-        #resp = utils.test_request(self.url, 'POST', '/signin', headers=self.json_headers, data=data, expect_errors=True)
-        #if LooseVersion(self.version) >= LooseVersion('0.7.8'):
-        #    utils.check_response_basic_info(resp, 401, expected_method='POST')
-        #else:
-        #    utils.check_response_basic_info(resp, 400, expected_method='POST')
         headers, cookies = utils.check_or_try_login_user(self.url, username=self.test_user_name, password=old_password,
                                                          use_ui_form_submit=True, version=self.version)
         resp = utils.test_request(self.url, 'GET', '/session', headers=headers, cookies=cookies)
@@ -1079,6 +1074,8 @@ class TestMagpieUI_NoAuth_Interface(unittest.TestCase):
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
 
+    __test__ = False
+
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
@@ -1167,6 +1164,8 @@ class TestMagpieUI_AdminAuth_Interface(unittest.TestCase):
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
+
+    __test__ = False
 
     @classmethod
     def setUpClass(cls):
