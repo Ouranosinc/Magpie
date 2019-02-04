@@ -36,12 +36,18 @@ def main(global_config=None, **settings):
                            raise_missing=False, raise_not_set=False, print_missing=True)
     LOGGER.setLevel(log_lvl)
     sa_settings = db.set_sqlalchemy_log_level(log_lvl)
-    # fetch db session here, otherwise, any other db engine connection (ie: during migration) will re-initialize
-    # with a new engine class and logging settings don't get re-evaluated/applied
-    db_session = db.get_db_session_from_config_ini(constants.MAGPIE_INI_FILE_PATH, settings_override=sa_settings)
 
     print_log('Looking for db migration requirement...')
-    db.run_database_migration_when_ready(settings, db_session=db_session)
+    db.run_database_migration_when_ready(settings)  # cannot pass db session as it might not even exist yet!
+
+    # HACK:
+    #   migration can cause sqlalchemy engine to reset its internal logger level, although it is properly set
+    #   to 'echo=False' because engines are re-created as needed... (ie: missing db)
+    #   apply configs to re-enforce the logging level of `sqlalchemy.engine.base.Engine`"""
+    db.set_sqlalchemy_log_level(log_lvl)
+    # fetch db session here, otherwise, any following db engine connection will re-initialize
+    # with a new engine class and logging settings don't get re-evaluated/applied
+    db_session = db.get_db_session_from_config_ini(constants.MAGPIE_INI_FILE_PATH, settings_override=sa_settings)
 
     print_log('Register default users...')
     register_default_users(db_session=db_session)

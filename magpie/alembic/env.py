@@ -3,10 +3,14 @@ from alembic import context
 from logging.config import fileConfig
 from sqlalchemy.schema import MetaData
 # noinspection PyProtectedMember
-from sqlalchemy.engine import create_engine, Connection
+from sqlalchemy.engine import create_engine, Connection, Connectable
 from sqlalchemy.exc import OperationalError
 from magpie.db import get_db_url
 from magpie.constants import get_constant
+import logging
+import os
+
+LOGGER = logging.getLogger(__name__)
 
 
 # this is the Alembic Config object, which provides
@@ -38,6 +42,25 @@ target_metadata = MetaData(naming_convention={
 # ... etc.
 
 
+def create_database(db_name, db_host, db_port):
+    db_default_postgres_url = get_db_url(
+        # only postgres user can connect to default 'postgres' db
+        # credentials correspond to postgres running instance, not magpie-specific credentials
+        # see for details:
+        #   https://stackoverflow.com/questions/6506578
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+        db_host=db_host,
+        db_port=db_port,
+        db_name='postgres'
+    )
+    connectable = create_engine(db_default_postgres_url)
+    with connectable.connect() as connection:
+        connection.execute("commit")  # end initial transaction
+        connection.execute("create database {}".format(db_name))
+    return connectable
+
+
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
 
@@ -58,21 +81,7 @@ def run_migrations_offline():
         context.run_migrations()
 
 
-def run_migrations_connection(connection):
-    # type: (Connection) -> None
-    """Run migrations in 'online' mode with provided connection."""
-    context.configure(
-        connection=connection,
-        target_metadata=target_metadata,
-        version_table='alembic_version',
-        transaction_per_migration=True,
-        render_as_batch=True
-    )
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-def run_migrations_online():
+def run_migrations_online(connection=None):
     """Run migrations in 'online' mode.
 
     In this scenario we need to create an Engine
@@ -81,39 +90,49 @@ def run_migrations_online():
     """
     # test the connection, if database is missing try creating it
     url = get_db_url()
+
+    def connect(c=None):
+        if isinstance(c, Connection) and not c.closed:
+            return c
+        if not isinstance(c, Connectable):
+            c = create_engine(url)
+        return c.connect()
+
     try:
-        connectable = create_engine(url)
-        with connectable.connect():
+        conn = connect()    # use new connection to not close arg one
+        with conn:
             pass
+        conn = connection
     except OperationalError as ex:
-        # see for details:
-        #   https://stackoverflow.com/questions/6506578
         db_name = get_constant('MAGPIE_POSTGRES_DB')
+        # message format is important, match error type with it
+        # any error is `OperationalError`, validate only missing db error
         if 'database "{}" does not exist'.format(db_name) not in str(ex):
-            raise   # any error is OperationalError, so validate only missing db error
-        db_default_postgres_url = get_db_url(
-            username='postgres',    # only postgres user can connect to default 'postgres' db
-            password='',
-            db_host=get_constant('MAGPIE_POSTGRES_HOST'),
-            db_port=get_constant('MAGPIE_POSTGRES_PORT'),
-            db_name='postgres'
-        )
-        connectable = create_engine(db_default_postgres_url)
-        with connectable.connect() as connection:
-            connection.execute("commit")    # end initial transaction
-            connection.execute("create database {}".format(db_name))
+            raise
+        LOGGER.info('database [{}] not found, attempting creation...'.format(db_name))
+        db_host = get_constant('MAGPIE_POSTGRES_HOST')
+        db_port = get_constant('MAGPIE_POSTGRES_PORT')
+        conn = create_database(db_name, db_host, db_port)
 
     # retry connection and run migration
-    with connectable.connect() as connection:
+    with connect(conn) as migrate_conn:
         try:
-            run_migrations_connection(connection)
+            context.configure(
+                connection=migrate_conn,
+                target_metadata=target_metadata,
+                version_table='alembic_version',
+                transaction_per_migration=True,
+                render_as_batch=True
+            )
+            with context.begin_transaction():
+                context.run_migrations()
         finally:
-            connection.close()
+            # close the connection only if not coming from upper call
+            if migrate_conn is not connection:
+                migrate_conn.close()
 
 
 if context.is_offline_mode():
     run_migrations_offline()
-elif config_connection is None:
-    run_migrations_online()
 else:
-    run_migrations_connection(config_connection)
+    run_migrations_online(config_connection)

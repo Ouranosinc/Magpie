@@ -129,7 +129,10 @@ def is_database_ready(db_session=None):
 
 def run_database_migration_when_ready(settings, db_session=None):
     # type: (SettingsDict, Optional[Session]) -> None
-    """Runs db migration if requested, """
+    """
+    Runs db migration if requested by config and need from revisions.
+    """
+
     db_ready = False
     if constants.get_constant('MAGPIE_DB_MIGRATION', settings, 'magpie.db_migration', True,
                               raise_missing=False, raise_not_set=False, print_missing=True):
@@ -137,41 +140,33 @@ def run_database_migration_when_ready(settings, db_session=None):
                                           default_value=5, raise_missing=False, raise_not_set=False, print_missing=True)
 
         print_log('Running database migration (as required) ...')
-        attempts = max(attempts, 1)
+        attempts = max(attempts, 2)     # enforce at least 2 attempts, 1 for db creation and one for actual migration
         for i in range(1, attempts + 1):
             try:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
                     run_database_migration(db_session)
-            except ImportError:
+            except ImportError as ex:
                 pass
             except Exception as e:
-                if i < attempts:
-                    print_log('Database migration failed [{!s}]. Retrying... ({}/{})'.format(e, i, attempts))
+                if i <= attempts:
+                    print_log('Database migration failed [{!r}]. Retrying... ({}/{})'.format(e, i, attempts))
                     time.sleep(2)
                     continue
                 else:
-                    raise_log('Database migration failed [{!s}]'.format(e), exception=RuntimeError)
-
-            # HACK:
-            #   migration can cause sqlalchemy engine to reset its internal logger level, although it is properly set
-            #   to 'echo=False'... apply configs to re-enforce the logging level of `sqlalchemy.engine.base.Engine`
-            log_lvl = constants.get_constant(
-                'MAGPIE_LOG_LEVEL', settings, 'magpie.log_level', default_value=logging.INFO,
-                raise_missing=False, print_missing=False, raise_not_set=False
-            )
-            set_sqlalchemy_log_level(log_lvl)
+                    raise_log('Database migration failed [{!r}]'.format(e), exception=RuntimeError)
 
             db_ready = is_database_ready(db_session)
             if not db_ready:
                 print_log('Database not ready. Retrying... ({}/{})'.format(i, attempts))
                 time.sleep(2)
+                continue
             break
     else:
         db_ready = is_database_ready(db_session)
     if not db_ready:
         time.sleep(2)
-        raise_log('Database not ready')
+        raise_log('Database not ready', exception=RuntimeError)
 
 
 def set_sqlalchemy_log_level(magpie_log_level):
