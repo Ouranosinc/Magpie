@@ -68,6 +68,7 @@ before_script:
   - echo $CONDA_PREFIX
   - echo $CONDA_ENV
 script:
+  - export MAGPIE_LOG_LEVEL=INFO
   - make $START_TARGET $TEST_TARGET
 notifications:
   email: false
