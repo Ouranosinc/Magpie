@@ -2,7 +2,8 @@ from __future__ import with_statement
 from alembic import context
 from logging.config import fileConfig
 from sqlalchemy.schema import MetaData
-from sqlalchemy.engine import create_engine
+# noinspection PyProtectedMember
+from sqlalchemy.engine import create_engine, Connection
 from sqlalchemy.exc import OperationalError
 from magpie.db import get_db_url
 from magpie.constants import get_constant
@@ -11,6 +12,11 @@ from magpie.constants import get_constant
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# verify if a connection is already provided
+config_connection = None
+if 'connection' in config.attributes and isinstance(config.attributes['connection'], Connection):
+    config_connection = context.config.attributes['connection']
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -52,6 +58,20 @@ def run_migrations_offline():
         context.run_migrations()
 
 
+def run_migrations_connection(connection):
+    # type: (Connection) -> None
+    """Run migrations in 'online' mode with provided connection."""
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        version_table='alembic_version',
+        transaction_per_migration=True,
+        render_as_batch=True
+    )
+    with context.begin_transaction():
+        context.run_migrations()
+
+
 def run_migrations_online():
     """Run migrations in 'online' mode.
 
@@ -85,21 +105,15 @@ def run_migrations_online():
 
     # retry connection and run migration
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            version_table='alembic_version',
-            transaction_per_migration=True,
-            render_as_batch=True
-        )
         try:
-            with context.begin_transaction():
-                context.run_migrations()
+            run_migrations_connection(connection)
         finally:
             connection.close()
 
 
 if context.is_offline_mode():
     run_migrations_offline()
-else:
+elif config_connection is None:
     run_migrations_online()
+else:
+    run_migrations_connection(config_connection)

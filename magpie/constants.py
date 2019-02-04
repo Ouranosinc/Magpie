@@ -147,5 +147,5 @@ def get_constant(name, settings=None, settings_name=None, default_value=None,
     if missing and raise_missing:
         raise_log("Constant could not be found: {}".format(name), level=logging.ERROR)
     if missing and print_missing:
-        print_log("Constant could not be found: {}".format(name), level=logging.WARN)
+        print_log("Constant could not be found: {} (using default: {})".format(name, default_value), level=logging.WARN)
     return magpie_value or default_value
