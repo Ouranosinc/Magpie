@@ -16,7 +16,8 @@ env:
     - CONDA_HOME=$HOME/conda
     - DOWNLOAD_CACHE=$HOME/downloads
   matrix:
-    - TEST_TARGET=test-local    START_TARGET=
+    # FIXME: local login not functional, cannot run local tests on travis
+    #- TEST_TARGET=test-local    START_TARGET=
     - TEST_TARGET=test-remote   START_TARGET=start
     - TEST_TARGET=coverage      START_TARGET=
 addons:
