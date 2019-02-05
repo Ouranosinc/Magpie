@@ -4,9 +4,9 @@ Installation
 
 At the command line::
 
-    $ easy_install magpie
+    $ pip install magpie
 
-Or, if you have virtualenvwrapper installed::
+Or, if you have conda installed::
 
-    $ mkvirtualenv magpie
+    $ conda create -n magpie
     $ pip install magpie

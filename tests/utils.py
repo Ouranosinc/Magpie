@@ -3,15 +3,26 @@ import json
 import six
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
+from pyramid.response import Response
 from pyramid.testing import setUp as PyramidSetUp
 from webtest import TestApp
 from webtest.response import TestResponse
-from magpie import __meta__, db, services, magpiectl
+from webob.headers import ResponseHeaders
+from magpie import __meta__, services, magpiectl
+from magpie.common import get_settings_from_config_ini
 from magpie.constants import get_constant
+from typing import AnyStr, Dict, List, Optional, Tuple, Union
+
+OptionalStringType = six.string_types + tuple([type(None)])
+HeadersType = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
+CookiesType = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
+OptionalHeaderCookiesType = Union[Tuple[None, None], Tuple[HeadersType, CookiesType]]
+TestAppOrUrlType = Union[AnyStr, TestApp]
+ResponseType = Union[TestResponse, Response]
 
 
 def config_setup_from_ini(config_ini_file_path):
-    settings = db.get_settings_from_config_ini(config_ini_file_path)
+    settings = get_settings_from_config_ini(config_ini_file_path)
     config = PyramidSetUp(settings=settings)
     return config
 
@@ -20,7 +31,8 @@ def get_test_magpie_app():
     # parse settings from ini file to pass them to the application
     config = config_setup_from_ini(get_constant('MAGPIE_INI_FILE_PATH'))
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
-    config.registry.settings['magpie.db_migration_disabled'] = True
+    config.include('ziggurat_foundations.ext.pyramid.get_user')
+    config.registry.settings['magpie.db_migration'] = False
     # scan dependencies
     config.include('magpie')
     # create the test application
@@ -38,6 +50,22 @@ def get_headers(app_or_url, header_dict):
     if isinstance(app_or_url, TestApp):
         return header_dict.items()
     return header_dict
+
+
+def get_header(header_name, header_container):
+    # type: (AnyStr, Optional[Union[HeadersType, ResponseHeaders]]) -> Union[AnyStr, None]
+    if header_container is None:
+        return None
+    headers = header_container
+    if isinstance(headers, ResponseHeaders):
+        headers = dict(headers)
+    if isinstance(headers, dict):
+        headers = header_container.items()
+    header_name = header_name.lower().replace('-', '_')
+    for h, v in headers:
+        if h.lower().replace('-', '_') == header_name:
+            return v
+    return None
 
 
 def get_response_content_types_list(response):
@@ -63,6 +91,8 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
     :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
     :param method: request method (GET, POST, PUT, DELETE)
     :param path: test path starting at base path
+    :param timeout: `timeout` to pass down to `request`
+    :param allow_redirects: `allow_redirects` to pass down to `request`
     :return: response of the request
     """
     method = method.upper()
@@ -84,13 +114,16 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
             if cookies and not app_or_url.cookies:
                 app_or_url.cookies.update(cookies)
 
-        kwargs['params'] = json_body
+        # obtain Content-Type header if specified to ensure it is properly applied
+        kwargs['content_type'] = get_header('Content-Type', kwargs.get('headers'))
 
         # convert JSON body as required
+        kwargs['params'] = json_body
         if json_body is not None:
             kwargs.update({'params': json.dumps(json_body, cls=json.JSONEncoder)})
         if status and status >= 300:
             kwargs.update({'expect_errors': True})
+        # noinspection PyProtectedMember
         resp = app_or_url._gen_request(method, path, **kwargs)
         # automatically follow the redirect if any and evaluate its response
         max_redirect = kwargs.get('max_redirects', 5)
@@ -110,32 +143,46 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
         return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
 
 
-def check_or_try_login_user(app_or_url, username=None, password=None, provider='ziggurat', headers=None,
-                            use_ui_form_submit=False, version=__meta__.__version__):
-    """
-    Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
-
-    :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
-    :param username: name of the user to login or None otherwise
-    :param password: password to use for login if the user was not already logged in
-    :param provider: provider string to use for login (default: ziggurat, ie: magpie's local signin)
-    :param headers: headers to include in the test request
-    :param use_ui_form_submit: use Magpie UI login 'form' to obtain cookies (required for local WebTest.App login)
-    :param version: server or local app version to evaluate responses with backward compatibility
-    :return: headers and cookies of the user session or (None, None)
-    :raise: Exception on any login/logout failure as required by the caller's specifications (username/password)
-    """
-
-    headers = headers or {}
-
+def get_session_user(app_or_url, headers=None):
+    # type: (TestAppOrUrlType, Optional[HeadersType]) -> ResponseType
+    if not headers:
+        headers = get_headers(app_or_url, {'Accept': 'application/json', 'Content-Type': 'application/json'})
     if isinstance(app_or_url, TestApp):
         resp = app_or_url.get('/session', headers=headers)
     else:
         resp = requests.get('{}/session'.format(app_or_url), headers=headers)
-    body = get_json_body(resp)
-
     if resp.status_code != 200:
         raise Exception('cannot retrieve logged in user information')
+    return resp
+
+
+def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrlType
+                            username=None,                  # type: Optional[AnyStr]
+                            password=None,                  # type: Optional[AnyStr]
+                            provider='ziggurat',            # type: Optional[AnyStr]
+                            headers=None,                   # type: Optional[Dict[AnyStr, AnyStr]]
+                            use_ui_form_submit=False,       # type: Optional[bool]
+                            version=__meta__.__version__,   # type: Optional[AnyStr]
+                            ):                              # type: (...) -> OptionalHeaderCookiesType
+    """
+    Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
+    Validates that the logged user (if any), matched the one specified with `username`.
+
+    :param app_or_url: instance of the test application or remote server URL to call
+    :param username: name of the user to login or None otherwise
+    :param password: password to use for login if the user was not already logged in
+    :param provider: provider string to use for login (default: ziggurat, ie: magpie's local signin)
+    :param headers: headers to include in the test request
+    :param use_ui_form_submit: use Magpie UI login 'form' to obtain cookies
+        (required for local `WebTest.App` login, ignored by requests using URL)
+    :param version: server or local app version to evaluate responses with backward compatibility
+    :return: headers and cookies of the user session or (None, None)
+    :raise: Exception on any login failure as required by the caller's specifications (username/password)
+    """
+
+    headers = headers or {}
+    resp = get_session_user(app_or_url, headers)
+    body = get_json_body(resp)
 
     resp_cookies = None
     auth = body.get('authenticated', False)
@@ -178,6 +225,33 @@ def check_or_try_login_user(app_or_url, username=None, password=None, provider='
             resp_cookies = resp.cookies
 
     return resp.headers, resp_cookies
+
+
+def check_or_try_logout_user(app_or_url):
+    # type: (TestAppOrUrlType) -> None
+    """
+    Verifies that any user is logged out, or tries to logout him otherwise.
+
+    :param app_or_url: instance of the test application or remote server URL to call
+    :raise: Exception on any logout failure or incapability to validate logout
+    """
+
+    def _is_logged_out():
+        resp = get_session_user(app_or_url)
+        body = get_json_body(resp)
+        auth = body.get('authenticated', False)
+        return not auth
+
+    if _is_logged_out():
+        return
+    resp_logout = test_request(app_or_url, 'GET', '/ui/logout', allow_redirects=True)
+    if isinstance(app_or_url, TestApp):
+        app_or_url.reset()  # clear app cookies
+    if resp_logout.status_code >= 400:
+        raise Exception("cannot validate logout")
+    if _is_logged_out():
+        return
+    raise Exception("logout did not succeed")
 
 
 def format_test_val_ref(val, ref, pre='Fail', msg=None):
@@ -263,16 +337,16 @@ class null(object):
 Null = null()
 
 
-def check_error_param_structure(json_body, paramValue=Null, paramName=Null, paramCompare=Null,
-                                isParamValueLiteralUnicode=False, paramCompareExists=False, version=None):
+def check_error_param_structure(json_body, param_value=Null, param_name=Null, param_compare=Null,
+                                is_param_value_literal_unicode=False, param_compare_exists=False, version=None):
     """
     Validates error response 'param' information based on different Magpie version formats.
     :param json_body: json body of the response to validate.
-    :param paramValue: expected 'value' of param, not verified if <Null>
-    :param paramName: expected 'name' of param, not verified if <Null> or non existing for Magpie version
-    :param paramCompare: expected 'compare'/'paramCompare' value, not verified if <Null>
-    :param isParamValueLiteralUnicode: param value is represented as `u'{paramValue}'` for older Magpie version
-    :param paramCompareExists: verify that 'compare'/'paramCompare' is in the body, not necessarily validating the value
+    :param param_value: expected 'value' of param, not verified if <Null>
+    :param param_name: expected 'name' of param, not verified if <Null> or non existing for Magpie version
+    :param param_compare: expected 'compare'/'paramCompare' value, not verified if <Null>
+    :param is_param_value_literal_unicode: param value is represented as `u'{paramValue}'` for older Magpie version
+    :param param_compare_exists: verify that 'compare'/'paramCompare' is in the body, not validating its actual value
     :param version: version of application/remote server to use for format validation, use local Magpie version if None
     :raise failing condition
     """
@@ -283,19 +357,19 @@ def check_error_param_structure(json_body, paramValue=Null, paramName=Null, para
         check_val_type(json_body['param'], dict)
         check_val_is_in('value', json_body['param'])
         check_val_is_in('name', json_body['param'])
-        check_val_equal(json_body['param']['name'], paramName)
-        check_val_equal(json_body['param']['value'], paramValue)
-        if paramCompareExists:
+        check_val_equal(json_body['param']['name'], param_name)
+        check_val_equal(json_body['param']['value'], param_value)
+        if param_compare_exists:
             check_val_is_in('compare', json_body['param'])
-            check_val_equal(json_body['param']['compare'], paramCompare)
+            check_val_equal(json_body['param']['compare'], param_compare)
     else:
         # unicode representation was explicitly returned in value only when of string type
-        if isParamValueLiteralUnicode and isinstance(paramValue, six.string_types):
-            paramValue = u'u\'{}\''.format(paramValue)
-        check_val_equal(json_body['param'], paramValue)
-        if paramCompareExists:
+        if is_param_value_literal_unicode and isinstance(param_value, six.string_types):
+            param_value = u'u\'{}\''.format(param_value)
+        check_val_equal(json_body['param'], param_value)
+        if param_compare_exists:
             check_val_is_in('paramCompare', json_body)
-            check_val_equal(json_body['paramCompare'], paramCompare)
+            check_val_equal(json_body['paramCompare'], param_compare)
 
 
 def check_post_resource_structure(json_body, resource_name, resource_type, resource_display_name, version=None):
@@ -362,6 +436,7 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
 
 
 # Generic setup and validation methods across unittests
+# noinspection PyPep8Naming
 class TestSetup(object):
     @staticmethod
     def get_Version(test_class):
@@ -376,7 +451,7 @@ class TestSetup(object):
         Verifies that the Magpie UI page at very least returned an Ok response with the displayed title.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
-        resp = test_request(test_class.url, method, path, cookies=test_class.cookies)
+        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=20)
         check_val_equal(resp.status_code, 200)
         check_val_is_in('Content-Type', dict(resp.headers))
         check_val_is_in('text/html', get_response_content_types_list(resp))
@@ -401,10 +476,11 @@ class TestSetup(object):
         check_val_not_equal(len(json_body['services'][test_class.test_service_type]), 0,
                             msg="Missing any required service of type: `{}`".format(test_class.test_service_type))
         services_dict = json_body['services'][test_class.test_service_type]
-        return services_dict.values()[0]
+        return list(services_dict.values())[0]
 
     @staticmethod
     def create_TestServiceResource(test_class, data_override=None):
+        TestSetup.create_TestService(test_class)
         route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
         data = {
             "resource_name": test_class.test_resource_name,
@@ -420,29 +496,34 @@ class TestSetup(object):
     @staticmethod
     def get_ExistingTestServiceInfo(test_class):
         route = '/services/{svc}'.format(svc=test_class.test_service_name)
-        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
+        resp = test_request(test_class.url, 'GET', route,
+                            headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = get_json_body(resp)
         return json_body[test_class.test_service_name]
 
     @staticmethod
-    def get_ExistingTestServiceDirectResources(test_class):
+    def get_TestServiceDirectResources(test_class, ignore_missing_service=False):
         route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
-        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
+        resp = test_request(test_class.url, 'GET', route,
+                            headers=test_class.json_headers, cookies=test_class.cookies,
+                            expect_errors=ignore_missing_service)
+        if ignore_missing_service and resp.status_code == 404:
+            return []
         json_body = get_json_body(resp)
         resources = json_body[test_class.test_service_name]['resources']
         return [resources[res] for res in resources]
 
     @staticmethod
-    def check_NonExistingTestResource(test_class):
-        resources = TestSetup.get_ExistingTestServiceDirectResources(test_class)
+    def check_NonExistingTestServiceResource(test_class):
+        resources = TestSetup.get_TestServiceDirectResources(test_class, ignore_missing_service=True)
         resources_names = [res['resource_name'] for res in resources]
         check_val_not_in(test_class.test_resource_name, resources_names)
 
     @staticmethod
     def delete_TestServiceResource(test_class, override_resource_name=None):
         resource_name = override_resource_name or test_class.test_resource_name
-        resources = TestSetup.get_ExistingTestServiceDirectResources(test_class)
-        test_resource = filter(lambda r: r['resource_name'] == resource_name, resources)
+        resources = TestSetup.get_TestServiceDirectResources(test_class, ignore_missing_service=True)
+        test_resource = list(filter(lambda r: r['resource_name'] == resource_name, resources))
         # delete as required, skip if non-existing
         if len(test_resource) > 0:
             resource_id = test_resource[0]['resource_id']
@@ -451,7 +532,44 @@ class TestSetup(object):
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_val_equal(resp.status_code, 200)
-        TestSetup.check_NonExistingTestResource(test_class)
+        TestSetup.check_NonExistingTestServiceResource(test_class)
+
+    @staticmethod
+    def create_TestService(test_class):
+        data = {
+            u'service_name': test_class.test_service_name,
+            u'service_type': test_class.test_service_type,
+            u'service_url': u'http://localhost:9000/{}'.format(test_class.test_service_name)
+        }
+        resp = test_request(test_class.url, 'POST', '/services', json=data,
+                            headers=test_class.json_headers, cookies=test_class.cookies,
+                            expect_errors=True)
+        if resp.status_code == 409:
+            resp = test_request(test_class.url, 'GET', '/services',
+                                headers=test_class.json_headers,
+                                cookies=test_class.cookies)
+            return check_response_basic_info(resp, 200, expected_method='GET')
+        return check_response_basic_info(resp, 201, expected_method='POST')
+
+    @staticmethod
+    def check_NonExistingTestService(test_class):
+        services_info = TestSetup.get_RegisteredServicesList(test_class)
+        services_names = [svc['service_name'] for svc in services_info]
+        check_val_not_in(test_class.test_service_name, services_names)
+
+    @staticmethod
+    def delete_TestService(test_class, override_service_name=None):
+        service_name = override_service_name or test_class.test_service_name
+        services_info = TestSetup.get_RegisteredServicesList(test_class)
+        test_service = list(filter(lambda r: r['service_name'] == service_name, services_info))
+        # delete as required, skip if non-existing
+        if len(test_service) > 0:
+            route = '/services/{svc_name}'.format(svc_name=test_class.test_service_name)
+            resp = test_request(test_class.url, 'DELETE', route,
+                                headers=test_class.json_headers,
+                                cookies=test_class.cookies)
+            check_val_equal(resp.status_code, 200)
+        TestSetup.check_NonExistingTestService(test_class)
 
     @staticmethod
     def get_RegisteredServicesList(test_class):

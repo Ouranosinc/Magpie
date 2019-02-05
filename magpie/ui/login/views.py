@@ -1,7 +1,7 @@
 from magpie.definitions.pyramid_definitions import *
-from magpie.ui.management import check_response
+from magpie.ui.utils import check_response
 from magpie.ui.home import add_template_data
-from magpie.api.api_rest_schemas import SigninAPI
+from magpie.api import api_rest_schemas as schemas
 import requests
 
 
@@ -11,12 +11,12 @@ class LoginViews(object):
         self.magpie_url = self.request.registry.settings['magpie.url']
 
     def get_internal_providers(self):
-        resp = requests.get(self.magpie_url + '/providers')
+        resp = requests.get('{}{}'.format(self.magpie_url, schemas.ProvidersAPI.path))
         check_response(resp)
         return resp.json()['providers']['internal']
 
     def get_external_providers(self):
-        resp = requests.get(self.magpie_url + '/providers')
+        resp = requests.get('{}{}'.format(self.magpie_url, schemas.ProvidersAPI.path))
         check_response(resp)
         return resp.json()['providers']['external']
 
@@ -33,7 +33,7 @@ class LoginViews(object):
 
         try:
             if 'submit' in self.request.POST:
-                signin_url = '{}/signin'.format(self.magpie_url)
+                signin_url = '{}{}'.format(self.magpie_url, schemas.SigninAPI.path)
                 data_to_send = {}
                 for key in self.request.POST:
                     data_to_send[key] = self.request.POST.get(key)
@@ -49,7 +49,7 @@ class LoginViews(object):
                     pyr_res = Response(body=response.content, headers=response.headers)
                     for cookie in response.cookies:
                         pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
-                    is_external = response.url != '{}{}'.format(self.magpie_url, SigninAPI.path)
+                    is_external = response.url != '{}{}'.format(self.magpie_url, schemas.SigninAPI.path)
                     if is_external:
                         return HTTPFound(response.url, headers=pyr_res.headers)
                     return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
@@ -66,5 +66,5 @@ class LoginViews(object):
     @view_config(route_name='logout', renderer='templates/login.mako', permission=NO_PERMISSION_REQUIRED)
     def logout(self):
         # Flush cookies and return to home
-        requests.get('{url}/signout'.format(url=self.magpie_url))
+        requests.get('{url}{path}'.format(url=self.magpie_url, path=schemas.SignoutAPI.path))
         return HTTPFound(location=self.request.route_url('home'), headers=forget(self.request))

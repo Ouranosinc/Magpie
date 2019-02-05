@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from six.moves.urllib.request import urlopen
 
 
-GITHUB_REPO = 'fderue/magpie'
+GITHUB_REPO = 'pavics/magpie'
 TRAVIS_CONFIG_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '.travis.yml')
 

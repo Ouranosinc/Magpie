@@ -1,22 +1,68 @@
-from magpie import models
-from magpie.constants import get_constant
-from magpie.register import SERVICES_PHOENIX_ALLOWED
-from magpie.definitions.ziggurat_definitions import *
-from magpie.services import service_type_dict
-from magpie.api.api_except import *
+from magpie.api import api_except as ax
+from magpie.api.api_rest_schemas import *
 from magpie.api.management.group.group_utils import create_group_resource_permission
+from magpie.api.management.service.service_formats import format_service
+from magpie.constants import get_constant
+from magpie.definitions.sqlalchemy_definitions import Session
+from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.ziggurat_definitions import *
+from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
+from magpie.services import service_type_dict
+from magpie import models
+from typing import AnyStr
+import logging
+LOGGER = logging.getLogger(__name__)
+
+
+def create_service(service_name, service_type, service_url, service_push, db_session):
+    # type: (AnyStr, AnyStr, AnyStr, bool, Session) -> HTTPException
+    """Generates an instance to register a new service."""
+
+    def _add_service_magpie_and_phoenix(svc, svc_push, db):
+        db.add(svc)
+        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED:
+            sync_services_phoenix(db.query(models.Service))
+
+        # sometimes, resource ID is not updated, fetch the service to obtain it
+        if not svc.resource_id:
+            svc = ax.evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=db_session),
+                                   fallback=lambda: db_session.rollback(), httpError=HTTPInternalServerError,
+                                   msgOnFail=Services_POST_InternalServerErrorResponseSchema.description,
+                                   content={u'service_name': str(service_name), u'resource_id': svc.resource_id})
+            ax.verify_param(svc.resource_id, notNone=True, ofType=int, httpError=HTTPInternalServerError,
+                            msgOnFail=Services_POST_InternalServerErrorResponseSchema.description,
+                            content={u'service_name': str(service_name),  u'resource_id': svc.resource_id},
+                            paramName=u'service_name')
+        return svc
+
+    # noinspection PyArgumentList
+    service = ax.evaluate_call(lambda: models.Service(resource_name=str(service_name),
+                                                      resource_type=models.Service.resource_type_name,
+                                                      url=str(service_url), type=str(service_type)),
+                               fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
+                               msgOnFail=Services_POST_UnprocessableEntityResponseSchema.description,
+                               content={u'service_name': str(service_name),
+                                        u'resource_type': models.Service.resource_type_name,
+                                        u'service_url': str(service_url), u'service_type': str(service_type)})
+
+    service = ax.evaluate_call(lambda: _add_service_magpie_and_phoenix(service, service_push, db_session),
+                               fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
+                               msgOnFail=Services_POST_ForbiddenResponseSchema.description,
+                               content=format_service(service, show_private_url=True))
+    return ax.valid_http(httpSuccess=HTTPCreated, detail=Services_POST_CreatedResponseSchema.description,
+                         content={u'service': format_service(service, show_private_url=True)})
 
 
 def get_services_by_type(service_type, db_session):
-    verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                 msgOnFail="Invalid `service_type` value '" + str(service_type) + "' specified")
+    ax.verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
+                    msgOnFail="Invalid `service_type` value '" + str(service_type) + "' specified")
     services = db_session.query(models.Service).filter(models.Service.type == service_type)
-    return sorted(services)
+    return sorted(services, key=lambda svc: svc.resource_name)
 
 
 def add_service_getcapabilities_perms(service, db_session, group_name=None):
     if service.type in SERVICES_PHOENIX_ALLOWED \
-    and 'getcapabilities' in service_type_dict[service.type].permission_names:
+    and 'getcapabilities' in service_type_dict[service.type].permission_names:  # noqa: F401
         if group_name is None:
             group_name = get_constant('MAGPIE_ANONYMOUS_USER')
         group = GroupService.by_group_name(group_name, db_session=db_session)

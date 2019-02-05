@@ -1,10 +1,23 @@
-from magpie.definitions.twitcher_definitions import *
-from magpie.definitions.pyramid_definitions import *
-from magpie.services import service_factory
-from magpie.models import Service
 from magpie.api.api_except import evaluate_call, verify_param
-from magpie.adapter.utils import get_magpie_url
 from magpie.constants import get_constant
+from magpie.definitions.pyramid_definitions import (
+    HTTPOk,
+    HTTPNotFound,
+    HTTPForbidden,
+    IAuthenticationPolicy,
+    IAuthorizationPolicy,
+    asbool,
+)
+from magpie.definitions.twitcher_definitions import (
+    OWSSecurityInterface,
+    OWSAccessForbidden,
+    parse_service_name,
+    get_twitcher_configuration,
+    TWITCHER_CONFIGURATION_DEFAULT,
+)
+from magpie.models import Service
+from magpie.services import service_factory
+from magpie.utils import get_magpie_url
 from requests.cookies import RequestsCookieJar
 from six.moves.urllib.parse import urlparse
 import requests
@@ -66,7 +79,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             # use specific domain to differentiate between `.{hostname}` and `{hostname}` variations if applicable
             # noinspection PyProtectedMember
             request_cookies = session_resp.request._cookies
-            magpie_cookies = filter(lambda cookie: cookie.name == token_name, request_cookies)
+            magpie_cookies = list(filter(lambda cookie: cookie.name == token_name, request_cookies))
             magpie_domain = urlparse(self.magpie_url).hostname if len(magpie_cookies) > 1 else None
             session_cookies = RequestsCookieJar.get(request_cookies, token_name, domain=magpie_domain)
             if not session_resp.json().get('authenticated') or not session_cookies:

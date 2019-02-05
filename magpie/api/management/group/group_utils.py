@@ -1,4 +1,3 @@
-from magpie.models import resource_tree_service, resource_type_dict
 from magpie.services import service_type_dict
 from magpie.api.api_requests import *
 from magpie.api.api_except import *
@@ -6,7 +5,10 @@ from magpie.api.management.resource.resource_utils import check_valid_service_re
 from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.service.service_formats import format_service_resources, format_service
 from magpie.api.management.group.group_formats import format_group
+from magpie.definitions.sqlalchemy_definitions import Session
 from magpie.definitions.ziggurat_definitions import *
+from magpie import models
+from typing import AnyStr
 
 
 def get_all_groups(db_session):
@@ -35,7 +37,33 @@ def get_group_resources(group, db_session):
     return json_response
 
 
+def create_group(group_name, db_session):
+    # type: (AnyStr, Session) -> models.Group
+    """
+    Creates a group if it is permitted and not conflicting.
+    :returns: corresponding HTTP response according to the encountered situation.
+    """
+    group = GroupService.by_group_name(group_name, db_session=db_session)
+    group_content_error = {u'group_name': str(group_name)}
+    verify_param(group, isNone=True, httpError=HTTPConflict, withParam=False,
+                 msgOnFail=Groups_POST_ConflictResponseSchema.description, content=group_content_error)
+    # noinspection PyArgumentList
+    new_group = evaluate_call(lambda: models.Group(group_name=group_name), fallback=lambda: db_session.rollback(),
+                              httpError=HTTPForbidden, msgOnFail=Groups_POST_ForbiddenCreateResponseSchema.description,
+                              content=group_content_error)
+    evaluate_call(lambda: db_session.add(new_group), fallback=lambda: db_session.rollback(),
+                  httpError=HTTPForbidden, msgOnFail=Groups_POST_ForbiddenAddResponseSchema.description,
+                  content=group_content_error)
+    return valid_http(httpSuccess=HTTPCreated, detail=Groups_POST_CreatedResponseSchema.description,
+                      content={u'group': format_group(new_group, basic_info=True)})
+
+
 def create_group_resource_permission(permission_name, resource, group, db_session):
+    # type: (AnyStr, models.Resource, models.Group, Session) -> HTTPException
+    """
+    Creates a permission on a group/resource combination if it is permitted and not conflicting.
+    :returns: corresponding HTTP response according to the encountered situation.
+    """
     resource_id = resource.resource_id
     check_valid_service_resource_permission(permission_name, resource, db_session)
     perm_content = {u'permission_name': str(permission_name),
@@ -48,6 +76,7 @@ def create_group_resource_permission(permission_name, resource, group, db_sessio
     )
     verify_param(create_perm, isNone=True, httpError=HTTPConflict,
                  msgOnFail=GroupResourcePermissions_POST_ConflictResponseSchema.description, content=perm_content)
+    # noinspection PyArgumentList
     new_perm = evaluate_call(lambda: models.GroupResourcePermission(resource_id=resource_id, group_id=group.id),
                              fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
                              msgOnFail=GroupResourcePermissions_POST_ForbiddenCreateResponseSchema.description,
@@ -82,7 +111,7 @@ def get_group_resources_permissions_dict(group, db_session, resource_ids=None, r
 def get_group_resource_permissions(group, resource, db_session):
     def get_grp_res_perms(grp, res, db):
         if res.owner_group_id == grp.id:
-            perm_names = resource_type_dict[res.type].permission_names
+            perm_names = models.resource_type_dict[res.type].permission_names
         else:
             grp_res_perm = db.query(models.GroupResourcePermission) \
                 .filter(models.GroupResourcePermission.resource_id == res.resource_id) \
@@ -157,6 +186,7 @@ def get_group_services_permissions(group, db_session, resource_ids=None):
 
 
 def get_group_service_resources_permissions_dict(group, service, db_session):
-    res_under_svc = resource_tree_service.from_parent_deeper(parent_id=service.resource_id, db_session=db_session)
+    res_id = service.resource_id
+    res_under_svc = models.resource_tree_service.from_parent_deeper(parent_id=res_id, db_session=db_session)
     res_ids = [resource.Resource.resource_id for resource in res_under_svc]
     return get_group_resources_permissions_dict(group, db_session, resource_types=None, resource_ids=res_ids)

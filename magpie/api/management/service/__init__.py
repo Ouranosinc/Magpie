@@ -9,7 +9,7 @@ def includeme(config):
     # Add all the rest api routes
     config.add_route(**service_api_route_info(ServicesAPI))
     config.add_route(**service_api_route_info(ServiceAPI))
-    config.add_route(**service_api_route_info(ServiceTypesAPI))
+    config.add_route(**service_api_route_info(ServiceTypeAPI))
     config.add_route(**service_api_route_info(ServicePermissionsAPI))
     config.add_route(**service_api_route_info(ServiceResourcesAPI))
     config.add_route(**service_api_route_info(ServiceResourceAPI))

@@ -8,12 +8,14 @@ import warnings
 import os
 
 
+def filter_test_files(root, filename):
+    return os.path.isfile(os.path.join(root, filename)) and filename.startswith('test') and filename.endswith('.py')
+
+
 test_root_path = os.path.abspath(os.path.dirname(__file__))
 test_root_name = os.path.split(test_root_path)[1]
-test_modules = [
-    '{}.test_magpie_api'.format(test_root_name),
-    '{}.test_magpie_ui'.format(test_root_name),
-]
+test_files = os.listdir(test_root_path)
+test_modules = [os.path.splitext(f)[0] for f in filter(lambda i: filter_test_files(test_root_path, i), test_files)]
 
 
 def default_run(option):
@@ -54,8 +56,8 @@ def test_suite():
                 suite.addTest(unittest.defaultTestLoader.loadTestsFromName(t))
             except AttributeError:
                 # if still not found, try discovery from root directory
-                #tests = unittest.defaultTestLoader.loadTestsFromModule(t)
-                #suite.addTests(tests)
+                # tests = unittest.defaultTestLoader.loadTestsFromModule(t)
+                # suite.addTests(tests)
                 suite.addTest(unittest.defaultTestLoader.discover(test_root_path))
     return suite
 

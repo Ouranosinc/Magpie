@@ -37,7 +37,7 @@ def get_resource_view(request):
                       content={resource.resource_id: res_json})
 
 
-@ResourcesAPI.post(schema=Resources_POST_RequestBodySchema, tags=[ResourcesTag],
+@ResourcesAPI.post(schema=Resources_POST_RequestSchema, tags=[ResourcesTag],
                    response_schemas=Resources_POST_responses)
 @view_config(route_name=ResourcesAPI.name, request_method='POST')
 def create_resource_view(request):

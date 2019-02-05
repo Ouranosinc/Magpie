@@ -4,6 +4,7 @@ __pycache__/
 .idea/
 .eggs/
 .pytest_cache/
+coverage.xml
 build/
 coverage/
 dist/
@@ -29,4 +30,5 @@ magpie.egg-info/
 src/
 share/
 /gunicorn.app.wsgiapp
+downloads/
 /sys

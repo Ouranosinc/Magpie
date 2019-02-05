@@ -1,4 +1,4 @@
-from magpie.register import get_twitcher_protected_service_url
+from magpie.utils import get_twitcher_protected_service_url
 from magpie.services import service_type_dict
 from magpie.definitions.pyramid_definitions import *
 from magpie.api.api_except import evaluate_call
@@ -12,7 +12,7 @@ def format_service(service, permissions=None, show_private_url=False):
             u'public_url': str(get_twitcher_protected_service_url(svc.resource_name)),
             u'service_name': str(svc.resource_name),
             u'service_type': str(svc.type),
-            u'service_sync_type': svc.sync_type,
+            u'service_sync_type': str(svc.sync_type),
             u'resource_id': svc.resource_id,
             u'permission_names': sorted(service_type_dict[svc.type].permission_names if perms is None else perms)
         }
@@ -33,7 +33,7 @@ def format_service_resources(service, db_session, service_perms=None,
     def fmt_svc_res(svc, db, svc_perms, res_perms, show_all):
         tree = get_resource_children(svc, db)
         if not show_all:
-            tree, resource_id_list_remain = crop_tree_with_permission(tree, res_perms.keys())
+            tree, resource_id_list_remain = crop_tree_with_permission(tree, list(res_perms.keys()))
 
         svc_perms = service_type_dict[svc.type].permission_names if svc_perms is None else svc_perms
         svc_res = format_service(svc, svc_perms, show_private_url=show_private_url)

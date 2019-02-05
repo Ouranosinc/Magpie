@@ -3,6 +3,23 @@
 History
 =======
 
+0.9.x
+---------------------
+
+* add permissions config to auto-generate user/group rules on startup
+* fix many invalid or erroneous swagger specifications
+* attempt db creation on first migration if not existing
+* add continuous integration testing and deployment (with python 2/3 tests)
+* ensure python compatibility for Python 2.7, 3.5, 3.6
+* reduce excessive sqlalchemy logging using `MAGPIE_LOG_LEVEL >= INFO`
+* use schema API route definitions for UI calls
+
+0.8.x
+---------------------
+
+* update MagpieAdapter to match process store changes
+* provide user ID on API routes returning user info
+
 0.7.x
 ---------------------
 

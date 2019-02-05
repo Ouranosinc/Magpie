@@ -7,14 +7,9 @@ from magpie.api.api_except import evaluate_call
 
 def format_resource(resource, permissions=None, basic_info=False):
     def fmt_res(res, perms, info):
-        resource_name = str(res.resource_name)
-        resource_display_name = resource_name
-        if res.resource_display_name:
-            resource_display_name = res.resource_display_name.encode('utf-8')
-
         result = {
-            u'resource_name': resource_name,
-            u'resource_display_name': resource_display_name,
+            u'resource_name': str(res.resource_name),
+            u'resource_display_name': str(res.resource_display_name or res.resource_name),
             u'resource_type': str(res.resource_type),
             u'resource_id': res.resource_id
         }

@@ -4,7 +4,7 @@ import os
 import shutil
 import dotenv
 import logging
-from magpie.common import str2bool, raise_log, print_log
+from magpie.common import str2bool, raise_log, print_log, get_settings_from_config_ini
 logger = logging.getLogger(__name__)
 
 # ===========================
@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 MAGPIE_MODULE_DIR = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
 MAGPIE_PROVIDERS_CONFIG_PATH = '{}/providers.cfg'.format(MAGPIE_ROOT)
+MAGPIE_PERMISSIONS_CONFIG_PATH = '{}/permissions.cfg'.format(MAGPIE_ROOT)
 MAGPIE_INI_FILE_PATH = '{}/magpie.ini'.format(MAGPIE_MODULE_DIR)
 MAGPIE_ALEMBIC_INI_FILE_PATH = '{}/alembic/alembic.ini'.format(MAGPIE_MODULE_DIR)
 # allow custom location of env files directory to avoid
@@ -40,6 +41,15 @@ except IOError:
     logger.warn("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR))
     pass
 
+# get default configurations from ini file
+_default_log_lvl = 'INFO'
+# noinspection PyBroadException
+try:
+    _settings = get_settings_from_config_ini(MAGPIE_INI_FILE_PATH, ini_main_section_name='logger_magpie')
+    _default_log_lvl = _settings.get('level', _default_log_lvl)
+except Exception:
+    pass
+
 # ===========================
 # variables from magpie.env
 # ===========================
@@ -57,6 +67,7 @@ MAGPIE_ANONYMOUS_GROUP = MAGPIE_ANONYMOUS_USER
 MAGPIE_EDITOR_GROUP = os.getenv('MAGPIE_EDITOR_GROUP', 'editors')
 MAGPIE_USERS_GROUP = os.getenv('MAGPIE_USERS_GROUP', 'users')
 MAGPIE_CRON_LOG = os.getenv('MAGPIE_CRON_LOG', '~/magpie-cron.log')
+MAGPIE_LOG_LEVEL = os.getenv('MAGPIE_LOG_LEVEL', _default_log_lvl)
 PHOENIX_USER = os.getenv('PHOENIX_USER', 'phoenix')
 PHOENIX_PASSWORD = os.getenv('PHOENIX_PASSWORD', 'qwerty')
 PHOENIX_PORT = int(os.getenv('PHOENIX_PORT', 8443))
@@ -71,13 +82,13 @@ MAGPIE_POSTGRES_USER = os.getenv('MAGPIE_POSTGRES_USER', 'magpie')
 MAGPIE_POSTGRES_PASSWORD = os.getenv('MAGPIE_POSTGRES_PASSWORD', 'qwerty')
 MAGPIE_POSTGRES_HOST = os.getenv('MAGPIE_POSTGRES_HOST', 'postgres')
 MAGPIE_POSTGRES_PORT = int(os.getenv('MAGPIE_POSTGRES_PORT', 5432))
-MAGPIE_POSTGRES_DB = os.getenv('MAGPIE_POSTGRES_DB', 'magpiedb')
+MAGPIE_POSTGRES_DB = os.getenv('MAGPIE_POSTGRES_DB', 'magpie')
 
 # ===========================
 # other constants
 # ===========================
 MAGPIE_ADMIN_PERMISSION = 'admin'
-#MAGPIE_ADMIN_PERMISSION = NO_PERMISSION_REQUIRED
+# MAGPIE_ADMIN_PERMISSION = NO_PERMISSION_REQUIRED
 MAGPIE_LOGGED_USER = 'current'
 MAGPIE_DEFAULT_PROVIDER = 'ziggurat'
 
@@ -136,5 +147,5 @@ def get_constant(name, settings=None, settings_name=None, default_value=None,
     if missing and raise_missing:
         raise_log("Constant could not be found: {}".format(name), level=logging.ERROR)
     if missing and print_missing:
-        print_log("Constant could not be found: {}".format(name), level=logging.WARN)
+        print_log("Constant could not be found: {} (using default: {})".format(name, default_value), level=logging.WARN)
     return magpie_value or default_value

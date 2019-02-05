@@ -1,6 +1,7 @@
 from magpie.definitions.cornice_definitions import *
 from magpie.definitions.pyramid_definitions import *
 from magpie.constants import get_constant
+# from magpie.security import get_provider_names
 from magpie import __meta__
 import six
 
@@ -211,7 +212,7 @@ ServicesAPI = Service(
 ServiceAPI = Service(
     path='/services/{service_name}',
     name='Service')
-ServiceTypesAPI = Service(
+ServiceTypeAPI = Service(
     path='/services/types/{service_type}',
     name='ServiceTypes')
 ServicePermissionsAPI = Service(
@@ -247,10 +248,32 @@ VersionAPI = Service(
 
 
 # Common path parameters
-GroupNameParameter = colander.SchemaNode(colander.String(), description="Registered user group.")
-UserNameParameter = colander.SchemaNode(colander.String(), description="Registered local user.")
-ProviderNameParameter = colander.SchemaNode(colander.String(), description="External identity provider.",
-                                            validator=colander.OneOf([]))
+GroupNameParameter = colander.SchemaNode(
+    colander.String(),
+    description="Registered user group.",
+    example="users",)
+UserNameParameter = colander.SchemaNode(
+    colander.String(),
+    description="Registered local user.",
+    example="toto",)
+ProviderNameParameter = colander.SchemaNode(
+    colander.String(),
+    description="External identity provider.",
+    example="DKRZ",
+    # validator=colander.OneOf(get_provider_names())
+)
+PermissionNameParameter = colander.SchemaNode(
+    colander.String(),
+    description="Permissions applicable to the service/resource.",
+    example="read",)
+ResourceIdParameter = colander.SchemaNode(
+    colander.String(),
+    description="Registered resource ID.",
+    example="123")
+ServiceNameParameter = colander.SchemaNode(
+    colander.String(),
+    description="Registered service name.",
+    example="my-wps")
 
 
 class HeaderResponseSchema(colander.MappingSchema):
@@ -290,8 +313,8 @@ class BaseResponseBodySchema(colander.MappingSchema):
     __code = None
     __desc = None
 
-    def __init__(self, code, description):
-        super(BaseResponseBodySchema, self).__init__()
+    def __init__(self, code, description, **kw):
+        super(BaseResponseBodySchema, self).__init__(**kw)
         assert isinstance(code, int)
         assert isinstance(description, six.string_types)
         self.__code = code
@@ -414,19 +437,11 @@ class ResourceTypesListSchema(colander.SequenceSchema):
 
 
 class GroupNamesListSchema(colander.SequenceSchema):
-    group_name = colander.SchemaNode(
-        colander.String(),
-        description="List of groups depending on context.",
-        example="administrators"
-    )
+    group_name = GroupNameParameter
 
 
 class UserNamesListSchema(colander.SequenceSchema):
-    user_name = colander.SchemaNode(
-        colander.String(),
-        description="Users registered in the db",
-        example="bob"
-    )
+    user_name = UserNameParameter
 
 
 class PermissionListSchema(colander.SequenceSchema):
@@ -438,10 +453,7 @@ class PermissionListSchema(colander.SequenceSchema):
 
 
 class UserBodySchema(colander.MappingSchema):
-    user_name = colander.SchemaNode(
-        colander.String(),
-        description="Name of the user.",
-        example="toto")
+    user_name = UserNameParameter
     email = colander.SchemaNode(
         colander.String(),
         description="Email of the user.",
@@ -645,6 +657,7 @@ class Resource_PUT_RequestBodySchema(colander.MappingSchema):
 class Resource_PUT_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
     body = Resource_PUT_RequestBodySchema()
+    resource_id = ResourceIdParameter
 
 
 class Resource_PUT_ResponseBodySchema(BaseResponseBodySchema):
@@ -690,6 +703,7 @@ class Resource_DELETE_RequestBodySchema(colander.MappingSchema):
 class Resource_DELETE_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
     body = Resource_DELETE_RequestBodySchema()
+    resource_id = ResourceIdParameter
 
 
 class Resource_DELETE_OkResponseSchema(colander.MappingSchema):
@@ -710,7 +724,7 @@ class Resources_GET_OkResponseSchema(colander.MappingSchema):
     body = Resources_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class Resources_POST_BodySchema(colander.MappingSchema):
+class Resources_POST_RequestBodySchema(colander.MappingSchema):
     resource_name = colander.SchemaNode(
         colander.String(),
         description="Name of the resource to create"
@@ -731,9 +745,9 @@ class Resources_POST_BodySchema(colander.MappingSchema):
     )
 
 
-class Resources_POST_RequestBodySchema(colander.MappingSchema):
+class Resources_POST_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
-    body = Resources_POST_BodySchema()
+    body = Resources_POST_RequestBodySchema()
 
 
 class Resource_POST_ResponseBodySchema(BaseResponseBodySchema):
@@ -951,6 +965,18 @@ class Services_POST_ConflictResponseSchema(colander.MappingSchema):
     body = BaseResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
+class Services_POST_UnprocessableEntityResponseSchema(colander.MappingSchema):
+    description = "Service creation for registration failed."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
+
+
+class Services_POST_InternalServerErrorResponseSchema(colander.MappingSchema):
+    description = "Service registration status could not be validated."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPInternalServerError.code, description=description)
+
+
 class Service_PUT_ResponseBodySchema(colander.MappingSchema):
     service_name = colander.SchemaNode(
         colander.String(),
@@ -1007,8 +1033,10 @@ class Service_PUT_ConflictResponseSchema(colander.MappingSchema):
     body = Service_FailureBodyResponseSchema(code=HTTPConflict.code, description=description)
 
 
-# delete service use same method as direct resource delete
-Service_DELETE_RequestSchema = Resource_DELETE_RequestSchema
+class Service_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    body = Resource_DELETE_RequestBodySchema()
+    service_name = ServiceNameParameter
 
 
 class Service_DELETE_OkResponseSchema(colander.MappingSchema):
@@ -1044,8 +1072,10 @@ class ServicePermissions_GET_NotAcceptableResponseSchema(colander.MappingSchema)
 
 
 # create service's resource use same method as direct resource create
-ServiceResources_POST_BodySchema = Resources_POST_BodySchema
-ServiceResources_POST_RequestBodySchema = Resources_POST_RequestBodySchema
+class ServiceResources_POST_RequestSchema(Resources_POST_RequestSchema):
+    service_name = ServiceNameParameter
+
+
 ServiceResources_POST_CreatedResponseSchema = Resources_POST_CreatedResponseSchema
 ServiceResources_POST_BadRequestResponseSchema = Resources_POST_BadRequestResponseSchema
 ServiceResources_POST_ForbiddenResponseSchema = Resources_POST_ForbiddenResponseSchema
@@ -1054,7 +1084,10 @@ ServiceResources_POST_ConflictResponseSchema = Resources_POST_ConflictResponseSc
 
 
 # delete service's resource use same method as direct resource delete
-ServiceResource_DELETE_RequestSchema = Resource_DELETE_RequestSchema
+class ServiceResource_DELETE_RequestSchema(Resource_DELETE_RequestSchema):
+    service_name = ServiceNameParameter
+
+
 ServiceResource_DELETE_ForbiddenResponseSchema = Resource_DELETE_ForbiddenResponseSchema
 ServiceResource_DELETE_OkResponseSchema = Resource_DELETE_OkResponseSchema
 
@@ -1363,6 +1396,7 @@ class UserGroups_POST_RequestBodySchema(colander.MappingSchema):
 class UserGroups_POST_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
     body = UserGroups_POST_RequestBodySchema()
+    user_name = UserNameParameter
 
 
 class UserGroups_POST_ResponseBodySchema(BaseResponseBodySchema):
@@ -1528,12 +1562,6 @@ class UserResourcePermissions_GET_NotFoundResponseSchema(colander.MappingSchema)
 
 
 class UserResourcePermissions_POST_RequestBodySchema(colander.MappingSchema):
-    resource_id = colander.SchemaNode(
-        colander.Integer(),
-        description="resource_id of the created user-resource-permission reference.")
-    user_id = colander.SchemaNode(
-        colander.Integer(),
-        description="user_id of the created user-resource-permission reference.")
     permission_name = colander.SchemaNode(
         colander.String(),
         description="permission_name of the created user-resource-permission reference.")
@@ -1542,6 +1570,8 @@ class UserResourcePermissions_POST_RequestBodySchema(colander.MappingSchema):
 class UserResourcePermissions_POST_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
     body = UserResourcePermissions_POST_RequestBodySchema()
+    resource_id = ResourceIdParameter
+    user_name = UserNameParameter
 
 
 class UserResourcePermissions_POST_ResponseBodySchema(BaseResponseBodySchema):
@@ -1604,7 +1634,11 @@ UserResourcePermissions_DELETE_BadRequestResponseSchema = UserResourcePermission
 
 
 class UserResourcePermission_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
     body = colander.MappingSchema(default={})
+    user_name = UserNameParameter
+    resource_id = ResourceIdParameter
+    permission_name = PermissionNameParameter
 
 
 class UserResourcePermissions_DELETE_OkResponseSchema(colander.MappingSchema):
@@ -1636,6 +1670,8 @@ class UserServiceResources_GET_QuerySchema(colander.MappingSchema):
 class UserServiceResources_GET_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
     querystring = UserServiceResources_GET_QuerySchema()
+    user_name = UserNameParameter
+    service_name = ServiceNameParameter
 
 
 class UserServicePermissions_POST_RequestBodySchema(colander.MappingSchema):
@@ -1645,11 +1681,16 @@ class UserServicePermissions_POST_RequestBodySchema(colander.MappingSchema):
 class UserServicePermissions_POST_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
     body = UserServicePermissions_POST_RequestBodySchema()
+    user_name = UserNameParameter
+    service_name = ServiceNameParameter
 
 
 class UserServicePermission_DELETE_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
     body = colander.MappingSchema(default={})
+    user_name = UserNameParameter
+    service_name = ServiceNameParameter
+    permission_name = PermissionNameParameter
 
 
 class UserServices_GET_QuerySchema(colander.MappingSchema):
@@ -1663,6 +1704,7 @@ class UserServices_GET_QuerySchema(colander.MappingSchema):
 class UserServices_GET_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
     querystring = UserServices_GET_QuerySchema()
+    user_name = UserNameParameter
 
 
 class UserServices_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1682,6 +1724,8 @@ class UserServicePermissions_GET_QuerySchema(colander.MappingSchema):
 class UserServicePermissions_GET_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
     querystring = UserServicePermissions_GET_QuerySchema()
+    user_name = UserNameParameter
+    service_name = ServiceNameParameter
 
 
 class UserServicePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1793,8 +1837,14 @@ class Group_GET_NotFoundResponseSchema(colander.MappingSchema):
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
-class Group_PUT_RequestSchema(colander.MappingSchema):
+class Group_PUT_RequestBodySchema(colander.MappingSchema):
     group_name = colander.SchemaNode(colander.String(), description="New name to apply to the group.")
+
+
+class Group_PUT_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    body = Group_PUT_RequestBodySchema()
+    group_name = GroupNameParameter
 
 
 class Group_PUT_OkResponseSchema(colander.MappingSchema):
@@ -1831,6 +1881,7 @@ class Group_PUT_ConflictResponseSchema(colander.MappingSchema):
 class Group_DELETE_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
     body = colander.MappingSchema(default={})
+    group_name = GroupNameParameter
 
 
 class Group_DELETE_OkResponseSchema(colander.MappingSchema):
@@ -1900,11 +1951,22 @@ class GroupServicePermissions_GET_InternalServerErrorResponseSchema(colander.Map
         code=HTTPInternalServerError.code, description=description)
 
 
-class GroupServicePermissions_POST_RequestSchema(colander.MappingSchema):
+class GroupServicePermissions_POST_RequestBodySchema(colander.MappingSchema):
     permission_name = colander.SchemaNode(colander.String(), description="Name of the permission to create.")
 
 
-GroupResourcePermissions_POST_RequestSchema = GroupServicePermissions_POST_RequestSchema
+class GroupServicePermissions_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    body = GroupServicePermissions_POST_RequestBodySchema()
+    group_name = GroupNameParameter
+    service_name = ServiceNameParameter
+
+
+class GroupResourcePermissions_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    body = GroupServicePermissions_POST_RequestBodySchema()
+    group_name = GroupNameParameter
+    resource_id = ResourceIdParameter
 
 
 class GroupResourcePermissions_POST_ResponseBodySchema(BaseResponseBodySchema):
@@ -1946,6 +2008,9 @@ class GroupResourcePermissions_POST_ConflictResponseSchema(colander.MappingSchem
 class GroupResourcePermission_DELETE_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchema()
     body = colander.MappingSchema(default={})
+    group_name = GroupNameParameter
+    resource_id = ResourceIdParameter
+    permission_name = PermissionNameParameter
 
 
 class GroupResourcesPermissions_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
@@ -2014,8 +2079,16 @@ class GroupServiceResources_GET_OkResponseSchema(colander.MappingSchema):
     body = GroupServiceResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class GroupServicePermission_DELETE_RequestSchema(colander.MappingSchema):
+class GroupServicePermission_DELETE_RequestBodySchema(colander.MappingSchema):
     permission_name = colander.SchemaNode(colander.String(), description="Name of the permission to delete.")
+
+
+class GroupServicePermission_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchema()
+    body = GroupServicePermission_DELETE_RequestBodySchema()
+    group_name = GroupNameParameter
+    service_name = ServiceNameParameter
+    permission_name = PermissionNameParameter
 
 
 class GroupServicePermission_DELETE_ResponseBodySchema(BaseResponseBodySchema):
@@ -2102,8 +2175,8 @@ class ProviderSignin_GET_HeaderRequestSchema(HeaderRequestSchema):
 
 
 class ProviderSignin_GET_RequestSchema(colander.MappingSchema):
-    provider_name = ProviderNameParameter
     header = ProviderSignin_GET_HeaderRequestSchema()
+    provider_name = ProviderNameParameter
 
 
 class ProviderSignin_GET_FoundResponseBodySchema(BaseResponseBodySchema):
@@ -2296,6 +2369,7 @@ Services_POST_responses = {
     '401': UnauthorizedResponseSchema(),
     '403': Services_POST_ForbiddenResponseSchema(),
     '409': Services_POST_ConflictResponseSchema(),
+    '422': Services_POST_UnprocessableEntityResponseSchema(),
 }
 Service_GET_responses = {
     '200': Service_GET_OkResponseSchema(),

@@ -3,6 +3,7 @@ from magpie.api.api_rest_schemas import *
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
 from magpie.api.management.user.user_formats import *
+from magpie.definitions.sqlalchemy_definitions import Session
 from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.pyramid_definitions import Request
 from magpie.services import service_factory, ResourcePermissionType, ServiceI
@@ -11,34 +12,41 @@ from typing import Any, AnyStr, Dict, List, Optional, Union
 
 
 def create_user(user_name, password, email, group_name, db_session):
-    db = db_session
+    # type: (AnyStr, Union[AnyStr, None], AnyStr, AnyStr, Session) -> HTTPException
+    """
+    Creates a user if it is permitted and not conflicting.
+    Password must be set to `None` if using external identity.
+    :returns: corresponding HTTP response according to the encountered situation.
+    """
 
     # Check that group already exists
-    group_check = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db),
+    group_check = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db_session),
                                 httpError=HTTPForbidden, msgOnFail=UserGroup_GET_ForbiddenResponseSchema.description)
     verify_param(group_check, notNone=True, httpError=HTTPNotAcceptable,
                  msgOnFail=UserGroup_Check_ForbiddenResponseSchema.description)
 
     # Check if user already exists
-    user_check = evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db),
+    user_check = evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
                                httpError=HTTPForbidden, msgOnFail=User_Check_ForbiddenResponseSchema.description)
     verify_param(user_check, isNone=True, httpError=HTTPConflict,
                  msgOnFail=User_Check_ConflictResponseSchema.description)
 
     # Create user with specified name and group to assign
+    # noinspection PyArgumentList
     new_user = models.User(user_name=user_name, email=email)
     if password:
         UserService.set_password(new_user, password)
         UserService.regenerate_security_code(new_user)
-    evaluate_call(lambda: db.add(new_user), fallback=lambda: db.rollback(),
+    evaluate_call(lambda: db_session.add(new_user), fallback=lambda: db_session.rollback(),
                   httpError=HTTPForbidden, msgOnFail=Users_POST_ForbiddenResponseSchema.description)
     # Fetch user to update fields
-    new_user = evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db),
+    new_user = evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db_session),
                              httpError=HTTPForbidden, msgOnFail=UserNew_POST_ForbiddenResponseSchema.description)
 
     # Assign user to group
+    # noinspection PyArgumentList
     group_entry = models.UserGroup(group_id=group_check.id, user_id=new_user.id)
-    evaluate_call(lambda: db.add(group_entry), fallback=lambda: db.rollback(),
+    evaluate_call(lambda: db_session.add(group_entry), fallback=lambda: db_session.rollback(),
                   httpError=HTTPForbidden, msgOnFail=UserGroup_GET_ForbiddenResponseSchema.description)
 
     return valid_http(httpSuccess=HTTPCreated, detail=Users_POST_CreatedResponseSchema.description,
@@ -46,6 +54,11 @@ def create_user(user_name, password, email, group_name, db_session):
 
 
 def create_user_resource_permission(permission_name, resource, user_id, db_session):
+    # type: (AnyStr, models.Resource, models.User, Session) -> HTTPException
+    """
+    Creates a permission on a user/resource combination if it is permitted and not conflicting.
+    :returns: corresponding HTTP response according to the encountered situation.
+    """
     check_valid_service_resource_permission(permission_name, resource, db_session)
     resource_id = resource.resource_id
     existing_perm = UserResourcePermissionService.by_resource_user_and_perm(
@@ -54,6 +67,7 @@ def create_user_resource_permission(permission_name, resource, user_id, db_sessi
                  content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name},
                  msgOnFail=UserResourcePermissions_POST_ConflictResponseSchema.description)
 
+    # noinspection PyArgumentList
     new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id, perm_name=permission_name)
     verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
                  content={u'resource_id': resource_id, u'user_id': user_id},

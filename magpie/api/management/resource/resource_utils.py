@@ -6,6 +6,10 @@ from magpie.definitions.ziggurat_definitions import *
 from magpie.api.api_requests import *
 from magpie.api.api_except import verify_param, evaluate_call, raise_http, valid_http
 from magpie.api.management.resource.resource_formats import format_resource
+from typing import AnyStr, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from magpie.definitions.pyramid_definitions import HTTPException
+    from magpie.definitions.sqlalchemy_definitions import Session
 
 
 def check_valid_service_resource_permission(permission_name, service_resource, db_session):
@@ -55,15 +59,14 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
 
 
 def crop_tree_with_permission(children, resource_id_list):
-    for child_id, child_dict in children.items():
+    for child_id, child_dict in list(children.items()):
         new_children = child_dict[u'children']
         children_returned, resource_id_list = crop_tree_with_permission(new_children, resource_id_list)
-        is_in_resource_id_list = child_id in resource_id_list
-        if not is_in_resource_id_list and not children_returned:
+        if child_id not in resource_id_list and not children_returned:
             children.pop(child_id)
-        elif is_in_resource_id_list:
+        elif child_id in resource_id_list:
             resource_id_list.remove(child_id)
-    return children, resource_id_list
+    return dict(children), list(resource_id_list)
 
 
 def get_resource_path(resource_id, db_session):
@@ -125,11 +128,12 @@ def get_resource_root_service(resource, db_session):
 
 
 def create_resource(resource_name, resource_display_name, resource_type, parent_id, db_session):
+    # type: (AnyStr, Union[AnyStr, None], AnyStr, int, Session) -> HTTPException
     verify_param(resource_name, paramName=u'resource_name', notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `resource_name` specified for child resource creation.")
     verify_param(resource_type, paramName=u'resource_type', notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `resource_type` specified for child resource creation.")
-    verify_param(parent_id, paramName=u'parent_id', notNone=True, notEmpty=True, httpError=HTTPBadRequest,
+    verify_param(parent_id, paramName=u'parent_id', notNone=True, notEmpty=True, ofType=int, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `parent_id` specified for child resource creation.")
     parent_resource = evaluate_call(lambda: ResourceService.by_resource_id(parent_id, db_session=db_session),
                                     fallback=lambda: db_session.rollback(), httpError=HTTPNotFound,

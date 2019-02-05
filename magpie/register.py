@@ -1,16 +1,40 @@
-from magpie.services import service_type_dict
-from magpie.common import make_dirs, print_log, raise_log, bool2str
+from magpie.api.api_rest_schemas import (
+    SigninAPI,
+    SignoutAPI,
+    ServicesAPI,
+    ServiceAPI,
+    ServiceResourcesAPI,
+    GroupsAPI,
+    UsersAPI,
+    GroupResourcePermissionsAPI,
+    UserResourcePermissionsAPI,
+)
+from magpie.common import make_dirs, print_log, raise_log, bool2str, islambda
 from magpie.constants import get_constant
+from magpie.definitions.ziggurat_definitions import (
+    ResourceService,
+    GroupService,
+    UserService,
+    UserResourcePermissionService,
+)
+from magpie.definitions.sqlalchemy_definitions import Session
+from magpie.definitions.pyramid_definitions import HTTPException
+from magpie.permissions import permissions_supported
+from magpie.services import service_type_dict
 from magpie import models
-from magpie.definitions.ziggurat_definitions import UserService, UserResourcePermissionService
+from magpie.utils import get_twitcher_protected_service_url, get_phoenix_url, get_magpie_url, get_admin_cookies
+from typing import AnyStr, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+from requests.cookies import RequestsCookieJar
 import os
+import six
 import time
 import yaml
 import subprocess
 import requests
 import transaction
+# noinspection PyUnresolvedReferences
 import logging
-
+import logging.config   # find config in 'logging.ini'
 LOGGER = logging.getLogger(__name__)
 
 LOGIN_ATTEMPT = 10              # max attempts for login
@@ -24,6 +48,11 @@ GETCAPABILITIES_ATTEMPTS = 12   # max attempts for 'GetCapabilities' validations
 SERVICES_MAGPIE = 'MAGPIE'
 SERVICES_PHOENIX = 'PHOENIX'
 SERVICES_PHOENIX_ALLOWED = ['wps']
+
+if TYPE_CHECKING:
+    ConfigItem = Dict[AnyStr, AnyStr]
+    ConfigList = List[ConfigItem]
+    ConfigDict = Dict[AnyStr, Union[ConfigItem, ConfigList]]
 
 
 def login_loop(login_url, cookies_file, data=None, message='Login response'):
@@ -46,9 +75,15 @@ def login_loop(login_url, cookies_file, data=None, message='Login response'):
 
 
 def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Response'):
+    # type: (AnyStr, Optional[AnyStr], Optional[AnyStr], Optional[AnyStr], Optional[AnyStr]) -> Tuple[int, int]
+    """Executes a request using cURL.
+
+    :returns: tuple of the returned system command code and the response http code
+    """
+
     # arg -k allows to ignore insecure SSL errors, ie: access 'https' page not configured for it
-    ###curl_cmd = 'curl -k -L -s -o /dev/null -w "{msg_out} : %{{http_code}}\\n" {params} {url}'
-    ###curl_cmd = curl_cmd.format(msg_out=msg, params=params, url=url)
+    #   curl_cmd = 'curl -k -L -s -o /dev/null -w "{msg_out} : %{{http_code}}\\n" {params} {url}'
+    #   curl_cmd = curl_cmd.format(msg_out=msg, params=params, url=url)
     msg_sep = msg + ": "
     params = ['curl', '-k', '-L', '-s', '-o', '/dev/null', '-w', msg_sep + '%{http_code}']
     if cookie_jar is not None and cookies is not None:
@@ -61,8 +96,8 @@ def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Resp
         params.extend(['--data', form_params])
     params.extend([url])
     curl_out = subprocess.Popen(params, stdout=subprocess.PIPE)
-    curl_msg = curl_out.communicate()[0]
-    curl_err = curl_out.returncode
+    curl_msg = curl_out.communicate()[0]    # type: AnyStr
+    curl_err = curl_out.returncode          # type: int
     http_code = int(curl_msg.split(msg_sep)[1])
     print_log("[{url}] {response}".format(response=curl_msg, url=url))
     return curl_err, http_code
@@ -91,8 +126,8 @@ def phoenix_login(cookies):
 def phoenix_login_check(cookies):
     """
     Since Phoenix always return 200, even on invalid login, 'hack' check unauthorized access.
-    :param cookies:
-    :return:
+    :param cookies: temporary cookies file storage used for login with `phoenix_login`.
+    :return: status indicating if login access was granted with defined credentials.
     """
     no_access_error = "<ExceptionText>Unauthorized: Services failed permission check</ExceptionText>"
     svc_url = get_phoenix_url() + '/services'
@@ -103,6 +138,11 @@ def phoenix_login_check(cookies):
 
 
 def phoenix_remove_services():
+    # type: (...) -> bool
+    """Removes the Phoenix services using temporary cookies retrieved from login with defined `PHOENIX` constants.
+
+    :returns: success status of the procedure.
+    """
     phoenix_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_phoenix')
     error = 0
     try:
@@ -139,10 +179,8 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
                 filtered_services_dict[svc]['type'] = filtered_services_dict[svc]['type'].upper()
 
         # Register services
-        phoenix_url = get_phoenix_url()
-        register_service_url = phoenix_url + '/services/register'
-        success, statuses = register_services(register_service_url, filtered_services_dict,
-                                              phoenix_cookies, 'Phoenix register service', SERVICES_PHOENIX)
+        success, statuses = register_services(SERVICES_PHOENIX, filtered_services_dict,
+                                              phoenix_cookies, 'Phoenix register service')
     except Exception as e:
         print_log("Exception during phoenix register services: [" + repr(e) + "]")
     finally:
@@ -151,42 +189,26 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
     return success, statuses
 
 
-def get_phoenix_url():
-    hostname = get_constant('HOSTNAME')
-    phoenix_port = get_constant('PHOENIX_PORT', raise_not_set=False)
-    return 'https://{0}{1}'.format(hostname, ':{}'.format(phoenix_port) if phoenix_port else '')
+def register_services(where,                        # type: Optional[AnyStr]
+                      services_dict,                # type: Dict[AnyStr, Dict[AnyStr, AnyStr]]
+                      cookies,                      # type: AnyStr
+                      message='Register response',  # type: AnyStr
+                      ):                            # type: (...) -> Tuple[bool, Dict[AnyStr, int]]
+    """
+    Registers services on desired location using provided configurations and access cookies.
 
-
-def get_magpie_url():
-    hostname = get_constant('HOSTNAME')
-    magpie_port = get_constant('MAGPIE_PORT', raise_not_set=False)
-    return 'http://{0}{1}'.format(hostname, ':{}'.format(magpie_port) if magpie_port else '')
-
-
-def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
-    twitcher_proxy_url = get_constant('TWITCHER_PROTECTED_URL', raise_not_set=False)
-    if not twitcher_proxy_url:
-        twitcher_proxy = get_constant('TWITCHER_PROTECTED_PATH', raise_not_set=False)
-        if not twitcher_proxy.endswith('/'):
-            twitcher_proxy = twitcher_proxy + '/'
-        if not twitcher_proxy.startswith('/'):
-            twitcher_proxy = '/' + twitcher_proxy
-        if not twitcher_proxy.startswith('/twitcher'):
-            twitcher_proxy = '/twitcher' + twitcher_proxy
-        hostname = hostname or get_constant('HOSTNAME')
-        twitcher_proxy_url = "https://{0}{1}".format(hostname, twitcher_proxy)
-    twitcher_proxy_url = twitcher_proxy_url.rstrip('/')
-    return "{0}/{1}".format(twitcher_proxy_url, magpie_service_name)
-
-
-def register_services(register_service_url, services_dict, cookies,
-                      message='Register response', where=SERVICES_MAGPIE):
+    :returns: tuple of overall success and individual http response of each service registration.
+    """
     success = True
+    svc_url = None
     statuses = dict()
+    register_service_url = None
     if where == SERVICES_MAGPIE:
         svc_url_tag = 'service_url'
+        get_magpie_url() + ServicesAPI.path
     elif where == SERVICES_PHOENIX:
         svc_url_tag = 'url'
+        register_service_url = get_phoenix_url() + '/services/register'
     else:
         raise ValueError("Unknown location for service registration", where)
     for service_name in services_dict:
@@ -219,6 +241,7 @@ def sync_services_phoenix(services_object_dict, services_as_dicts=False):
     """
     Syncs Magpie services by pushing updates to Phoenix.
     Services must be one of types specified in SERVICES_PHOENIX_ALLOWED.
+
     :param services_object_dict: dictionary of {svc-name: models.Service} objects containing each service's information
     :param services_as_dicts: alternatively specify `services_object_dict` as dict of {svc-name: {service-info}}
     where {service-info} = {'public_url': <url>, 'service_name': <name>, 'service_type': <type>}
@@ -289,6 +312,8 @@ def magpie_add_register_services_perms(services, statuses, curl_cookies, request
 
 
 def magpie_update_services_conflict(conflict_services, services_dict, request_cookies):
+    # type: (List[AnyStr], ConfigDict, Dict[AnyStr, AnyStr]) -> Dict[AnyStr, int]
+    """Resolve conflicting services by name during registration by updating them only if pointing to different URL."""
     magpie_url = get_magpie_url()
     statuses = dict()
     for svc_name in conflict_services:
@@ -306,16 +331,29 @@ def magpie_update_services_conflict(conflict_services, services_dict, request_co
     return statuses
 
 
-def magpie_register_services(services_dict, push_to_phoenix, user, password, provider,
-                             force_update=False, disable_getcapabilities=False):
+def magpie_register_services_with_requests(services_dict, push_to_phoenix, username, password, provider,
+                                           force_update=False, disable_getcapabilities=False):
+    # type: (ConfigDict, bool, AnyStr, AnyStr, AnyStr, Optional[bool], Optional[bool]) -> bool
+    """
+    Registers magpie services using the provided services configuration.
+
+    :param services_dict: services configuration definition.
+    :param push_to_phoenix: push registered Magpie services to Phoenix for synced configurations.
+    :param username: login username to use to obtain permissions for services registration.
+    :param password: login password to use to obtain permissions for services registration.
+    :param provider: login provider to use to obtain permissions for services registration.
+    :param force_update: override existing services matched by name
+    :param disable_getcapabilities: do not execute 'GetCapabilities' validation for applicable services.
+    :return: successful operation status
+    """
     magpie_url = get_magpie_url()
     curl_cookies = os.path.join(LOGIN_TMP_DIR, 'login_cookie_magpie')
     session = requests.Session()
     success = False
     try:
         # Need to login first as admin
-        login_url = magpie_url + '/signin'
-        login_data = {'user_name': user, 'password': password, 'provider_name': provider}
+        login_url = magpie_url + SigninAPI.path
+        login_data = {'user_name': username, 'password': password, 'provider_name': provider}
         login_loop(login_url, curl_cookies, login_data, 'Magpie login response')
         login_resp = session.post(login_url, data=login_data)
         if login_resp.status_code != 200:
@@ -324,9 +362,8 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
 
         # Register services
         # Magpie will not overwrite existing services by default, 409 Conflict instead of 201 Created
-        register_service_url = magpie_url + '/services'
-        success, statuses_register = register_services(register_service_url, services_dict, curl_cookies,
-                                                       'Magpie register service', SERVICES_MAGPIE)
+        success, statuses_register = register_services(SERVICES_MAGPIE, services_dict,
+                                                       curl_cookies, 'Magpie register service')
         # Service URL update if conflicting and requested
         if force_update and not success:
             conflict_services = [svc_name for svc_name, http_code in statuses_register.items() if http_code == 409]
@@ -337,7 +374,7 @@ def magpie_register_services(services_dict, push_to_phoenix, user, password, pro
         # Phoenix doesn't register the service if it cannot be checked with this request
         magpie_add_register_services_perms(services_dict, statuses_register,
                                            curl_cookies, request_cookies, disable_getcapabilities)
-        session.get(magpie_url + '/signout')
+        session.get(magpie_url + SignoutAPI.path)
 
         # Push updated services to Phoenix
         if push_to_phoenix:
@@ -376,6 +413,7 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
             print_log("Skipping service [{svc}] (conflict)" .format(svc=svc_name))
         else:
             print_log("Adding service [{svc}]".format(svc=svc_name))
+            # noinspection PyArgumentList
             svc = models.Service(resource_name=svc_name,
                                  resource_type=models.Service.resource_type_name,
                                  url=svc_new_url,
@@ -393,6 +431,7 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
             )
             if svc_perm_getcapabilities is None:
                 print_log("Adding 'getcapabilities' permission to anonymous user")
+                # noinspection PyArgumentList
                 svc_perm_getcapabilities = models.UserResourcePermission(
                     user_id=anonymous_user.id, perm_name='getcapabilities', resource_id=svc.resource_id
                 )
@@ -406,23 +445,322 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
     return True
 
 
+def _load_config(path_or_dict, section):
+    # type: (Union[AnyStr, ConfigDict], AnyStr) -> ConfigDict
+    """Loads a file path or dictionary as YAML/JSON configuration."""
+    try:
+        if isinstance(path_or_dict, six.string_types):
+            cfg = yaml.load(open(path_or_dict, 'r'))
+        else:
+            cfg = path_or_dict
+        return cfg[section]
+    except KeyError as ex:
+        raise_log("Config file section [{!s}] not found.".format(section), exception=type(ex))
+    except Exception as ex:
+        raise_log("Invalid config file [{!r}]".format(ex), exception=type(ex))
+
+
 def magpie_register_services_from_config(service_config_file_path, push_to_phoenix=False,
                                          force_update=False, disable_getcapabilities=False, db_session=None):
-    try:
-        services_cfg = yaml.load(open(service_config_file_path, 'r'))
-        services = services_cfg['providers']
-    except Exception as e:
-        raise_log("Bad service file + [" + repr(e) + "]", exception=type(e))
+    # type: (AnyStr, Optional[bool], Optional[bool], Optional[bool], Optional[Session]) -> None
+    """
+    Registers Magpie services from a `providers.cfg` file.
+    Uses the provided DB session to directly update service definitions, or uses API request routes as admin.
+    Optionally pushes updates to Phoenix.
+    """
+    services = _load_config(service_config_file_path, 'providers')
+    if not services:
+        LOGGER.warning("Services configuration are empty.")
+        return
 
     # register services using API POSTs
     if db_session is None:
         admin_usr = get_constant('MAGPIE_ADMIN_USER')
         admin_pwd = get_constant('MAGPIE_ADMIN_PASSWORD')
-        magpie_register_services(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat',
-                                 force_update=force_update, disable_getcapabilities=disable_getcapabilities)
+        magpie_register_services_with_requests(services, push_to_phoenix, admin_usr, admin_pwd, 'ziggurat',
+                                               force_update=force_update,
+                                               disable_getcapabilities=disable_getcapabilities)
 
     # register services directly to db using session
     else:
         magpie_register_services_with_db_session(services, db_session,
                                                  push_to_phoenix=push_to_phoenix, force_update=force_update,
                                                  update_getcapabilities_permissions=not disable_getcapabilities)
+
+
+def warn_permission(msg, _i, trail="skipping...", detail=None, permission=None, level=logging.WARN):
+    if detail:
+        trail = "{}\nDetail: [{!r}]".format(trail, detail)
+    if permission:
+        permission = ' [{!s}]'
+    LOGGER.log(level, "{!s} [permission #{}]{}, {}".format(msg, _i, permission or '', trail))
+
+
+def use_request(cookies_or_session):
+    return not isinstance(cookies_or_session, Session)
+
+
+def parse_resource_path(permission_config_entry,    # type: ConfigItem
+                        entry_index,                # type: int
+                        service_info,               # type: ConfigItem
+                        cookies_or_session=None,    # type: Union[RequestsCookieJar, Session]
+                        magpie_url=None,            # type: AnyStr
+                        ):                          # type: (...) -> Tuple[Union[int, None], bool]
+    """
+    Parses the `resource` field of a permission config entry and retrieves the final resource id.
+    Creates missing resources as necessary if they can be automatically resolved.
+
+    If `cookies` are provided, uses requests to a running `Magpie` instance (with `magpie_url`) to apply permission.
+    If `session` to db is provided, uses direct db connection instead to apply permission.
+
+    :returns: tuple of found id (if any, `None` otherwise), and success status of the parsing operation (error)
+    """
+    if not magpie_url and use_request(cookies_or_session):
+        raise ValueError("cannot use cookies without corresponding request URL")
+
+    resource = None
+    resource_path = permission_config_entry.get('resource', '')
+    if resource_path.startswith('/'):
+        resource_path = resource_path[1:]
+    if resource_path.endswith('/'):
+        resource_path = resource_path[:-1]
+    if resource_path:
+        try:
+            svc_name = service_info['service_name']
+            svc_type = service_info['service_type']
+            if use_request(cookies_or_session):
+                res_path = get_magpie_url() + ServiceResourcesAPI.path.format(service_name=svc_name)
+                res_dict = requests.get(res_path, cookies=cookies_or_session).json()[svc_name]['resources']
+            else:
+                from magpie.api.management.service.service_formats import format_service_resources
+                svc = models.Service.by_service_name(svc_name, db_session=cookies_or_session)
+                res_dict = format_service_resources(svc, db_session=cookies_or_session)
+            parent = None
+            for res in resource_path.split('/'):
+                if len(res_dict):
+                    # resource is specified by id/name
+                    res_id = list(filter(lambda r: res in [r, res_dict[r]["resource_name"]], res_dict))
+                    if res_id:
+                        res_dict = res_dict[res_id[0]]['children']  # update for upcoming sub-resource iteration
+                        parent = int(res[0])
+                        continue
+                # missing resource, attempt creation
+                type_count = len(service_type_dict[svc_type].resource_types)
+                if type_count != 1:
+                    warn_permission("Cannot automatically generate resources", entry_index,
+                                    detail="Service [{}] of type [{}] allows {} sub-resource types"
+                                           .format(svc_name, svc_type, type_count))
+                    raise Exception("Missing resource to apply permission.")  # fail fast
+                res_type = service_type_dict[svc_type].resource_types[0]
+                if use_request(cookies_or_session):
+                    body = {'resource_name': res, 'resource_type': res_type, 'parent_id': parent}
+                    # noinspection PyUnboundLocalVariable
+                    resp = requests.post(res_path, json=body, cookies=cookies_or_session)
+                else:
+                    from magpie.api.management.resource.resource_utils import create_resource
+                    resp = create_resource(res, res, res_type, parent, db_session=cookies_or_session)
+                if resp.status_code != 201:
+                    resp.raise_for_status()
+                parent = resp.json()['resource']['resource_id']
+            resource = parent
+            if not resource:
+                raise Exception("Could not extract child resource from resource path.")
+        except Exception as ex:
+            warn_permission("Failed resources parsing.", entry_index, detail=ex)
+            return None, False
+    return resource, True
+
+
+def apply_permission_entry(permission_config_entry,     # type: ConfigItem
+                           entry_index,                 # type: int
+                           resource_id,                 # type: int
+                           cookies_or_session,          # type: Union[RequestsCookieJar, Session]
+                           magpie_url,                  # type: Optional[AnyStr]
+                           ):                           # type: (...) -> None
+    """
+    Applies the single permission entry retrieved from the permission configuration.
+    Assumes that permissions fields where pre-validated.
+    Permission is applied for the user/group/resource using request or db session accordingly to arguments.
+    """
+
+    def _apply_request(_usr_name=None, _grp_name=None):
+        """Apply operation using HTTP request."""
+        action_oper = None
+        if usr_name:
+            action_oper = UserResourcePermissionsAPI.path.replace('{user_name}', _usr_name)
+        if grp_name:
+            action_oper = GroupResourcePermissionsAPI.path.replace('{group_name}', _grp_name)
+        if not action_oper:
+            return None
+        if create_perm:
+            action_func = requests.post
+            action_path = '{url}{path}'.format(url=magpie_url, path=action_oper)
+            action_body = {'permission_name': perm_name}
+        else:
+            action_func = requests.delete
+            action_path = '{url}{path}/{perm_name}'.format(url=magpie_url, path=action_oper, perm_name=perm_name)
+            action_body = {}
+        action_path = action_path.format(resource_id=resource_id)
+        action_resp = action_func(action_path, json=action_body, cookies=cookies_or_session)
+        return action_resp
+
+    def _apply_session(_usr_name=None, _grp_name=None):
+        """Apply operation using db session."""
+        from magpie.api.management.user import user_utils as ut
+        from magpie.api.management.group import group_utils as gt
+
+        res = ResourceService.by_resource_id(resource_id, db_session=cookies_or_session)
+        if _usr_name:
+            usr = UserService.by_user_name(_usr_name, db_session=cookies_or_session)
+            if create_perm:
+                return ut.create_user_resource_permission(perm_name, res, usr, db_session=cookies_or_session)
+            else:
+                return ut.delete_user_resource_permission(perm_name, res, usr, db_session=cookies_or_session)
+        if _grp_name:
+            grp = GroupService.by_group_name(_grp_name, db_session=cookies_or_session)
+            if create_perm:
+                return gt.create_group_resource_permission(perm_name, res, grp, db_session=cookies_or_session)
+            else:
+                return gt.delete_group_resource_permission(perm_name, res, grp, db_session=cookies_or_session)
+
+    def _apply_profile(_usr_name=None, _grp_name=None):
+        """Creates the user/group profile as required."""
+        usr_data = {'user_name': _usr_name, 'password': '12345', 'email': '{}@mail.com'.format(_usr_name),
+                    'group_name': get_constant('MAGPIE_ANONYMOUS_GROUP')}
+        if use_request(cookies_or_session):
+            if _usr_name:
+                path = '{url}{path}'.format(url=magpie_url, path=UsersAPI.path)
+                return requests.post(path, json=usr_data)
+            if _grp_name:
+                path = '{url}{path}'.format(url=magpie_url, path=GroupsAPI.path)
+                data = {'group_name': _grp_name}
+                return requests.post(path, json=data)
+        else:
+            if _usr_name:
+                from magpie.api.management.user.user_utils import create_user
+                usr_data['db_session'] = cookies_or_session
+                return create_user(**usr_data)
+            if _grp_name:
+                from magpie.api.management.group.group_utils import create_group
+                return create_group(_grp_name, cookies_or_session)
+
+    def _validate_response(operation, is_create, item_type='Permission'):
+        """Validate action/operation applied."""
+        # handle HTTPException raised
+        if not islambda(operation):
+            raise Exception("invalid use of method")
+        try:
+            _resp = operation()
+            if _resp is None:
+                return
+        except HTTPException as exc:
+            _resp = exc
+        except Exception:
+            raise
+
+        # validation according to status code returned
+        if is_create:
+            if _resp.status_code == 201:
+                warn_permission("{} successfully created.".format(item_type), entry_index, level=logging.INFO)
+            elif _resp.status_code == 409:
+                warn_permission("{} already exists.".format(item_type), entry_index, level=logging.INFO)
+            else:
+                warn_permission("Unknown response [{}]".format(_resp.status_code),
+                                entry_index, permission=permission_config_entry, level=logging.ERROR)
+        else:
+            if _resp.status_code == 200:
+                warn_permission("{} successfully removed.".format(item_type), entry_index, level=logging.INFO)
+            elif _resp.status_code == 404:
+                warn_permission("{} already removed.".format(item_type), entry_index, level=logging.INFO)
+            else:
+                warn_permission("Unknown response [{}]".format(_resp.status_code),
+                                entry_index, permission=permission_config_entry, level=logging.ERROR)
+
+    create_perm = permission_config_entry['action'] == 'create'
+    perm_name = permission_config_entry['permission']
+    usr_name = permission_config_entry.get('user')
+    grp_name = permission_config_entry.get('group')
+
+    _validate_response(lambda: _apply_profile(usr_name, None), is_create=True)
+    _validate_response(lambda: _apply_profile(None, grp_name), is_create=True)
+
+    if use_request(cookies_or_session):
+        _validate_response(lambda: _apply_request(usr_name, None), is_create=create_perm)
+        _validate_response(lambda: _apply_request(None, grp_name), is_create=create_perm)
+    else:
+        _validate_response(lambda: _apply_session(usr_name, None), is_create=create_perm)
+        _validate_response(lambda: _apply_session(None, grp_name), is_create=create_perm)
+
+
+def magpie_register_permissions_from_config(permissions_config, magpie_url=None, db_session=None):
+    # type: (Union[AnyStr, ConfigDict], Optional[AnyStr], Optional[Session]) -> None
+    """
+    Applies permissions specified in configuration.
+
+    :param permissions_config: file path to 'permissions' config or JSON/YAML equivalent pre-loaded.
+    :param magpie_url: URL to magpie instance (when using requests; default: `magpie.url` from this app's config).
+    :param db_session: db session to use instead of requests to directly create/remove permissions with config.
+
+    .. seealso::
+        `magpie/permissions.cfg` for specific parameter or operational details.
+    """
+    permissions = _load_config(permissions_config, 'permissions')
+    if not permissions:
+        LOGGER.warning("Permissions configuration are empty.")
+        return
+
+    if use_request(db_session):
+        magpie_url = magpie_url or get_magpie_url()
+        logging.debug("Editing permissions using requests to [{}]...".format(magpie_url))
+        err_msg = "Invalid credentials to register Magpie permissions."
+        cookies_or_session = get_admin_cookies(magpie_url, raise_message=err_msg)
+    else:
+        logging.debug("Editing permissions using db session...")
+        cookies_or_session = db_session
+
+    logging.info("Found {} permissions to update.".format(len(permissions)))
+    for i, perm in enumerate(permissions):
+        # parameter validation
+        if not isinstance(perm, dict) or not all(f in perm for f in ['permission', 'service']):
+            warn_permission("Invalid permission format for [{!s}]".format(perm), i)
+            continue
+        if perm['permission'] not in permissions_supported:
+            warn_permission("Unknown permission [{!s}]".format(perm['permission']), i)
+            continue
+        usr_name = perm.get('user')
+        grp_name = perm.get('group')
+        if not any([usr_name, grp_name]):
+            warn_permission("Missing required user and/or group field.", i)
+            continue
+        if 'action' not in perm:
+            warn_permission("Unspecified action", i, trail="using default (create)...")
+            perm['action'] = 'create'
+        if perm['action'] not in ['create', 'remove']:
+            warn_permission("Unknown action [{!s}]".format(perm['action']), i)
+            continue
+
+        # retrieve service for permissions validation
+        svc_name = perm['service']
+        if use_request(cookies_or_session):
+            svc_path = magpie_url + ServiceAPI.path.format(service_name=svc_name)
+            svc_resp = requests.get(svc_path, cookies=cookies_or_session)
+            if svc_resp.status_code != 200:
+                warn_permission("Unknown service [{!s}]".format(svc_name), i)
+                continue
+            service_info = svc_resp.json()[svc_name]
+        else:
+            svc = models.Service.by_service_name(svc_name, db_session=db_session)
+            if not svc:
+                warn_permission("Unknown service [{!s}]".format(svc_name), i)
+                continue
+            from magpie.api.management.service.service_formats import format_service
+            service_info = format_service(svc)
+
+        # apply permission config
+        resource_id, found = parse_resource_path(perm, i, service_info, cookies_or_session, magpie_url)
+        if not found:
+            continue
+        if not resource_id:
+            resource_id = service_info['resource_id']
+        apply_permission_entry(perm, i, resource_id, cookies_or_session, magpie_url)
+    logging.info("Done processing permissions.")

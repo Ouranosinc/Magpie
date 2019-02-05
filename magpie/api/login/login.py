@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 default_provider = get_constant('MAGPIE_DEFAULT_PROVIDER')
 MAGPIE_INTERNAL_PROVIDERS = {default_provider: default_provider.capitalize()}
 MAGPIE_EXTERNAL_PROVIDERS = get_provider_names()
-MAGPIE_PROVIDER_KEYS = MAGPIE_INTERNAL_PROVIDERS.keys() + MAGPIE_EXTERNAL_PROVIDERS.keys()
+MAGPIE_PROVIDER_KEYS = list(MAGPIE_INTERNAL_PROVIDERS.keys()) + list(MAGPIE_EXTERNAL_PROVIDERS.keys())
 
 
 def process_sign_in_external(request, username, provider):
@@ -28,7 +28,7 @@ def process_sign_in_external(request, username, provider):
         query_field = dict(id=username)
     elif provider_name == 'github':
         query_field = None
-        #query_field = dict(login_field=username)
+        # query_field = dict(login_field=username)
     elif provider_name == 'wso2':
         query_field = {}
     else:
@@ -113,6 +113,7 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
     create_user(internal_user_name, password=None, email=email, group_name=group_name, db_session=db_session)
 
     user = UserService.by_user_name(internal_user_name, db_session=db_session)
+    # noinspection PyArgumentList
     ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
                                           local_user_id=user.id, provider_name=provider_name)
     evaluate_call(lambda: db_session.add(ex_identity), fallback=lambda: db_session.rollback(),
@@ -251,6 +252,7 @@ def get_session(request):
     return valid_http(httpSuccess=HTTPOk, detail=Session_GET_OkResponseSchema.description, content=session_json)
 
 
+# noinspection PyUnusedLocal
 @ProvidersAPI.get(tags=[LoginTag], response_schemas=Providers_GET_responses)
 @view_config(route_name=ProvidersAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_providers(request):

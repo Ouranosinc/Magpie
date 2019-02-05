@@ -31,4 +31,4 @@ RUN touch ~/magpie_cron_status.log
 # set /etc/environment so that cron runs using the environment variables set by docker
 RUN env >> /etc/environment
 
-CMD make start
+CMD make start cron
