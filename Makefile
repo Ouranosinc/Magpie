@@ -101,6 +101,7 @@ clean-test:
 	@echo "Cleaning tests artifacts..."
 	rm -fr .tox/
 	rm -f .coverage
+	rm -f coverage.xml
 	rm -fr "$(CUR_DIR)/coverage/"
 
 .PHONY: lint
@@ -132,6 +133,7 @@ test-tox: install-dev install
 coverage: install-dev install
 	@echo "Running coverage analysis..."
 	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage run --source magpie setup.py test || true'
+	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage xml -i'
 	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage report -m'
 
 .PHONY: coverage-show
