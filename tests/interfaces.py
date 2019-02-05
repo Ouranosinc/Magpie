@@ -14,7 +14,7 @@ from tests import utils, runner
 
 # noinspection PyPep8Naming
 @pytest.mark.api
-@unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
+@unittest.skipUnless(*runner.MAGPIE_TEST_API)
 class Interface_MagpieAPI_NoAuth(object):
     """
     Interface class for unittests of Magpie API.
@@ -73,7 +73,7 @@ class Interface_MagpieAPI_NoAuth(object):
 @unittest.skip("Not implemented.")
 @pytest.mark.skip(reason="Not implemented.")
 @pytest.mark.api
-@unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
+@unittest.skipUnless(*runner.MAGPIE_TEST_API)
 class Interface_MagpieAPI_UsersAuth(unittest.TestCase):
     """
     Interface class for unittests of Magpie API.
@@ -95,7 +95,7 @@ class Interface_MagpieAPI_UsersAuth(unittest.TestCase):
 
 # noinspection PyPep8Naming
 @pytest.mark.api
-@unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
+@unittest.skipUnless(*runner.MAGPIE_TEST_API)
 class Interface_MagpieAPI_AdminAuth(object):
     """
     Interface class for unittests of Magpie API.
@@ -1076,7 +1076,7 @@ class Interface_MagpieAPI_AdminAuth(object):
 
 # noinspection PyPep8Naming
 @pytest.mark.ui
-@unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
+@unittest.skipUnless(*runner.MAGPIE_TEST_UI)
 class Interface_MagpieUI_NoAuth(object):
     """
     Interface class for unittests of Magpie UI.
@@ -1168,7 +1168,7 @@ class Interface_MagpieUI_NoAuth(object):
 
 # noinspection PyPep8Naming
 @pytest.mark.ui
-@unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
+@unittest.skipUnless(*runner.MAGPIE_TEST_UI)
 class Interface_MagpieUI_AdminAuth(object):
     """
     Interface class for unittests of Magpie UI.

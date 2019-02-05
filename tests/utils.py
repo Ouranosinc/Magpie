@@ -1,6 +1,9 @@
+import unittest
 import requests
 import json
 import six
+import pytest
+from _pytest.mark import MarkDecorator, Mark
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from pyramid.response import Response
@@ -8,10 +11,12 @@ from pyramid.testing import setUp as PyramidSetUp
 from webtest import TestApp
 from webtest.response import TestResponse
 from webob.headers import ResponseHeaders
+from typing import AnyStr, Callable, Dict, List, Optional, Tuple, Union
 from magpie import __meta__, services, magpiectl
 from magpie.common import get_settings_from_config_ini
 from magpie.constants import get_constant
-from typing import AnyStr, Dict, List, Optional, Tuple, Union
+from magpie.common import str2bool
+
 
 OptionalStringType = six.string_types + tuple([type(None)])
 HeadersType = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
@@ -19,6 +24,66 @@ CookiesType = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
 OptionalHeaderCookiesType = Union[Tuple[None, None], Tuple[HeadersType, CookiesType]]
 TestAppOrUrlType = Union[AnyStr, TestApp]
 ResponseType = Union[TestResponse, Response]
+
+
+class RunOption(object):
+    __slots__ = ['_name', '_enabled', '_marker']
+
+    def __init__(self, name, marker=None):
+        self._name = name
+        self._marker = marker if marker else name.lower().replace('magpie_test_', '')
+        self._enabled = self._default_run()
+
+    def __call__(self, *args, **kwargs):
+        """Return (condition, reason) matching `unittest.skipUnless` decorator."""
+        return self._enabled, self.message
+
+    def __str__(self):
+        return self.message
+
+    def __repr__(self):
+        return '{}[{}]'.format(type(self).__name__, self.message)
+
+    def _default_run(self):
+        option_value = str2bool(get_constant(self._name, default_value=True,
+                                             raise_missing=False, raise_not_set=False, print_missing=True))
+        return True if option_value is None else option_value
+
+    @property
+    def message(self):
+        option = " '{}' ".format(self._marker)
+        status = 'Run' if self._enabled else 'Skip'
+        return "{}{}tests requested [{}={}].".format(status, option, self._name, self._enabled)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def enabled(self):
+        return self._enabled
+
+    @property
+    def marker(self):
+        return self._marker
+
+
+# noinspection PyPep8Naming
+def RunDecorator(run_option):
+    # type: (RunOption) -> Callable
+    """
+    Decorates the test/class with ``pytest.mark`` and ``unittest.skipUnless``
+    using the provided test condition represented by the given ``RunOption``.
+    """
+
+    pytest_marker = MarkDecorator(Mark(run_option.name, (), {}))
+
+    @pytest_marker
+    @unittest.skipUnless(*run_option)
+    def wrap(test_func, *args, **kwargs):
+        return test_func.__call__(*args, **kwargs)
+
+    return wrap
 
 
 def config_setup_from_ini(config_ini_file_path):

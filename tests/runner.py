@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from magpie.common import str2bool
-from magpie.constants import get_constant
+from utils import Run
 import sqlalchemy.exc as sa_exc
 import unittest
 import warnings
@@ -18,28 +17,19 @@ test_files = os.listdir(test_root_path)
 test_modules = [os.path.splitext(f)[0] for f in filter(lambda i: filter_test_files(test_root_path, i), test_files)]
 
 
-def default_run(option):
-    option_value = str2bool(get_constant(option, raise_missing=False, raise_not_set=False))
-    return True if option_value is None else option_value
-
-
 # run test options
-MAGPIE_TEST_DEFAULTS = default_run('MAGPIE_TEST_DEFAULTS')  # default users, providers and views
-MAGPIE_TEST_LOGIN = default_run('MAGPIE_TEST_LOGIN')
-MAGPIE_TEST_SERVICES = default_run('MAGPIE_TEST_SERVICES')
-MAGPIE_TEST_RESOURCES = default_run('MAGPIE_TEST_RESOURCES')
-MAGPIE_TEST_GROUPS = default_run('MAGPIE_TEST_GROUPS')
-MAGPIE_TEST_USERS = default_run('MAGPIE_TEST_USERS')
-MAGPIE_TEST_STATUS = default_run('MAGPIE_TEST_STATUS')  # validate views found and displayed correctly as per permission
-MAGPIE_TEST_REMOTE = default_run('MAGPIE_TEST_REMOTE')
-MAGPIE_TEST_LOCAL = default_run('MAGPIE_TEST_LOCAL')
-MAGPIE_TEST_API = default_run('MAGPIE_TEST_API')
-MAGPIE_TEST_UI = default_run('MAGPIE_TEST_UI')
-
-
-# noinspection PyPep8Naming
-def MAGPIE_TEST_DISABLED_MESSAGE(option):
-    return "Skip{}tests requested.".format(" '{}' ".format(option) if option else '')
+MAGPIE_TEST_DEFAULTS = RunOption('MAGPIE_TEST_DEFAULTS')  # default users, providers and views
+MAGPIE_TEST_REGISTER = RunOption('MAGPIE_TEST_REGISTER')
+MAGPIE_TEST_LOGIN = RunOption('MAGPIE_TEST_LOGIN')
+MAGPIE_TEST_SERVICES = RunOption('MAGPIE_TEST_SERVICES')
+MAGPIE_TEST_RESOURCES = RunOption('MAGPIE_TEST_RESOURCES')
+MAGPIE_TEST_GROUPS = RunOption('MAGPIE_TEST_GROUPS')
+MAGPIE_TEST_USERS = RunOption('MAGPIE_TEST_USERS')
+MAGPIE_TEST_STATUS = RunOption('MAGPIE_TEST_STATUS')  # validate views found and displayed correctly as per permission
+MAGPIE_TEST_REMOTE = RunOption('MAGPIE_TEST_REMOTE')
+MAGPIE_TEST_LOCAL = RunOption('MAGPIE_TEST_LOCAL')
+MAGPIE_TEST_API = RunOption('MAGPIE_TEST_API')
+MAGPIE_TEST_UI = RunOption('MAGPIE_TEST_UI')
 
 
 def test_suite():
