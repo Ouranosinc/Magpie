@@ -39,11 +39,11 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Requirements Status
     :target: https://requires.io/github/Ouranosinc/Magpie/requirements/?branch=master
 
-.. |travis_latest| image:: https://img.shields.io/travis/Ouranosinc/Magpie/master.svg?label=master
+.. |travis_latest| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/master.svg?label=master
     :alt: Travis-CI Build Status (master branch)
     :target: https://travis-ci.com/Ouranosinc/Magpie
 
-.. |travis_tag| image:: https://img.shields.io/travis/Ouranosinc/Magpie/0.9.0.svg?label=0.9.0
+.. |travis_tag| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/0.9.0.svg?label=0.9.0
     :alt: Travis-CI Build Status (latest tag)
     :target: https://github.com/Ouranosinc/Magpie/tree/0.9.0
 
