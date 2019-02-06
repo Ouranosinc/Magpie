@@ -594,7 +594,10 @@ class TestSetup(object):
         resp = test_request(test_class.url, 'GET', route,
                             headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = get_json_body(resp)
-        return json_body[test_class.test_service_name]
+        svc_getter = 'service'
+        if LooseVersion(test_class.version) < LooseVersion('0.9.1'):
+            svc_getter = test_class.test_service_name
+        return json_body[svc_getter]
 
     @staticmethod
     def get_TestServiceDirectResources(test_class, ignore_missing_service=False):
@@ -630,20 +633,27 @@ class TestSetup(object):
         TestSetup.check_NonExistingTestServiceResource(test_class)
 
     @staticmethod
-    def create_TestService(test_class):
+    def create_TestService(test_class, override_service_name=None, override_service_type=None):
+        svc_name = override_service_name or test_class.test_service_name
+        svc_type = override_service_type or test_class.test_service_type
         data = {
-            u'service_name': test_class.test_service_name,
-            u'service_type': test_class.test_service_type,
-            u'service_url': u'http://localhost:9000/{}'.format(test_class.test_service_name)
+            u'service_name': svc_name,
+            u'service_type': svc_type,
+            u'service_url': u'http://localhost:9000/{}'.format(svc_name)
         }
         resp = test_request(test_class.url, 'POST', '/services', json=data,
                             headers=test_class.json_headers, cookies=test_class.cookies,
                             expect_errors=True)
         if resp.status_code == 409:
-            resp = test_request(test_class.url, 'GET', '/services',
+            path = '/services/{svc}'.format(svc=svc_name)
+            resp = test_request(test_class.url, 'GET', path,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
-            return check_response_basic_info(resp, 200, expected_method='GET')
+            body = check_response_basic_info(resp, 200, expected_method='GET')
+            if LooseVersion(test_class.version) < LooseVersion('0.9.1'):
+                body.update({'service': body[svc_name]})
+                body.pop(svc_name)
+            return body
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod

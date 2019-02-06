@@ -7,6 +7,7 @@ from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from magpie.api.api_rest_schemas import SwaggerGenerator
 from magpie.constants import get_constant
+from magpie.models import resource_type_dict
 from magpie.services import service_type_dict
 from magpie.utils import get_twitcher_protected_service_url
 from tests import utils, runner
@@ -242,7 +243,7 @@ class Interface_MagpieAPI_AdminAuth(object):
     @runner.MAGPIE_TEST_USERS
     def test_GetCurrentUserResourcesPermissions_Queries(self):
         if LooseVersion(self.version) < LooseVersion('0.7.0'):
-            self.skipTest(reason="Queries not yet implemented in this version [{}].".format(self.version))
+            self.skipTest(reason="Queries not yet implemented in version [{}].".format(self.version))
 
         # setup test resources under service with permissions
         # Service/Resources              | Admin-User | Admin-Group | Anonym-User | Anonym-Group
@@ -820,22 +821,63 @@ class Interface_MagpieAPI_AdminAuth(object):
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PutService_Forbidden_ReservedKeyword_Types(self):
+        # try to PUT on 'types' route should raise the error
         data = {'service_name': 'dummy', 'service_url': 'dummy'}
         resp = utils.test_request(self.url, 'PUT', '/services/types', data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        utils.check_response_basic_info(resp, 403, expected_method='PUT')
+        utils.check_response_basic_info(resp, 404, expected_method='PUT')   # no route with service 'types'
+
+        # try to PUT on valid service with new name 'types' should raise the error
+        utils.TestSetup.create_TestService(self)
+        path = '/services/{}'.format(self.test_service_name)
+        data = {'service_name': 'types'}
+        resp = utils.test_request(self.url, 'PUT', path, data=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 403, expected_method='PUT')   # don't allow naming to 'types'
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetService_ResponseFormat(self):
-        # TODO
-        #   all usual fields
-        #   ++ 'resources_allowed' & 'resource_types_allowed'
-        raise NotImplemented
+        utils.TestSetup.create_TestService(self)
+        path = '/services/{svc}'.format(svc=self.test_service_name)
+        resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method='GET')
+        if LooseVersion(self.version) < LooseVersion('0.9.1'):
+            utils.check_val_is_in(self.test_service_name, body)
+            svc_info = body[self.test_service_name]
+            utils.check_val_type(svc_info, dict)
+        else:
+            utils.check_val_is_in('service', body)
+            svc_info = body[self.test_service_name]
+            utils.check_val_type(svc_info, dict)
+            utils.check_val_is_in('resource_child_allowed', svc_info)
+            utils.check_val_is_in('resource_types_allowed', svc_info)
+            utils.check_val_type(svc_info['resource_child_allowed'], bool)
+            utils.check_val_type(svc_info['resource_types_allowed'], list)
+            if svc_info['resource_child_allowed']:
+                svc_type = svc_info['service_type']
+                utils.check_all_equal(svc_info['resource_types_allowed'], service_type_dict[svc_type].resource_types)
+            else:
+                utils.check_val_equal(len(svc_info['resource_types_allowed']), 0)
+        utils.check_val_is_in('resource_id', svc_info)
+        utils.check_val_is_in('service_name', svc_info)
+        utils.check_val_is_in('service_type', svc_info)
+        utils.check_val_is_in('public_url', svc_info)
+        utils.check_val_is_in('permission_names', svc_info)
+        utils.check_val_is_in('resources', svc_info)
+        utils.check_val_type(svc_info['resource_id'], int)
+        utils.check_val_type(svc_info['service_name'], six.string_types)
+        utils.check_val_type(svc_info['service_type'], six.string_types)
+        utils.check_val_type(svc_info['public_url'], six.string_types)
+        utils.check_val_type(svc_info['permission_names'], list)
+        utils.check_val_type(svc_info['resources'], dict)
+        if LooseVersion(self.version) >= LooseVersion('0.7.0'):
+            utils.check_val_is_in('service_sync_type', svc_info)
+            utils.check_val_type(svc_info['service_sync_type'], utils.OptionalStringType)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServiceTypes_ResponseFormat(self):
-        if LooseVersion(self.version) < LooseVersion('0.9.0'):
-            self.skipTest(reason="Get service types not yet implemented in this version [{}].".format(self.version))
+        if LooseVersion(self.version) < LooseVersion('0.9.1'):
+            self.skipTest(reason="Get service types not yet implemented in version [{}].".format(self.version))
         resp = utils.test_request(self.url, 'GET', '/services/types', headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('service_types', body)
@@ -845,6 +887,56 @@ class Interface_MagpieAPI_AdminAuth(object):
         svc_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         svc_types = list(svc_body['services'].keys())
         utils.check_all_equal(body['service_types'], svc_types, any_order=True)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetServiceTypeResources_ResponseFormat(self):
+        if LooseVersion(self.version) < LooseVersion('0.9.1'):
+            self.skipTest(reason="Get service type resources not yet implemented in version [{}].".format(self.version))
+        utils.TestSetup.create_TestService(self)
+        path = '/services/types/{svc_type}/resources'.format(svc_type=self.test_service_type)
+        resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method='GET')
+        utils.check_val_is_in('resource_types', body)
+        utils.check_val_type(body['resource_types'], list)
+        utils.check_val_equal(len(body['resource_types']) > 0, True)
+        for rt in body['resource_types']:
+            utils.check_val_type(rt, dict)
+            utils.check_val_is_in('resource_type', rt)
+            utils.check_val_is_in('resource_child_allowed', rt)
+            utils.check_val_is_in('permission_names', rt)
+            utils.check_val_type(rt['resource_type'], six.string_types)
+            utils.check_val_type(rt['resource_child_allowed'], bool)
+            utils.check_val_type(rt['permission_names'], list)
+            for p in rt['permission_names']:
+                utils.check_val_type(p, six.string_types)
+            utils.check_val_is_in(rt['resource_type'], resource_type_dict)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetServiceTypeResources_CheckValues(self):
+        if LooseVersion(self.version) < LooseVersion('0.9.1'):
+            self.skipTest(reason="Get service type resources not yet implemented in version [{}].".format(self.version))
+
+        # evaluate different types of services
+        for svc_type, svc_res_info in [
+            # recursive child resource allowed
+            ('api',          {'route':      {'perms': ['read', 'write', 'read-match', 'write-match'], 'child': True}}),
+            # child resource allowed only for specific types
+            ('thredds',      {'directory':  {'perms': ['read', 'write'], 'child': True},
+                              'file':       {'perms': ['read', 'write'], 'child': False}}),
+            # no child allowed
+            ('geoserverwms', {}),
+        ]:
+            # test response details
+            path = '/services/types/{}/resources'.format(svc_type)
+            resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
+            body = utils.check_response_basic_info(resp, 200, 'GET')
+            utils.check_val_type(body['resource_types'], list)
+            utils.check_val_equal(len(body['resource_types']), len(svc_res_info))
+            for r in body['resource_types']:
+                utils.check_val_is_in(r['resource_type'], svc_res_info)
+                r_type = svc_res_info[r['resource_type']]
+                utils.check_val_is_in(r['resource_child_allowed'], r_type['child'])
+                utils.check_all_equal(r['permission_names'], r_type['perms'])
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServiceResources(self):

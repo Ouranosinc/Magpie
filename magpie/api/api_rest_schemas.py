@@ -227,9 +227,12 @@ ServiceResourcesAPI = Service(
 ServiceResourceAPI = Service(
     path='/services/{service_name}/resources/{resource_id}',
     name='ServiceResource')
-ServiceResourceTypesAPI = Service(
+ServiceTypeResourcesAPI = Service(
+    path='/services/types/{service_type}/resources',
+    name='ServiceTypeResources')
+ServiceTypeResourceTypesAPI = Service(
     path='/services/types/{service_type}/resources/types',
-    name='ServiceResourceTypes')
+    name='ServiceTypeResourceTypes')
 ProvidersAPI = Service(
     path='/providers',
     name='Providers')
@@ -1037,9 +1040,15 @@ class Service_PUT_OkResponseSchema(colander.MappingSchema):
 
 
 class Service_PUT_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Logged service values are already equal to update values."
+    description = "Registered service values are already equal to update values."
     header = HeaderResponseSchema()
     body = Service_FailureBodyResponseSchema(code=HTTPBadRequest.code, description=description)
+
+
+class Service_PUT_ForbiddenResponseSchema_ReservedKeyword(colander.MappingSchema):
+    description = "Update service name to 'types' not allowed (reserved keyword)."
+    header = HeaderResponseSchema()
+    body = Service_FailureBodyResponseSchema(code=HTTPForbidden.code, description=description)
 
 
 class Service_PUT_ForbiddenResponseSchema(colander.MappingSchema):
@@ -1124,33 +1133,71 @@ class ServiceResources_GET_OkResponseSchema(colander.MappingSchema):
     body = ServiceResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class ServiceResourceTypes_GET_ResponseBodySchema(BaseResponseBodySchema):
-    resource_types = ResourceTypesListSchema()
+class ServiceTypeResourceTypes_GET_FailureBodyResponseSchema(BaseResponseBodySchema):
+    service_type = colander.SchemaNode(colander.String(), description="Service type retrieved from route path.")
 
 
-class ServiceResourceTypes_GET_OkResponseSchema(colander.MappingSchema):
-    description = "Get service type resource types successful."
-    header = HeaderResponseSchema()
-    body = ServiceResourceTypes_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
-
-
-class ServiceResourceTypes_GET_FailureBodyResponseSchema(BaseResponseBodySchema):
-    service_type = colander.SchemaNode(
+class ServiceTypeResourceInfo(colander.MappingSchema):
+    resource_type = colander.SchemaNode(
         colander.String(),
-        description="Service type retrieved from route path."
+        description="Resource type."
+    )
+    resource_child_allowed = colander.SchemaNode(
+        colander.Boolean(),
+        description="Indicates if the resource type allows child resources."
+    )
+    permission_names = PermissionListSchema(
+        description="Permissions applicable to the specific resource type.",
+        example=['read', 'write']
     )
 
 
-class ServiceResourceTypes_GET_ForbiddenResponseSchema(colander.MappingSchema):
+class ServiceTypeResourcesList(colander.SequenceSchema):
+    resource_type = ServiceTypeResourceInfo(description="Resource type detail for specific service type.")
+
+
+class ServiceTypeResources_GET_ResponseBodySchema(BaseResponseBodySchema):
+    resource_types = ServiceTypeResourcesList(description="Supported resources types under specific service type.")
+
+
+class ServiceTypeResources_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service type resources successful."
+    header = HeaderResponseSchema()
+    body = ServiceTypeResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class ServiceTypeResources_GET_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Failed to obtain resource types for specified service type."
     header = HeaderResponseSchema()
-    body = ServiceResourceTypes_GET_FailureBodyResponseSchema(code=HTTPForbidden.code, description=description)
+    body = ServiceTypeResourceTypes_GET_FailureBodyResponseSchema(code=HTTPForbidden.code, description=description)
 
 
-class ServiceResourceTypes_GET_NotFoundResponseSchema(colander.MappingSchema):
+class ServiceTypeResources_GET_NotFoundResponseSchema(colander.MappingSchema):
     description = "Invalid `service_type` does not exist to obtain its resource types."
     header = HeaderResponseSchema()
-    body = ServiceResourceTypes_GET_FailureBodyResponseSchema(code=HTTPNotFound.code, description=description)
+    body = ServiceTypeResourceTypes_GET_FailureBodyResponseSchema(code=HTTPNotFound.code, description=description)
+
+
+class ServiceTypeResourceTypes_GET_ResponseBodySchema(BaseResponseBodySchema):
+    resource_types = ResourceTypesListSchema()
+
+
+class ServiceTypeResourceTypes_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service type resource types successful."
+    header = HeaderResponseSchema()
+    body = ServiceTypeResourceTypes_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class ServiceTypeResourceTypes_GET_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Failed to obtain resource types for specified service type."
+    header = HeaderResponseSchema()
+    body = ServiceTypeResourceTypes_GET_FailureBodyResponseSchema(code=HTTPForbidden.code, description=description)
+
+
+class ServiceTypeResourceTypes_GET_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Invalid `service_type` does not exist to obtain its resource types."
+    header = HeaderResponseSchema()
+    body = ServiceTypeResourceTypes_GET_FailureBodyResponseSchema(code=HTTPNotFound.code, description=description)
 
 
 class Users_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -2439,11 +2486,18 @@ ServiceResources_POST_responses = {
     '409': ServiceResources_POST_ConflictResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),
 }
-ServiceResource_GET_responses = {
-    '200': ServiceResourceTypes_GET_OkResponseSchema(),
+ServiceTypeResources_GET_responses = {
+    '200': ServiceTypeResources_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
-    '403': ServiceResourceTypes_GET_ForbiddenResponseSchema(),
-    '404': ServiceResourceTypes_GET_NotFoundResponseSchema(),
+    '403': ServiceTypeResources_GET_ForbiddenResponseSchema(),
+    '404': ServiceTypeResources_GET_NotFoundResponseSchema(),
+    '422': UnprocessableEntityResponseSchema(),
+}
+ServiceTypeResourceTypes_GET_responses = {
+    '200': ServiceTypeResourceTypes_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+    '403': ServiceTypeResourceTypes_GET_ForbiddenResponseSchema(),
+    '404': ServiceTypeResourceTypes_GET_NotFoundResponseSchema(),
     '422': UnprocessableEntityResponseSchema(),
 }
 ServiceResource_DELETE_responses = {

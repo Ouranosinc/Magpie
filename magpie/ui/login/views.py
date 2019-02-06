@@ -29,7 +29,6 @@ class LoginViews(object):
 
         try:
             if 'submit' in self.request.POST:
-                signin_url = '{}{}'.format(self.magpie_url, schemas.SigninAPI.path)
                 data = {}
                 for key in self.request.POST:
                     data[key] = self.request.POST.get(key)
@@ -43,6 +42,7 @@ class LoginViews(object):
 
                 # keep using the external requests for external providers
                 if is_external:
+                    signin_url = '{}{}'.format(self.magpie_url, schemas.SigninAPI.path)
                     response = requests.post(signin_url, data=data, allow_redirects=True)
                 # use sub request for internal to avoid retry connection errors
                 else:

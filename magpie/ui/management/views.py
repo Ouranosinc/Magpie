@@ -4,8 +4,7 @@ from magpie.constants import get_constant
 from magpie.common import str2bool, get_json
 from magpie.helpers.sync_resources import OUT_OF_SYNC
 from magpie.helpers import sync_resources
-##from magpie.services import service_type_dict
-##from magpie.models import resource_type_dict, remote_resource_tree_service
+from magpie.models import resource_type_dict, remote_resource_tree_service  # TODO: remove, implement getters via API
 from magpie.ui.utils import check_response, request_api
 from magpie.ui.home import add_template_data
 from magpie import register, __meta__
@@ -27,10 +26,7 @@ class ManagementViews(object):
         return '{url}{path}'.format(url=self.magpie_url, path=path)
 
     def get_all_groups(self, first_default_group=None):
-        try:
-            resp = request_api(self.request, schemas.GroupsAPI.path, 'GET')
-        except Exception:
-            raise HTTPBadRequest(detail='Bad Json response')
+        resp = request_api(self.request, schemas.GroupsAPI.path, 'GET')
         check_response(resp)
         try:
             groups = list(get_json(resp)['group_names'])
@@ -267,7 +263,7 @@ class ManagementViews(object):
         user_url = schemas.UserAPI.path.format(user_name=user_name)
         user_resp = requests.get(self.get_url(user_url), cookies=self.request.cookies)
         check_response(user_resp)
-        user_info = user_get_json(resp)['user']
+        user_info = get_json(user_resp)['user']
         user_info[u'edit_mode'] = u'no_edit'
         user_info[u'own_groups'] = own_groups
         user_info[u'groups'] = all_groups
@@ -846,7 +842,8 @@ class ManagementViews(object):
         try:
             resources = {}
             path = schemas.ServiceResourcesAPI.path.format(service_name=service_name)
-            resp = check_response(requests.get(self.get_url(path), cookies=self.request.cookies))
+            resp = request_api(self.request, path, 'GET')
+            check_response(resp)
             raw_resources = get_json(resp)[service_name]
             resources[service_name] = dict(
                 id=raw_resources['resource_id'],
@@ -855,14 +852,17 @@ class ManagementViews(object):
             raw_resources_id_type = self.get_resource_types()
         except Exception as e:
             raise HTTPBadRequest(detail='Bad Json response [Exception: ' + repr(e) + ']')
+        path = schemas.ServiceAPI.path.format(service_name=service_name)
+        resp = request_api(self.request, path, 'GET')
+        check_response(resp)
+        svc_body = get_json(resp)['service']
 
-        # TODO:
-        #   use `allowed_resource_types` from `/services/{svc}` response
+        # TODO: use an API request instead of direct access to `resource_type_dict`
         service_info['resources'] = resources
         service_info['resources_id_type'] = raw_resources_id_type
         service_info['resources_no_child'] = [res for res in resource_type_dict
                                               if not resource_type_dict[res].child_resource_allowed]
-        service_info['service_no_child'] = not service_type_dict[cur_svc_type].child_resource_allowed
+        service_info['service_no_child'] = not svc_body['resource_child_allowed']
         return add_template_data(self.request, service_info)
 
     @view_config(route_name='add_resource', renderer='templates/add_resource.mako')
@@ -878,18 +878,20 @@ class ManagementViews(object):
             data = {u'resource_name': resource_name,
                     u'resource_type': resource_type,
                     u'parent_id': resource_id}
-            resp = requests.post(self.get_url(schemas.ResourcesAPI.path), data=data, cookies=self.request.cookies)
+            resp = request_api(self.request, schemas.ResourcesAPI.path, 'POST', data=data)
             check_response(resp)
 
             return HTTPFound(self.request.route_url('edit_service', service_name=service_name,
                                                     cur_svc_type=cur_svc_type))
 
-        path = schemas.ServiceResourceTypesAPI.path.format(service_type=cur_svc_type)
-        cur_svc_res = check_response(requests.get(self.get_url(path), cookies=self.request.cookies))
-        raw_svc_res = get_json(cur_svc_res)['resource_types']
-
-        return add_template_data(self.request,
-                                 {u'service_name': service_name,
-                                  u'cur_svc_type': cur_svc_type,
-                                  u'resource_id': resource_id,
-                                  u'cur_svc_res': raw_svc_res})
+        path = schemas.ServiceTypeResourceTypesAPI.path.format(service_type=cur_svc_type)
+        resp = request_api(self.request, path, 'GET')
+        check_response(resp)
+        svc_res_types = get_json(resp)['resource_types']
+        data = {
+            u'service_name': service_name,
+            u'cur_svc_type': cur_svc_type,
+            u'resource_id': resource_id,
+            u'cur_svc_res': svc_res_types,
+        }
+        return add_template_data(self.request, data)

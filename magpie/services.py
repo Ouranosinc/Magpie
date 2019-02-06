@@ -26,11 +26,11 @@ class ServiceMeta(type):
 
 class ServiceI(with_metaclass(ServiceMeta)):
     # required request parameters for the service
-    params_expected = []                # type: List[str]
+    params_expected = []                # type: List[AnyStr]
     # global permissions allowed for the service (top-level resource)
-    permission_names = []               # type: List[str]
+    permission_names = []               # type: List[AnyStr]
     # dict of list for each corresponding allowed resource permissions (children resources)
-    resource_types_permissions = {}     # type: Dict[str,List[str]]
+    resource_types_permissions = {}     # type: Dict[AnyStr, List[AnyStr]]
 
     def __init__(self, service, request):
         self.service = service
