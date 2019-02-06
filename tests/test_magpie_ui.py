@@ -9,7 +9,6 @@ Tests for `magpie.ui` module.
 """
 
 import unittest
-import pytest
 from magpie.constants import get_constant
 from tests import utils, runner
 
@@ -17,10 +16,8 @@ from tests import utils, runner
 import tests.interfaces as ti
 
 
-@pytest.mark.ui
-@pytest.mark.local
-@unittest.skipUnless(*runner.MAGPIE_TEST_UI)
-@unittest.skipUnless(*runner.MAGPIE_TEST_LOCAL)
+@runner.MAGPIE_TEST_UI
+@runner.MAGPIE_TEST_LOCAL
 class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.TestCase):
     """
     Test any operation that do not require user AuthN/AuthZ.
@@ -42,10 +39,8 @@ class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.Test
         cls.test_service_name = 'flyingpigeon'
 
 
-@pytest.mark.ui
-@pytest.mark.local
-@unittest.skipUnless(*runner.MAGPIE_TEST_UI)
-@unittest.skipUnless(*runner.MAGPIE_TEST_LOCAL)
+@runner.MAGPIE_TEST_UI
+@runner.MAGPIE_TEST_LOCAL
 class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittest.TestCase):
     """
     Test any operation that require at least 'administrator' group AuthN/AuthZ.
@@ -77,10 +72,8 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         cls.test_service_name = utils.TestSetup.get_AnyServiceOfTestServiceType(cls)['service_name']
 
 
-@pytest.mark.ui
-@pytest.mark.remote
-@unittest.skipUnless(*runner.MAGPIE_TEST_UI)
-@unittest.skipUnless(*runner.MAGPIE_TEST_REMOTE)
+@runner.MAGPIE_TEST_UI
+@runner.MAGPIE_TEST_REMOTE
 class TestCase_MagpieUI_NoAuth_Remote(ti.Interface_MagpieUI_NoAuth, unittest.TestCase):
     """
     Test any operation that do not require user AuthN/AuthZ.
@@ -101,10 +94,8 @@ class TestCase_MagpieUI_NoAuth_Remote(ti.Interface_MagpieUI_NoAuth, unittest.Tes
         cls.test_service_name = 'flyingpigeon'
 
 
-@pytest.mark.ui
-@pytest.mark.remote
-@unittest.skipUnless(*runner.MAGPIE_TEST_UI)
-@unittest.skipUnless(*runner.MAGPIE_TEST_REMOTE)
+@runner.MAGPIE_TEST_UI
+@runner.MAGPIE_TEST_REMOTE
 class TestCase_MagpieUI_AdminAuth_Remote(ti.Interface_MagpieUI_AdminAuth, unittest.TestCase):
     """
     Test any operation that require at least 'Administrator' group AuthN/AuthZ.

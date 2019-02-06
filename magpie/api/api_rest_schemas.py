@@ -2770,5 +2770,5 @@ def api_schema(request):
     }
     swagger_base_spec.update(SecurityDefinitionsAPI)
     generator.swagger = swagger_base_spec
-    json_api_spec = generator.generate(title=TitleAPI, version=__meta__.__version__, info=InfoAPI, base_path='/magpie')
+    json_api_spec = generator.generate(title=TitleAPI, version=__meta__.__version__, info=InfoAPI)
     return json_api_spec

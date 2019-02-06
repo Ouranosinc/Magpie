@@ -12,10 +12,16 @@ logger = logging.getLogger(__name__)
 # ===========================
 MAGPIE_MODULE_DIR = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
-MAGPIE_PROVIDERS_CONFIG_PATH = '{}/providers.cfg'.format(MAGPIE_ROOT)
-MAGPIE_PERMISSIONS_CONFIG_PATH = '{}/permissions.cfg'.format(MAGPIE_ROOT)
-MAGPIE_INI_FILE_PATH = '{}/magpie.ini'.format(MAGPIE_MODULE_DIR)
-MAGPIE_ALEMBIC_INI_FILE_PATH = '{}/alembic/alembic.ini'.format(MAGPIE_MODULE_DIR)
+MAGPIE_CONFIG_DIR = os.getenv(
+    'MAGPIE_CONFIG_DIR', os.path.join(MAGPIE_ROOT, 'config'))
+MAGPIE_PROVIDERS_CONFIG_PATH = os.getenv(
+    'MAGPIE_PROVIDERS_CONFIG_PATH', '{}/providers.cfg'.format(MAGPIE_CONFIG_DIR))
+MAGPIE_PERMISSIONS_CONFIG_PATH = os.getenv(
+    'MAGPIE_PERMISSIONS_CONFIG_PATH', '{}/permissions.cfg'.format(MAGPIE_CONFIG_DIR))
+MAGPIE_INI_FILE_PATH = os.getenv(
+    'MAGPIE_INI_FILE_PATH', '{}/magpie.ini'.format(MAGPIE_MODULE_DIR))
+MAGPIE_ALEMBIC_INI_FILE_PATH = os.getenv(
+    'MAGPIE_ALEMBIC_INI_FILE_PATH', '{}/alembic/alembic.ini'.format(MAGPIE_MODULE_DIR))
 # allow custom location of env files directory to avoid
 # loading from installed magpie in python site-packages
 MAGPIE_ENV_DIR = os.getenv('MAGPIE_ENV_DIR', os.path.join(MAGPIE_ROOT, 'env'))

@@ -83,8 +83,8 @@ setup(
     ],
 
     # -- Package structure -------------------------------------------------
-    packages=find_packages(),
-    package_dir={__meta__.__package__: 'magpie'},
+    packages=[__meta__.__package__],
+    package_dir={__meta__.__package__: __meta__.__package__},
     include_package_data=True,
     install_requires=REQUIREMENTS,
     dependency_links=LINKS,

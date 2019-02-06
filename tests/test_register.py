@@ -4,12 +4,6 @@ import pytest
 import unittest
 
 
-#@pytest.mark.local
-#@pytest.mark.remote
-#@pytest.mark.register
-#@unittest.skipUnless(*runner.MAGPIE_TEST_LOCAL)
-#@unittest.skipUnless(*runner.MAGPIE_TEST_REMOTE)
-#@unittest.skipUnless(*runner.MAGPIE_TEST_REGISTER)
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_REMOTE
 @runner.MAGPIE_TEST_REGISTER

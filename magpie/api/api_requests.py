@@ -1,4 +1,3 @@
-from magpie.constants import get_constant
 from magpie.definitions import ziggurat_definitions as zig
 from magpie.api.api_except import evaluate_call, verify_param
 from magpie.api.api_rest_schemas import *

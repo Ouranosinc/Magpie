@@ -3,7 +3,6 @@ import requests
 import json
 import six
 import pytest
-from _pytest.mark import MarkDecorator, Mark
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from pyramid.response import Response
@@ -74,16 +73,46 @@ def RunDecorator(run_option):
     """
     Decorates the test/class with ``pytest.mark`` and ``unittest.skipUnless``
     using the provided test condition represented by the given ``RunOption``.
+
+    Allows to decorate a function or class such that::
+
+        option = RunDecorator(RunOption('MAGPIE_TEST_CUSTOM_MARKER'))
+
+        @option
+        def test_func():
+            <test>
+
+    is equivalent to::
+
+        @pytest.mark.custom_marker
+        @unittest.skipUnless(runner.MAGPIE_TEST_CUSTOM_MARKER, reason='...')
+        def test_func():
+            <test>
+
     """
 
-    pytest_marker = MarkDecorator(Mark(run_option.name, (), {}))
-
-    @pytest_marker
-    @unittest.skipUnless(*run_option)
     def wrap(test_func, *args, **kwargs):
-        return test_func.__call__(*args, **kwargs)
+        pytest_marker = pytest.mark.__getattr__(run_option.marker)
+        unittest_skip = unittest.skipUnless(*run_option())
+        test_func = pytest_marker(test_func)
+        test_func = unittest_skip(test_func)
+        return test_func
 
     return wrap
+
+
+class RunOptionDecorator(object):
+    """
+    Simplifies the call to::
+
+        RunDecorator(RunOption('MAGPIE_TEST_CUSTOM_MARKER'))
+
+    by::
+
+        RunOptionDecorator('MAGPIE_TEST_CUSTOM_MARKER')
+    """
+    def __new__(cls, name):
+        return RunDecorator(RunOption(name))
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -98,6 +127,7 @@ def get_test_magpie_app():
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
     config.include('ziggurat_foundations.ext.pyramid.get_user')
     config.registry.settings['magpie.db_migration'] = False
+    config.registry.settings['magpie.url'] = 'http://localhost:80'  #
     # scan dependencies
     config.include('magpie')
     # create the test application

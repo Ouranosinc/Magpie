@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from utils import Run
+from utils import RunOptionDecorator
 import sqlalchemy.exc as sa_exc
 import unittest
 import warnings
 import os
+import sys
+
+# ensure that files under 'tests' dir can be found (since not installed)
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
 def filter_test_files(root, filename):
@@ -18,18 +22,18 @@ test_modules = [os.path.splitext(f)[0] for f in filter(lambda i: filter_test_fil
 
 
 # run test options
-MAGPIE_TEST_DEFAULTS = RunOption('MAGPIE_TEST_DEFAULTS')  # default users, providers and views
-MAGPIE_TEST_REGISTER = RunOption('MAGPIE_TEST_REGISTER')
-MAGPIE_TEST_LOGIN = RunOption('MAGPIE_TEST_LOGIN')
-MAGPIE_TEST_SERVICES = RunOption('MAGPIE_TEST_SERVICES')
-MAGPIE_TEST_RESOURCES = RunOption('MAGPIE_TEST_RESOURCES')
-MAGPIE_TEST_GROUPS = RunOption('MAGPIE_TEST_GROUPS')
-MAGPIE_TEST_USERS = RunOption('MAGPIE_TEST_USERS')
-MAGPIE_TEST_STATUS = RunOption('MAGPIE_TEST_STATUS')  # validate views found and displayed correctly as per permission
-MAGPIE_TEST_REMOTE = RunOption('MAGPIE_TEST_REMOTE')
-MAGPIE_TEST_LOCAL = RunOption('MAGPIE_TEST_LOCAL')
-MAGPIE_TEST_API = RunOption('MAGPIE_TEST_API')
-MAGPIE_TEST_UI = RunOption('MAGPIE_TEST_UI')
+MAGPIE_TEST_DEFAULTS = RunOptionDecorator('MAGPIE_TEST_DEFAULTS')   # default users, providers and views
+MAGPIE_TEST_REGISTER = RunOptionDecorator('MAGPIE_TEST_REGISTER')   # methods employed in 'register' module
+MAGPIE_TEST_LOGIN = RunOptionDecorator('MAGPIE_TEST_LOGIN')
+MAGPIE_TEST_SERVICES = RunOptionDecorator('MAGPIE_TEST_SERVICES')
+MAGPIE_TEST_RESOURCES = RunOptionDecorator('MAGPIE_TEST_RESOURCES')
+MAGPIE_TEST_GROUPS = RunOptionDecorator('MAGPIE_TEST_GROUPS')
+MAGPIE_TEST_USERS = RunOptionDecorator('MAGPIE_TEST_USERS')
+MAGPIE_TEST_STATUS = RunOptionDecorator('MAGPIE_TEST_STATUS')  # validate views found/displayed as per permissions
+MAGPIE_TEST_REMOTE = RunOptionDecorator('MAGPIE_TEST_REMOTE')
+MAGPIE_TEST_LOCAL = RunOptionDecorator('MAGPIE_TEST_LOCAL')
+MAGPIE_TEST_API = RunOptionDecorator('MAGPIE_TEST_API')
+MAGPIE_TEST_UI = RunOptionDecorator('MAGPIE_TEST_UI')
 
 
 def test_suite():
