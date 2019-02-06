@@ -4,7 +4,7 @@ from magpie import constants
 from magpie.common import get_settings_from_config_ini, print_log, raise_log
 from magpie.definitions.alembic_definitions import *
 from magpie.definitions.sqlalchemy_definitions import *
-from magpie.definitions.typedefs import AnyStr, SettingsDict, Optional, Union
+from magpie.definitions.typedefs import AnyStr, Settings, Optional, Union
 import transaction
 import inspect
 import zope.sqlalchemy
@@ -128,7 +128,7 @@ def is_database_ready(db_session=None):
 
 
 def run_database_migration_when_ready(settings, db_session=None):
-    # type: (SettingsDict, Optional[Session]) -> None
+    # type: (Settings, Optional[Session]) -> None
     """
     Runs db migration if requested by config and need from revisions.
     """
@@ -170,7 +170,7 @@ def run_database_migration_when_ready(settings, db_session=None):
 
 
 def set_sqlalchemy_log_level(magpie_log_level):
-    # type: (Union[AnyStr, int]) -> SettingsDict
+    # type: (Union[AnyStr, int]) -> Settings
     """Suppresses sqlalchemy logging if not in debug for magpie."""
     log_lvl = logging.getLevelName(magpie_log_level) if isinstance(magpie_log_level, int) else magpie_log_level
     sa_settings = {'sqlalchemy.echo': True}

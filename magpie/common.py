@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from magpie.definitions.pyramid_definitions import Response, HTTPException
+from magpie.definitions.typedefs import Any
 from distutils.dir_util import mkpath
 from typing import AnyStr, Optional, Type
 # noinspection PyProtectedMember
@@ -65,3 +67,34 @@ def get_settings_from_config_ini(config_ini_path, ini_main_section_name='app:mag
     parser.read([config_ini_path])
     settings = dict(parser.items(ini_main_section_name))
     return settings
+
+
+def get_json(response):
+    """
+    Retrieves the 'JSON' body of a response using the property/callable
+    according to the response's implementation.
+    """
+    if isinstance(response.json, dict):
+        return response.json
+    return response.json()
+
+
+def convert_response(response):
+    # type: (Any) -> Response
+    """
+    Converts a ``response`` implementation (eg: ``requests.Response``)
+    to an equivalent ``pyramid.response.Response`` version.
+    """
+    if isinstance(response, Response):
+        return response
+    json_body = get_json(response)
+    pyramid_response = Response(body=json_body, headers=response.headers)
+    if hasattr(response, 'cookies'):
+        for cookie in response.cookies:
+            pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
+    if isinstance(response, HTTPException):
+        # noinspection PyProtectedMember
+        for header_name, header_value in response.headers._items:
+            if header_name.lower() == 'set-cookie':
+                pyramid_response.set_cookie(name=header_name, value=header_value, overwrite=True)
+    return pyramid_response

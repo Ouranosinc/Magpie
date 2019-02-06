@@ -9,7 +9,15 @@ from magpie.services import service_type_dict
 from magpie import models
 
 
-@ServiceTypeAPI.get(tags=[ServicesTag], response_schemas=ServiceTypes_GET_responses)
+@ServiceTypesAPI.get(tags=[ServicesTag], response_schemas=ServiceTypes_GET_responses)
+@view_config(route_name=ServiceTypesAPI.name, request_method='GET')
+def get_service_types_view(request):
+    """List all available service types."""
+    return ax.valid_http(httpSuccess=HTTPOk, content={u'service_types': list(sorted(service_type_dict.keys()))},
+                         detail=ServiceTypes_GET_OkResponseSchema.description)
+
+
+@ServiceTypeAPI.get(tags=[ServicesTag], response_schemas=ServiceType_GET_responses)
 @view_config(route_name=ServiceTypeAPI.name, request_method='GET')
 def get_services_by_type_view(request):
     """List all registered services from a specific type."""

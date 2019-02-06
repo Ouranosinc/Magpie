@@ -9,8 +9,8 @@ from magpie.api.api_requests import *
 from magpie.api.api_rest_schemas import *
 from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import create_user
+from magpie.common import convert_response
 from six.moves.urllib.parse import urlparse
-import requests
 import logging
 LOGGER = logging.getLogger(__name__)
 
@@ -57,14 +57,11 @@ def sign_in(request):
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
         signin_internal_url = request.route_url('ziggurat.routes.sign_in')
         signin_internal_data = {u'user_name': user_name, u'password': password, u'provider_name': provider_name}
-        signin_response = requests.post(signin_internal_url, data=signin_internal_data,
-                                        allow_redirects=True, verify=False)
-
+        signin_sub_request = Request.blank(signin_internal_url, base_url=request.application_url,
+                                           headers={'Accept': 'application/json'}, POST=signin_internal_data)
+        signin_response = request.invoke_subrequest(signin_sub_request)
         if signin_response.status_code == HTTPOk.code:
-            pyramid_response = Response(body=signin_response.content, headers=signin_response.headers)
-            for cookie in signin_response.cookies:
-                pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
-            return pyramid_response
+            return convert_response(signin_response)
         login_failure(request, "Incorrect credentials.")
 
     elif provider_name in MAGPIE_EXTERNAL_PROVIDERS.keys():

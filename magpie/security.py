@@ -136,5 +136,5 @@ def get_provider_names():
     config = authomatic_config()
     for provider in config.keys():
         if provider != '__defaults__':
-            provider_names[provider] = config[provider].get('display_name', provider)
+            provider_names[provider.lower()] = config[provider].get('display_name', provider)
     return provider_names

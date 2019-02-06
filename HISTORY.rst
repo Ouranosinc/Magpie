@@ -13,6 +13,10 @@ History
 * ensure python compatibility for Python 2.7, 3.5, 3.6
 * reduce excessive sqlalchemy logging using `MAGPIE_LOG_LEVEL >= INFO`
 * use schema API route definitions for UI calls
+* use sub-requests API call for UI operations (fixes issue #114)
+* add new route `/services/types` to obtain a list of available service types
+* add `resources_allowed` and `resource_types_allowed` fields in service response
+* additional tests for new routes and operations previously left unevaluated
 
 0.8.x
 ---------------------

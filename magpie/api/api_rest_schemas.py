@@ -212,9 +212,12 @@ ServicesAPI = Service(
 ServiceAPI = Service(
     path='/services/{service_name}',
     name='Service')
+ServiceTypesAPI = Service(
+    path='/services/types',
+    name='ServiceTypes')
 ServiceTypeAPI = Service(
     path='/services/types/{service_type}',
-    name='ServiceTypes')
+    name='ServiceType')
 ServicePermissionsAPI = Service(
     path='/services/{service_name}/permissions',
     name='ServicePermissions')
@@ -845,6 +848,24 @@ class ServiceType_wps_SchemaNode(colander.MappingSchema):
     catalog = ServiceBodySchema(missing=colander.drop)
     malleefowl = ServiceBodySchema(missing=colander.drop)
     hummingbird = ServiceBodySchema(missing=colander.drop)
+
+
+class ServiceTypesList(colander.SequenceSchema):
+    service_type = colander.SchemaNode(
+        colander.String(),
+        description="Available service type.",
+        example="api",
+    )
+
+
+class ServiceTypes_GET_OkResponseBodySchema(BaseResponseBodySchema):
+    service_types = ServiceTypesList(description="List of available service types.")
+
+
+class ServiceTypes_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get service types successful."
+    header = HeaderResponseSchema()
+    body = ServiceTypes_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class ServicesSchemaNode(colander.MappingSchema):
@@ -2354,6 +2375,10 @@ ResourcePermissions_GET_responses = {
     '422': UnprocessableEntityResponseSchema(),
 }
 ServiceTypes_GET_responses = {
+    '200': ServiceTypes_GET_OkResponseSchema(),
+    '401': UnauthorizedResponseSchema(),
+}
+ServiceType_GET_responses = {
     '200': Services_GET_OkResponseSchema(),
     '401': UnauthorizedResponseSchema(),
     '406': Services_GET_NotAcceptableResponseSchema(),
