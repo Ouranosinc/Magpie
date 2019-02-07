@@ -1,4 +1,5 @@
 import unittest
+import warnings
 import pytest
 import pyramid.testing
 import yaml
@@ -221,7 +222,7 @@ class Interface_MagpieAPI_AdminAuth(object):
     @runner.MAGPIE_TEST_USERS
     def test_PutUser_Forbidden_ReservedKeyword_Current(self):
         # TODO
-        raise NotImplemented
+        self.skipTest(reason='not implemented')
 
     @runner.MAGPIE_TEST_USERS
     def test_GetCurrentUser(self):
@@ -514,7 +515,7 @@ class Interface_MagpieAPI_AdminAuth(object):
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers_Forbidden_ReservedKeyword_Current(self):
         # TODO
-        raise NotImplemented
+        self.skipTest(reason='not implemented')
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_nothing(self):
@@ -815,9 +816,11 @@ class Interface_MagpieAPI_AdminAuth(object):
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PutService_BadRequest_NoUpdateInfo(self):
+        # no route PUT on '/services/types' (not equivalent to '/services/{service_name}')
+        # so not even a forbidden case to handle
         resp = utils.test_request(self.url, 'PUT', '/services/types', data={}, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        utils.check_response_basic_info(resp, 400, expected_method='PUT')
+        utils.check_response_basic_info(resp, 404, expected_method='PUT')
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PutService_Forbidden_ReservedKeyword_Types(self):
@@ -827,13 +830,17 @@ class Interface_MagpieAPI_AdminAuth(object):
                                   headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 404, expected_method='PUT')   # no route with service 'types'
 
-        # try to PUT on valid service with new name 'types' should raise the error
-        utils.TestSetup.create_TestService(self)
-        path = '/services/{}'.format(self.test_service_name)
-        data = {'service_name': 'types'}
-        resp = utils.test_request(self.url, 'PUT', path, data=data, expect_errors=True,
-                                  headers=self.json_headers, cookies=self.cookies)
-        utils.check_response_basic_info(resp, 403, expected_method='PUT')   # don't allow naming to 'types'
+        if LooseVersion(self.version) < LooseVersion('0.9.1'):
+            warnings.warn("no check for update service named 'types' performed in version [{}], upgrade to [>=0.9.1]"
+                          .format(self.version), FutureWarning)
+        else:
+            # try to PUT on valid service with new name 'types' should raise the error
+            utils.TestSetup.create_TestService(self)
+            path = '/services/{}'.format(self.test_service_name)
+            data = {'service_name': 'types'}
+            resp = utils.test_request(self.url, 'PUT', path, data=data, expect_errors=True,
+                                      headers=self.json_headers, cookies=self.cookies)
+            utils.check_response_basic_info(resp, 400, expected_method='PUT')   # don't allow naming to 'types'
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetService_ResponseFormat(self):
@@ -847,7 +854,7 @@ class Interface_MagpieAPI_AdminAuth(object):
             utils.check_val_type(svc_info, dict)
         else:
             utils.check_val_is_in('service', body)
-            svc_info = body[self.test_service_name]
+            svc_info = body['service']
             utils.check_val_type(svc_info, dict)
             utils.check_val_is_in('resource_child_allowed', svc_info)
             utils.check_val_is_in('resource_types_allowed', svc_info)
@@ -863,13 +870,11 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_is_in('service_type', svc_info)
         utils.check_val_is_in('public_url', svc_info)
         utils.check_val_is_in('permission_names', svc_info)
-        utils.check_val_is_in('resources', svc_info)
         utils.check_val_type(svc_info['resource_id'], int)
         utils.check_val_type(svc_info['service_name'], six.string_types)
         utils.check_val_type(svc_info['service_type'], six.string_types)
         utils.check_val_type(svc_info['public_url'], six.string_types)
         utils.check_val_type(svc_info['permission_names'], list)
-        utils.check_val_type(svc_info['resources'], dict)
         if LooseVersion(self.version) >= LooseVersion('0.7.0'):
             utils.check_val_is_in('service_sync_type', svc_info)
             utils.check_val_type(svc_info['service_sync_type'], utils.OptionalStringType)
@@ -885,8 +890,7 @@ class Interface_MagpieAPI_AdminAuth(object):
 
         svc_resp = utils.test_request(self.url, 'GET', '/services', headers=self.json_headers, cookies=self.cookies)
         svc_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
-        svc_types = list(svc_body['services'].keys())
-        utils.check_all_equal(body['service_types'], svc_types, any_order=True)
+        utils.check_all_equal(body['service_types'], list(service_type_dict.keys()), any_order=True)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServiceTypeResources_ResponseFormat(self):
@@ -924,18 +928,18 @@ class Interface_MagpieAPI_AdminAuth(object):
             ('thredds',      {'directory':  {'perms': ['read', 'write'], 'child': True},
                               'file':       {'perms': ['read', 'write'], 'child': False}}),
             # no child allowed
-            ('geoserverwms', {}),
+            ('access', {}),
         ]:
             # test response details
             path = '/services/types/{}/resources'.format(svc_type)
             resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
-            body = utils.check_response_basic_info(resp, 200, 'GET')
+            body = utils.check_response_basic_info(resp, 200, expected_method='GET')
             utils.check_val_type(body['resource_types'], list)
             utils.check_val_equal(len(body['resource_types']), len(svc_res_info))
             for r in body['resource_types']:
                 utils.check_val_is_in(r['resource_type'], svc_res_info)
                 r_type = svc_res_info[r['resource_type']]
-                utils.check_val_is_in(r['resource_child_allowed'], r_type['child'])
+                utils.check_val_equal(r['resource_child_allowed'], r_type['child'])
                 utils.check_all_equal(r['permission_names'], r_type['perms'])
 
     @runner.MAGPIE_TEST_SERVICES

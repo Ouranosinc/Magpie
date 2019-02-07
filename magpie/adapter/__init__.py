@@ -36,7 +36,7 @@ class MagpieAdapter(AdapterInterface):
 
         LOGGER.info('Loading MagpieAdapter config')
         config = auth_config_from_settings(settings)
-        config.set_request_property(get_user, 'user', reify=True)
+        config.add_request_method(get_user, 'user', reify=True)
         self.owsproxy_config(settings, config)
         return config
 

@@ -82,8 +82,9 @@ def update_service_view(request):
     # None/Empty values are accepted in case of unspecified
     svc_name = select_update(ar.get_multiformat_post(request, 'service_name'), service.resource_name)
     svc_url = select_update(ar.get_multiformat_post(request, 'service_url'), service.url)
-    ax.verify_param(svc_name == 'types', notEqual=True, paramCompare=True, paramName='service_name',
-                    httpError=HTTPForbidden, msgOnFail=Service_PUT_ForbiddenResponseSchema_ReservedKeyword.description)
+    ax.verify_param(svc_name == 'types', notEqual=True,
+                    paramCompare=True, paramName='service_name', httpError=HTTPBadRequest,
+                    msgOnFail=Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
     ax.verify_param(svc_name == service.resource_name and svc_url == service.url, notEqual=True,
                     paramCompare=True, paramName="service_name/service_url",
                     httpError=HTTPBadRequest, msgOnFail=Service_PUT_BadRequestResponseSchema.description)

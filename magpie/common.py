@@ -9,11 +9,12 @@ from typing import AnyStr, Optional, Type
 from logging import _loggerClass as LoggerType
 # noinspection PyCompatibility
 import configparser
-import logging
 import types
 import six
 import os
-
+# noinspection PyUnresolvedReferences
+import logging
+import logging.config   # find config in 'logging.ini'
 LOGGER = logging.getLogger(__name__)
 
 

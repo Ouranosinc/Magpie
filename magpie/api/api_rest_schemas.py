@@ -904,8 +904,7 @@ class Service_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
 
 
 class Service_GET_ResponseBodySchema(BaseResponseBodySchema):
-    service_name = ServiceBodySchema()
-    service_name.name = '{service_name}'
+    service = ServiceBodySchema()
 
 
 class Service_GET_OkResponseSchema(colander.MappingSchema):
@@ -1045,10 +1044,10 @@ class Service_PUT_BadRequestResponseSchema(colander.MappingSchema):
     body = Service_FailureBodyResponseSchema(code=HTTPBadRequest.code, description=description)
 
 
-class Service_PUT_ForbiddenResponseSchema_ReservedKeyword(colander.MappingSchema):
+class Service_PUT_BadRequestResponseSchema_ReservedKeyword(colander.MappingSchema):
     description = "Update service name to 'types' not allowed (reserved keyword)."
     header = HeaderResponseSchema()
-    body = Service_FailureBodyResponseSchema(code=HTTPForbidden.code, description=description)
+    body = Service_FailureBodyResponseSchema(code=HTTPBadRequest.code, description=description)
 
 
 class Service_PUT_ForbiddenResponseSchema(colander.MappingSchema):

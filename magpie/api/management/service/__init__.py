@@ -5,7 +5,10 @@ logger = logging.getLogger(__name__)
 
 def includeme(config):
     logger.info('Adding api service ...')
-    # routes 'ServiceTypes' must be before 'Services' to be evaluated first
+    # NOTE:
+    #   routes 'by type' must be before 'by name' to be evaluated first
+    #   order is important to preserve expected behaviour,
+    #   otherwise service named 'types' is searched before
     # --- service by type ---
     config.add_route(**service_api_route_info(ServiceTypesAPI))
     config.add_route(**service_api_route_info(ServiceTypeAPI))
