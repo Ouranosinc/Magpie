@@ -1,8 +1,10 @@
 import unittest
 import requests
+import warnings
 import json
 import six
 import pytest
+import pyramid.testing
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from pyramid.response import Response
@@ -15,6 +17,9 @@ from magpie.common import get_settings_from_config_ini
 from magpie.constants import get_constant
 from magpie.common import str2bool
 from magpie.definitions.typedefs import Str, Callable, Dict, List, Optional, Tuple, Type, Union  # noqa: F401
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from utils import Base_Magpie_TestCase    # noqa: F401
 
 
 OptionalStringType = six.string_types + tuple([type(None)])
@@ -178,6 +183,20 @@ def get_service_types_for_version(version):
     if LooseVersion(version) <= LooseVersion('0.6.1'):
         available_service_types = available_service_types - {'access'}
     return list(available_service_types)
+
+
+def warn_skip_version(test, functionality, version):
+    # type: (Base_Magpie_TestCase, Str, Str) -> None
+    """
+    Verifies if the :param:`test.version` value meets the minimal :param:`version` requirement to execute a test.
+    If condition is not met, a warning is raised and the test is skipped.
+    """
+    # noinspection PyUnresolvedReferences
+    if LooseVersion(test.version) < LooseVersion(version):
+        test.skipTest(reason="Functionality [{}] not yet implemented in version [{}], upgrade to [>=0.9.1]."
+                      .format(test.version))
+        warnings.warn("no check for response (401/403) statuses performed in version [{}], upgrade to [>=0.9.1]"
+                      .format(test.version), FutureWarning)
 
 
 def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kwargs):

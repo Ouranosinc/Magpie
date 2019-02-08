@@ -31,8 +31,6 @@ from pyramid.httpexceptions import (   # noqa: F401
     exception_response,
 )
 # noinspection PyUnresolvedReferences
-from pyramid.registry import Registry                                               # noqa: F401
-# noinspection PyUnresolvedReferences
 from pyramid.settings import asbool                                                 # noqa: F401
 # noinspection PyUnresolvedReferences
 from pyramid.registry import Registry                                               # noqa: F401

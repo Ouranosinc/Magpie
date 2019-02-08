@@ -1,6 +1,15 @@
 from magpie.api import api_rest_schemas as schemas
 from magpie.common import get_json
-from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.pyramid_definitions import (
+    NO_PERMISSION_REQUIRED,
+    view_config,
+    forget,
+    Response,
+    HTTPOk,
+    HTTPFound,
+    HTTPUnauthorized,
+    HTTPInternalServerError,
+)
 from magpie.ui.utils import check_response, request_api
 from magpie.ui.home import add_template_data
 import requests

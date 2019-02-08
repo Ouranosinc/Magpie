@@ -1,5 +1,12 @@
 from magpie.api import api_rest_schemas as schemas
-from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.pyramid_definitions import (
+    view_config,
+    HTTPFound,
+    HTTPMovedPermanently,
+    HTTPBadRequest,
+    HTTPNotFound,
+    HTTPConflict,
+)
 from magpie.constants import get_constant
 from magpie.common import str2bool, get_json
 from magpie.helpers.sync_resources import OUT_OF_SYNC

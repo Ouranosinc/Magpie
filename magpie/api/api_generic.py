@@ -1,5 +1,8 @@
 from magpie.definitions.pyramid_definitions import (
+    IAuthenticationPolicy,
+    Authenticated,
     HTTPUnauthorized,
+    HTTPForbidden,
     HTTPNotFound,
     HTTPInternalServerError,
     HTTPServerError,
@@ -28,8 +31,16 @@ def unauthorized_access(request):
     # if not overridden, default is HTTPForbidden [403], which is for a slightly different situation
     # this better reflects the HTTPUnauthorized [401] user access with specified AuthZ headers
     # [http://www.restapitutorial.com/httpstatuscodes.html]
-    content = get_request_info(request, default_msg=s.UnauthorizedResponseSchema.description)
-    return raise_http(nothrow=True, httpError=HTTPUnauthorized, contentType='application/json',
+    authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
+    principals = authn_policy.effective_principals(request)
+    if Authenticated not in principals:
+        httpError = HTTPUnauthorized
+        httpMsg = s.UnauthorizedResponseSchema.description
+    else:
+        httpError = HTTPForbidden
+        httpMsg = None
+    content = get_request_info(request, default_msg=httpMsg)
+    return raise_http(nothrow=True, httpError=httpError, contentType='application/json',
                       detail=content['detail'], content=content)
 
 

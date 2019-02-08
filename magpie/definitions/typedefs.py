@@ -6,13 +6,13 @@ from typing import Any, AnyStr, Callable, Dict, List, Optional, Tuple, Type, Uni
 
 Str = Union[AnyStr, unicode]
 
-Setting = Union[AnyStr, int, float, bool]
+Setting = Union[AnyStr, int, float, bool, None]
 Settings = Dict[AnyStr, Setting]
 
 Cookies = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
 Headers = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
 
-JsonField = Union[Str, int, float, bool, Dict['JsonBody'], List['JsonBody']]
-JsonBody = Dict[Str, JsonField]
+JsonField = Union[Str, int, float, bool, None]
+JsonBody = Dict[Str, Union[JsonField, Dict[Str, Any], List[Any]]]
 
 ParamKWArgs = Dict[Str, Any]

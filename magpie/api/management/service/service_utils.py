@@ -1,11 +1,16 @@
-from magpie.api import api_except as ax
-from magpie.api.api_rest_schemas import *
+from magpie.api import api_except as ax, api_rest_schemas as s
 from magpie.api.management.group.group_utils import create_group_resource_permission
 from magpie.api.management.service.service_formats import format_service
 from magpie.constants import get_constant
 from magpie.definitions.sqlalchemy_definitions import Session
-from magpie.definitions.pyramid_definitions import *
-from magpie.definitions.ziggurat_definitions import *
+from magpie.definitions.pyramid_definitions import (
+    HTTPCreated,
+    HTTPForbidden,
+    HTTPNotAcceptable,
+    HTTPInternalServerError,
+    HTTPException,  # noqa: F401
+)
+from magpie.definitions.ziggurat_definitions import GroupService, ResourceService
 from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
 from magpie.services import service_type_dict
 from magpie import models
@@ -27,11 +32,11 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
         if not svc.resource_id:
             svc = ax.evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=db_session),
                                    fallback=lambda: db_session.rollback(), httpError=HTTPInternalServerError,
-                                   msgOnFail=Services_POST_InternalServerErrorResponseSchema.description,
+                                   msgOnFail=s.Services_POST_InternalServerErrorResponseSchema.description,
                                    content={u'service_name': str(service_name), u'resource_id': svc.resource_id})
             ax.verify_param(svc.resource_id, notNone=True, paramCompare=int, ofType=True,
                             httpError=HTTPInternalServerError,
-                            msgOnFail=Services_POST_InternalServerErrorResponseSchema.description,
+                            msgOnFail=s.Services_POST_InternalServerErrorResponseSchema.description,
                             content={u'service_name': str(service_name),  u'resource_id': svc.resource_id},
                             paramName=u'service_name')
         return svc
@@ -41,16 +46,16 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
                                                       resource_type=models.Service.resource_type_name,
                                                       url=str(service_url), type=str(service_type)),
                                fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
-                               msgOnFail=Services_POST_UnprocessableEntityResponseSchema.description,
+                               msgOnFail=s.Services_POST_UnprocessableEntityResponseSchema.description,
                                content={u'service_name': str(service_name),
                                         u'resource_type': models.Service.resource_type_name,
                                         u'service_url': str(service_url), u'service_type': str(service_type)})
 
     service = ax.evaluate_call(lambda: _add_service_magpie_and_phoenix(service, service_push, db_session),
                                fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
-                               msgOnFail=Services_POST_ForbiddenResponseSchema.description,
+                               msgOnFail=s.Services_POST_ForbiddenResponseSchema.description,
                                content=format_service(service, show_private_url=True))
-    return ax.valid_http(httpSuccess=HTTPCreated, detail=Services_POST_CreatedResponseSchema.description,
+    return ax.valid_http(httpSuccess=HTTPCreated, detail=s.Services_POST_CreatedResponseSchema.description,
                          content={u'service': format_service(service, show_private_url=True)})
 
 

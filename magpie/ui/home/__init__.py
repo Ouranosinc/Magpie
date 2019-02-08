@@ -1,7 +1,5 @@
+from magpie.definitions.pyramid_definitions import IAuthenticationPolicy, Authenticated
 import logging
-import requests
-from magpie.definitions.pyramid_definitions import *
-
 logger = logging.getLogger(__name__)
 
 

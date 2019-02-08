@@ -1,5 +1,5 @@
 from magpie.definitions.pyramid_definitions import exception_response
-from magpie.definitions.typedefs import AnyStr, JsonBody, Cookies, Headers, Optional
+from magpie.definitions.typedefs import Str, JsonBody, Cookies, Headers, Optional
 from pyramid.request import Request
 from pyramid.response import Response
 
@@ -11,8 +11,8 @@ def check_response(response):
 
 
 def request_api(request,            # type: Request
-                path,               # type: AnyStr
-                method='GET',       # type: Optional[AnyStr]
+                path,               # type: Str
+                method='GET',       # type: Optional[Str]
                 data=None,          # type: Optional[JsonBody]
                 headers=None,       # type: Optional[Headers]
                 cookies=None,       # type: Optional[Cookies]

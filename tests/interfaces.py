@@ -2,6 +2,7 @@ import unittest
 import warnings
 import pytest
 import pyramid.testing
+import mock
 import yaml
 import six
 from six.moves.urllib.parse import urlparse
@@ -14,14 +15,9 @@ from magpie.utils import get_twitcher_protected_service_url
 from tests import utils, runner
 
 
-@runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_NoAuth(object):
-    """
-    Interface class for unittests of Magpie API.
-    Test any operation that do not require user AuthN/AuthZ.
-
-    Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
-    """
+class Base_Magpie_TestCase(unittest.TestCase):
+    version = None
+    url = None
 
     __test__ = False
 
@@ -32,6 +28,17 @@ class Interface_MagpieAPI_NoAuth(object):
     @classmethod
     def tearDownClass(cls):
         pyramid.testing.tearDown()
+
+
+# noinspection PyAbstractClass
+@runner.MAGPIE_TEST_API
+class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
+    """
+    Interface class for unittests of Magpie API.
+    Test any operation that do not require user AuthN/AuthZ.
+
+    Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
+    """
 
     @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Anonymous(self):
@@ -67,46 +74,29 @@ class Interface_MagpieAPI_NoAuth(object):
             utils.check_val_equal(json_body['user_name'], self.usr)
 
 
+# noinspection PyAbstractClass
 @unittest.skip("Not implemented.")
 @pytest.mark.skip(reason="Not implemented.")
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_UsersAuth(unittest.TestCase):
+class Interface_MagpieAPI_UsersAuth(Base_Magpie_TestCase):
     """
     Interface class for unittests of Magpie API.
     Test any operation that require at least 'Users' group AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
-
-    __test__ = False
-
-    @classmethod
-    def setUpClass(cls):
-        raise NotImplementedError
-
-    @classmethod
-    def tearDownClass(cls):
-        pyramid.testing.tearDown()
+    pass
 
 
+# noinspection PyAbstractClass
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_AdminAuth(object):
+class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     """
     Interface class for unittests of Magpie API.
     Test any operation that require at least 'administrator' group AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
-
-    __test__ = False
-
-    @classmethod
-    def setUpClass(cls):
-        raise NotImplementedError
-
-    @classmethod
-    def tearDownClass(cls):
-        pyramid.testing.tearDown()
 
     def tearDown(self):
         self.check_requirements()   # re-login as required in case test logged out the user with permissions
@@ -172,6 +162,29 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_is_in('securityDefinitions', json_body)
         utils.check_val_is_in('swagger', json_body)
         utils.check_val_equal(json_body['swagger'], '2.0')
+
+    @runner.MAGPIE_TEST_STATUS
+    def test_unauthorized_forbidden_responses(self):
+        """
+        Verify that unauthorized (401) and forbidden (403) are properly returned for corresponding operations.
+        Both variations use the same forbidden view.
+        """
+        if LooseVersion(self.version) < LooseVersion('0.9.1'):
+            warnings.warn("no check for response (401/403) statuses performed in version [{}], upgrade to [>=0.9.1]"
+                          .format(self.version), FutureWarning)
+            self.skipTest(reason="Status 401/403 check not yet implemented in version [{}].".format(self.version))
+
+        # call a route that will make a forbidden access to db
+        with mock.patch('magpie.models.User.all', side_effect=Exception('Test')):
+            resp = utils.test_request(self.url, 'GET', '/users', headers=self.json_headers, expect_errors=True)
+            body = utils.check_response_basic_info(resp, 403, expected_method='GET')
+            utils.check_val_equal(body['code'], 403)
+
+        # call a route that is admin-only
+        utils.check_or_try_logout_user(self.url)
+        resp = utils.test_request(self.url, 'GET', '/services', headers=self.json_headers, expect_errors=True)
+        body = utils.check_response_basic_info(resp, 401, expected_method='GET')
+        utils.check_val_equal(body['code'], 401)
 
     @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Administrator(self):
@@ -1208,24 +1221,15 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.TestSetup.check_NonExistingTestServiceResource(self)
 
 
+# noinspection PyAbstractClass
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_NoAuth(object):
+class Interface_MagpieUI_NoAuth(Base_Magpie_TestCase):
     """
     Interface class for unittests of Magpie UI.
     Test any operation that do not require user AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
-
-    __test__ = False
-
-    @classmethod
-    def setUpClass(cls):
-        raise NotImplementedError
-
-    @classmethod
-    def tearDownClass(cls):
-        pyramid.testing.tearDown()
 
     @runner.MAGPIE_TEST_STATUS
     def test_Home(self):
@@ -1286,24 +1290,15 @@ class Interface_MagpieUI_NoAuth(object):
         utils.TestSetup.check_Unauthorized(self, method='POST', path=path)
 
 
+# noinspection PyAbstractClass
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_AdminAuth(object):
+class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
     """
     Interface class for unittests of Magpie UI.
     Test any operation that require at least 'administrator' group AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
-
-    __test__ = False
-
-    @classmethod
-    def setUpClass(cls):
-        raise NotImplementedError
-
-    @classmethod
-    def tearDownClass(cls):
-        pyramid.testing.tearDown()
 
     @classmethod
     def check_requirements(cls):
