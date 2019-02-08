@@ -1,6 +1,14 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+test_register
+----------------------------------
+
+Tests for `magpie.register` operations.
+"""
 from magpie.constants import get_constant
 from tests import utils, runner
-import pytest
 import unittest
 
 

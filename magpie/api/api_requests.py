@@ -1,4 +1,6 @@
 from magpie.definitions import ziggurat_definitions as zig
+from magpie.definitions.pyramid_definitions import Request
+from magpie.definitions.typedefs import Any, AnyStr, Optional
 from magpie.api.api_except import evaluate_call, verify_param
 from magpie.api.api_rest_schemas import *
 from magpie import models
@@ -154,10 +156,9 @@ def get_value_matchdict_checked(request, key):
 
 
 def get_query_param(request, case_insensitive_key, default=None):
+    # type: (Request, AnyStr, Optional[Any]) -> Any
+    """Retrieves a query string value by name (case insensitive), or returns the default if not present."""
     for p in request.params:
         if p.lower() == case_insensitive_key:
-            value = request.params.get(p)
-            if isinstance(value, six.string_types):
-                return value.lower()
-            return value
+            return request.params.get(p)
     return default

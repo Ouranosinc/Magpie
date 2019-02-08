@@ -34,8 +34,12 @@ def request_api(request,            # type: Request
         headers = {'Accept': 'application/json'}
     if not headers:
         headers = request.headers
-    if not data and method not in ('HEAD', 'GET'):
-        data = {}
+    # although no body is required per-say for HEAD/GET requests, add it if missing
+    # this avoid downstream errors when 'request.POST' is accessed
+    # we use a plain empty byte str because `{}` or `None` cause errors on each case
+    # of local/remote testing with corresponding `webtest.TestApp`/`requests.Request`
+    if not data:
+        data = u''
 
     if isinstance(cookies, dict):
         cookies = list(cookies.items())

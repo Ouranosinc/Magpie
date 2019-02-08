@@ -182,7 +182,7 @@ def get_service_types_for_version(version):
 
 def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kwargs):
     """
-    Calls the request using either a `webtest.TestApp` instance or a `requests` instance from a string URL.
+    Calls the request using either a :class:`webtest.TestApp` instance or :class:`requests.Request` from a string URL.
     :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
     :param method: request method (GET, POST, PUT, DELETE)
     :param path: test path starting at base path
@@ -258,6 +258,7 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
                             headers=None,                   # type: Optional[Dict[AnyStr, AnyStr]]
                             use_ui_form_submit=False,       # type: Optional[bool]
                             version=__meta__.__version__,   # type: Optional[AnyStr]
+                            expect_errors=False,            # type: Optional[bool]
                             ):                              # type: (...) -> OptionalHeaderCookiesType
     """
     Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
@@ -271,6 +272,7 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
     :param use_ui_form_submit: use Magpie UI login 'form' to obtain cookies
         (required for local `WebTest.App` login, ignored by requests using URL)
     :param version: server or local app version to evaluate responses with backward compatibility
+    :param expect_errors: indicate if the login is expected to fail, used only if using UI form & `webtest.TestApp`
     :return: headers and cookies of the user session or (None, None)
     :raise: Exception on any login failure as required by the caller's specifications (username/password)
     """
@@ -293,7 +295,7 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
                 form['user_name'] = username
                 form['password'] = password
                 form['provider_name'] = provider
-                resp = form.submit('submit')
+                resp = form.submit('submit', expect_errors=expect_errors)
                 resp_cookies = app_or_url.cookies    # automatically set by form submit
             else:
                 resp = app_or_url.post_json('/signin', data, headers=headers)

@@ -34,6 +34,7 @@ MAGPIE_TEST_REMOTE = RunOptionDecorator('MAGPIE_TEST_REMOTE')
 MAGPIE_TEST_LOCAL = RunOptionDecorator('MAGPIE_TEST_LOCAL')
 MAGPIE_TEST_API = RunOptionDecorator('MAGPIE_TEST_API')
 MAGPIE_TEST_UI = RunOptionDecorator('MAGPIE_TEST_UI')
+MAGPIE_TEST_UTILS = RunOptionDecorator('MAGPIE_TEST_UTILS')
 
 
 def test_suite():

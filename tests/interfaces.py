@@ -564,9 +564,9 @@ class Interface_MagpieAPI_AdminAuth(object):
 
         # validate ineffective previous user name
         utils.check_or_try_logout_user(self.url)
-        headers, cookies = utils.check_or_try_login_user(self.url,
-                                                         username=self.test_user_name, password=self.test_user_name,
-                                                         use_ui_form_submit=True, version=self.version)
+        headers, cookies = utils.check_or_try_login_user(
+            self.url, username=self.test_user_name, password=self.test_user_name, version=self.version,
+            use_ui_form_submit=True, expect_errors=True)
         utils.check_val_equal(cookies, {}, msg="Cookies should be empty from login failure.")
         resp = utils.test_request(self.url, 'GET', '/session', headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
@@ -606,8 +606,9 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_or_try_logout_user(self.url)
 
         # validate that previous password is ineffective
-        headers, cookies = utils.check_or_try_login_user(self.url, username=self.test_user_name, password=old_password,
-                                                         use_ui_form_submit=True, version=self.version)
+        headers, cookies = utils.check_or_try_login_user(
+            self.url, username=self.test_user_name, password=old_password, version=self.version,
+            use_ui_form_submit=True, expect_errors=True)
         resp = utils.test_request(self.url, 'GET', '/session', headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(body['authenticated'], False)
