@@ -1,6 +1,13 @@
 from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import *
-from magpie.definitions.pyramid_definitions import EVERYONE, ALLOW, Request
+from magpie.definitions.pyramid_definitions import (
+    EVERYONE,
+    ALLOW,
+    Request,
+    HTTPNotFound,
+    HTTPBadRequest,
+    HTTPNotImplemented,
+)
 from magpie.api.api_except import *
 from magpie.permissions import *
 from magpie.owsrequest import *
@@ -448,7 +455,8 @@ service_type_dict = {
 def service_factory(service, request):
     # type: (models.Service, Request) -> ServiceI
     """Retrieve the specific service class from the provided database service entry."""
-    verify_param(service, ofType=models.Service, httpError=HTTPBadRequest, content={u'service': repr(service)},
+    verify_param(service, paramType=models.Service, ofType=True,
+                 httpError=HTTPBadRequest, content={u'service': repr(service)},
                  msgOnFail="Cannot process invalid service object")
     service_type = evaluate_call(lambda: service.type, httpError=HTTPInternalServerError,
                                  msgOnFail="Cannot retrieve service type from object")

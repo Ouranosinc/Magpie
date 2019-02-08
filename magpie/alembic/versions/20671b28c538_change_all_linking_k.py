@@ -11,9 +11,10 @@ from __future__ import unicode_literals
 revision = '20671b28c538'
 down_revision = '4c10d97c509'
 
-from alembic import op
-from alembic.context import get_context
-from magpie.definitions.sqlalchemy_definitions import *
+# noinspection PyUnresolvedReferences
+from alembic.context import get_context                                             # noqa: F401
+from alembic import op                                                              # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import sa, MySQLDialect, Inspector   # noqa: F401
 
 
 def upgrade():

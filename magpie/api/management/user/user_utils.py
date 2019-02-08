@@ -8,11 +8,11 @@ from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.pyramid_definitions import Request
 from magpie.services import service_factory, ResourcePermissionType, ServiceI
 from magpie import models
-from typing import Any, AnyStr, Dict, List, Optional, Union
+from typing import Any, Str, Dict, List, Optional, Union
 
 
 def create_user(user_name, password, email, group_name, db_session):
-    # type: (AnyStr, Union[AnyStr, None], AnyStr, AnyStr, Session) -> HTTPException
+    # type: (Str, Union[Str, None], Str, Str, Session) -> HTTPException
     """
     Creates a user if it is permitted and not conflicting.
     Password must be set to `None` if using external identity.
@@ -54,7 +54,7 @@ def create_user(user_name, password, email, group_name, db_session):
 
 
 def create_user_resource_permission(permission_name, resource, user_id, db_session):
-    # type: (AnyStr, models.Resource, models.User, Session) -> HTTPException
+    # type: (Str, models.Resource, models.User, Session) -> HTTPException
     """
     Creates a permission on a user/resource combination if it is permitted and not conflicting.
     :returns: corresponding HTTP response according to the encountered situation.
@@ -108,7 +108,7 @@ def filter_user_permission(resource_permission_list, user):
 
 def get_user_resource_permissions(user, resource, request,
                                   inherit_groups_permissions=True, effective_permissions=False):
-    # type: (models.User, models.Resource, Request, bool, bool) -> List[AnyStr]
+    # type: (models.User, models.Resource, Request, bool, bool) -> List[Str]
     """
     Retrieves user resource permissions with or without inherited group permissions.
     Alternatively retrieves the effective user resource permissions, where group permissions are implied as `True`.
@@ -128,7 +128,7 @@ def get_user_resource_permissions(user, resource, request,
     return sorted(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
 
-UserServices = Union[Dict[AnyStr, Dict[AnyStr, Any]], List[Dict[AnyStr, Any]]]
+UserServices = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
 
 
 def get_user_services(user, request, cascade_resources=False,
@@ -179,7 +179,7 @@ def get_user_services(user, request, cascade_resources=False,
 
 
 def get_user_service_permissions(user, service, request, inherit_groups_permissions=True):
-    # type: (models.User, models.Service, Request, Optional[bool]) -> List[AnyStr]
+    # type: (models.User, models.Service, Request, Optional[bool]) -> List[Str]
     if service.owner_user_id == user.id:
         permission_names = service_factory(service, request).permission_names
     else:
@@ -192,7 +192,7 @@ def get_user_service_permissions(user, service, request, inherit_groups_permissi
 
 def get_user_resources_permissions_dict(user, request, resource_types=None,
                                         resource_ids=None, inherit_groups_permissions=True):
-    # type: (models.User, Request, Optional[List[AnyStr]], Optional[List[int]], Optional[bool]) -> Dict[AnyStr, Any]
+    # type: (models.User, Request, Optional[List[Str]], Optional[List[int]], Optional[bool]) -> Dict[Str, Any]
     """
     Creates a dictionary of resources by id with corresponding permissions of the user.
 
@@ -226,7 +226,7 @@ def get_user_resources_permissions_dict(user, request, resource_types=None,
 
 
 def get_user_service_resources_permissions_dict(user, service, request, inherit_groups_permissions=True):
-    # type: (models.User, models.Service, Request, bool) -> Dict[AnyStr, Any]
+    # type: (models.User, models.Service, Request, bool) -> Dict[Str, Any]
     resources_under_service = models.resource_tree_service.from_parent_deeper(parent_id=service.resource_id,
                                                                               db_session=request.db)
     resource_ids = [resource.Resource.resource_id for resource in resources_under_service]
@@ -241,18 +241,18 @@ def check_user_info(user_name, email, password, group_name):
     verify_param(len(user_name), isIn=True, httpError=HTTPBadRequest,
                  paramName=u'user_name', paramCompare=range(1, 1 + get_constant('MAGPIE_USER_NAME_MAX_LENGTH')),
                  msgOnFail=Users_CheckInfo_Size_BadRequestResponseSchema.description)
+    verify_param(user_name, paramCompare=get_constant('MAGPIE_LOGGED_USER'), notEqual=True, httpError=HTTPBadRequest,
+                 paramName=u'user_name', msgOnFail=Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
     verify_param(email, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  paramName=u'email', msgOnFail=Users_CheckInfo_Email_BadRequestResponseSchema.description)
     verify_param(password, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  paramName=u'password', msgOnFail=Users_CheckInfo_Password_BadRequestResponseSchema.description)
     verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  paramName=u'group_name', msgOnFail=Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
-    verify_param(user_name, paramCompare=[get_constant('MAGPIE_LOGGED_USER')], notIn=True, httpError=HTTPConflict,
-                 paramName=u'user_name', msgOnFail=Users_CheckInfo_Login_ConflictResponseSchema.description)
 
 
 def get_user_groups_checked(request, user):
-    # type: (Request, models.User) -> List[AnyStr]
+    # type: (Request, models.User) -> List[Str]
     verify_param(user, notNone=True, httpError=HTTPNotFound,
                  msgOnFail=Groups_CheckInfo_NotFoundResponseSchema.description)
     db = request.db

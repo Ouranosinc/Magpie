@@ -21,8 +21,8 @@ def upgrade():
                     sa.Column('resource_id',
                               sa.Integer(),
                               sa.ForeignKey('resources.resource_id',
-                                          onupdate='CASCADE',
-                                          ondelete='CASCADE', ),
+                                            onupdate='CASCADE',
+                                            ondelete='CASCADE', ),
                               primary_key=True),
                     sa.Column('type', sa.UnicodeText(), unique=False),
                     sa.Column('url', sa.UnicodeText(), unique=False))

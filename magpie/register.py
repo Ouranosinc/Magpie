@@ -19,11 +19,11 @@ from magpie.definitions.ziggurat_definitions import (
 )
 from magpie.definitions.sqlalchemy_definitions import Session
 from magpie.definitions.pyramid_definitions import HTTPException
+from magpie.definitions.typedefs import Str, Dict, List, Optional, Tuple, Union, TYPE_CHECKING  # noqa: F401
 from magpie.permissions import permissions_supported
 from magpie.services import service_type_dict
 from magpie import models
 from magpie.utils import get_twitcher_protected_service_url, get_phoenix_url, get_magpie_url, get_admin_cookies
-from typing import AnyStr, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from requests.cookies import RequestsCookieJar
 import os
 import six
@@ -50,9 +50,9 @@ SERVICES_PHOENIX = 'PHOENIX'
 SERVICES_PHOENIX_ALLOWED = ['wps']
 
 if TYPE_CHECKING:
-    ConfigItem = Dict[AnyStr, AnyStr]
+    ConfigItem = Dict[Str, Str]
     ConfigList = List[ConfigItem]
-    ConfigDict = Dict[AnyStr, Union[ConfigItem, ConfigList]]
+    ConfigDict = Dict[Str, Union[ConfigItem, ConfigList]]
 
 
 def login_loop(login_url, cookies_file, data=None, message='Login response'):
@@ -75,7 +75,7 @@ def login_loop(login_url, cookies_file, data=None, message='Login response'):
 
 
 def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Response'):
-    # type: (AnyStr, Optional[AnyStr], Optional[AnyStr], Optional[AnyStr], Optional[AnyStr]) -> Tuple[int, int]
+    # type: (Str, Optional[Str], Optional[Str], Optional[Str], Optional[Str]) -> Tuple[int, int]
     """Executes a request using cURL.
 
     :returns: tuple of the returned system command code and the response http code
@@ -96,7 +96,7 @@ def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Resp
         params.extend(['--data', form_params])
     params.extend([url])
     curl_out = subprocess.Popen(params, stdout=subprocess.PIPE)
-    curl_msg = curl_out.communicate()[0]    # type: AnyStr
+    curl_msg = curl_out.communicate()[0]    # type: Str
     curl_err = curl_out.returncode          # type: int
     http_code = int(curl_msg.split(msg_sep)[1])
     print_log("[{url}] {response}".format(response=curl_msg, url=url))
@@ -189,11 +189,11 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
     return success, statuses
 
 
-def register_services(where,                        # type: Optional[AnyStr]
-                      services_dict,                # type: Dict[AnyStr, Dict[AnyStr, AnyStr]]
-                      cookies,                      # type: AnyStr
-                      message='Register response',  # type: AnyStr
-                      ):                            # type: (...) -> Tuple[bool, Dict[AnyStr, int]]
+def register_services(where,                        # type: Optional[Str]
+                      services_dict,                # type: Dict[Str, Dict[Str, Str]]
+                      cookies,                      # type: Str
+                      message='Register response',  # type: Optional[Str]
+                      ):                            # type: (...) -> Tuple[bool, Dict[Str, int]]
     """
     Registers services on desired location using provided configurations and access cookies.
 
@@ -312,7 +312,7 @@ def magpie_add_register_services_perms(services, statuses, curl_cookies, request
 
 
 def magpie_update_services_conflict(conflict_services, services_dict, request_cookies):
-    # type: (List[AnyStr], ConfigDict, Dict[AnyStr, AnyStr]) -> Dict[AnyStr, int]
+    # type: (List[Str], ConfigDict, Dict[Str, Str]) -> Dict[Str, int]
     """Resolve conflicting services by name during registration by updating them only if pointing to different URL."""
     magpie_url = get_magpie_url()
     statuses = dict()
@@ -333,7 +333,7 @@ def magpie_update_services_conflict(conflict_services, services_dict, request_co
 
 def magpie_register_services_with_requests(services_dict, push_to_phoenix, username, password, provider,
                                            force_update=False, disable_getcapabilities=False):
-    # type: (ConfigDict, bool, AnyStr, AnyStr, AnyStr, Optional[bool], Optional[bool]) -> bool
+    # type: (ConfigDict, bool, Str, Str, Str, Optional[bool], Optional[bool]) -> bool
     """
     Registers magpie services using the provided services configuration.
 
@@ -446,7 +446,7 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
 
 
 def _load_config(path_or_dict, section):
-    # type: (Union[AnyStr, ConfigDict], AnyStr) -> ConfigDict
+    # type: (Union[Str, ConfigDict], Str) -> ConfigDict
     """Loads a file path or dictionary as YAML/JSON configuration."""
     try:
         if isinstance(path_or_dict, six.string_types):
@@ -462,7 +462,7 @@ def _load_config(path_or_dict, section):
 
 def magpie_register_services_from_config(service_config_file_path, push_to_phoenix=False,
                                          force_update=False, disable_getcapabilities=False, db_session=None):
-    # type: (AnyStr, Optional[bool], Optional[bool], Optional[bool], Optional[Session]) -> None
+    # type: (Str, Optional[bool], Optional[bool], Optional[bool], Optional[Session]) -> None
     """
     Registers Magpie services from a `providers.cfg` file.
     Uses the provided DB session to directly update service definitions, or uses API request routes as admin.
@@ -504,7 +504,7 @@ def parse_resource_path(permission_config_entry,    # type: ConfigItem
                         entry_index,                # type: int
                         service_info,               # type: ConfigItem
                         cookies_or_session=None,    # type: Union[RequestsCookieJar, Session]
-                        magpie_url=None,            # type: AnyStr
+                        magpie_url=None,            # type: Optional[Str]
                         ):                          # type: (...) -> Tuple[Union[int, None], bool]
     """
     Parses the `resource` field of a permission config entry and retrieves the final resource id.
@@ -539,8 +539,10 @@ def parse_resource_path(permission_config_entry,    # type: ConfigItem
             for res in resource_path.split('/'):
                 if len(res_dict):
                     # resource is specified by id/name
+                    # noinspection PyTypeChecker
                     res_id = list(filter(lambda r: res in [r, res_dict[r]["resource_name"]], res_dict))
                     if res_id:
+                        # noinspection PyTypeChecker
                         res_dict = res_dict[res_id[0]]['children']  # update for upcoming sub-resource iteration
                         parent = int(res[0])
                         continue
@@ -575,7 +577,7 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
                            entry_index,                 # type: int
                            resource_id,                 # type: int
                            cookies_or_session,          # type: Union[RequestsCookieJar, Session]
-                           magpie_url,                  # type: Optional[AnyStr]
+                           magpie_url,                  # type: Optional[Str]
                            ):                           # type: (...) -> None
     """
     Applies the single permission entry retrieved from the permission configuration.
@@ -693,7 +695,7 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
 
 
 def magpie_register_permissions_from_config(permissions_config, magpie_url=None, db_session=None):
-    # type: (Union[AnyStr, ConfigDict], Optional[AnyStr], Optional[Session]) -> None
+    # type: (Union[Str, ConfigDict], Optional[Str], Optional[Session]) -> None
     """
     Applies permissions specified in configuration.
 

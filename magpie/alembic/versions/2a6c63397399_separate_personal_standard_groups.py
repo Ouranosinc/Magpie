@@ -5,7 +5,8 @@ Revises: 9fd4589cc82c
 Create Date: 2018-05-23 17:17:51.205891
 
 """
-import os, sys
+import os
+import sys
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)    # version
 root_dir = os.path.dirname(root_dir)    # alembic
@@ -13,11 +14,12 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-from alembic import op
-from alembic.context import get_context
-from magpie.definitions.sqlalchemy_definitions import *
-from magpie.helpers.register_default_users import init_anonymous, init_admin, init_user_group
-from magpie import models
+# noinspection PyUnresolvedReferences
+from alembic.context import get_context                                                         # noqa: F401
+from alembic import op                                                                          # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import sessionmaker, PGDialect                   # noqa: F401
+from magpie.helpers.register_default_users import init_anonymous, init_admin, init_user_group   # noqa: F401
+from magpie import models                                                                       # noqa: F401
 
 Session = sessionmaker()
 
@@ -48,12 +50,15 @@ def get_users_groups(db_session):
     new_group_users = [group for group in all_groups if group.group_name == NEW_GROUP_USERS]
 
     # return found or None
-    return old_user_admin[0] if len(old_user_admin) > 0 else None, \
-           old_user_users[0] if len(old_user_users) > 0 else None, \
-           old_group_admin[0] if len(old_group_admin) > 0 else None, \
-           old_group_users[0] if len(old_group_users) > 0 else None, \
-           new_group_admin[0] if len(new_group_admin) > 0 else None, \
-           new_group_users[0] if len(new_group_users) > 0 else None
+    # noinspection PyPep8
+    return (
+        old_user_admin[0] if len(old_user_admin) > 0 else None,
+        old_user_users[0] if len(old_user_users) > 0 else None,
+        old_group_admin[0] if len(old_group_admin) > 0 else None,
+        old_group_users[0] if len(old_group_users) > 0 else None,
+        new_group_admin[0] if len(new_group_admin) > 0 else None,
+        new_group_users[0] if len(new_group_users) > 0 else None
+    )
 
 
 def upgrade_migrate(old_group, old_user, new_group, new_name, db_session):
@@ -67,6 +72,7 @@ def upgrade_migrate(old_group, old_user, new_group, new_name, db_session):
         old_group.group_name = new_name
     elif new_group is None and old_group is None:
         # create missing group, no group reference to modify
+        # noinspection PyArgumentList
         new_group = models.Group(group_name=new_name)
         db_session.add(new_group)
     elif new_group is not None and old_group is not None:
@@ -98,6 +104,7 @@ def downgrade_migrate(old_group, old_user, new_group, old_name, db_session):
 
     if old_group is None:
         # create missing group
+        # noinspection PyArgumentList
         old_group = models.Group(group_name=old_name)
         db_session.add(old_group)
     if old_group is not None and new_group is not None:
@@ -117,9 +124,11 @@ def downgrade_migrate(old_group, old_user, new_group, old_name, db_session):
         db_session.delete(new_group)
 
     if old_user is None:
+        # noinspection PyArgumentList
         old_user = models.User(user_name=old_name, email='{}@mail.com'.format(old_name))
         db_session.add(old_user)
         old_user = models.User.by_user_name(old_name, db_session)
+        # noinspection PyArgumentList
         usr_grp = models.UserGroup(group_id=old_group.id, user_id=old_user.id)
         db_session.add(usr_grp)
 

@@ -33,10 +33,10 @@ class TestRegister(unittest.TestCase):
                                                                  use_ui_form_submit=True, version=cls.version)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
 
-
     def test_register_providers(self):
-        pass
-
+        # TODO
+        self.skipTest(reason="not implemented")
 
     def test_register_permissions(self):
-        pass
+        # TODO
+        self.skipTest(reason="not implemented")

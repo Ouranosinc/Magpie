@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from magpie import constants
 from magpie.common import get_settings_from_config_ini, print_log, raise_log

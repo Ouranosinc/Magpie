@@ -29,7 +29,8 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
                                    fallback=lambda: db_session.rollback(), httpError=HTTPInternalServerError,
                                    msgOnFail=Services_POST_InternalServerErrorResponseSchema.description,
                                    content={u'service_name': str(service_name), u'resource_id': svc.resource_id})
-            ax.verify_param(svc.resource_id, notNone=True, ofType=int, httpError=HTTPInternalServerError,
+            ax.verify_param(svc.resource_id, notNone=True, paramCompare=int, ofType=True,
+                            httpError=HTTPInternalServerError,
                             msgOnFail=Services_POST_InternalServerErrorResponseSchema.description,
                             content={u'service_name': str(service_name),  u'resource_id': svc.resource_id},
                             paramName=u'service_name')

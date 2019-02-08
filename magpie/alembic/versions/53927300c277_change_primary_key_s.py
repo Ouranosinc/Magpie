@@ -11,11 +11,12 @@ from __future__ import unicode_literals
 revision = '53927300c277'
 down_revision = '54d08f9adc8c'
 
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.mysql.base import MySQLDialect
-from alembic.context import get_context
-from sqlalchemy.engine.reflection import Inspector
+# noinspection PyUnresolvedReferences
+from alembic.context import get_context                     # noqa: F401
+from alembic import op                                      # noqa: F401
+import sqlalchemy as sa                                     # noqa: F401
+from sqlalchemy.dialects.mysql.base import MySQLDialect     # noqa: F401
+from sqlalchemy.engine.reflection import Inspector          # noqa: F401
 
 
 def upgrade():

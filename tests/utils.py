@@ -10,18 +10,18 @@ from pyramid.testing import setUp as PyramidSetUp
 from webtest import TestApp
 from webtest.response import TestResponse
 from webob.headers import ResponseHeaders
-from typing import AnyStr, Callable, Dict, List, Optional, Tuple, Union
 from magpie import __meta__, services, magpiectl
 from magpie.common import get_settings_from_config_ini
 from magpie.constants import get_constant
 from magpie.common import str2bool
+from magpie.definitions.typedefs import Str, Callable, Dict, List, Optional, Tuple, Type, Union  # noqa: F401
 
 
 OptionalStringType = six.string_types + tuple([type(None)])
-HeadersType = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
-CookiesType = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
+HeadersType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
+CookiesType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
 OptionalHeaderCookiesType = Union[Tuple[None, None], Tuple[HeadersType, CookiesType]]
-TestAppOrUrlType = Union[AnyStr, TestApp]
+TestAppOrUrlType = Union[Str, TestApp]
 ResponseType = Union[TestResponse, Response]
 
 
@@ -148,7 +148,7 @@ def get_headers(app_or_url, header_dict):
 
 
 def get_header(header_name, header_container):
-    # type: (AnyStr, Optional[Union[HeadersType, ResponseHeaders]]) -> Union[AnyStr, None]
+    # type: (Str, Optional[Union[HeadersType, ResponseHeaders]]) -> Union[Str, None]
     if header_container is None:
         return None
     headers = header_container
@@ -252,12 +252,12 @@ def get_session_user(app_or_url, headers=None):
 
 
 def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrlType
-                            username=None,                  # type: Optional[AnyStr]
-                            password=None,                  # type: Optional[AnyStr]
-                            provider='ziggurat',            # type: Optional[AnyStr]
-                            headers=None,                   # type: Optional[Dict[AnyStr, AnyStr]]
+                            username=None,                  # type: Optional[Str]
+                            password=None,                  # type: Optional[Str]
+                            provider='ziggurat',            # type: Optional[Str]
+                            headers=None,                   # type: Optional[Dict[Str, Str]]
                             use_ui_form_submit=False,       # type: Optional[bool]
-                            version=__meta__.__version__,   # type: Optional[AnyStr]
+                            version=__meta__.__version__,   # type: Optional[Str]
                             expect_errors=False,            # type: Optional[bool]
                             ):                              # type: (...) -> OptionalHeaderCookiesType
     """
@@ -392,6 +392,23 @@ def check_val_not_in(val, ref, msg=None):
 
 def check_val_type(val, ref, msg=None):
     assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre='Type Fail', msg=msg)
+
+
+def check_raises(func, exception_type):
+    # type: (Callable[[], None], Type[Exception]) -> Exception
+    """
+    Calls the callable and verifies that the specific exception was raised.
+
+    :raise AssertionError: on failing exception check or missing raised exception.
+    :returns: raised exception of expected type if it was raised.
+    """
+    # noinspection PyBroadException
+    try:
+        func()
+    except Exception as ex:
+        assert isinstance(ex, exception_type)
+        return ex
+    raise AssertionError("Exception [{}] was not raised.".format(exception_type))
 
 
 def check_response_basic_info(response, expected_code=200, expected_type='application/json', expected_method='GET'):

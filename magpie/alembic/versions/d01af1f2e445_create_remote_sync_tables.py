@@ -5,8 +5,8 @@ Revises: c352a98d570e
 Create Date: 2018-09-11 10:56:23.779143
 
 """
-import os, sys
-
+import os
+import sys
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)  # version
 root_dir = os.path.dirname(root_dir)  # alembic
@@ -14,12 +14,11 @@ root_dir = os.path.dirname(root_dir)  # magpie
 root_dir = os.path.dirname(root_dir)  # root
 sys.path.insert(0, root_dir)
 
-from alembic import op
-from magpie.definitions.sqlalchemy_definitions import *
+from alembic import op                                                  # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import sessionmaker, sa  # noqa: F401
 
 Session = sessionmaker()
 
-import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'd01af1f2e445'

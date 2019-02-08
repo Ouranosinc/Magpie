@@ -220,11 +220,6 @@ class Interface_MagpieAPI_AdminAuth(object):
         return json_body
 
     @runner.MAGPIE_TEST_USERS
-    def test_PutUser_Forbidden_ReservedKeyword_Current(self):
-        # TODO
-        self.skipTest(reason='not implemented')
-
-    @runner.MAGPIE_TEST_USERS
     def test_GetCurrentUser(self):
         logged_user = get_constant('MAGPIE_LOGGED_USER')
         resp = utils.test_request(self.url, 'GET', '/users/{}'.format(logged_user), headers=self.json_headers)
@@ -513,16 +508,32 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_is_in(self.test_user_name, users)
 
     @runner.MAGPIE_TEST_USERS
-    def test_PostUsers_Forbidden_ReservedKeyword_Current(self):
-        # TODO
-        self.skipTest(reason='not implemented')
+    def test_PostUsers_ReservedKeyword_Current(self):
+        data = {
+            'user_name': get_constant('MAGPIE_LOGGED_USER'),
+            'password': 'pwd',
+            'email': 'email@mail.com',
+            'group_name': 'users',
+        }
+        resp = utils.test_request(self.url, 'POST', '/users', data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 400, expected_method='POST')
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PutUser_ReservedKeyword_Current(self):
+        utils.TestSetup.create_TestUser(self)
+        route = '/users/{usr}'.format(usr=get_constant('MAGPIE_LOGGED_USER'))
+        data = {'user_name': self.test_user_name + '-new-put-over-current'}
+        resp = utils.test_request(self.url, 'PUT', route, data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 400, expected_method='PUT')
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_nothing(self):
         utils.TestSetup.create_TestUser(self)
         route = '/users/{usr}'.format(usr=self.test_user_name)
-        resp = utils.test_request(self.url, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data={},
-                                  expect_errors=True)
+        resp = utils.test_request(self.url, 'PUT', route, data={},
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 400, expected_method='PUT')
 
     @runner.MAGPIE_TEST_USERS
@@ -644,18 +655,6 @@ class Interface_MagpieAPI_AdminAuth(object):
                                   cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 404, expected_method='GET')
 
-    @runner.MAGPIE_TEST_USERS
-    def test_GetCurrentUser(self):
-        utils.TestSetup.check_NonExistingTestUser(self)
-        logged_user = get_constant('MAGPIE_LOGGED_USER')
-        resp = utils.test_request(self.url, 'GET', '/users/{}'.format(logged_user),
-                                  headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
-        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
-            utils.check_val_equal(json_body['user']['user_name'], self.usr)
-        else:
-            utils.check_val_equal(json_body['user_name'], self.usr)
-
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_DEFAULTS
     def test_ValidateDefaultGroups(self):
@@ -684,7 +683,7 @@ class Interface_MagpieAPI_AdminAuth(object):
     def test_PostUserGroup_conflict(self):
         route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
         data = {'group_name': get_constant('MAGPIE_ADMIN_GROUP')}
-        resp = utils.test_request(self.url, 'POST', route,  expect_errors=True,
+        resp = utils.test_request(self.url, 'POST', route, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies, data=data)
         utils.check_response_basic_info(resp, 409, expected_method='POST')
 
@@ -816,7 +815,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_equal(body['service']['service_name'], new_svc_name)
 
     @runner.MAGPIE_TEST_SERVICES
-    def test_PutService_BadRequest_NoUpdateInfo(self):
+    def test_PutService_NoUpdateInfo(self):
         # no route PUT on '/services/types' (not equivalent to '/services/{service_name}')
         # so not even a forbidden case to handle
         resp = utils.test_request(self.url, 'PUT', '/services/types', data={}, expect_errors=True,
@@ -824,7 +823,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_response_basic_info(resp, 404, expected_method='PUT')
 
     @runner.MAGPIE_TEST_SERVICES
-    def test_PutService_Forbidden_ReservedKeyword_Types(self):
+    def test_PutService_ReservedKeyword_Types(self):
         # try to PUT on 'types' route should raise the error
         data = {'service_name': 'dummy', 'service_url': 'dummy'}
         resp = utils.test_request(self.url, 'PUT', '/services/types', data=data, expect_errors=True,
@@ -888,9 +887,6 @@ class Interface_MagpieAPI_AdminAuth(object):
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('service_types', body)
         utils.check_val_type(body['service_types'], list)
-
-        svc_resp = utils.test_request(self.url, 'GET', '/services', headers=self.json_headers, cookies=self.cookies)
-        svc_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_all_equal(body['service_types'], list(service_type_dict.keys()), any_order=True)
 
     @runner.MAGPIE_TEST_SERVICES
@@ -924,10 +920,18 @@ class Interface_MagpieAPI_AdminAuth(object):
         # evaluate different types of services
         for svc_type, svc_res_info in [
             # recursive child resource allowed
-            ('api',          {'route':      {'perms': ['read', 'write', 'read-match', 'write-match'], 'child': True}}),
+            ('api',
+                {'route': {
+                    'perms': ['read', 'write', 'read-match', 'write-match'],
+                    'child': True}}),
             # child resource allowed only for specific types
-            ('thredds',      {'directory':  {'perms': ['read', 'write'], 'child': True},
-                              'file':       {'perms': ['read', 'write'], 'child': False}}),
+            ('thredds',
+                {'directory': {
+                    'perms': ['read', 'write'],
+                    'child': True},
+                 'file': {
+                     'perms': ['read', 'write'],
+                     'child': False}}),
             # no child allowed
             ('access', {}),
         ]:

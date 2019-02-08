@@ -5,7 +5,8 @@ Revises: ae1a3c8c7860
 Create Date: 2018-06-04 11:38:31.296950
 
 """
-import os, sys
+import os
+import sys
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)    # version
 root_dir = os.path.dirname(root_dir)    # alembic
@@ -13,11 +14,12 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-from alembic import op
-from alembic.context import get_context
-from magpie.definitions.sqlalchemy_definitions import *
-from magpie import models
-from magpie.api.management.resource.resource_utils import get_resource_root_service
+# noinspection PyUnresolvedReferences
+from alembic.context import get_context                                                 # noqa: F401
+from alembic import op                                                                  # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import PGDialect, sessionmaker, sa       # noqa: F401
+from magpie import models                                                               # noqa: F401
+from magpie.api.management.resource.resource_utils import get_resource_root_service     # noqa: F401
 
 Session = sessionmaker()
 
@@ -34,7 +36,7 @@ def upgrade():
     session = Session(bind=op.get_bind())
 
     # two following lines avoids double 'DELETE' erroneous call when deleting group due to incorrect checks
-    # https://stackoverflow.com/questions/28824401/sqlalchemy-attempting-to-twice-delete-many-to-many-secondary-relationship
+    # https://stackoverflow.com/questions/28824401
     context.connection.engine.dialect.supports_sane_rowcount = False
     context.connection.engine.dialect.supports_sane_multi_rowcount = False
 

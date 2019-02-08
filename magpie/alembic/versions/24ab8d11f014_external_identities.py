@@ -11,8 +11,8 @@ from __future__ import unicode_literals
 revision = '24ab8d11f014'
 down_revision = '2bb1ba973f0b'
 
-from alembic import op
-import sqlalchemy as sa
+from alembic import op      # noqa: F401
+import sqlalchemy as sa     # noqa: F401
 
 
 def upgrade():

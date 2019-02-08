@@ -6,7 +6,8 @@ Create Date: 2018-05-29 16:04:20.724597
 
 """
 
-import os, sys
+import os
+import sys
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)    # version
 root_dir = os.path.dirname(root_dir)    # alembic
@@ -14,12 +15,13 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-from alembic import op
-from alembic.context import get_context
-from sqlalchemy.dialects.postgresql.base import PGDialect
-from sqlalchemy.orm import sessionmaker
-from magpie import models, constants
-from magpie.definitions.ziggurat_definitions import *
+# noinspection PyUnresolvedReferences
+from alembic.context import get_context                             # noqa: F401
+from alembic import op                                              # noqa: F401
+from sqlalchemy.orm import sessionmaker                             # noqa: F401
+from magpie import models, constants                                # noqa: F401
+from magpie.definitions.ziggurat_definitions import UserService     # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import PGDialect     # noqa: F401
 
 Session = sessionmaker()
 
@@ -53,6 +55,7 @@ def upgrade():
                 # transfer permissions from 'personal' group to user
                 user_group_res_perm = [urp for urp in all_user_res_perms if urp.group_id == group.id]
                 for group_perm in user_group_res_perm:
+                    # noinspection PyArgumentList
                     user_perm = models.UserResourcePermission(resource_id=group_perm.resource_id,
                                                               user_id=user.id, perm_name=group_perm.perm_name)
                     session.add(user_perm)

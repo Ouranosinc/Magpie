@@ -1045,7 +1045,7 @@ class Service_PUT_BadRequestResponseSchema(colander.MappingSchema):
 
 
 class Service_PUT_BadRequestResponseSchema_ReservedKeyword(colander.MappingSchema):
-    description = "Update service name to 'types' not allowed (reserved keyword)."
+    description = "Update service name to `types` not allowed (reserved keyword)."
     header = HeaderResponseSchema()
     body = Service_FailureBodyResponseSchema(code=HTTPBadRequest.code, description=description)
 
@@ -1250,8 +1250,8 @@ class Users_CheckInfo_GroupName_BadRequestResponseSchema(colander.MappingSchema)
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class Users_CheckInfo_Login_ConflictResponseSchema(colander.MappingSchema):
-    description = "Invalid `user_name` already logged in."
+class Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid `user_name` not allowed (reserved keyword)."
     header = HeaderResponseSchema()
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPConflict.code, description=description)
 
@@ -2518,7 +2518,7 @@ Users_POST_responses = {
     '401': UnauthorizedResponseSchema(),
     '403': Users_POST_ForbiddenResponseSchema(),
     '406': UserGroup_GET_NotAcceptableResponseSchema(),
-    '409': Users_CheckInfo_Login_ConflictResponseSchema(),
+    '409': User_Check_ConflictResponseSchema(),
 }
 User_GET_responses = {
     '200': User_GET_OkResponseSchema(),
@@ -2532,7 +2532,7 @@ User_PUT_responses = {
     '401': UnauthorizedResponseSchema(),
     '403': UserGroup_GET_ForbiddenResponseSchema(),
     '406': UserGroup_GET_NotAcceptableResponseSchema(),
-    '409': Users_CheckInfo_Login_ConflictResponseSchema(),
+    '409': User_Check_ConflictResponseSchema(),
 }
 User_DELETE_responses = {
     '200': User_DELETE_OkResponseSchema(),

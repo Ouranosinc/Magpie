@@ -1,5 +1,10 @@
-from magpie.definitions.pyramid_definitions import HTTPUnauthorized, HTTPNotFound, HTTPInternalServerError
-from magpie.api.api_except import raise_http, HTTPServerError
+from magpie.definitions.pyramid_definitions import (
+    HTTPUnauthorized,
+    HTTPNotFound,
+    HTTPInternalServerError,
+    HTTPServerError,
+)
+from magpie.api.api_except import raise_http
 from magpie.api import api_rest_schemas as s
 from simplejson import JSONDecodeError
 

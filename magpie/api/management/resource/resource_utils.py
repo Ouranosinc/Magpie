@@ -133,8 +133,8 @@ def create_resource(resource_name, resource_display_name, resource_type, parent_
                  msgOnFail="Invalid `resource_name` specified for child resource creation.")
     verify_param(resource_type, paramName=u'resource_type', notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                  msgOnFail="Invalid `resource_type` specified for child resource creation.")
-    verify_param(parent_id, paramName=u'parent_id', notNone=True, notEmpty=True, ofType=int, httpError=HTTPBadRequest,
-                 msgOnFail="Invalid `parent_id` specified for child resource creation.")
+    verify_param(parent_id, paramName=u'parent_id', notNone=True, notEmpty=True, paramCompare=int, ofType=True,
+                 httpError=HTTPBadRequest, msgOnFail="Invalid `parent_id` specified for child resource creation.")
     parent_resource = evaluate_call(lambda: ResourceService.by_resource_id(parent_id, db_session=db_session),
                                     fallback=lambda: db_session.rollback(), httpError=HTTPNotFound,
                                     msgOnFail=Resources_POST_NotFoundResponseSchema.description,
