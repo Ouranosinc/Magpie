@@ -7,7 +7,7 @@ from pyramid.authorization import ACLAuthorizationPolicy                        
 # noinspection PyUnresolvedReferences
 from pyramid.exceptions import ConfigurationError                                   # noqa: F401
 # noinspection PyUnresolvedReferences
-from pyramid.httpexceptions import (
+from pyramid.httpexceptions import (   # noqa: F401
     HTTPOk,
     HTTPCreated,
     HTTPFound,
@@ -29,7 +29,7 @@ from pyramid.httpexceptions import (
     HTTPRedirection,
     HTTPError,
     exception_response,
-)   # noqa: F401
+)
 # noinspection PyUnresolvedReferences
 from pyramid.registry import Registry                                               # noqa: F401
 # noinspection PyUnresolvedReferences
@@ -43,19 +43,19 @@ from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy      
 # noinspection PyUnresolvedReferences
 from pyramid.response import Response, FileResponse                                 # noqa: F401
 # noinspection PyUnresolvedReferences
-from pyramid.view import (
+from pyramid.view import (      # noqa: F401
     view_config,
     notfound_view_config,
     exception_view_config,
     forbidden_view_config
-)   # noqa: F401
+)
 # noinspection PyUnresolvedReferences
-from pyramid.security import (
+from pyramid.security import (  # noqa: F401
     Authenticated,
     Allow as ALLOW,
     ALL_PERMISSIONS,
     NO_PERMISSION_REQUIRED,
     Everyone as EVERYONE,
     forget,
-    remember
-)   # noqa: F401
+    remember,
+)

@@ -1,31 +1,38 @@
 from magpie.api.management.resource.resource_utils import create_resource, delete_resource
 from magpie.api.management.service import service_formats as sf, service_utils as su
-from magpie.api import api_requests as ar, api_except as ax
-from magpie.api.api_rest_schemas import *
-from magpie.definitions.pyramid_definitions import view_config
+from magpie.api import api_requests as ar, api_except as ax, api_rest_schemas as s
+from magpie.definitions.pyramid_definitions import (
+    view_config,
+    HTTPOk,
+    HTTPBadRequest,
+    HTTPForbidden,
+    HTTPNotFound,
+    HTTPNotAcceptable,
+    HTTPConflict,
+)
 from magpie.common import str2bool
 from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
 from magpie.services import service_type_dict
 from magpie import models
 
 
-@ServiceTypesAPI.get(tags=[ServicesTag], response_schemas=ServiceTypes_GET_responses)
-@view_config(route_name=ServiceTypesAPI.name, request_method='GET')
+@s.ServiceTypesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypes_GET_responses)
+@view_config(route_name=s.ServiceTypesAPI.name, request_method='GET')
 def get_service_types_view(request):
     """List all available service types."""
     return ax.valid_http(httpSuccess=HTTPOk, content={u'service_types': list(sorted(service_type_dict.keys()))},
-                         detail=ServiceTypes_GET_OkResponseSchema.description)
+                         detail=s.ServiceTypes_GET_OkResponseSchema.description)
 
 
-@ServiceTypeAPI.get(tags=[ServicesTag], response_schemas=ServiceType_GET_responses)
-@view_config(route_name=ServiceTypeAPI.name, request_method='GET')
+@s.ServiceTypeAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceType_GET_responses)
+@view_config(route_name=s.ServiceTypeAPI.name, request_method='GET')
 def get_services_by_type_view(request):
     """List all registered services from a specific type."""
     return get_services_runner(request)
 
 
-@ServicesAPI.get(tags=[ServicesTag], response_schemas=Services_GET_responses)
-@view_config(route_name=ServicesAPI.name, request_method='GET')
+@s.ServicesAPI.get(tags=[s.ServicesTag], response_schemas=s.Services_GET_responses)
+@view_config(route_name=s.ServicesAPI.name, request_method='GET')
 def get_services_view(request):
     """List all registered services."""
     return get_services_runner(request)
@@ -38,7 +45,7 @@ def get_services_runner(request):
         service_types = service_type_dict.keys()
     else:
         ax.verify_param(service_type_filter, paramCompare=service_type_dict.keys(), isIn=True,
-                        httpError=HTTPNotAcceptable, msgOnFail=Services_GET_NotAcceptableResponseSchema.description,
+                        httpError=HTTPNotAcceptable, msgOnFail=s.Services_GET_NotAcceptableResponseSchema.description,
                         content={u'service_type': str(service_type_filter)}, contentType='application/json')
         service_types = [service_type_filter]
 
@@ -49,12 +56,12 @@ def get_services_runner(request):
             json_response[service_type][service.resource_name] = sf.format_service(service, show_private_url=True)
 
     return ax.valid_http(httpSuccess=HTTPOk, content={u'services': json_response},
-                         detail=Services_GET_OkResponseSchema.description)
+                         detail=s.Services_GET_OkResponseSchema.description)
 
 
-@ServicesAPI.post(schema=Services_POST_RequestBodySchema(), tags=[ServicesTag],
-                  response_schemas=Services_POST_responses)
-@view_config(route_name=ServicesAPI.name, request_method='POST')
+@s.ServicesAPI.post(schema=s.Services_POST_RequestBodySchema(), tags=[s.ServicesTag],
+                    response_schemas=s.Services_POST_responses)
+@view_config(route_name=s.ServicesAPI.name, request_method='POST')
 def register_service_view(request):
     """Registers a new service."""
     service_name = ar.get_value_multiformat_post_checked(request, 'service_name')
@@ -62,15 +69,16 @@ def register_service_view(request):
     service_type = ar.get_value_multiformat_post_checked(request, 'service_type')
     service_push = str2bool(ar.get_multiformat_post(request, 'service_push'))
     ax.verify_param(service_type, isIn=True, paramCompare=service_type_dict.keys(),
-                    httpError=HTTPBadRequest, msgOnFail=Services_POST_BadRequestResponseSchema.description)
+                    httpError=HTTPBadRequest, msgOnFail=s.Services_POST_BadRequestResponseSchema.description)
     ax.verify_param(models.Service.by_service_name(service_name, db_session=request.db), isNone=True,
-                    httpError=HTTPConflict, msgOnFail=Services_POST_ConflictResponseSchema.description,
+                    httpError=HTTPConflict, msgOnFail=s.Services_POST_ConflictResponseSchema.description,
                     content={u'service_name': str(service_name)}, paramName=u'service_name')
     return su.create_service(service_name, service_type, service_url, service_push, db_session=request.db)
 
 
-@ServiceAPI.put(schema=Service_PUT_RequestBodySchema(), tags=[ServicesTag], response_schemas=Service_PUT_responses)
-@view_config(route_name=ServiceAPI.name, request_method='PUT')
+@s.ServiceAPI.put(schema=s.Service_PUT_RequestBodySchema(), tags=[s.ServicesTag],
+                  response_schemas=s.Service_PUT_responses)
+@view_config(route_name=s.ServiceAPI.name, request_method='PUT')
 def update_service_view(request):
     """Update a service information."""
     service = ar.get_service_matchdict_checked(request)
@@ -84,10 +92,10 @@ def update_service_view(request):
     svc_url = select_update(ar.get_multiformat_post(request, 'service_url'), service.url)
     ax.verify_param(svc_name, paramCompare='types', notEqual=True,
                     paramName='service_name', httpError=HTTPBadRequest,
-                    msgOnFail=Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
+                    msgOnFail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
     ax.verify_param(svc_name == service.resource_name and svc_url == service.url, notEqual=True,
                     paramCompare=True, paramName="service_name/service_url",
-                    httpError=HTTPBadRequest, msgOnFail=Service_PUT_BadRequestResponseSchema.description)
+                    httpError=HTTPBadRequest, msgOnFail=s.Service_PUT_BadRequestResponseSchema.description)
 
     if svc_name != service.resource_name:
         all_svc_names = list()
@@ -95,7 +103,7 @@ def update_service_view(request):
             for svc in su.get_services_by_type(svc_type, db_session=request.db):
                 all_svc_names.extend(svc.resource_name)
         ax.verify_param(svc_name, notIn=True, paramCompare=all_svc_names, httpError=HTTPConflict,
-                        msgOnFail=Service_PUT_ConflictResponseSchema.description,
+                        msgOnFail=s.Service_PUT_ConflictResponseSchema.description,
                         content={u'service_name': str(svc_name)})
 
     def update_service_magpie_and_phoenix(_svc, new_name, new_url, svc_push, db_session):
@@ -111,24 +119,25 @@ def update_service_view(request):
     err_svc_content = {u'service': old_svc_content, u'new_service_name': svc_name, u'new_service_url': svc_url}
     ax.evaluate_call(lambda: update_service_magpie_and_phoenix(service, svc_name, svc_url, service_push, request.db),
                      fallback=lambda: request.db.rollback(),
-                     httpError=HTTPForbidden, msgOnFail=Service_PUT_ForbiddenResponseSchema.description,
+                     httpError=HTTPForbidden, msgOnFail=s.Service_PUT_ForbiddenResponseSchema.description,
                      content=err_svc_content)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=Service_PUT_OkResponseSchema.description,
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Service_PUT_OkResponseSchema.description,
                          content={u'service': sf.format_service(service, show_private_url=True)})
 
 
-@ServiceAPI.get(tags=[ServicesTag], response_schemas=Service_GET_responses)
-@view_config(route_name=ServiceAPI.name, request_method='GET')
+@s.ServiceAPI.get(tags=[s.ServicesTag], response_schemas=s.Service_GET_responses)
+@view_config(route_name=s.ServiceAPI.name, request_method='GET')
 def get_service_view(request):
     """Get a service information."""
     service = ar.get_service_matchdict_checked(request)
     service_info = sf.format_service(service, show_private_url=True, show_resources_allowed=True)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=Service_GET_OkResponseSchema.description,
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Service_GET_OkResponseSchema.description,
                          content={u'service': service_info})
 
 
-@ServiceAPI.delete(schema=Service_DELETE_RequestSchema(), tags=[ServicesTag], response_schemas=Service_DELETE_responses)
-@view_config(route_name=ServiceAPI.name, request_method='DELETE')
+@s.ServiceAPI.delete(schema=s.Service_DELETE_RequestSchema(), tags=[s.ServicesTag],
+                     response_schemas=s.Service_DELETE_responses)
+@view_config(route_name=s.ServiceAPI.name, request_method='DELETE')
 def unregister_service_view(request):
     """Unregister a service."""
     service = ar.get_service_matchdict_checked(request)
@@ -146,44 +155,44 @@ def unregister_service_view(request):
 
     ax.evaluate_call(lambda: remove_service_magpie_and_phoenix(service, service_push, request.db),
                      fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                     msgOnFail=Service_DELETE_ForbiddenResponseSchema.description, content=svc_content)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=Service_DELETE_OkResponseSchema.description)
+                     msgOnFail=s.Service_DELETE_ForbiddenResponseSchema.description, content=svc_content)
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Service_DELETE_OkResponseSchema.description)
 
 
-@ServicePermissionsAPI.get(tags=[ServicesTag], response_schemas=ServicePermissions_GET_responses)
-@view_config(route_name=ServicePermissionsAPI.name, request_method='GET')
+@s.ServicePermissionsAPI.get(tags=[s.ServicesTag], response_schemas=s.ServicePermissions_GET_responses)
+@view_config(route_name=s.ServicePermissionsAPI.name, request_method='GET')
 def get_service_permissions_view(request):
     """List all applicable permissions for a service."""
     service = ar.get_service_matchdict_checked(request)
     svc_content = sf.format_service(service, show_private_url=True)
     svc_perms = ax.evaluate_call(lambda: service_type_dict[service.type].permission_names,
                                  fallback=request.db.rollback(), httpError=HTTPNotAcceptable, content=svc_content,
-                                 msgOnFail=ServicePermissions_GET_NotAcceptableResponseSchema.description)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=ServicePermissions_GET_OkResponseSchema.description,
+                                 msgOnFail=s.ServicePermissions_GET_NotAcceptableResponseSchema.description)
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.ServicePermissions_GET_OkResponseSchema.description,
                          content={u'permission_names': sorted(svc_perms)})
 
 
-@ServiceResourceAPI.delete(schema=ServiceResource_DELETE_RequestSchema(), tags=[ServicesTag],
-                           response_schemas=ServiceResource_DELETE_responses)
-@view_config(route_name=ServiceResourceAPI.name, request_method='DELETE')
+@s.ServiceResourceAPI.delete(schema=s.ServiceResource_DELETE_RequestSchema(), tags=[s.ServicesTag],
+                             response_schemas=s.ServiceResource_DELETE_responses)
+@view_config(route_name=s.ServiceResourceAPI.name, request_method='DELETE')
 def delete_service_resource_view(request):
     """Unregister a resource."""
     return delete_resource(request)
 
 
-@ServiceResourcesAPI.get(tags=[ServicesTag], response_schemas=ServiceResources_GET_responses)
-@view_config(route_name=ServiceResourcesAPI.name, request_method='GET')
+@s.ServiceResourcesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceResources_GET_responses)
+@view_config(route_name=s.ServiceResourcesAPI.name, request_method='GET')
 def get_service_resources_view(request):
     """List all resources registered under a service."""
     service = ar.get_service_matchdict_checked(request)
     svc_res_json = sf.format_service_resources(service, db_session=request.db, display_all=True, show_private_url=True)
     return ax.valid_http(httpSuccess=HTTPOk, content={svc_res_json['service_name']: svc_res_json},
-                         detail=ServiceResources_GET_OkResponseSchema.description)
+                         detail=s.ServiceResources_GET_OkResponseSchema.description)
 
 
-@ServiceResourcesAPI.post(schema=ServiceResources_POST_RequestSchema, tags=[ServicesTag],
-                          response_schemas=ServiceResources_POST_responses)
-@view_config(route_name=ServiceResourcesAPI.name, request_method='POST')
+@s.ServiceResourcesAPI.post(schema=s.ServiceResources_POST_RequestSchema, tags=[s.ServicesTag],
+                            response_schemas=s.ServiceResources_POST_responses)
+@view_config(route_name=s.ServiceResourcesAPI.name, request_method='POST')
 def create_service_direct_resource_view(request):
     """Register a new resource directly under a service."""
     service = ar.get_service_matchdict_checked(request)
@@ -197,8 +206,8 @@ def create_service_direct_resource_view(request):
                            parent_id=parent_id, db_session=request.db)
 
 
-@ServiceTypeResourcesAPI.get(tags=[ServicesTag], response_schemas=ServiceTypeResources_GET_responses)
-@view_config(route_name=ServiceTypeResourcesAPI.name, request_method='GET')
+@s.ServiceTypeResourcesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypeResources_GET_responses)
+@view_config(route_name=s.ServiceTypeResourcesAPI.name, request_method='GET')
 def get_service_type_resources_view(request):
     """List details of resource types supported under a specific service type."""
 
@@ -208,23 +217,24 @@ def get_service_type_resources_view(request):
 
     service_type = ar.get_value_matchdict_checked(request, 'service_type')
     ax.verify_param(service_type, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotFound,
-                    msgOnFail=ServiceTypeResources_GET_NotFoundResponseSchema.description)
-    resource_types_names = ax.evaluate_call(lambda: service_type_dict[service_type].resource_types,
-                                            httpError=HTTPForbidden, content={u'service_type': str(service_type)},
-                                            msgOnFail=ServiceTypeResourceTypes_GET_ForbiddenResponseSchema.description)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=ServiceTypeResourceTypes_GET_OkResponseSchema.description,
+                    msgOnFail=s.ServiceTypeResources_GET_NotFoundResponseSchema.description)
+    resource_types_names = ax.evaluate_call(
+        lambda: service_type_dict[service_type].resource_types,
+        httpError=HTTPForbidden, content={u'service_type': str(service_type)},
+        msgOnFail=s.ServiceTypeResourceTypes_GET_ForbiddenResponseSchema.description)
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.ServiceTypeResourceTypes_GET_OkResponseSchema.description,
                          content={u'resource_types': _get_resource_types_info(resource_types_names)})
 
 
-@ServiceTypeResourceTypesAPI.get(tags=[ServicesTag], response_schemas=ServiceTypeResourceTypes_GET_responses)
-@view_config(route_name=ServiceTypeResourceTypesAPI.name, request_method='GET')
+@s.ServiceTypeResourceTypesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypeResourceTypes_GET_responses)
+@view_config(route_name=s.ServiceTypeResourceTypesAPI.name, request_method='GET')
 def get_service_type_resource_types_view(request):
     """List all resource types supported under a specific service type."""
     service_type = ar.get_value_matchdict_checked(request, 'service_type')
     ax.verify_param(service_type, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotFound,
-                    msgOnFail=ServiceTypeResourceTypes_GET_NotFoundResponseSchema.description)
+                    msgOnFail=s.ServiceTypeResourceTypes_GET_NotFoundResponseSchema.description)
     resource_types = ax.evaluate_call(lambda: service_type_dict[service_type].resource_types,
                                       httpError=HTTPForbidden, content={u'service_type': str(service_type)},
-                                      msgOnFail=ServiceTypeResourceTypes_GET_ForbiddenResponseSchema.description)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=ServiceTypeResourceTypes_GET_OkResponseSchema.description,
+                                      msgOnFail=s.ServiceTypeResourceTypes_GET_ForbiddenResponseSchema.description)
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.ServiceTypeResourceTypes_GET_OkResponseSchema.description,
                          content={u'resource_types': resource_types})

@@ -1,4 +1,4 @@
-from magpie.api.api_rest_schemas import *
+from magpie.api import api_rest_schemas as s
 import logging
 logger = logging.getLogger(__name__)
 
@@ -10,14 +10,14 @@ def includeme(config):
     #   order is important to preserve expected behaviour,
     #   otherwise service named 'types' is searched before
     # --- service by type ---
-    config.add_route(**service_api_route_info(ServiceTypesAPI))
-    config.add_route(**service_api_route_info(ServiceTypeAPI))
-    config.add_route(**service_api_route_info(ServiceTypeResourcesAPI))
-    config.add_route(**service_api_route_info(ServiceTypeResourceTypesAPI))
+    config.add_route(**s.service_api_route_info(s.ServiceTypesAPI))
+    config.add_route(**s.service_api_route_info(s.ServiceTypeAPI))
+    config.add_route(**s.service_api_route_info(s.ServiceTypeResourcesAPI))
+    config.add_route(**s.service_api_route_info(s.ServiceTypeResourceTypesAPI))
     # --- service by name ---
-    config.add_route(**service_api_route_info(ServicesAPI))
-    config.add_route(**service_api_route_info(ServiceAPI))
-    config.add_route(**service_api_route_info(ServicePermissionsAPI))
-    config.add_route(**service_api_route_info(ServiceResourcesAPI))
-    config.add_route(**service_api_route_info(ServiceResourceAPI))
+    config.add_route(**s.service_api_route_info(s.ServicesAPI))
+    config.add_route(**s.service_api_route_info(s.ServiceAPI))
+    config.add_route(**s.service_api_route_info(s.ServicePermissionsAPI))
+    config.add_route(**s.service_api_route_info(s.ServiceResourcesAPI))
+    config.add_route(**s.service_api_route_info(s.ServiceResourceAPI))
     config.scan()

@@ -9,14 +9,14 @@ Tests for the various utility operations employed by magpie.
 """
 
 from magpie.api import api_requests as ar, api_except as ax
-from magpie.definitions.pyramid_definitions import (
+from magpie.definitions.pyramid_definitions import (    # noqa: F401
     asbool,
     Request,
     HTTPInternalServerError,
     HTTPNotAcceptable,
     HTTPBadRequest,
     HTTPOk,
-)   # noqa: F401
+)
 from magpie.definitions.typedefs import Str     # noqa: F401
 from pyramid.testing import DummyRequest
 from tests import utils, runner

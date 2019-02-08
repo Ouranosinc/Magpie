@@ -1,4 +1,8 @@
-from alembic import op
-from alembic.context import get_context
-import alembic.config
-import alembic.command
+# noinspection PyUnresolvedReferences
+from alembic.context import get_context         # noqa: F401
+# noinspection PyUnresolvedReferences
+from alembic import op                          # noqa: F401
+# noinspection PyUnresolvedReferences
+import alembic.config                           # noqa: F401
+# noinspection PyUnresolvedReferences
+import alembic.command                          # noqa: F401

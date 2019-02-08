@@ -107,7 +107,7 @@ clean-test:
 .PHONY: lint
 lint: install-dev
 	@echo "Checking code style with flake8..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; flake8 magpie tests --ignore=E501 || true'
+	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; flake8 magpie tests --ignore=E501,W291 || true'
 
 .PHONY: test
 test: install-dev install

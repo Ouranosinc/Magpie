@@ -1,4 +1,4 @@
-from magpie.api.api_rest_schemas import *
+from magpie.api import api_rest_schemas as s
 import logging
 logger = logging.getLogger(__name__)
 
@@ -7,8 +7,8 @@ def includeme(config):
 
     logger.info('Adding api resource ...')
     # Add all the rest api routes
-    config.add_route(**service_api_route_info(ResourcesAPI))
-    config.add_route(**service_api_route_info(ResourceAPI))
-    config.add_route(**service_api_route_info(ResourcePermissionsAPI))
+    config.add_route(**s.service_api_route_info(s.ResourcesAPI))
+    config.add_route(**s.service_api_route_info(s.ResourceAPI))
+    config.add_route(**s.service_api_route_info(s.ResourcePermissionsAPI))
 
     config.scan()

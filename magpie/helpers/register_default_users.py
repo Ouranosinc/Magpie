@@ -1,7 +1,7 @@
 from magpie import constants, db, models
 from magpie.common import print_log, raise_log
 from magpie.definitions.sqlalchemy_definitions import Session
-from magpie.definitions.ziggurat_definitions import *
+from magpie.definitions.ziggurat_definitions import GroupService, UserService
 from magpie.definitions.typedefs import Optional
 import transaction
 import logging
