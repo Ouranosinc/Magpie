@@ -1,7 +1,7 @@
 FROM ubuntu:16.04
 MAINTAINER Francis Charette-Migneault
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 	build-essential \
 	supervisor \
 	cron \
@@ -14,7 +14,10 @@ RUN apt-get update && apt-get install -y \
 	zlib1g-dev \
 	python-pip \
 	git \
-	vim
+	vim \
+	apt-get clean autoclean \
+    apt-get autoremove --yes \
+    rm -rf /var/lib/{apt,dpkg,cache,log}/
 
 ARG MAGPIE_DIR=/opt/local/src/magpie
 ENV MAGPIE_ENV_DIR=$MAGPIE_DIR/env
@@ -24,11 +27,5 @@ COPY ./ $MAGPIE_DIR
 RUN make install -f $MAGPIE_DIR/Makefile
 RUN make docs -f $MAGPIE_DIR/Makefile
 
-# magpie cron service
-ADD magpie-cron /etc/cron.d/magpie-cron
-RUN chmod 0644 /etc/cron.d/magpie-cron
-RUN touch ~/magpie_cron_status.log
-# set /etc/environment so that cron runs using the environment variables set by docker
-RUN env >> /etc/environment
 
 CMD make start cron
