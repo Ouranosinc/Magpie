@@ -39,7 +39,8 @@ class MagpieServiceStore(ServiceStore):
         # obtain admin access since 'service_url' is only provided on admin routes
         services = []
         path = '{}/services'.format(self.magpie_url)
-        resp = requests.get(path, cookies=self.magpie_admin_token, headers={'Accept': 'application/json'})
+        resp = requests.get(path, cookies=self.magpie_admin_token, headers={'Accept': 'application/json'},
+                            verify=self.twitcher_ssl_verify)
         if resp.status_code != HTTPOk.code:
             raise resp.raise_for_status()
         json_body = resp.json()
