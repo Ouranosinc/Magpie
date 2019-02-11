@@ -12,7 +12,7 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-from magpie import __meta__             # noqa: F401
+import __meta__
 
 with open('README.rst') as readme_file:
     README = readme_file.read()
