@@ -17,7 +17,7 @@ env:
     - DOWNLOAD_CACHE=$HOME/downloads
   matrix:
     # FIXME: local login not functional, cannot run local tests on travis
-    #- TEST_TARGET=test-local    START_TARGET=
+    - TEST_TARGET=test-local    START_TARGET=
     - TEST_TARGET=test-remote   START_TARGET=start
     - TEST_TARGET=coverage      START_TARGET=
 addons:
