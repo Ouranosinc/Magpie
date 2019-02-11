@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from utils import RunOptionDecorator
+from tests.utils import RunOptionDecorator
 import sqlalchemy.exc as sa_exc
 import unittest
 import warnings

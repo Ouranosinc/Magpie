@@ -18,7 +18,7 @@ from magpie.common import str2bool
 from magpie.definitions.typedefs import Str, Callable, Dict, List, Optional, Tuple, Type, Union  # noqa: F401
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from interfaces import Base_Magpie_TestCase    # noqa: F401
+    from tests.interfaces import Base_Magpie_TestCase    # noqa: F401
 
 
 OptionalStringType = six.string_types + tuple([type(None)])
