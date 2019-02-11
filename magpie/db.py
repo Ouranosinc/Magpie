@@ -88,7 +88,7 @@ def run_database_migration(db_session=None):
     # type: (Optional[Session]) -> None
     """Runs db migration operations with alembic, using db session or a new engine connection."""
     logger.info("Using file '{}' for migration.".format(constants.MAGPIE_ALEMBIC_INI_FILE_PATH))
-    alembic_args = ['-c', constants.MAGPIE_ALEMBIC_INI_FILE_PATH, 'upgrade', 'heads']
+    alembic_args = ['-c', constants.MAGPIE_ALEMBIC_INI_FILE_PATH, 'upgrade', 'head']
     if not isinstance(db_session, Session):
         alembic.config.main(argv=alembic_args)
     else:
