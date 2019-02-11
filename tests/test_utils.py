@@ -119,3 +119,13 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param('b', notIn=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param('b', paramCompare=['a', 'b'], notIn=True,
                                                    httpError=HTTPOk), HTTPInternalServerError)
+
+    def test_verify_param_compare_types(self):
+        """param and paramCompare must be of same type"""
+        utils.check_raises(lambda: ax.verify_param('1', paramCompare=1, isEqual=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param('1', paramCompare=True, isEqual=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param(1, paramCompare='1', isEqual=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param(1, paramCompare=True, isEqual=True), HTTPInternalServerError)
+
+        # strings cases handled correctly (no raise)
+        utils.check_no_raise(lambda: ax.verify_param('1', paramCompare=u'1', isEqual=True))

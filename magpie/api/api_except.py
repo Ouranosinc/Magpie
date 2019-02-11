@@ -82,36 +82,39 @@ def verify_param(
     # precondition evaluation of input parameters
     try:
         if type(notNone) is not bool:
-            raise Exception("`notNone` is not a `bool`")
+            raise TypeError("`notNone` is not a `bool`")
         if type(notEmpty) is not bool:
-            raise Exception("`notEmpty` is not a `bool`")
+            raise TypeError("`notEmpty` is not a `bool`")
         if type(notIn) is not bool:
-            raise Exception("`notIn` is not a `bool`")
+            raise TypeError("`notIn` is not a `bool`")
         if type(notEqual) is not bool:
-            raise Exception("`notEqual` is not a `bool`")
+            raise TypeError("`notEqual` is not a `bool`")
         if type(isTrue) is not bool:
-            raise Exception("`isTrue` is not a `bool`")
+            raise TypeError("`isTrue` is not a `bool`")
         if type(isFalse) is not bool:
-            raise Exception("`isFalse` is not a `bool`")
+            raise TypeError("`isFalse` is not a `bool`")
         if type(isNone) is not bool:
-            raise Exception("`isNone` is not a `bool`")
+            raise TypeError("`isNone` is not a `bool`")
         if type(isEmpty) is not bool:
-            raise Exception("`isEmpty` is not a `bool`")
+            raise TypeError("`isEmpty` is not a `bool`")
         if type(isIn) is not bool:
-            raise Exception("`isIn` is not a `bool`")
+            raise TypeError("`isIn` is not a `bool`")
         if type(isEqual) is not bool:
-            raise Exception("`isEqual` is not a `bool`")
+            raise TypeError("`isEqual` is not a `bool`")
         if type(ofType) is not bool:
-            raise Exception("`ofType` is not a `bool`")
+            raise TypeError("`ofType` is not a `bool`")
         if paramCompare is None and (isIn or notIn or isEqual or notEqual):
-            raise Exception("`paramCompare` cannot be `None` with specified test flags")
-        if type(param) != type(paramCompare) and (isEqual or notEqual):
-            raise Exception("`paramCompare` cannot be of different type with specified test flags")
+            raise TypeError("`paramCompare` cannot be `None` with specified test flags")
+        if isEqual or notEqual:
+            # allow 'different' string literals for comparison, otherwise types must match exactly
+            if not (isinstance(param, six.string_types) and
+                    isinstance(paramCompare, six.string_types)) and type(param) != type(paramCompare):
+                raise TypeError("`paramCompare` cannot be of incompatible type with specified test flags")
         if not hasattr(paramCompare, '__iter__') and (isIn or notIn):
             paramCompare = [paramCompare]
         # error if none of the flags specified
         if not any([notNone, notEmpty, notIn, notEqual, isTrue, isFalse, isNone, isEmpty, isIn, isEqual, ofType]):
-            raise Exception("no comparison flag specified for verification")
+            raise ValueError("no comparison flag specified for verification")
     except Exception as e:
         content[u'traceback'] = repr(exc_info())
         content[u'exception'] = repr(e)

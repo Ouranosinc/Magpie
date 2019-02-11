@@ -13,6 +13,7 @@ from magpie.definitions.pyramid_definitions import (
     NO_PERMISSION_REQUIRED,
 )
 from magpie.definitions.ziggurat_definitions import UserService, GroupService
+from magpie.constants import get_constant
 from magpie.common import str2bool
 from magpie import models
 import logging
@@ -48,6 +49,12 @@ def create_user_view(request):
 @view_config(route_name=s.UserAPI.name, request_method='PUT')
 def update_user_view(request):
     """Update user information by user name."""
+
+    user_name = ar.get_value_matchdict_checked(request, key='user_name')
+    ax.verify_param(user_name, paramCompare=get_constant('MAGPIE_LOGGED_USER'), notEqual=True,
+                    httpError=HTTPBadRequest, paramName='user_name', content={u'user_name': user_name},
+                    msgOnFail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
+
     user = ar.get_user_matchdict_checked(request, user_name_key='user_name')
     new_user_name = ar.get_multiformat_post(request, 'user_name', default=user.user_name)
     new_email = ar.get_multiformat_post(request, 'email', default=user.email)

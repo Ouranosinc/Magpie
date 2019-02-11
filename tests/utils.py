@@ -4,7 +4,6 @@ import warnings
 import json
 import six
 import pytest
-import pyramid.testing
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from pyramid.response import Response
@@ -19,7 +18,7 @@ from magpie.common import str2bool
 from magpie.definitions.typedefs import Str, Callable, Dict, List, Optional, Tuple, Type, Union  # noqa: F401
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from utils import Base_Magpie_TestCase    # noqa: F401
+    from interfaces import Base_Magpie_TestCase    # noqa: F401
 
 
 OptionalStringType = six.string_types + tuple([type(None)])
@@ -185,18 +184,20 @@ def get_service_types_for_version(version):
     return list(available_service_types)
 
 
-def warn_skip_version(test, functionality, version):
-    # type: (Base_Magpie_TestCase, Str, Str) -> None
+def warn_version(test, functionality, version, skip=True):
+    # type: (Base_Magpie_TestCase, Str, Str, Optional[bool]) -> None
     """
-    Verifies if the :param:`test.version` value meets the minimal :param:`version` requirement to execute a test.
-    If condition is not met, a warning is raised and the test is skipped.
+    Verifies that :param:`test.version` value meets the minimal :param:`version` requirement to execute a test.
+    (ie: ``test.version >= version``).
+    If condition is not met, a warning is raised and the test is skipped according to :param:`skip` value.
     """
     # noinspection PyUnresolvedReferences
     if LooseVersion(test.version) < LooseVersion(version):
-        test.skipTest(reason="Functionality [{}] not yet implemented in version [{}], upgrade to [>=0.9.1]."
-                      .format(test.version))
-        warnings.warn("no check for response (401/403) statuses performed in version [{}], upgrade to [>=0.9.1]"
-                      .format(test.version), FutureWarning)
+        msg = "Functionality [{}] not yet implemented in version [{}], upgrade to [>={}]." \
+              .format(functionality, test.version, version)
+        warnings.warn(msg, FutureWarning)
+        if skip:
+            test.skipTest(reason=msg)
 
 
 def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kwargs):
@@ -427,7 +428,21 @@ def check_raises(func, exception_type):
     except Exception as ex:
         assert isinstance(ex, exception_type)
         return ex
-    raise AssertionError("Exception [{}] was not raised.".format(exception_type))
+    raise AssertionError("Exception [{!s}] was not raised.".format(exception_type))
+
+
+def check_no_raise(func):
+    # type: (Callable[[], None]) -> None
+    """
+    Calls the callable and verifies that no exception was raised.
+
+    :raise AssertionError: on any raised exception.
+    """
+    # noinspection PyBroadException
+    try:
+        func()
+    except Exception as ex:
+        raise AssertionError("Exception [{!r}] was raised when none is expected.".format(ex))
 
 
 def check_response_basic_info(response, expected_code=200, expected_type='application/json', expected_method='GET'):
@@ -737,9 +752,10 @@ class TestSetup(object):
         return json_body['user_names']
 
     @staticmethod
-    def check_NonExistingTestUser(test_class):
+    def check_NonExistingTestUser(test_class, override_user_name=None):
         users = TestSetup.get_RegisteredUsersList(test_class)
-        check_val_not_in(test_class.test_user_name, users)
+        user_name = override_user_name or test_class.test_user_name
+        check_val_not_in(user_name, users)
 
     @staticmethod
     def create_TestUser(test_class):
@@ -755,16 +771,17 @@ class TestSetup(object):
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
-    def delete_TestUser(test_class):
+    def delete_TestUser(test_class, override_user_name=None):
         users = TestSetup.get_RegisteredUsersList(test_class)
+        user_name = override_user_name or test_class.test_user_name
         # delete as required, skip if non-existing
-        if test_class.test_user_name in users:
-            route = '/users/{usr}'.format(usr=test_class.test_user_name)
+        if user_name in users:
+            route = '/users/{usr}'.format(usr=user_name)
             resp = test_request(test_class.url, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_response_basic_info(resp, 200, expected_method='DELETE')
-        TestSetup.check_NonExistingTestUser(test_class)
+        TestSetup.check_NonExistingTestUser(test_class, override_user_name=user_name)
 
     @staticmethod
     def get_RegisteredGroupsList(test_class):

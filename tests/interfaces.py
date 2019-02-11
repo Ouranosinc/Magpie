@@ -169,16 +169,17 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         Verify that unauthorized (401) and forbidden (403) are properly returned for corresponding operations.
         Both variations use the same forbidden view.
         """
-        if LooseVersion(self.version) < LooseVersion('0.9.1'):
-            warnings.warn("no check for response (401/403) statuses performed in version [{}], upgrade to [>=0.9.1]"
-                          .format(self.version), FutureWarning)
-            self.skipTest(reason="Status 401/403 check not yet implemented in version [{}].".format(self.version))
+        utils.warn_version(self, "check for response (401/403) statuses", '0.9.1', skip=True)
 
-        # call a route that will make a forbidden access to db
-        with mock.patch('magpie.models.User.all', side_effect=Exception('Test')):
-            resp = utils.test_request(self.url, 'GET', '/users', headers=self.json_headers, expect_errors=True)
-            body = utils.check_response_basic_info(resp, 403, expected_method='GET')
-            utils.check_val_equal(body['code'], 403)
+        if isinstance(self.url, six.string_types):
+            warnings.warn("cannot validate 403 status with remote server (no mock possible, test with local)",
+                          RuntimeWarning)
+        else:
+            # call a route that will make a forbidden access to db
+            with mock.patch('magpie.models.User.all', side_effect=Exception('Test')):
+                resp = utils.test_request(self.url, 'GET', '/users', headers=self.json_headers, expect_errors=True)
+                body = utils.check_response_basic_info(resp, 403, expected_method='GET')
+                utils.check_val_equal(body['code'], 403)
 
         # call a route that is admin-only
         utils.check_or_try_logout_user(self.url)
@@ -251,8 +252,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
     @runner.MAGPIE_TEST_USERS
     def test_GetCurrentUserResourcesPermissions_Queries(self):
-        if LooseVersion(self.version) < LooseVersion('0.7.0'):
-            self.skipTest(reason="Queries not yet implemented in version [{}].".format(self.version))
+        utils.warn_version(self, "queries", '0.7.0', skip=True)
 
         # setup test resources under service with permissions
         # Service/Resources              | Admin-User | Admin-Group | Anonym-User | Anonym-Group
@@ -555,9 +555,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         new_name = self.test_user_name + '-new'
 
         # cleanup in case the updated username already exists (ex: previous test execution failure)
-        route = '/users/{usr}'.format(usr=new_name)
-        resp = utils.test_request(self.url, 'DELETE', route, headers=self.json_headers, cookies=self.cookies)
-        utils.check_val_is_in(resp.status_code, [200, 404])
+        utils.TestSetup.delete_TestUser(self, override_user_name=new_name)
 
         # update existing user name
         data = {'user_name': new_name}
@@ -894,8 +892,8 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServiceTypes_ResponseFormat(self):
-        if LooseVersion(self.version) < LooseVersion('0.9.1'):
-            self.skipTest(reason="Get service types not yet implemented in version [{}].".format(self.version))
+        utils.warn_version(self, "get service types", '0.9.1', skip=True)
+
         resp = utils.test_request(self.url, 'GET', '/services/types', headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('service_types', body)
@@ -904,8 +902,8 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServiceTypeResources_ResponseFormat(self):
-        if LooseVersion(self.version) < LooseVersion('0.9.1'):
-            self.skipTest(reason="Get service type resources not yet implemented in version [{}].".format(self.version))
+        utils.warn_version(self, "get service type resources", '0.9.1', skip=True)
+
         utils.TestSetup.create_TestService(self)
         path = '/services/types/{svc_type}/resources'.format(svc_type=self.test_service_type)
         resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
@@ -927,8 +925,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServiceTypeResources_CheckValues(self):
-        if LooseVersion(self.version) < LooseVersion('0.9.1'):
-            self.skipTest(reason="Get service type resources not yet implemented in version [{}].".format(self.version))
+        utils.warn_version(self, "get service type resources", '0.9.1', skip=True)
 
         # evaluate different types of services
         for svc_type, svc_res_info in [

@@ -253,7 +253,7 @@ def get_user_service_resources_permissions_dict(user, service, request, inherit_
 
 
 def check_user_info(user_name, email, password, group_name):
-    # type: (Any, Any, Any, Any) -> None
+    # type: (Str, Str, Str, Str) -> None
     ax.verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                     paramName=u'user_name', msgOnFail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
     ax.verify_param(len(user_name), isIn=True, httpError=HTTPBadRequest,
