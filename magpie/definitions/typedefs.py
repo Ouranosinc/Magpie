@@ -3,8 +3,12 @@
 
 # noinspection PyUnresolvedReferences
 from typing import Any, AnyStr, Callable, Dict, List, Optional, Tuple, Type, Union, TYPE_CHECKING   # noqa: F401
+import six
 
-Str = Union[AnyStr, unicode]
+if six.PY2:
+    Str = Union[AnyStr, unicode]
+else:
+    Str = AnyStr
 
 Setting = Union[AnyStr, int, float, bool, None]
 Settings = Dict[AnyStr, Setting]
