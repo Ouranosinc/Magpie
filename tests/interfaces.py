@@ -236,7 +236,8 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     @runner.MAGPIE_TEST_USERS
     def test_GetCurrentUser(self):
         logged_user = get_constant('MAGPIE_LOGGED_USER')
-        resp = utils.test_request(self.url, 'GET', '/users/{}'.format(logged_user), headers=self.json_headers)
+        path = '/users/{}'.format(logged_user)
+        resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             utils.check_val_equal(json_body['user']['user_name'], self.usr)
