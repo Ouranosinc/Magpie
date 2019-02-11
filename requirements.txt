@@ -27,6 +27,8 @@ threddsclient==0.3.4
 humanize
 requests_file
 typing
+configparser
+sqlalchemy_utils
 # TODO: remove when merged
 # until fix merged and deployed (https://github.com/authomatic/authomatic/pull/195)
 #   authomatic==0.1.0.post1
