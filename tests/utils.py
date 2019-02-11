@@ -191,12 +191,12 @@ def warn_version(test, functionality, version, skip=True):
     (ie: ``test.version >= version``).
     If condition is not met, a warning is raised and the test is skipped according to :param:`skip` value.
     """
-    # noinspection PyUnresolvedReferences
     if LooseVersion(test.version) < LooseVersion(version):
         msg = "Functionality [{}] not yet implemented in version [{}], upgrade to [>={}]." \
               .format(functionality, test.version, version)
         warnings.warn(msg, FutureWarning)
         if skip:
+            # noinspection PyUnresolvedReferences
             test.skipTest(reason=msg)
 
 

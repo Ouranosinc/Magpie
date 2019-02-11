@@ -15,7 +15,9 @@ from magpie.utils import get_twitcher_protected_service_url
 from tests import utils, runner
 
 
-class Base_Magpie_TestCase(unittest.TestCase):
+# don't use 'unittest.TestCase' base
+# some test runner raise (ERROR) the 'NotImplementedError' although overridden by other classes
+class Base_Magpie_TestCase(object):
     version = None
     url = None
 
