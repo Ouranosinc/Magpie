@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from tests.utils import RunOptionDecorator
 import sqlalchemy.exc as sa_exc
 import unittest
 import warnings
@@ -9,6 +8,7 @@ import sys
 
 # ensure that files under 'tests' dir can be found (since not installed)
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from tests.utils import RunOptionDecorator  # noqa: F401
 
 
 def filter_test_files(root, filename):

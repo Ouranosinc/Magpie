@@ -758,13 +758,15 @@ class TestSetup(object):
         check_val_not_in(user_name, users)
 
     @staticmethod
-    def create_TestUser(test_class):
+    def create_TestUser(test_class, override_data=None):
         data = {
             "user_name": test_class.test_user_name,
             "email": '{}@mail.com'.format(test_class.test_user_name),
             "password": test_class.test_user_name,
             "group_name": test_class.test_user_group,
         }
+        if override_data:
+            data.update(override_data)
         resp = test_request(test_class.url, 'POST', '/users',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
