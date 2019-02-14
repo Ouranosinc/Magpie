@@ -722,7 +722,7 @@ class TestSetup(object):
         test_service = list(filter(lambda r: r['service_name'] == service_name, services_info))
         # delete as required, skip if non-existing
         if len(test_service) > 0:
-            route = '/services/{svc_name}'.format(svc_name=test_class.test_service_name)
+            route = '/services/{svc_name}'.format(svc_name=service_name)
             resp = test_request(test_class.url, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)

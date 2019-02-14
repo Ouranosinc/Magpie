@@ -38,7 +38,7 @@ class ManagementViews(object):
                 groups.insert(0, first_default_group)
             return groups
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def get_group_users(self, group_name):
         try:
@@ -47,7 +47,7 @@ class ManagementViews(object):
             check_response(resp)
             return get_json(resp)['user_names']
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def get_user_groups(self, user_name):
         try:
@@ -56,7 +56,7 @@ class ManagementViews(object):
             check_response(resp)
             return get_json(resp)['group_names']
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def get_user_names(self):
         try:
@@ -64,7 +64,7 @@ class ManagementViews(object):
             check_response(resp)
             return get_json(resp)['user_names']
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def get_user_emails(self):
         user_names = self.get_user_names()
@@ -81,7 +81,7 @@ class ManagementViews(object):
                 emails.append(user_email)
             return emails
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def get_resource_types(self):
         """
@@ -115,7 +115,7 @@ class ManagementViews(object):
             check_response(resp)
             return get_json(resp)['service']
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def get_service_types(self):
         svc_types_resp = request_api(self.request, schemas.ServiceTypesAPI.path, 'GET')
@@ -132,7 +132,7 @@ class ManagementViews(object):
             resp = request_api(self.request, path, 'PUT', data=svc_data)
             check_response(resp)
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def update_service_url(self, service_name, new_service_url, service_push):
         try:
@@ -143,7 +143,7 @@ class ManagementViews(object):
             resp = request_api(self.request, path, 'PUT', data=svc_data)
             check_response(resp)
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def goto_service(self, resource_id):
         try:
@@ -492,7 +492,8 @@ class ManagementViews(object):
         new_perms = list(set(selected_perms) - set(res_perms))
 
         for perm in removed_perms:
-            resp = request_api(self.request, res_perms_path, 'DELETE')
+            path = '{path}/{perm}'.format(path=res_perms_path, perm=perm)
+            resp = request_api(self.request, path, 'DELETE')
             check_response(resp)
         for perm in new_perms:
             data = {u'permission_name': perm}

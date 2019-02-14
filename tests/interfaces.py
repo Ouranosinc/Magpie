@@ -411,7 +411,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             route = '/users/{usr}/inherited_resources'.format(usr=self.usr)
         else:
             route = '/users/{usr}/resources?inherit=true'.format(usr=self.usr)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies, timeout=60)
+        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('resources', json_body)
         utils.check_val_type(json_body['resources'], dict)
@@ -805,6 +805,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         service = json_body['service']
         new_svc_name = service['service_name'] + "-updated"
         new_svc_url = service['service_url'] + "/updated"
+        utils.TestSetup.delete_TestService(self, override_service_name=new_svc_name)
         path = '/services/{svc}'.format(svc=service['service_name'])
         data = {'service_name': new_svc_name, 'service_url': new_svc_url}
         resp = utils.test_request(self.url, 'PUT', path, data=data, headers=self.json_headers, cookies=self.cookies)
@@ -828,6 +829,22 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             utils.check_val_type(body['service']['service_sync_type'], utils.OptionalStringType)
         utils.check_val_equal(body['service']['service_url'], new_svc_url)
         utils.check_val_equal(body['service']['service_name'], new_svc_name)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_PutService_UpdateConflict(self):
+        body = utils.TestSetup.create_TestService(self)
+        service = body['service']
+        new_svc_name = service['service_name'] + "-updated"
+        new_svc_url = service['service_url'] + "/updated"
+        try:
+            utils.TestSetup.create_TestService(self, override_service_name=new_svc_name)
+            path = '/services/{svc}'.format(svc=service['service_name'])
+            data = {'service_name': new_svc_name, 'service_url': new_svc_url}
+            resp = utils.test_request(self.url, 'PUT', path, data=data, expect_errors=True,
+                                      headers=self.json_headers, cookies=self.cookies)
+            utils.check_response_basic_info(resp, 409, expected_method='PUT')
+        finally:
+            utils.TestSetup.delete_TestService(self, override_service_name=new_svc_name)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PutService_NoUpdateInfo(self):
@@ -1335,12 +1352,12 @@ class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
     @runner.MAGPIE_TEST_STATUS
     def test_EditUser(self):
         path = '/ui/users/{}/default'.format(self.test_user)
-        utils.TestSetup.check_UpStatus(self, method='GET', path=path, timeout=60)
+        utils.TestSetup.check_UpStatus(self, method='GET', path=path)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditUserService(self):
         path = '/ui/users/{usr}/{type}'.format(usr=self.test_user, type=self.test_service_type)
-        utils.TestSetup.check_UpStatus(self, method='GET', path=path, timeout=60)
+        utils.TestSetup.check_UpStatus(self, method='GET', path=path)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditGroup(self):

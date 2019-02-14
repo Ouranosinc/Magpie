@@ -184,7 +184,8 @@ def get_user_resources_view(request):
 
     def build_json_user_resource_tree(usr):
         json_res = {}
-        for svc in models.Service.all(db_session=db):
+        services = list(models.Service.all(db_session=db))
+        for svc in services:
             svc_perms = uu.get_user_service_permissions(
                 user=usr, service=svc, request=request, inherit_groups_permissions=inherit_groups_perms)
             if svc.type not in json_res:

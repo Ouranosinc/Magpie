@@ -101,7 +101,7 @@ def update_service_view(request):
         all_svc_names = list()
         for svc_type in service_type_dict:
             for svc in su.get_services_by_type(svc_type, db_session=request.db):
-                all_svc_names.extend(svc.resource_name)
+                all_svc_names.append(svc.resource_name)
         ax.verify_param(svc_name, notIn=True, paramCompare=all_svc_names, httpError=HTTPConflict,
                         msgOnFail=s.Service_PUT_ConflictResponseSchema.description,
                         content={u'service_name': str(svc_name)})
