@@ -17,6 +17,7 @@ from tests import utils, runner
 
 # don't use 'unittest.TestCase' base
 # some test runner raise (ERROR) the 'NotImplementedError' although overridden by other classes
+# noinspection PyPep8Naming
 class Base_Magpie_TestCase(object):
     version = None
     url = None
@@ -32,7 +33,7 @@ class Base_Magpie_TestCase(object):
         pyramid.testing.tearDown()
 
 
-# noinspection PyAbstractClass
+# noinspection PyAbstractClass, PyPep8Naming
 @runner.MAGPIE_TEST_API
 class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
     """
@@ -76,7 +77,7 @@ class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
             utils.check_val_equal(json_body['user_name'], self.usr)
 
 
-# noinspection PyAbstractClass
+# noinspection PyAbstractClass, PyPep8Naming
 @unittest.skip("Not implemented.")
 @pytest.mark.skip(reason="Not implemented.")
 @runner.MAGPIE_TEST_API
@@ -90,7 +91,7 @@ class Interface_MagpieAPI_UsersAuth(Base_Magpie_TestCase):
     pass
 
 
-# noinspection PyAbstractClass
+# noinspection PyAbstractClass, PyPep8Naming
 @runner.MAGPIE_TEST_API
 class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     """
@@ -410,7 +411,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             route = '/users/{usr}/inherited_resources'.format(usr=self.usr)
         else:
             route = '/users/{usr}/resources?inherit=true'.format(usr=self.usr)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies, timeout=20)
+        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies, timeout=60)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('resources', json_body)
         utils.check_val_type(json_body['resources'], dict)
@@ -1221,7 +1222,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.check_NonExistingTestServiceResource(self)
 
 
-# noinspection PyAbstractClass
+# noinspection PyAbstractClass, PyPep8Naming
 @runner.MAGPIE_TEST_UI
 class Interface_MagpieUI_NoAuth(Base_Magpie_TestCase):
     """
@@ -1290,7 +1291,7 @@ class Interface_MagpieUI_NoAuth(Base_Magpie_TestCase):
         utils.TestSetup.check_Unauthorized(self, method='POST', path=path)
 
 
-# noinspection PyAbstractClass
+# noinspection PyAbstractClass, PyPep8Naming
 @runner.MAGPIE_TEST_UI
 class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
     """
@@ -1334,12 +1335,12 @@ class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
     @runner.MAGPIE_TEST_STATUS
     def test_EditUser(self):
         path = '/ui/users/{}/default'.format(self.test_user)
-        utils.TestSetup.check_UpStatus(self, method='GET', path=path)
+        utils.TestSetup.check_UpStatus(self, method='GET', path=path, timeout=60)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditUserService(self):
         path = '/ui/users/{usr}/{type}'.format(usr=self.test_user, type=self.test_service_type)
-        utils.TestSetup.check_UpStatus(self, method='GET', path=path)
+        utils.TestSetup.check_UpStatus(self, method='GET', path=path, timeout=60)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditGroup(self):

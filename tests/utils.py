@@ -594,12 +594,12 @@ class TestSetup(object):
         return json_body['version']
 
     @staticmethod
-    def check_UpStatus(test_class, method, path):
+    def check_UpStatus(test_class, method, path, timeout=20):
         """
         Verifies that the Magpie UI page at very least returned an Ok response with the displayed title.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
-        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=20)
+        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=timeout)
         check_val_equal(resp.status_code, 200)
         check_val_is_in('Content-Type', dict(resp.headers))
         check_val_is_in('text/html', get_response_content_types_list(resp))
