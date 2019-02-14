@@ -3,13 +3,17 @@ import requests
 import warnings
 import json
 import six
+# noinspection PyPackageRequirements
 import pytest
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from pyramid.response import Response
 from pyramid.testing import setUp as PyramidSetUp
+# noinspection PyPackageRequirements
 from webtest import TestApp
+# noinspection PyPackageRequirements
 from webtest.response import TestResponse
+# noinspection PyPackageRequirements
 from webob.headers import ResponseHeaders
 from magpie import __meta__, services, magpiectl
 from magpie.common import get_settings_from_config_ini
@@ -94,7 +98,7 @@ def RunDecorator(run_option):
             <test>
 
     """
-
+    # noinspection PyUnusedLocal
     def wrap(test_func, *args, **kwargs):
         pytest_marker = pytest.mark.__getattr__(run_option.marker)
         unittest_skip = unittest.skipUnless(*run_option())
@@ -600,7 +604,10 @@ class TestSetup(object):
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
         resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=timeout)
-        check_val_equal(resp.status_code, 200)
+        msg = None \
+            if get_header('Content-Type', resp.headers) != 'application/json' \
+            else "Response body: {}".format(get_json_body(resp))
+        check_val_equal(resp.status_code, 200, msg=msg)
         check_val_is_in('Content-Type', dict(resp.headers))
         check_val_is_in('text/html', get_response_content_types_list(resp))
         check_val_is_in("Magpie Administration", resp.text)
