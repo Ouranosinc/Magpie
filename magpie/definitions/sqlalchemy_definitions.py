@@ -19,6 +19,6 @@ from sqlalchemy import engine_from_config, pool, create_engine                  
 # noinspection PyUnresolvedReferences
 from sqlalchemy import exc as sa_exc                                                            # noqa: F401
 # noinspection PyUnresolvedReferences
-from zope.sqlalchemy import ZopeTransactionExtension                                            # noqa: F401
+from zope.sqlalchemy import ZopeTransactionExtension, register                                  # noqa: F401
 # noinspection PyUnresolvedReferences
 import sqlalchemy as sa                                                                         # noqa: F401

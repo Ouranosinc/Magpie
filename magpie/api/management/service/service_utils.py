@@ -2,6 +2,7 @@ from magpie.api import api_except as ax, api_rest_schemas as s
 from magpie.api.management.group.group_utils import create_group_resource_permission
 from magpie.api.management.service.service_formats import format_service
 from magpie.constants import get_constant
+from magpie.common import get_logger
 from magpie.definitions.sqlalchemy_definitions import Session
 from magpie.definitions.pyramid_definitions import (
     HTTPCreated,
@@ -15,8 +16,7 @@ from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
 from magpie.services import service_type_dict
 from magpie import models
 from typing import AnyStr
-import logging
-LOGGER = logging.getLogger(__name__)
+LOGGER = get_logger(__name__)
 
 
 def create_service(service_name, service_type, service_url, service_push, db_session):

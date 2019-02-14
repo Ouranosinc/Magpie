@@ -19,7 +19,9 @@ PyYAML>=3.13
 requests
 requests_file
 six
+sqlalchemy
 threddsclient==0.3.4
+transaction
 typing
 wheel==0.33.0
 ziggurat-foundations==0.8.3

@@ -710,10 +710,11 @@ class TestSetup(object):
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
-    def check_NonExistingTestService(test_class):
+    def check_NonExistingTestService(test_class, override_service_name=None):
         services_info = TestSetup.get_RegisteredServicesList(test_class)
         services_names = [svc['service_name'] for svc in services_info]
-        check_val_not_in(test_class.test_service_name, services_names)
+        service_name = override_service_name or test_class.test_service_name
+        check_val_not_in(service_name, services_names)
 
     @staticmethod
     def delete_TestService(test_class, override_service_name=None):
@@ -727,7 +728,7 @@ class TestSetup(object):
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_val_equal(resp.status_code, 200)
-        TestSetup.check_NonExistingTestService(test_class)
+        TestSetup.check_NonExistingTestService(test_class, override_service_name=service_name)
 
     @staticmethod
     def get_RegisteredServicesList(test_class):

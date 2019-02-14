@@ -1,5 +1,6 @@
 from magpie.api.api_except import evaluate_call, verify_param
 from magpie.constants import get_constant
+from magpie.common import get_logger
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,
     HTTPNotFound,
@@ -8,6 +9,7 @@ from magpie.definitions.pyramid_definitions import (
     IAuthorizationPolicy,
     asbool,
 )
+# noinspection PyUnresolvedReferences
 from magpie.definitions.twitcher_definitions import (
     OWSSecurityInterface,
     OWSAccessForbidden,
@@ -21,8 +23,7 @@ from magpie.utils import get_magpie_url
 from requests.cookies import RequestsCookieJar
 from six.moves.urllib.parse import urlparse
 import requests
-import logging
-LOGGER = logging.getLogger("TWITCHER")
+LOGGER = get_logger("TWITCHER")
 
 
 class MagpieOWSSecurity(OWSSecurityInterface):

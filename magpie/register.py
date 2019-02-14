@@ -9,7 +9,7 @@ from magpie.api.api_rest_schemas import (
     GroupResourcePermissionsAPI,
     UserResourcePermissionsAPI,
 )
-from magpie.common import make_dirs, print_log, raise_log, bool2str, islambda
+from magpie.common import make_dirs, print_log, raise_log, bool2str, islambda, get_logger
 from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import (
     ResourceService,
@@ -32,10 +32,8 @@ import yaml
 import subprocess
 import requests
 import transaction
-# noinspection PyUnresolvedReferences
 import logging
-import logging.config   # find config in 'logging.ini'
-LOGGER = logging.getLogger(__name__)
+LOGGER = get_logger(__name__)
 
 LOGIN_ATTEMPT = 10              # max attempts for login
 LOGIN_TIMEOUT = 10              # delay (s) between each login attempt
@@ -99,17 +97,17 @@ def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Resp
     curl_msg = curl_out.communicate()[0]    # type: Str
     curl_err = curl_out.returncode          # type: int
     http_code = int(curl_msg.split(msg_sep)[1])
-    print_log("[{url}] {response}".format(response=curl_msg, url=url))
+    print_log("[{url}] {response}".format(response=curl_msg, url=url), logger=LOGGER)
     return curl_err, http_code
 
 
 def phoenix_update_services(services_dict):
     if not phoenix_remove_services():
-        print_log("Could not remove services, aborting register sync services to Phoenix")
+        print_log("Could not remove services, aborting register sync services to Phoenix", logger=LOGGER)
         return False
     if not phoenix_register_services(services_dict):
         print_log("Failed services registration from Magpie to Phoenix\n" +
-                  "[warning: services could have been removed but could not be re-added]")
+                  "[warning: services could have been removed but could not be re-added]", logger=LOGGER)
         return False
     return True
 
@@ -147,13 +145,13 @@ def phoenix_remove_services():
     error = 0
     try:
         if not phoenix_login(phoenix_cookies):
-            print_log("Login unsuccessful from post-login check, aborting...")
+            print_log("Login unsuccessful from post-login check, aborting...", logger=LOGGER)
             return False
         phoenix_url = get_phoenix_url()
         remove_services_url = phoenix_url + '/clear_services'
         error, http_code = request_curl(remove_services_url, cookies=phoenix_cookies, msg='Phoenix remove services')
     except Exception as e:
-        print_log("Exception during phoenix remove services: [" + repr(e) + "]")
+        print_log("Exception during phoenix remove services: [{!r}]".format(e), logger=LOGGER)
     finally:
         if os.path.isfile(phoenix_cookies):
             os.remove(phoenix_cookies)
@@ -168,7 +166,7 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
         allowed_service_types = SERVICES_PHOENIX_ALLOWED if allowed_service_types is None else allowed_service_types
         allowed_service_types = [svc.upper() for svc in allowed_service_types]
         if not phoenix_login(phoenix_cookies):
-            print_log("Login unsuccessful from post-login check, aborting...")
+            print_log("Login unsuccessful from post-login check, aborting...", logger=LOGGER, level=logging.WARN)
             return False
 
         # Filter specific services to push
@@ -182,7 +180,7 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
         success, statuses = register_services(SERVICES_PHOENIX, filtered_services_dict,
                                               phoenix_cookies, 'Phoenix register service')
     except Exception as e:
-        print_log("Exception during phoenix register services: [" + repr(e) + "]")
+        print_log("Exception during phoenix register services: [{!r}]".format(e), logger=LOGGER, level=logging.ERROR)
     finally:
         if os.path.isfile(phoenix_cookies):
             os.remove(phoenix_cookies)
@@ -268,7 +266,7 @@ def magpie_add_register_services_perms(services, statuses, curl_cookies, request
                                   .format(magpie=magpie_url, svc=service_name)
         resp_available_perms = requests.get(svc_available_perms_url, cookies=request_cookies)
         if resp_available_perms.status_code == 401:
-            raise_log("Invalid credentials, cannot update service permissions", exception=ValueError)
+            raise_log("Invalid credentials, cannot update service permissions", exception=ValueError, logger=LOGGER)
 
         available_perms = resp_available_perms.json().get('permission_names', [])
         # only applicable to services supporting 'GetCapabilities' request
@@ -277,7 +275,7 @@ def magpie_add_register_services_perms(services, statuses, curl_cookies, request
             # enforce 'getcapabilities' permission if available for service just updated (200) or created (201)
             # update 'getcapabilities' permission when the service existed and it allowed
             if (not disable_getcapabilities and statuses[service_name] == 409) \
-            or statuses[service_name] == 200 or statuses[service_name] == 201:
+            or statuses[service_name] == 200 or statuses[service_name] == 201:  # noqa
                 svc_anonym_add_perms_url = '{magpie}/users/{usr}/services/{svc}/permissions' \
                                            .format(magpie=magpie_url, usr=login_usr, svc=service_name)
                 svc_anonym_perm_data = {'permission_name': 'getcapabilities'}
@@ -301,13 +299,13 @@ def magpie_add_register_services_perms(services, statuses, curl_cookies, request
                 if not err and http == 200:
                     break
                 print_log("[{url}] Bad response from service '{svc}' retrying after {sec}s..."
-                          .format(svc=service_name, url=service_url, sec=GETCAPABILITIES_INTERVAL))
+                          .format(svc=service_name, url=service_url, sec=GETCAPABILITIES_INTERVAL), logger=LOGGER)
                 time.sleep(GETCAPABILITIES_INTERVAL)
                 attempt += 1
                 if attempt >= GETCAPABILITIES_ATTEMPTS:
                     msg = "[{url}] No response from service '{svc}' after {tries} attempts. Skipping..." \
                           .format(svc=service_name, url=service_url, tries=attempt)
-                    print_log(msg)
+                    print_log(msg, logger=LOGGER)
                     break
 
 
@@ -327,7 +325,8 @@ def magpie_update_services_conflict(conflict_services, services_dict, request_co
             res_svc_put = requests.put(svc_url_db, data=svc_info, cookies=request_cookies)
             statuses[svc_name] = res_svc_put.status_code
             print_log("[{url_old}] => [{url_new}] Service URL update ({svc}): {resp}"
-                      .format(svc=svc_name, url_old=svc_url_old, url_new=svc_url_new, resp=res_svc_put.status_code))
+                      .format(svc=svc_name, url_old=svc_url_old, url_new=svc_url_new, resp=res_svc_put.status_code),
+                      logger=LOGGER)
     return statuses
 
 
@@ -357,7 +356,7 @@ def magpie_register_services_with_requests(services_dict, push_to_phoenix, usern
         login_loop(login_url, curl_cookies, login_data, 'Magpie login response')
         login_resp = session.post(login_url, data=login_data)
         if login_resp.status_code != 200:
-            raise_log('Failed login with specified credentials')
+            raise_log('Failed login with specified credentials', logger=LOGGER)
         request_cookies = login_resp.cookies
 
         # Register services
@@ -381,7 +380,7 @@ def magpie_register_services_with_requests(services_dict, push_to_phoenix, usern
             success = phoenix_update_services(services_dict)
 
     except Exception as e:
-        print_log("Exception during magpie register services: [" + repr(e) + "]")
+        print_log("Exception during magpie register services: [{!r}]".format(e), logger=LOGGER, level=logging.ERROR)
     finally:
         session.cookies.clear()
         if os.path.isfile(curl_cookies):
@@ -403,16 +402,17 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
         if force_update and svc_name in existing_services_names:
             svc = models.Service.by_service_name(svc_name, db_session=db_session)
             if svc.url == svc_new_url:
-                print_log("Service URL already properly set [{url}] ({svc})".format(url=svc.url, svc=svc_name))
+                print_log("Service URL already properly set [{url}] ({svc})"
+                          .format(url=svc.url, svc=svc_name), logger=LOGGER)
             else:
                 print_log("Service URL update [{url_old}] => [{url_new}] ({svc})"
-                          .format(url_old=svc.url, url_new=svc_new_url, svc=svc_name))
+                          .format(url_old=svc.url, url_new=svc_new_url, svc=svc_name), logger=LOGGER)
                 svc.url = svc_new_url
             svc.sync_type = svc_sync_type
         elif not force_update and svc_name in existing_services_names:
-            print_log("Skipping service [{svc}] (conflict)" .format(svc=svc_name))
+            print_log("Skipping service [{svc}] (conflict)" .format(svc=svc_name), logger=LOGGER)
         else:
-            print_log("Adding service [{svc}]".format(svc=svc_name))
+            print_log("Adding service [{svc}]".format(svc=svc_name), logger=LOGGER)
             # noinspection PyArgumentList
             svc = models.Service(resource_name=svc_name,
                                  resource_type=models.Service.resource_type_name,
@@ -422,7 +422,8 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
             db_session.add(svc)
 
         if update_getcapabilities_permissions and anonymous_user is None:
-            print_log("Cannot update 'getcapabilities' permission of non existing anonymous user", level=logging.WARN)
+            print_log("Cannot update 'getcapabilities' permission of non existing anonymous user",
+                      level=logging.WARN, logger=LOGGER)
         elif update_getcapabilities_permissions and 'getcapabilities' in service_type_dict[svc_type].permission_names:
             svc = db_session.query(models.Service.resource_id).filter_by(resource_name=svc_name).first()
             svc_perm_getcapabilities = UserResourcePermissionService.by_resource_user_and_perm(
@@ -430,7 +431,7 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
                 resource_id=svc.resource_id, db_session=db_session
             )
             if svc_perm_getcapabilities is None:
-                print_log("Adding 'getcapabilities' permission to anonymous user")
+                print_log("Adding 'getcapabilities' permission to anonymous user", logger=LOGGER)
                 # noinspection PyArgumentList
                 svc_perm_getcapabilities = models.UserResourcePermission(
                     user_id=anonymous_user.id, perm_name='getcapabilities', resource_id=svc.resource_id
@@ -455,9 +456,9 @@ def _load_config(path_or_dict, section):
             cfg = path_or_dict
         return cfg[section]
     except KeyError as ex:
-        raise_log("Config file section [{!s}] not found.".format(section), exception=type(ex))
+        raise_log("Config file section [{!s}] not found.".format(section), exception=type(ex), logger=LOGGER)
     except Exception as ex:
-        raise_log("Invalid config file [{!r}]".format(ex), exception=type(ex))
+        raise_log("Invalid config file [{!r}]".format(ex), exception=type(ex), logger=LOGGER)
 
 
 def magpie_register_services_from_config(service_config_file_path, push_to_phoenix=False,

@@ -11,15 +11,30 @@ from logging import _loggerClass as LoggerType
 import configparser
 import types
 import six
+import sys
 import os
-# noinspection PyUnresolvedReferences
 import logging
-import logging.config   # find config in 'logging.ini'
-LOGGER = logging.getLogger(__name__)
+
+
+def get_logger(name, level=logging.INFO):
+    """
+    Immediately sets the logger level to avoid duplicate log outputs
+    from the `root logger` and `this logger` when `level` is `NOTSET`.
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    return logger
+
+
+LOGGER = get_logger(__name__)
 
 
 def print_log(msg, logger=LOGGER, level=logging.INFO):
-    print(msg)
+    all_handlers = logging.root.handlers + logger.handlers
+    if not any(isinstance(h, logging.StreamHandler) for h in all_handlers):
+        logger.addHandler(logging.StreamHandler(sys.stdout))
+    if logger.disabled:
+        logger.disabled = False
     logger.log(level, msg)
 
 

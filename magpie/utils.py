@@ -1,11 +1,10 @@
-from magpie.common import raise_log
+from magpie.common import raise_log, get_logger
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import HTTPOk, ConfigurationError, Registry
 from six.moves.urllib.parse import urlparse
 from typing import AnyStr, Dict, Optional
 import requests
-import logging
-LOGGER = logging.getLogger(__name__)
+LOGGER = get_logger(__name__)
 
 
 def get_admin_cookies(magpie_url, verify=True, raise_message=None):

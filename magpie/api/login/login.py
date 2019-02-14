@@ -9,10 +9,9 @@ from magpie.api.api_requests import *
 from magpie.api.api_rest_schemas import *
 from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import create_user
-from magpie.common import convert_response
+from magpie.common import convert_response, get_logger
 from six.moves.urllib.parse import urlparse
-import logging
-LOGGER = logging.getLogger(__name__)
+LOGGER = get_logger(__name__)
 
 
 # dictionaries of {'provider_id': 'provider_display_name'}

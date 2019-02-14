@@ -20,6 +20,8 @@ History
 * add new route `/services/types/{svc_type}/resources` for details about child service type resources
 * error handling of reserved route keywords service `types` and current user `MAGPIE_LOGGED_USER`
 * additional tests for new routes and operations previously left unevaluated
+* fix invalid conflict service name check on service update request
+* logging adjustments
 
 0.8.x
 ---------------------

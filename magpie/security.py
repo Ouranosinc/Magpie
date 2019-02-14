@@ -2,11 +2,11 @@ from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.api.login import esgfopenid, wso2
 from magpie.constants import get_constant
+from magpie.common import get_logger
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
 import logging
-AUTHOMATIC_LOGGER = logging.getLogger('magpie.authomatic')
-AUTHOMATIC_LOGGER.setLevel(logging.DEBUG)
+AUTHOMATIC_LOGGER = get_logger('magpie.authomatic', level=logging.DEBUG)
 
 
 def auth_config_from_settings(settings):

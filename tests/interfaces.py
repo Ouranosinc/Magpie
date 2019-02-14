@@ -1,7 +1,9 @@
 import unittest
 import warnings
+# noinspection PyPackageRequirements
 import pytest
 import pyramid.testing
+# noinspection PyPackageRequirements
 import mock
 import yaml
 import six
