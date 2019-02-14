@@ -389,7 +389,6 @@ class ManagementViews(object):
         user_info[u'svc_types'] = svc_types
         user_info[u'resources'] = res_perms
         user_info[u'permissions'] = res_perm_names
-
         return add_template_data(self.request, data=user_info)
 
     @view_config(route_name='view_groups', renderer='templates/view_groups.mako')
