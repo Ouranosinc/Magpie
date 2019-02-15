@@ -9,6 +9,7 @@ from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from pyramid.response import Response
 from pyramid.testing import setUp as PyramidSetUp
+from requests.structures import CaseInsensitiveDict
 # noinspection PyPackageRequirements
 from webtest import TestApp
 # noinspection PyPackageRequirements
@@ -160,7 +161,7 @@ def get_header(header_name, header_container):
     if header_container is None:
         return None
     headers = header_container
-    if isinstance(headers, ResponseHeaders):
+    if isinstance(headers, (ResponseHeaders, CaseInsensitiveDict)):
         headers = dict(headers)
     if isinstance(headers, dict):
         headers = header_container.items()
