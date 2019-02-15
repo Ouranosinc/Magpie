@@ -18,6 +18,7 @@ python-dotenv
 PyYAML>=3.13
 requests
 requests_file
+simplejson
 six
 sqlalchemy
 threddsclient==0.3.4

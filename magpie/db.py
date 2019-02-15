@@ -44,7 +44,8 @@ def get_engine(settings, prefix='sqlalchemy.'):
 
 
 def get_session_factory(engine):
-    factory = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
+    #factory = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
+    factory = sessionmaker(extension=ZopeTransactionExtension())
     factory.configure(bind=engine)
     return factory
 
