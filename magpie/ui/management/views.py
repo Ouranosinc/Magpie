@@ -246,31 +246,24 @@ class ManagementViews(object):
 
     @view_config(route_name='edit_user', renderer='templates/edit_user.mako')
     def edit_user(self):
-        LOGGER.warning('edit user start')    # TODO: remove
         user_name = self.request.matchdict['user_name']
         cur_svc_type = self.request.matchdict['cur_svc_type']
         inherit_grp_perms = self.request.matchdict.get('inherit_groups_permissions', False)
 
-        LOGGER.warning('fetch groups')  # TODO: remove
         own_groups = self.get_user_groups(user_name)
         all_groups = self.get_all_groups(first_default_group=get_constant('MAGPIE_USERS_GROUP'))
 
-        error_message = ""
-
-        LOGGER.warning('get session')  # TODO: remove
         # TODO:
         #   Until the api is modified to make it possible to request from the RemoteResource table,
         #   we have to access the database directly here
         session = self.request.db
 
-        LOGGER.warning('get services [cur={}]'.format(cur_svc_type))  # TODO: remove
         try:
             # The service type is 'default'. This function replaces cur_svc_type with the first service type.
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        LOGGER.warning('get user')  # TODO: remove
         user_path = schemas.UserAPI.path.format(user_name=user_name)
         user_resp = request_api(self.request, user_path, 'GET')
         check_response(user_resp)
@@ -279,6 +272,7 @@ class ManagementViews(object):
         user_info[u'own_groups'] = own_groups
         user_info[u'groups'] = all_groups
         user_info[u'inherit_groups_permissions'] = inherit_grp_perms
+        error_message = ""
 
         if self.request.method == 'POST':
             res_id = self.request.POST.get(u'resource_id')
@@ -369,8 +363,6 @@ class ManagementViews(object):
                     check_response(resp)
                 user_info[u'own_groups'] = self.get_user_groups(user_name)
 
-        LOGGER.warning('get user resource permissions [usr={}, svc={}, inherit={}]'
-                       .format(user_name, services, inherit_grp_perms))  # TODO: remove
         # display resources permissions per service type tab
         try:
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(
@@ -379,15 +371,12 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        LOGGER.warning('get sync types')  # TODO: remove
         sync_types = [s["service_sync_type"] for s in services.values()]
         sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
 
-        LOGGER.warning('get remote resource info')  # TODO: remove
         info = self.get_remote_resources_info(res_perms, services, session)
         res_perms, ids_to_clean, last_sync_humanized, out_of_sync = info
 
-        LOGGER.warning('message')  # TODO: remove
         if out_of_sync:
             error_message = self.make_sync_error_message(out_of_sync)
 
@@ -400,7 +389,6 @@ class ManagementViews(object):
         user_info[u'svc_types'] = svc_types
         user_info[u'resources'] = res_perms
         user_info[u'permissions'] = res_perm_names
-        LOGGER.warning('return to template [{}]'.format(user_info))  # TODO: remove
         return add_template_data(self.request, data=user_info)
 
     @view_config(route_name='view_groups', renderer='templates/view_groups.mako')

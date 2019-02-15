@@ -4,7 +4,7 @@ from magpie import constants
 from magpie.common import get_settings_from_config_ini, print_log, raise_log, get_logger
 from magpie.definitions.alembic_definitions import alembic
 from magpie.definitions.sqlalchemy_definitions import (
-    register, scoped_session, sessionmaker, engine_from_config, ZopeTransactionExtension,
+    register, sessionmaker, engine_from_config, ZopeTransactionExtension,
     configure_mappers, select, Inspector, Session, sa_exc
 )
 from magpie.definitions.typedefs import AnyStr, Settings, Optional, Union
@@ -44,7 +44,6 @@ def get_engine(settings, prefix='sqlalchemy.'):
 
 
 def get_session_factory(engine):
-    #factory = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
     factory = sessionmaker(extension=ZopeTransactionExtension())
     factory.configure(bind=engine)
     return factory
