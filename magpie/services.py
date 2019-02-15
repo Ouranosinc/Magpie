@@ -1,6 +1,13 @@
 from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import *
-from magpie.definitions.pyramid_definitions import EVERYONE, ALLOW, Request
+from magpie.definitions.pyramid_definitions import (
+    EVERYONE,
+    ALLOW,
+    Request,
+    HTTPNotFound,
+    HTTPBadRequest,
+    HTTPNotImplemented,
+)
 from magpie.api.api_except import *
 from magpie.permissions import *
 from magpie.owsrequest import *
@@ -26,11 +33,11 @@ class ServiceMeta(type):
 
 class ServiceI(with_metaclass(ServiceMeta)):
     # required request parameters for the service
-    params_expected = []                # type: List[str]
+    params_expected = []                # type: List[AnyStr]
     # global permissions allowed for the service (top-level resource)
-    permission_names = []               # type: List[str]
+    permission_names = []               # type: List[AnyStr]
     # dict of list for each corresponding allowed resource permissions (children resources)
-    resource_types_permissions = {}     # type: Dict[str,List[str]]
+    resource_types_permissions = {}     # type: Dict[AnyStr, List[AnyStr]]
 
     def __init__(self, service, request):
         self.service = service
@@ -178,18 +185,22 @@ class ServiceNCWMS2(ServiceWMS):
         permission_requested = self.permission_requested()
         netcdf_file = None
         if permission_requested == PERMISSION_GET_CAPABILITIES:
-            # https://colibri.crim.ca/twitcher/ows/proxy/ncWMS2/wms?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0&DATASET=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc
+            # https://colibri.crim.ca/twitcher/ows/proxy/ncWMS2/wms?SERVICE=WMS&REQUEST=GetCapabilities&
+            #   VERSION=1.3.0&DATASET=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc
             if 'dataset' in self.parser.params.keys():
                 netcdf_file = self.parser.params['dataset']
 
         elif permission_requested == PERMISSION_GET_MAP:
-            # https://colibri.crim.ca/ncWMS2/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image%2Fpng&TRANSPARENT=TRUE&ABOVEMAXCOLOR=extend&STYLES=default-scalar%2Fseq-Blues&LAYERS=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc/PCP&EPSG=4326
+            # https://colibri.crim.ca/ncWMS2/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image%2Fpng&
+            #   TRANSPARENT=TRUE&ABOVEMAXCOLOR=extend&STYLES=default-scalar%2Fseq-Blues&
+            #   LAYERS=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc/PCP&EPSG=4326
             netcdf_file = self.parser.params['layers']
             if netcdf_file:
                 netcdf_file = netcdf_file.rsplit('/', 1)[0]
 
         elif permission_requested == PERMISSION_GET_METADATA:
-            # https://colibri.crim.ca/ncWMS2/wms?request=GetMetadata&item=layerDetails&layerName=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc/PCP
+            # https://colibri.crim.ca/ncWMS2/wms?request=GetMetadata&item=layerDetails&
+            #   layerName=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc/PCP
             netcdf_file = self.parser.params['layername']
             if netcdf_file:
                 netcdf_file = netcdf_file.rsplit('/', 1)[0]
@@ -448,7 +459,8 @@ service_type_dict = {
 def service_factory(service, request):
     # type: (models.Service, Request) -> ServiceI
     """Retrieve the specific service class from the provided database service entry."""
-    verify_param(service, ofType=models.Service, httpError=HTTPBadRequest, content={u'service': repr(service)},
+    verify_param(service, paramCompare=models.Service, ofType=True,
+                 httpError=HTTPBadRequest, content={u'service': repr(service)},
                  msgOnFail="Cannot process invalid service object")
     service_type = evaluate_call(lambda: service.type, httpError=HTTPInternalServerError,
                                  msgOnFail="Cannot retrieve service type from object")

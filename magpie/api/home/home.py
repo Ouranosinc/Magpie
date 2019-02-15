@@ -1,20 +1,22 @@
-from magpie.definitions.pyramid_definitions import *
-from magpie.api.api_rest_schemas import *
-from magpie.api.api_except import *
+from magpie.api import api_except as ax, api_rest_schemas as s
+from magpie.definitions.pyramid_definitions import NO_PERMISSION_REQUIRED, HTTPOk, view_config
 from magpie import db, __meta__
 
 
-#@view_config(route_name='home', renderer='templates/home.pt')
-#def home_config_view(request):
-#    return dict()
+# @view_config(route_name='home', renderer='templates/home.pt')
+# def home_config_view(request):
+#     return dict()
 
 
-@VersionAPI.get(tags=[APITag], api_security=SecurityEveryoneAPI, response_schemas=Version_GET_responses)
-@view_config(route_name=VersionAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@s.VersionAPI.get(tags=[s.APITag], api_security=s.SecurityEveryoneAPI, response_schemas=s.Version_GET_responses)
+@view_config(route_name=s.VersionAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_version(request):
     """
     Version information of the API.
     """
-    return valid_http(httpSuccess=HTTPOk,
-                      content={u'version': __meta__.__version__, u'db_version': db.get_database_revision(request.db)},
-                      detail=Version_GET_OkResponseSchema.description, contentType='application/json')
+    version = {
+        u'version': __meta__.__version__,
+        u'db_version': db.get_database_revision(request.db)
+    }
+    return ax.valid_http(httpSuccess=HTTPOk, content=version, contentType='application/json',
+                         detail=s.Version_GET_OkResponseSchema.description)

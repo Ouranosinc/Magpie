@@ -1,72 +1,71 @@
 from magpie.api import api_rest_schemas as schemas
-from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.pyramid_definitions import (
+    view_config,
+    HTTPFound,
+    HTTPMovedPermanently,
+    HTTPBadRequest,
+    HTTPNotFound,
+    HTTPConflict,
+)
 from magpie.constants import get_constant
-from magpie.common import str2bool
+from magpie.common import str2bool, get_json, get_logger
 from magpie.helpers.sync_resources import OUT_OF_SYNC
-from magpie.services import service_type_dict
-from magpie.models import resource_type_dict, remote_resource_tree_service
-from magpie.ui.utils import check_response
 from magpie.helpers import sync_resources
+from magpie.models import resource_type_dict, remote_resource_tree_service  # TODO: remove, implement getters via API
+from magpie.ui.utils import check_response, request_api
 from magpie.ui.home import add_template_data
 from magpie import register, __meta__
 from collections import OrderedDict
 from distutils.version import LooseVersion
 import datetime
 import humanize
-import requests
 import json
 import six
+LOGGER = get_logger(__name__)
 
 
 class ManagementViews(object):
     def __init__(self, request):
         self.request = request
-        self.magpie_url = get_constant('magpie.url', settings=self.request.registry.settings,
-                                       raise_missing=True, raise_not_set=True)
-
-    def get_url(self, path):
-        return '{url}{path}'.format(url=self.magpie_url, path=path)
+        self.magpie_url = request.application_url
 
     def get_all_groups(self, first_default_group=None):
-        try:
-            resp = requests.get(self.get_url(schemas.GroupsAPI.path), cookies=self.request.cookies)
-        except Exception:
-            raise HTTPBadRequest(detail='Bad Json response')
+        resp = request_api(self.request, schemas.GroupsAPI.path, 'GET')
         check_response(resp)
         try:
-            groups = list(resp.json()['group_names'])
+            groups = list(get_json(resp)['group_names'])
             if isinstance(first_default_group, six.string_types) and first_default_group in groups:
                 groups.remove(first_default_group)
                 groups.insert(0, first_default_group)
             return groups
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def get_group_users(self, group_name):
         try:
             path = schemas.GroupUsersAPI.path.format(group_name=group_name)
-            resp = requests.get(self.get_url(path), cookies=self.request.cookies)
+            resp = request_api(self.request, path, 'GET')
             check_response(resp)
-            return resp.json()['user_names']
+            return get_json(resp)['user_names']
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def get_user_groups(self, user_name):
         try:
             path = schemas.UserGroupsAPI.path.format(user_name=user_name)
-            resp = requests.get(self.get_url(path), cookies=self.request.cookies)
+            resp = request_api(self.request, path, 'GET')
             check_response(resp)
-            return resp.json()['group_names']
+            return get_json(resp)['group_names']
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def get_user_names(self):
         try:
-            resp = requests.get(self.get_url(schemas.UsersAPI.path), cookies=self.request.cookies)
+            resp = request_api(self.request, schemas.UsersAPI.path, 'GET')
             check_response(resp)
-            return resp.json()['user_names']
+            return get_json(resp)['user_names']
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def get_user_emails(self):
         user_names = self.get_user_names()
@@ -74,34 +73,34 @@ class ManagementViews(object):
             emails = list()
             for user in user_names:
                 path = schemas.UserAPI.path.format(user_name=user)
-                resp = requests.get(self.get_url(path), cookies=self.request.cookies)
+                resp = request_api(self.request, path, 'GET')
                 check_response(resp)
                 if LooseVersion(__meta__.__version__) >= LooseVersion('0.6.3'):
-                    user_email = resp.json()['user']['email']
+                    user_email = get_json(resp)['user']['email']
                 else:
-                    user_email = resp.json()['email']
+                    user_email = get_json(resp)['email']
                 emails.append(user_email)
             return emails
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def get_resource_types(self):
         """
         :return: dictionary of all resources as {id: 'resource_type'}
         :rtype: dict
         """
-        resp = requests.get(self.get_url(schemas.ResourcesAPI.path), cookies=self.request.cookies)
+        resp = request_api(self.request, schemas.ResourcesAPI.path, 'GET')
         check_response(resp)
-        res_dic = self.default_get(resp.json(), 'resources', dict())
+        res_dic = self.default_get(get_json(resp), 'resources', dict())
         res_ids = dict()
         self.flatten_tree_resource(res_dic, res_ids)
         return res_ids
 
     def get_services(self, cur_svc_type):
         try:
-            resp = requests.get(self.get_url(schemas.ServicesAPI.path), cookies=self.request.cookies)
+            resp = request_api(self.request, schemas.ServicesAPI.path, 'GET')
             check_response(resp)
-            all_services = resp.json()['services']
+            all_services = get_json(resp)['services']
             svc_types = sorted(all_services.keys())
             if cur_svc_type not in svc_types:
                 cur_svc_type = svc_types[0]
@@ -113,11 +112,15 @@ class ManagementViews(object):
     def get_service_data(self, service_name):
         try:
             path = schemas.ServiceAPI.path.format(service_name=service_name)
-            resp = requests.get(self.get_url(path), cookies=self.request.cookies)
+            resp = request_api(self.request, path, 'GET')
             check_response(resp)
-            return resp.json()[service_name]
+            return get_json(resp)['service']
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
+
+    def get_service_types(self):
+        svc_types_resp = request_api(self.request, schemas.ServiceTypesAPI.path, 'GET')
+        return get_json(svc_types_resp)['service_types']
 
     def update_service_name(self, old_service_name, new_service_name, service_push):
         try:
@@ -127,10 +130,10 @@ class ManagementViews(object):
             svc_data['service_push'] = service_push
             svc_id = str(svc_data['resource_id'])
             path = schemas.ResourceAPI.path.format(resource_id=svc_id)
-            resp = requests.put(self.get_url(path), data=svc_data, cookies=self.request.cookies)
+            resp = request_api(self.request, path, 'PUT', data=svc_data)
             check_response(resp)
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def update_service_url(self, service_name, new_service_url, service_push):
         try:
@@ -138,23 +141,23 @@ class ManagementViews(object):
             svc_data['service_url'] = new_service_url
             svc_data['service_push'] = service_push
             path = schemas.ServiceAPI.path.format(service_name=service_name)
-            resp = requests.put(self.get_url(path), data=svc_data, cookies=self.request.cookies)
+            resp = request_api(self.request, path, 'PUT', data=svc_data)
             check_response(resp)
         except Exception as e:
-            raise HTTPBadRequest(detail=e.message)
+            raise HTTPBadRequest(detail=str(e))
 
     def goto_service(self, resource_id):
         try:
             path = schemas.ResourceAPI.path.format(resource_id=resource_id)
-            resp = requests.get(self.get_url(path), cookies=self.request.cookies)
+            resp = request_api(self.request, path, 'GET')
             check_response(resp)
-            body = resp.json()
+            body = get_json(resp)
             svc_name = body[resource_id]['resource_name']
             # get service type instead of 'cur_svc_type' in case of 'default' ('cur_svc_type' not set yet)
             path = schemas.ServiceAPI.path.format(service_name=svc_name)
-            resp = requests.get(self.get_url(path), cookies=self.request.cookies)
+            resp = request_api(self.request, path, 'GET')
             check_response(resp)
-            body = resp.json()
+            body = get_json(resp)
             svc_type = body[svc_name]['service_type']
             return HTTPFound(self.request.route_url('edit_service', service_name=svc_name, cur_svc_type=svc_type))
         except Exception as e:
@@ -181,7 +184,8 @@ class ManagementViews(object):
         if 'delete' in self.request.POST:
             user_name = self.request.POST.get('user_name')
             path = schemas.UserAPI.path.format(user_name=user_name)
-            check_response(requests.delete(self.get_url(path), cookies=self.request.cookies))
+            resp = request_api(self.request, path, 'DELETE')
+            check_response(resp)
 
         if 'edit' in self.request.POST:
             user_name = self.request.POST.get('user_name')
@@ -210,7 +214,7 @@ class ManagementViews(object):
 
             if group_name not in groups:
                 data = {u'group_name': group_name}
-                resp = requests.post(self.get_url(schemas.GroupsAPI.path), data, cookies=self.request.cookies)
+                resp = request_api(self.request, schemas.GroupsAPI.path, 'POST', data=data)
                 if resp.status_code == HTTPConflict.code:
                     return_data[u'conflict_group_name'] = True
             if user_email in self.get_user_emails():
@@ -234,7 +238,8 @@ class ManagementViews(object):
                     u'email': user_email,
                     u'password': password,
                     u'group_name': group_name}
-            check_response(requests.post(self.get_url(schemas.UsersAPI.path), data, cookies=self.request.cookies))
+            resp = request_api(self.request, schemas.UsersAPI.path, 'POST', data=data)
+            check_response(resp)
             return HTTPFound(self.request.route_url('view_users'))
 
         return add_template_data(self.request, return_data)
@@ -248,8 +253,6 @@ class ManagementViews(object):
         own_groups = self.get_user_groups(user_name)
         all_groups = self.get_all_groups(first_default_group=get_constant('MAGPIE_USERS_GROUP'))
 
-        error_message = ""
-
         # TODO:
         #   Until the api is modified to make it possible to request from the RemoteResource table,
         #   we have to access the database directly here
@@ -261,14 +264,15 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        user_url = schemas.UserAPI.path.format(user_name=user_name)
-        user_resp = requests.get(self.get_url(user_url), cookies=self.request.cookies)
+        user_path = schemas.UserAPI.path.format(user_name=user_name)
+        user_resp = request_api(self.request, user_path, 'GET')
         check_response(user_resp)
-        user_info = user_resp.json()['user']
+        user_info = get_json(user_resp)['user']
         user_info[u'edit_mode'] = u'no_edit'
         user_info[u'own_groups'] = own_groups
         user_info[u'groups'] = all_groups
         user_info[u'inherit_groups_permissions'] = inherit_grp_perms
+        error_message = ""
 
         if self.request.method == 'POST':
             res_id = self.request.POST.get(u'resource_id')
@@ -281,7 +285,8 @@ class ManagementViews(object):
                 user_info[u'inherit_groups_permissions'] = inherit_grp_perms
 
             if u'delete' in self.request.POST:
-                check_response(requests.delete(user_url, cookies=self.request.cookies))
+                resp = request_api(self.request, user_path, 'DELETE')
+                check_response(resp)
                 return HTTPFound(self.request.route_url('view_users'))
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
@@ -328,7 +333,8 @@ class ManagementViews(object):
                     self.delete_resource(id_)
 
             if is_save_user_info:
-                check_response(requests.put(user_url, data=user_info, cookies=self.request.cookies))
+                resp = request_api(self.request, user_path, 'PUT', data=user_info)
+                check_response(resp)
 
             # always remove password from output
             user_info.pop(u'password', None)
@@ -348,11 +354,13 @@ class ManagementViews(object):
                 new_groups = list(set(selected_groups) - set(own_groups))
                 for group in removed_groups:
                     path = schemas.UserGroupAPI.path.format(user_name=user_name, group_name=group)
-                    check_response(requests.delete(self.get_url(path), cookies=self.request.cookies))
+                    resp = request_api(self.request, path, 'DELETE')
+                    check_response(resp)
                 for group in new_groups:
                     path = schemas.UserGroupsAPI.path.format(user_name=user_name)
                     data = {'group_name': group}
-                    check_response(requests.post(self.get_url(path), data=data, cookies=self.request.cookies))
+                    resp = request_api(self.request, path, 'POST', data=data)
+                    check_response(resp)
                 user_info[u'own_groups'] = self.get_user_groups(user_name)
 
         # display resources permissions per service type tab
@@ -381,7 +389,6 @@ class ManagementViews(object):
         user_info[u'svc_types'] = svc_types
         user_info[u'resources'] = res_perms
         user_info[u'permissions'] = res_perm_names
-
         return add_template_data(self.request, data=user_info)
 
     @view_config(route_name='view_groups', renderer='templates/view_groups.mako')
@@ -389,7 +396,8 @@ class ManagementViews(object):
         if 'delete' in self.request.POST:
             group_name = self.request.POST.get('group_name')
             path = schemas.GroupAPI.path.format(group_name=group_name)
-            check_response(requests.delete(self.get_url(path), cookies=self.request.cookies))
+            resp = request_api(self.request, path, 'DELETE')
+            check_response(resp)
 
         if 'edit' in self.request.POST:
             group_name = self.request.POST.get('group_name')
@@ -413,7 +421,7 @@ class ManagementViews(object):
                 return add_template_data(self.request, return_data)
 
             data = {u'group_name': group_name}
-            resp = requests.post(self.get_url(schemas.GroupsAPI.path), data, cookies=self.request.cookies)
+            resp = request_api(self.request, schemas.GroupsAPI.path, 'POST', data=data)
             if resp.status_code == HTTPConflict.code:
                 return_data[u'conflict_group_name'] = True
                 return add_template_data(self.request, return_data)
@@ -457,23 +465,24 @@ class ManagementViews(object):
 
         for user_name in removed_members:
             path = schemas.UserGroupAPI.path.format(user_name=user_name, group_name=group_name)
-            check_response(requests.delete(self.get_url(path), cookies=self.request.cookies))
+            resp = request_api(self.request, path, 'DELETE')
+            check_response(resp)
         for user_name in new_members:
             path = schemas.UserGroupsAPI.path.format(user_name=user_name)
             data = {'group_name': group_name}
-            check_response(requests.post(self.get_url(path), data=data, cookies=self.request.cookies))
+            resp = request_api(self.request, path, 'POST', data=data)
+            check_response(resp)
 
     def edit_user_or_group_resource_permissions(self, user_or_group_name, resource_id, is_user=False):
         if is_user:
-            path = schemas.UserResourcePermissionsAPI.path\
+            res_perms_path = schemas.UserResourcePermissionsAPI.path \
                 .format(user_name=user_or_group_name, resource_id=resource_id)
         else:
-            path = schemas.GroupResourcePermissionsAPI.path\
+            res_perms_path = schemas.GroupResourcePermissionsAPI.path \
                 .format(group_name=user_or_group_name, resource_id=resource_id)
-        res_perms_url = self.get_url(path)
         try:
-            res_perms_resp = requests.get(res_perms_url, cookies=self.request.cookies)
-            res_perms = res_perms_resp.json()['permission_names']
+            resp = request_api(self.request, res_perms_path, 'GET')
+            res_perms = get_json(resp)['permission_names']
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
@@ -483,11 +492,13 @@ class ManagementViews(object):
         new_perms = list(set(selected_perms) - set(res_perms))
 
         for perm in removed_perms:
-            del_perm_url = '{url}/{perm}'.format(url=res_perms_url, perm=perm)
-            check_response(requests.delete(del_perm_url, cookies=self.request.cookies))
+            path = '{path}/{perm}'.format(path=res_perms_path, perm=perm)
+            resp = request_api(self.request, path, 'DELETE')
+            check_response(resp)
         for perm in new_perms:
             data = {u'permission_name': perm}
-            check_response(requests.post(res_perms_url, data=data, cookies=self.request.cookies))
+            resp = request_api(self.request, res_perms_path, 'POST', data=data)
+            check_response(resp)
 
     def get_user_or_group_resources_permissions_dict(self, user_or_group_name, services, service_type,
                                                      is_user=False, is_inherit_groups_permissions=False):
@@ -497,12 +508,14 @@ class ManagementViews(object):
         else:
             path = schemas.GroupResourcesAPI.path.format(group_name=user_or_group_name)
 
-        resp_group_perms = check_response(requests.get(self.get_url(path), cookies=self.request.cookies))
-        resp_group_perms_json = resp_group_perms.json()
+        resp_group_perms = request_api(self.request, path, 'GET')
+        check_response(resp_group_perms)
+        resp_group_perms_json = get_json(resp_group_perms)
 
         path = schemas.ServiceTypeAPI.path.format(service_type=service_type)
-        resp_svc_type = check_response(requests.get(self.get_url(path), cookies=self.request.cookies))
-        resp_available_svc_types = resp_svc_type.json()['services'][service_type]
+        resp = request_api(self.request, path, 'GET')
+        check_response(resp)
+        resp_available_svc_types = get_json(resp)['services'][service_type]
 
         # remove possible duplicate permissions from different services
         resources_permission_names = set()
@@ -525,8 +538,9 @@ class ManagementViews(object):
                 pass
 
             path = schemas.ServiceResourcesAPI.path.format(service_name=service)
-            resp = check_response(requests.get(self.get_url(path), cookies=self.request.cookies))
-            raw_resources = resp.json()[service]
+            resp = request_api(self.request, path, 'GET')
+            check_response(resp)
+            raw_resources = get_json(resp)[service]
             resources[service] = OrderedDict(
                 id=raw_resources['resource_id'],
                 permission_names=self.default_get(permission, raw_resources['resource_id'], []),
@@ -555,16 +569,18 @@ class ManagementViews(object):
         # move to service or edit requested group/permission changes
         if self.request.method == 'POST':
             res_id = self.request.POST.get('resource_id')
-            group_url = self.get_url(schemas.GroupAPI.path.format(group_name=group_name))
+            group_path = schemas.GroupAPI.path.format(group_name=group_name)
 
             if u'delete' in self.request.POST:
-                check_response(requests.delete(group_url, cookies=self.request.cookies))
+                resp = request_api(self.request, group_path, 'DELETE')
+                check_response(resp)
                 return HTTPFound(self.request.route_url('view_groups'))
             elif u'edit_group_name' in self.request.POST:
                 group_info[u'edit_mode'] = u'edit_group_name'
             elif u'save_group_name' in self.request.POST:
                 group_info[u'group_name'] = self.request.POST.get(u'new_group_name')
-                check_response(requests.put(group_url, data=group_info, cookies=self.request.cookies))
+                resp = request_api(self.request, group_path, 'PUT', data=group_info)
+                check_response(resp)
                 # return immediately with updated URL to group with new name
                 return HTTPFound(self.request.route_url('edit_group', **group_info))
             elif u'goto_service' in self.request.POST:
@@ -675,7 +691,8 @@ class ManagementViews(object):
     def delete_resource(self, res_id):
         try:
             path = schemas.ResourceAPI.path.format(resource_id=res_id)
-            check_response(requests.delete(self.get_url(path), cookies=self.request.cookies))
+            resp = request_api(self.request, path, 'DELETE')
+            check_response(resp)
         except HTTPNotFound:
             # Some resource ids are already deleted because they were a child
             # of another just deleted parent resource.
@@ -698,12 +715,11 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
-        # Todo:
-        # Until the api is modified to make it possible to request from the RemoteResource table,
-        # we have to access the database directly here
-        session = self.request.db
-
         # get the parent resources for this remote_id
+        # TODO:
+        #   Until the api is modified to make it possible to request from the RemoteResource table,
+        #   we have to access the database directly here
+        session = self.request.db
         parents = remote_resource_tree_service.path_upper(remote_id, db_session=session)
         parents = list(reversed(list(parents)))
 
@@ -721,9 +737,9 @@ class ManagementViews(object):
                     'resource_type': remote_resource.resource_type,
                     'parent_id': parent_id,
                 }
-                resp = requests.post(self.get_url(schemas.ResourcesAPI.path), data=data, cookies=self.request.cookies)
+                resp = request_api(self.request, schemas.ResourcesAPI.path, 'POST', data=data)
                 check_response(resp)
-                parent_id = resp.json()['resource']['resource_id']
+                parent_id = get_json(resp)['resource']['resource_id']
 
         return parent_id
 
@@ -733,7 +749,7 @@ class ManagementViews(object):
             service_name = self.request.POST.get('service_name')
             service_data = {u'service_push': self.request.POST.get('service_push')}
             path = schemas.ServiceAPI.path.format(service_name=service_name)
-            resp = requests.delete(self.get_url(path), data=json.dumps(service_data), cookies=self.request.cookies)
+            resp = request_api(self.request, path, 'DELETE', data=json.dumps(service_data))
             check_response(resp)
 
         cur_svc_type = self.request.matchdict['cur_svc_type']
@@ -772,11 +788,11 @@ class ManagementViews(object):
                     u'service_url': service_url,
                     u'service_type': service_type,
                     u'service_push': service_push}
-            resp = requests.post(self.get_url(schemas.ServicesAPI.path), data=data, cookies=self.request.cookies)
+            resp = request_api(self.request, schemas.ServicesAPI.path, 'POST', data=data)
             check_response(resp)
             return HTTPFound(self.request.route_url('view_services', cur_svc_type=service_type))
 
-        services_keys_sorted = sorted(service_type_dict)
+        services_keys_sorted = self.get_service_types()
         services_phoenix_indices = [(1 if services_keys_sorted[i] in register.SERVICES_PHOENIX_ALLOWED else 0)
                                     for i in range(len(services_keys_sorted))]
         return add_template_data(self.request,
@@ -829,13 +845,15 @@ class ManagementViews(object):
         if 'delete' in self.request.POST:
             service_data = json.dumps({u'service_push': service_push})
             path = schemas.ServiceAPI.path.format(service_name=service_name)
-            check_response(requests.delete(self.get_url(path), data=service_data, cookies=self.request.cookies))
+            resp = request_api(self.request, path, 'DELETE', data=service_data)
+            check_response(resp)
             return HTTPFound(self.request.route_url('view_services', **service_info))
 
         if 'delete_child' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
             path = schemas.ResourceAPI.format(resource_id=resource_id)
-            check_response(requests.delete(self.get_url(path), cookies=self.request.cookies))
+            resp = request_api(self.request, path, 'DELETE')
+            check_response(resp)
 
         if 'add_child' in self.request.POST:
             service_info['resource_id'] = self.request.POST.get('resource_id')
@@ -844,8 +862,9 @@ class ManagementViews(object):
         try:
             resources = {}
             path = schemas.ServiceResourcesAPI.path.format(service_name=service_name)
-            resp = check_response(requests.get(self.get_url(path), cookies=self.request.cookies))
-            raw_resources = resp.json()[service_name]
+            resp = request_api(self.request, path, 'GET')
+            check_response(resp)
+            raw_resources = get_json(resp)[service_name]
             resources[service_name] = dict(
                 id=raw_resources['resource_id'],
                 permission_names=[],
@@ -853,12 +872,17 @@ class ManagementViews(object):
             raw_resources_id_type = self.get_resource_types()
         except Exception as e:
             raise HTTPBadRequest(detail='Bad Json response [Exception: ' + repr(e) + ']')
+        path = schemas.ServiceAPI.path.format(service_name=service_name)
+        resp = request_api(self.request, path, 'GET')
+        check_response(resp)
+        svc_body = get_json(resp)['service']
 
+        # TODO: use an API request instead of direct access to `resource_type_dict`
         service_info['resources'] = resources
         service_info['resources_id_type'] = raw_resources_id_type
         service_info['resources_no_child'] = [res for res in resource_type_dict
                                               if not resource_type_dict[res].child_resource_allowed]
-        service_info['service_no_child'] = not service_type_dict[cur_svc_type].child_resource_allowed
+        service_info['service_no_child'] = not svc_body['resource_child_allowed']
         return add_template_data(self.request, service_info)
 
     @view_config(route_name='add_resource', renderer='templates/add_resource.mako')
@@ -874,18 +898,20 @@ class ManagementViews(object):
             data = {u'resource_name': resource_name,
                     u'resource_type': resource_type,
                     u'parent_id': resource_id}
-            resp = requests.post(self.get_url(schemas.ResourcesAPI.path), data=data, cookies=self.request.cookies)
+            resp = request_api(self.request, schemas.ResourcesAPI.path, 'POST', data=data)
             check_response(resp)
 
             return HTTPFound(self.request.route_url('edit_service', service_name=service_name,
                                                     cur_svc_type=cur_svc_type))
 
-        path = schemas.ServiceResourceTypesAPI.path.format(service_type=cur_svc_type)
-        cur_svc_res = check_response(requests.get(self.get_url(path), cookies=self.request.cookies))
-        raw_svc_res = cur_svc_res.json()['resource_types']
-
-        return add_template_data(self.request,
-                                 {u'service_name': service_name,
-                                  u'cur_svc_type': cur_svc_type,
-                                  u'resource_id': resource_id,
-                                  u'cur_svc_res': raw_svc_res})
+        path = schemas.ServiceTypeResourceTypesAPI.path.format(service_type=cur_svc_type)
+        resp = request_api(self.request, path, 'GET')
+        check_response(resp)
+        svc_res_types = get_json(resp)['resource_types']
+        data = {
+            u'service_name': service_name,
+            u'cur_svc_type': cur_svc_type,
+            u'resource_id': resource_id,
+            u'cur_svc_res': svc_res_types,
+        }
+        return add_template_data(self.request, data)

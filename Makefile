@@ -82,8 +82,9 @@ clean-build:
 	@echo "Cleaning build artifacts..."
 	rm -fr build/
 	rm -fr dist/
+	rm -fr downloads/
 	rm -fr .eggs/
-	find . -type f -name '*.egg-info' -exec rm -fr {} +
+	find . -type d -name '*.egg-info' -exec rm -fr {} +
 	find . -type f -name '*.egg' -exec rm -f {} +
 
 clean-docs:
@@ -100,6 +101,7 @@ clean-pyc:
 clean-test:
 	@echo "Cleaning tests artifacts..."
 	rm -fr .tox/
+	rm -fr .pytest_cache/
 	rm -f .coverage
 	rm -f coverage.xml
 	rm -fr "$(CUR_DIR)/coverage/"
@@ -107,7 +109,7 @@ clean-test:
 .PHONY: lint
 lint: install-dev
 	@echo "Checking code style with flake8..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; flake8 magpie tests --ignore=E501 || true'
+	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; flake8 magpie tests --ignore=E501,W291 || true'
 
 .PHONY: test
 test: install-dev install

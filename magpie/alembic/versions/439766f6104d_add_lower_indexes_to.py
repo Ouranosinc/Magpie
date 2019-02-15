@@ -11,10 +11,10 @@ from __future__ import unicode_literals
 revision = '439766f6104d'
 down_revision = '20671b28c538'
 
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql.base import PGDialect
-from alembic.context import get_context
+# noinspection PyUnresolvedReferences
+from alembic.context import get_context                             # noqa: F401
+from alembic import op                                              # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import PGDialect     # noqa: F401
 
 
 def upgrade():
@@ -34,7 +34,9 @@ def upgrade():
 
         op.execute('''
         ALTER TABLE groups_resources_permissions
-              ADD CONSTRAINT groups_resources_permissions_perm_name_check CHECK (perm_name::text = lower(perm_name::text));
+              ADD CONSTRAINT groups_resources_permissions_perm_name_check CHECK (
+                    perm_name::text = lower(perm_name::text)
+              );
         ''')
 
         op.execute('''

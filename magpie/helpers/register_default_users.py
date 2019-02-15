@@ -1,13 +1,12 @@
 from magpie import constants, db, models
-from magpie.common import print_log, raise_log
+from magpie.common import print_log, raise_log, get_logger
 from magpie.definitions.sqlalchemy_definitions import Session
-from magpie.definitions.ziggurat_definitions import *
+from magpie.definitions.ziggurat_definitions import GroupService, UserService
 from magpie.definitions.typedefs import Optional
 import transaction
 import logging
 import time
-
-LOGGER = logging.getLogger(__name__)
+LOGGER = get_logger(__name__)
 
 
 def register_user_with_group(user_name, group_name, email, password, db_session):

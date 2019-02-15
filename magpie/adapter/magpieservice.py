@@ -2,12 +2,13 @@
 Store adapters to read data from magpie.
 """
 
+# noinspection PyUnresolvedReferences
 from magpie.definitions.twitcher_definitions import ServiceStore, Service, ServiceNotFound
 from magpie.definitions.pyramid_definitions import HTTPOk, asbool
+from magpie.common import get_logger
 from magpie.utils import get_admin_cookies, get_magpie_url
 import requests
-import logging
-LOGGER = logging.getLogger("TWITCHER")
+LOGGER = get_logger("TWITCHER")
 
 
 class MagpieServiceStore(ServiceStore):

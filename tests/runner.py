@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from magpie.common import str2bool
-from magpie.constants import get_constant
 import sqlalchemy.exc as sa_exc
 import unittest
 import warnings
 import os
+import sys
+
+# ensure that files under 'tests' dir can be found (since not installed)
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from tests.utils import RunOptionDecorator  # noqa: F401
 
 
 def filter_test_files(root, filename):
@@ -18,28 +21,20 @@ test_files = os.listdir(test_root_path)
 test_modules = [os.path.splitext(f)[0] for f in filter(lambda i: filter_test_files(test_root_path, i), test_files)]
 
 
-def default_run(option):
-    option_value = str2bool(get_constant(option, raise_missing=False, raise_not_set=False))
-    return True if option_value is None else option_value
-
-
 # run test options
-MAGPIE_TEST_DEFAULTS = default_run('MAGPIE_TEST_DEFAULTS')  # default users, providers and views
-MAGPIE_TEST_LOGIN = default_run('MAGPIE_TEST_LOGIN')
-MAGPIE_TEST_SERVICES = default_run('MAGPIE_TEST_SERVICES')
-MAGPIE_TEST_RESOURCES = default_run('MAGPIE_TEST_RESOURCES')
-MAGPIE_TEST_GROUPS = default_run('MAGPIE_TEST_GROUPS')
-MAGPIE_TEST_USERS = default_run('MAGPIE_TEST_USERS')
-MAGPIE_TEST_STATUS = default_run('MAGPIE_TEST_STATUS')  # validate views found and displayed correctly as per permission
-MAGPIE_TEST_REMOTE = default_run('MAGPIE_TEST_REMOTE')
-MAGPIE_TEST_LOCAL = default_run('MAGPIE_TEST_LOCAL')
-MAGPIE_TEST_API = default_run('MAGPIE_TEST_API')
-MAGPIE_TEST_UI = default_run('MAGPIE_TEST_UI')
-
-
-# noinspection PyPep8Naming
-def MAGPIE_TEST_DISABLED_MESSAGE(option):
-    return "Skip{}tests requested.".format(" '{}' ".format(option) if option else '')
+MAGPIE_TEST_DEFAULTS = RunOptionDecorator('MAGPIE_TEST_DEFAULTS')   # default users, providers and views
+MAGPIE_TEST_REGISTER = RunOptionDecorator('MAGPIE_TEST_REGISTER')   # methods employed in 'register' module
+MAGPIE_TEST_LOGIN = RunOptionDecorator('MAGPIE_TEST_LOGIN')
+MAGPIE_TEST_SERVICES = RunOptionDecorator('MAGPIE_TEST_SERVICES')
+MAGPIE_TEST_RESOURCES = RunOptionDecorator('MAGPIE_TEST_RESOURCES')
+MAGPIE_TEST_GROUPS = RunOptionDecorator('MAGPIE_TEST_GROUPS')
+MAGPIE_TEST_USERS = RunOptionDecorator('MAGPIE_TEST_USERS')
+MAGPIE_TEST_STATUS = RunOptionDecorator('MAGPIE_TEST_STATUS')  # validate views found/displayed as per permissions
+MAGPIE_TEST_REMOTE = RunOptionDecorator('MAGPIE_TEST_REMOTE')
+MAGPIE_TEST_LOCAL = RunOptionDecorator('MAGPIE_TEST_LOCAL')
+MAGPIE_TEST_API = RunOptionDecorator('MAGPIE_TEST_API')
+MAGPIE_TEST_UI = RunOptionDecorator('MAGPIE_TEST_UI')
+MAGPIE_TEST_UTILS = RunOptionDecorator('MAGPIE_TEST_UTILS')
 
 
 def test_suite():

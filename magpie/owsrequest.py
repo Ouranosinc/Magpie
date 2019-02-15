@@ -6,12 +6,12 @@ The OWSRequest is based on pywps code:
 """
 
 from magpie.api.api_except import raise_http
+from magpie.common import get_logger
 from pyramid.httpexceptions import HTTPMethodNotAllowed
 from requests import Request
 import lxml.etree
 import json
-import logging
-logger = logging.getLogger(__name__)
+LOGGER = get_logger(__name__)
 
 
 def ows_parser_factory(request):
@@ -24,8 +24,10 @@ def ows_parser_factory(request):
     content_type = request.headers.get('Content-Type', 'application/json')
     if content_type == 'text/plain':
         try:
+            # noinspection PyUnresolvedReferences
             if request.body:
                 # raises if parsing fails
+                # noinspection PyUnresolvedReferences
                 json.loads(request.body)
             content_type = 'application/json'
         except ValueError:
@@ -91,11 +93,8 @@ class WPSPost(OWSParser):
 
     def __init__(self, request):
         super(WPSPost, self).__init__(request)
-        try:
-            self.document = lxml.etree.fromstring(self.request.body)
-            lxml_strip_ns(self.document)
-        except Exception as e:
-            raise Exception(e.message)
+        self.document = lxml.etree.fromstring(self.request.body)
+        lxml_strip_ns(self.document)
 
     def _get_param_value(self, param):
         if param in self.document.attrib:

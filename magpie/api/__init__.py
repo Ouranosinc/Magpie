@@ -1,6 +1,6 @@
 from magpie.api.api_generic import not_found, internal_server_error, unauthorized_access
-import logging
-logger = logging.getLogger(__name__)
+from magpie.common import get_logger
+logger = get_logger(__name__)
 
 
 def includeme(config):

@@ -4,17 +4,16 @@
 Providers which implement the |openid|_ protocol based on the
 `python-openid`_ library.
 .. warning::
-    This providers are dependent on the |pyopenid|_ package.
+    This providers are dependent on the |python-openid|_ package.
 """
 
 import ssl
 from six.moves.urllib.request import urlopen
 from authomatic.providers.openid import OpenID
+# noinspection PyProtectedMember, PyUnresolvedReferences
 from openid.fetchers import setDefaultFetcher, Urllib2Fetcher
-
-import logging
-
-logger = logging.getLogger(__name__)
+from magpie.common import get_logger
+LOGGER = get_logger(__name__)
 
 __all__ = ['ESGFOpenID']
 
@@ -22,6 +21,7 @@ __all__ = ['ESGFOpenID']
 class MyFetcher(Urllib2Fetcher):
     @staticmethod
     def urlopen(req):
+        # noinspection PyProtectedMember
         return urlopen(req, context=ssl._create_unverified_context())
 
 
@@ -54,7 +54,7 @@ class ESGFOpenID(OpenID):
             self.identifier = self.provider_url.format(hostname=self.hostname, username=self.username)
 
         # use fetcher with disabled ssl verification
-        #setDefaultFetcher(MyFetcher())
+        # setDefaultFetcher(MyFetcher())
 
 
 # Authomatic provider type ID is generated from this list's indexes!

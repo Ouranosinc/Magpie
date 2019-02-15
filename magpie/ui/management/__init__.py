@@ -1,10 +1,10 @@
-import logging
-logger = logging.getLogger(__name__)
+from magpie.common import get_logger
+LOGGER = get_logger(__name__)
 
 
 def includeme(config):
     from magpie.ui.management.views import ManagementViews
-    logger.info('Adding management ...')
+    LOGGER.info('Adding management ...')
     config.add_route(ManagementViews.view_groups.__name__, '/ui/groups')
     config.add_route(ManagementViews.add_group.__name__, '/ui/groups/add')
     config.add_route(ManagementViews.edit_group.__name__, '/ui/groups/{group_name}/{cur_svc_type}')

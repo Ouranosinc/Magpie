@@ -1,28 +1,33 @@
-from magpie.definitions.pyramid_definitions import *
-from magpie.ui.utils import check_response
-from magpie.ui.home import add_template_data
 from magpie.api import api_rest_schemas as schemas
+from magpie.common import get_json
+from magpie.definitions.pyramid_definitions import (
+    NO_PERMISSION_REQUIRED,
+    view_config,
+    forget,
+    Response,
+    HTTPOk,
+    HTTPFound,
+    HTTPUnauthorized,
+    HTTPInternalServerError,
+)
+from magpie.ui.utils import check_response, request_api
+from magpie.ui.home import add_template_data
 import requests
 
 
 class LoginViews(object):
     def __init__(self, request):
         self.request = request
-        self.magpie_url = self.request.registry.settings['magpie.url']
+        self.magpie_url = request.application_url
 
-    def get_internal_providers(self):
-        resp = requests.get('{}{}'.format(self.magpie_url, schemas.ProvidersAPI.path))
+    def request_providers_json(self):
+        resp = request_api(self.request, schemas.ProvidersAPI.path, 'GET')
         check_response(resp)
-        return resp.json()['providers']['internal']
-
-    def get_external_providers(self):
-        resp = requests.get('{}{}'.format(self.magpie_url, schemas.ProvidersAPI.path))
-        check_response(resp)
-        return resp.json()['providers']['external']
+        return get_json(resp)['providers']
 
     @view_config(route_name='login', renderer='templates/login.mako', permission=NO_PERMISSION_REQUIRED)
     def login(self):
-        external_providers = self.get_external_providers()
+        external_providers = self.request_providers_json()['external']
         return_data = {
             u'external_providers': external_providers,
             u'user_name_external': self.request.POST.get('user_name', u''),
@@ -33,26 +38,33 @@ class LoginViews(object):
 
         try:
             if 'submit' in self.request.POST:
-                signin_url = '{}{}'.format(self.magpie_url, schemas.SigninAPI.path)
-                data_to_send = {}
+                data = {}
                 for key in self.request.POST:
-                    data_to_send[key] = self.request.POST.get(key)
+                    data[key] = self.request.POST.get(key)
 
-                return_data[u'provider_name'] = data_to_send.get('provider_name')
-                if return_data[u'provider_name'] not in external_providers:
-                    return_data[u'user_name_external'] = u''
-                else:
+                return_data[u'provider_name'] = data.get('provider_name', '').lower()
+                is_external = return_data[u'provider_name'] in [p.lower() for p in external_providers]
+                if is_external:
                     return_data[u'user_name_internal'] = u''
+                else:
+                    return_data[u'user_name_external'] = u''
 
-                response = requests.post(signin_url, data=data_to_send, allow_redirects=True)
+                # keep using the external requests for external providers
+                if is_external:
+                    signin_url = '{}{}'.format(self.magpie_url, schemas.SigninAPI.path)
+                    response = requests.post(signin_url, data=data, allow_redirects=True)
+                # use sub request for internal to avoid retry connection errors
+                else:
+                    response = request_api(self.request, schemas.SigninAPI.path, 'POST', data=data)
+
                 if response.status_code in (HTTPOk.code, HTTPFound.code):
-                    pyr_res = Response(body=response.content, headers=response.headers)
-                    for cookie in response.cookies:
-                        pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
-                    is_external = response.url != '{}{}'.format(self.magpie_url, schemas.SigninAPI.path)
                     if is_external:
+                        pyr_res = Response(body=response.content, headers=response.headers)
+                        for cookie in response.cookies:
+                            pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
+                        is_external = response.url != '{}{}'.format(self.magpie_url, schemas.SigninAPI.path)
                         return HTTPFound(response.url, headers=pyr_res.headers)
-                    return HTTPFound(location=self.request.route_url('home'), headers=pyr_res.headers)
+                    return HTTPFound(location=self.request.route_url('home'), headers=response.headers)
                 elif response.status_code == HTTPUnauthorized.code:
                     return_data[u'invalid_credentials'] = True
                 else:
@@ -66,5 +78,5 @@ class LoginViews(object):
     @view_config(route_name='logout', renderer='templates/login.mako', permission=NO_PERMISSION_REQUIRED)
     def logout(self):
         # Flush cookies and return to home
-        requests.get('{url}{path}'.format(url=self.magpie_url, path=schemas.SignoutAPI.path))
+        request_api(self.request, schemas.SignoutAPI.path, 'GET')
         return HTTPFound(location=self.request.route_url('home'), headers=forget(self.request))

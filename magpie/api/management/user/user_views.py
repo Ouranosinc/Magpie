@@ -1,27 +1,37 @@
-from magpie.api.api_rest_schemas import *
-from magpie.api import api_except as ax, api_requests as ar
+from magpie.api import api_except as ax, api_requests as ar, api_rest_schemas as s
 from magpie.api.management.user import user_utils as uu, user_formats as uf
 from magpie.api.management.service.service_formats import format_service_resources
+from magpie.definitions.pyramid_definitions import (
+    view_config,
+    HTTPOk,
+    HTTPCreated,
+    HTTPMovedPermanently,
+    HTTPBadRequest,
+    HTTPForbidden,
+    HTTPNotFound,
+    HTTPConflict,
+    NO_PERMISSION_REQUIRED,
+)
 from magpie.definitions.ziggurat_definitions import UserService, GroupService
-from magpie.common import str2bool
+from magpie.constants import get_constant
+from magpie.common import str2bool, get_logger
 from magpie import models
-import logging
-LOGGER = logging.getLogger(__name__)
+LOGGER = get_logger(__name__)
 
 
-@UsersAPI.get(tags=[UsersTag], response_schemas=Users_GET_responses)
-@view_config(route_name=UsersAPI.name, request_method='GET')
+@s.UsersAPI.get(tags=[s.UsersTag], response_schemas=s.Users_GET_responses)
+@view_config(route_name=s.UsersAPI.name, request_method='GET')
 def get_users_view(request):
     """List all registered user names."""
     user_name_list = ax.evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
-                                      fallback=lambda: request.db.rollback(),
-                                      httpError=HTTPForbidden, msgOnFail=Users_GET_ForbiddenResponseSchema.description)
+                                      fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                                      msgOnFail=s.Users_GET_ForbiddenResponseSchema.description)
     return ax.valid_http(httpSuccess=HTTPOk, content={u'user_names': sorted(user_name_list)},
-                         detail=Users_GET_OkResponseSchema.description)
+                         detail=s.Users_GET_OkResponseSchema.description)
 
 
-@UsersAPI.post(schema=Users_POST_RequestSchema(), tags=[UsersTag], response_schemas=Users_POST_responses)
-@view_config(route_name=UsersAPI.name, request_method='POST')
+@s.UsersAPI.post(schema=s.Users_POST_RequestSchema(), tags=[s.UsersTag], response_schemas=s.Users_POST_responses)
+@view_config(route_name=s.UsersAPI.name, request_method='POST')
 def create_user_view(request):
     """Create a new user."""
     user_name = ar.get_multiformat_post(request, 'user_name')
@@ -32,11 +42,18 @@ def create_user_view(request):
     return uu.create_user(user_name, password, email, group_name, db_session=request.db)
 
 
-@UserAPI.put(schema=User_PUT_RequestSchema(), tags=[UsersTag], response_schemas=User_PUT_responses)
-@LoggedUserAPI.put(schema=User_PUT_RequestSchema(), tags=[LoggedUserTag], response_schemas=LoggedUser_PUT_responses)
-@view_config(route_name=UserAPI.name, request_method='PUT')
+@s.UserAPI.put(schema=s.User_PUT_RequestSchema(), tags=[s.UsersTag], response_schemas=s.User_PUT_responses)
+@s.LoggedUserAPI.put(schema=s.User_PUT_RequestSchema(), tags=[s.LoggedUserTag],
+                     response_schemas=s.LoggedUser_PUT_responses)
+@view_config(route_name=s.UserAPI.name, request_method='PUT')
 def update_user_view(request):
     """Update user information by user name."""
+
+    user_name = ar.get_value_matchdict_checked(request, key='user_name')
+    ax.verify_param(user_name, paramCompare=get_constant('MAGPIE_LOGGED_USER'), notEqual=True,
+                    httpError=HTTPBadRequest, paramName='user_name', content={u'user_name': user_name},
+                    msgOnFail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
+
     user = ar.get_user_matchdict_checked(request, user_name_key='user_name')
     new_user_name = ar.get_multiformat_post(request, 'user_name', default=user.user_name)
     new_email = ar.get_multiformat_post(request, 'email', default=user.email)
@@ -48,14 +65,14 @@ def update_user_view(request):
     update_email = user.email != new_email
     ax.verify_param(any([update_username, update_password, update_email]), isTrue=True, httpError=HTTPBadRequest,
                     content={u'user_name': user.user_name},
-                    msgOnFail=User_PUT_BadRequestResponseSchema.description)
+                    msgOnFail=s.User_PUT_BadRequestResponseSchema.description)
 
     if user.user_name != new_user_name:
         existing_user = ax.evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
                                          fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                                         msgOnFail=User_PUT_ForbiddenResponseSchema.description)
+                                         msgOnFail=s.User_PUT_ForbiddenResponseSchema.description)
         ax.verify_param(existing_user, isNone=True, httpError=HTTPConflict,
-                        msgOnFail=User_PUT_ConflictResponseSchema.description)
+                        msgOnFail=s.User_PUT_ConflictResponseSchema.description)
         user.user_name = new_user_name
     if user.email != new_email:
         user.email = new_email
@@ -63,47 +80,49 @@ def update_user_view(request):
         UserService.set_password(user, new_password)
         UserService.regenerate_security_code(user)
 
-    return ax.valid_http(httpSuccess=HTTPOk, detail=Users_PUT_OkResponseSchema.description)
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Users_PUT_OkResponseSchema.description)
 
 
-@UserAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas=User_GET_responses)
-@LoggedUserAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI, response_schemas=LoggedUser_GET_responses)
-@view_config(route_name=UserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@s.UserAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI, response_schemas=s.User_GET_responses)
+@s.LoggedUserAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                     response_schemas=s.LoggedUser_GET_responses)
+@view_config(route_name=s.UserAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_view(request):
     """Get user information by name."""
     user = ar.get_user_matchdict_checked_or_logged(request)
     return ax.valid_http(httpSuccess=HTTPOk, content={u'user': uf.format_user(user)},
-                         detail=User_GET_OkResponseSchema.description)
+                         detail=s.User_GET_OkResponseSchema.description)
 
 
-@UserAPI.delete(schema=User_DELETE_RequestSchema(), tags=[UsersTag], response_schemas=User_DELETE_responses)
-@LoggedUserAPI.delete(schema=User_DELETE_RequestSchema(), tags=[LoggedUserTag],
-                      response_schemas=LoggedUser_DELETE_responses)
-@view_config(route_name=UserAPI.name, request_method='DELETE')
+@s.UserAPI.delete(schema=s.User_DELETE_RequestSchema(), tags=[s.UsersTag], response_schemas=s.User_DELETE_responses)
+@s.LoggedUserAPI.delete(schema=s.User_DELETE_RequestSchema(), tags=[s.LoggedUserTag],
+                        response_schemas=s.LoggedUser_DELETE_responses)
+@view_config(route_name=s.UserAPI.name, request_method='DELETE')
 def delete_user_view(request):
     """Delete a user by name."""
     user = ar.get_user_matchdict_checked_or_logged(request)
     ax.evaluate_call(lambda: request.db.delete(user), fallback=lambda: request.db.rollback(),
-                     httpError=HTTPForbidden, msgOnFail=User_DELETE_ForbiddenResponseSchema.description)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=User_DELETE_OkResponseSchema.description)
+                     httpError=HTTPForbidden, msgOnFail=s.User_DELETE_ForbiddenResponseSchema.description)
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)
 
 
-@UserGroupsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI, response_schemas=UserGroups_GET_responses)
-@LoggedUserGroupsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                         response_schemas=LoggedUserGroups_GET_responses)
-@view_config(route_name=UserGroupsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@s.UserGroupsAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI, response_schemas=s.UserGroups_GET_responses)
+@s.LoggedUserGroupsAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                           response_schemas=s.LoggedUserGroups_GET_responses)
+@view_config(route_name=s.UserGroupsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_groups_view(request):
     """List all groups a user belongs to."""
     user = ar.get_user_matchdict_checked_or_logged(request)
     group_names = uu.get_user_groups_checked(request, user)
     return ax.valid_http(httpSuccess=HTTPOk, content={u'group_names': group_names},
-                         detail=UserGroups_GET_OkResponseSchema.description)
+                         detail=s.UserGroups_GET_OkResponseSchema.description)
 
 
-@UserGroupsAPI.post(schema=UserGroups_POST_RequestSchema(), tags=[UsersTag], response_schemas=UserGroups_POST_responses)
-@LoggedUserGroupsAPI.post(schema=UserGroups_POST_RequestSchema(), tags=[LoggedUserTag],
-                          response_schemas=LoggedUserGroups_POST_responses)
-@view_config(route_name=UserGroupsAPI.name, request_method='POST')
+@s.UserGroupsAPI.post(schema=s.UserGroups_POST_RequestSchema(), tags=[s.UsersTag],
+                      response_schemas=s.UserGroups_POST_responses)
+@s.LoggedUserGroupsAPI.post(schema=s.UserGroups_POST_RequestSchema(), tags=[s.LoggedUserTag],
+                            response_schemas=s.LoggedUserGroups_POST_responses)
+@view_config(route_name=s.UserGroupsAPI.name, request_method='POST')
 def assign_user_group_view(request):
     """Assign a user to a group."""
     user = ar.get_user_matchdict_checked_or_logged(request)
@@ -111,26 +130,26 @@ def assign_user_group_view(request):
     group_name = ar.get_value_multiformat_post_checked(request, 'group_name')
     group = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
                              fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail=UserGroups_POST_ForbiddenResponseSchema.description)
+                             httpError=HTTPForbidden, msgOnFail=s.UserGroups_POST_ForbiddenResponseSchema.description)
     ax.verify_param(group, notNone=True, httpError=HTTPNotFound,
-                    msgOnFail=UserGroups_POST_GroupNotFoundResponseSchema.description)
+                    msgOnFail=s.UserGroups_POST_GroupNotFoundResponseSchema.description)
     ax.verify_param(user.id, paramCompare=[usr.id for usr in group.users], notIn=True, httpError=HTTPConflict,
                     content={u'user_name': user.user_name, u'group_name': group.group_name},
-                    msgOnFail=UserGroups_POST_ConflictResponseSchema.description)
+                    msgOnFail=s.UserGroups_POST_ConflictResponseSchema.description)
     # noinspection PyArgumentList
     ax.evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),
-                     fallback=lambda: request.db.rollback(),
-                     httpError=HTTPForbidden, msgOnFail=UserGroups_POST_RelationshipForbiddenResponseSchema.description,
+                     fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                     msgOnFail=s.UserGroups_POST_RelationshipForbiddenResponseSchema.description,
                      content={u'user_name': user.user_name, u'group_name': group.group_name})
-    return ax.valid_http(httpSuccess=HTTPCreated, detail=UserGroups_POST_CreatedResponseSchema.description,
+    return ax.valid_http(httpSuccess=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
                          content={u'user_name': user.user_name, u'group_name': group.group_name})
 
 
-@UserGroupAPI.delete(schema=UserGroup_DELETE_RequestSchema(), tags=[UsersTag],
-                     response_schemas=UserGroup_DELETE_responses)
-@LoggedUserGroupAPI.delete(schema=UserGroup_DELETE_RequestSchema(), tags=[LoggedUserTag],
-                           response_schemas=LoggedUserGroup_DELETE_responses)
-@view_config(route_name=UserGroupAPI.name, request_method='DELETE')
+@s.UserGroupAPI.delete(schema=s.UserGroup_DELETE_RequestSchema(), tags=[s.UsersTag],
+                       response_schemas=s.UserGroup_DELETE_responses)
+@s.LoggedUserGroupAPI.delete(schema=s.UserGroup_DELETE_RequestSchema(), tags=[s.LoggedUserTag],
+                             response_schemas=s.LoggedUserGroup_DELETE_responses)
+@view_config(route_name=s.UserGroupAPI.name, request_method='DELETE')
 def delete_user_group_view(request):
     """Remove a user from a group."""
     db = request.db
@@ -144,18 +163,18 @@ def delete_user_group_view(request):
             .delete()
 
     ax.evaluate_call(lambda: del_usr_grp(user, group), fallback=lambda: db.rollback(),
-                     httpError=HTTPNotFound, msgOnFail=UserGroup_DELETE_NotFoundResponseSchema.description,
+                     httpError=HTTPNotFound, msgOnFail=s.UserGroup_DELETE_NotFoundResponseSchema.description,
                      content={u'user_name': user.user_name, u'group_name': group.group_name})
-    return ax.valid_http(httpSuccess=HTTPOk, detail=UserGroup_DELETE_OkResponseSchema.description)
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.UserGroup_DELETE_OkResponseSchema.description)
 
 
-@UserResourcesAPI.get(schema=UserResources_GET_RequestSchema(),
-                      tags=[UsersTag], api_security=SecurityEveryoneAPI,
-                      response_schemas=UserResources_GET_responses)
-@LoggedUserResourcesAPI.get(schema=UserResources_GET_RequestSchema(),
-                            tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                            response_schemas=LoggedUserResources_GET_responses)
-@view_config(route_name=UserResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@s.UserResourcesAPI.get(schema=s.UserResources_GET_RequestSchema(),
+                        tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
+                        response_schemas=s.UserResources_GET_responses)
+@s.LoggedUserResourcesAPI.get(schema=s.UserResources_GET_RequestSchema(),
+                              tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                              response_schemas=s.LoggedUserResources_GET_responses)
+@view_config(route_name=s.UserResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_resources_view(request):
     """List all resources a user has permissions on."""
     inherit_groups_perms = str2bool(ar.get_query_param(request, 'inherit'))
@@ -164,7 +183,8 @@ def get_user_resources_view(request):
 
     def build_json_user_resource_tree(usr):
         json_res = {}
-        for svc in models.Service.all(db_session=db):
+        services = list(models.Service.all(db_session=db))
+        for svc in services:
             svc_perms = uu.get_user_service_permissions(
                 user=usr, service=svc, request=request, inherit_groups_permissions=inherit_groups_perms)
             if svc.type not in json_res:
@@ -183,33 +203,33 @@ def get_user_resources_view(request):
 
     usr_res_dict = ax.evaluate_call(lambda: build_json_user_resource_tree(user),
                                     fallback=lambda: db.rollback(), httpError=HTTPNotFound,
-                                    msgOnFail=UserResources_GET_NotFoundResponseSchema.description,
+                                    msgOnFail=s.UserResources_GET_NotFoundResponseSchema.description,
                                     content={u'user_name': user.user_name,
                                              u'resource_types': [models.Service.resource_type_name]})
     return ax.valid_http(httpSuccess=HTTPOk, content={u'resources': usr_res_dict},
-                         detail=UserResources_GET_OkResponseSchema.description)
+                         detail=s.UserResources_GET_OkResponseSchema.description)
 
 
-@UserInheritedResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
-                               response_schemas=UserResources_GET_responses)
-@LoggedUserInheritedResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                                     response_schemas=LoggedUserResources_GET_responses)
-@view_config(route_name=UserInheritedResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@s.UserInheritedResourcesAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
+                                 response_schemas=s.UserResources_GET_responses)
+@s.LoggedUserInheritedResourcesAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                                       response_schemas=s.LoggedUserResources_GET_responses)
+@view_config(route_name=s.UserInheritedResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_inherited_resources_view(request):
     """[DEPRECATED: use '/users/{user_name}/resources?inherit=true']
     List all resources a user has permissions on with his inherited user and groups permissions."""
-    LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"
-                .format(UserInheritedResourcesAPI.path, UserResourcesAPI.path + "?inherit=true"))
+    LOGGER.warning("Route deprecated: [{0}], Instead Use: [{1}]"
+                   .format(s.UserInheritedResourcesAPI.path, s.UserResourcesAPI.path + "?inherit=true"))
     return HTTPMovedPermanently(location=request.path.replace('/inherited_resources', '/resources?inherit=true'))
 
 
-@UserResourcePermissionsAPI.get(schema=UserResourcePermissions_GET_RequestSchema(),
-                                tags=[UsersTag], api_security=SecurityEveryoneAPI,
-                                response_schemas=UserResourcePermissions_GET_responses)
-@LoggedUserResourcePermissionsAPI.get(schema=UserResourcePermissions_GET_RequestSchema(),
-                                      tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                                      response_schemas=LoggedUserResourcePermissions_GET_responses)
-@view_config(route_name=UserResourcePermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@s.UserResourcePermissionsAPI.get(schema=s.UserResourcePermissions_GET_RequestSchema(),
+                                  tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
+                                  response_schemas=s.UserResourcePermissions_GET_responses)
+@s.LoggedUserResourcePermissionsAPI.get(schema=s.UserResourcePermissions_GET_RequestSchema(),
+                                        tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                                        response_schemas=s.LoggedUserResourcePermissions_GET_responses)
+@view_config(route_name=s.UserResourcePermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_resource_permissions_view(request):
     """List all permissions a user has on a specific resource."""
     user = ar.get_user_matchdict_checked_or_logged(request)
@@ -220,28 +240,29 @@ def get_user_resource_permissions_view(request):
                                                   inherit_groups_permissions=inherit_groups_perms,
                                                   effective_permissions=effective_perms)
     return ax.valid_http(httpSuccess=HTTPOk, content={u'permission_names': sorted(perm_names)},
-                         detail=UserResourcePermissions_GET_OkResponseSchema.description)
+                         detail=s.UserResourcePermissions_GET_OkResponseSchema.description)
 
 
-@UserResourceInheritedPermissionsAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
-                                         response_schemas=UserResourcePermissions_GET_responses)
-@LoggedUserResourceInheritedPermissionsAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                                               response_schemas=LoggedUserResourcePermissions_GET_responses)
-@view_config(route_name=UserResourceInheritedPermissionsAPI.name, request_method='GET',
+@s.UserResourceInheritedPermissionsAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
+                                           response_schemas=s.UserResourcePermissions_GET_responses)
+@s.LoggedUserResourceInheritedPermissionsAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                                                 response_schemas=s.LoggedUserResourcePermissions_GET_responses)
+@view_config(route_name=s.UserResourceInheritedPermissionsAPI.name, request_method='GET',
              permission=NO_PERMISSION_REQUIRED)
 def get_user_resource_inherit_groups_permissions_view(request):
     """[DEPRECATED: use '/users/{user_name}/resources/{resource_id}/permissions?inherit=true']
     List all permissions a user has on a specific resource with his inherited user and groups permissions."""
-    LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"
-                .format(UserResourceInheritedPermissionsAPI.path, UserResourcePermissionsAPI.path + "?inherit=true"))
+    LOGGER.warning("Route deprecated: [{0}], Instead Use: [{1}]"
+                   .format(s.UserResourceInheritedPermissionsAPI.path,
+                           s.UserResourcePermissionsAPI.path + "?inherit=true"))
     return HTTPMovedPermanently(location=request.path.replace('/inherited_permissions', '/permissions?inherit=true'))
 
 
-@UserResourcePermissionsAPI.post(schema=UserResourcePermissions_POST_RequestSchema(), tags=[UsersTag],
-                                 response_schemas=UserResourcePermissions_POST_responses)
-@LoggedUserResourcePermissionsAPI.post(schema=UserResourcePermissions_POST_RequestSchema(), tags=[LoggedUserTag],
-                                       response_schemas=LoggedUserResourcePermissions_POST_responses)
-@view_config(route_name=UserResourcePermissionsAPI.name, request_method='POST')
+@s.UserResourcePermissionsAPI.post(schema=s.UserResourcePermissions_POST_RequestSchema(), tags=[s.UsersTag],
+                                   response_schemas=s.UserResourcePermissions_POST_responses)
+@s.LoggedUserResourcePermissionsAPI.post(schema=s.UserResourcePermissions_POST_RequestSchema(), tags=[s.LoggedUserTag],
+                                         response_schemas=s.LoggedUserResourcePermissions_POST_responses)
+@view_config(route_name=s.UserResourcePermissionsAPI.name, request_method='POST')
 def create_user_resource_permission_view(request):
     """Create a permission on specific resource for a user."""
     user = ar.get_user_matchdict_checked_or_logged(request)
@@ -250,11 +271,12 @@ def create_user_resource_permission_view(request):
     return uu.create_user_resource_permission(perm_name, resource, user.id, request.db)
 
 
-@UserResourcePermissionAPI.delete(schema=UserResourcePermission_DELETE_RequestSchema(), tags=[UsersTag],
-                                  response_schemas=UserResourcePermission_DELETE_responses)
-@LoggedUserResourcePermissionAPI.delete(schema=UserResourcePermission_DELETE_RequestSchema(), tags=[LoggedUserTag],
-                                        response_schemas=LoggedUserResourcePermission_DELETE_responses)
-@view_config(route_name=UserResourcePermissionAPI.name, request_method='DELETE')
+@s.UserResourcePermissionAPI.delete(schema=s.UserResourcePermission_DELETE_RequestSchema(), tags=[s.UsersTag],
+                                    response_schemas=s.UserResourcePermission_DELETE_responses)
+@s.LoggedUserResourcePermissionAPI.delete(schema=s.UserResourcePermission_DELETE_RequestSchema(),
+                                          tags=[s.LoggedUserTag],
+                                          response_schemas=s.LoggedUserResourcePermission_DELETE_responses)
+@view_config(route_name=s.UserResourcePermissionAPI.name, request_method='DELETE')
 def delete_user_resource_permission_view(request):
     """Delete a direct permission on a resource for a user (not including his groups permissions)."""
     user = ar.get_user_matchdict_checked_or_logged(request)
@@ -263,11 +285,11 @@ def delete_user_resource_permission_view(request):
     return uu.delete_user_resource_permission(perm_name, resource, user.id, request.db)
 
 
-@UserServicesAPI.get(tags=[UsersTag], schema=UserServices_GET_RequestSchema,
-                     api_security=SecurityEveryoneAPI, response_schemas=UserServices_GET_responses)
-@LoggedUserServicesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                           response_schemas=LoggedUserServices_GET_responses)
-@view_config(route_name=UserServicesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@s.UserServicesAPI.get(tags=[s.UsersTag], schema=s.UserServices_GET_RequestSchema,
+                       api_security=s.SecurityEveryoneAPI, response_schemas=s.UserServices_GET_responses)
+@s.LoggedUserServicesAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                             response_schemas=s.LoggedUserServices_GET_responses)
+@view_config(route_name=s.UserServicesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_services_view(request):
     """List all services a user has permissions on."""
     user = ar.get_user_matchdict_checked_or_logged(request)
@@ -280,45 +302,46 @@ def get_user_services_view(request):
                                     inherit_groups_permissions=inherit_groups_perms,
                                     format_as_list=format_as_list)
     return ax.valid_http(httpSuccess=HTTPOk, content={u'services': svc_json},
-                         detail=UserServices_GET_OkResponseSchema.description)
+                         detail=s.UserServices_GET_OkResponseSchema.description)
 
 
-@UserInheritedServicesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
-                              response_schemas=UserServices_GET_responses)
-@LoggedUserInheritedServicesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                                    response_schemas=LoggedUserServices_GET_responses)
-@view_config(route_name=UserInheritedServicesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@s.UserInheritedServicesAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
+                                response_schemas=s.UserServices_GET_responses)
+@s.LoggedUserInheritedServicesAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                                      response_schemas=s.LoggedUserServices_GET_responses)
+@view_config(route_name=s.UserInheritedServicesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_inherited_services_view(request):
     """[DEPRECATED: use '/users/{user_name}/services?inherit=true']
     List all services a user has permissions on with his inherited user and groups permissions."""
-    LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"
-                .format(LoggedUserInheritedServicesAPI.path, LoggedUserServicesAPI.path + "?inherit=true"))
+    LOGGER.warning("Route deprecated: [{0}], Instead Use: [{1}]"
+                   .format(s.LoggedUserInheritedServicesAPI.path, s.LoggedUserServicesAPI.path + "?inherit=true"))
     return HTTPMovedPermanently(location=request.path.replace('/inherited_services', '/services?inherit=true'))
 
 
-@UserServiceInheritedPermissionsAPI.get(schema=UserServicePermissions_GET_RequestSchema,
-                                        tags=[UsersTag], api_security=SecurityEveryoneAPI,
-                                        response_schemas=UserServicePermissions_GET_responses)
-@LoggedUserServiceInheritedPermissionsAPI.get(schema=UserServicePermissions_GET_RequestSchema,
-                                              tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                                              response_schemas=LoggedUserServicePermissions_GET_responses)
-@view_config(route_name=UserServiceInheritedPermissionsAPI.name, request_method='GET',
+@s.UserServiceInheritedPermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema,
+                                          tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
+                                          response_schemas=s.UserServicePermissions_GET_responses)
+@s.LoggedUserServiceInheritedPermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema,
+                                                tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                                                response_schemas=s.LoggedUserServicePermissions_GET_responses)
+@view_config(route_name=s.UserServiceInheritedPermissionsAPI.name, request_method='GET',
              permission=NO_PERMISSION_REQUIRED)
 def get_user_service_inherited_permissions_view(request):
     """[DEPRECATED: use '/users/{user_name}/services/{service_name}/permissions?inherit=true']
     List all permissions a user has on a service using all his inherited user and groups permissions."""
-    LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"
-                .format(UserServiceInheritedPermissionsAPI.path, UserServicePermissionsAPI.path + "?inherit=true"))
+    LOGGER.warning("Route deprecated: [{0}], Instead Use: [{1}]"
+                   .format(s.UserServiceInheritedPermissionsAPI.path,
+                           s.UserServicePermissionsAPI.path + "?inherit=true"))
     return HTTPMovedPermanently(location=request.path.replace('/inherited_permissions', '/permissions?inherit=true'))
 
 
-@UserServicePermissionsAPI.get(schema=UserServicePermissions_GET_RequestSchema,
-                               tags=[UsersTag], api_security=SecurityEveryoneAPI,
-                               response_schemas=UserServicePermissions_GET_responses)
-@LoggedUserServicePermissionsAPI.get(schema=UserServicePermissions_GET_RequestSchema,
-                                     tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                                     response_schemas=LoggedUserServicePermissions_GET_responses)
-@view_config(route_name=UserServicePermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@s.UserServicePermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema,
+                                 tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
+                                 response_schemas=s.UserServicePermissions_GET_responses)
+@s.LoggedUserServicePermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema,
+                                       tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                                       response_schemas=s.LoggedUserServicePermissions_GET_responses)
+@view_config(route_name=s.UserServicePermissionsAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_permissions_view(request):
     """List all permissions a user has on a service."""
     user = ar.get_user_matchdict_checked_or_logged(request)
@@ -327,17 +350,17 @@ def get_user_service_permissions_view(request):
     perms = ax.evaluate_call(lambda: uu.get_user_service_permissions(service=service, user=user, request=request,
                                                                      inherit_groups_permissions=inherit_groups_perms),
                              fallback=lambda: request.db.rollback(), httpError=HTTPNotFound,
-                             msgOnFail=UserServicePermissions_GET_NotFoundResponseSchema.description,
+                             msgOnFail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
                              content={u'service_name': str(service.resource_name), u'user_name': str(user.user_name)})
-    return ax.valid_http(httpSuccess=HTTPOk, detail=UserServicePermissions_GET_OkResponseSchema.description,
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.UserServicePermissions_GET_OkResponseSchema.description,
                          content={u'permission_names': sorted(perms)})
 
 
-@UserServicePermissionsAPI.post(schema=UserServicePermissions_POST_RequestSchema, tags=[UsersTag],
-                                response_schemas=UserServicePermissions_POST_responses)
-@LoggedUserServicePermissionsAPI.post(schema=UserServicePermissions_POST_RequestSchema, tags=[LoggedUserTag],
-                                      response_schemas=LoggedUserServicePermissions_POST_responses)
-@view_config(route_name=UserServicePermissionsAPI.name, request_method='POST')
+@s.UserServicePermissionsAPI.post(schema=s.UserServicePermissions_POST_RequestSchema, tags=[s.UsersTag],
+                                  response_schemas=s.UserServicePermissions_POST_responses)
+@s.LoggedUserServicePermissionsAPI.post(schema=s.UserServicePermissions_POST_RequestSchema, tags=[s.LoggedUserTag],
+                                        response_schemas=s.LoggedUserServicePermissions_POST_responses)
+@view_config(route_name=s.UserServicePermissionsAPI.name, request_method='POST')
 def create_user_service_permission_view(request):
     """Create a permission on a service for a user."""
     user = ar.get_user_matchdict_checked_or_logged(request)
@@ -346,11 +369,11 @@ def create_user_service_permission_view(request):
     return uu.create_user_resource_permission(perm_name, service, user.id, request.db)
 
 
-@UserServicePermissionAPI.delete(schema=UserServicePermission_DELETE_RequestSchema, tags=[UsersTag],
-                                 response_schemas=UserServicePermission_DELETE_responses)
-@LoggedUserServicePermissionAPI.delete(schema=UserServicePermission_DELETE_RequestSchema, tags=[LoggedUserTag],
-                                       response_schemas=LoggedUserServicePermission_DELETE_responses)
-@view_config(route_name=UserServicePermissionAPI.name, request_method='DELETE')
+@s.UserServicePermissionAPI.delete(schema=s.UserServicePermission_DELETE_RequestSchema, tags=[s.UsersTag],
+                                   response_schemas=s.UserServicePermission_DELETE_responses)
+@s.LoggedUserServicePermissionAPI.delete(schema=s.UserServicePermission_DELETE_RequestSchema, tags=[s.LoggedUserTag],
+                                         response_schemas=s.LoggedUserServicePermission_DELETE_responses)
+@view_config(route_name=s.UserServicePermissionAPI.name, request_method='DELETE')
 def delete_user_service_permission_view(request):
     """Delete a direct permission on a service for a user (not including his groups permissions)."""
     user = ar.get_user_matchdict_checked_or_logged(request)
@@ -359,13 +382,13 @@ def delete_user_service_permission_view(request):
     return uu.delete_user_resource_permission(perm_name, service, user.id, request.db)
 
 
-@UserServiceResourcesAPI.get(schema=UserServiceResources_GET_RequestSchema,
-                             tags=[UsersTag], api_security=SecurityEveryoneAPI,
-                             response_schemas=UserServiceResources_GET_responses)
-@LoggedUserServiceResourcesAPI.get(schema=UserServiceResources_GET_RequestSchema,
-                                   tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                                   response_schemas=LoggedUserServiceResources_GET_responses)
-@view_config(route_name=UserServiceResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@s.UserServiceResourcesAPI.get(schema=s.UserServiceResources_GET_RequestSchema,
+                               tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
+                               response_schemas=s.UserServiceResources_GET_responses)
+@s.LoggedUserServiceResourcesAPI.get(schema=s.UserServiceResources_GET_RequestSchema,
+                                     tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                                     response_schemas=s.LoggedUserServiceResources_GET_responses)
+@view_config(route_name=s.UserServiceResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_resources_view(request):
     """List all resources under a service a user has permission on."""
     inherit_groups_perms = str2bool(ar.get_query_param(request, 'inherit'))
@@ -383,18 +406,19 @@ def get_user_service_resources_view(request):
         display_all=False,
         show_private_url=False,
     )
-    return ax.valid_http(httpSuccess=HTTPOk, detail=UserServiceResources_GET_OkResponseSchema.description,
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.UserServiceResources_GET_OkResponseSchema.description,
                          content={u'service': user_svc_res_json})
 
 
-@UserServiceInheritedResourcesAPI.get(tags=[UsersTag], api_security=SecurityEveryoneAPI,
-                                      response_schemas=UserServiceResources_GET_responses)
-@LoggedUserServiceInheritedResourcesAPI.get(tags=[LoggedUserTag], api_security=SecurityEveryoneAPI,
-                                            response_schemas=LoggedUserServiceResources_GET_responses)
-@view_config(route_name=UserServiceInheritedResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@s.UserServiceInheritedResourcesAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
+                                        response_schemas=s.UserServiceResources_GET_responses)
+@s.LoggedUserServiceInheritedResourcesAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
+                                              response_schemas=s.LoggedUserServiceResources_GET_responses)
+@view_config(route_name=s.UserServiceInheritedResourcesAPI.name, request_method='GET',
+             permission=NO_PERMISSION_REQUIRED)
 def get_user_service_inherited_resources_view(request):
     """[DEPRECATED: use '/users/{user_name}/services/{service_name}/resources?inherit=true']
     List all resources under a service a user has permission on using all his inherited user and groups permissions."""
-    LOGGER.warn("Route deprecated: [{0}], Instead Use: [{1}]"
-                .format(UserServiceInheritedResourcesAPI.path, UserServiceResourcesAPI.path + "?inherit=true"))
+    LOGGER.warning("Route deprecated: [{0}], Instead Use: [{1}]"
+                   .format(s.UserServiceInheritedResourcesAPI.path, s.UserServiceResourcesAPI.path + "?inherit=true"))
     return HTTPMovedPermanently(location=request.path.replace('/inherited_resources', '/resources?inherit=true'))

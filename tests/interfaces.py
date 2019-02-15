@@ -1,27 +1,28 @@
 import unittest
+import warnings
+# noinspection PyPackageRequirements
 import pytest
 import pyramid.testing
+# noinspection PyPackageRequirements
+import mock
 import yaml
 import six
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from magpie.api.api_rest_schemas import SwaggerGenerator
 from magpie.constants import get_constant
+from magpie.models import resource_type_dict
 from magpie.services import service_type_dict
 from magpie.utils import get_twitcher_protected_service_url
 from tests import utils, runner
 
 
+# don't use 'unittest.TestCase' base
+# some test runner raise (ERROR) the 'NotImplementedError' although overridden by other classes
 # noinspection PyPep8Naming
-@pytest.mark.api
-@unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
-class Interface_MagpieAPI_NoAuth(object):
-    """
-    Interface class for unittests of Magpie API.
-    Test any operation that do not require user AuthN/AuthZ.
-
-    Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
-    """
+class Base_Magpie_TestCase(object):
+    version = None
+    url = None
 
     __test__ = False
 
@@ -33,8 +34,18 @@ class Interface_MagpieAPI_NoAuth(object):
     def tearDownClass(cls):
         pyramid.testing.tearDown()
 
-    @pytest.mark.login
-    @unittest.skipUnless(runner.MAGPIE_TEST_LOGIN, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('login'))
+
+# noinspection PyAbstractClass, PyPep8Naming
+@runner.MAGPIE_TEST_API
+class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
+    """
+    Interface class for unittests of Magpie API.
+    Test any operation that do not require user AuthN/AuthZ.
+
+    Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
+    """
+
+    @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Anonymous(self):
         resp = utils.test_request(self.url, 'GET', '/session', headers=self.json_headers)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
@@ -57,8 +68,7 @@ class Interface_MagpieAPI_NoAuth(object):
         version_parts = json_body['version'].split('.')
         utils.check_val_equal(len(version_parts), 3)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_GetCurrentUser(self):
         logged_user = get_constant('MAGPIE_LOGGED_USER')
         resp = utils.test_request(self.url, 'GET', '/users/{}'.format(logged_user), headers=self.json_headers)
@@ -69,50 +79,29 @@ class Interface_MagpieAPI_NoAuth(object):
             utils.check_val_equal(json_body['user_name'], self.usr)
 
 
-# noinspection PyPep8Naming
+# noinspection PyAbstractClass, PyPep8Naming
 @unittest.skip("Not implemented.")
 @pytest.mark.skip(reason="Not implemented.")
-@pytest.mark.api
-@unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
-class Interface_MagpieAPI_UsersAuth(unittest.TestCase):
+@runner.MAGPIE_TEST_API
+class Interface_MagpieAPI_UsersAuth(Base_Magpie_TestCase):
     """
     Interface class for unittests of Magpie API.
     Test any operation that require at least 'Users' group AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
-
-    __test__ = False
-
-    @classmethod
-    def setUpClass(cls):
-        raise NotImplementedError
-
-    @classmethod
-    def tearDownClass(cls):
-        pyramid.testing.tearDown()
+    pass
 
 
-# noinspection PyPep8Naming
-@pytest.mark.api
-@unittest.skipUnless(runner.MAGPIE_TEST_API, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('api'))
-class Interface_MagpieAPI_AdminAuth(object):
+# noinspection PyAbstractClass, PyPep8Naming
+@runner.MAGPIE_TEST_API
+class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     """
     Interface class for unittests of Magpie API.
     Test any operation that require at least 'administrator' group AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
-
-    __test__ = False
-
-    @classmethod
-    def setUpClass(cls):
-        raise NotImplementedError
-
-    @classmethod
-    def tearDownClass(cls):
-        pyramid.testing.tearDown()
 
     def tearDown(self):
         self.check_requirements()   # re-login as required in case test logged out the user with permissions
@@ -179,8 +168,31 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_is_in('swagger', json_body)
         utils.check_val_equal(json_body['swagger'], '2.0')
 
-    @pytest.mark.login
-    @unittest.skipUnless(runner.MAGPIE_TEST_LOGIN, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('login'))
+    @runner.MAGPIE_TEST_STATUS
+    def test_unauthorized_forbidden_responses(self):
+        """
+        Verify that unauthorized (401) and forbidden (403) are properly returned for corresponding operations.
+        Both variations use the same forbidden view.
+        """
+        utils.warn_version(self, "check for response (401/403) statuses", '0.9.1', skip=True)
+
+        if isinstance(self.url, six.string_types):
+            warnings.warn("cannot validate 403 status with remote server (no mock possible, test with local)",
+                          RuntimeWarning)
+        else:
+            # call a route that will make a forbidden access to db
+            with mock.patch('magpie.models.User.all', side_effect=Exception('Test')):
+                resp = utils.test_request(self.url, 'GET', '/users', headers=self.json_headers, expect_errors=True)
+                body = utils.check_response_basic_info(resp, 403, expected_method='GET')
+                utils.check_val_equal(body['code'], 403)
+
+        # call a route that is admin-only
+        utils.check_or_try_logout_user(self.url)
+        resp = utils.test_request(self.url, 'GET', '/services', headers=self.json_headers, expect_errors=True)
+        body = utils.check_response_basic_info(resp, 401, expected_method='GET')
+        utils.check_val_equal(body['code'], 401)
+
+    @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Administrator(self):
         resp = utils.test_request(self.url, 'GET', '/session', headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
@@ -197,8 +209,7 @@ class Interface_MagpieAPI_AdminAuth(object):
             utils.check_val_type(json_body['group_names'], list)
             utils.check_val_is_in('user_email', json_body)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_GetUsers(self):
         resp = utils.test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
@@ -208,10 +219,8 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_is_in('anonymous', json_body['user_names'])       # anonymous always in users
         utils.check_val_is_in(self.usr, json_body['user_names'])          # current test user in users
 
-    @pytest.mark.users
-    @pytest.mark.defaults
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
-    @unittest.skipUnless(runner.MAGPIE_TEST_DEFAULTS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('defaults'))
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_DEFAULTS
     def test_ValidateDefaultUsers(self):
         resp = utils.test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
@@ -229,19 +238,27 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_type(json_body['permission_names'], list)
         return json_body
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
+    def test_GetCurrentUser(self):
+        logged_user = get_constant('MAGPIE_LOGGED_USER')
+        path = '/users/{}'.format(logged_user)
+        resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
+        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
+        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
+            utils.check_val_equal(json_body['user']['user_name'], self.usr)
+        else:
+            utils.check_val_equal(json_body['user_name'], self.usr)
+
+    @runner.MAGPIE_TEST_USERS
     def test_GetCurrentUserResourcesPermissions(self):
         utils.TestSetup.create_TestService(self)
         json_body = utils.TestSetup.create_TestServiceResource(self)
         res_id = json_body['resource']['resource_id']
         self.check_GetUserResourcesPermissions(get_constant('MAGPIE_LOGGED_USER'), res_id)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_GetCurrentUserResourcesPermissions_Queries(self):
-        if LooseVersion(self.version) < LooseVersion('0.7.0'):
-            self.skipTest(reason="Queries not yet implemented in this version.")
+        utils.warn_version(self, "queries", '0.7.0', skip=True)
 
         # setup test resources under service with permissions
         # Service/Resources              | Admin-User | Admin-Group | Anonym-User | Anonym-Group
@@ -320,15 +337,13 @@ class Interface_MagpieAPI_AdminAuth(object):
         json_body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=q_effect)
         utils.check_val_equal(json_body['permission_names'], [perm_recur])
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_GetUserResourcesPermissions(self):
         utils.TestSetup.create_TestService(self)
         json_body = utils.TestSetup.create_TestServiceResource(self)
         self.check_GetUserResourcesPermissions(self.usr, json_body['resource']['resource_id'])
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_PostUserResourcesPermissions_Created(self):
         resource_name = 'post_res_perm_created'
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
@@ -352,8 +367,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         # cleanup (delete sub resource should remove child permission)
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_PostUserResourcesPermissions_Conflict(self):
         resource_name = 'post_res_perm_conflict'
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
@@ -382,8 +396,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         # cleanup (delete sub resource should remove child permission)
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_GetCurrentUserGroups(self):
         resp = utils.test_request(self.url, 'GET', '/users/current/groups',
                                   headers=self.json_headers, cookies=self.cookies)
@@ -392,8 +405,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_type(json_body['group_names'], list)
         utils.check_val_is_in(get_constant('MAGPIE_ADMIN_GROUP'), json_body['group_names'])
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_GetUserInheritedResources(self):
         utils.TestSetup.create_TestService(self)
         utils.TestSetup.create_TestServiceResource(self)
@@ -401,7 +413,7 @@ class Interface_MagpieAPI_AdminAuth(object):
             route = '/users/{usr}/inherited_resources'.format(usr=self.usr)
         else:
             route = '/users/{usr}/resources?inherit=true'.format(usr=self.usr)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies, timeout=20)
+        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('resources', json_body)
         utils.check_val_type(json_body['resources'], dict)
@@ -432,8 +444,7 @@ class Interface_MagpieAPI_AdminAuth(object):
                     utils.check_val_is_in('service_url', svc_dict)
                     utils.check_val_type(svc_dict['service_url'], six.string_types)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_GetUserServices(self):
         route = '/users/{usr}/services'.format(usr=self.usr)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
@@ -470,8 +481,7 @@ class Interface_MagpieAPI_AdminAuth(object):
                     utils.check_val_is_in('service_url', svc_dict)
                     utils.check_val_type(svc_dict['service_url'], six.string_types)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_GetUserServiceResources(self):
         utils.TestSetup.create_TestService(self)
         utils.TestSetup.create_TestServiceResource(self)
@@ -501,8 +511,7 @@ class Interface_MagpieAPI_AdminAuth(object):
             utils.check_val_is_in('service_url', svc_dict)
             utils.check_val_type(svc_dict['service_url'], six.string_types)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_PostUsers(self):
         json_body = utils.TestSetup.create_TestUser(self)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
@@ -517,25 +526,42 @@ class Interface_MagpieAPI_AdminAuth(object):
         users = utils.TestSetup.get_RegisteredUsersList(self)
         utils.check_val_is_in(self.test_user_name, users)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_ReservedKeyword_Current(self):
+        data = {
+            'user_name': get_constant('MAGPIE_LOGGED_USER'),
+            'password': 'pwd',
+            'email': 'email@mail.com',
+            'group_name': 'users',
+        }
+        resp = utils.test_request(self.url, 'POST', '/users', data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 400, expected_method='POST')
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PutUser_ReservedKeyword_Current(self):
+        utils.TestSetup.create_TestUser(self)
+        route = '/users/{usr}'.format(usr=get_constant('MAGPIE_LOGGED_USER'))
+        data = {'user_name': self.test_user_name + '-new-put-over-current'}
+        resp = utils.test_request(self.url, 'PUT', route, data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 400, expected_method='PUT')
+
+    @runner.MAGPIE_TEST_USERS
     def test_PutUsers_nothing(self):
         utils.TestSetup.create_TestUser(self)
         route = '/users/{usr}'.format(usr=self.test_user_name)
-        resp = utils.test_request(self.url, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data={},
-                                  expect_errors=True)
+        resp = utils.test_request(self.url, 'PUT', route, data={},
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 400, expected_method='PUT')
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_PutUsers_username(self):
         utils.TestSetup.create_TestUser(self)
         new_name = self.test_user_name + '-new'
 
         # cleanup in case the updated username already exists (ex: previous test execution failure)
-        route = '/users/{usr}'.format(usr=new_name)
-        resp = utils.test_request(self.url, 'DELETE', route, headers=self.json_headers, cookies=self.cookies)
-        utils.check_val_is_in(resp.status_code, [200, 404])
+        utils.TestSetup.delete_TestUser(self, override_user_name=new_name)
 
         # update existing user name
         data = {'user_name': new_name}
@@ -566,16 +592,15 @@ class Interface_MagpieAPI_AdminAuth(object):
 
         # validate ineffective previous user name
         utils.check_or_try_logout_user(self.url)
-        headers, cookies = utils.check_or_try_login_user(self.url,
-                                                         username=self.test_user_name, password=self.test_user_name,
-                                                         use_ui_form_submit=True, version=self.version)
+        headers, cookies = utils.check_or_try_login_user(
+            self.url, username=self.test_user_name, password=self.test_user_name, version=self.version,
+            use_ui_form_submit=True, expect_errors=True)
         utils.check_val_equal(cookies, {}, msg="Cookies should be empty from login failure.")
         resp = utils.test_request(self.url, 'GET', '/session', headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(body['authenticated'], False)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_PutUsers_email(self):
         utils.TestSetup.create_TestUser(self)
         new_email = 'toto@new-email.lol'
@@ -588,8 +613,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(body['user']['email'], new_email)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_PutUsers_password(self):
         utils.TestSetup.create_TestUser(self)
         old_password = self.test_user_name
@@ -610,14 +634,14 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_or_try_logout_user(self.url)
 
         # validate that previous password is ineffective
-        headers, cookies = utils.check_or_try_login_user(self.url, username=self.test_user_name, password=old_password,
-                                                         use_ui_form_submit=True, version=self.version)
+        headers, cookies = utils.check_or_try_login_user(
+            self.url, username=self.test_user_name, password=old_password, version=self.version,
+            use_ui_form_submit=True, expect_errors=True)
         resp = utils.test_request(self.url, 'GET', '/session', headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(body['authenticated'], False)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_GetUser_existing(self):
         utils.TestSetup.create_TestUser(self)
 
@@ -640,8 +664,7 @@ class Interface_MagpieAPI_AdminAuth(object):
             utils.check_val_is_in('group_names', json_body)
             utils.check_val_type(json_body['group_names'], list)
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
+    @runner.MAGPIE_TEST_USERS
     def test_GetUser_missing(self):
         utils.TestSetup.check_NonExistingTestUser(self)
         route = '/users/{usr}'.format(usr=self.test_user_name)
@@ -649,23 +672,8 @@ class Interface_MagpieAPI_AdminAuth(object):
                                   cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 404, expected_method='GET')
 
-    @pytest.mark.users
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('users'))
-    def test_GetCurrentUser(self):
-        utils.TestSetup.check_NonExistingTestUser(self)
-        logged_user = get_constant('MAGPIE_LOGGED_USER')
-        resp = utils.test_request(self.url, 'GET', '/users/{}'.format(logged_user),
-                                  headers=self.json_headers, cookies=self.cookies)
-        json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
-        if LooseVersion(self.version) >= LooseVersion('0.6.3'):
-            utils.check_val_equal(json_body['user']['user_name'], self.usr)
-        else:
-            utils.check_val_equal(json_body['user_name'], self.usr)
-
-    @pytest.mark.groups
-    @pytest.mark.defaults
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
-    @unittest.skipUnless(runner.MAGPIE_TEST_DEFAULTS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('defaults'))
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_DEFAULTS
     def test_ValidateDefaultGroups(self):
         resp = utils.test_request(self.url, 'GET', '/groups', headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
@@ -674,15 +682,13 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_is_in(get_constant('MAGPIE_USERS_GROUP'), groups)
         utils.check_val_is_in(get_constant('MAGPIE_ADMIN_GROUP'), groups)
 
-    @pytest.mark.groups
-    @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
+    @runner.MAGPIE_TEST_GROUPS
     def test_PostUserGroup_assign(self):
         utils.TestSetup.delete_TestGroup(self)  # setup as required
         utils.TestSetup.create_TestGroup(self)  # actual test
         utils.TestSetup.delete_TestGroup(self)  # cleanup
 
-    @pytest.mark.groups
-    @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
+    @runner.MAGPIE_TEST_GROUPS
     def test_PostUserGroup_not_found(self):
         route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
         data = {'group_name': 'not_found'}
@@ -690,17 +696,15 @@ class Interface_MagpieAPI_AdminAuth(object):
                                   headers=self.json_headers, cookies=self.cookies, data=data)
         utils.check_response_basic_info(resp, 404, expected_method='POST')
 
-    @pytest.mark.groups
-    @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
+    @runner.MAGPIE_TEST_GROUPS
     def test_PostUserGroup_conflict(self):
         route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
         data = {'group_name': get_constant('MAGPIE_ADMIN_GROUP')}
-        resp = utils.test_request(self.url, 'POST', route,  expect_errors=True,
+        resp = utils.test_request(self.url, 'POST', route, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies, data=data)
         utils.check_response_basic_info(resp, 409, expected_method='POST')
 
-    @pytest.mark.groups
-    @unittest.skipUnless(runner.MAGPIE_TEST_GROUPS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
+    @runner.MAGPIE_TEST_GROUPS
     def test_GetGroupUsers(self):
         route = '/groups/{grp}/users'.format(grp=get_constant('MAGPIE_ADMIN_GROUP'))
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
@@ -710,8 +714,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_is_in(get_constant('MAGPIE_ADMIN_USER'), json_body['user_names'])
         utils.check_val_is_in(self.usr, json_body['user_names'])
 
-    @pytest.mark.groups
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
+    @runner.MAGPIE_TEST_GROUPS
     def test_GetGroupServices(self):
         route = '/groups/{grp}/services'.format(grp=self.grp)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
@@ -747,8 +750,7 @@ class Interface_MagpieAPI_AdminAuth(object):
                     utils.check_val_is_in('service_url', svc_dict)
                     utils.check_val_type(svc_dict['service_url'], six.string_types)
 
-    @pytest.mark.groups
-    @unittest.skipUnless(runner.MAGPIE_TEST_USERS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('groups'))
+    @runner.MAGPIE_TEST_GROUPS
     def test_GetGroupServiceResources(self):
         utils.TestSetup.create_TestService(self)
         utils.TestSetup.create_TestServiceResource(self)
@@ -778,8 +780,7 @@ class Interface_MagpieAPI_AdminAuth(object):
             utils.check_val_is_in('service_url', svc_dict)
             utils.check_val_type(svc_dict['service_url'], six.string_types)
 
-    @pytest.mark.services
-    @unittest.skipUnless(runner.MAGPIE_TEST_SERVICES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('services'))
+    @runner.MAGPIE_TEST_SERVICES
     def test_PostService_ResponseFormat(self):
         json_body = utils.TestSetup.create_TestService(self)
         utils.check_val_is_in('service', json_body)
@@ -800,8 +801,186 @@ class Interface_MagpieAPI_AdminAuth(object):
             utils.check_val_is_in('service_sync_type', json_body['service'])
             utils.check_val_type(json_body['service']['service_sync_type'], utils.OptionalStringType)
 
-    @pytest.mark.services
-    @unittest.skipUnless(runner.MAGPIE_TEST_SERVICES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('services'))
+    @runner.MAGPIE_TEST_SERVICES
+    def test_PutService_UpdateSuccess(self):
+        json_body = utils.TestSetup.create_TestService(self)
+        service = json_body['service']
+        new_svc_name = service['service_name'] + "-updated"
+        new_svc_url = service['service_url'] + "/updated"
+        utils.TestSetup.delete_TestService(self, override_service_name=new_svc_name)
+        path = '/services/{svc}'.format(svc=service['service_name'])
+        data = {'service_name': new_svc_name, 'service_url': new_svc_url}
+        resp = utils.test_request(self.url, 'PUT', path, data=data, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, expected_method='PUT')
+        utils.check_val_is_in('service', body)
+        utils.check_val_type(body['service'], dict)
+        utils.check_val_is_in('resource_id', body['service'])
+        utils.check_val_is_in('public_url', body['service'])
+        utils.check_val_is_in('service_url', body['service'])
+        utils.check_val_is_in('service_name', body['service'])
+        utils.check_val_is_in('service_type', body['service'])
+        utils.check_val_is_in('permission_names', body['service'])
+        utils.check_val_type(body['service']['resource_id'], int)
+        utils.check_val_type(body['service']['public_url'], six.string_types)
+        utils.check_val_type(body['service']['service_url'], six.string_types)
+        utils.check_val_type(body['service']['service_name'], six.string_types)
+        utils.check_val_type(body['service']['service_type'], six.string_types)
+        utils.check_val_type(body['service']['permission_names'], list)
+        if LooseVersion(self.version) >= LooseVersion('0.7.0'):
+            utils.check_val_is_in('service_sync_type', body['service'])
+            utils.check_val_type(body['service']['service_sync_type'], utils.OptionalStringType)
+        utils.check_val_equal(body['service']['service_url'], new_svc_url)
+        utils.check_val_equal(body['service']['service_name'], new_svc_name)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_PutService_UpdateConflict(self):
+        body = utils.TestSetup.create_TestService(self)
+        service = body['service']
+        new_svc_name = service['service_name'] + "-updated"
+        new_svc_url = service['service_url'] + "/updated"
+        try:
+            utils.TestSetup.create_TestService(self, override_service_name=new_svc_name)
+            path = '/services/{svc}'.format(svc=service['service_name'])
+            data = {'service_name': new_svc_name, 'service_url': new_svc_url}
+            resp = utils.test_request(self.url, 'PUT', path, data=data, expect_errors=True,
+                                      headers=self.json_headers, cookies=self.cookies)
+            utils.check_response_basic_info(resp, 409, expected_method='PUT')
+        finally:
+            utils.TestSetup.delete_TestService(self, override_service_name=new_svc_name)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_PutService_NoUpdateInfo(self):
+        # no route PUT on '/services/types' (not equivalent to '/services/{service_name}')
+        # so not even a forbidden case to handle
+        resp = utils.test_request(self.url, 'PUT', '/services/types', data={}, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 404, expected_method='PUT')
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_PutService_ReservedKeyword_Types(self):
+        # try to PUT on 'types' route should raise the error
+        data = {'service_name': 'dummy', 'service_url': 'dummy'}
+        resp = utils.test_request(self.url, 'PUT', '/services/types', data=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 404, expected_method='PUT')   # no route with service 'types'
+
+        if LooseVersion(self.version) < LooseVersion('0.9.1'):
+            warnings.warn("no check for update service named 'types' performed in version [{}], upgrade to [>=0.9.1]"
+                          .format(self.version), FutureWarning)
+        else:
+            # try to PUT on valid service with new name 'types' should raise the error
+            utils.TestSetup.create_TestService(self)
+            path = '/services/{}'.format(self.test_service_name)
+            data = {'service_name': 'types'}
+            resp = utils.test_request(self.url, 'PUT', path, data=data, expect_errors=True,
+                                      headers=self.json_headers, cookies=self.cookies)
+            utils.check_response_basic_info(resp, 400, expected_method='PUT')   # don't allow naming to 'types'
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetService_ResponseFormat(self):
+        utils.TestSetup.create_TestService(self)
+        path = '/services/{svc}'.format(svc=self.test_service_name)
+        resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method='GET')
+        if LooseVersion(self.version) < LooseVersion('0.9.1'):
+            utils.check_val_is_in(self.test_service_name, body)
+            svc_info = body[self.test_service_name]
+            utils.check_val_type(svc_info, dict)
+        else:
+            utils.check_val_is_in('service', body)
+            svc_info = body['service']
+            utils.check_val_type(svc_info, dict)
+            utils.check_val_is_in('resource_child_allowed', svc_info)
+            utils.check_val_is_in('resource_types_allowed', svc_info)
+            utils.check_val_type(svc_info['resource_child_allowed'], bool)
+            utils.check_val_type(svc_info['resource_types_allowed'], list)
+            if svc_info['resource_child_allowed']:
+                svc_type = svc_info['service_type']
+                utils.check_all_equal(svc_info['resource_types_allowed'], service_type_dict[svc_type].resource_types)
+            else:
+                utils.check_val_equal(len(svc_info['resource_types_allowed']), 0)
+        utils.check_val_is_in('resource_id', svc_info)
+        utils.check_val_is_in('service_name', svc_info)
+        utils.check_val_is_in('service_type', svc_info)
+        utils.check_val_is_in('public_url', svc_info)
+        utils.check_val_is_in('permission_names', svc_info)
+        utils.check_val_type(svc_info['resource_id'], int)
+        utils.check_val_type(svc_info['service_name'], six.string_types)
+        utils.check_val_type(svc_info['service_type'], six.string_types)
+        utils.check_val_type(svc_info['public_url'], six.string_types)
+        utils.check_val_type(svc_info['permission_names'], list)
+        if LooseVersion(self.version) >= LooseVersion('0.7.0'):
+            utils.check_val_is_in('service_sync_type', svc_info)
+            utils.check_val_type(svc_info['service_sync_type'], utils.OptionalStringType)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetServiceTypes_ResponseFormat(self):
+        utils.warn_version(self, "get service types", '0.9.1', skip=True)
+
+        resp = utils.test_request(self.url, 'GET', '/services/types', headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method='GET')
+        utils.check_val_is_in('service_types', body)
+        utils.check_val_type(body['service_types'], list)
+        utils.check_all_equal(body['service_types'], list(service_type_dict.keys()), any_order=True)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetServiceTypeResources_ResponseFormat(self):
+        utils.warn_version(self, "get service type resources", '0.9.1', skip=True)
+
+        utils.TestSetup.create_TestService(self)
+        path = '/services/types/{svc_type}/resources'.format(svc_type=self.test_service_type)
+        resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method='GET')
+        utils.check_val_is_in('resource_types', body)
+        utils.check_val_type(body['resource_types'], list)
+        utils.check_val_equal(len(body['resource_types']) > 0, True)
+        for rt in body['resource_types']:
+            utils.check_val_type(rt, dict)
+            utils.check_val_is_in('resource_type', rt)
+            utils.check_val_is_in('resource_child_allowed', rt)
+            utils.check_val_is_in('permission_names', rt)
+            utils.check_val_type(rt['resource_type'], six.string_types)
+            utils.check_val_type(rt['resource_child_allowed'], bool)
+            utils.check_val_type(rt['permission_names'], list)
+            for p in rt['permission_names']:
+                utils.check_val_type(p, six.string_types)
+            utils.check_val_is_in(rt['resource_type'], resource_type_dict)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetServiceTypeResources_CheckValues(self):
+        utils.warn_version(self, "get service type resources", '0.9.1', skip=True)
+
+        # evaluate different types of services
+        for svc_type, svc_res_info in [
+            # recursive child resource allowed
+            ('api',
+                {'route': {
+                    'perms': ['read', 'write', 'read-match', 'write-match'],
+                    'child': True}}),
+            # child resource allowed only for specific types
+            ('thredds',
+                {'directory': {
+                    'perms': ['read', 'write'],
+                    'child': True},
+                 'file': {
+                     'perms': ['read', 'write'],
+                     'child': False}}),
+            # no child allowed
+            ('access', {}),
+        ]:
+            # test response details
+            path = '/services/types/{}/resources'.format(svc_type)
+            resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
+            body = utils.check_response_basic_info(resp, 200, expected_method='GET')
+            utils.check_val_type(body['resource_types'], list)
+            utils.check_val_equal(len(body['resource_types']), len(svc_res_info))
+            for r in body['resource_types']:
+                utils.check_val_is_in(r['resource_type'], svc_res_info)
+                r_type = svc_res_info[r['resource_type']]
+                utils.check_val_equal(r['resource_child_allowed'], r_type['child'])
+                utils.check_all_equal(r['permission_names'], r_type['perms'])
+
+    @runner.MAGPIE_TEST_SERVICES
     def test_GetServiceResources(self):
         utils.TestSetup.create_TestService(self)
         utils.TestSetup.create_TestServiceResource(self)
@@ -829,8 +1008,7 @@ class Interface_MagpieAPI_AdminAuth(object):
             utils.check_val_is_in('service_sync_type', svc_dict)
             utils.check_val_type(svc_dict['service_sync_type'], utils.OptionalStringType)
 
-    @pytest.mark.services
-    @unittest.skipUnless(runner.MAGPIE_TEST_SERVICES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('services'))
+    @runner.MAGPIE_TEST_SERVICES
     def test_GetServicePermissions(self):
         services_list = utils.TestSetup.get_RegisteredServicesList(self)
 
@@ -844,8 +1022,7 @@ class Interface_MagpieAPI_AdminAuth(object):
             utils.check_val_type(json_body['permission_names'], list)
             utils.check_all_equal(json_body['permission_names'], service_perms, any_order=True)
 
-    @pytest.mark.services
-    @unittest.skipUnless(runner.MAGPIE_TEST_SERVICES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('services'))
+    @runner.MAGPIE_TEST_SERVICES
     def test_PostServiceResources_DirectResource_NoParentID(self):
         utils.TestSetup.create_TestService(self)
         resources_prior = utils.TestSetup.get_TestServiceDirectResources(self)
@@ -861,8 +1038,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_equal(json_body['resource_name'], self.test_resource_name)
         utils.check_val_equal(json_body['resource_type'], self.test_resource_type)
 
-    @pytest.mark.services
-    @unittest.skipUnless(runner.MAGPIE_TEST_SERVICES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('services'))
+    @runner.MAGPIE_TEST_SERVICES
     def test_PostServiceResources_DirectResource_WithParentID(self):
         utils.TestSetup.create_TestService(self)
         resources_prior = utils.TestSetup.get_TestServiceDirectResources(self)
@@ -880,8 +1056,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_equal(json_body['resource_name'], self.test_resource_name)
         utils.check_val_equal(json_body['resource_type'], self.test_resource_type)
 
-    @pytest.mark.services
-    @unittest.skipUnless(runner.MAGPIE_TEST_SERVICES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('services'))
+    @runner.MAGPIE_TEST_SERVICES
     def test_PostServiceResources_ChildrenResource_ParentID(self):
         # create the direct resource
         json_body = utils.TestSetup.create_TestServiceResource(self)
@@ -929,8 +1104,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_val_type(resource_body['children'], dict)
         utils.check_val_equal(len(resource_body['children']), 0)
 
-    @pytest.mark.services
-    @unittest.skipUnless(runner.MAGPIE_TEST_SERVICES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('services'))
+    @runner.MAGPIE_TEST_SERVICES
     def test_PostServiceResources_DirectResource_Conflict(self):
         utils.TestSetup.create_TestServiceResource(self)
         route = '/services/{svc}/resources'.format(svc=self.test_service_name)
@@ -942,10 +1116,8 @@ class Interface_MagpieAPI_AdminAuth(object):
                                           is_param_value_literal_unicode=True, param_compare_exists=True,
                                           param_value=self.test_resource_name, param_name=u'resource_name')
 
-    @pytest.mark.services
-    @pytest.mark.defaults
-    @unittest.skipUnless(runner.MAGPIE_TEST_SERVICES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('services'))
-    @unittest.skipUnless(runner.MAGPIE_TEST_DEFAULTS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('defaults'))
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_DEFAULTS
     def test_ValidateDefaultServiceProviders(self):
         services_list = utils.TestSetup.get_RegisteredServicesList(self)
 
@@ -987,8 +1159,7 @@ class Interface_MagpieAPI_AdminAuth(object):
             utils.check_val_is_in(svc_name, services_body[svc_type], msg=msg)
             utils.check_val_is_in('getcapabilities', services_body[svc_type][svc_name]['permission_names'])
 
-    @pytest.mark.resources
-    @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
+    @runner.MAGPIE_TEST_RESOURCES
     def test_PostResources_DirectServiceResource(self):
         utils.TestSetup.create_TestService(self)
         service_info = utils.TestSetup.get_ExistingTestServiceInfo(self)
@@ -1006,8 +1177,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
                                             self.test_resource_name, self.version)
 
-    @pytest.mark.resources
-    @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
+    @runner.MAGPIE_TEST_RESOURCES
     def test_PostResources_DirectServiceResourceOptional(self):
         utils.TestSetup.create_TestService(self)
         service_info = utils.TestSetup.get_ExistingTestServiceInfo(self)
@@ -1025,8 +1195,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
                                             self.test_resource_name, self.version)
 
-    @pytest.mark.resources
-    @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
+    @runner.MAGPIE_TEST_RESOURCES
     def test_PostResources_ChildrenResource(self):
         resource_info = utils.TestSetup.create_TestServiceResource(self)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
@@ -1046,8 +1215,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
                                             self.test_resource_name, self.version)
 
-    @pytest.mark.resources
-    @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
+    @runner.MAGPIE_TEST_RESOURCES
     def test_PostResources_MissingParentID(self):
         data = {
             "resource_name": self.test_resource_name,
@@ -1059,8 +1227,7 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.check_error_param_structure(json_body, version=self.version,
                                           param_name='parent_id', param_value=repr(None))
 
-    @pytest.mark.resources
-    @unittest.skipUnless(runner.MAGPIE_TEST_RESOURCES, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('resources'))
+    @runner.MAGPIE_TEST_RESOURCES
     def test_DeleteResource(self):
         json_body = utils.TestSetup.create_TestServiceResource(self)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
@@ -1074,10 +1241,9 @@ class Interface_MagpieAPI_AdminAuth(object):
         utils.TestSetup.check_NonExistingTestServiceResource(self)
 
 
-# noinspection PyPep8Naming
-@pytest.mark.ui
-@unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
-class Interface_MagpieUI_NoAuth(object):
+# noinspection PyAbstractClass, PyPep8Naming
+@runner.MAGPIE_TEST_UI
+class Interface_MagpieUI_NoAuth(Base_Magpie_TestCase):
     """
     Interface class for unittests of Magpie UI.
     Test any operation that do not require user AuthN/AuthZ.
@@ -1085,91 +1251,68 @@ class Interface_MagpieUI_NoAuth(object):
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
 
-    __test__ = False
-
-    @classmethod
-    def setUpClass(cls):
-        raise NotImplementedError
-
-    @classmethod
-    def tearDownClass(cls):
-        pyramid.testing.tearDown()
-
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_Home(self):
         utils.TestSetup.check_UpStatus(self, method='GET', path='/')
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_Login(self):
         utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/login')
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_ViewUsers(self):
         utils.TestSetup.check_Unauthorized(self, method='GET', path='/ui/users')
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_ViewGroups(self):
         utils.TestSetup.check_Unauthorized(self, method='GET', path='/ui/groups')
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_ViewServices(self):
         utils.TestSetup.check_Unauthorized(self, method='GET', path='/ui/services/default')
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_ViewServicesOfType(self):
         path = '/ui/services/{}'.format(self.test_service_type)
         utils.TestSetup.check_Unauthorized(self, method='GET', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_EditUser(self):
         path = '/ui/users/{}/default'.format(self.test_user)
         utils.TestSetup.check_Unauthorized(self, method='GET', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_EditGroup(self):
         path = '/ui/groups/{}/default'.format(self.test_group)
         utils.TestSetup.check_Unauthorized(self, method='GET', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_EditService(self):
         path = '/ui/services/{type}/{name}'.format(type=self.test_service_type, name=self.test_service_name)
         utils.TestSetup.check_Unauthorized(self, method='GET', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_AddUser(self):
         path = '/ui/users/add'
         utils.TestSetup.check_Unauthorized(self, method='GET', path=path)
         utils.TestSetup.check_Unauthorized(self, method='POST', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_AddGroup(self):
         path = '/ui/groups/add'
         utils.TestSetup.check_Unauthorized(self, method='GET', path=path)
         utils.TestSetup.check_Unauthorized(self, method='POST', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_AddService(self):
         path = '/ui/services/{}/add'.format(self.test_service_type)
         utils.TestSetup.check_Unauthorized(self, method='GET', path=path)
         utils.TestSetup.check_Unauthorized(self, method='POST', path=path)
 
 
-# noinspection PyPep8Naming
-@pytest.mark.ui
-@unittest.skipUnless(runner.MAGPIE_TEST_UI, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('ui'))
-class Interface_MagpieUI_AdminAuth(object):
+# noinspection PyAbstractClass, PyPep8Naming
+@runner.MAGPIE_TEST_UI
+class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
     """
     Interface class for unittests of Magpie UI.
     Test any operation that require at least 'administrator' group AuthN/AuthZ.
@@ -1177,99 +1320,75 @@ class Interface_MagpieUI_AdminAuth(object):
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
 
-    __test__ = False
-
-    @classmethod
-    def setUpClass(cls):
-        raise NotImplementedError
-
-    @classmethod
-    def tearDownClass(cls):
-        pyramid.testing.tearDown()
-
     @classmethod
     def check_requirements(cls):
         headers, cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
         assert headers and cookies, cls.require
         assert cls.headers and cls.cookies, cls.require
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_Home(self):
         utils.TestSetup.check_UpStatus(self, method='GET', path='/')
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_Login(self):
         utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/login')
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_ViewUsers(self):
         utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/users')
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_ViewGroups(self):
         utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/groups')
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_ViewServices(self):
         utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/services/default')
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_ViewServicesOfType(self):
         path = '/ui/services/{}'.format(self.test_service_type)
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_EditUser(self):
         path = '/ui/users/{}/default'.format(self.test_user)
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_EditUserService(self):
         path = '/ui/users/{usr}/{type}'.format(usr=self.test_user, type=self.test_service_type)
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_EditGroup(self):
         path = '/ui/groups/{}/default'.format(self.test_group)
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_EditGroupService(self):
         path = '/ui/groups/{grp}/{type}'.format(grp=self.test_group, type=self.test_service_type)
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_EditService(self):
         path = '/ui/services/{type}/{name}'.format(type=self.test_service_type, name=self.test_service_name)
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_AddUser(self):
         path = '/ui/users/add'
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)
         utils.TestSetup.check_UpStatus(self, method='POST', path=path)  # empty fields, same page but 'incorrect'
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_AddGroup(self):
         path = '/ui/groups/add'
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)
         utils.TestSetup.check_UpStatus(self, method='POST', path=path)  # empty fields, same page but 'incorrect'
 
-    @pytest.mark.status
-    @unittest.skipUnless(runner.MAGPIE_TEST_STATUS, reason=runner.MAGPIE_TEST_DISABLED_MESSAGE('status'))
+    @runner.MAGPIE_TEST_STATUS
     def test_AddService(self):
         path = '/ui/services/{}/add'.format(self.test_service_type)
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)

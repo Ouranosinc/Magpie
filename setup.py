@@ -7,7 +7,6 @@ MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, 'magpie')
 sys.path.insert(0, MAGPIE_MODULE_DIR)
 
-from setuptools import find_packages    # noqa: F401
 try:
     from setuptools import setup
 except ImportError:
@@ -83,8 +82,8 @@ setup(
     ],
 
     # -- Package structure -------------------------------------------------
-    packages=find_packages(),
-    package_dir={__meta__.__package__: 'magpie'},
+    packages=[__meta__.__package__],
+    package_dir={__meta__.__package__: __meta__.__package__},
     include_package_data=True,
     install_requires=REQUIREMENTS,
     dependency_links=LINKS,

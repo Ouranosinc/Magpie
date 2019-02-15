@@ -5,7 +5,8 @@ Revises: 5e7b5346c330
 Create Date: 2018-05-30 15:15:33.008614
 
 """
-import os, sys
+import os
+import sys
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)    # version
 root_dir = os.path.dirname(root_dir)    # alembic
@@ -13,11 +14,12 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-from alembic import op
-from alembic.context import get_context
-from magpie.definitions.sqlalchemy_definitions import *
-from magpie.definitions.ziggurat_definitions import *
-from magpie import models, constants
+# noinspection PyUnresolvedReferences
+from alembic.context import get_context                                                 # noqa: F401
+from alembic import op                                                                  # noqa: F401
+from magpie import models, constants                                                    # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import PGDialect, sessionmaker           # noqa: F401
+from magpie.definitions.ziggurat_definitions import GroupService, UserService           # noqa: F401
 
 Session = sessionmaker()
 
@@ -39,7 +41,7 @@ def upgrade():
     session = Session(bind=op.get_bind())
 
     # two following lines avoids double 'DELETE' erroneous call when deleting group due to incorrect checks
-    # https://stackoverflow.com/questions/28824401/sqlalchemy-attempting-to-twice-delete-many-to-many-secondary-relationship
+    # https://stackoverflow.com/questions/28824401
     context.connection.engine.dialect.supports_sane_rowcount = False
     context.connection.engine.dialect.supports_sane_multi_rowcount = False
 
@@ -55,6 +57,7 @@ def upgrade():
 
                 # create new group if missing
                 if not new_group:
+                    # noinspection PyArgumentList
                     new_group = models.Group(group_name=new_group_name)
                     session.add(new_group)
                     new_group = GroupService.by_group_name(new_group_name, db_session=session)
@@ -76,6 +79,7 @@ def upgrade():
 
                 for user_name in diff_group_users:
                     user = UserService.by_user_name(user_name=user_name, db_session=session)
+                    # noinspection PyArgumentList
                     user_group = models.UserGroup(group_id=new_group.id, user_id=user.id)
                     session.add(user_group)
 
@@ -85,7 +89,8 @@ def upgrade():
                         session.delete(user_group)
 
         # remove anonymous group references
-        MAGPIE_ANONYMOUS_GROUP = GroupService.by_group_name(group_name=constants.MAGPIE_ANONYMOUS_USER, db_session=session)
+        MAGPIE_ANONYMOUS_GROUP = GroupService.by_group_name(
+            group_name=constants.MAGPIE_ANONYMOUS_USER, db_session=session)
         if MAGPIE_ANONYMOUS_GROUP:
             for user_group in all_user_group_refs:
                 if user_group.group_id == MAGPIE_ANONYMOUS_GROUP.id:

@@ -1,21 +1,28 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
 import shutil
+# noinspection PyPackageRequirements
 import dotenv
 import logging
-from magpie.common import str2bool, raise_log, print_log, get_settings_from_config_ini
-logger = logging.getLogger(__name__)
+from magpie.common import str2bool, raise_log, print_log, get_settings_from_config_ini, get_logger
+LOGGER = get_logger(__name__)
 
 # ===========================
 # path variables
 # ===========================
 MAGPIE_MODULE_DIR = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
-MAGPIE_PROVIDERS_CONFIG_PATH = '{}/providers.cfg'.format(MAGPIE_ROOT)
-MAGPIE_PERMISSIONS_CONFIG_PATH = '{}/permissions.cfg'.format(MAGPIE_ROOT)
-MAGPIE_INI_FILE_PATH = '{}/magpie.ini'.format(MAGPIE_MODULE_DIR)
-MAGPIE_ALEMBIC_INI_FILE_PATH = '{}/alembic/alembic.ini'.format(MAGPIE_MODULE_DIR)
+MAGPIE_CONFIG_DIR = os.getenv(
+    'MAGPIE_CONFIG_DIR', os.path.join(MAGPIE_ROOT, 'config'))
+MAGPIE_PROVIDERS_CONFIG_PATH = os.getenv(
+    'MAGPIE_PROVIDERS_CONFIG_PATH', '{}/providers.cfg'.format(MAGPIE_CONFIG_DIR))
+MAGPIE_PERMISSIONS_CONFIG_PATH = os.getenv(
+    'MAGPIE_PERMISSIONS_CONFIG_PATH', '{}/permissions.cfg'.format(MAGPIE_CONFIG_DIR))
+MAGPIE_INI_FILE_PATH = os.getenv(
+    'MAGPIE_INI_FILE_PATH', '{}/magpie.ini'.format(MAGPIE_MODULE_DIR))
+MAGPIE_ALEMBIC_INI_FILE_PATH = os.getenv(
+    'MAGPIE_ALEMBIC_INI_FILE_PATH', '{}/alembic/alembic.ini'.format(MAGPIE_MODULE_DIR))
 # allow custom location of env files directory to avoid
 # loading from installed magpie in python site-packages
 MAGPIE_ENV_DIR = os.getenv('MAGPIE_ENV_DIR', os.path.join(MAGPIE_ROOT, 'env'))
@@ -38,7 +45,7 @@ try:
     dotenv.load_dotenv(MAGPIE_ENV_FILE, override=False)
     dotenv.load_dotenv(MAGPIE_POSTGRES_ENV_FILE, override=False)
 except IOError:
-    logger.warn("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR))
+    LOGGER.warning("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR))
     pass
 
 # get default configurations from ini file

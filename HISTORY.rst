@@ -10,9 +10,18 @@ History
 * fix many invalid or erroneous swagger specifications
 * attempt db creation on first migration if not existing
 * add continuous integration testing and deployment (with python 2/3 tests)
-* ensure python compatibility for Python 2.7, 3.5, 3.6
+* ensure python compatibility for Python 2.7, 3.5, 3.6 (via Travis-CI)
 * reduce excessive sqlalchemy logging using `MAGPIE_LOG_LEVEL >= INFO`
 * use schema API route definitions for UI calls
+* use sub-requests API call for UI operations (fixes issue #114)
+* add new route `/services/types` to obtain a list of available service types
+* add `resource_child_allowed` and `resource_types_allowed` fields in service response
+* change service response for generic `service: {<info>}` instead of `{service-name}: {<info>}`
+* add new route `/services/types/{svc_type}/resources` for details about child service type resources
+* error handling of reserved route keywords service `types` and current user `MAGPIE_LOGGED_USER`
+* additional tests for new routes and operations previously left unevaluated
+* fix invalid conflict service name check on service update request
+* logging adjustments
 
 0.8.x
 ---------------------

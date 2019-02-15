@@ -5,7 +5,8 @@ Revises: d01af1f2e445
 Create Date: 2018-09-27 16:12:02.282830
 
 """
-import os, sys
+import os
+import sys
 
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)  # version
@@ -14,12 +15,12 @@ root_dir = os.path.dirname(root_dir)  # magpie
 root_dir = os.path.dirname(root_dir)  # root
 sys.path.insert(0, root_dir)
 
-from alembic import op
-from alembic.context import get_context
-from magpie.definitions.sqlalchemy_definitions import *
-# from magpie.models import Service
-from sqlalchemy.sql import table
-from sqlalchemy import func
+# noinspection PyUnresolvedReferences
+from alembic.context import get_context                                                 # noqa: F401
+from alembic import op                                                                  # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import sa, sessionmaker, PGDialect       # noqa: F401
+from sqlalchemy.sql import table                                                        # noqa: F401
+from sqlalchemy import func                                                             # noqa: F401
 
 Session = sessionmaker()
 

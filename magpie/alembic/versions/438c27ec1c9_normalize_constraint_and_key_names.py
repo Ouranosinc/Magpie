@@ -8,7 +8,8 @@ Create Date: 2015-06-13 21:16:32.358778
 """
 from __future__ import unicode_literals
 
-import os, sys
+import os
+import sys
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)    # version
 root_dir = os.path.dirname(root_dir)    # alembic
@@ -16,8 +17,9 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-from magpie.definitions.alembic_definitions import *
-from magpie.definitions.sqlalchemy_definitions import *
+# noinspection PyUnresolvedReferences
+from magpie.definitions.alembic_definitions import op, get_context              # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import PGDialect, Inspector      # noqa: F401
 
 # revision identifiers, used by Alembic.
 revision = '438c27ec1c9'
@@ -108,9 +110,8 @@ def upgrade():
             op.execute(
                 'ALTER INDEX external_identities_pkey RENAME to pk_external_identities')
 
-        if 'external_identities_local_user_name_fkey' in [c['name'] for c in
-                                                          insp.get_foreign_keys(
-                                                                  'external_identities')]:
+        if 'external_identities_local_user_name_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('external_identities')]:
             op.drop_constraint('external_identities_local_user_name_fkey',
                                'external_identities', type_='foreignkey')
             op.create_foreign_key(None, 'external_identities', 'users',
@@ -119,9 +120,8 @@ def upgrade():
                                   onupdate='CASCADE',
                                   ondelete='CASCADE')
 
-        if 'groups_permissions_group_id_fkey' in [c['name'] for c in
-                                                  insp.get_foreign_keys(
-                                                          'groups_permissions')]:
+        if 'groups_permissions_group_id_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('groups_permissions')]:
             op.drop_constraint('groups_permissions_group_id_fkey',
                                'groups_permissions', type_='foreignkey')
             op.create_foreign_key(None, 'groups_permissions', 'groups',
@@ -134,9 +134,8 @@ def upgrade():
             op.execute(
                 'ALTER INDEX groups_group_name_key RENAME to uq_groups_group_name')
 
-        if 'groups_resources_permissions_group_id_fkey' in [c['name'] for c in
-                                                            insp.get_foreign_keys(
-                                                                    'groups_resources_permissions')]:
+        if 'groups_resources_permissions_group_id_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('groups_resources_permissions')]:
             op.drop_constraint('groups_resources_permissions_group_id_fkey',
                                'groups_resources_permissions',
                                type_='foreignkey')
@@ -145,10 +144,8 @@ def upgrade():
                                   local_cols=['group_id'], onupdate='CASCADE',
                                   ondelete='CASCADE')
 
-        if 'groups_resources_permissions_resource_id_fkey' in [c['name'] for c
-                                                               in
-                                                               insp.get_foreign_keys(
-                                                                       'groups_resources_permissions')]:
+        if 'groups_resources_permissions_resource_id_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('groups_resources_permissions')]:
             op.drop_constraint('groups_resources_permissions_resource_id_fkey',
                                'groups_resources_permissions',
                                type_='foreignkey')
@@ -161,9 +158,8 @@ def upgrade():
         if 'resources_pkey' == insp.get_pk_constraint('resources')['name']:
             op.execute('ALTER INDEX resources_pkey RENAME to pk_resources')
 
-        if 'resources_owner_group_id_fkey' in [c['name'] for c in
-                                               insp.get_foreign_keys(
-                                                       'resources')]:
+        if 'resources_owner_group_id_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('resources')]:
             op.drop_constraint('resources_owner_group_id_fkey', 'resources',
                                type_='foreignkey')
             op.create_foreign_key(None, 'resources', 'groups',
@@ -172,9 +168,8 @@ def upgrade():
                                   onupdate='CASCADE',
                                   ondelete='SET NULL')
 
-        if 'resources_owner_user_id_fkey' in [c['name'] for c in
-                                              insp.get_foreign_keys(
-                                                      'resources')]:
+        if 'resources_owner_user_id_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('resources')]:
             op.drop_constraint('resources_owner_user_id_fkey', 'resources',
                                type_='foreignkey')
             op.create_foreign_key(None, 'resources', 'users',
@@ -183,8 +178,8 @@ def upgrade():
                                   onupdate='CASCADE',
                                   ondelete='SET NULL')
 
-        if 'resources_parent_id_fkey' in [c['name'] for c in
-                                          insp.get_foreign_keys('resources')]:
+        if 'resources_parent_id_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('resources')]:
             op.drop_constraint('resources_parent_id_fkey', 'resources',
                                type_='foreignkey')
             op.create_foreign_key(None, 'resources', 'resources',
@@ -195,18 +190,17 @@ def upgrade():
         if 'users_pkey' == insp.get_pk_constraint('users')['name']:
             op.execute('ALTER INDEX users_pkey RENAME to pk_users')
 
-        if 'users_email_key' in [c['name'] for c in
-                                 insp.get_unique_constraints('users')]:
+        if 'users_email_key' in [
+                c['name'] for c in insp.get_unique_constraints('users')]:
             op.execute('ALTER INDEX users_email_key RENAME to uq_users_email')
 
-        if 'users_user_name_key' in [c['name'] for c in
-                                     insp.get_unique_constraints('users')]:
+        if 'users_user_name_key' in [
+                c['name'] for c in insp.get_unique_constraints('users')]:
             op.execute(
                 'ALTER INDEX users_user_name_key RENAME to uq_users_user_name')
 
-        if 'users_groups_group_id_fkey' in [c['name'] for c in
-                                            insp.get_foreign_keys(
-                                                    'users_groups')]:
+        if 'users_groups_group_id_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('users_groups')]:
             op.drop_constraint('users_groups_group_id_fkey', 'users_groups',
                                type_='foreignkey')
             op.create_foreign_key(None, 'users_groups', 'groups',
@@ -214,9 +208,8 @@ def upgrade():
                                   local_cols=['group_id'], onupdate='CASCADE',
                                   ondelete='CASCADE')
 
-        if 'users_groups_user_id_fkey' in [c['name'] for c in
-                                           insp.get_foreign_keys(
-                                                   'users_groups')]:
+        if 'users_groups_user_id_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('users_groups')]:
             op.drop_constraint('users_groups_user_id_fkey', 'users_groups',
                                type_='foreignkey')
             op.create_foreign_key(None, 'users_groups', 'users',
@@ -224,9 +217,8 @@ def upgrade():
                                   local_cols=['user_id'], onupdate='CASCADE',
                                   ondelete='CASCADE')
 
-        if 'users_permissions_user_id_fkey' in [c['name'] for c in
-                                                insp.get_foreign_keys(
-                                                        'users_permissions')]:
+        if 'users_permissions_user_id_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('users_permissions')]:
             op.drop_constraint('users_permissions_user_id_fkey',
                                'users_permissions', type_='foreignkey')
             op.create_foreign_key(None, 'users_permissions', 'users',
@@ -234,9 +226,8 @@ def upgrade():
                                   local_cols=['user_id'], onupdate='CASCADE',
                                   ondelete='CASCADE')
 
-        if 'users_resources_permissions_resource_id_fkey' in [c['name'] for c in
-                                                              insp.get_foreign_keys(
-                                                                      'users_resources_permissions')]:
+        if 'users_resources_permissions_resource_id_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('users_resources_permissions')]:
             op.drop_constraint('users_resources_permissions_resource_id_fkey',
                                'users_resources_permissions',
                                type_='foreignkey')
@@ -246,9 +237,8 @@ def upgrade():
                                   onupdate='CASCADE',
                                   ondelete='CASCADE')
 
-        if 'users_resources_permissions_user_id_fkey' in [c['name'] for c in
-                                                          insp.get_foreign_keys(
-                                                                  'users_resources_permissions')]:
+        if 'users_resources_permissions_user_id_fkey' in [
+                c['name'] for c in insp.get_foreign_keys('users_resources_permissions')]:
             op.drop_constraint('users_resources_permissions_user_id_fkey',
                                'users_resources_permissions',
                                type_='foreignkey')

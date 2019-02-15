@@ -1,16 +1,15 @@
 from __future__ import with_statement
 from alembic import context
-from logging.config import fileConfig
+# from logging.config import fileConfig
 from sqlalchemy.schema import MetaData
 # noinspection PyProtectedMember
 from sqlalchemy.engine import create_engine, Connection, Connectable
 from sqlalchemy.exc import OperationalError
 from magpie.db import get_db_url
 from magpie.constants import get_constant
-import logging
+from magpie.common import get_logger
 import os
-
-LOGGER = logging.getLogger(__name__)
+LOGGER = get_logger(__name__)
 
 
 # this is the Alembic Config object, which provides
@@ -24,7 +23,7 @@ if 'connection' in config.attributes and isinstance(config.attributes['connectio
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+##fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 target_metadata = MetaData(naming_convention={

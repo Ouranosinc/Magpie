@@ -4,12 +4,12 @@ from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.models import get_user
 from magpie.security import auth_config_from_settings
 from magpie.db import get_session_factory, get_tm_session, get_engine
+from magpie.common import get_logger
 from magpie import __meta__
-import logging
-LOGGER = logging.getLogger("TWITCHER")
+LOGGER = get_logger("TWITCHER")
 
 
-# noinspection PyAbstractClass, PyMethodMayBeStatic
+# noinspection PyAbstractClass, PyMethodMayBeStatic, PyUnusedLocal
 class MagpieAdapter(AdapterInterface):
     def describe_adapter(self):
         return {"name": self.__class__.__name__, "version": __meta__.__version__}
@@ -36,7 +36,7 @@ class MagpieAdapter(AdapterInterface):
 
         LOGGER.info('Loading MagpieAdapter config')
         config = auth_config_from_settings(settings)
-        config.set_request_property(get_user, 'user', reify=True)
+        config.add_request_method(get_user, 'user', reify=True)
         self.owsproxy_config(settings, config)
         return config
 

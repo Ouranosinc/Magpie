@@ -1,22 +1,40 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from magpie.definitions.pyramid_definitions import Response, HTTPException
+from magpie.definitions.typedefs import Any
 from distutils.dir_util import mkpath
 from typing import AnyStr, Optional, Type
 # noinspection PyProtectedMember
 from logging import _loggerClass as LoggerType
 # noinspection PyCompatibility
 import configparser
-import logging
 import types
 import six
+import sys
 import os
+import logging
 
-LOGGER = logging.getLogger(__name__)
+
+def get_logger(name, level=logging.INFO):
+    """
+    Immediately sets the logger level to avoid duplicate log outputs
+    from the `root logger` and `this logger` when `level` is `NOTSET`.
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    return logger
+
+
+LOGGER = get_logger(__name__)
 
 
 def print_log(msg, logger=LOGGER, level=logging.INFO):
-    print(msg)
+    all_handlers = logging.root.handlers + logger.handlers
+    if not any(isinstance(h, logging.StreamHandler) for h in all_handlers):
+        logger.addHandler(logging.StreamHandler(sys.stdout))
+    if logger.disabled:
+        logger.disabled = False
     logger.log(level, msg)
 
 
@@ -65,3 +83,34 @@ def get_settings_from_config_ini(config_ini_path, ini_main_section_name='app:mag
     parser.read([config_ini_path])
     settings = dict(parser.items(ini_main_section_name))
     return settings
+
+
+def get_json(response):
+    """
+    Retrieves the 'JSON' body of a response using the property/callable
+    according to the response's implementation.
+    """
+    if isinstance(response.json, dict):
+        return response.json
+    return response.json()
+
+
+def convert_response(response):
+    # type: (Any) -> Response
+    """
+    Converts a ``response`` implementation (eg: ``requests.Response``)
+    to an equivalent ``pyramid.response.Response`` version.
+    """
+    if isinstance(response, Response):
+        return response
+    json_body = get_json(response)
+    pyramid_response = Response(body=json_body, headers=response.headers)
+    if hasattr(response, 'cookies'):
+        for cookie in response.cookies:
+            pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
+    if isinstance(response, HTTPException):
+        # noinspection PyProtectedMember
+        for header_name, header_value in response.headers._items:
+            if header_name.lower() == 'set-cookie':
+                pyramid_response.set_cookie(name=header_name, value=header_value, overwrite=True)
+    return pyramid_response

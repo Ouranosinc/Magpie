@@ -1,24 +1,127 @@
+import unittest
 import requests
+import warnings
 import json
 import six
+# noinspection PyPackageRequirements
+import pytest
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from pyramid.response import Response
 from pyramid.testing import setUp as PyramidSetUp
+from requests.structures import CaseInsensitiveDict
+# noinspection PyPackageRequirements
 from webtest import TestApp
+# noinspection PyPackageRequirements
 from webtest.response import TestResponse
+# noinspection PyPackageRequirements
 from webob.headers import ResponseHeaders
 from magpie import __meta__, services, magpiectl
 from magpie.common import get_settings_from_config_ini
 from magpie.constants import get_constant
-from typing import AnyStr, Dict, List, Optional, Tuple, Union
+from magpie.common import str2bool
+from magpie.definitions.typedefs import Str, Callable, Dict, List, Optional, Tuple, Type, Union  # noqa: F401
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from tests.interfaces import Base_Magpie_TestCase    # noqa: F401
+
 
 OptionalStringType = six.string_types + tuple([type(None)])
-HeadersType = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
-CookiesType = Union[Dict[AnyStr, AnyStr], List[Tuple[AnyStr, AnyStr]]]
+HeadersType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
+CookiesType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
 OptionalHeaderCookiesType = Union[Tuple[None, None], Tuple[HeadersType, CookiesType]]
-TestAppOrUrlType = Union[AnyStr, TestApp]
+TestAppOrUrlType = Union[Str, TestApp]
 ResponseType = Union[TestResponse, Response]
+
+
+class RunOption(object):
+    __slots__ = ['_name', '_enabled', '_marker']
+
+    def __init__(self, name, marker=None):
+        self._name = name
+        self._marker = marker if marker else name.lower().replace('magpie_test_', '')
+        self._enabled = self._default_run()
+
+    def __call__(self, *args, **kwargs):
+        """Return (condition, reason) matching `unittest.skipUnless` decorator."""
+        return self._enabled, self.message
+
+    def __str__(self):
+        return self.message
+
+    def __repr__(self):
+        return '{}[{}]'.format(type(self).__name__, self.message)
+
+    def _default_run(self):
+        option_value = str2bool(get_constant(self._name, default_value=True,
+                                             raise_missing=False, raise_not_set=False, print_missing=True))
+        return True if option_value is None else option_value
+
+    @property
+    def message(self):
+        option = " '{}' ".format(self._marker)
+        status = 'Run' if self._enabled else 'Skip'
+        return "{}{}tests requested [{}={}].".format(status, option, self._name, self._enabled)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def enabled(self):
+        return self._enabled
+
+    @property
+    def marker(self):
+        return self._marker
+
+
+# noinspection PyPep8Naming
+def RunDecorator(run_option):
+    # type: (RunOption) -> Callable
+    """
+    Decorates the test/class with ``pytest.mark`` and ``unittest.skipUnless``
+    using the provided test condition represented by the given ``RunOption``.
+
+    Allows to decorate a function or class such that::
+
+        option = RunDecorator(RunOption('MAGPIE_TEST_CUSTOM_MARKER'))
+
+        @option
+        def test_func():
+            <test>
+
+    is equivalent to::
+
+        @pytest.mark.custom_marker
+        @unittest.skipUnless(runner.MAGPIE_TEST_CUSTOM_MARKER, reason='...')
+        def test_func():
+            <test>
+
+    """
+    # noinspection PyUnusedLocal
+    def wrap(test_func, *args, **kwargs):
+        pytest_marker = pytest.mark.__getattr__(run_option.marker)
+        unittest_skip = unittest.skipUnless(*run_option())
+        test_func = pytest_marker(test_func)
+        test_func = unittest_skip(test_func)
+        return test_func
+
+    return wrap
+
+
+class RunOptionDecorator(object):
+    """
+    Simplifies the call to::
+
+        RunDecorator(RunOption('MAGPIE_TEST_CUSTOM_MARKER'))
+
+    by::
+
+        RunOptionDecorator('MAGPIE_TEST_CUSTOM_MARKER')
+    """
+    def __new__(cls, name):
+        return RunDecorator(RunOption(name))
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -33,6 +136,7 @@ def get_test_magpie_app():
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
     config.include('ziggurat_foundations.ext.pyramid.get_user')
     config.registry.settings['magpie.db_migration'] = False
+    config.registry.settings['magpie.url'] = 'http://localhost:80'  #
     # scan dependencies
     config.include('magpie')
     # create the test application
@@ -53,11 +157,11 @@ def get_headers(app_or_url, header_dict):
 
 
 def get_header(header_name, header_container):
-    # type: (AnyStr, Optional[Union[HeadersType, ResponseHeaders]]) -> Union[AnyStr, None]
+    # type: (Str, Optional[Union[HeadersType, ResponseHeaders]]) -> Union[Str, None]
     if header_container is None:
         return None
     headers = header_container
-    if isinstance(headers, ResponseHeaders):
+    if isinstance(headers, (ResponseHeaders, CaseInsensitiveDict)):
         headers = dict(headers)
     if isinstance(headers, dict):
         headers = header_container.items()
@@ -85,9 +189,25 @@ def get_service_types_for_version(version):
     return list(available_service_types)
 
 
+def warn_version(test, functionality, version, skip=True):
+    # type: (Base_Magpie_TestCase, Str, Str, Optional[bool]) -> None
+    """
+    Verifies that :param:`test.version` value meets the minimal :param:`version` requirement to execute a test.
+    (ie: ``test.version >= version``).
+    If condition is not met, a warning is raised and the test is skipped according to :param:`skip` value.
+    """
+    if LooseVersion(test.version) < LooseVersion(version):
+        msg = "Functionality [{}] not yet implemented in version [{}], upgrade to [>={}]." \
+              .format(functionality, test.version, version)
+        warnings.warn(msg, FutureWarning)
+        if skip:
+            # noinspection PyUnresolvedReferences
+            test.skipTest(reason=msg)
+
+
 def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kwargs):
     """
-    Calls the request using either a `webtest.TestApp` instance or a `requests` instance from a string URL.
+    Calls the request using either a :class:`webtest.TestApp` instance or :class:`requests.Request` from a string URL.
     :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
     :param method: request method (GET, POST, PUT, DELETE)
     :param path: test path starting at base path
@@ -157,12 +277,13 @@ def get_session_user(app_or_url, headers=None):
 
 
 def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrlType
-                            username=None,                  # type: Optional[AnyStr]
-                            password=None,                  # type: Optional[AnyStr]
-                            provider='ziggurat',            # type: Optional[AnyStr]
-                            headers=None,                   # type: Optional[Dict[AnyStr, AnyStr]]
+                            username=None,                  # type: Optional[Str]
+                            password=None,                  # type: Optional[Str]
+                            provider='ziggurat',            # type: Optional[Str]
+                            headers=None,                   # type: Optional[Dict[Str, Str]]
                             use_ui_form_submit=False,       # type: Optional[bool]
-                            version=__meta__.__version__,   # type: Optional[AnyStr]
+                            version=__meta__.__version__,   # type: Optional[Str]
+                            expect_errors=False,            # type: Optional[bool]
                             ):                              # type: (...) -> OptionalHeaderCookiesType
     """
     Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
@@ -176,6 +297,7 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
     :param use_ui_form_submit: use Magpie UI login 'form' to obtain cookies
         (required for local `WebTest.App` login, ignored by requests using URL)
     :param version: server or local app version to evaluate responses with backward compatibility
+    :param expect_errors: indicate if the login is expected to fail, used only if using UI form & `webtest.TestApp`
     :return: headers and cookies of the user session or (None, None)
     :raise: Exception on any login failure as required by the caller's specifications (username/password)
     """
@@ -198,7 +320,7 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
                 form['user_name'] = username
                 form['password'] = password
                 form['provider_name'] = provider
-                resp = form.submit('submit')
+                resp = form.submit('submit', expect_errors=expect_errors)
                 resp_cookies = app_or_url.cookies    # automatically set by form submit
             else:
                 resp = app_or_url.post_json('/signin', data, headers=headers)
@@ -295,6 +417,37 @@ def check_val_not_in(val, ref, msg=None):
 
 def check_val_type(val, ref, msg=None):
     assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre='Type Fail', msg=msg)
+
+
+def check_raises(func, exception_type):
+    # type: (Callable[[], None], Type[Exception]) -> Exception
+    """
+    Calls the callable and verifies that the specific exception was raised.
+
+    :raise AssertionError: on failing exception check or missing raised exception.
+    :returns: raised exception of expected type if it was raised.
+    """
+    # noinspection PyBroadException
+    try:
+        func()
+    except Exception as ex:
+        assert isinstance(ex, exception_type)
+        return ex
+    raise AssertionError("Exception [{!s}] was not raised.".format(exception_type))
+
+
+def check_no_raise(func):
+    # type: (Callable[[], None]) -> None
+    """
+    Calls the callable and verifies that no exception was raised.
+
+    :raise AssertionError: on any raised exception.
+    """
+    # noinspection PyBroadException
+    try:
+        func()
+    except Exception as ex:
+        raise AssertionError("Exception [{!r}] was raised when none is expected.".format(ex))
 
 
 def check_response_basic_info(response, expected_code=200, expected_type='application/json', expected_method='GET'):
@@ -446,13 +599,16 @@ class TestSetup(object):
         return json_body['version']
 
     @staticmethod
-    def check_UpStatus(test_class, method, path):
+    def check_UpStatus(test_class, method, path, timeout=20):
         """
         Verifies that the Magpie UI page at very least returned an Ok response with the displayed title.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
-        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=20)
-        check_val_equal(resp.status_code, 200)
+        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=timeout)
+        msg = None \
+            if get_header('Content-Type', resp.headers) != 'application/json' \
+            else "Response body: {}".format(get_json_body(resp))
+        check_val_equal(resp.status_code, 200, msg=msg)
         check_val_is_in('Content-Type', dict(resp.headers))
         check_val_is_in('text/html', get_response_content_types_list(resp))
         check_val_is_in("Magpie Administration", resp.text)
@@ -499,7 +655,10 @@ class TestSetup(object):
         resp = test_request(test_class.url, 'GET', route,
                             headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = get_json_body(resp)
-        return json_body[test_class.test_service_name]
+        svc_getter = 'service'
+        if LooseVersion(test_class.version) < LooseVersion('0.9.1'):
+            svc_getter = test_class.test_service_name
+        return json_body[svc_getter]
 
     @staticmethod
     def get_TestServiceDirectResources(test_class, ignore_missing_service=False):
@@ -535,27 +694,35 @@ class TestSetup(object):
         TestSetup.check_NonExistingTestServiceResource(test_class)
 
     @staticmethod
-    def create_TestService(test_class):
+    def create_TestService(test_class, override_service_name=None, override_service_type=None):
+        svc_name = override_service_name or test_class.test_service_name
+        svc_type = override_service_type or test_class.test_service_type
         data = {
-            u'service_name': test_class.test_service_name,
-            u'service_type': test_class.test_service_type,
-            u'service_url': u'http://localhost:9000/{}'.format(test_class.test_service_name)
+            u'service_name': svc_name,
+            u'service_type': svc_type,
+            u'service_url': u'http://localhost:9000/{}'.format(svc_name)
         }
         resp = test_request(test_class.url, 'POST', '/services', json=data,
                             headers=test_class.json_headers, cookies=test_class.cookies,
                             expect_errors=True)
         if resp.status_code == 409:
-            resp = test_request(test_class.url, 'GET', '/services',
+            path = '/services/{svc}'.format(svc=svc_name)
+            resp = test_request(test_class.url, 'GET', path,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
-            return check_response_basic_info(resp, 200, expected_method='GET')
+            body = check_response_basic_info(resp, 200, expected_method='GET')
+            if LooseVersion(test_class.version) < LooseVersion('0.9.1'):
+                body.update({'service': body[svc_name]})
+                body.pop(svc_name)
+            return body
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
-    def check_NonExistingTestService(test_class):
+    def check_NonExistingTestService(test_class, override_service_name=None):
         services_info = TestSetup.get_RegisteredServicesList(test_class)
         services_names = [svc['service_name'] for svc in services_info]
-        check_val_not_in(test_class.test_service_name, services_names)
+        service_name = override_service_name or test_class.test_service_name
+        check_val_not_in(service_name, services_names)
 
     @staticmethod
     def delete_TestService(test_class, override_service_name=None):
@@ -564,12 +731,12 @@ class TestSetup(object):
         test_service = list(filter(lambda r: r['service_name'] == service_name, services_info))
         # delete as required, skip if non-existing
         if len(test_service) > 0:
-            route = '/services/{svc_name}'.format(svc_name=test_class.test_service_name)
+            route = '/services/{svc_name}'.format(svc_name=service_name)
             resp = test_request(test_class.url, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_val_equal(resp.status_code, 200)
-        TestSetup.check_NonExistingTestService(test_class)
+        TestSetup.check_NonExistingTestService(test_class, override_service_name=service_name)
 
     @staticmethod
     def get_RegisteredServicesList(test_class):
@@ -594,34 +761,38 @@ class TestSetup(object):
         return json_body['user_names']
 
     @staticmethod
-    def check_NonExistingTestUser(test_class):
+    def check_NonExistingTestUser(test_class, override_user_name=None):
         users = TestSetup.get_RegisteredUsersList(test_class)
-        check_val_not_in(test_class.test_user_name, users)
+        user_name = override_user_name or test_class.test_user_name
+        check_val_not_in(user_name, users)
 
     @staticmethod
-    def create_TestUser(test_class):
+    def create_TestUser(test_class, override_data=None):
         data = {
             "user_name": test_class.test_user_name,
             "email": '{}@mail.com'.format(test_class.test_user_name),
             "password": test_class.test_user_name,
             "group_name": test_class.test_user_group,
         }
+        if override_data:
+            data.update(override_data)
         resp = test_request(test_class.url, 'POST', '/users',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
-    def delete_TestUser(test_class):
+    def delete_TestUser(test_class, override_user_name=None):
         users = TestSetup.get_RegisteredUsersList(test_class)
+        user_name = override_user_name or test_class.test_user_name
         # delete as required, skip if non-existing
-        if test_class.test_user_name in users:
-            route = '/users/{usr}'.format(usr=test_class.test_user_name)
+        if user_name in users:
+            route = '/users/{usr}'.format(usr=user_name)
             resp = test_request(test_class.url, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_response_basic_info(resp, 200, expected_method='DELETE')
-        TestSetup.check_NonExistingTestUser(test_class)
+        TestSetup.check_NonExistingTestUser(test_class, override_user_name=user_name)
 
     @staticmethod
     def get_RegisteredGroupsList(test_class):

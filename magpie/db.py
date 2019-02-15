@@ -1,13 +1,15 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from magpie import constants
-from magpie.common import get_settings_from_config_ini, print_log, raise_log
-from magpie.definitions.alembic_definitions import *
-from magpie.definitions.sqlalchemy_definitions import *
-from magpie.definitions.typedefs import AnyStr, SettingsDict, Optional, Union
+from magpie.common import get_settings_from_config_ini, print_log, raise_log, get_logger
+from magpie.definitions.alembic_definitions import alembic
+from magpie.definitions.sqlalchemy_definitions import (
+    register, sessionmaker, engine_from_config, ZopeTransactionExtension,
+    configure_mappers, select, Inspector, Session, sa_exc
+)
+from magpie.definitions.typedefs import AnyStr, Settings, Optional, Union
 import transaction
 import inspect
-import zope.sqlalchemy
 import warnings
 import logging
 import time
@@ -17,7 +19,7 @@ import time
 from magpie import models
 
 
-logger = logging.getLogger(__name__)
+LOGGER = get_logger(__name__)
 
 # run configure_mappers after defining all of the models to ensure
 # all relationships can be setup
@@ -35,12 +37,14 @@ def get_db_url(username=None, password=None, db_host=None, db_port=None, db_name
 
 
 def get_engine(settings, prefix='sqlalchemy.'):
-    settings[prefix+'url'] = get_db_url()
+    settings[prefix + 'url'] = get_db_url()
+    settings[prefix + 'pool_size'] = 20
+    settings[prefix + 'max_overflow'] = 100
     return engine_from_config(settings, prefix)
 
 
 def get_session_factory(engine):
-    factory = sessionmaker()
+    factory = sessionmaker(extension=ZopeTransactionExtension())
     factory.configure(bind=engine)
     return factory
 
@@ -67,7 +71,7 @@ def get_tm_session(session_factory, transaction_manager):
 
     """
     db_session = session_factory()
-    zope.sqlalchemy.register(db_session, transaction_manager=transaction_manager)
+    register(db_session, transaction_manager=transaction_manager)
     return db_session
 
 
@@ -87,7 +91,7 @@ def get_db_session_from_config_ini(config_ini_path, ini_main_section_name='app:m
 def run_database_migration(db_session=None):
     # type: (Optional[Session]) -> None
     """Runs db migration operations with alembic, using db session or a new engine connection."""
-    logger.info("Using file '{}' for migration.".format(constants.MAGPIE_ALEMBIC_INI_FILE_PATH))
+    LOGGER.info("Using file '{}' for migration.".format(constants.MAGPIE_ALEMBIC_INI_FILE_PATH))
     alembic_args = ['-c', constants.MAGPIE_ALEMBIC_INI_FILE_PATH, 'upgrade', 'heads']
     if not isinstance(db_session, Session):
         alembic.config.main(argv=alembic_args)
@@ -128,7 +132,7 @@ def is_database_ready(db_session=None):
 
 
 def run_database_migration_when_ready(settings, db_session=None):
-    # type: (SettingsDict, Optional[Session]) -> None
+    # type: (Settings, Optional[Session]) -> None
     """
     Runs db migration if requested by config and need from revisions.
     """
@@ -146,7 +150,7 @@ def run_database_migration_when_ready(settings, db_session=None):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
                     run_database_migration(db_session)
-            except ImportError as ex:
+            except ImportError:
                 pass
             except Exception as e:
                 if i <= attempts:
@@ -170,7 +174,7 @@ def run_database_migration_when_ready(settings, db_session=None):
 
 
 def set_sqlalchemy_log_level(magpie_log_level):
-    # type: (Union[AnyStr, int]) -> SettingsDict
+    # type: (Union[AnyStr, int]) -> Settings
     """Suppresses sqlalchemy logging if not in debug for magpie."""
     log_lvl = logging.getLevelName(magpie_log_level) if isinstance(magpie_log_level, int) else magpie_log_level
     sa_settings = {'sqlalchemy.echo': True}

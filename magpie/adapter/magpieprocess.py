@@ -4,6 +4,7 @@ Store adapters to read data from magpie.
 from magpie.utils import get_magpie_url, get_admin_cookies
 from magpie.api.api_except import raise_http
 from magpie.constants import get_constant
+from magpie.common import get_logger
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,
     HTTPCreated,
@@ -25,8 +26,7 @@ from twitcher.visibility import VISIBILITY_PUBLIC, VISIBILITY_PRIVATE, visibilit
 from typing import List, Optional, Iterable, Union, AnyStr
 import six
 import requests
-import logging
-LOGGER = logging.getLogger("TWITCHER")
+LOGGER = get_logger("TWITCHER")
 
 
 class MagpieProcessStore(ProcessStore):

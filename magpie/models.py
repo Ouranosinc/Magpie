@@ -1,8 +1,10 @@
 from magpie.definitions.pyramid_definitions import *
 from magpie.definitions.ziggurat_definitions import *
 from magpie.definitions.sqlalchemy_definitions import *
+from magpie.definitions.typedefs import AnyStr
 from magpie.api.api_except import evaluate_call
 from magpie.permissions import *
+from six import with_metaclass
 
 Base = declarative_base()
 
@@ -34,13 +36,19 @@ class GroupResourcePermission(GroupResourcePermissionMixin, Base):
     pass
 
 
-class Resource(ResourceMixin, Base):
-    # ... your own properties....
+class ResourceMeta(type):
+    @property
+    def resource_type_name(cls):
+        # type: (...) -> AnyStr
+        """Generic resource type identifier."""
+        raise NotImplemented("Resource implementation must define unique type representation"
+                             "and must be added to `resource_type_dict`.")
 
-    # example implementation of ACL for pyramid application
+
+class Resource(ResourceMixin, Base):
+#class Resource(with_metaclass(ResourceMeta, ResourceMixin, Base)):
     permission_names = []
     child_resource_allowed = True
-
     resource_display_name = sa.Column(sa.Unicode(100), nullable=True)
 
     # reference to top-most service under which the resource is nested
