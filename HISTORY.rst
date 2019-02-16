@@ -6,6 +6,10 @@ History
 0.9.x
 ---------------------
 
+* allow quick functional testing using sequences of local app form submissions
+* fix UI add child button broken by introduced 'int' resource id type checking
+* add test methods for UI redirects to other views from button click in displayed page
+* change resource response for generic `resource: {<info>}` instead of `{resource-id}: {<info>}`
 * add permissions config to auto-generate user/group rules on startup
 * fix many invalid or erroneous swagger specifications
 * attempt db creation on first migration if not existing

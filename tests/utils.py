@@ -7,29 +7,24 @@ import six
 import pytest
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
-from pyramid.response import Response
 from pyramid.testing import setUp as PyramidSetUp
-from requests.structures import CaseInsensitiveDict
 # noinspection PyPackageRequirements
 from webtest import TestApp
 # noinspection PyPackageRequirements
 from webtest.response import TestResponse
-# noinspection PyPackageRequirements
-from webob.headers import ResponseHeaders
 from magpie import __meta__, services, magpiectl
-from magpie.common import get_settings_from_config_ini
+from magpie.common import get_settings_from_config_ini, get_header
 from magpie.constants import get_constant
 from magpie.common import str2bool
-from magpie.definitions.typedefs import Str, Callable, Dict, List, Optional, Tuple, Type, Union  # noqa: F401
+from magpie.definitions.typedefs import (  # noqa: F401
+    Str, Callable, Dict, Headers, OptionalHeaderCookies, Optional, Type, Union
+)
+from magpie.definitions.pyramid_definitions import Response
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tests.interfaces import Base_Magpie_TestCase    # noqa: F401
 
-
 OptionalStringType = six.string_types + tuple([type(None)])
-HeadersType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
-CookiesType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
-OptionalHeaderCookiesType = Union[Tuple[None, None], Tuple[HeadersType, CookiesType]]
 TestAppOrUrlType = Union[Str, TestApp]
 ResponseType = Union[TestResponse, Response]
 
@@ -156,22 +151,6 @@ def get_headers(app_or_url, header_dict):
     return header_dict
 
 
-def get_header(header_name, header_container):
-    # type: (Str, Optional[Union[HeadersType, ResponseHeaders]]) -> Union[Str, None]
-    if header_container is None:
-        return None
-    headers = header_container
-    if isinstance(headers, (ResponseHeaders, CaseInsensitiveDict)):
-        headers = dict(headers)
-    if isinstance(headers, dict):
-        headers = header_container.items()
-    header_name = header_name.lower().replace('-', '_')
-    for h, v in headers:
-        if h.lower().replace('-', '_') == header_name:
-            return v
-    return None
-
-
 def get_response_content_types_list(response):
     return [ct.strip() for ct in response.headers['Content-Type'].split(';')]
 
@@ -264,7 +243,7 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
 
 
 def get_session_user(app_or_url, headers=None):
-    # type: (TestAppOrUrlType, Optional[HeadersType]) -> ResponseType
+    # type: (TestAppOrUrlType, Optional[Headers]) -> ResponseType
     if not headers:
         headers = get_headers(app_or_url, {'Accept': 'application/json', 'Content-Type': 'application/json'})
     if isinstance(app_or_url, TestApp):
@@ -284,7 +263,7 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
                             use_ui_form_submit=False,       # type: Optional[bool]
                             version=__meta__.__version__,   # type: Optional[Str]
                             expect_errors=False,            # type: Optional[bool]
-                            ):                              # type: (...) -> OptionalHeaderCookiesType
+                            ):                              # type: (...) -> OptionalHeaderCookies
     """
     Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
     Validates that the logged user (if any), matched the one specified with `username`.
@@ -377,9 +356,12 @@ def check_or_try_logout_user(app_or_url):
 
 
 def format_test_val_ref(val, ref, pre='Fail', msg=None):
-    _msg = '({0}) Test value: `{1}`, Reference value: `{2}`'.format(pre, val, ref)
-    if isinstance(msg, six.string_types):
-        _msg = '{}\n{}'.format(msg, _msg)
+    if is_null(msg):
+        _msg = '({0}) Failed condition between test and reference values.'.format(pre)
+    else:
+        _msg = '({0}) Test value: `{1}`, Reference value: `{2}`'.format(pre, val, ref)
+        if isinstance(msg, six.string_types):
+            _msg = '{}\n{}'.format(msg, _msg)
     return _msg
 
 
@@ -400,19 +382,19 @@ def check_all_equal(iter_val, iter_ref, any_order=False, msg=None):
 
 
 def check_val_equal(val, ref, msg=None):
-    assert isinstance(ref, null) or val == ref, format_test_val_ref(val, ref, pre='Equal Fail', msg=msg)
+    assert is_null(ref) or val == ref, format_test_val_ref(val, ref, pre='Equal Fail', msg=msg)
 
 
 def check_val_not_equal(val, ref, msg=None):
-    assert isinstance(ref, null) or val != ref, format_test_val_ref(val, ref, pre='Equal Fail', msg=msg)
+    assert is_null(ref) or val != ref, format_test_val_ref(val, ref, pre='Equal Fail', msg=msg)
 
 
 def check_val_is_in(val, ref, msg=None):
-    assert isinstance(ref, null) or val in ref, format_test_val_ref(val, ref, pre='Is In Fail', msg=msg)
+    assert is_null(ref) or val in ref, format_test_val_ref(val, ref, pre='Is In Fail', msg=msg)
 
 
 def check_val_not_in(val, ref, msg=None):
-    assert isinstance(ref, null) or val not in ref, format_test_val_ref(val, ref, pre='Not In Fail', msg=msg)
+    assert is_null(ref) or val not in ref, format_test_val_ref(val, ref, pre='Not In Fail', msg=msg)
 
 
 def check_val_type(val, ref, msg=None):
@@ -481,6 +463,16 @@ def check_response_basic_info(response, expected_code=200, expected_type='applic
     return json_body
 
 
+def check_ui_response_basic_info(response, expected_code=200, expected_type='text/html'):
+    msg = None \
+        if get_header('Content-Type', response.headers) != 'application/json' \
+        else "Response body: {}".format(get_json_body(response))
+    check_val_equal(response.status_code, expected_code, msg=msg)
+    check_val_is_in('Content-Type', dict(response.headers))
+    check_val_is_in(expected_type, get_response_content_types_list(response))
+    check_val_is_in("Magpie Administration", response.text, msg=null)   # don't output big html if failing
+
+
 class null(object):
     """ Represents a null value to differentiate from None. """
     def __repr__(self):
@@ -488,6 +480,10 @@ class null(object):
 
 
 Null = null()
+
+
+def is_null(item):
+    return isinstance(item, null) or item is null
 
 
 def check_error_param_structure(json_body, param_value=Null, param_name=Null, param_compare=Null,
@@ -603,15 +599,68 @@ class TestSetup(object):
         """
         Verifies that the Magpie UI page at very least returned an Ok response with the displayed title.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
+
+        :returns: response from the rendered page for further tests
         """
         resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=timeout)
-        msg = None \
-            if get_header('Content-Type', resp.headers) != 'application/json' \
-            else "Response body: {}".format(get_json_body(resp))
-        check_val_equal(resp.status_code, 200, msg=msg)
-        check_val_is_in('Content-Type', dict(resp.headers))
-        check_val_is_in('text/html', get_response_content_types_list(resp))
-        check_val_is_in("Magpie Administration", resp.text)
+        check_ui_response_basic_info(resp)
+        return resp
+
+    @staticmethod
+    def check_FormSubmit(test_class, form_match, form_data=None, form_submit='submit',
+                         previous_response=None, path=None, method='GET', timeout=20,
+                         expected_code=200, expected_type='text/html', expect_errors=False, max_redirect=5):
+        """
+        Simulates the submission of a UI form to evaluate the status of the resulting page.
+        Follows any redirect if the submission results into a move to another page request.
+
+        Parameter :param:`form_match` can be a form name, an index (from all available forms on page) or an
+        iterable of key/values of form fields to search for a match (first match is used if many are available).
+
+        Parameter :param:`form_submit` specifies which `button` by name or index to submit within the matched form.
+
+        Fields to be filed from UI input can be provided via :param:`form_data` in a key/value fashion.
+
+        Parameter :param:`path` has to be provided to fetch the available form on the desired page, *unless*
+        :param:`previous_response` is provided.
+
+        Successive calls using form submits to `navigate pages` can be accomplished using :param:`previous_response`
+        as the previous `response` object returned.
+
+        Example::
+
+            svc_resp = check_FormSubmit(test, form_match='goto_add_service', path='/ui/services')
+            add_resp = check_FormSubmit(test, form_match='add_service', form_data={...}, previous_response=svc_resp)
+
+        :returns: response from the rendered page for further tests
+        """
+        if not isinstance(test_class.url, TestApp):
+            test_class.skipTest(reason='test form submit with remote URL not implemented')
+        if isinstance(previous_response, TestResponse):
+            resp = previous_response
+        else:
+            resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=timeout)
+        check_val_equal(resp.status_code, 200, msg="Cannot test form submission, initial page returned an error.")
+        form = None
+        if isinstance(form_match, int) or isinstance(form_match, six.string_types):
+            form = resp.forms[form_match]
+        else:
+            # select form if all key/value pairs specified match the current one
+            for f in resp.forms.values():
+                f_fields = [(fk, fv[0].value) for fk, fv in f.fields.items()]
+                if all((mk, mv) in f_fields for mk, mv in form_match.items()):
+                    form = f
+                    break
+        if not form:
+            test_class.fail("could not find requested form for submission")
+        if form_data:
+            for f_field, f_value in dict(form_data).items():
+                form[f_field] = f_value
+        resp = form.submit(form_submit, expect_errors=expect_errors)
+        while 300 <= resp.status_code < 400 and max_redirect > 0:
+            resp = resp.follow()
+        check_ui_response_basic_info(resp, expected_code=expected_code, expected_type=expected_type)
+        return resp
 
     @staticmethod
     def check_Unauthorized(test_class, method, path, content_type='application/json'):

@@ -20,7 +20,7 @@
     });
 </script>
 
-<form class="new_item_form" action="${request.path}" method="post">
+<form class="new_item_form" id="add_service_form" action="${request.path}" method="post">
     <table class="fields_table">
         <tr>
             <td>Service name (unique):</td>

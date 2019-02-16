@@ -8,7 +8,7 @@
 
 <h1>Add Group</h1>
 
-<form class="new_item_form" action="${request.path}" method="post">
+<form class="new_item_form" id="add_group_form" action="${request.path}" method="post">
     <input type="hidden" value="${request.route_url('home')}" name="came_from">
     <table class="fields_table">
         <tr>

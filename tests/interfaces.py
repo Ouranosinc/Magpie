@@ -7,6 +7,8 @@ import pyramid.testing
 import mock
 import yaml
 import six
+# noinspection PyPackageRequirements
+from webtest import TestApp
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from magpie.api.api_rest_schemas import SwaggerGenerator
@@ -864,17 +866,14 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
                                   headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 404, expected_method='PUT')   # no route with service 'types'
 
-        if LooseVersion(self.version) < LooseVersion('0.9.1'):
-            warnings.warn("no check for update service named 'types' performed in version [{}], upgrade to [>=0.9.1]"
-                          .format(self.version), FutureWarning)
-        else:
-            # try to PUT on valid service with new name 'types' should raise the error
-            utils.TestSetup.create_TestService(self)
-            path = '/services/{}'.format(self.test_service_name)
-            data = {'service_name': 'types'}
-            resp = utils.test_request(self.url, 'PUT', path, data=data, expect_errors=True,
-                                      headers=self.json_headers, cookies=self.cookies)
-            utils.check_response_basic_info(resp, 400, expected_method='PUT')   # don't allow naming to 'types'
+        utils.warn_version(self, "check for update service named 'types'", '0.9.1', skip=True)
+        # try to PUT on valid service with new name 'types' should raise the error
+        utils.TestSetup.create_TestService(self)
+        path = '/services/{}'.format(self.test_service_name)
+        data = {'service_name': 'types'}
+        resp = utils.test_request(self.url, 'PUT', path, data=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 400, expected_method='PUT')   # don't allow naming to 'types'
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetService_ResponseFormat(self):
@@ -1094,8 +1093,12 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         route = '/resources/{res_id}'.format(res_id=child_resource_id)
         resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
-        utils.check_val_is_in(str(child_resource_id), json_body)
-        resource_body = json_body[str(child_resource_id)]
+        if LooseVersion(self.version) >= LooseVersion('0.9.2'):
+            utils.check_val_is_in('resource', json_body)
+            resource_body = json_body['resource']
+        else:
+            utils.check_val_is_in(str(child_resource_id), json_body)
+            resource_body = json_body[str(child_resource_id)]
         utils.check_val_equal(resource_body['root_service_id'], service_root_id)
         utils.check_val_equal(resource_body['parent_id'], test_resource_id)
         utils.check_val_equal(resource_body['resource_id'], child_resource_id)
@@ -1339,17 +1342,37 @@ class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/users')
 
     @runner.MAGPIE_TEST_STATUS
+    def test_ViewUsers_GotoEditUser(self):
+        form = {'edit': None, 'user_name': self.test_user}
+        resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit='edit', path='/ui/users')
+        utils.check_val_is_in("Edit User: {}".format(self.test_user), resp.text, msg=utils.null)
+
+    @runner.MAGPIE_TEST_STATUS
     def test_ViewGroups(self):
         utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/groups')
 
     @runner.MAGPIE_TEST_STATUS
-    def test_ViewServices(self):
+    def test_ViewGroups_GotoEditGroup(self):
+        form = {'edit': None, 'group_name': self.test_group}
+        resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit='edit', path='/ui/groups')
+        utils.check_val_is_in("Edit Group: {}".format(self.test_group), resp.text, msg=utils.null)
+
+    @runner.MAGPIE_TEST_STATUS
+    def test_ViewServicesDefault(self):
         utils.TestSetup.check_UpStatus(self, method='GET', path='/ui/services/default')
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewServicesOfType(self):
         path = '/ui/services/{}'.format(self.test_service_type)
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)
+
+    @runner.MAGPIE_TEST_STATUS
+    def test_ViewServices_GotoEditService(self):
+        form = {'edit': None, 'service_name': self.test_service_name}
+        path = '/ui/services/{}'.format(self.test_service_type)
+        resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit='edit', path=path)
+        find = '<span class="panel_value">{}</span>'.format(self.test_service_name)
+        utils.check_val_is_in(find, resp.text, msg=utils.null)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditUser(self):
@@ -1375,6 +1398,35 @@ class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
     def test_EditService(self):
         path = '/ui/services/{type}/{name}'.format(type=self.test_service_type, name=self.test_service_name)
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)
+
+    @runner.MAGPIE_TEST_STATUS
+    @runner.MAGPIE_TEST_FUNCTIONAL
+    def test_EditService_GotoAddChild_BackToEditService(self):
+        if not isinstance(self.url, TestApp):
+            self.skipTest("test not implemented with remote URL")
+        try:
+            # make sure any sub-resource are all deleted to avoid conflict, then recreate service to add sub-resource
+            utils.TestSetup.delete_TestService(self, override_service_name=self.test_service_parent_resource_name)
+            body = utils.TestSetup.create_TestService(self,
+                                                      override_service_name=self.test_service_parent_resource_name,
+                                                      override_service_type=self.test_service_parent_resource_type)
+            svc_res_id = body['service']['resource_id']
+            form = {'add_child': None, 'resource_id': str(svc_res_id)}
+            path = '/ui/services/{}/{}'.format(self.test_service_parent_resource_type,
+                                               self.test_service_parent_resource_name)
+            resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit='add_child', path=path)
+            utils.check_val_is_in("New Resource", resp.text, msg=utils.null)    # add resource page reached
+            data = {
+                'resource_name': self.test_service_child_resource_name,
+                'resource_type': self.test_service_child_resource_type,
+            }
+            resp = utils.TestSetup.check_FormSubmit(self, form_match='add_resource_form', form_submit='add_child',
+                                                    form_data=data, previous_response=resp)
+            for res_name in (self.test_service_parent_resource_name, self.test_service_child_resource_name):
+                find = '<div class="tree_item">{}</div>'.format(res_name)
+                utils.check_val_is_in(find, resp.text, msg=utils.null)
+        finally:
+            utils.TestSetup.delete_TestService(self, override_service_name=self.test_service_parent_resource_name)
 
     @runner.MAGPIE_TEST_STATUS
     def test_AddUser(self):

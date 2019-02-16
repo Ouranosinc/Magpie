@@ -39,8 +39,8 @@ def get_resource_view(request):
                                 fallback=lambda: request.db.rollback(), httpError=HTTPInternalServerError,
                                 msgOnFail=s.Resource_GET_InternalServerErrorResponseSchema.description,
                                 content={u'resource': rf.format_resource(resource, basic_info=True)})
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Resource_GET_OkResponseSchema.description,
-                         content={resource.resource_id: res_json})
+    return ax.valid_http(httpSuccess=HTTPOk, content={'resource': res_json},
+                         detail=s.Resource_GET_OkResponseSchema.description)
 
 
 @s.ResourcesAPI.post(schema=s.Resources_POST_RequestSchema, tags=[s.ResourcesTag],
@@ -94,7 +94,7 @@ def update_resource(request):
 @view_config(route_name=s.ResourcePermissionsAPI.name, request_method='GET')
 def get_resource_permissions_view(request):
     """List all applicable permissions for a resource."""
-    resource = ru.get_resource_matchdict_checked(request, 'resource_id')
+    resource = ar.get_resource_matchdict_checked(request, 'resource_id')
     res_perm = ax.evaluate_call(lambda: ru.get_resource_permissions(resource, db_session=request.db),
                                 fallback=lambda: request.db.rollback(), httpError=HTTPNotAcceptable,
                                 msgOnFail=s.ResourcePermissions_GET_NotAcceptableResponseSchema.description,

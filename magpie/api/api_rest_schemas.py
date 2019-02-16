@@ -576,6 +576,10 @@ class Resource_ChildResourceWithoutChildrenBodySchema(colander.MappingSchema):
     id.name = '{resource_id}'
 
 
+class Resource_ParentResourceWithChildrenContainerBodySchema(ResourceBodySchema):
+    children = Resource_ChildResourceWithoutChildrenBodySchema()
+
+
 class Resource_ChildrenContainerWithChildResourceBodySchema(ResourceBodySchema):
     children = Resource_ChildResourceWithoutChildrenBodySchema()
 
@@ -632,8 +636,7 @@ class Resource_MatchDictCheck_NotAcceptableResponseSchema(colander.MappingSchema
 
 
 class Resource_GET_ResponseBodySchema(BaseResponseBodySchema):
-    resource_id = Resource_ChildResourceWithChildrenContainerBodySchema()
-    resource_id.name = '{resource_id}'
+    resource = Resource_ParentResourceWithChildrenContainerBodySchema()
 
 
 class Resource_GET_OkResponseSchema(colander.MappingSchema):
