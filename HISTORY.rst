@@ -6,6 +6,7 @@ History
 0.9.x
 ---------------------
 
+* greatly reduce docker image size
 * allow quick functional testing using sequences of local app form submissions
 * fix UI add child button broken by introduced 'int' resource id type checking
 * add test methods for UI redirects to other views from button click in displayed page

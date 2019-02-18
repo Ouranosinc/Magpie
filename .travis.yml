@@ -73,15 +73,5 @@ script:
   - make $START_TARGET $TEST_TARGET
 notifications:
   email: false
-jobs:
-  include:
-    - stage: deploy
-      script: echo "Deploying..."
-      deploy:
-        provider: script
-        script: make conda-env docker-push
-        skip_existing: true
-        on:
-          tags: true
 after_success:
   - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
