@@ -22,7 +22,7 @@ CONDA_HOME ?= $(HOME)/conda
 CONDA_ENVS_DIR ?= $(CONDA_HOME)/envs
 CONDA_ENV_PATH := $(CONDA_ENVS_DIR)/$(CONDA_ENV)
 DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
-PYTHON_VERSION ?= `python -c 'import sys; print(sys.version[:5])'`
+PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
 
 # choose conda installer depending on your OS
 CONDA_URL = https://repo.continuum.io/miniconda
