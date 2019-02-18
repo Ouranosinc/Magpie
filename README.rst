@@ -27,13 +27,13 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Requires Python 2.7, 3.5+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/0.9.2.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/0.9.3.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/Magpie/compare/v0.9.2...master
+    :target: https://github.com/Ouranosinc/Magpie/compare/v0.9.3...master
 
 .. |version| image:: https://img.shields.io/github/tag/ouranosinc/magpie.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/Magpie/tree/0.9.2
+    :target: https://github.com/Ouranosinc/Magpie/tree/0.9.3
 
 .. |requires| image:: https://requires.io/github/Ouranosinc/Magpie/requirements.svg?branch=master
     :alt: Requirements Status
@@ -43,9 +43,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Travis-CI Build Status (master branch)
     :target: https://travis-ci.com/Ouranosinc/Magpie
 
-.. |travis_tag| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/0.9.2.svg?label=0.9.2
+.. |travis_tag| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/0.9.3.svg?label=0.9.3
     :alt: Travis-CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/tree/0.9.2
+    :target: https://github.com/Ouranosinc/Magpie/tree/0.9.3
 
 .. |coverage| image:: https://img.shields.io/codecov/c/gh/Ouranosinc/Magpie.svg?label=coverage
     :alt: Travis-CI CodeCov Coverage
