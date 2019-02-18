@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from magpie.definitions.pyramid_definitions import Response, HTTPException
-from magpie.definitions.typedefs import Any
+from magpie.definitions.typedefs import Any, AnyHeaders, Str, Optional, Type, Union
+from webob.headers import ResponseHeaders, EnvironHeaders
+from requests.structures import CaseInsensitiveDict
 from distutils.dir_util import mkpath
-from typing import AnyStr, Optional, Type
 # noinspection PyProtectedMember
 from logging import _loggerClass as LoggerType
 # noinspection PyCompatibility
@@ -39,7 +40,7 @@ def print_log(msg, logger=LOGGER, level=logging.INFO):
 
 
 def raise_log(msg, exception=Exception, logger=LOGGER, level=logging.ERROR):
-    # type: (AnyStr, Optional[Type[Exception]], Optional[LoggerType], Optional[int]) -> None
+    # type: (Str, Optional[Type[Exception]], Optional[LoggerType], Optional[int]) -> None
     logger.log(level, msg)
     if not hasattr(exception, 'message'):
         exception = Exception
@@ -93,6 +94,22 @@ def get_json(response):
     if isinstance(response.json, dict):
         return response.json
     return response.json()
+
+
+def get_header(header_name, header_container):
+    # type: (Str, AnyHeaders) -> Union[Str, None]
+    if header_container is None:
+        return None
+    headers = header_container
+    if isinstance(headers, (ResponseHeaders, EnvironHeaders, CaseInsensitiveDict)):
+        headers = dict(headers)
+    if isinstance(headers, dict):
+        headers = header_container.items()
+    header_name = header_name.lower().replace('-', '_')
+    for h, v in headers:
+        if h.lower().replace('-', '_') == header_name:
+            return v
+    return None
 
 
 def convert_response(response):

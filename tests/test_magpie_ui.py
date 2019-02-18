@@ -60,8 +60,6 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                                                        'Content-Type': 'application/json'})
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
-        # TODO: fix UI views so that they can be 'found' directly in the WebTest.TestApp
-        # NOTE: localhost magpie has to be running for following login call to work
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()
@@ -70,6 +68,11 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         cls.test_group = get_constant('MAGPIE_ANONYMOUS_GROUP')
         cls.test_service_type = utils.get_service_types_for_version(cls.version)[0]
         cls.test_service_name = utils.TestSetup.get_AnyServiceOfTestServiceType(cls)['service_name']
+
+        cls.test_service_parent_resource_type = 'api'
+        cls.test_service_parent_resource_name = 'magpie-unittest-ui-tree-parent'
+        cls.test_service_child_resource_type = 'route'
+        cls.test_service_child_resource_name = 'magpie-unittest-ui-tree-child'
 
 
 @runner.MAGPIE_TEST_UI

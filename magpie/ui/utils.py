@@ -1,7 +1,7 @@
-from magpie.definitions.pyramid_definitions import exception_response
+from magpie.definitions.pyramid_definitions import exception_response, Request, Response, HTTPBadRequest
 from magpie.definitions.typedefs import Str, JsonBody, Cookies, Headers, Optional
-from pyramid.request import Request
-from pyramid.response import Response
+from magpie.common import get_header
+import json
 
 
 def check_response(response):
@@ -40,6 +40,8 @@ def request_api(request,            # type: Request
     # of local/remote testing with corresponding `webtest.TestApp`/`requests.Request`
     if not data:
         data = u''
+    if isinstance(data, dict) and get_header('Content-Type', headers) == 'application/json':
+        data = json.dumps(data)
 
     if isinstance(cookies, dict):
         cookies = list(cookies.items())
@@ -55,3 +57,13 @@ def request_api(request,            # type: Request
 
     subreq = Request.blank(path, base_url=request.application_url, headers=headers, POST=data, **extra_kwargs)
     return request.invoke_subrequest(subreq)
+
+
+def error_badrequest(func):
+    """Decorator that encapsulates the operation in a try/except block, and returns HTTP Bad Request on exception."""
+    def wrap(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            raise HTTPBadRequest(detail=str(e))
+    return wrap

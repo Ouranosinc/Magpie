@@ -8,7 +8,7 @@
 
 <h1>Add User</h1>
 
-<form class="new_item_form" action="${request.path}" method="post">
+<form class="new_item_form" id="add_user_form" action="${request.path}" method="post">
     <table class="fields_table">
         <tr>
             <td>User name:</td>
