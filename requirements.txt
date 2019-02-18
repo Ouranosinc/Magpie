@@ -21,6 +21,7 @@ requests_file
 simplejson
 six
 sqlalchemy
+sqlalchemy_utils
 threddsclient==0.3.4
 transaction
 typing

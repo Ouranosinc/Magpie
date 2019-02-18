@@ -321,7 +321,7 @@ def fetch():
     db_url = db.get_db_url()
 
     LOGGER.debug("Database url: %s" % db_url)
-    engine = create_engine(db_url)
+    engine = create_engine(db_url, convert_unicode=True, echo=False)
 
     session = Session(bind=engine)
 

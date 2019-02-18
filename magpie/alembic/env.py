@@ -1,14 +1,14 @@
 from __future__ import with_statement
+# noinspection PyUnresolvedReferences
 from alembic import context
 # from logging.config import fileConfig
 from sqlalchemy.schema import MetaData
 # noinspection PyProtectedMember
 from sqlalchemy.engine import create_engine, Connection, Connectable
-from sqlalchemy.exc import OperationalError
+from sqlalchemy_utils import database_exists, create_database
 from magpie.db import get_db_url
 from magpie.constants import get_constant
 from magpie.common import get_logger
-import os
 LOGGER = get_logger(__name__)
 
 
@@ -23,7 +23,7 @@ if 'connection' in config.attributes and isinstance(config.attributes['connectio
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-##fileConfig(config.config_file_name)
+# fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 target_metadata = MetaData(naming_convention={
@@ -39,25 +39,6 @@ target_metadata = MetaData(naming_convention={
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-
-
-def create_database(db_name, db_host, db_port):
-    db_default_postgres_url = get_db_url(
-        # only postgres user can connect to default 'postgres' db
-        # credentials correspond to postgres running instance, not magpie-specific credentials
-        # see for details:
-        #   https://stackoverflow.com/questions/6506578
-        username=os.getenv('POSTGRES_USER', 'postgres'),
-        password=os.getenv('POSTGRES_PASSWORD', ''),
-        db_host=db_host,
-        db_port=db_port,
-        db_name='postgres'
-    )
-    connectable = create_engine(db_default_postgres_url)
-    with connectable.connect() as connection:
-        connection.execute("commit")  # end initial transaction
-        connection.execute("create database {}".format(db_name))
-    return connectable
 
 
 def run_migrations_offline():
@@ -87,34 +68,23 @@ def run_migrations_online(connection=None):
     and associate a connection with the context.
 
     """
-    # test the connection, if database is missing try creating it
+
     url = get_db_url()
 
     def connect(c=None):
         if isinstance(c, Connection) and not c.closed:
             return c
         if not isinstance(c, Connectable):
-            c = create_engine(url)
+            c = create_engine(url, convert_unicode=True, echo=False)
         return c.connect()
 
-    try:
-        conn = connect()    # use new connection to not close arg one
-        with conn:
-            pass
-        conn = connection
-    except OperationalError as ex:
+    if not database_exists(url):
         db_name = get_constant('MAGPIE_POSTGRES_DB')
-        # message format is important, match error type with it
-        # any error is `OperationalError`, validate only missing db error
-        if 'database "{}" does not exist'.format(db_name) not in str(ex):
-            raise
         LOGGER.info('database [{}] not found, attempting creation...'.format(db_name))
-        db_host = get_constant('MAGPIE_POSTGRES_HOST')
-        db_port = get_constant('MAGPIE_POSTGRES_PORT')
-        conn = create_database(db_name, db_host, db_port)
+        connection = create_database(url)
 
     # retry connection and run migration
-    with connect(conn) as migrate_conn:
+    with connect(connection) as migrate_conn:
         try:
             context.configure(
                 connection=migrate_conn,
@@ -126,7 +96,7 @@ def run_migrations_online(connection=None):
             with context.begin_transaction():
                 context.run_migrations()
         finally:
-            # close the connection only if not coming from upper call
+            # close the connection only if not given argument
             if migrate_conn is not connection:
                 migrate_conn.close()
 
