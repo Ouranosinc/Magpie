@@ -22,7 +22,6 @@ WORKDIR $MAGPIE_DIR
 
 COPY ./ $MAGPIE_DIR
 RUN make install -f $MAGPIE_DIR/Makefile
-RUN make docs -f $MAGPIE_DIR/Makefile
 
 # magpie cron service
 ADD magpie-cron /etc/cron.d/magpie-cron
