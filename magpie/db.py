@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from magpie import constants
+from magpie.constants import get_constant
 from magpie.common import get_settings_from_config_ini, print_log, raise_log, get_logger
 from magpie.definitions.alembic_definitions import alembic
 from magpie.definitions.sqlalchemy_definitions import (
@@ -26,13 +26,13 @@ LOGGER = get_logger(__name__)
 configure_mappers()
 
 
-def get_db_url(username=None, password=None, db_host=None, db_port=None, db_name=None):
+def get_db_url(username=None, password=None, db_host=None, db_port=None, db_name=None, settings=None):
     return "postgresql://%s:%s@%s:%s/%s" % (
-        username if username is not None else constants.MAGPIE_POSTGRES_USER,
-        password if password is not None else constants.MAGPIE_POSTGRES_PASSWORD,
-        db_host if db_host is not None else constants.MAGPIE_POSTGRES_HOST,
-        db_port if db_port is not None else constants.MAGPIE_POSTGRES_PORT,
-        db_name if db_name is not None else constants.MAGPIE_POSTGRES_DB,
+        username if username is not None else get_constant('MAGPIE_POSTGRES_USER', settings, 'postgres.user'),
+        password if password is not None else get_constant('MAGPIE_POSTGRES_PASSWORD', settings, 'postgres.password'),
+        db_host if db_host is not None else get_constant('MAGPIE_POSTGRES_HOST', settings, 'postgres.host'),
+        db_port if db_port is not None else get_constant('MAGPIE_POSTGRES_PORT', settings, 'postgres.port'),
+        db_name if db_name is not None else get_constant('MAGPIE_POSTGRES_DB', settings, 'postgres.db'),
     )
 
 
@@ -91,14 +91,15 @@ def get_db_session_from_config_ini(config_ini_path, ini_main_section_name='app:m
 def run_database_migration(db_session=None):
     # type: (Optional[Session]) -> None
     """Runs db migration operations with alembic, using db session or a new engine connection."""
-    LOGGER.info("Using file '{}' for migration.".format(constants.MAGPIE_ALEMBIC_INI_FILE_PATH))
-    alembic_args = ['-c', constants.MAGPIE_ALEMBIC_INI_FILE_PATH, 'upgrade', 'heads']
+    ini_file = get_constant('MAGPIE_ALEMBIC_INI_FILE_PATH')
+    LOGGER.info("Using file '{}' for migration.".format(ini_file))
+    alembic_args = ['-c', ini_file, 'upgrade', 'heads']
     if not isinstance(db_session, Session):
         alembic.config.main(argv=alembic_args)
     else:
         engine = db_session.bind
         with engine.begin() as connection:
-            alembic_cfg = alembic.config.Config(file_=constants.MAGPIE_ALEMBIC_INI_FILE_PATH)
+            alembic_cfg = alembic.config.Config(file_=ini_file)
             alembic_cfg.attributes['connection'] = connection
             alembic.command.upgrade(alembic_cfg, "head")
 
@@ -138,10 +139,10 @@ def run_database_migration_when_ready(settings, db_session=None):
     """
 
     db_ready = False
-    if constants.get_constant('MAGPIE_DB_MIGRATION', settings, 'magpie.db_migration', True,
-                              raise_missing=False, raise_not_set=False, print_missing=True):
-        attempts = constants.get_constant('MAGPIE_DB_MIGRATION_ATTEMPTS', settings, 'magpie.db_migration_attempts',
-                                          default_value=5, raise_missing=False, raise_not_set=False, print_missing=True)
+    if get_constant('MAGPIE_DB_MIGRATION', settings, 'magpie.db_migration', True,
+                    raise_missing=False, raise_not_set=False, print_missing=True):
+        attempts = get_constant('MAGPIE_DB_MIGRATION_ATTEMPTS', settings, 'magpie.db_migration_attempts',
+                                default_value=5, raise_missing=False, raise_not_set=False, print_missing=True)
 
         print_log('Running database migration (as required) ...')
         attempts = max(attempts, 2)     # enforce at least 2 attempts, 1 for db creation and one for actual migration

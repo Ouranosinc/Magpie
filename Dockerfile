@@ -1,27 +1,10 @@
-FROM ubuntu:16.04
+FROM python:2.7-alpine
 MAINTAINER Francis Charette-Migneault
-
-RUN apt-get update && apt-get install -y \
-	build-essential \
-	supervisor \
-	cron \
-	curl \
-	libssl-dev \
-	libffi-dev \
-	python-dev \
-	libxml2-dev \
-	libxslt1-dev \
-	zlib1g-dev \
-	python-pip \
-	git \
-	vim
 
 ARG MAGPIE_DIR=/opt/local/src/magpie
 ENV MAGPIE_ENV_DIR=$MAGPIE_DIR/env
 WORKDIR $MAGPIE_DIR
-
 COPY ./ $MAGPIE_DIR
-RUN make install -f $MAGPIE_DIR/Makefile
 
 # magpie cron service
 ADD magpie-cron /etc/cron.d/magpie-cron
@@ -30,4 +13,23 @@ RUN touch ~/magpie_cron_status.log
 # set /etc/environment so that cron runs using the environment variables set by docker
 RUN env >> /etc/environment
 
-CMD make start cron
+RUN apk update && apk add \
+        bash \
+        postgresql-libs \
+        py-pip \
+        libxslt-dev && \
+    apk add --virtual .build-deps \
+        supervisor \
+        gcc \
+        libffi-dev \
+        python-dev \
+        musl-dev \
+        postgresql-dev && \
+    pip install --no-cache-dir --upgrade pip setuptools && \
+    pip install --no-cache-dir -e $MAGPIE_DIR && \
+    apk --purge del .build-deps
+
+# equivalent of `make install` without conda env and pre-installed packages
+RUN pip install --no-dependencies -e $MAGPIE_DIR
+# equivalent of `make cron start` without conda env
+CMD crond && gunicorn -b 0.0.0.0:2001 --paste $MAGPIE_DIR/magpie/magpie.ini --workers 10 --preload
