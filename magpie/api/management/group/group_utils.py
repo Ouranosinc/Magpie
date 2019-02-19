@@ -39,7 +39,7 @@ def get_group_resources(group, db_session):
             db_session=db_session,
             service_perms=svc_perms,
             resources_perms_dict=res_perm_dict,
-            display_all=False,
+            show_all_children=False,
             show_private_url=False,
         )
     return json_response

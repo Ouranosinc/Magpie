@@ -196,7 +196,7 @@ def get_user_resources_view(request):
                 db_session=db,
                 service_perms=svc_perms,
                 resources_perms_dict=res_perms_dict,
-                display_all=False,
+                show_all_children=False,
                 show_private_url=False,
             )
         return json_res
@@ -403,7 +403,7 @@ def get_user_service_resources_view(request):
         db_session=request.db,
         service_perms=service_perms,
         resources_perms_dict=resources_perms_dict,
-        display_all=False,
+        show_all_children=False,
         show_private_url=False,
     )
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.UserServiceResources_GET_OkResponseSchema.description,

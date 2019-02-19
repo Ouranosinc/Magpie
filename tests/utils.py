@@ -852,26 +852,28 @@ class TestSetup(object):
         return json_body['group_names']
 
     @staticmethod
-    def check_NonExistingTestGroup(test_class):
+    def check_NonExistingTestGroup(test_class, override_group_name=None):
         groups = TestSetup.get_RegisteredGroupsList(test_class)
-        check_val_not_in(test_class.test_group_name, groups)
+        group_name = override_group_name or test_class.test_group_name
+        check_val_not_in(group_name, groups)
 
     @staticmethod
-    def create_TestGroup(test_class):
-        data = {"group_name": test_class.test_group_name}
+    def create_TestGroup(test_class, override_group_name=None):
+        data = {"group_name": override_group_name or test_class.test_group_name}
         resp = test_request(test_class.url, 'POST', '/groups',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
-    def delete_TestGroup(test_class):
+    def delete_TestGroup(test_class, override_group_name=None):
         groups = TestSetup.get_RegisteredGroupsList(test_class)
+        group_name = override_group_name or test_class.test_group_name
         # delete as required, skip if non-existing
-        if test_class.test_group_name in groups:
-            route = '/groups/{grp}'.format(grp=test_class.test_group_name)
+        if group_name in groups:
+            route = '/groups/{grp}'.format(grp=group_name)
             resp = test_request(test_class.url, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_response_basic_info(resp, 200, expected_method='DELETE')
-        TestSetup.check_NonExistingTestGroup(test_class)
+        TestSetup.check_NonExistingTestGroup(test_class, override_group_name=group_name)

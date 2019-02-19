@@ -195,7 +195,7 @@ def get_group_service_resources_view(request):
         db_session=request.db,
         service_perms=svc_perms,
         resources_perms_dict=res_perms,
-        display_all=False,
+        show_all_children=False,
         show_private_url=False,
     )
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.GroupServiceResources_GET_OkResponseSchema.description,

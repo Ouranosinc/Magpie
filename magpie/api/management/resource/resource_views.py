@@ -25,7 +25,7 @@ def get_resources_view(request):
         res_json[svc_type] = {}
         for svc in services:
             res_json[svc_type][svc.resource_name] = format_service_resources(
-                svc, request.db, display_all=True, show_private_url=False)
+                svc, request.db, show_all_children=True, show_private_url=False)
     res_json = {u'resources': res_json}
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.Resources_GET_OkResponseSchema.description, content=res_json)
 
