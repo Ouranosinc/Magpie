@@ -185,7 +185,8 @@ def delete_service_resource_view(request):
 def get_service_resources_view(request):
     """List all resources registered under a service."""
     service = ar.get_service_matchdict_checked(request)
-    svc_res_json = sf.format_service_resources(service, db_session=request.db, display_all=True, show_private_url=True)
+    svc_res_json = sf.format_service_resources(service, db_session=request.db,
+                                               show_all_children=True, show_private_url=True)
     return ax.valid_http(httpSuccess=HTTPOk, content={svc_res_json['service_name']: svc_res_json},
                          detail=s.ServiceResources_GET_OkResponseSchema.description)
 

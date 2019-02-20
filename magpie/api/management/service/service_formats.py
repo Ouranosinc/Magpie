@@ -39,9 +39,20 @@ def format_service_resources(service,                       # type: Service
                              db_session,                    # type: Session
                              service_perms=None,            # type: Optional[List[AnyStr]]
                              resources_perms_dict=None,     # type: Optional[Dict[AnyStr, List[AnyStr]]]
-                             display_all=False,             # type: Optional[bool]
+                             show_all_children=False,       # type: Optional[bool]
                              show_private_url=True,         # type: Optional[bool]
                              ):                             # type: (...) -> JsonBody
+    """
+    Formats the service and its resource tree as a JSON body.
+
+    :param service: service for which to display details with sub-resources
+    :param db_session: database session
+    :param service_perms: permissions to display instead of specific ``service``-type ones
+    :param resources_perms_dict: permission(s) of resource(s) id(s) to *preserve* if ``resources_perms_dict = False``
+    :param show_all_children: display all children resources recursively, or only ones matching ``resources_perms_dict``
+    :param show_private_url: displays the
+    :return: JSON body representation of the service resource tree
+    """
     def fmt_svc_res(svc, db, svc_perms, res_perms, show_all):
         tree = get_resource_children(svc, db)
         if not show_all:
@@ -53,8 +64,8 @@ def format_service_resources(service,                       # type: Service
         return svc_res
 
     return evaluate_call(
-        lambda: fmt_svc_res(service, db_session, service_perms, resources_perms_dict, display_all),
-        fallback=db_session.rollback(), httpError=HTTPInternalServerError,
+        lambda: fmt_svc_res(service, db_session, service_perms, resources_perms_dict or {}, show_all_children),
+        fallback=lambda: db_session.rollback(), httpError=HTTPInternalServerError,
         msgOnFail="Failed to format service resources tree",
         content=format_service(service, service_perms, show_private_url=show_private_url)
     )

@@ -120,7 +120,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
     @classmethod
     def setup_test_values(cls):
-        services_cfg = yaml.load(open(get_constant('MAGPIE_PROVIDERS_CONFIG_PATH'), 'r'))
+        services_cfg = yaml.safe_load(open(get_constant('MAGPIE_PROVIDERS_CONFIG_PATH'), 'r'))
         provider_services_info = services_cfg['providers']
         # filter impossible providers from possible previous version of remote server
         possible_service_types = utils.get_service_types_for_version(cls.version)

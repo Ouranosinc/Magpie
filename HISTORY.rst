@@ -31,7 +31,7 @@ History
 0.8.x
 ---------------------
 
-* update MagpieAdapter to match process store changes
+* update `MagpieAdapter` to match process store changes
 * provide user ID on API routes returning user info
 
 0.7.x

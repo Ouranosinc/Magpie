@@ -52,8 +52,8 @@ def fetch_public_key(repo):
 
     Travis API docs: http://docs.travis-ci.com/api/#repository-keys
     """
-    keyurl = 'https://api.travis-ci.org/repos/{0}/key'.format(repo)
-    data = json.loads(urlopen(keyurl).read())
+    key_url = 'https://api.travis-ci.org/repos/{0}/key'.format(repo)
+    data = json.loads(urlopen(key_url).read())
     if 'key' not in data:
         errmsg = "Could not find public key for repo: {}.\n".format(repo)
         errmsg += "Have you already added your GitHub repo to Travis?"
@@ -61,26 +61,26 @@ def fetch_public_key(repo):
     return data['key']
 
 
-def prepend_line(filepath, line):
+def prepend_line(file_path, line):
     """Rewrite a file adding a line to its beginning.
     """
-    with open(filepath) as f:
+    with open(file_path) as f:
         lines = f.readlines()
 
     lines.insert(0, line)
 
-    with open(filepath, 'w') as f:
+    with open(file_path, 'w') as f:
         f.writelines(lines)
 
 
-def load_yaml_config(filepath):
-    with open(filepath) as f:
-        return yaml.load(f)
+def load_yaml_config(file_path):
+    with open(file_path) as f:
+        return yaml.safe_load(f)
 
 
-def save_yaml_config(filepath, config):
-    with open(filepath, 'w') as f:
-        yaml.dump(config, f, default_flow_style=False)
+def save_yaml_config(file_path, config):
+    with open(file_path, 'w') as f:
+        yaml.safe_dump(config, f, default_flow_style=False)
 
 
 def update_travis_deploy_password(encrypted_password):
