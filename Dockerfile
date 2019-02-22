@@ -1,7 +1,8 @@
 FROM python:2.7-alpine
 MAINTAINER Francis Charette-Migneault
 
-ARG MAGPIE_DIR=/opt/local/src/magpie
+# the cron service depends on the $MAGPIE_DIR environment variable
+ENV MAGPIE_DIR=/opt/local/src/magpie
 ENV MAGPIE_ENV_DIR=$MAGPIE_DIR/env
 WORKDIR $MAGPIE_DIR
 
