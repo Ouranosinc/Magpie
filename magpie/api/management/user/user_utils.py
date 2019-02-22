@@ -69,7 +69,7 @@ def create_user(user_name, password, email, group_name, db_session):
                          content={u'user': uf.format_user(new_user, [group_name])})
 
 
-def create_user_resource_permission(permission_name, resource, user_id, db_session):
+def create_user_resource_permission(permission_name, resource, user, db_session):
     # type: (Str, models.Resource, models.User, Session) -> HTTPException
     """
     Creates a permission on a user/resource combination if it is permitted and not conflicting.
@@ -78,16 +78,16 @@ def create_user_resource_permission(permission_name, resource, user_id, db_sessi
     check_valid_service_resource_permission(permission_name, resource, db_session)
     resource_id = resource.resource_id
     existing_perm = UserResourcePermissionService.by_resource_user_and_perm(
-        user_id=user_id, resource_id=resource_id, perm_name=permission_name, db_session=db_session)
+        user_id=user.id, resource_id=resource_id, perm_name=permission_name, db_session=db_session)
     ax.verify_param(existing_perm, isNone=True, httpError=HTTPConflict,
-                    content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name},
+                    content={u'resource_id': resource_id, u'user_id': user.id, u'permission_name': permission_name},
                     msgOnFail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
 
     # noinspection PyArgumentList
-    new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user_id, perm_name=permission_name)
-    usr_res_data = {u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name}
+    new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user.id, perm_name=permission_name)
+    usr_res_data = {u'resource_id': resource_id, u'user_id': user.id, u'permission_name': permission_name}
     ax.verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
-                    content={u'resource_id': resource_id, u'user_id': user_id},
+                    content={u'resource_id': resource_id, u'user_id': user.id},
                     msgOnFail=s.UserResourcePermissions_POST_NotAcceptableResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                      httpError=HTTPForbidden, content=usr_res_data,
