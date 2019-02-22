@@ -268,7 +268,7 @@ def create_user_resource_permission_view(request):
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request)
     perm_name = ar.get_permission_multiformat_post_checked(request, resource)
-    return uu.create_user_resource_permission(perm_name, resource, user.id, request.db)
+    return uu.create_user_resource_permission(perm_name, resource, user, request.db)
 
 
 @s.UserResourcePermissionAPI.delete(schema=s.UserResourcePermission_DELETE_RequestSchema(), tags=[s.UsersTag],
@@ -282,7 +282,7 @@ def delete_user_resource_permission_view(request):
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request)
     perm_name = ar.get_permission_matchdict_checked(request, resource)
-    return uu.delete_user_resource_permission(perm_name, resource, user.id, request.db)
+    return uu.delete_user_resource_permission(perm_name, resource, user, request.db)
 
 
 @s.UserServicesAPI.get(tags=[s.UsersTag], schema=s.UserServices_GET_RequestSchema,
