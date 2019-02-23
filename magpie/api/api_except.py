@@ -8,13 +8,13 @@ from magpie.definitions.pyramid_definitions import (
     HTTPRedirection,
     HTTPOk,
 )
-from typing import TYPE_CHECKING
 from sys import exc_info
+from typing import TYPE_CHECKING
 import json
 import six
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import (  # noqa: F401
-        Any, Str, Callable, List, Iterable, Optional, Tuple, Union, JsonBody, ParamKWArgs, PyramidResponse
+        Any, Str, Callable, List, Iterable, Optional, Tuple, Union, JSON, ParamsType, PyramidResponse
     )
 
 # control variables to avoid infinite recursion in case of
@@ -32,9 +32,9 @@ def verify_param(   # noqa: E126
                  paramName=None,                    # type: Optional[Str]
                  withParam=True,                    # type: Optional[bool]
                  httpError=HTTPNotAcceptable,       # type: Optional[HTTPError]
-                 httpKWArgs=None,                   # type: Optional[ParamKWArgs]
+                 httpKWArgs=None,                   # type: Optional[ParamsType]
                  msgOnFail="",                      # type: Optional[Str]
-                 content=None,                      # type: Optional[JsonBody]
+                 content=None,                      # type: Optional[JSON]
                  contentType=JSON_TYPE,             # type: Optional[Str]
                  # --- verification flags (method) ---
                  notNone=False,                     # type: Optional[bool]
@@ -164,9 +164,9 @@ def verify_param(   # noqa: E126
 def evaluate_call(call,                                 # type: Optional[Callable[[], Any]]
                   fallback=None,                        # type: Optional[Callable[[], None]]
                   httpError=HTTPInternalServerError,    # type: Optional[HTTPError]
-                  httpKWArgs=None,                      # type: Optional[ParamKWArgs]
+                  httpKWArgs=None,                      # type: Optional[ParamsType]
                   msgOnFail="",                         # type: Optional[Str]
-                  content=None,                         # type: Optional[JsonBody]
+                  content=None,                         # type: Optional[JSON]
                   contentType=JSON_TYPE                 # type: Optional[Str]
                   ):                                    # type: (...) -> Any
     """
@@ -224,21 +224,21 @@ def evaluate_call(call,                                 # type: Optional[Callabl
             fallback()
     except Exception as e:
         fe = repr(e)
-        raise_http(httpError=HTTPInternalServerError, httpKWArgs=httpKWArgs,
-                   detail="Exception occurred during `fallback` called after failing `call` exception",
-                   content={u'call': {u'exception': ce, u'detail': msgOnFail, u'content': repr(content)},
-                            u'fallback': {u'exception': fe}},
-                   contentType=contentType)
-    raise_http(httpError, detail=msgOnFail, httpKWArgs=httpKWArgs,
-               content={u'call': {u'exception': ce, u'content': repr(content)}},
-               contentType=contentType)
+        content = {
+            u'call': {u'exception': ce, u'detail': msgOnFail, u'content': repr(content)},
+            u'fallback': {u'exception': fe}
+        }
+        raise_http(httpError=HTTPInternalServerError, httpKWArgs=httpKWArgs, contentType=contentType, content=content,
+                   detail="Exception occurred during `fallback` called after failing `call` exception")
+    raise_http(httpError, detail=msgOnFail, httpKWArgs=httpKWArgs, contentType=contentType,
+               content={u'call': {u'exception': ce, u'content': repr(content)}})
 
 
 # noinspection PyPep8Naming
 def valid_http(httpSuccess=HTTPOk,      # type: Optional[HTTPSuccessful]
-               httpKWArgs=None,         # type: Optional[ParamKWArgs]
+               httpKWArgs=None,         # type: Optional[ParamsType]
                detail="",               # type: Optional[Str]
-               content=None,            # type: Optional[JsonBody]
+               content=None,            # type: Optional[JSON]
                contentType=JSON_TYPE,   # type: Optional[Str]
                ):                       # type: (...) -> HTTPException
     """
@@ -267,9 +267,9 @@ def valid_http(httpSuccess=HTTPOk,      # type: Optional[HTTPSuccessful]
 
 # noinspection PyPep8Naming
 def raise_http(httpError=HTTPInternalServerError,   # type: Optional[HTTPError]
-               httpKWArgs=None,                     # type: Optional[ParamKWArgs]
+               httpKWArgs=None,                     # type: Optional[ParamsType]
                detail="",                           # type: Optional[Str]
-               content=None,                        # type: Optional[JsonBody]
+               content=None,                        # type: Optional[JSON]
                contentType=JSON_TYPE,               # type: Optional[Str]
                nothrow=False                        # type: Optional[bool]
                ):                                   # type: (...) -> Union[HTTPException, None]
@@ -319,9 +319,9 @@ def raise_http(httpError=HTTPInternalServerError,   # type: Optional[HTTPError]
 def validate_params(httpClass,      # type: HTTPException
                     httpBase,       # type: Union[HTTPException, Iterable[HTTPException]]
                     detail,         # type: Str
-                    content,        # type: Union[JsonBody, None]
+                    content,        # type: Union[JSON, None]
                     contentType,    # type: Str
-                    ):              # type: (...) -> Tuple[int, Str, JsonBody]
+                    ):              # type: (...) -> Tuple[int, Str, JSON]
     """
     Validates parameter types and formats required by :function:`valid_http` and :function:`raise_http`.
 
@@ -342,6 +342,7 @@ def validate_params(httpClass,      # type: HTTPException
     verify_param(isclass(httpClass), paramName='httpClass', isTrue=True,
                  httpError=HTTPInternalServerError, contentType=JSON_TYPE, content={u'caller': caller},
                  msgOnFail="Object specified is not a class, class derived from `HTTPException` is expected.")
+
     # if `httpClass` derives from `httpBase` (ex: `HTTPSuccessful` or `HTTPError`) it is of proper requested type
     # if it derives from `HTTPException`, it *could* be different than base (ex: 2xx instead of 4xx codes)
     # return 'unknown error' (520) if not of lowest level base `HTTPException`, otherwise use the available code
@@ -390,7 +391,7 @@ def format_content_json_str(httpCode, detail, content, contentType):
 
 # noinspection PyPep8Naming
 def generate_response_http_format(httpClass, httpKWArgs, jsonContent, outputType=PLAIN_TYPE):
-    # type: (Union[HTTPException, PyramidResponse], ParamKWArgs, JsonBody, Optional[Str]) -> PyramidResponse
+    # type: (Union[HTTPException, PyramidResponse], ParamsType, JSON, Optional[Str]) -> PyramidResponse
     """
     Formats the HTTP response output according to desired ``outputType`` using provided HTTP code and content.
 
@@ -409,8 +410,7 @@ def generate_response_http_format(httpClass, httpKWArgs, jsonContent, outputType
     try:
         # directly output json
         if outputType == JSON_TYPE:
-            json_type = '{}; charset=UTF-8'.format(JSON_TYPE)
-            httpResponse = httpClass(body=jsonContent, content_type=json_type, **httpKWArgs)
+            httpResponse = httpClass(body=jsonContent, content_type='{}; charset=UTF-8'.format(JSON_TYPE), **httpKWArgs)
 
         # otherwise json is contained within the html <body> section
         elif outputType == HTML_TYPE:

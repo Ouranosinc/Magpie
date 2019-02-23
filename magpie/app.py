@@ -9,6 +9,7 @@ from magpie.common import print_log, get_logger
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import asbool
 from magpie.helpers.register_default_users import register_default_users
+from magpie.services import update_service_types
 from magpie.register import (
     magpie_register_services_from_config,
     magpie_register_permissions_from_config,
@@ -57,6 +58,13 @@ def main(global_config=None, **settings):
 
     print_log('Register default users...', LOGGER)
     register_default_users(db_session=db_session)
+
+    print_log('Register custom service types...', logger=LOGGER)
+    custom_service_types_paths = get_constant('MAGPIE_SERVICES_PATHS', settings, 'magpie.services_paths',
+                                              raise_missing=False, raise_not_set=False, print_missing=True)
+    custom_service_types_filter = get_constant('MAGPIE_SERVICES_FILTER', settings, 'magpie.services_filter',
+                                               raise_missing=False, raise_not_set=False, print_missing=True)
+    update_service_types(custom_service_types_paths, custom_service_types_filter, db_session)
 
     print_log('Register configuration providers...', logger=LOGGER)
     push_phoenix = asbool(get_constant('PHOENIX_PUSH', settings, settings_name='magpie.phoenix_push',

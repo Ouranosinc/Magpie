@@ -1,28 +1,11 @@
+from magpie.definitions.pyramid_definitions import Allow, ALL_PERMISSIONS, HTTPInternalServerError
+from magpie.definitions.sqlalchemy_definitions import sa, declarative_base, declared_attr, relationship
+from magpie.definitions import ziggurat_definitions as zig
 from magpie.api.api_except import evaluate_call
-from magpie.definitions.pyramid_definitions import ALLOW, ALL_PERMISSIONS, HTTPInternalServerError
-from magpie.definitions.sqlalchemy_definitions import sa, declared_attr, relationship, declarative_base
-from magpie.definitions.ziggurat_definitions import (
-    get_db_session,
-    permission_to_pyramid_acls,
-    ziggurat_model_init,
-    BaseModel,
-    ExternalIdentityMixin,
-    GroupMixin,
-    GroupPermissionMixin,
-    GroupResourcePermissionMixin,
-    ResourceMixin,
-    ResourceTreeService,
-    ResourceTreeServicePostgreSQL,
-    UserGroupMixin,
-    UserMixin,
-    UserPermissionMixin,
-    UserResourcePermissionMixin,
-    UserService,
-)
 from magpie import permissions as p
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str  # noqa: F401
+    from magpie.definitions.typedefs import Str
 
 Base = declarative_base()
 
@@ -35,22 +18,22 @@ def get_user(request):
     user_id = request.unauthenticated_userid
     db_session = get_session_callable(request)
     if user_id is not None:
-        return UserService.by_id(user_id, db_session=db_session)
+        return zig.UserService.by_id(user_id, db_session=db_session)
 
 
-class Group(GroupMixin, Base):
+class Group(zig.GroupMixin, Base):
     pass
 
 
-class GroupPermission(GroupPermissionMixin, Base):
+class GroupPermission(zig.GroupPermissionMixin, Base):
     pass
 
 
-class UserGroup(UserGroupMixin, Base):
+class UserGroup(zig.UserGroupMixin, Base):
     pass
 
 
-class GroupResourcePermission(GroupResourcePermissionMixin, Base):
+class GroupResourcePermission(zig.GroupResourcePermissionMixin, Base):
     pass
 
 
@@ -63,7 +46,7 @@ class ResourceMeta(type):
                              "and must be added to `resource_type_dict`.")
 
 
-class Resource(ResourceMixin, Base):
+class Resource(zig.ResourceMixin, Base):
     permission_names = []
     child_resource_allowed = True
     resource_display_name = sa.Column(sa.Unicode(100), nullable=True)
@@ -82,27 +65,27 @@ class Resource(ResourceMixin, Base):
         acl = []
 
         if self.owner_user_id:
-            acl.extend([(ALLOW, self.owner_user_id, ALL_PERMISSIONS,), ])
+            acl.extend([(Allow, self.owner_user_id, ALL_PERMISSIONS,), ])
 
         if self.owner_group_id:
-            acl.extend([(ALLOW, "group:%s" % self.owner_group_id, ALL_PERMISSIONS,), ])
+            acl.extend([(Allow, "group:%s" % self.owner_group_id, ALL_PERMISSIONS,), ])
         return acl
 
 
-class UserPermission(UserPermissionMixin, Base):
+class UserPermission(zig.UserPermissionMixin, Base):
     pass
 
 
-class UserResourcePermission(UserResourcePermissionMixin, Base):
+class UserResourcePermission(zig.UserResourcePermissionMixin, Base):
     pass
 
 
-class User(UserMixin, Base):
+class User(zig.UserMixin, Base):
     # ... your own properties....
     pass
 
 
-class ExternalIdentity(ExternalIdentityMixin, Base):
+class ExternalIdentity(zig.ExternalIdentityMixin, Base):
     pass
 
 
@@ -110,8 +93,8 @@ class RootFactory(object):
     def __init__(self, request):
         self.__acl__ = []
         if request.user:
-            permissions = UserService.permissions(request.user, request.db)
-            for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
+            permissions = zig.UserService.permissions(request.user, request.db)
+            for outcome, perm_user, perm_name in zig.permission_to_pyramid_acls(permissions):
                 self.__acl__.append((outcome, perm_user, perm_name))
 
 
@@ -154,7 +137,7 @@ class Service(Resource):
 
     @staticmethod
     def by_service_name(service_name, db_session):
-        db = get_db_session(db_session)
+        db = zig.get_db_session(db_session)
         service = db.query(Service).filter(Resource.resource_name == service_name).first()
         return service
 
@@ -167,7 +150,7 @@ class Service(Resource):
             self.__acl__.append(ace)
         # Custom acl
         permissions = resource.perms_for_user(user)
-        for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
+        for outcome, perm_user, perm_name in zig.permission_to_pyramid_acls(permissions):
             self.__acl__.append((outcome, perm_user, perm_name,))
 
 
@@ -216,18 +199,18 @@ class Route(Resource):
     __mapper_args__ = {u'polymorphic_identity': resource_type_name}
 
     permission_names = [
-        p.PERMISSION_READ,            # access with inheritance (this route and all under it)
-        p.PERMISSION_WRITE,           # access with inheritance (this route and all under it)
-        p.PERMISSION_READ_MATCH,      # access without inheritance (only on this specific route)
-        p.PERMISSION_WRITE_MATCH,     # access without inheritance (only on this specific route)
+        p.PERMISSION_READ,          # access with inheritance (this route and all under it)
+        p.PERMISSION_WRITE,         # access with inheritance (this route and all under it)
+        p.PERMISSION_READ_MATCH,    # access without inheritance (only on this specific route)
+        p.PERMISSION_WRITE_MATCH,   # access without inheritance (only on this specific route)
     ]
 
 
-class RemoteResource(BaseModel, Base):
+class RemoteResource(zig.BaseModel, Base):
     __tablename__ = "remote_resources"
 
     __possible_permissions__ = ()
-    _ziggurat_services = [ResourceTreeService]
+    _ziggurat_services = [zig.ResourceTreeService]
 
     resource_id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
     service_id = sa.Column(sa.Integer(),
@@ -251,7 +234,7 @@ class RemoteResource(BaseModel, Base):
         return '<RemoteResource: %s, %s, id: %s position: %s, parent_id: %s>' % info
 
 
-class RemoteResourcesSyncInfo(BaseModel, Base):
+class RemoteResourcesSyncInfo(zig.BaseModel, Base):
     __tablename__ = "remote_resources_sync_info"
 
     id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
@@ -279,13 +262,13 @@ class RemoteResourcesSyncInfo(BaseModel, Base):
         return '<RemoteResourcesSyncInfo service_id: %s, last_sync: %s, id: %s>' % info
 
 
-class RemoteResourceTreeService(ResourceTreeService):
+class RemoteResourceTreeService(zig.ResourceTreeService):
     def __init__(self, service_cls):
         self.model = RemoteResource
         super(RemoteResourceTreeService, self).__init__(service_cls)
 
 
-class RemoteResourceTreeServicePostgresSQL(ResourceTreeServicePostgreSQL):
+class RemoteResourceTreeServicePostgresSQL(zig.ResourceTreeServicePostgreSQL):
     """
     This is necessary, because ResourceTreeServicePostgresSQL.model is the Resource class.
     If we want to change it for a RemoteResource, we need this class.
@@ -295,11 +278,11 @@ class RemoteResourceTreeServicePostgresSQL(ResourceTreeServicePostgreSQL):
     pass
 
 
-ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
-                    UserResourcePermission, GroupResourcePermission, Resource,
-                    ExternalIdentity, passwordmanager=None)
+zig.ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
+                        UserResourcePermission, GroupResourcePermission, Resource,
+                        ExternalIdentity, passwordmanager=None)
 
-resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
+resource_tree_service = zig.ResourceTreeService(zig.ResourceTreeServicePostgreSQL)
 remote_resource_tree_service = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
 resource_type_dict = {

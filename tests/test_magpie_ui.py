@@ -11,6 +11,7 @@ Tests for `magpie.ui` module.
 from magpie.common import JSON_TYPE
 from magpie.constants import get_constant
 from tests import utils, runner
+import unittest
 
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
@@ -30,7 +31,6 @@ class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.Test
     @classmethod
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
-        cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.json_headers = utils.get_headers(cls.app, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
         cls.cookies = None
         cls.test_user = get_constant('MAGPIE_ANONYMOUS_USER')
@@ -55,11 +55,10 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         cls.usr = get_constant('MAGPIE_TEST_ADMIN_USERNAME')
         cls.pwd = get_constant('MAGPIE_TEST_ADMIN_PASSWORD')
         cls.app = utils.get_test_magpie_app()
-        cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.json_headers = utils.get_headers(cls.app, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd, use_ui_form_submit=True)
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()
 

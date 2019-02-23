@@ -1,12 +1,22 @@
 from magpie.security import authomatic_setup, get_provider_names
 from magpie.definitions.pyramid_definitions import (
     view_config,
+<<<<<<< b45d2af26d6844b735d6e534cb418ff03b8a9186
     forget,
     remember,
     Authenticated,
     IAuthenticationPolicy,
     Request,
     Response,
+=======
+    remember,
+    forget,
+    Request,
+    Response,
+    IAuthenticationPolicy,
+    Authenticated,
+    NO_PERMISSION_REQUIRED,
+>>>>>>> working on dynamic service by config (process+tests) + 0.9.4 → 0.10.0
     HTTPOk,
     HTTPFound,
     HTTPTemporaryRedirect,
@@ -17,6 +27,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPConflict,
     HTTPNotAcceptable,
     HTTPInternalServerError,
+<<<<<<< b45d2af26d6844b735d6e534cb418ff03b8a9186
     NO_PERMISSION_REQUIRED,
 )
 from magpie.definitions.ziggurat_definitions import (
@@ -34,6 +45,23 @@ from magpie.common import convert_response, get_logger, JSON_TYPE
 from magpie.constants import get_constant
 from magpie.models import User, ExternalIdentity
 from magpie.utils import get_magpie_url
+=======
+)
+from magpie.definitions.ziggurat_definitions import (
+    UserService,
+    ExternalIdentityService,
+    ZigguratSignOut,
+    ZigguratSignInSuccess,
+    ZigguratSignInBadAuth,
+)
+from magpie.api import api_requests as ar, api_rest_schemas as s, api_except as ax, api_generic as ag
+from magpie.api.management.user.user_formats import format_user
+from magpie.api.management.user.user_utils import create_user
+from magpie.constants import get_constant
+from magpie.common import convert_response, get_logger, JSON_TYPE
+from magpie.utils import get_magpie_url
+from magpie import models
+>>>>>>> working on dynamic service by config (process+tests) + 0.9.4 → 0.10.0
 from authomatic.adapters import WebObAdapter
 from authomatic.core import LoginResult, Credentials, resolve_provider_class
 from authomatic.exceptions import OAuth2Error
@@ -75,9 +103,9 @@ def verify_provider(provider_name):
 @view_config(route_name=s.SigninAPI.name, request_method='POST', permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
     """Signs in a user session."""
-    provider_name = get_value_multiformat_post_checked(request, 'provider_name', default=default_provider).lower()
-    user_name = get_value_multiformat_post_checked(request, 'user_name')
-    password = get_multiformat_post(request, 'password')   # no check since password is None for external login
+    provider_name = ar.get_value_multiformat_post_checked(request, 'provider_name', default=default_provider).lower()
+    user_name = ar.get_value_multiformat_post_checked(request, 'user_name')
+    password = ar.get_multiformat_post(request, 'password')   # no check since password is None for external login
     verify_provider(provider_name)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
@@ -94,7 +122,11 @@ def sign_in(request):
     elif provider_name in MAGPIE_EXTERNAL_PROVIDERS.keys():
         return ax.evaluate_call(lambda: process_sign_in_external(request, user_name, provider_name),
                                 httpError=HTTPInternalServerError,
+<<<<<<< b45d2af26d6844b735d6e534cb418ff03b8a9186
                                 content={u'user_name': user_name, u'provider_name': provider_name},
+=======
+                                content={u'user_name': user_name,  u'provider_name': provider_name},
+>>>>>>> working on dynamic service by config (process+tests) + 0.9.4 → 0.10.0
                                 msgOnFail=s.Signin_POST_InternalServerErrorResponseSchema.description)
 
 
@@ -113,14 +145,25 @@ def login_failure(request, reason=None):
     if reason is None:
         http_err = HTTPNotAcceptable
         reason = s.Signin_POST_NotAcceptableResponseSchema.description
+<<<<<<< b45d2af26d6844b735d6e534cb418ff03b8a9186
         user_name = get_multiformat_post(request, 'user_name', default=None)
+=======
+        user_name = ar.get_multiformat_post(request, 'user_name', default=None)
+>>>>>>> working on dynamic service by config (process+tests) + 0.9.4 → 0.10.0
         if user_name is None:
             http_err = HTTPBadRequest
             reason = s.Signin_POST_BadRequestResponseSchema.description
         else:
+<<<<<<< b45d2af26d6844b735d6e534cb418ff03b8a9186
             user_name_list = ax.evaluate_call(lambda: [user.user_name for user in User.all(db_session=request.db)],
                                               fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                                               msgOnFail=s.Signin_POST_ForbiddenResponseSchema.description)
+=======
+            user_name_list = ax.evaluate_call(
+                lambda: [user.user_name for user in models.User.all(db_session=request.db)],
+                fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                msgOnFail=s.Signin_POST_ForbiddenResponseSchema.description)
+>>>>>>> working on dynamic service by config (process+tests) + 0.9.4 → 0.10.0
             if user_name in user_name_list:
                 http_err = HTTPUnauthorized
                 reason = "Incorrect credentials."
@@ -138,8 +181,13 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
 
     user = UserService.by_user_name(internal_user_name, db_session=db_session)
     # noinspection PyArgumentList
+<<<<<<< b45d2af26d6844b735d6e534cb418ff03b8a9186
     ex_identity = ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
                                    local_user_id=user.id, provider_name=provider_name)
+=======
+    ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
+                                          local_user_id=user.id, provider_name=provider_name)
+>>>>>>> working on dynamic service by config (process+tests) + 0.9.4 → 0.10.0
     ax.evaluate_call(lambda: db_session.add(ex_identity), fallback=lambda: db_session.rollback(),
                      httpError=HTTPConflict, msgOnFail=s.Signin_POST_ConflictResponseSchema.description,
                      content={u'provider_name': str(provider_name),

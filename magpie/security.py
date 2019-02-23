@@ -10,7 +10,7 @@ from authomatic.providers import oauth2, openid
 from typing import TYPE_CHECKING
 import logging
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import JsonBody  # noqa: F401
+    from magpie.definitions.typedefs import JSON  # noqa: F401
 AUTHOMATIC_LOGGER = get_logger('magpie.authomatic', level=logging.DEBUG)
 
 
@@ -55,6 +55,7 @@ def authomatic_setup(request):
     )
 
 
+# noinspection PyPep8Naming
 def authomatic_config(request=None):
 
     defaults_config = {
@@ -128,7 +129,7 @@ def authomatic_config(request=None):
     }
 
     # Concatenate the configs.
-    config = {}  # type: JsonBody
+    config = {}  # type: JSON
     config.update(oauth2_config)
     config.update(openid_config)
     config.update(esgf_config)

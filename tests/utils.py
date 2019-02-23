@@ -133,8 +133,9 @@ def get_test_magpie_app(settings=None):
     config.registry.settings['magpie.db_migration'] = False
     if settings:
         config.registry.settings.update(settings)
-    # create the test application
+    # scan dependencies
     config.include('magpie')
+    # create the test application
     magpie_app = TestApp(app.main({}, **config.registry.settings))
     return magpie_app
 
@@ -174,7 +175,7 @@ def get_json_body(response):
 
 
 def get_service_types_for_version(version):
-    available_service_types = set(services.service_type_dict.keys())
+    available_service_types = set(services.SERVICE_TYPE_DICT.keys())
     if LooseVersion(version) <= LooseVersion('0.6.1'):
         available_service_types = available_service_types - {'access'}
     return list(available_service_types)
@@ -604,10 +605,8 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
 class TestSetup(object):
     @staticmethod
     def get_Version(test_class):
-        app_or_url = get_app_or_url(test_class)
-        resp = test_request(app_or_url, 'GET', '/version',
-                            headers=test_class.json_headers,
-                            cookies=test_class.cookies)
+        resp = test_request(test_class, 'GET', '/version',
+                            headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200)
         return json_body['version']
 
@@ -619,8 +618,7 @@ class TestSetup(object):
 
         :returns: response from the rendered page for further tests
         """
-        app_or_url = get_app_or_url(test_class)
-        resp = test_request(app_or_url, method, path, cookies=test_class.cookies, timeout=timeout)
+        resp = test_request(test_class, method, path, cookies=test_class.cookies, timeout=timeout)
         check_ui_response_basic_info(resp)
         return resp
 
@@ -687,15 +685,14 @@ class TestSetup(object):
         Verifies that Magpie returned an Unauthorized response.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
-        app_or_url = get_app_or_url(test_class)
-        resp = test_request(app_or_url, method, path, cookies=test_class.cookies, expect_errors=True)
+        resp = test_request(test_class, method, path, cookies=test_class.cookies, expect_errors=True)
         check_response_basic_info(resp, expected_code=401, expected_type=content_type, expected_method=method)
 
     @staticmethod
     def get_AnyServiceOfTestServiceType(test_class):
-        app_or_url = get_app_or_url(test_class)
         route = '/services/types/{}'.format(test_class.test_service_type)
-        resp = test_request(app_or_url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
+        resp = test_request(test_class, 'GET', route,
+                            headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method='GET')
         check_val_is_in('services', json_body)
         check_val_is_in(test_class.test_service_type, json_body['services'])
@@ -706,7 +703,6 @@ class TestSetup(object):
 
     @staticmethod
     def create_TestServiceResource(test_class, data_override=None):
-        app_or_url = get_app_or_url(test_class)
         TestSetup.create_TestService(test_class)
         route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
         data = {
@@ -715,16 +711,15 @@ class TestSetup(object):
         }
         if data_override:
             data.update(data_override)
-        resp = test_request(app_or_url, 'POST', route,
+        resp = test_request(test_class, 'POST', route,
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
     def get_ExistingTestServiceInfo(test_class):
-        app_or_url = get_app_or_url(test_class)
         route = '/services/{svc}'.format(svc=test_class.test_service_name)
-        resp = test_request(app_or_url, 'GET', route,
+        resp = test_request(test_class, 'GET', route,
                             headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = get_json_body(resp)
         svc_getter = 'service'
@@ -734,9 +729,8 @@ class TestSetup(object):
 
     @staticmethod
     def get_TestServiceDirectResources(test_class, ignore_missing_service=False):
-        app_or_url = get_app_or_url(test_class)
         route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
-        resp = test_request(app_or_url, 'GET', route,
+        resp = test_request(test_class, 'GET', route,
                             headers=test_class.json_headers, cookies=test_class.cookies,
                             expect_errors=ignore_missing_service)
         if ignore_missing_service and resp.status_code == 404:
@@ -753,7 +747,6 @@ class TestSetup(object):
 
     @staticmethod
     def delete_TestServiceResource(test_class, override_resource_name=None):
-        app_or_url = get_app_or_url(test_class)
         resource_name = override_resource_name or test_class.test_resource_name
         resources = TestSetup.get_TestServiceDirectResources(test_class, ignore_missing_service=True)
         test_resource = list(filter(lambda r: r['resource_name'] == resource_name, resources))
@@ -761,7 +754,7 @@ class TestSetup(object):
         if len(test_resource) > 0:
             resource_id = test_resource[0]['resource_id']
             route = '/services/{svc}/resources/{res_id}'.format(svc=test_class.test_service_name, res_id=resource_id)
-            resp = test_request(app_or_url, 'DELETE', route,
+            resp = test_request(test_class, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_val_equal(resp.status_code, 200)
@@ -769,7 +762,6 @@ class TestSetup(object):
 
     @staticmethod
     def create_TestService(test_class, override_service_name=None, override_service_type=None):
-        app_or_url = get_app_or_url(test_class)
         svc_name = override_service_name or test_class.test_service_name
         svc_type = override_service_type or test_class.test_service_type
         data = {
@@ -777,12 +769,12 @@ class TestSetup(object):
             u'service_type': svc_type,
             u'service_url': u'http://localhost:9000/{}'.format(svc_name)
         }
-        resp = test_request(app_or_url, 'POST', '/services', json=data,
+        resp = test_request(test_class, 'POST', '/services', json=data,
                             headers=test_class.json_headers, cookies=test_class.cookies,
                             expect_errors=True)
         if resp.status_code == 409:
             path = '/services/{svc}'.format(svc=svc_name)
-            resp = test_request(app_or_url, 'GET', path,
+            resp = test_request(test_class, 'GET', path,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             body = check_response_basic_info(resp, 200, expected_method='GET')
@@ -801,14 +793,13 @@ class TestSetup(object):
 
     @staticmethod
     def delete_TestService(test_class, override_service_name=None):
-        app_or_url = get_app_or_url(test_class)
         service_name = override_service_name or test_class.test_service_name
         services_info = TestSetup.get_RegisteredServicesList(test_class)
         test_service = list(filter(lambda r: r['service_name'] == service_name, services_info))
         # delete as required, skip if non-existing
         if len(test_service) > 0:
             route = '/services/{svc_name}'.format(svc_name=service_name)
-            resp = test_request(app_or_url, 'DELETE', route,
+            resp = test_request(test_class, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_val_equal(resp.status_code, 200)
@@ -816,8 +807,7 @@ class TestSetup(object):
 
     @staticmethod
     def get_RegisteredServicesList(test_class):
-        app_or_url = get_app_or_url(test_class)
-        resp = test_request(app_or_url, 'GET', '/services',
+        resp = test_request(test_class, 'GET', '/services',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method='GET')
@@ -831,8 +821,7 @@ class TestSetup(object):
 
     @staticmethod
     def get_RegisteredUsersList(test_class):
-        app_or_url = get_app_or_url(test_class)
-        resp = test_request(app_or_url, 'GET', '/users',
+        resp = test_request(test_class, 'GET', '/users',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method='GET')
@@ -846,7 +835,6 @@ class TestSetup(object):
 
     @staticmethod
     def create_TestUser(test_class, override_data=None):
-        app_or_url = get_app_or_url(test_class)
         data = {
             "user_name": test_class.test_user_name,
             "email": '{}@mail.com'.format(test_class.test_user_name),
@@ -855,20 +843,19 @@ class TestSetup(object):
         }
         if override_data:
             data.update(override_data)
-        resp = test_request(app_or_url, 'POST', '/users',
+        resp = test_request(test_class, 'POST', '/users',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
     def delete_TestUser(test_class, override_user_name=None):
-        app_or_url = get_app_or_url(test_class)
         users = TestSetup.get_RegisteredUsersList(test_class)
         user_name = override_user_name or test_class.test_user_name
         # delete as required, skip if non-existing
         if user_name in users:
             route = '/users/{usr}'.format(usr=user_name)
-            resp = test_request(app_or_url, 'DELETE', route,
+            resp = test_request(test_class, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_response_basic_info(resp, 200, expected_method='DELETE')
@@ -876,8 +863,7 @@ class TestSetup(object):
 
     @staticmethod
     def get_RegisteredGroupsList(test_class):
-        app_or_url = get_app_or_url(test_class)
-        resp = test_request(app_or_url, 'GET', '/groups',
+        resp = test_request(test_class, 'GET', '/groups',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method='GET')
@@ -891,22 +877,20 @@ class TestSetup(object):
 
     @staticmethod
     def create_TestGroup(test_class, override_group_name=None):
-        app_or_url = get_app_or_url(test_class)
         data = {"group_name": override_group_name or test_class.test_group_name}
-        resp = test_request(app_or_url, 'POST', '/groups',
+        resp = test_request(test_class, 'POST', '/groups',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
     def delete_TestGroup(test_class, override_group_name=None):
-        app_or_url = get_app_or_url(test_class)
         groups = TestSetup.get_RegisteredGroupsList(test_class)
         group_name = override_group_name or test_class.test_group_name
         # delete as required, skip if non-existing
         if group_name in groups:
             route = '/groups/{grp}'.format(grp=group_name)
-            resp = test_request(app_or_url, 'DELETE', route,
+            resp = test_request(test_class, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_response_basic_info(resp, 200, expected_method='DELETE')

@@ -21,7 +21,6 @@ class TestRegister(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
-        cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.grp = get_constant('MAGPIE_ADMIN_GROUP')
         cls.usr = get_constant('MAGPIE_TEST_ADMIN_USERNAME')
         cls.pwd = get_constant('MAGPIE_TEST_ADMIN_PASSWORD')

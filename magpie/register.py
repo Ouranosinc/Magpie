@@ -9,7 +9,7 @@ from magpie.api.api_rest_schemas import (
     GroupResourcePermissionsAPI,
     UserResourcePermissionsAPI,
 )
-from magpie.common import make_dirs, print_log, raise_log, bool2str, islambda, get_logger, get_json
+from magpie.common import make_dirs, print_log, raise_log, bool2str, list2str, islambda, get_logger, get_json
 from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import (
     ResourceService,
@@ -20,7 +20,7 @@ from magpie.definitions.ziggurat_definitions import (
 from magpie.definitions.sqlalchemy_definitions import Session
 from magpie.definitions.pyramid_definitions import HTTPException
 from magpie.permissions import permissions_supported
-from magpie.services import service_type_dict
+from magpie.services import SERVICE_TYPE_DICT
 from magpie import models
 from magpie.utils import get_twitcher_protected_service_url, get_phoenix_url, get_magpie_url, get_admin_cookies
 from typing import TYPE_CHECKING
@@ -34,10 +34,14 @@ import transaction
 import logging
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import (  # noqa: F401
-        Str, Dict, List, JsonBody, Optional, Tuple, Union, CookiesOrSessionType
+        Str, Dict, List, JSON, Optional, Tuple, Union, CookiesOrSessionType
     )
 
 LOGGER = get_logger(__name__)
+
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Str, Dict, List, JSON, Optional, Tuple, Union  # noqa: F401
+
 
 LOGIN_ATTEMPT = 10              # max attempts for login
 LOGIN_TIMEOUT = 10              # delay (s) between each login attempt
@@ -403,6 +407,10 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
     for svc_name, svc_values in services_dict.items():
         svc_new_url = os.path.expandvars(svc_values['url'])
         svc_type = svc_values['type']
+        if svc_type not in SERVICE_TYPE_DICT:
+            print_log("Cannot register service of type [{!s}], unknown type amongst loaded ones {!s}, skipping..."
+                      .format(svc_type, list2str(SERVICE_TYPE_DICT)), logger=LOGGER, level=logging.WARNING)
+            continue
 
         svc_sync_type = svc_values.get('sync_type')
         if force_update and svc_name in existing_services_names:
@@ -430,7 +438,7 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
         if update_getcapabilities_permissions and anonymous_user is None:
             print_log("Cannot update 'getcapabilities' permission of non existing anonymous user",
                       level=logging.WARN, logger=LOGGER)
-        elif update_getcapabilities_permissions and 'getcapabilities' in service_type_dict[svc_type].permission_names:
+        elif update_getcapabilities_permissions and 'getcapabilities' in SERVICE_TYPE_DICT[svc_type].permission_names:
             svc = db_session.query(models.Service.resource_id).filter_by(resource_name=svc_name).first()
             svc_perm_getcapabilities = UserResourcePermissionService.by_resource_user_and_perm(
                 user_id=anonymous_user.id, perm_name='getcapabilities',
@@ -550,12 +558,12 @@ def parse_resource_path(permission_config_entry,    # type: ConfigItem
                     # noinspection PyTypeChecker
                     res_id = list(filter(lambda r: res in [r, child_resources[r]["resource_name"]], child_resources))
                     if res_id:
-                        res_info = child_resources[res_id[0]]   # type: Dict[Str, JsonBody]
+                        res_info = child_resources[res_id[0]]   # type: Dict[Str, JSON]
                         child_resources = res_info['children']  # update next sub-resource iteration
                         parent = res_info['resource_id']
                         continue
                 # missing resource, attempt creation
-                svc_res_types = service_type_dict[svc_type].resource_types
+                svc_res_types = SERVICE_TYPE_DICT[svc_type].resource_types
                 type_count = len(svc_res_types)
                 if type_count != 1:
                     warn_permission("Cannot automatically generate resources", entry_index,

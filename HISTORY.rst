@@ -3,6 +3,12 @@
 History
 =======
 
+0.10.x
+---------------------
+
+* allow external services dynamic loading using ``MAGPIE_SERVICES_PATHS`` and ``MAGPIE_SERVICES_FILTER``
+* introduce ``__req__`` service method to process a request's response contents before returning it
+
 0.9.x
 ---------------------
 

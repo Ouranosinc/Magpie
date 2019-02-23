@@ -11,7 +11,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPInternalServerError,
 )
 from magpie.register import sync_services_phoenix
-from magpie.services import service_type_dict
+from magpie.services import SERVICE_TYPE_DICT
 from magpie import models
 
 
@@ -20,7 +20,7 @@ from magpie import models
 def get_resources_view(request):
     """List all registered resources."""
     res_json = {}
-    for svc_type in service_type_dict.keys():
+    for svc_type in SERVICE_TYPE_DICT.keys():
         services = get_services_by_type(svc_type, db_session=request.db)
         res_json[svc_type] = {}
         for svc in services:

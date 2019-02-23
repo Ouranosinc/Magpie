@@ -1,8 +1,15 @@
+from magpie.common import list2str, get_logger
 from magpie.constants import get_constant
-from magpie.definitions.ziggurat_definitions import UserService, ResourceService, permission_to_pyramid_acls
+from magpie.definitions.sqlalchemy_definitions import Session
+from magpie.definitions.ziggurat_definitions import (
+    UserService,
+    ResourceService,
+    permission_to_pyramid_acls,
+)
 from magpie.definitions.pyramid_definitions import (
-    EVERYONE,
-    ALLOW,
+    Everyone,
+    Allow,
+    Response,
     HTTPNotFound,
     HTTPBadRequest,
     HTTPNotImplemented,
@@ -11,15 +18,25 @@ from magpie.definitions.pyramid_definitions import (
 from magpie.api import api_except as ax
 from magpie.owsrequest import ows_parser_factory
 from magpie import models, permissions as p
-from typing import TYPE_CHECKING
+from magpie.utils import classproperty
+from abc import ABCMeta, abstractmethod, abstractproperty
 from six import with_metaclass
+from typing import TYPE_CHECKING
+import warnings
+import sys
+import os
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, List, Dict, Union  # noqa: F401
+    from magpie.definitions.typedefs import (  # noqa: F401
+        Str, List, Dict, Type, Union, AccessControlListType, ResourcePermissionType,
+    )
     from magpie.definitions.pyramid_definitions import Request  # noqa: F401
-    ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
+LOGGER = get_logger(__name__)
 
-
-class ServiceMeta(type):
+# FIXME: remove/use?
+'''
+#class ServiceMeta(type):
+class ServiceMeta(ABCMeta):
+>>>>>>> working on dynamic service by config (process+tests) + 0.9.4 → 0.10.0
     @property
     def resource_types(cls):
         # type: (...) -> List[Str]
@@ -32,7 +49,11 @@ class ServiceMeta(type):
         return len(cls.resource_types) > 0
 
 
-class ServiceI(with_metaclass(ServiceMeta)):
+class ServiceInterface(with_metaclass(ServiceMeta)):
+'''
+class ServiceInterface(object):
+    # service type identifier (must be unique)
+    service_type = None                 # type: Str
     # required request parameters for the service
     params_expected = []                # type: List[Str]
     # global permissions allowed for the service (top-level resource)
@@ -41,18 +62,26 @@ class ServiceI(with_metaclass(ServiceMeta)):
     resource_types_permissions = {}     # type: Dict[Str, List[Str]]
 
     def __init__(self, service, request):
-        self.service = service
-        self.request = request
-        self.acl = []
+        self.service = service          # type: models.Service
+        self.request = request          # type: Request
+        self.acl = []                   # type: AccessControlListType
         self.parser = ows_parser_factory(request)
         self.parser.parse(self.params_expected)
 
-    @property
+    @abstractproperty
     def __acl__(self):
+        # type: () -> AccessControlListType
+        """Access control list parsing implementation of the derived class."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __req__(self, request):
+        # type: (Request) -> Response
+        """Request to response parsing implementation of the derived class."""
         raise NotImplementedError
 
     def expand_acl(self, resource, user):
-        # type: (models.Resource, models.User) -> None
+        # type: (ServiceInterface, models.User) -> None
         if resource:
             for ace in resource.__acl__:
                 self.acl.append(ace)
@@ -68,14 +97,14 @@ class ServiceI(with_metaclass(ServiceMeta)):
                 else:
                     permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
                     for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-                        self.acl.append((outcome, EVERYONE, perm_name,))
+                        self.acl.append((outcome, Everyone, perm_name,))
 
     def permission_requested(self):
         # type: (...) -> Str
         try:
             return self.parser.params[u'request']
         except Exception as e:
-            # if 'ServiceI', 'params_expected' is empty and will raise a KeyError
+            # if 'ServiceInterface', 'params_expected' is empty and will raise a KeyError
             raise NotImplementedError("Exception: [" + repr(e) + "]")
 
     def effective_permissions(self, resource, user):
@@ -94,8 +123,22 @@ class ServiceI(with_metaclass(ServiceMeta)):
                 resource = None
         return resource_effective_perms
 
+    # noinspection PyMethodParameters
+    @classproperty
+    def resource_types(cls):
+        # type: (...) -> List[Str]
+        """Allowed resources types under the service."""
+        return list(cls.resource_types_permissions.keys())
 
-class ServiceWPS(ServiceI):
+    # noinspection PyMethodParameters
+    @classproperty
+    def child_resource_allowed(cls):
+        # type: (...) -> bool
+        return len(cls.resource_types) > 0
+
+
+class ServiceWPS(ServiceInterface):
+    service_type = u'wps'
 
     permission_names = [
         p.PERMISSION_GET_CAPABILITIES,
@@ -120,7 +163,7 @@ class ServiceWPS(ServiceI):
         return self.acl
 
 
-class ServiceWMS(ServiceI):
+class ServiceWMS(ServiceInterface):
     permission_names = [
         p.PERMISSION_GET_CAPABILITIES,
         p.PERMISSION_GET_MAP,
@@ -157,6 +200,7 @@ class ServiceWMS(ServiceI):
 
 
 class ServiceNCWMS2(ServiceWMS):
+    service_type = u'ncwms'
 
     resource_types_permissions = {
         models.File.resource_type_name: [
@@ -207,7 +251,7 @@ class ServiceNCWMS2(ServiceWMS):
                 netcdf_file = netcdf_file.rsplit('/', 1)[0]
 
         else:
-            return [(ALLOW, EVERYONE, permission_requested,)]
+            return [(Allow, Everyone, permission_requested,)]
 
         if netcdf_file:
             ax.verify_param('outputs/', paramCompare=netcdf_file, httpError=HTTPNotFound,
@@ -228,6 +272,7 @@ class ServiceNCWMS2(ServiceWMS):
 
 
 class ServiceGeoserver(ServiceWMS):
+    service_type = u'geoserverwms'
 
     def __init__(self, service, request):
         super(ServiceGeoserver, self).__init__(service, request)
@@ -265,7 +310,8 @@ class ServiceGeoserver(ServiceWMS):
         return self.acl
 
 
-class ServiceAccess(ServiceI):
+class ServiceAccess(ServiceInterface):
+    service_type = u'access'
     permission_names = [p.PERMISSION_ACCESS]
     params_expected = []
     resource_types_permissions = {}
@@ -282,7 +328,9 @@ class ServiceAccess(ServiceI):
         return p.PERMISSION_ACCESS
 
 
-class ServiceAPI(ServiceI):
+class ServiceAPI(ServiceInterface):
+    service_type = u'api'
+
     permission_names = models.Route.permission_names
 
     params_expected = []
@@ -348,7 +396,8 @@ class ServiceAPI(ServiceI):
                       resource_effective_perms)
 
 
-class ServiceWFS(ServiceI):
+class ServiceWFS(ServiceInterface):
+    service_type = u'wfs'
 
     permission_names = [
         p.PERMISSION_GET_CAPABILITIES,
@@ -394,7 +443,8 @@ class ServiceWFS(ServiceI):
         return self.acl
 
 
-class ServiceTHREDDS(ServiceI):
+class ServiceTHREDDS(ServiceInterface):
+    service_type = u'thredds'
 
     permission_names = [
         p.PERMISSION_READ,
@@ -446,35 +496,104 @@ class ServiceTHREDDS(ServiceI):
         return u'read'
 
 
-service_type_dict = {
-    u'access':          ServiceAccess,      # noqa: E241
-    u'api':             ServiceAPI,         # noqa: E241
-    u'geoserverwms':    ServiceGeoserver,   # noqa: E241
-    u'ncwms':           ServiceNCWMS2,      # noqa: E241
-    u'thredds':         ServiceTHREDDS,     # noqa: E241
-    u'wfs':             ServiceWFS,         # noqa: E241
-    u'wps':             ServiceWPS,         # noqa: E241
-}
+def update_service_types(import_paths, filter_service_types=None, db_session=None):
+    # type: (Str, Str, Session) -> None
+    """
+    Updates ``SERVICE_TYPE_DICT`` with any ``ServiceInterface`` found under ``import_paths``.
+
+    :param import_paths: single or a comma-separated list of python-file and/or directory path.
+    :param filter_service_types: single or comma-separated list of 'service_type' ID to preserve, all if `None`.
+    :param db_session: session to validate existing service types (cannot filter out registered types)
+    """
+    def file_filter(file_path):
+        return os.path.splitext(file_path)[-1] == '.py'
+
+    def import_item(name):
+        components = name.split('.')
+        item_name = components[0]
+        item = __import__(item_name)
+        for comp in components[1:]:
+            if not hasattr(item, comp):
+                item_name = '{mod}.{sub}'.format(mod=item_name, sub=comp)
+                item = __import__(item_name, fromlist=[item_name])
+                continue
+            item = getattr(item, comp)
+        return item
+
+    if not import_paths:
+        LOGGER.debug("No service path specified, using default services.")
+        return
+
+    import_paths = [os.path.abspath(path) for path in import_paths.split(',')]
+    module_paths = []
+    for path in import_paths:
+        if os.path.isfile(path) and file_filter(path):
+            module_paths.append(path)
+        elif os.path.isdir(path):
+            module_paths.extend([os.path.join(dp, f) for dp, dn, fn in os.walk(path) for f in fn if file_filter(f)])
+
+    if module_paths:
+        for mod in module_paths:
+            try:
+                mod_path, mod_name = os.path.split(os.path.splitext(mod)[0])
+                sys.path.append(mod_path)
+                module = import_item(mod_name)
+                for mod_item in dir(module):
+                    it = import_item('{}.{}'.format(mod_name, mod_item))
+                    if ax.isclass(it) and issubclass(it, ServiceInterface):
+                        svc_type = getattr(it, 'service_type', None)
+                        if not svc_type:
+                            warnings.warn("Service type [{}] doesn't implement a valid service.")
+                        if svc_type in SERVICE_TYPE_DICT:
+                            warnings.warn("Service type [{}] already exists, choose another type ID.", ImportWarning)
+                            continue
+                        if it is ServiceInterface:
+                            continue
+                        SERVICE_TYPE_DICT[it.service_type] = it
+            except (ImportError, AttributeError) as ex:
+                warnings.warn("Could not import [{}] [{}], skipping...".format(mod, str(ex)), ImportWarning)
+
+    if filter_service_types:
+        if not db_session:
+            raise RuntimeError("Database session required for verification of filtered service types.")
+        cfg_svc_types = filter_service_types.split(',')
+        db_svc_types = [s.type for s in list(models.Service.all(db_session=db_session))]
+        rm_svc_types = set(db_svc_types) - set(cfg_svc_types)
+        ignore_types = set(rm_svc_types) - set(cfg_svc_types)
+        if ignore_types:
+            warnings.warn("Will not filter out service types: {}, they are employed by registered services."
+                          .format(list2str(ignore_types)), RuntimeWarning)
+
+        for svc in set(SERVICE_TYPE_DICT) - set(rm_svc_types):
+            SERVICE_TYPE_DICT.pop(svc)
+
+    if not len(SERVICE_TYPE_DICT):
+        raise RuntimeError("Cannot use magpie without any service type.")
 
 
 def service_factory(service, request):
-    # type: (models.Service, Request) -> ServiceI
+    # type: (models.Service, Request) -> ServiceInterface
     """Retrieve the specific service class from the provided database service entry."""
     ax.verify_param(service, paramCompare=models.Service, ofType=True,
                     httpError=HTTPBadRequest, content={u'service': repr(service)},
                     msgOnFail="Cannot process invalid service object")
     service_type = ax.evaluate_call(lambda: service.type, httpError=HTTPInternalServerError,
                                     msgOnFail="Cannot retrieve service type from object")
-    ax.verify_param(service_type, isIn=True, paramCompare=service_type_dict.keys(),
+    ax.verify_param(service_type, isIn=True, paramCompare=SERVICE_TYPE_DICT.keys(),
                     httpError=HTTPNotImplemented, content={u'service_type': service_type},
                     msgOnFail="Undefined service type mapping to service object")
-    return ax.evaluate_call(lambda: service_type_dict[service_type](service, request),
+    return ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service_type](service, request),
                             httpError=HTTPInternalServerError,
                             msgOnFail="Failed to find requested service type.")
 
 
 def get_all_service_permission_names():
     all_permission_names_list = set()
-    for service_type in service_type_dict.keys():
-        all_permission_names_list.update(service_type_dict[service_type].permission_names)
+    for service_type in SERVICE_TYPE_DICT.keys():
+        all_permission_names_list.update(SERVICE_TYPE_DICT[service_type].permission_names)
     return all_permission_names_list
+
+
+SERVICE_TYPE_DICT = dict()  # type: Dict[Str, Type[ServiceInterface]]
+for _svc in [ServiceAccess, ServiceAPI, ServiceGeoserver, ServiceNCWMS2, ServiceTHREDDS, ServiceWFS, ServiceWPS]:
+    SERVICE_TYPE_DICT[_svc.service_type] = _svc

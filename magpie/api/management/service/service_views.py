@@ -13,7 +13,7 @@ from magpie.definitions.pyramid_definitions import (
 )
 from magpie.common import JSON_TYPE
 from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
-from magpie.services import service_type_dict
+from magpie.services import SERVICE_TYPE_DICT
 from magpie import models
 
 
@@ -22,7 +22,7 @@ from magpie import models
 @view_config(route_name=s.ServiceTypesAPI.name, request_method='GET')
 def get_service_types_view(request):
     """List all available service types."""
-    return ax.valid_http(httpSuccess=HTTPOk, content={u'service_types': list(sorted(service_type_dict.keys()))},
+    return ax.valid_http(httpSuccess=HTTPOk, content={u'service_types': list(sorted(SERVICE_TYPE_DICT.keys()))},
                          detail=s.ServiceTypes_GET_OkResponseSchema.description)
 
 
@@ -44,9 +44,9 @@ def get_services_runner(request):
     service_type_filter = request.matchdict.get('service_type')  # no check because None/empty is for 'all services'
     json_response = {}
     if not service_type_filter:
-        service_types = service_type_dict.keys()
+        service_types = SERVICE_TYPE_DICT.keys()
     else:
-        ax.verify_param(service_type_filter, paramCompare=service_type_dict.keys(), isIn=True,
+        ax.verify_param(service_type_filter, paramCompare=SERVICE_TYPE_DICT.keys(), isIn=True,
                         httpError=HTTPNotAcceptable, msgOnFail=s.Services_GET_NotAcceptableResponseSchema.description,
                         content={u'service_type': str(service_type_filter)}, contentType=JSON_TYPE)
         service_types = [service_type_filter]
@@ -70,7 +70,7 @@ def register_service_view(request):
     service_url = ar.get_value_multiformat_post_checked(request, 'service_url')
     service_type = ar.get_value_multiformat_post_checked(request, 'service_type')
     service_push = asbool(ar.get_multiformat_post(request, 'service_push'))
-    ax.verify_param(service_type, isIn=True, paramCompare=service_type_dict.keys(),
+    ax.verify_param(service_type, isIn=True, paramCompare=SERVICE_TYPE_DICT.keys(),
                     httpError=HTTPBadRequest, msgOnFail=s.Services_POST_BadRequestResponseSchema.description)
     ax.verify_param(models.Service.by_service_name(service_name, db_session=request.db), isNone=True,
                     httpError=HTTPConflict, msgOnFail=s.Services_POST_ConflictResponseSchema.description,
@@ -101,7 +101,7 @@ def update_service_view(request):
 
     if svc_name != service.resource_name:
         all_svc_names = list()
-        for svc_type in service_type_dict:
+        for svc_type in SERVICE_TYPE_DICT:
             for svc in su.get_services_by_type(svc_type, db_session=request.db):
                 all_svc_names.append(svc.resource_name)
         ax.verify_param(svc_name, notIn=True, paramCompare=all_svc_names, httpError=HTTPConflict,
@@ -111,7 +111,7 @@ def update_service_view(request):
     def update_service_magpie_and_phoenix(_svc, new_name, new_url, svc_push, db_session):
         _svc.resource_name = new_name
         _svc.url = new_url
-        has_getcap = 'getcapabilities' in service_type_dict[_svc.type].permission_names
+        has_getcap = 'getcapabilities' in SERVICE_TYPE_DICT[_svc.type].permission_names
         if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED and has_getcap:
             # (re)apply getcapabilities to updated service to ensure updated push
             su.add_service_getcapabilities_perms(_svc, db_session)
@@ -167,7 +167,7 @@ def get_service_permissions_view(request):
     """List all applicable permissions for a service."""
     service = ar.get_service_matchdict_checked(request)
     svc_content = sf.format_service(service, show_private_url=True)
-    svc_perms = ax.evaluate_call(lambda: service_type_dict[service.type].permission_names,
+    svc_perms = ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service.type].permission_names,
                                  fallback=request.db.rollback(), httpError=HTTPNotAcceptable, content=svc_content,
                                  msgOnFail=s.ServicePermissions_GET_NotAcceptableResponseSchema.description)
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.ServicePermissions_GET_OkResponseSchema.description,
@@ -216,13 +216,13 @@ def get_service_type_resources_view(request):
 
     def _get_resource_types_info(res_type_names):
         res_type_classes = [r for rt, r in models.resource_type_dict.items() if rt in res_type_names]
-        return [sf.format_service_resource_type(r, service_type_dict[service_type]) for r in res_type_classes]
+        return [sf.format_service_resource_type(r, SERVICE_TYPE_DICT[service_type]) for r in res_type_classes]
 
     service_type = ar.get_value_matchdict_checked(request, 'service_type')
-    ax.verify_param(service_type, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotFound,
+    ax.verify_param(service_type, paramCompare=SERVICE_TYPE_DICT.keys(), isIn=True, httpError=HTTPNotFound,
                     msgOnFail=s.ServiceTypeResources_GET_NotFoundResponseSchema.description)
     resource_types_names = ax.evaluate_call(
-        lambda: service_type_dict[service_type].resource_types,
+        lambda: SERVICE_TYPE_DICT[service_type].resource_types,
         httpError=HTTPForbidden, content={u'service_type': str(service_type)},
         msgOnFail=s.ServiceTypeResourceTypes_GET_ForbiddenResponseSchema.description)
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.ServiceTypeResourceTypes_GET_OkResponseSchema.description,
@@ -234,9 +234,9 @@ def get_service_type_resources_view(request):
 def get_service_type_resource_types_view(request):
     """List all resource types supported under a specific service type."""
     service_type = ar.get_value_matchdict_checked(request, 'service_type')
-    ax.verify_param(service_type, paramCompare=service_type_dict.keys(), isIn=True, httpError=HTTPNotFound,
+    ax.verify_param(service_type, paramCompare=SERVICE_TYPE_DICT.keys(), isIn=True, httpError=HTTPNotFound,
                     msgOnFail=s.ServiceTypeResourceTypes_GET_NotFoundResponseSchema.description)
-    resource_types = ax.evaluate_call(lambda: service_type_dict[service_type].resource_types,
+    resource_types = ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service_type].resource_types,
                                       httpError=HTTPForbidden, content={u'service_type': str(service_type)},
                                       msgOnFail=s.ServiceTypeResourceTypes_GET_ForbiddenResponseSchema.description)
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.ServiceTypeResourceTypes_GET_OkResponseSchema.description,

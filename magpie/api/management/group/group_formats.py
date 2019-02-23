@@ -1,5 +1,5 @@
-from magpie.api.api_requests import HTTPInternalServerError
 from magpie.api.api_except import evaluate_call
+from magpie.definitions.pyramid_definitions import HTTPInternalServerError
 
 
 def format_group(group, basic_info=False):

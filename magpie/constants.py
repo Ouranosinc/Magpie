@@ -84,6 +84,8 @@ MAGPIE_DB_MIGRATION_ATTEMPTS = int(os.getenv('MAGPIE_DB_MIGRATION_ATTEMPTS', 5))
 MAGPIE_LOG_LEVEL = os.getenv('MAGPIE_LOG_LEVEL', _default_log_lvl)
 MAGPIE_LOG_REQUEST = asbool(os.getenv('MAGPIE_LOG_REQUEST', True))
 MAGPIE_LOG_EXCEPTION = asbool(os.getenv('MAGPIE_LOG_EXCEPTION', True))
+MAGPIE_SERVICES_PATHS = os.getenv('MAGPIE_SERVICES_PATHS', None)
+MAGPIE_SERVICES_FILTER = os.getenv('MAGPIE_SERVICES_FILTER', None)
 PHOENIX_USER = os.getenv('PHOENIX_USER', 'phoenix')
 PHOENIX_PASSWORD = os.getenv('PHOENIX_PASSWORD', 'qwerty')
 PHOENIX_PORT = int(os.getenv('PHOENIX_PORT', 8443))
@@ -128,7 +130,7 @@ def get_constant(name, settings_container=None, settings_name=None, default_valu
 
     :param name: key to search for a value
     :param settings_container: wsgi app settings container
-    :param settings_name: alternative name for `settings` if specified
+    :param settings_name: alternative name for `settings` if specified, or resolve `MAGPIE_PARAM_1` to `magpie.param_1`
     :param default_value: default value to be returned if not found anywhere, and exception raises are disabled.
     :param raise_missing: raise exception if key is not found anywhere
     :param print_missing: print message if key is not found anywhere, return `None`
@@ -157,6 +159,10 @@ def get_constant(name, settings_container=None, settings_name=None, default_valu
         magpie_value = settings.get(name)
         if magpie_value is not None:
             return magpie_value
+    if settings and not settings_name:
+        name_parts = name.replace('-', '_').split('_', maxsplit=1)
+        if len(name_parts) == 2:
+            settings_name = '{}.{}'.format(name_parts[0].lower(), name_parts[1].lower())
     if settings and settings_name and settings_name in settings:
         missing = False
         magpie_value = settings.get(settings_name)

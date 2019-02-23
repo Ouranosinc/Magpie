@@ -22,10 +22,10 @@ from magpie.services import service_factory
 from magpie import models
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.services import ResourcePermissionType, ServiceI  # noqa: F401
+    from magpie.services import ResourcePermissionType, ServiceInterface  # noqa: F401
     from magpie.definitions.pyramid_definitions import Request, HTTPException  # noqa: F401
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.definitions.typedefs import Any, Str, Dict, List, Optional, Union, UserServicesType  # noqa: F401
+    from magpie.definitions.typedefs import Any, Str, Dict, List, Optional, Union, JSON  # noqa: F401
 
 
 def create_user(user_name, password, email, group_name, db_session):
@@ -111,7 +111,7 @@ def delete_user_resource_permission(permission_name, resource, user, db_session)
 
 
 def get_resource_root_service(resource, request):
-    # type: (models.Resource, Request) -> ServiceI
+    # type: (models.Resource, Request) -> ServiceInterface
     """Retrieves the service class corresponding to the specified resource's root service-resource."""
     if resource.resource_type == models.Service.resource_type_name:
         res_root_svc = resource
@@ -151,7 +151,7 @@ def get_user_resource_permissions(user, resource, request,
 
 def get_user_services(user, request, cascade_resources=False,
                       inherit_groups_permissions=False, format_as_list=False):
-    # type: (models.User, Request, Optional[bool], Optional[bool], Optional[bool]) -> UserServicesType
+    # type: (models.User, Request, Optional[bool], Optional[bool], Optional[bool]) -> Union[JSON, List[JSON]]
     """
     Returns services by type with corresponding services by name containing sub-dict information.
 

@@ -54,6 +54,11 @@ def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
     raise exception(msg)
 
 
+def list2str(value):
+    """Prints a list as a literal presentation of it's items (without additional commas)."""
+    return str([str(i) for i in list(value)]).replace("'", '')
+
+
 def bool2str(value):
     # type: (Any) -> Str
     return 'true' if str(value).lower() in truthy else 'false'

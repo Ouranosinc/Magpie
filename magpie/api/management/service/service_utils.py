@@ -11,7 +11,7 @@ from magpie.definitions.pyramid_definitions import (
 )
 from magpie.definitions.ziggurat_definitions import GroupService, ResourceService
 from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
-from magpie.services import service_type_dict
+from magpie.services import SERVICE_TYPE_DICT
 from magpie import models
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -70,7 +70,7 @@ def get_services_by_type(service_type, db_session):
 
 def add_service_getcapabilities_perms(service, db_session, group_name=None):
     if service.type in SERVICES_PHOENIX_ALLOWED \
-    and 'getcapabilities' in service_type_dict[service.type].permission_names:  # noqa: F401
+    and 'getcapabilities' in SERVICE_TYPE_DICT[service.type].permission_names:  # noqa: F401
         if group_name is None:
             group_name = get_constant('MAGPIE_ANONYMOUS_USER')
         group = GroupService.by_group_name(group_name, db_session=db_session)

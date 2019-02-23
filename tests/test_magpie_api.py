@@ -8,10 +8,10 @@ test_magpie_api
 Tests for `magpie.api` module.
 """
 
-import unittest
 from magpie.constants import get_constant
 from magpie.common import JSON_TYPE
 from tests import utils, runner
+import unittest
 
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti  # noqa: F401
@@ -31,6 +31,7 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
         cls.json_headers = utils.get_headers(cls.app, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
+        cls.json_headers = utils.get_headers(cls.url, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
         cls.usr = get_constant('MAGPIE_ANONYMOUS_USER')

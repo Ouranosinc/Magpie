@@ -1,4 +1,4 @@
-from magpie.services import service_type_dict
+from magpie.services import SERVICE_TYPE_DICT
 from magpie.register import sync_services_phoenix
 from magpie.definitions.ziggurat_definitions import ResourceService
 from magpie.definitions.pyramid_definitions import (
@@ -59,11 +59,11 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
     ax.verify_param(root_service.resource_type, isEqual=True, httpError=HTTPInternalServerError,
                     paramName=u'resource_type', paramCompare=models.Service.resource_type_name,
                     msgOnFail="Invalid `root_service` retrieved from db is not a service")
-    ax.verify_param(service_type_dict[root_service.type].child_resource_allowed, isEqual=True,
+    ax.verify_param(SERVICE_TYPE_DICT[root_service.type].child_resource_allowed, isEqual=True,
                     paramCompare=True, httpError=HTTPNotAcceptable,
                     msgOnFail="Child resource not allowed for specified service type `{}`".format(root_service.type))
     ax.verify_param(resource_type, isIn=True, httpError=HTTPNotAcceptable,
-                    paramName=u'resource_type', paramCompare=service_type_dict[root_service.type].resource_types,
+                    paramName=u'resource_type', paramCompare=SERVICE_TYPE_DICT[root_service.type].resource_types,
                     msgOnFail="Invalid `resource_type` specified for service type `{}`".format(root_service.type))
     return root_service
 
@@ -89,7 +89,7 @@ def get_resource_path(resource_id, db_session):
 
 def get_service_or_resource_types(service_resource):
     if isinstance(service_resource, models.Service):
-        svc_res_type_obj = service_type_dict[service_resource.type]
+        svc_res_type_obj = SERVICE_TYPE_DICT[service_resource.type]
         svc_res_type_str = u"service"
     elif isinstance(service_resource, models.Resource):
         svc_res_type_obj = models.resource_type_dict[service_resource.resource_type]
@@ -107,14 +107,14 @@ def get_resource_permissions(resource, db_session):
     # directly access the service resource
     if resource.root_service_id is None:
         service = resource
-        return service_type_dict[service.type].permission_names
+        return SERVICE_TYPE_DICT[service.type].permission_names
 
     # otherwise obtain root level service to infer sub-resource permissions
     service = ResourceService.by_resource_id(resource.root_service_id, db_session=db_session)
     ax.verify_param(service.resource_type, isEqual=True, httpError=HTTPNotAcceptable,
                     paramName=u'resource_type', paramCompare=models.Service.resource_type_name,
                     msgOnFail=s.UserResourcePermissions_GET_NotAcceptableRootServiceResponseSchema.description)
-    service_obj = service_type_dict[service.type]
+    service_obj = SERVICE_TYPE_DICT[service.type]
     ax.verify_param(resource.resource_type, isIn=True, httpError=HTTPNotAcceptable,
                     paramName=u'resource_type', paramCompare=service_obj.resource_types,
                     msgOnFail=s.UserResourcePermissions_GET_NotAcceptableResourceTypeResponseSchema.description)

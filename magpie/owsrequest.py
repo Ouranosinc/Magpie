@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
+# noinspection PyUnusedLocal
 def ows_parser_factory(request):
     # type: (Request) -> OWSParser
     """

@@ -1,4 +1,4 @@
-from magpie.services import service_type_dict
+from magpie.services import SERVICE_TYPE_DICT
 from magpie.api import api_except as ax, api_rest_schemas as s
 from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
 from magpie.api.management.resource.resource_formats import format_resource
@@ -168,7 +168,7 @@ def get_group_services(resources_permissions_dict, db_session):
 def get_group_service_permissions(group, service, db_session):
     def get_grp_svc_perms(grp, svc, db):
         if svc.owner_group_id == grp.id:
-            perm_names = service_type_dict[svc.type].permission_names
+            perm_names = SERVICE_TYPE_DICT[svc.type].permission_names
         else:
             grp_res_perm = db.query(models.GroupResourcePermission) \
                 .filter(models.GroupResourcePermission.resource_id == svc.resource_id) \

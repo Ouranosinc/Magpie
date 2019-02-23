@@ -9,6 +9,8 @@ import time
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import Optional  # noqa: F401
 LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Optional
 
 
 def register_user_with_group(user_name, group_name, email, password, db_session):

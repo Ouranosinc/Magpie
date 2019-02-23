@@ -10,7 +10,7 @@ Tests for the various utility operations employed by magpie.
 
 from magpie.api import api_requests as ar, api_except as ax
 from magpie.common import get_header, JSON_TYPE
-from magpie.definitions.pyramid_definitions import (    # noqa: F401
+from magpie.definitions.pyramid_definitions import (  # noqa: F401
     asbool,
     Request,
     HTTPInternalServerError,

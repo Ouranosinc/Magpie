@@ -3,7 +3,7 @@ from magpie.common import get_header, JSON_TYPE
 from typing import TYPE_CHECKING
 import json
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, JsonBody, CookiesType, HeadersType, Optional  # noqa: F401
+    from magpie.definitions.typedefs import Str, JSON, CookiesType, HeadersType, Optional  # noqa: F401
     from magpie.definitions.pyramid_definitions import Response  # noqa: F401
 
 
@@ -16,7 +16,7 @@ def check_response(response):
 def request_api(request,            # type: Request
                 path,               # type: Str
                 method='GET',       # type: Optional[Str]
-                data=None,          # type: Optional[JsonBody]
+                data=None,          # type: Optional[JSON]
                 headers=None,       # type: Optional[HeadersType]
                 cookies=None,       # type: Optional[CookiesType]
                 ):                  # type: (...) -> Response

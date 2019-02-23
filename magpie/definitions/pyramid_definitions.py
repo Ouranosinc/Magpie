@@ -55,10 +55,10 @@ from pyramid.view import (      # noqa: F401
 # noinspection PyUnresolvedReferences, PyPep8Naming
 from pyramid.security import (  # noqa: F401
     Authenticated,
-    Allow as ALLOW,
+    Allow,
     ALL_PERMISSIONS,
     NO_PERMISSION_REQUIRED,
-    Everyone as EVERYONE,
+    Everyone,
     forget,
     remember,
 )
