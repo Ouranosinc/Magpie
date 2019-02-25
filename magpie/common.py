@@ -8,10 +8,9 @@ from requests.structures import CaseInsensitiveDict
 from distutils.dir_util import mkpath
 # noinspection PyProtectedMember
 from logging import _loggerClass as LoggerType
-# noinspection PyCompatibility
-import configparser
 import types
 import six
+from six.moves import configparser
 import sys
 import os
 import logging
