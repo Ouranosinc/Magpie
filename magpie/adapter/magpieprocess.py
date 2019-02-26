@@ -83,14 +83,14 @@ class MagpieProcessStore(ProcessStore):
             resp = requests.get(path, cookies=self.magpie_admin_token,
                                 headers=self.json_headers, verify=self.twitcher_ssl_verify)
             resp.raise_for_status()
-            return resp.json()[resource_name]['resource_id']
+            return resp.json()['service']['resource_id']
 
         path = '{host}/resources/{id}'.format(host=self.magpie_url, id=parent_resource_id)
         resp = requests.get(path, cookies=self.magpie_admin_token,
                             headers=self.json_headers, verify=self.twitcher_ssl_verify)
         resp.raise_for_status()
         child_res_id = None
-        parent_resource_info = resp.json()[str(parent_resource_id)]
+        parent_resource_info = resp.json()['resource']
         children_resources = parent_resource_info['children']
         for res_id in children_resources:
             if children_resources[res_id]['resource_name'] == resource_name:

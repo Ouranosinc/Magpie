@@ -5,6 +5,7 @@ from magpie.definitions.pyramid_definitions import (  # noqa: F401
 )
 from six.moves.urllib.parse import urlparse
 from typing import Optional, TYPE_CHECKING
+from requests.cookies import RequestsCookieJar
 import logging
 import requests
 if TYPE_CHECKING:
@@ -22,7 +23,15 @@ def get_admin_cookies(magpie_url, verify=True, raise_message=None):
             raise_log(raise_message, logger=LOGGER)
         raise resp.raise_for_status()
     token_name = get_constant('MAGPIE_COOKIE_NAME')
-    return {token_name: resp.cookies.get(token_name)}
+
+    # use specific domain to differentiate between `.{hostname}` and `{hostname}` variations if applicable
+    # noinspection PyProtectedMember
+    request_cookies = resp.cookies
+    magpie_cookies = list(filter(lambda cookie: cookie.name == token_name, request_cookies))
+    magpie_domain = urlparse(magpie_url).hostname if len(magpie_cookies) > 1 else None
+    session_cookies = RequestsCookieJar.get(request_cookies, token_name, domain=magpie_domain)
+
+    return {token_name: session_cookies}
 
 
 def get_settings(container):
