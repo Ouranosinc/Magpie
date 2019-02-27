@@ -14,6 +14,7 @@ from magpie.helpers import sync_resources
 from magpie.models import resource_type_dict, remote_resource_tree_service  # TODO: remove, implement getters via API
 from magpie.ui.utils import check_response, request_api, error_badrequest
 from magpie.ui.home import add_template_data
+from magpie.utils import route_url
 from magpie import register, __meta__
 from collections import OrderedDict
 from distutils.version import LooseVersion
@@ -27,7 +28,6 @@ LOGGER = get_logger(__name__)
 class ManagementViews(object):
     def __init__(self, request):
         self.request = request
-        self.magpie_url = request.application_url
 
     @error_badrequest
     def get_all_groups(self, first_default_group=None):
@@ -141,7 +141,7 @@ class ManagementViews(object):
         check_response(resp)
         body = get_json(resp)
         svc_type = body['service']['service_type']
-        return HTTPFound(self.request.route_url('edit_service', service_name=svc_name, cur_svc_type=svc_type))
+        return HTTPFound(route_url(self.request, 'edit_service', service_name=svc_name, cur_svc_type=svc_type))
 
     @staticmethod
     def flatten_tree_resource(resource_node, resource_dict):
@@ -169,7 +169,7 @@ class ManagementViews(object):
 
         if 'edit' in self.request.POST:
             user_name = self.request.POST.get('user_name')
-            return HTTPFound(self.request.route_url('edit_user', user_name=user_name, cur_svc_type='default'))
+            return HTTPFound(route_url(self.request, 'edit_user', user_name=user_name, cur_svc_type='default'))
 
         return add_template_data(self.request, {'users': self.get_user_names()})
 
@@ -220,7 +220,7 @@ class ManagementViews(object):
                     u'group_name': group_name}
             resp = request_api(self.request, schemas.UsersAPI.path, 'POST', data=data)
             check_response(resp)
-            return HTTPFound(self.request.route_url('view_users'))
+            return HTTPFound(route_url(self.request, 'view_users'))
 
         return add_template_data(self.request, return_data)
 
@@ -267,7 +267,7 @@ class ManagementViews(object):
             if u'delete' in self.request.POST:
                 resp = request_api(self.request, user_path, 'DELETE')
                 check_response(resp)
-                return HTTPFound(self.request.route_url('view_users'))
+                return HTTPFound(route_url(self.request, 'view_users'))
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
             elif u'clean_resource' in self.request.POST:
@@ -324,7 +324,7 @@ class ManagementViews(object):
                 user_name = user_info[u'user_name']
                 user_info[u'own_groups'] = self.get_user_groups(user_name)
                 # return immediately with updated URL to user with new name
-                users_url = self.request.route_url('edit_user', user_name=user_name, cur_svc_type=cur_svc_type)
+                users_url = route_url(self.request, 'edit_user', user_name=user_name, cur_svc_type=cur_svc_type)
                 return HTTPMovedPermanently(location=users_url)
 
             # edits to groups checkboxes
@@ -381,7 +381,7 @@ class ManagementViews(object):
 
         if 'edit' in self.request.POST:
             group_name = self.request.POST.get('group_name')
-            return HTTPFound(self.request.route_url('edit_group', group_name=group_name, cur_svc_type='default'))
+            return HTTPFound(route_url(self.request, 'edit_group', group_name=group_name, cur_svc_type='default'))
 
         groups_info = {}
         groups = sorted(self.get_all_groups())
@@ -407,7 +407,7 @@ class ManagementViews(object):
                 return add_template_data(self.request, return_data)
 
             check_response(resp)  # check for any other exception than conflict
-            return HTTPFound(self.request.route_url('view_groups'))
+            return HTTPFound(route_url(self.request, 'view_groups'))
 
         return add_template_data(self.request, return_data)
 
@@ -554,7 +554,7 @@ class ManagementViews(object):
             if u'delete' in self.request.POST:
                 resp = request_api(self.request, group_path, 'DELETE')
                 check_response(resp)
-                return HTTPFound(self.request.route_url('view_groups'))
+                return HTTPFound(route_url(self.request, 'view_groups'))
             elif u'edit_group_name' in self.request.POST:
                 group_info[u'edit_mode'] = u'edit_group_name'
             elif u'save_group_name' in self.request.POST:
@@ -562,7 +562,7 @@ class ManagementViews(object):
                 resp = request_api(self.request, group_path, 'PUT', data=group_info)
                 check_response(resp)
                 # return immediately with updated URL to group with new name
-                return HTTPFound(self.request.route_url('edit_group', **group_info))
+                return HTTPFound(route_url(self.request, 'edit_group', **group_info))
             elif u'goto_service' in self.request.POST:
                 return self.goto_service(res_id)
             elif u'clean_resource' in self.request.POST:
@@ -757,9 +757,8 @@ class ManagementViews(object):
 
         if 'edit' in self.request.POST:
             service_name = self.request.POST.get('service_name')
-            return HTTPFound(self.request.route_url('edit_service',
-                                                    service_name=service_name,
-                                                    cur_svc_type=cur_svc_type))
+            return HTTPFound(route_url(self.request, 'edit_service',
+                                       service_name=service_name, cur_svc_type=cur_svc_type))
 
         return add_template_data(self.request,
                                  {u'cur_svc_type': cur_svc_type,
@@ -784,7 +783,7 @@ class ManagementViews(object):
                     u'service_push': service_push}
             resp = request_api(self.request, schemas.ServicesAPI.path, 'POST', data=data)
             check_response(resp)
-            return HTTPFound(self.request.route_url('view_services', cur_svc_type=service_type))
+            return HTTPFound(route_url(self.request, 'view_services', cur_svc_type=service_type))
 
         services_keys_sorted = self.get_service_types()
         services_phoenix_indices = [(1 if services_keys_sorted[i] in register.SERVICES_PHOENIX_ALLOWED else 0)
@@ -824,7 +823,7 @@ class ManagementViews(object):
                 service_info['public_url'] = register.get_twitcher_protected_service_url(new_svc_name),
             service_info['edit_mode'] = u'no_edit'
             # return directly to 'regenerate' the URL with the modified name
-            return HTTPFound(self.request.route_url('edit_service', **service_info))
+            return HTTPFound(route_url(self.request, 'edit_service', **service_info))
 
         if 'edit_url' in self.request.POST:
             service_info['edit_mode'] = u'edit_url'
@@ -841,7 +840,7 @@ class ManagementViews(object):
             path = schemas.ServiceAPI.path.format(service_name=service_name)
             resp = request_api(self.request, path, 'DELETE', data=service_data)
             check_response(resp)
-            return HTTPFound(self.request.route_url('view_services', **service_info))
+            return HTTPFound(route_url(self.request, 'view_services', **service_info))
 
         if 'delete_child' in self.request.POST:
             resource_id = self.request.POST.get('resource_id')
@@ -851,7 +850,7 @@ class ManagementViews(object):
 
         if 'add_child' in self.request.POST:
             service_info['resource_id'] = self.request.POST.get('resource_id')
-            return HTTPFound(self.request.route_url('add_resource', **service_info))
+            return HTTPFound(route_url(self.request, 'add_resource', **service_info))
 
         resources, resources_id_type = self.get_service_resources(service_name)
         path = schemas.ServiceAPI.path.format(service_name=service_name)
@@ -884,8 +883,8 @@ class ManagementViews(object):
                                headers={'Content-Type': 'application/json'})
             check_response(resp)
 
-            return HTTPFound(self.request.route_url('edit_service', service_name=service_name,
-                                                    cur_svc_type=cur_svc_type))
+            return HTTPFound(route_url(self.request, 'edit_service',
+                                       service_name=service_name, cur_svc_type=cur_svc_type))
 
         path = schemas.ServiceTypeResourceTypesAPI.path.format(service_type=cur_svc_type)
         resp = request_api(self.request, path, 'GET')
