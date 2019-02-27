@@ -280,7 +280,7 @@ class MagpieProcessStore(ProcessStore):
                 resp = requests.get(path, cookies=self.magpie_admin_token,
                                     headers=self.json_headers, verify=self.twitcher_ssl_verify)
                 resp.raise_for_status()
-                ems_res_id = resp.json()[self.magpie_service]['resource_id']
+                ems_res_id = resp.json()['service']['resource_id']
             except KeyError:
                 raise ProcessRegistrationError("Failed retrieving service resource.")
             except Exception as ex:
