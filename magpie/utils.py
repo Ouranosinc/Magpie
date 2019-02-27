@@ -1,8 +1,11 @@
 from magpie.common import raise_log, get_logger
 from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import HTTPOk, ConfigurationError, Configurator, Registry, Request
+from magpie.definitions.pyramid_definitions import (  # noqa: F401
+    HTTPOk, HTTPError, HTTPInternalServerError, ConfigurationError, Configurator, Registry, Request
+)
 from six.moves.urllib.parse import urlparse
 from typing import Optional, TYPE_CHECKING
+import logging
 import requests
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import Str, Cookies, Settings, SettingsContainer
@@ -31,19 +34,6 @@ def get_settings(container):
     if isinstance(container, dict):
         return container
     raise TypeError("Could not retrieve settings from container object [{}]".format(type(container)))
-
-
-def proxy_url(event):
-    """
-    Subscriber event that corrects the ``HTTP_HOST`` of the request according to `Magpie URL` matched with settings.
-    This is useful if `Magpie` is behind a reverse proxy, where URL/path routing doesn't correspond to the app URL.
-
-    .. seealso::
-        - :meth:`pyramid.config.adapters.AdaptersConfiguratorMixin.add_subscriber`
-        - :class:`pyramid.events.NewRequest`
-    """
-    host_url_parts = urlparse(get_magpie_url(event.request.registry))
-    event.request.environ['HTTP_HOST'] = host_url_parts.netloc + host_url_parts.path
 
 
 def patch_magpie_url(container):
@@ -113,3 +103,43 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
         twitcher_proxy_url = "https://{0}{1}".format(hostname, twitcher_proxy)
     twitcher_proxy_url = twitcher_proxy_url.rstrip('/')
     return "{0}/{1}".format(twitcher_proxy_url, magpie_service_name)
+
+
+def proxy_url(event):
+    """
+    Subscriber event that corrects the ``HTTP_HOST`` of the request according to `Magpie URL` matched with settings.
+    This is useful if `Magpie` is behind a reverse proxy, where URL/path routing doesn't correspond to the app URL.
+
+    .. seealso::
+        - :meth:`pyramid.config.adapters.AdaptersConfiguratorMixin.add_subscriber`
+        - :class:`pyramid.events.NewRequest`
+    """
+    host_url_parts = urlparse(get_magpie_url(event.request.registry))
+    event.request.environ['HTTP_HOST'] = host_url_parts.netloc + host_url_parts.path
+
+
+def log_request_format(request):
+    # type: (Request) -> Str
+    return "{!s:8} {!s} {!s}".format(request.method, request.host, request.path)
+
+
+def log_request(event):
+    """Subscriber event that logs basic details about the incoming requests."""
+    LOGGER.info("Request: [{}]".format(log_request_format(event.request)))
+
+
+def log_exception(handler, registry):
+    """
+    Tween factory that logs any exception before re-raising it.
+    Application errors are marked as ``ERROR`` while non critical HTTP errors are marked as ``WARNING``.
+    """
+    def log_exc(request):
+        try:
+            return handler(request)
+        except Exception as err:
+            lvl = logging.ERROR
+            if isinstance(err, HTTPError) and err.status_code < HTTPInternalServerError.code:
+                lvl = logging.WARNING
+            LOGGER.log(lvl, "Exception during request: [{}]".format(log_request_format(request)), exc_info=True)
+            return err
+    return log_exc

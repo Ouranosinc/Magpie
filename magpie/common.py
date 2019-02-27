@@ -16,20 +16,20 @@ import os
 import logging
 
 
-def get_logger(name, level=logging.INFO):
+def get_logger(name, level=None):
     """
     Immediately sets the logger level to avoid duplicate log outputs
     from the `root logger` and `this logger` when `level` is `NOTSET`.
     """
+    from magpie.constants import MAGPIE_LOG_LEVEL
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(level or MAGPIE_LOG_LEVEL)
     return logger
 
 
-LOGGER = get_logger(__name__)
-
-
-def print_log(msg, logger=LOGGER, level=logging.INFO):
+def print_log(msg, logger=None, level=logging.INFO):
+    if not logger:
+        logger = get_logger(__name__)
     all_handlers = logging.root.handlers + logger.handlers
     if not any(isinstance(h, logging.StreamHandler) for h in all_handlers):
         logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -38,8 +38,10 @@ def print_log(msg, logger=LOGGER, level=logging.INFO):
     logger.log(level, msg)
 
 
-def raise_log(msg, exception=Exception, logger=LOGGER, level=logging.ERROR):
+def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
     # type: (Str, Optional[Type[Exception]], Optional[LoggerType], Optional[int]) -> None
+    if not logger:
+        logger = get_logger(__name__)
     logger.log(level, msg)
     if not hasattr(exception, 'message'):
         exception = Exception

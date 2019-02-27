@@ -5,8 +5,8 @@ import shutil
 # noinspection PyPackageRequirements
 import dotenv
 import logging
-from magpie.common import str2bool, raise_log, print_log, get_settings_from_config_ini, get_logger
-LOGGER = get_logger(__name__)
+import warnings
+from magpie.common import str2bool, raise_log, print_log, get_settings_from_config_ini
 
 # ===========================
 # path variables
@@ -45,7 +45,7 @@ try:
     dotenv.load_dotenv(MAGPIE_ENV_FILE, override=False)
     dotenv.load_dotenv(MAGPIE_POSTGRES_ENV_FILE, override=False)
 except IOError:
-    LOGGER.warning("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR))
+    warnings.warn("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR), RuntimeWarning)
     pass
 
 # get default configurations from ini file
