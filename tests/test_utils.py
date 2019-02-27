@@ -42,6 +42,16 @@ class TestUtils(unittest.TestCase):
     def setUpClass(cls):
         pass
 
+    @runner.MAGPIE_TEST_LOCAL
+    def test_proxy_url(self):
+        magpie_url = 'http://random-host/some-base/path'
+        app = utils.get_test_magpie_app({'magpie.url': magpie_url})
+
+        path = '/version'
+        resp = utils.test_request(app, 'GET', path)
+        utils.check_response_basic_info(resp)
+        utils.check_val_equal(resp.request.url, magpie_url + path, "Proxied path should have been auto-resolved.")
+
     def test_get_query_param(self):
         r = self.make_request('/some/path')
         v = ar.get_query_param(r, 'value')

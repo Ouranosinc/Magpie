@@ -7,12 +7,14 @@ Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations
 
 from magpie.common import print_log, str2bool, get_logger
 from magpie.constants import get_constant
+from magpie.definitions.pyramid_definitions import NewRequest
 from magpie.helpers.register_default_users import register_default_users
 from magpie.register import (
     magpie_register_services_from_config,
     magpie_register_permissions_from_config,
 )
 from magpie.security import auth_config_from_settings
+from magpie.utils import proxy_url, patch_magpie_url
 from magpie import db, constants
 import os
 import sys
@@ -76,18 +78,13 @@ def main(global_config=None, **settings):
         print_log('No configuration file found for permissions registration, skipping...', LOGGER, logging.WARN)
 
     print_log('Running configurations setup...', LOGGER)
-    magpie_url_template = 'http://{hostname}:{port}'
-    port = get_constant('MAGPIE_PORT', settings=settings, settings_name='magpie.port')
-    if port:
-        settings['magpie.port'] = port
-    hostname = get_constant('HOSTNAME')
-    if hostname:
-        settings['magpie.url'] = magpie_url_template.format(hostname=hostname, port=settings['magpie.port'])
+    patch_magpie_url(settings)
 
     # avoid cornice conflicting with magpie exception views
     settings['handle_exceptions'] = False
 
     config = auth_config_from_settings(settings)
+    config.add_subscriber(proxy_url, NewRequest)
     config.include('magpie')
     # Don't use scan otherwise modules like 'magpie.adapter' are
     # automatically found and cause import errors on missing packages

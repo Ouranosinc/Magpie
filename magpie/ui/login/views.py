@@ -12,7 +12,7 @@ from magpie.definitions.pyramid_definitions import (
 )
 from magpie.ui.utils import check_response, request_api
 from magpie.ui.home import add_template_data
-from magpie.utils import get_magpie_url, route_url
+from magpie.utils import get_magpie_url
 import requests
 
 
@@ -65,7 +65,7 @@ class LoginViews(object):
                             pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
                         is_external = response.url != '{}{}'.format(self.magpie_url, schemas.SigninAPI.path)
                         return HTTPFound(response.url, headers=pyr_res.headers)
-                    return HTTPFound(location=route_url(self.request, 'home'), headers=response.headers)
+                    return HTTPFound(location=self.request.route_url('home'), headers=response.headers)
                 elif response.status_code == HTTPUnauthorized.code:
                     return_data[u'invalid_credentials'] = True
                 else:
@@ -80,4 +80,4 @@ class LoginViews(object):
     def logout(self):
         # Flush cookies and return to home
         request_api(self.request, schemas.SignoutAPI.path, 'GET')
-        return HTTPFound(location=route_url(self.request, 'home'), headers=forget(self.request))
+        return HTTPFound(location=self.request.route_url('home'), headers=forget(self.request))

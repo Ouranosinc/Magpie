@@ -1,16 +1,16 @@
 from magpie.common import raise_log, get_logger
 from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import HTTPOk, ConfigurationError, Registry, Request
+from magpie.definitions.pyramid_definitions import HTTPOk, ConfigurationError, Configurator, Registry, Request
 from six.moves.urllib.parse import urlparse
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 import requests
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Any, Str
+    from magpie.definitions.typedefs import Str, Cookies, Settings, SettingsContainer
 LOGGER = get_logger(__name__)
 
 
 def get_admin_cookies(magpie_url, verify=True, raise_message=None):
-    # type: (str, Optional[bool], Optional[Str]) -> Dict[str,str]
+    # type: (Str, Optional[bool], Optional[Str]) -> Cookies
     magpie_login_url = '{}/signin'.format(magpie_url)
     cred = {'user_name': get_constant('MAGPIE_ADMIN_USER'), 'password': get_constant('MAGPIE_ADMIN_PASSWORD')}
     resp = requests.post(magpie_login_url, data=cred, headers={'Accept': 'application/json'}, verify=verify)
@@ -22,15 +22,50 @@ def get_admin_cookies(magpie_url, verify=True, raise_message=None):
     return {token_name: resp.cookies.get(token_name)}
 
 
-def route_url(request, route, *args, **kwargs):
-    # type: (Request, Str, Any, Any) -> Str
-    kwargs['_app_url'] = get_magpie_url(request.registry)
-    return request.route_url(route, *args, **kwargs)
+def get_settings(container):
+    # type: (SettingsContainer) -> Settings
+    if isinstance(container, (Configurator, Request)):
+        return container.registry.settings
+    if isinstance(container, Registry):
+        return container.settings
+    if isinstance(container, dict):
+        return container
+    raise TypeError("Could not retrieve settings from container object [{}]".format(type(container)))
 
 
-def get_magpie_url(registry=None):
-    # type: (Optional[Registry]) -> str
-    if registry is None:
+def proxy_url(event):
+    """
+    Subscriber event that corrects the ``HTTP_HOST`` of the request according to `Magpie URL` matched with settings.
+    This is useful if `Magpie` is behind a reverse proxy, where URL/path routing doesn't correspond to the app URL.
+
+    .. seealso::
+        - :meth:`pyramid.config.adapters.AdaptersConfiguratorMixin.add_subscriber`
+        - :class:`pyramid.events.NewRequest`
+    """
+    host_url_parts = urlparse(get_magpie_url(event.request.registry))
+    event.request.environ['HTTP_HOST'] = host_url_parts.netloc + host_url_parts.path
+
+
+def patch_magpie_url(container):
+    # type: (SettingsContainer) -> Settings
+    """Updates potentially missing configuration settings for normal application execution."""
+    settings = get_settings(container)
+    try:
+        get_magpie_url(settings)
+    except ConfigurationError:
+        magpie_url_template = 'http://{hostname}:{port}'
+        port = get_constant('MAGPIE_PORT', settings=settings, settings_name='magpie.port')
+        if port:
+            settings['magpie.port'] = port
+        hostname = get_constant('HOSTNAME')
+        if hostname:
+            settings['magpie.url'] = magpie_url_template.format(hostname=hostname, port=settings['magpie.port'])
+    return settings
+
+
+def get_magpie_url(container=None):
+    # type: (Optional[SettingsContainer]) -> Str
+    if container is None:
         LOGGER.warning("Registry not specified, trying to find Magpie URL from environment")
         url = get_constant('MAGPIE_URL', raise_missing=False, raise_not_set=False)
         if url:
@@ -38,19 +73,20 @@ def get_magpie_url(registry=None):
         hostname = get_constant('HOSTNAME', raise_not_set=False, raise_missing=False) or \
                    get_constant('MAGPIE_HOST', raise_not_set=False, raise_missing=False)    # noqa
         if not hostname:
-            raise ValueError('Missing or unset MAGPIE_HOST or HOSTNAME value.')
+            raise ConfigurationError('Missing or unset MAGPIE_HOST or HOSTNAME value.')
         magpie_port = get_constant('MAGPIE_PORT', raise_not_set=False)
         return 'http://{0}{1}'.format(hostname, ':{}'.format(magpie_port) if magpie_port else '')
     try:
         # add 'http' scheme to url if omitted from config since further 'requests' calls fail without it
         # mostly for testing when only 'localhost' is specified
         # otherwise twitcher config should explicitly define it in MAGPIE_URL
-        url_parsed = urlparse(get_constant('MAGPIE_URL', registry.settings, 'magpie.url').strip('/'))
+        settings = get_settings(container)
+        url_parsed = urlparse(get_constant('MAGPIE_URL', settings, 'magpie.url').strip('/'))
         if url_parsed.scheme in ['http', 'https']:
             return url_parsed.geturl()
         else:
             magpie_url = 'http://{}'.format(url_parsed.geturl())
-            LOGGER.warning("Missing scheme from registry url, new value: '{}'".format(magpie_url))
+            LOGGER.warning("Missing scheme from settings URL, new value: '{}'".format(magpie_url))
             return magpie_url
     except AttributeError:
         # If magpie.url does not exist, calling strip fct over None will raise this issue

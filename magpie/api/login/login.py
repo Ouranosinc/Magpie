@@ -11,7 +11,6 @@ from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import create_user
 from magpie.common import convert_response, get_logger
 from magpie.constants import get_constant
-from magpie.utils import route_url
 from six.moves.urllib.parse import urlparse
 LOGGER = get_logger(__name__)
 
@@ -37,7 +36,7 @@ def process_sign_in_external(request, username, provider):
 
     came_from = request.POST.get('came_from', '/')
     request.response.set_cookie('homepage_route', came_from)
-    external_login_route = route_url(request, ProviderSigninAPI.name, provider_name=provider_name, _query=query_field)
+    external_login_route = request.route_url(ProviderSigninAPI.name, provider_name=provider_name, _query=query_field)
     return HTTPTemporaryRedirect(location=external_login_route, headers=request.response.headers)
 
 
@@ -56,7 +55,7 @@ def sign_in(request):
     verify_provider(provider_name)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
-        signin_internal_url = route_url(request, 'ziggurat.routes.sign_in')
+        signin_internal_url = request.route_url('ziggurat.routes.sign_in')
         signin_internal_data = {u'user_name': user_name, u'password': password, u'provider_name': provider_name}
         signin_sub_request = Request.blank(signin_internal_url, base_url=request.application_url,
                                            headers={'Accept': 'application/json'}, POST=signin_internal_data)

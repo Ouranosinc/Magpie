@@ -20,6 +20,7 @@ from magpie.definitions.typedefs import (  # noqa: F401
     Str, Callable, Dict, Headers, OptionalHeaderCookies, Optional, Type, Union
 )
 from magpie.definitions.pyramid_definitions import Response
+from magpie.utils import get_magpie_url
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tests.interfaces import Base_Magpie_TestCase    # noqa: F401
@@ -125,15 +126,15 @@ def config_setup_from_ini(config_ini_file_path):
     return config
 
 
-def get_test_magpie_app():
+def get_test_magpie_app(settings=None):
     # parse settings from ini file to pass them to the application
     config = config_setup_from_ini(get_constant('MAGPIE_INI_FILE_PATH'))
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
     config.include('ziggurat_foundations.ext.pyramid.get_user')
     config.registry.settings['magpie.db_migration'] = False
     config.registry.settings['magpie.url'] = 'http://localhost:80'  #
-    # scan dependencies
-    config.include('magpie')
+    if settings:
+        config.registry.settings.update(settings)
     # create the test application
     app = TestApp(magpiectl.main({}, **config.registry.settings))
     return app
@@ -141,7 +142,7 @@ def get_test_magpie_app():
 
 def get_hostname(app_or_url):
     if isinstance(app_or_url, TestApp):
-        app_or_url = get_constant('MAGPIE_URL', settings=app_or_url.app.registry.settings, settings_name='magpie.url')
+        app_or_url = get_magpie_url(app_or_url.app.registry)
     return urlparse(app_or_url).hostname
 
 

@@ -7,6 +7,8 @@ from pyramid.authorization import ACLAuthorizationPolicy                        
 # noinspection PyUnresolvedReferences
 from pyramid.exceptions import ConfigurationError                                   # noqa: F401
 # noinspection PyUnresolvedReferences
+from pyramid.events import NewRequest                                               # noqa: F401
+# noinspection PyUnresolvedReferences
 from pyramid.httpexceptions import (   # noqa: F401
     HTTPOk,
     HTTPCreated,
