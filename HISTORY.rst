@@ -8,25 +8,28 @@ History
 
 * greatly reduce docker image size
 * allow quick functional testing using sequences of local app form submissions
-* fix UI add child button broken by introduced 'int' resource id type checking
+* fix UI add child button broken by introduced ``int`` resource id type checking
 * add test methods for UI redirects to other views from button click in displayed page
-* change resource response for generic `resource: {<info>}` instead of `{resource-id}: {<info>}`
+* change resource response for generic ``resource: {<info>}`` instead of ``{resource-id}: {<info>}``
 * add permissions config to auto-generate user/group rules on startup
 * fix many invalid or erroneous swagger specifications
 * attempt db creation on first migration if not existing
 * add continuous integration testing and deployment (with python 2/3 tests)
-* ensure python compatibility for Python 2.7, 3.5, 3.6 (via Travis-CI)
-* reduce excessive sqlalchemy logging using `MAGPIE_LOG_LEVEL >= INFO`
+* ensure python compatibility for Python 2.7, 3.5, 3.6 (via `Travis-CI`)
+* reduce excessive ``sqlalchemy`` logging using ``MAGPIE_LOG_LEVEL >= INFO``
 * use schema API route definitions for UI calls
-* use sub-requests API call for UI operations (fixes issue #114)
-* add new route `/services/types` to obtain a list of available service types
-* add `resource_child_allowed` and `resource_types_allowed` fields in service response
-* change service response for generic `service: {<info>}` instead of `{service-name}: {<info>}`
-* add new route `/services/types/{svc_type}/resources` for details about child service type resources
-* error handling of reserved route keywords service `types` and current user `MAGPIE_LOGGED_USER`
+* use sub-requests API call for UI operations (fixes issue `#114 <https://github.com/Ouranosinc/Magpie/issues/114>`_)
+* add new route ``/services/types`` to obtain a list of available service types
+* add ``resource_child_allowed`` and ``resource_types_allowed`` fields in service response
+* change service response for generic ``service: {<info>}`` instead of ``{service-name}: {<info>}``
+* add new route ``/services/types/{svc_type}/resources`` for details about child service type resources
+* error handling of reserved route keywords service `types` and current user ``MAGPIE_LOGGED_USER``
 * additional tests for new routes and operations previously left unevaluated
 * fix invalid conflict service name check on service update request
-* logging adjustments
+* logging requests and exceptions according to `MAGPIE_LOG_REQUEST` and `MAGPIE_LOG_EXCEPTION` values
+* better handling of ``HTTPUnauthorized [401]`` and ``HTTPForbidden [403]`` according to unauthorized view
+  (invalid access token/headers or forbidden operation under view)
+* better handling of ``HTTPNotFound [404]`` and ``HTTPMethodNotAllowed [405]`` on invalid routes and request methods
 
 0.8.x
 ---------------------
@@ -44,11 +47,11 @@ History
 * add inherited resource permission with querystring (deprecate `inherited_<>` routes warnings)
 * add flag to return `effective` permissions from user resource permissions requests
 * hide service private URL on non administrator level requests
-* fix external providers login support (validated for DKRZ, GitHub and WSO2)
-* make cookies expire-able by setting `MAGPIE_COOKIE_EXPIRE` and provide cookie only on http (JS CSRF attack protection)
-* update `MagpieAdapter.MagpieOWSSecurity` for WSO2 seamless integration with Authentication header token
-* update `MagpieAdapter.MagpieProcess` for automatic handling of REST-API WPS process route access permissions
-* update `MagpieAdapter.MagpieService` accordingly to inherited resources and service URL changes
+* fix external providers login support (validated for `DKRZ`, `GitHub` and `WSO2`)
+* make cookies expire-able by setting ``MAGPIE_COOKIE_EXPIRE`` and provide cookie only on http (`JS CSRF` attack protection)
+* update ``MagpieAdapter.MagpieOWSSecurity`` for `WSO2` seamless integration with Authentication header token
+* update ``MagpieAdapter.MagpieProcess`` for automatic handling of REST-API WPS process route access permissions
+* update ``MagpieAdapter.MagpieService`` accordingly to inherited resources and service URL changes
 * bug fixes related to postgres DB entry conflicting inserts and validations
 
 0.6.x
@@ -56,14 +59,14 @@ History
 
 `Magpie REST API 0.6.x documentation`_
 
-* add `/magpie/api/` route to locally display the Magpie REST API documentation
+* add ``/magpie/api/`` route to locally display the Magpie REST API documentation
 * move many source files around to regroup by API/UI functionality
 * auto-generation of swagger REST API documentation
 * unit tests
 * validation of permitted resource types children under specific parent service or resource
-* ServiceAPI to filter read/write of specific GET,POST,etc on route parts
-* ServiceAccess to filter top-level route 'access' permission of a generic service URL
-* properly return values of field `permission_names` under `/services/.*` routes
+* ``ServiceAPI`` to filter ``read``/``write`` of specific HTTP methods on route parts
+* ``ServiceAccess`` to filter top-level route ``access`` permission of a generic service URL
+* properly return values of field ``permission_names`` under ``/services/.*`` routes
 * update make procedures and postgres variables specific to magpie
 
 0.5.x
@@ -93,17 +96,17 @@ History
 
 `Magpie REST API 0.3.x documentation`_
 
-* ncWMS support for getmap, getcapabilities, getmetadata on thredds resource
-* ncWMS2 added to default providers
-* add geoserverwms
-* remove load balanced Malleefowl and Catalog
-* push service provider updates to phoenix on service modification or initial setup with getcapabilities for anonymous
+* `ncWMS` support for `getmap`, `getcapabilities`, `getmetadata` on ``thredds`` resource
+* `ncWMS2` added to default providers
+* add `geoserverwms` service
+* remove load balanced `Malleefowl` and `Catalog`
+* push service provider updates to `Phoenix` on service edit or initial setup with `getcapabilities` for `anonymous`
 * major update of `Magpie REST API 0.2.x documentation`_ to match returned codes/messages from 0.2.0 changes
 * normalise additional HTTP request responses omitted from 0.2.0 (404, 500, and other missed responses)
-* remove internal api call, separate login external from local, direct access to ziggurat login
-* fixes UI "Magpie Administration" to redirect toward home page instead of PAVICS platform
+* remove internal api call, separate login external from local, direct access to `ziggurat` login
+* fixes UI ``"Magpie Administration"`` to redirect toward home page instead of `PAVICS` platform
 * fix bug during user creation against preemptive checks
-* bug fixes from 0.2.x series
+* bug fixes from `0.2.x` versions
 
 0.2.0
 ---------------------
@@ -118,7 +121,7 @@ History
 
 `Magpie REST API 0.1.1 documentation`_
 
-* Add edition of service URL via PUT/{service_name}.
+* Add edition of service URL via ``PUT /{service_name}``.
 
 0.1.0
 ---------------------

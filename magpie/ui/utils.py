@@ -1,7 +1,9 @@
 from magpie.definitions.pyramid_definitions import exception_response, Request, Response, HTTPBadRequest
-from magpie.definitions.typedefs import Str, JsonBody, Cookies, Headers, Optional
-from magpie.common import get_header
+from magpie.common import get_header, JSON_TYPE
+from typing import TYPE_CHECKING
 import json
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Str, JsonBody, CookiesType, HeadersType, Optional
 
 
 def check_response(response):
@@ -14,16 +16,16 @@ def request_api(request,            # type: Request
                 path,               # type: Str
                 method='GET',       # type: Optional[Str]
                 data=None,          # type: Optional[JsonBody]
-                headers=None,       # type: Optional[Headers]
-                cookies=None,       # type: Optional[Cookies]
+                headers=None,       # type: Optional[HeadersType]
+                cookies=None,       # type: Optional[CookiesType]
                 ):                  # type: (...) -> Response
     """
     Use a pyramid sub-request to request Magpie API routes via the UI.
     This avoids max retries and closed connections when using 1 worker (eg: during tests).
 
-    Some information is retrieved from :param:`request` to pass down to the sub-request (eg: headers, cookies).
-    If they are passed as argument, corresponding values will override the ones found in :param:`request`.
-    All sub-requests to the API are assumed to be of JSON type.
+    Some information is retrieved from ``request`` to pass down to the sub-request (eg: headers, cookies).
+    If they are passed as argument, corresponding values will override the ones found in ``request``.
+    All sub-requests to the API are assumed to be of ``magpie.common.JSON_TYPE``.
     """
     method = method.upper()
     extra_kwargs = {'method': method}
@@ -31,7 +33,7 @@ def request_api(request,            # type: Request
     if headers:
         headers = dict(headers)
     if not headers and not request.headers:
-        headers = {'Accept': 'application/json'}
+        headers = {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE}
     if not headers:
         headers = request.headers
     # although no body is required per-say for HEAD/GET requests, add it if missing
@@ -40,7 +42,7 @@ def request_api(request,            # type: Request
     # of local/remote testing with corresponding `webtest.TestApp`/`requests.Request`
     if not data:
         data = u''
-    if isinstance(data, dict) and get_header('Content-Type', headers) == 'application/json':
+    if isinstance(data, dict) and get_header('Content-Type', headers, split=[',', ';']) == JSON_TYPE:
         data = json.dumps(data)
 
     if isinstance(cookies, dict):

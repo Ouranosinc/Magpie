@@ -9,6 +9,7 @@ Tests for the various utility operations employed by magpie.
 """
 
 from magpie.api import api_requests as ar, api_except as ax
+from magpie.common import get_header, JSON_TYPE
 from magpie.definitions.pyramid_definitions import (    # noqa: F401
     asbool,
     Request,
@@ -17,10 +18,12 @@ from magpie.definitions.pyramid_definitions import (    # noqa: F401
     HTTPBadRequest,
     HTTPOk,
 )
-from magpie.definitions.typedefs import Str     # noqa: F401
 from pyramid.testing import DummyRequest
 from tests import utils, runner
+from typing import TYPE_CHECKING
 import unittest
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Str  # noqa: F401
 
 
 @runner.MAGPIE_TEST_UTILS
@@ -51,6 +54,12 @@ class TestUtils(unittest.TestCase):
         resp = utils.test_request(app, 'GET', path)
         utils.check_response_basic_info(resp)
         utils.check_val_equal(resp.request.url, magpie_url + path, "Proxied path should have been auto-resolved.")
+
+    def test_get_header_split(self):
+        headers = {'Content-Type': '{}; charset=UTF-8'.format(JSON_TYPE)}
+        for name in ['content_type', 'content-type', 'Content_Type', 'Content-Type', 'CONTENT_TYPE', 'CONTENT-TYPE']:
+            for split in [';,', ',;', ';', (',', ';'), [';', ',']]:
+                utils.check_val_equal(get_header(name, headers, split=split), JSON_TYPE)
 
     def test_get_query_param(self):
         r = self.make_request('/some/path')

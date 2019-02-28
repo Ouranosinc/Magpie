@@ -1,22 +1,22 @@
-from magpie.common import raise_log, get_logger
+from magpie.common import raise_log, get_logger, JSON_TYPE
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import (  # noqa: F401
-    HTTPOk, HTTPError, HTTPInternalServerError, ConfigurationError, Configurator, Registry, Request
+    HTTPOk, HTTPClientError, ConfigurationError, Configurator, Registry, Request
 )
 from six.moves.urllib.parse import urlparse
 from typing import Optional, TYPE_CHECKING
 import logging
 import requests
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, Cookies, Settings, SettingsContainer
+    from magpie.definitions.typedefs import Str, CookiesType, SettingsType, SettingsContainer
 LOGGER = get_logger(__name__)
 
 
 def get_admin_cookies(magpie_url, verify=True, raise_message=None):
-    # type: (Str, Optional[bool], Optional[Str]) -> Cookies
+    # type: (Str, Optional[bool], Optional[Str]) -> CookiesType
     magpie_login_url = '{}/signin'.format(magpie_url)
     cred = {'user_name': get_constant('MAGPIE_ADMIN_USER'), 'password': get_constant('MAGPIE_ADMIN_PASSWORD')}
-    resp = requests.post(magpie_login_url, data=cred, headers={'Accept': 'application/json'}, verify=verify)
+    resp = requests.post(magpie_login_url, data=cred, headers={'Accept': JSON_TYPE}, verify=verify)
     if resp.status_code != HTTPOk.code:
         if raise_message:
             raise_log(raise_message, logger=LOGGER)
@@ -26,7 +26,7 @@ def get_admin_cookies(magpie_url, verify=True, raise_message=None):
 
 
 def get_settings(container):
-    # type: (SettingsContainer) -> Settings
+    # type: (SettingsContainer) -> SettingsType
     if isinstance(container, (Configurator, Request)):
         return container.registry.settings
     if isinstance(container, Registry):
@@ -37,7 +37,7 @@ def get_settings(container):
 
 
 def patch_magpie_url(container):
-    # type: (SettingsContainer) -> Settings
+    # type: (SettingsContainer) -> SettingsType
     """Updates potentially missing configuration settings for normal application execution."""
     settings = get_settings(container)
     try:
@@ -128,6 +128,7 @@ def log_request(event):
     LOGGER.info("Request: [{}]".format(log_request_format(event.request)))
 
 
+# noinspection PyUnusedLocal
 def log_exception(handler, registry):
     """
     Tween factory that logs any exception before re-raising it.
@@ -138,8 +139,10 @@ def log_exception(handler, registry):
             return handler(request)
         except Exception as err:
             lvl = logging.ERROR
-            if isinstance(err, HTTPError) and err.status_code < HTTPInternalServerError.code:
+            exc = True
+            if isinstance(err, HTTPClientError):
                 lvl = logging.WARNING
-            LOGGER.log(lvl, "Exception during request: [{}]".format(log_request_format(request)), exc_info=True)
-            return err
+                exc = False
+            LOGGER.log(lvl, "Exception during request: [{}]".format(log_request_format(request)), exc_info=exc)
+            raise err
     return log_exc

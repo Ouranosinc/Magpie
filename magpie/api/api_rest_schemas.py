@@ -1,5 +1,6 @@
 from magpie.definitions.cornice_definitions import *
 from magpie.definitions.pyramid_definitions import *
+from magpie.common import JSON_TYPE
 from magpie.constants import get_constant
 from magpie.utils import get_magpie_url
 # from magpie.security import get_provider_names
@@ -286,8 +287,8 @@ ServiceNameParameter = colander.SchemaNode(
 class HeaderResponseSchema(colander.MappingSchema):
     content_type = colander.SchemaNode(
         colander.String(),
-        default='application/json',
-        example='application/json',
+        default=JSON_TYPE,
+        example=JSON_TYPE,
         description='Content type of the response body.',
     )
     content_type.name = 'Content-Type'
@@ -296,8 +297,8 @@ class HeaderResponseSchema(colander.MappingSchema):
 class HeaderRequestSchema(colander.MappingSchema):
     content_type = colander.SchemaNode(
         colander.String(),
-        default='application/json',
-        example='application/json',
+        default=JSON_TYPE,
+        example=JSON_TYPE,
         missing=colander.drop,
     )
     content_type.name = 'Content-Type'
@@ -342,7 +343,7 @@ class BaseResponseBodySchema(colander.MappingSchema):
     type = colander.SchemaNode(
         colander.String(),
         description="Response content type",
-        example="application/json")
+        example=JSON_TYPE)
     detail = colander.SchemaNode(
         colander.String(),
         description="Response status message",
@@ -398,9 +399,16 @@ class UnauthorizedResponseBodySchema(BaseResponseBodySchema):
 
 
 class UnauthorizedResponseSchema(colander.MappingSchema):
-    description = "Unauthorized. Insufficient user privileges or missing authentication headers."
+    description = "Unauthorized access to this resource. " + \
+                  "Insufficient user privileges or missing authentication headers."
     header = HeaderResponseSchema()
     body = UnauthorizedResponseBodySchema(code=HTTPUnauthorized.code, description=description)
+
+
+class HTTPForbiddenResponseSchema(colander.MappingSchema):
+    description = "Forbidden operation under this resource."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class NotFoundResponseSchema(colander.MappingSchema):

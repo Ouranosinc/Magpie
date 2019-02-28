@@ -75,6 +75,8 @@ MAGPIE_EDITOR_GROUP = os.getenv('MAGPIE_EDITOR_GROUP', 'editors')
 MAGPIE_USERS_GROUP = os.getenv('MAGPIE_USERS_GROUP', 'users')
 MAGPIE_CRON_LOG = os.getenv('MAGPIE_CRON_LOG', '~/magpie-cron.log')
 MAGPIE_LOG_LEVEL = os.getenv('MAGPIE_LOG_LEVEL', _default_log_lvl)
+MAGPIE_LOG_REQUEST = str2bool(os.getenv('MAGPIE_LOG_REQUEST', True))
+MAGPIE_LOG_EXCEPTION = str2bool(os.getenv('MAGPIE_LOG_EXCEPTION', True))
 PHOENIX_USER = os.getenv('PHOENIX_USER', 'phoenix')
 PHOENIX_PASSWORD = os.getenv('PHOENIX_PASSWORD', 'qwerty')
 PHOENIX_PORT = int(os.getenv('PHOENIX_PORT', 8443))
@@ -121,10 +123,10 @@ def get_constant(name, settings=None, settings_name=None, default_value=None,
     :param settings_name: alternative name for `settings` if specified
     :param default_value: default value to be returned if not found anywhere, and exception raises are disabled.
     :param raise_missing: raise exception if key is not found anywhere
-    :param print_missing: print message if key is not found anywhere, return None
-    :param raise_not_set: raise an exception if the found key is None, search until last case if previous are None
-    :returns: found value or :param:`default_value`
-    :raises: according message based on options (by default raise missing/None value)
+    :param print_missing: print message if key is not found anywhere, return `None`
+    :param raise_not_set: raise an exception if the found key is None, search until last case if previous are `None`
+    :returns: found value or `default_value`
+    :raises: according message based on options (by default raise missing/`None` value)
     """
     magpie_globals = globals()
     missing = True

@@ -21,9 +21,11 @@ from magpie.definitions.pyramid_definitions import (
     HTTPConflict,
     HTTPException,  # noqa: F401
 )
-from magpie.definitions.typedefs import Any, Str, Dict, List, Optional, Union
 from magpie.services import service_factory, ResourcePermissionType, ServiceI
 from magpie import models
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Any, Str, Dict, List, Optional, Union, UserServicesType
 
 
 def create_user(user_name, password, email, group_name, db_session):
@@ -146,12 +148,9 @@ def get_user_resource_permissions(user, resource, request,
     return sorted(set(permission_names))  # remove any duplicates that could be incorporated by multiple groups
 
 
-UserServices = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
-
-
 def get_user_services(user, request, cascade_resources=False,
                       inherit_groups_permissions=False, format_as_list=False):
-    # type: (models.User, Request, Optional[bool], Optional[bool], Optional[bool]) -> UserServices
+    # type: (models.User, Request, Optional[bool], Optional[bool], Optional[bool]) -> UserServicesType
     """
     Returns services by type with corresponding services by name containing sub-dict information.
 

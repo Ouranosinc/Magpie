@@ -58,7 +58,7 @@ def sign_in(request):
         signin_internal_url = request.route_url('ziggurat.routes.sign_in')
         signin_internal_data = {u'user_name': user_name, u'password': password, u'provider_name': provider_name}
         signin_sub_request = Request.blank(signin_internal_url, base_url=request.application_url,
-                                           headers={'Accept': 'application/json'}, POST=signin_internal_data)
+                                           headers={'Accept': JSON_TYPE}, POST=signin_internal_data)
         signin_response = request.invoke_subrequest(signin_sub_request)
         if signin_response.status_code == HTTPOk.code:
             return convert_response(signin_response)
@@ -97,7 +97,7 @@ def login_failure(request, reason=None):
             if user_name in user_name_list:
                 httpError = HTTPUnauthorized
                 reason = "Incorrect credentials."
-    content = get_request_info(request, default_msg=Signin_POST_UnauthorizedResponseSchema.description)
+    content = get_request_info(request, default_message=Signin_POST_UnauthorizedResponseSchema.description)
     content.update({u'reason': str(reason)})
     raise_http(httpError=httpError, content=content, detail=Signin_POST_UnauthorizedResponseSchema.description)
 

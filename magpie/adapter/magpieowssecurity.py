@@ -1,6 +1,6 @@
 from magpie.api.api_except import evaluate_call, verify_param
 from magpie.constants import get_constant
-from magpie.common import get_logger
+from magpie.common import get_logger, JSON_TYPE
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,
     HTTPNotFound,
@@ -70,7 +70,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             magpie_prov = request.params.get('provider', 'WSO2')
             magpie_auth = '{host}/providers/{provider}/signin'.format(host=self.magpie_url, provider=magpie_prov)
             headers = dict(request.headers)
-            headers.update({'Homepage-Route': '/session', 'Accept': 'application/json'})
+            headers.update({'Homepage-Route': '/session', 'Accept': JSON_TYPE})
             session_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)
             if session_resp.status_code != HTTPOk.code:
                 raise OWSAccessForbidden("Not authorized to access this resource. " +

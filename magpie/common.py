@@ -1,19 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
 from magpie.definitions.pyramid_definitions import Response, HTTPException
-from magpie.definitions.typedefs import Any, AnyHeaders, Str, Optional, Type, Union
 from webob.headers import ResponseHeaders, EnvironHeaders
 from requests.structures import CaseInsensitiveDict
 from distutils.dir_util import mkpath
-# noinspection PyProtectedMember
-from logging import _loggerClass as LoggerType
+from six.moves import configparser
+from typing import TYPE_CHECKING
+import logging
 import types
 import six
-from six.moves import configparser
 import sys
 import os
-import logging
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import (  # noqa: F401
+        AnyResponseType, AnyHeadersType, LoggerType, Str, List, Optional, Type, Union
+    )
+
+JSON_TYPE = 'application/json'
+HTML_TYPE = 'text/html'
+PLAIN_TYPE = 'text/plain'
+CONTENT_TYPES = [JSON_TYPE, HTML_TYPE, PLAIN_TYPE]
 
 
 def get_logger(name, level=None):
@@ -97,26 +103,47 @@ def get_json(response):
     return response.json()
 
 
-def get_header(header_name, header_container):
-    # type: (Str, AnyHeaders) -> Union[Str, None]
+def get_header(header_name, header_container, default=None, split=None):
+    # type: (Str, AnyHeadersType, Optional[Str], Optional[Union[Str, List[Str]]]) -> Union[Str, None]
+    """
+    Retrieves ``header_name`` by fuzzy match (independently of upper/lower-case and underscore/dash)
+    from various framework implementations of ``Headers``.
+
+    If ``split`` is specified, the matched ``header_name`` is first split with it and the first item is returned.
+    This allows to parse complex headers (e.g.: ``text/plain; charset=UTF-8`` to ``text/plain`` with ``split=';'``).
+
+    :param header_name: header to find.
+    :param header_container: where to look for `header_name`.
+    :param default: value to returned if `header_container` is invalid or `header_name` could not be found.
+    :param split: character(s) to use to split the *found* `header_name`.
+    """
+    def fuzzy_name(name):
+        return name.lower().replace('-', '_')
+
     if header_container is None:
-        return None
+        return default
     headers = header_container
     if isinstance(headers, (ResponseHeaders, EnvironHeaders, CaseInsensitiveDict)):
         headers = dict(headers)
     if isinstance(headers, dict):
         headers = header_container.items()
-    header_name = header_name.lower().replace('-', '_')
+    header_name = fuzzy_name(header_name)
     for h, v in headers:
-        if h.lower().replace('-', '_') == header_name:
-            return v
-    return None
+        if fuzzy_name(h) == header_name:
+            if isinstance(split, six.string_types) and len(split) > 1:
+                split = [c for c in split]
+            if hasattr(split, '__iter__') and not isinstance(split, six.string_types):
+                for s in split:
+                    v = v.replace(s, split[0])
+                split = split[0]
+            return (v.split(split)[0] if split else v).strip()
+    return default
 
 
 def convert_response(response):
-    # type: (Any) -> Response
+    # type: (AnyResponseType) -> Response
     """
-    Converts a ``response`` implementation (eg: ``requests.Response``)
+    Converts a ``response`` implementation (e.g.: ``requests.Response``)
     to an equivalent ``pyramid.response.Response`` version.
     """
     if isinstance(response, Response):
