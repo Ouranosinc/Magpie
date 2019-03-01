@@ -13,7 +13,7 @@ from magpie.register import (
     magpie_register_permissions_from_config,
 )
 from magpie.security import auth_config_from_settings
-from magpie.utils import patch_magpie_url, proxy_url, log_request, log_exception
+from magpie.utils import patch_magpie_url
 from magpie import db, constants
 import os
 import sys

@@ -21,6 +21,9 @@ from magpie.definitions.pyramid_definitions import (    # noqa: F401
 from pyramid.testing import DummyRequest
 from tests import utils, runner
 from typing import TYPE_CHECKING
+# noinspection PyDeprecation
+from contextlib import nested
+import mock
 import unittest
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import Str  # noqa: F401
@@ -46,7 +49,44 @@ class TestUtils(unittest.TestCase):
         pass
 
     @runner.MAGPIE_TEST_LOCAL
-    def test_proxy_url(self):
+    def test_proxy_url_direct_request(self):
+        magpie_url = 'http://random-host/some-base/path'
+        app = utils.get_test_magpie_app({'magpie.url': magpie_url})
+
+        path = '/version'
+        resp = utils.test_request(app, 'GET', path)
+        utils.check_response_basic_info(resp)
+        utils.check_val_equal(resp.request.url, magpie_url + path, "Proxied path should have been auto-resolved.")
+
+    @runner.MAGPIE_TEST_LOCAL
+    def test_proxy_url_request_with_multiple_route_url(self):
+        """
+        Test multiple request routing with fixed 'MAGPIE_URL' within the API application.
+
+        Signin with invalid credentials will call '/signin' followed by sub-request '/signin_internal' and
+        finally 'ZigguratSignInBadAuth'. Both '/signin' and 'ZigguratSignInBadAuth' use 'get_multiformat_post'.
+        """
+
+        paths = ['/signin', '/signin_internal']
+
+        def mock_get_multiformat_post(*args, **kwargs):
+            return get_post_item(*args, p=paths.pop(0), **kwargs)
+
+        def get_post_item(request, name, default=None, p=None):
+            utils.check_val_equal(request.url, magpie_url + p, "Proxied path should have been auto-resolved.")
+            return request.json.get(name, default)
+
+        magpie_url = 'http://random-host/some-base/path'
+        app = utils.get_test_magpie_app({'magpie.url': magpie_url})
+
+        with mock.patch('magpie.api.login.login.get_multiformat_post', side_effect=mock_get_multiformat_post):
+            data = {'user_name': 'foo', 'password': 'bar'}
+            headers = {'Content-Type': JSON_TYPE, 'Accept': JSON_TYPE}
+            resp = utils.test_request(app, 'POST', paths[0], json=data, headers=headers, expect_errors=True)
+            utils.check_response_basic_info(resp, expected_code=401)
+
+    @runner.MAGPIE_TEST_LOCAL
+    def test_proxy_url_request(self):
         magpie_url = 'http://random-host/some-base/path'
         app = utils.get_test_magpie_app({'magpie.url': magpie_url})
 

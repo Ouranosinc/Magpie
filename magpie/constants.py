@@ -60,6 +60,7 @@ except Exception:
 # ===========================
 # variables from magpie.env
 # ===========================
+MAGPIE_URL = os.getenv('MAGPIE_URL', None)
 MAGPIE_SECRET = os.getenv('MAGPIE_SECRET', 'seekrit')
 MAGPIE_COOKIE_NAME = os.getenv('MAGPIE_COOKIE_NAME', 'auth_tkt')
 MAGPIE_COOKIE_EXPIRE = os.getenv('MAGPIE_COOKIE_EXPIRE', None)
