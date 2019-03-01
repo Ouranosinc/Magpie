@@ -73,8 +73,9 @@ class TestUtils(unittest.TestCase):
             return get_post_item(*args, p=paths.pop(0), **kwargs)
 
         def get_post_item(request, name, default=None, p=None):
+            from magpie.api.api_requests import get_multiformat_post as real_get_multiformat_post
             utils.check_val_equal(request.url, magpie_url + p, "Proxied path should have been auto-resolved.")
-            return request.json.get(name, default)
+            return real_get_multiformat_post(request, name, default=default)
 
         magpie_url = 'http://random-host/some-base/path'
         app = utils.get_test_magpie_app({'magpie.url': magpie_url})
@@ -83,7 +84,7 @@ class TestUtils(unittest.TestCase):
             data = {'user_name': 'foo', 'password': 'bar'}
             headers = {'Content-Type': JSON_TYPE, 'Accept': JSON_TYPE}
             resp = utils.test_request(app, 'POST', paths[0], json=data, headers=headers, expect_errors=True)
-            utils.check_response_basic_info(resp, expected_code=401)
+            utils.check_response_basic_info(resp, expected_code=406)    # user name doesn't exist
 
     @runner.MAGPIE_TEST_LOCAL
     def test_proxy_url_request(self):
