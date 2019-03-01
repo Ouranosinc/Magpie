@@ -292,7 +292,8 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
 
         if isinstance(app_or_url, TestApp):
             if use_ui_form_submit:
-                resp = app_or_url.get(url='/ui/login')
+                base_url = app_or_url.app.registry.settings.get('magpie.url')
+                resp = app_or_url.get(url='{}/ui/login'.format(base_url))
                 form = resp.forms['login_internal']
                 form['user_name'] = username
                 form['password'] = password

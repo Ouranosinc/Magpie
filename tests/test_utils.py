@@ -21,8 +21,6 @@ from magpie.definitions.pyramid_definitions import (    # noqa: F401
 from pyramid.testing import DummyRequest
 from tests import utils, runner
 from typing import TYPE_CHECKING
-# noinspection PyDeprecation
-from contextlib import nested
 import mock
 import unittest
 if TYPE_CHECKING:
@@ -57,7 +55,8 @@ class TestUtils(unittest.TestCase):
             path = '/version'
             resp = utils.test_request(app, 'GET', path)
             utils.check_response_basic_info(resp)
-            utils.check_val_equal(resp.request.url, base_url + path, "Proxied path should have been auto-resolved.")
+            utils.check_val_equal(resp.request.url, base_url + path,
+                                  "Proxied path should have been auto-resolved [URL: {}].".format(url))
 
     @runner.MAGPIE_TEST_LOCAL
     def test_magpie_prefix_request_with_multiple_route_url(self):
@@ -74,7 +73,8 @@ class TestUtils(unittest.TestCase):
 
         def get_post_item(request, name, default=None, p=None):
             from magpie.api.api_requests import get_multiformat_post as real_get_multiformat_post
-            utils.check_val_equal(request.url, base_url + p, "Proxied path should have been auto-resolved.")
+            utils.check_val_equal(request.url, base_url + p,
+                                  "Proxied path should have been auto-resolved [URL: {}].".format(url))
             return real_get_multiformat_post(request, name, default=default)
 
         for url in ['http://localhost', 'http://localhost/magpie']:
