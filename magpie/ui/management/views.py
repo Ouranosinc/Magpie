@@ -8,7 +8,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPConflict,
 )
 from magpie.constants import get_constant
-from magpie.common import str2bool, get_json, get_logger
+from magpie.common import str2bool, get_json, get_logger, JSON_TYPE
 from magpie.helpers.sync_resources import OUT_OF_SYNC
 from magpie.helpers import sync_resources
 from magpie.models import resource_type_dict, remote_resource_tree_service  # TODO: remove, implement getters via API
@@ -27,7 +27,6 @@ LOGGER = get_logger(__name__)
 class ManagementViews(object):
     def __init__(self, request):
         self.request = request
-        self.magpie_url = request.application_url
 
     @error_badrequest
     def get_all_groups(self, first_default_group=None):
@@ -758,8 +757,7 @@ class ManagementViews(object):
         if 'edit' in self.request.POST:
             service_name = self.request.POST.get('service_name')
             return HTTPFound(self.request.route_url('edit_service',
-                                                    service_name=service_name,
-                                                    cur_svc_type=cur_svc_type))
+                                       service_name=service_name, cur_svc_type=cur_svc_type))
 
         return add_template_data(self.request,
                                  {u'cur_svc_type': cur_svc_type,
@@ -881,10 +879,11 @@ class ManagementViews(object):
                     u'resource_type': resource_type,
                     u'parent_id': int(resource_id) if resource_id else None}
             resp = request_api(self.request, schemas.ResourcesAPI.path, 'POST', data=data,
-                               headers={'Content-Type': 'application/json'})
+                               headers={'Content-Type': JSON_TYPE})
             check_response(resp)
 
-            return HTTPFound(self.request.route_url('edit_service', service_name=service_name,
+            return HTTPFound(self.request.route_url('edit_service',
+                                                    service_name=service_name,
                                                     cur_svc_type=cur_svc_type))
 
         path = schemas.ServiceTypeResourceTypesAPI.path.format(service_type=cur_svc_type)

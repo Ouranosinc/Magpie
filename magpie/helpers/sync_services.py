@@ -1,3 +1,4 @@
+from magpie.common import JSON_TYPE
 import abc
 from collections import OrderedDict
 
@@ -60,7 +61,7 @@ class _SyncServiceGeoserver(_SyncServiceInterface):
         # Only workspaces are fetched for now
         resource_type = "route"
         workspaces_url = "{}/{}".format(self.url, "workspaces")
-        resp = requests.get(workspaces_url, headers={"Accept": "application/json"})
+        resp = requests.get(workspaces_url, headers={"Accept": JSON_TYPE})
         resp.raise_for_status()
         workspaces_list = resp.json().get("workspaces", {}).get("workspace", {})
 

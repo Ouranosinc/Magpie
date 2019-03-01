@@ -12,6 +12,7 @@ from webtest import TestApp
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from magpie.api.api_rest_schemas import SwaggerGenerator
+from magpie.common import JSON_TYPE
 from magpie.constants import get_constant
 from magpie.models import resource_type_dict
 from magpie.services import service_type_dict
@@ -156,7 +157,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         resp = utils.test_request(self.url, 'GET', SwaggerGenerator.path, headers=self.json_headers)
         json_body = utils.get_json_body(resp)
         content_types = utils.get_response_content_types_list(resp)
-        utils.check_val_is_in('application/json', content_types)
+        utils.check_val_is_in(JSON_TYPE, content_types)
         utils.check_val_equal(resp.status_code, 200)
         utils.check_val_is_in('info', json_body)
         utils.check_val_is_in('version', json_body['info'])
@@ -597,7 +598,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         headers, cookies = utils.check_or_try_login_user(
             self.url, username=self.test_user_name, password=self.test_user_name, version=self.version,
             use_ui_form_submit=True, expect_errors=True)
-        utils.check_val_equal(cookies, {}, msg="Cookies should be empty from login failure.")
+        utils.check_val_equal(cookies, {}, msg="CookiesType should be empty from login failure.")
         resp = utils.test_request(self.url, 'GET', '/session', headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(body['authenticated'], False)
@@ -856,7 +857,12 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         # so not even a forbidden case to handle
         resp = utils.test_request(self.url, 'PUT', '/services/types', data={}, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        utils.check_response_basic_info(resp, 404, expected_method='PUT')
+        if LooseVersion(self.version) >= LooseVersion('0.9.5'):
+            # directly interpreted as expected route `/services/types` behaviour, so method PUT not allowed
+            utils.check_response_basic_info(resp, 405, expected_method='PUT')
+        else:
+            # no route with service named 'types', filtered as not found
+            utils.check_response_basic_info(resp, 404, expected_method='PUT')
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PutService_ReservedKeyword_Types(self):
@@ -864,7 +870,12 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         data = {'service_name': 'dummy', 'service_url': 'dummy'}
         resp = utils.test_request(self.url, 'PUT', '/services/types', data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        utils.check_response_basic_info(resp, 404, expected_method='PUT')   # no route with service 'types'
+        if LooseVersion(self.version) >= LooseVersion('0.9.5'):
+            # directly interpreted as expected route `/services/types` behaviour, so method PUT not allowed
+            utils.check_response_basic_info(resp, 405, expected_method='PUT')
+        else:
+            # no route with service named 'types', filtered as not found
+            utils.check_response_basic_info(resp, 404, expected_method='PUT')
 
         utils.warn_version(self, "check for update service named 'types'", '0.9.1', skip=True)
         # try to PUT on valid service with new name 'types' should raise the error

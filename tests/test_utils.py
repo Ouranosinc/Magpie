@@ -9,6 +9,7 @@ Tests for the various utility operations employed by magpie.
 """
 
 from magpie.api import api_requests as ar, api_except as ax
+from magpie.common import get_header, JSON_TYPE
 from magpie.definitions.pyramid_definitions import (    # noqa: F401
     asbool,
     Request,
@@ -17,10 +18,13 @@ from magpie.definitions.pyramid_definitions import (    # noqa: F401
     HTTPBadRequest,
     HTTPOk,
 )
-from magpie.definitions.typedefs import Str     # noqa: F401
 from pyramid.testing import DummyRequest
 from tests import utils, runner
+from typing import TYPE_CHECKING
+import mock
 import unittest
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Str  # noqa: F401
 
 
 @runner.MAGPIE_TEST_UTILS
@@ -41,6 +45,53 @@ class TestUtils(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         pass
+
+    @runner.MAGPIE_TEST_LOCAL
+    def test_magpie_prefix_direct_request(self):
+        base_url = 'http://localhost'
+        for url in ['http://localhost', 'http://localhost/magpie']:
+            app = utils.get_test_magpie_app({'magpie.url': url})
+
+            path = '/version'
+            resp = utils.test_request(app, 'GET', path)
+            utils.check_response_basic_info(resp)
+            utils.check_val_equal(resp.request.url, base_url + path,
+                                  "Proxied path should have been auto-resolved [URL: {}].".format(url))
+
+    @runner.MAGPIE_TEST_LOCAL
+    def test_magpie_prefix_request_with_multiple_route_url(self):
+        """
+        Test multiple request routing with fixed 'MAGPIE_URL' within the API application.
+
+        Signin with invalid credentials will call '/signin' followed by sub-request '/signin_internal' and
+        finally 'ZigguratSignInBadAuth'. Both '/signin' and 'ZigguratSignInBadAuth' use 'get_multiformat_post'.
+        """
+        base_url = 'http://localhost'
+
+        def mock_get_multiformat_post(*args, **kwargs):
+            return get_post_item(*args, p=paths.pop(0), **kwargs)
+
+        def get_post_item(request, name, default=None, p=None):
+            from magpie.api.api_requests import get_multiformat_post as real_get_multiformat_post
+            utils.check_val_equal(request.url, base_url + p,
+                                  "Proxied path should have been auto-resolved [URL: {}].".format(url))
+            return real_get_multiformat_post(request, name, default=default)
+
+        for url in ['http://localhost', 'http://localhost/magpie']:
+            paths = ['/signin', '/signin_internal']
+            app = utils.get_test_magpie_app({'magpie.url': url})
+
+            with mock.patch('magpie.api.login.login.get_multiformat_post', side_effect=mock_get_multiformat_post):
+                data = {'user_name': 'foo', 'password': 'bar'}
+                headers = {'Content-Type': JSON_TYPE, 'Accept': JSON_TYPE}
+                resp = utils.test_request(app, 'POST', paths[0], json=data, headers=headers, expect_errors=True)
+                utils.check_response_basic_info(resp, expected_code=406)    # user name doesn't exist
+
+    def test_get_header_split(self):
+        headers = {'Content-Type': '{}; charset=UTF-8'.format(JSON_TYPE)}
+        for name in ['content_type', 'content-type', 'Content_Type', 'Content-Type', 'CONTENT_TYPE', 'CONTENT-TYPE']:
+            for split in [';,', ',;', ';', (',', ';'), [';', ',']]:
+                utils.check_val_equal(get_header(name, headers, split=split), JSON_TYPE)
 
     def test_get_query_param(self):
         r = self.make_request('/some/path')

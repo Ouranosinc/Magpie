@@ -18,7 +18,7 @@ DOCKER_REPO := pavics/magpie
 
 # conda
 CONDA_ENV ?= $(APP_NAME)
-CONDA_HOME ?= $(HOME)/conda
+CONDA_HOME ?= $(HOME)/.conda
 CONDA_ENVS_DIR ?= $(CONDA_HOME)/envs
 CONDA_ENV_PATH := $(CONDA_ENVS_DIR)/$(CONDA_ENV)
 DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
@@ -63,7 +63,8 @@ help:
 	@echo "  Install and run"
 	@echo "    docs:            generate Sphinx HTML documentation, including API docs"
 	@echo "    install:         install the package to the active Python's site-packages"
-	@echo "    sysinstall:      install system dependencies and required installers/runners"
+	@echo "    install-dev:     install package requirements for development and testing"
+	@echo "    install-sys:     install system dependencies and required installers/runners"
 	@echo "    migrate:         run postgres database migration with alembic"
 	@echo "    start:           start magpie instance with gunicorn"
 	@echo "  Test and coverage"
@@ -203,21 +204,21 @@ dist: clean conda-env
 	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; python setup.py bdist_wheel'
 	ls -l dist
 
-.PHONY: sysinstall
-sysinstall: clean conda-env
+.PHONY: install-sys
+install-sys: clean conda-env
 	@echo "Installing system dependencies..."
 	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install --upgrade pip setuptools'
 	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install gunicorn'
 
 .PHONY: install
-install: sysinstall
+install: install-sys
 	@echo "Installing Magpie..."
 	# TODO: remove when merged
 	# --- ensure fix is applied
 	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; \
 		pip install --force-reinstall "https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic"'
 	# ---
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install --upgrade "$(CUR_DIR)"'
+	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install --upgrade -e "$(CUR_DIR)" --no-cache'
 
 .PHONY: install-dev
 install-dev: conda-env

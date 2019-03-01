@@ -7,7 +7,7 @@ from magpie.definitions.sqlalchemy_definitions import (
     register, sessionmaker, engine_from_config, ZopeTransactionExtension,
     configure_mappers, select, Inspector, Session, sa_exc
 )
-from magpie.definitions.typedefs import AnyStr, Settings, Optional, Union
+from typing import TYPE_CHECKING
 import transaction
 import inspect
 import warnings
@@ -17,6 +17,9 @@ import time
 # import or define all models here to ensure they are attached to the
 # Base.metadata prior to any initialization routines
 from magpie import models
+
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Str, SettingsType, Optional, Union
 
 
 LOGGER = get_logger(__name__)
@@ -105,7 +108,7 @@ def run_database_migration(db_session=None):
 
 
 def get_database_revision(db_session):
-    # type: (Session) -> AnyStr
+    # type: (Session) -> Str
     s = select(['version_num'], from_obj='alembic_version')
     result = db_session.execute(s).fetchone()
     return result['version_num']
@@ -133,7 +136,7 @@ def is_database_ready(db_session=None):
 
 
 def run_database_migration_when_ready(settings, db_session=None):
-    # type: (Settings, Optional[Session]) -> None
+    # type: (SettingsType, Optional[Session]) -> None
     """
     Runs db migration if requested by config and need from revisions.
     """
@@ -175,7 +178,7 @@ def run_database_migration_when_ready(settings, db_session=None):
 
 
 def set_sqlalchemy_log_level(magpie_log_level):
-    # type: (Union[AnyStr, int]) -> Settings
+    # type: (Union[Str, int]) -> SettingsType
     """Suppresses sqlalchemy logging if not in debug for magpie."""
     log_lvl = logging.getLevelName(magpie_log_level) if isinstance(magpie_log_level, int) else magpie_log_level
     sa_settings = {'sqlalchemy.echo': True}

@@ -12,13 +12,14 @@ from magpie.definitions.pyramid_definitions import (
 )
 from magpie.ui.utils import check_response, request_api
 from magpie.ui.home import add_template_data
+from magpie.utils import get_magpie_url
 import requests
 
 
 class LoginViews(object):
     def __init__(self, request):
         self.request = request
-        self.magpie_url = request.application_url
+        self.magpie_url = get_magpie_url(request.registry)
 
     def request_providers_json(self):
         resp = request_api(self.request, schemas.ProvidersAPI.path, 'GET')

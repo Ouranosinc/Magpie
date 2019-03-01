@@ -10,6 +10,7 @@ from magpie.api.api_rest_schemas import *
 from magpie.api.management.user.user_formats import *
 from magpie.api.management.user.user_utils import create_user
 from magpie.common import convert_response, get_logger
+from magpie.constants import get_constant
 from six.moves.urllib.parse import urlparse
 LOGGER = get_logger(__name__)
 
@@ -54,10 +55,11 @@ def sign_in(request):
     verify_provider(provider_name)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
-        signin_internal_url = request.route_url('ziggurat.routes.sign_in')
+        # obtain the raw path, without any '/magpie' prefix (if any), let 'application_url' handle it
+        signin_internal_path = request.route_url('ziggurat.routes.sign_in', _app_url='')
         signin_internal_data = {u'user_name': user_name, u'password': password, u'provider_name': provider_name}
-        signin_sub_request = Request.blank(signin_internal_url, base_url=request.application_url,
-                                           headers={'Accept': 'application/json'}, POST=signin_internal_data)
+        signin_sub_request = Request.blank(signin_internal_path, base_url=request.application_url,
+                                           headers={'Accept': JSON_TYPE}, POST=signin_internal_data)
         signin_response = request.invoke_subrequest(signin_sub_request)
         if signin_response.status_code == HTTPOk.code:
             return convert_response(signin_response)
@@ -81,24 +83,24 @@ def login_success_ziggurat(request):
 # swagger responses referred in `sign_in`
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
 def login_failure(request, reason=None):
-    httpError = HTTPUnauthorized
+    http_err = HTTPUnauthorized
     if reason is None:
-        httpError = HTTPNotAcceptable
+        http_err = HTTPNotAcceptable
         reason = Signin_POST_NotAcceptableResponseSchema.description
-        user_name = request.POST.get('user_name')
+        user_name = get_multiformat_post(request, 'user_name', default=None)
         if user_name is None:
-            httpError = HTTPBadRequest
+            http_err = HTTPBadRequest
             reason = Signin_POST_BadRequestResponseSchema.description
         else:
             user_name_list = evaluate_call(lambda: [user.user_name for user in models.User.all(db_session=request.db)],
                                            fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                                            msgOnFail=Signin_POST_ForbiddenResponseSchema.description)
             if user_name in user_name_list:
-                httpError = HTTPUnauthorized
+                http_err = HTTPUnauthorized
                 reason = "Incorrect credentials."
-    content = get_request_info(request, default_msg=Signin_POST_UnauthorizedResponseSchema.description)
+    content = get_request_info(request, default_message=Signin_POST_UnauthorizedResponseSchema.description)
     content.update({u'reason': str(reason)})
-    raise_http(httpError=httpError, content=content, detail=Signin_POST_UnauthorizedResponseSchema.description)
+    raise_http(httpError=http_err, content=content, detail=Signin_POST_UnauthorizedResponseSchema.description)
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):
@@ -140,7 +142,7 @@ def login_success_external(request, external_user_name, external_id, email, prov
     else:
         homepage_route = '/'
     header_host = urlparse(homepage_route).hostname
-    magpie_host = request.registry.settings.get('magpie.url')
+    magpie_host = get_magpie_url(request)
     if header_host and header_host != magpie_host:
         raise_http(httpError=HTTPForbidden, detail=ProviderSignin_GET_ForbiddenResponseSchema.description)
     if not header_host:
@@ -165,8 +167,8 @@ def authomatic_login(request):
         # if we directly have the Authorization header, bypass authomatic login and retrieve 'userinfo' to signin
         if 'Authorization' in request.headers and 'authomatic' not in request.cookies:
             provider_config = authomatic_handler.config.get(provider_name, {})
-            ProviderClass = resolve_provider_class(provider_config.get('class_'))
-            provider = ProviderClass(authomatic_handler, adapter=None, provider_name=provider_name)
+            provider_class = resolve_provider_class(provider_config.get('class_'))
+            provider = provider_class(authomatic_handler, adapter=None, provider_name=provider_name)
             # provide the token user data, let the external provider update it on login afterwards
             token_type, access_token = request.headers.get('Authorization').split()
             data = {'access_token': access_token, 'token_type': token_type}

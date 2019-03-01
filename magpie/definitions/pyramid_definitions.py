@@ -5,7 +5,9 @@ from pyramid.authentication import AuthTktAuthenticationPolicy                  
 # noinspection PyUnresolvedReferences
 from pyramid.authorization import ACLAuthorizationPolicy                            # noqa: F401
 # noinspection PyUnresolvedReferences
-from pyramid.exceptions import ConfigurationError                                   # noqa: F401
+from pyramid.exceptions import ConfigurationError, PredicateMismatch                # noqa: F401
+# noinspection PyUnresolvedReferences
+from pyramid.events import NewRequest                                               # noqa: F401
 # noinspection PyUnresolvedReferences
 from pyramid.httpexceptions import (   # noqa: F401
     HTTPOk,
@@ -22,12 +24,13 @@ from pyramid.httpexceptions import (   # noqa: F401
     HTTPConflict,
     HTTPUnprocessableEntity,
     HTTPInternalServerError,
-    HTTPServerError,
     HTTPNotImplemented,
     HTTPException,
     HTTPSuccessful,
     HTTPRedirection,
     HTTPError,
+    HTTPClientError,
+    HTTPServerError,
     exception_response,
 )
 # noinspection PyUnresolvedReferences
@@ -40,6 +43,8 @@ from pyramid.request import Request                                             
 from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy          # noqa: F401
 # noinspection PyUnresolvedReferences
 from pyramid.response import Response, FileResponse                                 # noqa: F401
+# noinspection PyUnresolvedReferences
+from pyramid.tweens import EXCVIEW                                                  # noqa: F401
 # noinspection PyUnresolvedReferences
 from pyramid.view import (      # noqa: F401
     view_config,

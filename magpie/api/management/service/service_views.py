@@ -10,12 +10,13 @@ from magpie.definitions.pyramid_definitions import (
     HTTPNotAcceptable,
     HTTPConflict,
 )
-from magpie.common import str2bool
+from magpie.common import str2bool, JSON_TYPE
 from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
 from magpie.services import service_type_dict
 from magpie import models
 
 
+# noinspection PyUnusedLocal
 @s.ServiceTypesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypes_GET_responses)
 @view_config(route_name=s.ServiceTypesAPI.name, request_method='GET')
 def get_service_types_view(request):
@@ -46,7 +47,7 @@ def get_services_runner(request):
     else:
         ax.verify_param(service_type_filter, paramCompare=service_type_dict.keys(), isIn=True,
                         httpError=HTTPNotAcceptable, msgOnFail=s.Services_GET_NotAcceptableResponseSchema.description,
-                        content={u'service_type': str(service_type_filter)}, contentType='application/json')
+                        content={u'service_type': str(service_type_filter)}, contentType=JSON_TYPE)
         service_types = [service_type_filter]
 
     for service_type in service_types:

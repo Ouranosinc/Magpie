@@ -4,7 +4,7 @@ Store adapters to read data from magpie.
 from magpie.utils import get_magpie_url, get_admin_cookies
 from magpie.api.api_except import raise_http
 from magpie.constants import get_constant
-from magpie.common import get_logger
+from magpie.common import get_logger, JSON_TYPE
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,
     HTTPCreated,
@@ -50,7 +50,7 @@ class MagpieProcessStore(ProcessStore):
         self.default_process_store = DefaultAdapter().processstore_factory(registry)
         self.twitcher_config = get_twitcher_configuration(registry.settings)
         self.twitcher_url = get_twitcher_url(registry.settings)
-        self.json_headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+        self.json_headers = {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE}
 
         # setup basic configuration ('/ems' service of type 'api', '/ems/processes' resource, admin full permissions)
         ems_res_id = self._create_resource(self.magpie_service, resource_parent_id=None, resource_type='service',
@@ -71,8 +71,8 @@ class MagpieProcessStore(ProcessStore):
     def _find_resource_id(self, parent_resource_id, resource_name):
         # type: (int, AnyStr) -> int
         """
-        Finds the resource id corresponding to a child :param:`resource_name` of :param:`parent_resource_id`.
-        If :param:`parent_resource_id` is `None`, suppose the resource is a `service`, search by :param:`resource_name`.
+        Finds the resource id corresponding to a child ``resource_name`` of ``parent_resource_id``.
+        If ``parent_resource_id`` is ``None``, suppose the resource is a ``service``, search by ``resource_name``.
 
         :param parent_resource_id: id of the resource from which to search children resources.
         :param resource_name: name of the sub resource to find.
@@ -267,11 +267,11 @@ class MagpieProcessStore(ProcessStore):
         If twitcher is in EMS mode:
             - user requesting creation must have sufficient user/group permissions in magpie to do so.
               (otherwise, this code won't be reached because of :class:`MagpieOWSSecurity` blocking the create route.
-            - assign any pre-required routes permissions to allow admins and current user to edit '/ems/processes/...'
+            - assign any pre-required routes permissions to allow admins and current user to edit ``/ems/processes/...``
 
             Requirements:
-                - service :param:`magpie_service` of type 'api' must exist (see __init__)
-                - group 'administrators' must have ['read', 'write'] permissions on :param:`magpie_service`
+                - service ``self.magpie_service`` of type ``'api'`` must exist (see ``__init__``)
+                - group ``'administrators'`` must have ``['read', 'write']`` permissions on ``magpie_service``
         """
         if self.twitcher_config == TWITCHER_CONFIGURATION_EMS:
             try:
@@ -349,7 +349,7 @@ class MagpieProcessStore(ProcessStore):
         List publicly visible processes according to the requesting user's user/group permissions.
 
         Delegate execution to default twitcher process store to retrieve visibility values per process.
-        If twitcher is not in EMS mode, filter by only visible processes using specified :param:`visibility`.
+        If twitcher is not in EMS mode, filter by only visible processes using specified ``visibility``.
         If twitcher is in EMS mode, filter processes according to magpie user and inherited group permissions.
         """
         visibility_filter = visibility if self.twitcher_config != TWITCHER_CONFIGURATION_EMS else visibility_values

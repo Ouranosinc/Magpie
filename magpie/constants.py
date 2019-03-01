@@ -5,8 +5,8 @@ import shutil
 # noinspection PyPackageRequirements
 import dotenv
 import logging
-from magpie.common import str2bool, raise_log, print_log, get_settings_from_config_ini, get_logger
-LOGGER = get_logger(__name__)
+import warnings
+from magpie.common import str2bool, raise_log, print_log, get_settings_from_config_ini
 
 # ===========================
 # path variables
@@ -45,7 +45,7 @@ try:
     dotenv.load_dotenv(MAGPIE_ENV_FILE, override=False)
     dotenv.load_dotenv(MAGPIE_POSTGRES_ENV_FILE, override=False)
 except IOError:
-    LOGGER.warning("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR))
+    warnings.warn("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR), RuntimeWarning)
     pass
 
 # get default configurations from ini file
@@ -60,6 +60,7 @@ except Exception:
 # ===========================
 # variables from magpie.env
 # ===========================
+MAGPIE_URL = os.getenv('MAGPIE_URL', None)
 MAGPIE_SECRET = os.getenv('MAGPIE_SECRET', 'seekrit')
 MAGPIE_COOKIE_NAME = os.getenv('MAGPIE_COOKIE_NAME', 'auth_tkt')
 MAGPIE_COOKIE_EXPIRE = os.getenv('MAGPIE_COOKIE_EXPIRE', None)
@@ -75,6 +76,8 @@ MAGPIE_EDITOR_GROUP = os.getenv('MAGPIE_EDITOR_GROUP', 'editors')
 MAGPIE_USERS_GROUP = os.getenv('MAGPIE_USERS_GROUP', 'users')
 MAGPIE_CRON_LOG = os.getenv('MAGPIE_CRON_LOG', '~/magpie-cron.log')
 MAGPIE_LOG_LEVEL = os.getenv('MAGPIE_LOG_LEVEL', _default_log_lvl)
+MAGPIE_LOG_REQUEST = str2bool(os.getenv('MAGPIE_LOG_REQUEST', True))
+MAGPIE_LOG_EXCEPTION = str2bool(os.getenv('MAGPIE_LOG_EXCEPTION', True))
 PHOENIX_USER = os.getenv('PHOENIX_USER', 'phoenix')
 PHOENIX_PASSWORD = os.getenv('PHOENIX_PASSWORD', 'qwerty')
 PHOENIX_PORT = int(os.getenv('PHOENIX_PORT', 8443))
@@ -121,10 +124,10 @@ def get_constant(name, settings=None, settings_name=None, default_value=None,
     :param settings_name: alternative name for `settings` if specified
     :param default_value: default value to be returned if not found anywhere, and exception raises are disabled.
     :param raise_missing: raise exception if key is not found anywhere
-    :param print_missing: print message if key is not found anywhere, return None
-    :param raise_not_set: raise an exception if the found key is None, search until last case if previous are None
-    :returns: found value or :param:`default_value`
-    :raises: according message based on options (by default raise missing/None value)
+    :param print_missing: print message if key is not found anywhere, return `None`
+    :param raise_not_set: raise an exception if the found key is None, search until last case if previous are `None`
+    :returns: found value or `default_value`
+    :raises: according message based on options (by default raise missing/`None` value)
     """
     magpie_globals = globals()
     missing = True

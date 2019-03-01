@@ -38,7 +38,7 @@ before_install:
   - hash -r
   - env
   - make conda-base
-  - make sysinstall
+  - make install-sys
   - echo $CONDA_PREFIX
   - echo $CONDA_ENV
   #==== magpie env and constants ===

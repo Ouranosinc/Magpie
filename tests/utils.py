@@ -13,20 +13,18 @@ from webtest import TestApp
 # noinspection PyPackageRequirements
 from webtest.response import TestResponse
 from magpie import __meta__, services, magpiectl
-from magpie.common import get_settings_from_config_ini, get_header
+from magpie.common import get_settings_from_config_ini, get_header, JSON_TYPE, HTML_TYPE
 from magpie.constants import get_constant
 from magpie.common import str2bool
-from magpie.definitions.typedefs import (  # noqa: F401
-    Str, Callable, Dict, Headers, OptionalHeaderCookies, Optional, Type, Union
-)
-from magpie.definitions.pyramid_definitions import Response
+from magpie.utils import get_magpie_url
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tests.interfaces import Base_Magpie_TestCase    # noqa: F401
+    from magpie.definitions.typedefs import (  # noqa: F401
+        Str, Callable, Dict, HeadersType, OptionalHeaderCookiesType, Optional, Type, TestAppOrUrlType, AnyResponseType
+    )
 
 OptionalStringType = six.string_types + tuple([type(None)])
-TestAppOrUrlType = Union[Str, TestApp]
-ResponseType = Union[TestResponse, Response]
 
 
 class RunOption(object):
@@ -125,15 +123,15 @@ def config_setup_from_ini(config_ini_file_path):
     return config
 
 
-def get_test_magpie_app():
+def get_test_magpie_app(settings=None):
     # parse settings from ini file to pass them to the application
     config = config_setup_from_ini(get_constant('MAGPIE_INI_FILE_PATH'))
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
     config.include('ziggurat_foundations.ext.pyramid.get_user')
     config.registry.settings['magpie.db_migration'] = False
-    config.registry.settings['magpie.url'] = 'http://localhost:80'  #
-    # scan dependencies
-    config.include('magpie')
+    config.registry.settings['magpie.url'] = 'http://localhost:80'
+    if settings:
+        config.registry.settings.update(settings)
     # create the test application
     app = TestApp(magpiectl.main({}, **config.registry.settings))
     return app
@@ -141,7 +139,7 @@ def get_test_magpie_app():
 
 def get_hostname(app_or_url):
     if isinstance(app_or_url, TestApp):
-        app_or_url = get_constant('MAGPIE_URL', settings=app_or_url.app.registry.settings, settings_name='magpie.url')
+        app_or_url = get_magpie_url(app_or_url.app.registry)
     return urlparse(app_or_url).hostname
 
 
@@ -171,9 +169,9 @@ def get_service_types_for_version(version):
 def warn_version(test, functionality, version, skip=True):
     # type: (Base_Magpie_TestCase, Str, Str, Optional[bool]) -> None
     """
-    Verifies that :param:`test.version` value meets the minimal :param:`version` requirement to execute a test.
+    Verifies that ``test.version`` value meets the minimal ``version`` requirement to execute a test.
     (ie: ``test.version >= version``).
-    If condition is not met, a warning is raised and the test is skipped according to :param:`skip` value.
+    If condition is not met, a warning is raised and the test is skipped according to ``skip`` value.
     """
     if LooseVersion(test.version) < LooseVersion(version):
         msg = "Functionality [{}] not yet implemented in version [{}], upgrade to [>={}]." \
@@ -243,9 +241,9 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
 
 
 def get_session_user(app_or_url, headers=None):
-    # type: (TestAppOrUrlType, Optional[Headers]) -> ResponseType
+    # type: (TestAppOrUrlType, Optional[HeadersType]) -> AnyResponseType
     if not headers:
-        headers = get_headers(app_or_url, {'Accept': 'application/json', 'Content-Type': 'application/json'})
+        headers = get_headers(app_or_url, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
     if isinstance(app_or_url, TestApp):
         resp = app_or_url.get('/session', headers=headers)
     else:
@@ -263,7 +261,7 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
                             use_ui_form_submit=False,       # type: Optional[bool]
                             version=__meta__.__version__,   # type: Optional[Str]
                             expect_errors=False,            # type: Optional[bool]
-                            ):                              # type: (...) -> OptionalHeaderCookies
+                            ):                              # type: (...) -> OptionalHeaderCookiesType
     """
     Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
     Validates that the logged user (if any), matched the one specified with `username`.
@@ -294,7 +292,8 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
 
         if isinstance(app_or_url, TestApp):
             if use_ui_form_submit:
-                resp = app_or_url.get(url='/ui/login')
+                base_url = app_or_url.app.registry.settings.get('magpie.url')
+                resp = app_or_url.get(url='{}/ui/login'.format(base_url))
                 form = resp.forms['login_internal']
                 form['user_name'] = username
                 form['password'] = password
@@ -432,7 +431,7 @@ def check_no_raise(func):
         raise AssertionError("Exception [{!r}] was raised when none is expected.".format(ex))
 
 
-def check_response_basic_info(response, expected_code=200, expected_type='application/json', expected_method='GET'):
+def check_response_basic_info(response, expected_code=200, expected_type=JSON_TYPE, expected_method='GET'):
     """
     Validates basic Magpie API response metadata.
 
@@ -463,9 +462,9 @@ def check_response_basic_info(response, expected_code=200, expected_type='applic
     return json_body
 
 
-def check_ui_response_basic_info(response, expected_code=200, expected_type='text/html'):
+def check_ui_response_basic_info(response, expected_code=200, expected_type=HTML_TYPE):
     msg = None \
-        if get_header('Content-Type', response.headers) != 'application/json' \
+        if get_header('Content-Type', response.headers) != JSON_TYPE \
         else "Response body: {}".format(get_json_body(response))
     check_val_equal(response.status_code, expected_code, msg=msg)
     check_val_is_in('Content-Type', dict(response.headers))
@@ -614,17 +613,17 @@ class TestSetup(object):
         Simulates the submission of a UI form to evaluate the status of the resulting page.
         Follows any redirect if the submission results into a move to another page request.
 
-        Parameter :param:`form_match` can be a form name, an index (from all available forms on page) or an
+        Parameter ``form_match`` can be a form name, an index (from all available forms on page) or an
         iterable of key/values of form fields to search for a match (first match is used if many are available).
 
-        Parameter :param:`form_submit` specifies which `button` by name or index to submit within the matched form.
+        Parameter ``form_submit`` specifies which `button` by name or index to submit within the matched form.
 
-        Fields to be filed from UI input can be provided via :param:`form_data` in a key/value fashion.
+        Fields to be filed from UI input can be provided via ``form_data`` in a key/value fashion.
 
-        Parameter :param:`path` has to be provided to fetch the available form on the desired page, *unless*
-        :param:`previous_response` is provided.
+        Parameter ``path`` has to be provided to fetch the available form on the desired page, *unless*
+        ``previous_response`` is provided.
 
-        Successive calls using form submits to `navigate pages` can be accomplished using :param:`previous_response`
+        Successive calls using form submits to `navigate pages` can be accomplished using ``previous_response``
         as the previous `response` object returned.
 
         Example::
@@ -663,7 +662,7 @@ class TestSetup(object):
         return resp
 
     @staticmethod
-    def check_Unauthorized(test_class, method, path, content_type='application/json'):
+    def check_Unauthorized(test_class, method, path, content_type=JSON_TYPE):
         """
         Verifies that Magpie returned an Unauthorized response.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.

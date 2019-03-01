@@ -2,7 +2,6 @@ from magpie.common import str2bool
 from magpie.services import service_type_dict
 from magpie.register import sync_services_phoenix
 from magpie.definitions.ziggurat_definitions import ResourceService
-from magpie.definitions.typedefs import Str, Union, TYPE_CHECKING
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,
     HTTPCreated,
@@ -16,9 +15,11 @@ from magpie.definitions.pyramid_definitions import (
 from magpie.api import api_requests as ar, api_except as ax, api_rest_schemas as s
 from magpie.api.management.resource.resource_formats import format_resource
 from magpie import models
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from magpie.definitions.pyramid_definitions import HTTPException
     from magpie.definitions.sqlalchemy_definitions import Session
+    from magpie.definitions.typedefs import Str, Union
 
 
 def check_valid_service_resource_permission(permission_name, service_resource, db_session):

@@ -1,5 +1,4 @@
 from magpie.definitions import ziggurat_definitions as zig
-from magpie.definitions.pyramid_definitions import Request
 from magpie.definitions.typedefs import Any, AnyStr, Optional
 from magpie.api.api_except import evaluate_call, verify_param
 from magpie.api.api_rest_schemas import *
@@ -15,7 +14,7 @@ def get_request_method_content(request):
 def get_multiformat_any(request, key, default=None):
     msg = "Key `{key}` could not be extracted from {method} of type `{type}`" \
           .format(key=repr(key), method=request.method, type=request.content_type)
-    if request.content_type == 'application/json':
+    if request.content_type == JSON_TYPE:
         # avoid json parse error if body is empty
         if not len(request.body):
             return default

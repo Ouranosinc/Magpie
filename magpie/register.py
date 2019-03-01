@@ -19,12 +19,12 @@ from magpie.definitions.ziggurat_definitions import (
 )
 from magpie.definitions.sqlalchemy_definitions import Session
 from magpie.definitions.pyramid_definitions import HTTPException
-from magpie.definitions.typedefs import Str, Dict, List, JsonBody, Optional, Tuple, Union, TYPE_CHECKING  # noqa: F401
 from magpie.permissions import permissions_supported
 from magpie.services import service_type_dict
 from magpie import models
 from magpie.utils import get_twitcher_protected_service_url, get_phoenix_url, get_magpie_url, get_admin_cookies
 from requests.cookies import RequestsCookieJar
+from typing import TYPE_CHECKING
 import os
 import six
 import time
@@ -33,6 +33,9 @@ import subprocess
 import requests
 import transaction
 import logging
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Str, Dict, List, JsonBody, Optional, Tuple, Union  # noqa: F401
+
 LOGGER = get_logger(__name__)
 
 LOGIN_ATTEMPT = 10              # max attempts for login
@@ -85,7 +88,7 @@ def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg='Resp
     msg_sep = msg + ": "
     params = ['curl', '-k', '-L', '-s', '-o', '/dev/null', '-w', msg_sep + '%{http_code}']
     if cookie_jar is not None and cookies is not None:
-        raise ValueError("Cookies and Cookie_Jar cannot be both set simultaneously")
+        raise ValueError("CookiesType and Cookie_Jar cannot be both set simultaneously")
     if cookie_jar is not None:
         params.extend(['--cookie-jar', cookie_jar])  # save cookies
     if cookies is not None:

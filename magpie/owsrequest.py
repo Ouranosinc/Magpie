@@ -6,7 +6,7 @@ The OWSRequest is based on pywps code:
 """
 
 from magpie.api.api_except import raise_http
-from magpie.common import get_logger
+from magpie.common import get_logger, get_header, JSON_TYPE, PLAIN_TYPE
 from pyramid.httpexceptions import HTTPMethodNotAllowed
 from requests import Request
 import lxml.etree
@@ -17,22 +17,22 @@ LOGGER = get_logger(__name__)
 def ows_parser_factory(request):
     # type: (Request) -> OWSParser
     """
-    Retrieve the appropriate OWS Request parser using the Content-Type header.
-    Default to JSON if no Content-Type is specified or if it is 'text/plain' but can be parsed as JSON.
+    Retrieve the appropriate ``OWSRequest`` parser using the ``Content-Type`` header.
+    Default to JSON if no ``Content-Type`` is specified or if it is 'text/plain' but can be parsed as JSON.
     Otherwise, use the GET/POST WPS parsers.
     """
-    content_type = request.headers.get('Content-Type', 'application/json')
-    if content_type == 'text/plain':
+    content_type = get_header('Content-Type', request.headers, default=JSON_TYPE, split=';,')
+    if content_type == PLAIN_TYPE:
         try:
             # noinspection PyUnresolvedReferences
             if request.body:
                 # raises if parsing fails
                 # noinspection PyUnresolvedReferences
                 json.loads(request.body)
-            content_type = 'application/json'
+            content_type = JSON_TYPE
         except ValueError:
             pass
-    if content_type == 'application/json':
+    if content_type == JSON_TYPE:
         return JSONParser(request)
     else:
         if request.method == 'GET':
