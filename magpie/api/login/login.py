@@ -55,8 +55,8 @@ def sign_in(request):
     verify_provider(provider_name)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
-        signin_internal_host = get_magpie_url(request)
-        signin_internal_path = request.route_url('ziggurat.routes.sign_in').replace(signin_internal_host, '')
+        # obtain the raw path, without any '/magpie' prefix (if any), let 'application_url' handle it
+        signin_internal_path = request.route_url('ziggurat.routes.sign_in', _app_url='')
         signin_internal_data = {u'user_name': user_name, u'password': password, u'provider_name': provider_name}
         signin_sub_request = Request.blank(signin_internal_path, base_url=request.application_url,
                                            headers={'Accept': JSON_TYPE}, POST=signin_internal_data)
