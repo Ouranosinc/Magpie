@@ -57,7 +57,7 @@ def get_magpie_url(container=None):
     # type: (Optional[SettingsContainer]) -> Str
     if container is None:
         LOGGER.warning("Registry not specified, trying to find Magpie URL from environment")
-        url = get_constant('MAGPIE_URL', raise_missing=False, raise_not_set=False)
+        url = get_constant('MAGPIE_URL', raise_missing=False, raise_not_set=False, print_missing=False)
         if url:
             return url
         hostname = get_constant('HOSTNAME', raise_not_set=False, raise_missing=False) or \
@@ -103,19 +103,6 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
         twitcher_proxy_url = "https://{0}{1}".format(hostname, twitcher_proxy)
     twitcher_proxy_url = twitcher_proxy_url.rstrip('/')
     return "{0}/{1}".format(twitcher_proxy_url, magpie_service_name)
-
-
-def proxy_url(event):
-    """
-    Subscriber event that corrects the ``HTTP_HOST`` of the request according to `Magpie URL` matched with settings.
-    This is useful if `Magpie` is behind a reverse proxy, where URL/path routing doesn't correspond to the app URL.
-
-    .. seealso::
-        - :meth:`pyramid.config.adapters.AdaptersConfiguratorMixin.add_subscriber`
-        - :class:`pyramid.events.NewRequest`
-    """
-    host_url_parts = urlparse(get_magpie_url(event.request.registry))
-    event.request.environ['HTTP_HOST'] = host_url_parts.netloc + host_url_parts.path
 
 
 def log_request_format(request):

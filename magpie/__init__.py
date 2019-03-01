@@ -19,7 +19,6 @@ def includeme(config):
     config.add_notfound_view(not_found_or_method_not_allowed)
 
     config.set_default_permission(get_constant('MAGPIE_ADMIN_PERMISSION'))
-    config.add_subscriber('magpie.utils.proxy_url', NewRequest)
     if get_constant('MAGPIE_LOG_REQUEST'):
         config.add_subscriber('magpie.utils.log_request', NewRequest)
     if get_constant('MAGPIE_LOG_EXCEPTION'):

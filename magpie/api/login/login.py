@@ -55,10 +55,10 @@ def sign_in(request):
     verify_provider(provider_name)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
-        signin_internal_path = request.route_path('ziggurat.routes.sign_in')
-        signin_internal_host = request.application_url.replace(urlparse(request.application_url).path, '')
+        signin_internal_host = get_magpie_url(request)
+        signin_internal_path = request.route_url('ziggurat.routes.sign_in').replace(signin_internal_host, '')
         signin_internal_data = {u'user_name': user_name, u'password': password, u'provider_name': provider_name}
-        signin_sub_request = Request.blank(signin_internal_path, base_url=signin_internal_host,
+        signin_sub_request = Request.blank(signin_internal_path, base_url=request.application_url,
                                            headers={'Accept': JSON_TYPE}, POST=signin_internal_data)
         signin_response = request.invoke_subrequest(signin_sub_request)
         if signin_response.status_code == HTTPOk.code:
@@ -142,7 +142,7 @@ def login_success_external(request, external_user_name, external_id, email, prov
     else:
         homepage_route = '/'
     header_host = urlparse(homepage_route).hostname
-    magpie_host = get_constant('MAGPIE_URL', request.registry.settings, 'magpie.url')
+    magpie_host = get_magpie_url(request)
     if header_host and header_host != magpie_host:
         raise_http(httpError=HTTPForbidden, detail=ProviderSignin_GET_ForbiddenResponseSchema.description)
     if not header_host:
