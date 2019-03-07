@@ -42,41 +42,42 @@ class TestCase_MagpieServices_DynamicLoading(unittest.TestCase):
                               msg="Cannot have pre-defined 'MAGPIE_SERVICES_FILTER' to properly test service imports.")
 
     def login(self):
+        app_url = utils.get_app_or_url(self)
         self.usr = get_constant('MAGPIE_TEST_ADMIN_USERNAME')
         self.pwd = get_constant('MAGPIE_TEST_ADMIN_PASSWORD')
         self.json_headers = {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE}
-        self.headers, self.cookies = utils.check_or_try_login_user(self.app, self.usr, self.pwd,
+        self.headers, self.cookies = utils.check_or_try_login_user(app_url, self.usr, self.pwd,
                                                                    use_ui_form_submit=True, version=self.version)
         assert self.headers and self.cookies, "cannot run tests without logged in admin user"
 
     def test_load_normal(self):
-        app = utils.get_test_magpie_app({'magpie.services_paths': ''})
+        self.app = utils.get_test_magpie_app({'magpie.services_paths': ''})
         self.login()
-        resp = utils.test_request(app, 'GET', ServiceTypesAPI.path, headers=self.headers, cookies=self.cookies)
+        resp = utils.test_request(self.app, 'GET', ServiceTypesAPI.path, headers=self.headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         test = ALL_SERVICES_TYPES + [TEST_SERVICE_IS_MODULE, TEST_SERVICE_NO_MODULE]
         utils.check_all_equal(body['service_types'], test, any_order=True)
 
     def test_load_recursive_from_top_dir(self):
-        app = utils.get_test_magpie_app({'magpie.services_paths': os.path.dirname(CUR_DIR)})
+        self.app = utils.get_test_magpie_app({'magpie.services_paths': os.path.dirname(CUR_DIR)})
         self.login()
-        resp = utils.test_request(app, 'GET', ServiceTypesAPI.path, headers=self.headers, cookies=self.cookies)
+        resp = utils.test_request(self.app, 'GET', ServiceTypesAPI.path, headers=self.headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         test = ALL_SERVICES_TYPES + [TEST_SERVICE_IS_MODULE, TEST_SERVICE_NO_MODULE]
         utils.check_all_equal(body['service_types'], test, any_order=True)
 
     def test_load_from_is_module_dir(self):
-        app = utils.get_test_magpie_app({'magpie.services_paths': os.path.join(CUR_DIR, 'services', 'is-module')})
+        self.app = utils.get_test_magpie_app({'magpie.services_paths': os.path.join(CUR_DIR, 'services', 'is-module')})
         self.login()
-        resp = utils.test_request(app, 'GET', ServiceTypesAPI.path, headers=self.headers, cookies=self.cookies)
+        resp = utils.test_request(self.app, 'GET', ServiceTypesAPI.path, headers=self.headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         test = ALL_SERVICES_TYPES + [TEST_SERVICE_IS_MODULE]
         utils.check_all_equal(body['service_types'], test, any_order=True)
 
     def test_load_from_no_module_dir(self):
-        app = utils.get_test_magpie_app({'magpie.services_paths': os.path.join(CUR_DIR, 'services', 'no-module')})
+        self.app = utils.get_test_magpie_app({'magpie.services_paths': os.path.join(CUR_DIR, 'services', 'no-module')})
         self.login()
-        resp = utils.test_request(app, 'GET', ServiceTypesAPI.path, headers=self.headers, cookies=self.cookies)
+        resp = utils.test_request(self.app, 'GET', ServiceTypesAPI.path, headers=self.headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         test = ALL_SERVICES_TYPES + [TEST_SERVICE_NO_MODULE]
         utils.check_all_equal(body['service_types'], test, any_order=True)
@@ -87,9 +88,9 @@ class TestCase_MagpieServices_DynamicLoading(unittest.TestCase):
             'magpie.services_paths': os.path.join(CUR_DIR, 'services'),
             'magpie.services_filter': ','.join(test)
         }
-        app = utils.get_test_magpie_app(opt)
+        self.app = utils.get_test_magpie_app(opt)
         self.login()
-        resp = utils.test_request(app, 'GET', ServiceTypesAPI.path, headers=self.headers, cookies=self.cookies)
+        resp = utils.test_request(self.app, 'GET', ServiceTypesAPI.path, headers=self.headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         utils.check_all_equal(body['service_types'], test, any_order=True)
 

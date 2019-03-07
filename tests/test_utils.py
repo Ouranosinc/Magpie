@@ -81,7 +81,7 @@ class TestUtils(unittest.TestCase):
             paths = ['/signin', '/signin_internal']
             app = utils.get_test_magpie_app({'magpie.url': url})
 
-            with mock.patch('magpie.api.login.login.get_multiformat_post', side_effect=mock_get_multiformat_post):
+            with mock.patch('magpie.api.login.login.ar.get_multiformat_post', side_effect=mock_get_multiformat_post):
                 data = {'user_name': 'foo', 'password': 'bar'}
                 headers = {'Content-Type': JSON_TYPE, 'Accept': JSON_TYPE}
                 resp = utils.test_request(app, 'POST', paths[0], json=data, headers=headers, expect_errors=True)

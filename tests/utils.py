@@ -260,12 +260,8 @@ def get_session_user(app_or_url, headers=None):
     # type: (TestAppOrUrlType, Optional[HeadersType]) -> AnyResponseType
     if not headers:
         headers = get_headers(app_or_url, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
-    if isinstance(app_or_url, TestApp):
-        resp = app_or_url.get('/session', headers=headers)
-    else:
-        resp = requests.get('{}/session'.format(app_or_url), headers=headers)
-    if resp.status_code != 200:
-        raise Exception('cannot retrieve logged in user information')
+    resp = test_request(app_or_url, 'GET', path='/session', headers=headers)
+    check_response_basic_info(resp)
     return resp
 
 

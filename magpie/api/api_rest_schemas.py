@@ -16,6 +16,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPInternalServerError,
     NO_PERMISSION_REQUIRED,
 )
+from magpie.utils import get_magpie_url
 # from magpie.security import get_provider_names
 from magpie import __meta__
 import six
@@ -2868,7 +2869,7 @@ def api_schema(request):
     generator.summary_docstrings = True
     generator.default_security = get_security
     swagger_base_spec = {
-        'host': get_magpie_url(request.registry),
+        'host': get_magpie_url(request),
         'schemes': [request.scheme]
     }
     swagger_base_spec.update(SecurityDefinitionsAPI)

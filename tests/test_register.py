@@ -24,7 +24,7 @@ class TestRegister(unittest.TestCase):
         cls.grp = get_constant('MAGPIE_ADMIN_GROUP')
         cls.usr = get_constant('MAGPIE_TEST_ADMIN_USERNAME')
         cls.pwd = get_constant('MAGPIE_TEST_ADMIN_PASSWORD')
-        cls.json_headers = utils.get_headers(cls.url, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
+        cls.json_headers = utils.get_headers(cls.app, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
         # TODO: fix UI views so that they can be 'found' directly in the WebTest.TestApp
