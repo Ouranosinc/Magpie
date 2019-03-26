@@ -1,11 +1,16 @@
-from magpie.definitions.pyramid_definitions import *
-from magpie.definitions.ziggurat_definitions import *
 from magpie.api.login import esgfopenid, wso2
-from magpie.constants import get_constant
 from magpie.common import get_logger
+from magpie.constants import get_constant
+from magpie.definitions.pyramid_definitions import (
+    AuthTktAuthenticationPolicy, ACLAuthorizationPolicy, Configurator, asbool
+)
+from magpie.definitions.ziggurat_definitions import groupfinder
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
+from typing import TYPE_CHECKING
 import logging
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import JsonBody
 AUTHOMATIC_LOGGER = get_logger('magpie.authomatic', level=logging.DEBUG)
 
 
@@ -52,18 +57,18 @@ def authomatic_setup(request):
 
 def authomatic_config(request=None):
 
-    DEFAULTS = {
+    defaults_config = {
         'popup': True,
     }
 
-    OPENID = {
+    openid_config = {
         'openid': {
             'class_': openid.OpenID,
             'display_name': 'OpenID',
         },
     }
 
-    ESGF = {
+    esgf_config = {
         'dkrz': {
             'class_': esgfopenid.ESGFOpenID,
             'hostname': 'esgf-data.dkrz.de',
@@ -94,7 +99,7 @@ def authomatic_config(request=None):
     }
 
     _get_const_info = dict(raise_missing=False, raise_not_set=False, print_missing=True)
-    OAUTH2 = {
+    oauth2_config = {
         'github': {
             'class_': oauth2.GitHub,
             'display_name': 'GitHub',
@@ -123,11 +128,11 @@ def authomatic_config(request=None):
     }
 
     # Concatenate the configs.
-    config = {}
-    config.update(OAUTH2)
-    config.update(OPENID)
-    config.update(ESGF)
-    config['__defaults__'] = DEFAULTS
+    config = {}  # type: JsonBody
+    config.update(oauth2_config)
+    config.update(openid_config)
+    config.update(esgf_config)
+    config['__defaults__'] = defaults_config
     return config
 
 
