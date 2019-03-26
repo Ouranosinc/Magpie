@@ -12,7 +12,7 @@ from pyramid.testing import setUp as PyramidSetUp
 from webtest import TestApp
 # noinspection PyPackageRequirements
 from webtest.response import TestResponse
-from magpie import __meta__, services, magpiectl
+from magpie import __meta__, services, app
 from magpie.common import get_settings_from_config_ini, get_header, JSON_TYPE, HTML_TYPE
 from magpie.constants import get_constant
 from magpie.common import str2bool
@@ -133,8 +133,9 @@ def get_test_magpie_app(settings=None):
     if settings:
         config.registry.settings.update(settings)
     # create the test application
-    app = TestApp(magpiectl.main({}, **config.registry.settings))
-    return app
+    config.include('magpie')
+    magpie_app = TestApp(app.main({}, **config.registry.settings))
+    return magpie_app
 
 
 def get_hostname(app_or_url):
