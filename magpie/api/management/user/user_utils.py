@@ -99,6 +99,7 @@ def create_user_resource_permission(permission_name, resource, user, db_session)
 
 
 def delete_user_resource_permission(permission_name, resource, user, db_session):
+    # type: (Str, models.Resource, models.User, Session) -> HTTPException
     check_valid_service_resource_permission(permission_name, resource, db_session)
     resource_id = resource.resource_id
     del_perm = UserResourcePermissionService.get(user.id, resource_id, permission_name, db_session)
