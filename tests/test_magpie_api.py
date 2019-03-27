@@ -32,7 +32,9 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
         cls.json_headers = utils.get_headers(cls.app, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
+        # FIXME: use get_version()
         cls.version = __meta__.__version__
+        #cls.version = utils.TestSetup.get_Version(cls)
         cls.cookies = None
         cls.usr = get_constant('MAGPIE_ANONYMOUS_USER')
         cls.grp = get_constant('MAGPIE_ANONYMOUS_GROUP')
@@ -71,7 +73,9 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         cls.pwd = get_constant('MAGPIE_TEST_ADMIN_PASSWORD')
         cls.json_headers = utils.get_headers(cls.app, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
         cls.cookies = None
-        cls.version = utils.TestSetup.get_Version(cls)
+        # FIXME: use get_version()
+        cls.version = __meta__.__version__
+        #cls.version = utils.TestSetup.get_Version(cls)
         # TODO: fix UI views so that they can be 'found' directly in the WebTest.TestApp
         # NOTE: localhost magpie has to be running for following login call to work
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd,
@@ -98,7 +102,9 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
         cls.cookies = None
         cls.usr = get_constant('MAGPIE_ANONYMOUS_USER')
         cls.grp = get_constant('MAGPIE_ANONYMOUS_GROUP')
-        cls.version = utils.TestSetup.get_Version(cls)
+        # FIXME: use get_version()
+        cls.version = __meta__.__version__
+        #cls.version = utils.TestSetup.get_Version(cls)
 
 
 @runner.MAGPIE_TEST_API
