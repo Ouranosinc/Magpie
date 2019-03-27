@@ -31,8 +31,7 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
     @classmethod
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
-        cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
-        cls.json_headers = utils.get_headers(cls.url, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
+        cls.json_headers = utils.get_headers(cls.app, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
         cls.version = __meta__.__version__
         cls.cookies = None
         cls.usr = get_constant('MAGPIE_ANONYMOUS_USER')
@@ -67,11 +66,10 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
     @classmethod
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
-        cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.grp = get_constant('MAGPIE_ADMIN_GROUP')
         cls.usr = get_constant('MAGPIE_TEST_ADMIN_USERNAME')
         cls.pwd = get_constant('MAGPIE_TEST_ADMIN_PASSWORD')
-        cls.json_headers = utils.get_headers(cls.url, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
+        cls.json_headers = utils.get_headers(cls.app, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
         # TODO: fix UI views so that they can be 'found' directly in the WebTest.TestApp

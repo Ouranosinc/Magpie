@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from requests.structures import CaseInsensitiveDict
     # noinspection PyUnresolvedReferences, PyProtectedMember
     from logging import _loggerClass as LoggerType  # noqa: F401
+    from tests.interfaces import Base_Magpie_TestCase
     import six
 
     if six.PY2:
@@ -43,3 +44,4 @@ if TYPE_CHECKING:
     UserServicesTypes = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
 
     TestAppOrUrlType = Union[Str, TestApp]
+    AnyMagpieTestType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase, TestAppOrUrlType]
