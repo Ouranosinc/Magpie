@@ -1,8 +1,8 @@
-from magpie.common import str2bool
 from magpie.services import service_type_dict
 from magpie.register import sync_services_phoenix
 from magpie.definitions.ziggurat_definitions import ResourceService
 from magpie.definitions.pyramid_definitions import (
+    asbool,
     HTTPOk,
     HTTPCreated,
     HTTPBadRequest,
@@ -182,7 +182,7 @@ def create_resource(resource_name, resource_display_name, resource_type, parent_
 
 def delete_resource(request):
     resource = ar.get_resource_matchdict_checked(request)
-    service_push = str2bool(ar.get_multiformat_post(request, 'service_push'))
+    service_push = asbool(ar.get_multiformat_post(request, 'service_push'))
     res_content = {u'resource': format_resource(resource, basic_info=True)}
     ax.evaluate_call(lambda: models.resource_tree_service.delete_branch(
                         resource_id=resource.resource_id, db_session=request.db),

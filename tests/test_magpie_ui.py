@@ -8,7 +8,6 @@ test_magpie_ui
 Tests for `magpie.ui` module.
 """
 
-from magpie import __meta__
 from magpie.common import JSON_TYPE
 from magpie.constants import get_constant
 from tests import utils, runner
@@ -59,9 +58,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.json_headers = utils.get_headers(cls.app, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
         cls.cookies = None
-        # FIXME: use get_version()
-        cls.version = __meta__.__version__
-        # cls.version = utils.TestSetup.get_Version(cls)
+        cls.version = utils.TestSetup.get_Version(cls)
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()

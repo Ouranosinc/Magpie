@@ -15,7 +15,7 @@ from webtest.response import TestResponse
 from magpie import __meta__, services, app
 from magpie.common import get_settings_from_config_ini, get_header, JSON_TYPE, HTML_TYPE
 from magpie.constants import get_constant
-from magpie.common import str2bool
+from magpie.definitions.pyramid_definitions import asbool
 from magpie.utils import get_magpie_url
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -47,8 +47,8 @@ class RunOption(object):
         return '{}[{}]'.format(type(self).__name__, self.message)
 
     def _default_run(self):
-        option_value = str2bool(get_constant(self._name, default_value=True,
-                                             raise_missing=False, raise_not_set=False, print_missing=True))
+        option_value = asbool(get_constant(self._name, default_value=True,
+                                           raise_missing=False, raise_not_set=False, print_missing=True))
         return True if option_value is None else option_value
 
     @property
@@ -129,7 +129,6 @@ def get_test_magpie_app(settings=None):
     config = config_setup_from_ini(get_constant('MAGPIE_INI_FILE_PATH'))
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
     config.include('ziggurat_foundations.ext.pyramid.get_user')
-    config.registry.settings['magpie.db_migration'] = False
     config.registry.settings['magpie.url'] = 'http://localhost:80'
     if settings:
         config.registry.settings.update(settings)

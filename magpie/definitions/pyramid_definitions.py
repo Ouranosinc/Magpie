@@ -34,7 +34,7 @@ from pyramid.httpexceptions import (   # noqa: F401
     exception_response,
 )
 # noinspection PyUnresolvedReferences
-from pyramid.settings import asbool                                                 # noqa: F401
+from pyramid.settings import asbool, truthy                                         # noqa: F401
 # noinspection PyUnresolvedReferences
 from pyramid.registry import Registry                                               # noqa: F401
 # noinspection PyUnresolvedReferences
@@ -52,7 +52,7 @@ from pyramid.view import (      # noqa: F401
     exception_view_config,
     forbidden_view_config
 )
-# noinspection PyUnresolvedReferences
+# noinspection PyUnresolvedReferences, PyPep8Naming
 from pyramid.security import (  # noqa: F401
     Authenticated,
     Allow as ALLOW,

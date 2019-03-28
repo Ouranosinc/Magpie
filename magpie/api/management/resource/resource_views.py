@@ -3,13 +3,13 @@ from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.api.management.resource import resource_utils as ru, resource_formats as rf
 from magpie.definitions.pyramid_definitions import (
+    asbool,
     view_config,
     HTTPOk,
     HTTPForbidden,
     HTTPNotAcceptable,
     HTTPInternalServerError,
 )
-from magpie.common import str2bool
 from magpie.register import sync_services_phoenix
 from magpie.services import service_type_dict
 from magpie import models
@@ -69,7 +69,7 @@ def delete_resource_view(request):
 def update_resource(request):
     """Update a resource information."""
     resource = ar.get_resource_matchdict_checked(request, 'resource_id')
-    service_push = str2bool(ar.get_multiformat_post(request, 'service_push'))
+    service_push = asbool(ar.get_multiformat_post(request, 'service_push'))
     res_old_name = resource.resource_name
     res_new_name = ar.get_value_multiformat_post_checked(request, 'resource_name')
 

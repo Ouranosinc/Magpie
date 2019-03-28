@@ -6,7 +6,8 @@ import shutil
 import dotenv
 import logging
 import warnings
-from magpie.common import str2bool, raise_log, print_log, get_settings_from_config_ini
+from magpie.common import raise_log, print_log, get_settings_from_config_ini
+from magpie.definitions.pyramid_definitions import asbool
 
 # ===========================
 # path variables
@@ -75,13 +76,15 @@ MAGPIE_ANONYMOUS_GROUP = MAGPIE_ANONYMOUS_USER
 MAGPIE_EDITOR_GROUP = os.getenv('MAGPIE_EDITOR_GROUP', 'editors')
 MAGPIE_USERS_GROUP = os.getenv('MAGPIE_USERS_GROUP', 'users')
 MAGPIE_CRON_LOG = os.getenv('MAGPIE_CRON_LOG', '~/magpie-cron.log')
+MAGPIE_DB_MIGRATION = asbool(os.getenv('MAGPIE_DB_MIGRATION', True))
+MAGPIE_DB_MIGRATION_ATTEMPTS = int(os.getenv('MAGPIE_DB_MIGRATION_ATTEMPTS', 5))
 MAGPIE_LOG_LEVEL = os.getenv('MAGPIE_LOG_LEVEL', _default_log_lvl)
-MAGPIE_LOG_REQUEST = str2bool(os.getenv('MAGPIE_LOG_REQUEST', True))
-MAGPIE_LOG_EXCEPTION = str2bool(os.getenv('MAGPIE_LOG_EXCEPTION', True))
+MAGPIE_LOG_REQUEST = asbool(os.getenv('MAGPIE_LOG_REQUEST', True))
+MAGPIE_LOG_EXCEPTION = asbool(os.getenv('MAGPIE_LOG_EXCEPTION', True))
 PHOENIX_USER = os.getenv('PHOENIX_USER', 'phoenix')
 PHOENIX_PASSWORD = os.getenv('PHOENIX_PASSWORD', 'qwerty')
 PHOENIX_PORT = int(os.getenv('PHOENIX_PORT', 8443))
-PHOENIX_PUSH = str2bool(os.getenv('PHOENIX_PUSH', True))
+PHOENIX_PUSH = asbool(os.getenv('PHOENIX_PUSH', True))
 TWITCHER_PROTECTED_PATH = os.getenv('TWITCHER_PROTECTED_PATH', '/ows/proxy')
 TWITCHER_PROTECTED_URL = os.getenv('TWITCHER_PROTECTED_URL', None)
 

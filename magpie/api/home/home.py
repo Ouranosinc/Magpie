@@ -12,7 +12,7 @@ def get_version(request):
     """
     version = {
         u'version': __meta__.__version__,
-        # u'db_version': db.get_database_revision(request.db)
+        u'db_version': db.get_database_revision(request.db)
     }
     return ax.valid_http(httpSuccess=HTTPOk, content=version, contentType=JSON_TYPE,
                          detail=s.Version_GET_OkResponseSchema.description)
