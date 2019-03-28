@@ -17,7 +17,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     * - dependencies
       - | |py_ver| |requires|
     * - build status
-      - | |travis_latest| |travis_tag| |coverage|
+      - | |travis_latest| |travis_tag| |coverage| |codacy|
     * - docker status
       - | |docker_build_mode| |docker_build_status|
     * - releases
@@ -50,6 +50,10 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 .. |coverage| image:: https://img.shields.io/codecov/c/gh/Ouranosinc/Magpie.svg?label=coverage
     :alt: Travis-CI CodeCov Coverage
     :target: https://codecov.io/gh/Ouranosinc/Magpie
+
+.. |codacy| image:: https://api.codacy.com/project/badge/Grade/1920f28c7e2140a083f527a803c58ae7
+    :alt: Codacy Badge
+    :target: https://www.codacy.com/app/fmigneault/Magpie?utm_source=github.com&utm_medium=referral&utm_content=Ouranosinc/Magpie&utm_campaign=Badge_Grade
 
 .. |docker_build_mode| image:: https://img.shields.io/docker/automated/pavics/magpie.svg?label=build
     :alt: Docker Build Status (latest tag)
