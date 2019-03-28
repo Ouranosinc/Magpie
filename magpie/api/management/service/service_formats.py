@@ -1,14 +1,15 @@
 from magpie.api.api_except import evaluate_call
 from magpie.api.management.resource.resource_utils import crop_tree_with_permission
 from magpie.api.management.resource.resource_formats import get_resource_children, format_resource_tree
-from magpie.definitions.pyramid_definitions import *
-from magpie.definitions.sqlalchemy_definitions import Session
+from magpie.definitions.pyramid_definitions import HTTPInternalServerError
 from magpie.utils import get_twitcher_protected_service_url
-from magpie.models import Resource, Service
-from magpie.services import service_type_dict, ServiceI
+from magpie.services import service_type_dict
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Optional, JsonBody, AnyStr, Dict, List
+    from magpie.definitions.typedefs import Optional, JsonBody, AnyStr, Dict, List  # noqa: F401
+    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
+    from magpie.models import Resource, Service  # noqa: F401
+    from magpie.services import ServiceI  # noqa: F401
 
 
 def format_service(service, permissions=None, show_private_url=False, show_resources_allowed=False):

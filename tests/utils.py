@@ -1,10 +1,8 @@
-import unittest
-import requests
-import warnings
-import json
-import six
-# noinspection PyPackageRequirements
-import pytest
+from magpie import __meta__, services, app
+from magpie.common import get_settings_from_config_ini, get_header, JSON_TYPE, HTML_TYPE
+from magpie.constants import get_constant
+from magpie.definitions.pyramid_definitions import asbool
+from magpie.utils import get_magpie_url
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from pyramid.testing import setUp as PyramidSetUp
@@ -12,14 +10,17 @@ from pyramid.testing import setUp as PyramidSetUp
 from webtest import TestApp
 # noinspection PyPackageRequirements
 from webtest.response import TestResponse
-from magpie import __meta__, services, app
-from magpie.common import get_settings_from_config_ini, get_header, JSON_TYPE, HTML_TYPE
-from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import asbool
-from magpie.utils import get_magpie_url
 from typing import TYPE_CHECKING
+import unittest
+import requests
+import warnings
+import json
+import mock
+import six
+# noinspection PyPackageRequirements
+import pytest
 if TYPE_CHECKING:
-    from tests.interfaces import Base_Magpie_TestCase    # noqa: F401
+    from tests.interfaces import Base_Magpie_TestCase  # noqa: F401
     from magpie.definitions.typedefs import (  # noqa: F401
         Str, Callable, Dict, HeadersType, OptionalHeaderCookiesType, Optional, Type,
         AnyMagpieTestType, AnyResponseType, TestAppOrUrlType
@@ -604,7 +605,11 @@ class TestSetup(object):
     @staticmethod
     def get_Version(test_class):
         app_or_url = get_app_or_url(test_class)
-        resp = test_request(app_or_url, 'GET', '/version', headers=test_class.json_headers, cookies=test_class.cookies)
+        # use mocked call since migration seem to fail on travis-ci
+        with mock.patch('magpie.api.home.home.get_database_revision', return_value='mocked-revision'):
+            resp = test_request(app_or_url, 'GET', '/version',
+                                headers=test_class.json_headers,
+                                cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200)
         return json_body['version']
 

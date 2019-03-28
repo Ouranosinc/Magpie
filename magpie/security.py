@@ -10,7 +10,7 @@ from authomatic.providers import oauth2, openid
 from typing import TYPE_CHECKING
 import logging
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import JsonBody
+    from magpie.definitions.typedefs import JsonBody  # noqa: F401
 AUTHOMATIC_LOGGER = get_logger('magpie.authomatic', level=logging.DEBUG)
 
 

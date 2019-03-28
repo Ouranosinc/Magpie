@@ -8,9 +8,12 @@ The OWSRequest is based on pywps code:
 from magpie.api.api_except import raise_http
 from magpie.common import get_logger, get_header, JSON_TYPE, PLAIN_TYPE
 from pyramid.httpexceptions import HTTPMethodNotAllowed
-from requests import Request
+from typing import TYPE_CHECKING
+# noinspection PyUnresolvedReferences
 import lxml.etree
 import json
+if TYPE_CHECKING:
+    from requests import Request  # noqa: F401
 LOGGER = get_logger(__name__)
 
 
@@ -93,6 +96,7 @@ class WPSPost(OWSParser):
 
     def __init__(self, request):
         super(WPSPost, self).__init__(request)
+        # noinspection PyUnresolvedReferences
         self.document = lxml.etree.fromstring(self.request.body)
         lxml_strip_ns(self.document)
 

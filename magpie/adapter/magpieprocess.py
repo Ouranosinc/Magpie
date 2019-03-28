@@ -12,20 +12,29 @@ from magpie.definitions.pyramid_definitions import (
     HTTPConflict,
     HTTPNotImplemented,
     asbool,
-    Registry,
 )
 
 # import 'process' elements separately than 'twitcher_definitions' because not defined in master
+# noinspection PyUnresolvedReferences
 from twitcher.utils import get_twitcher_url
+# noinspection PyUnresolvedReferences
 from twitcher.config import get_twitcher_configuration, TWITCHER_CONFIGURATION_EMS
-from twitcher.datatype import Process
+# noinspection PyUnresolvedReferences
 from twitcher.exceptions import ProcessNotFound, ProcessRegistrationError
+# noinspection PyUnresolvedReferences
 from twitcher.adapter.default import DefaultAdapter
+# noinspection PyUnresolvedReferences
 from twitcher.store.base import ProcessStore
+# noinspection PyUnresolvedReferences
 from twitcher.visibility import VISIBILITY_PUBLIC, VISIBILITY_PRIVATE, visibility_values
-from typing import List, Optional, Iterable, Union, AnyStr
+# noinspection PyUnresolvedReferences
+from twitcher.datatype import Process  # noqa: F401
+from typing import TYPE_CHECKING
 import six
 import requests
+if TYPE_CHECKING:
+    from typing import List, Optional, Iterable, Union, AnyStr  # noqa: F401
+    from magpie.definitions.pyramid_definitions import Registry  # noqa: F401
 LOGGER = get_logger("TWITCHER")
 
 
@@ -480,5 +489,6 @@ class MagpieProcessStore(ProcessStore):
         # update visibility of process, which will also reflect changes to route permissions during 'list_processes'
         self.default_process_store.set_visibility(process_id, visibility=visibility, request=request)
 
+    # noinspection PyMethodMayBeStatic, PyUnusedLocal
     def clear_processes(self, request=None):
         raise_http(httpError=HTTPNotImplemented, detail="Clear processes not supported via MagpieAdapter.")

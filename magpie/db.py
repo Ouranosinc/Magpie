@@ -20,7 +20,7 @@ import time
 from magpie import models
 
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, SettingsType, Optional, Union
+    from magpie.definitions.typedefs import Str, SettingsType, Optional, Union  # noqa: F401
 
 
 LOGGER = get_logger(__name__)

@@ -2,10 +2,12 @@ from magpie import constants, db, models
 from magpie.common import print_log, raise_log, get_logger
 from magpie.definitions.sqlalchemy_definitions import Session
 from magpie.definitions.ziggurat_definitions import GroupService, UserService
-from magpie.definitions.typedefs import Optional
+from typing import TYPE_CHECKING
 import transaction
 import logging
 import time
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Optional  # noqa: F401
 LOGGER = get_logger(__name__)
 
 
@@ -49,8 +51,8 @@ def init_anonymous(db_session):
 
 
 def init_admin(db_session):
-    if not (UserService.by_user_name(constants.MAGPIE_ADMIN_USER, db_session=db_session)
-            and GroupService.by_group_name(constants.MAGPIE_ADMIN_GROUP, db_session=db_session)):
+    if not (UserService.by_user_name(constants.MAGPIE_ADMIN_USER, db_session=db_session) and
+            GroupService.by_group_name(constants.MAGPIE_ADMIN_GROUP, db_session=db_session)):
         register_user_with_group(user_name=constants.MAGPIE_ADMIN_USER,
                                  group_name=constants.MAGPIE_ADMIN_GROUP,
                                  email=constants.MAGPIE_ADMIN_EMAIL,
@@ -84,7 +86,6 @@ def register_default_users(db_session=None):
     # type: (Optional[Session]) -> None
     if not isinstance(db_session, Session):
         db_session = db.get_db_session_from_config_ini(constants.MAGPIE_INI_FILE_PATH)
-        db_close = False
     if not db.is_database_ready(db_session):
         time.sleep(2)
         raise_log('Database not ready')

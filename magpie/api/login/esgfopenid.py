@@ -11,7 +11,7 @@ import ssl
 from six.moves.urllib.request import urlopen
 from authomatic.providers.openid import OpenID
 # noinspection PyProtectedMember, PyUnresolvedReferences
-from openid.fetchers import setDefaultFetcher, Urllib2Fetcher
+from openid.fetchers import Urllib2Fetcher  # , setDefaultFetcher
 from magpie.common import get_logger
 LOGGER = get_logger(__name__)
 

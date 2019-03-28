@@ -1,4 +1,4 @@
-from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.pyramid_definitions import HTTPInternalServerError
 from magpie.definitions.ziggurat_definitions import ResourceService
 from magpie.models import resource_tree_service
 from magpie.services import service_type_dict

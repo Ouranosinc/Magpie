@@ -758,7 +758,7 @@ class ManagementViews(object):
         if 'edit' in self.request.POST:
             service_name = self.request.POST.get('service_name')
             return HTTPFound(self.request.route_url('edit_service',
-                                       service_name=service_name, cur_svc_type=cur_svc_type))
+                             service_name=service_name, cur_svc_type=cur_svc_type))
 
         return add_template_data(self.request,
                                  {u'cur_svc_type': cur_svc_type,

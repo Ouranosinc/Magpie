@@ -1,5 +1,19 @@
-from magpie.definitions.cornice_definitions import *
-from magpie.definitions.pyramid_definitions import *
+from magpie.definitions.cornice_definitions import colander, Service, CorniceSwagger, get_services
+from magpie.definitions.pyramid_definitions import (
+    HTTPOk,
+    HTTPCreated,
+    HTTPFound,
+    HTTPBadRequest,
+    HTTPUnauthorized,
+    HTTPForbidden,
+    HTTPNotFound,
+    HTTPMethodNotAllowed,
+    HTTPNotAcceptable,
+    HTTPConflict,
+    HTTPUnprocessableEntity,
+    HTTPInternalServerError,
+    NO_PERMISSION_REQUIRED,
+)
 from magpie.common import JSON_TYPE
 from magpie.constants import get_constant
 from magpie.utils import get_magpie_url

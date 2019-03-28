@@ -17,9 +17,9 @@ from magpie.api.management.resource.resource_formats import format_resource
 from magpie import models
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.definitions.pyramid_definitions import HTTPException
-    from magpie.definitions.sqlalchemy_definitions import Session
-    from magpie.definitions.typedefs import Str, Union
+    from magpie.definitions.pyramid_definitions import HTTPException  # noqa: F401
+    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
+    from magpie.definitions.typedefs import Str, Union  # noqa: F401
 
 
 def check_valid_service_resource_permission(permission_name, service_resource, db_session):
@@ -184,10 +184,11 @@ def delete_resource(request):
     resource = ar.get_resource_matchdict_checked(request)
     service_push = asbool(ar.get_multiformat_post(request, 'service_push'))
     res_content = {u'resource': format_resource(resource, basic_info=True)}
-    ax.evaluate_call(lambda: models.resource_tree_service.delete_branch(
-                        resource_id=resource.resource_id, db_session=request.db),
-                     fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                     msgOnFail="Delete resource branch from tree service failed.", content=res_content)
+    ax.evaluate_call(
+        lambda: models.resource_tree_service.delete_branch(resource_id=resource.resource_id, db_session=request.db),
+        fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+        msgOnFail="Delete resource branch from tree service failed.", content=res_content
+    )
 
     def remove_service_magpie_and_phoenix(res, svc_push, db):
         if res.resource_type != 'service':
