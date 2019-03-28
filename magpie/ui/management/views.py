@@ -385,8 +385,9 @@ class ManagementViews(object):
 
         groups_info = {}
         groups = sorted(self.get_all_groups())
-        [groups_info.setdefault(grp, {u'members': len(self.get_group_users(grp))}) for grp in groups if grp != u'']
-
+        for grp in groups:
+            if grp != u'':
+                groups_info.setdefault(grp, {u'members': len(self.get_group_users(grp))})
         return add_template_data(self.request, {u'group_names': groups_info})
 
     @view_config(route_name='add_group', renderer='templates/add_group.mako')
@@ -681,7 +682,7 @@ class ManagementViews(object):
 
     def get_ids_to_clean(self, resources):
         ids = []
-        for resource_name, values in resources.items():
+        for _, values in resources.items():
             if "matches_remote" in values and not values["matches_remote"]:
                 ids.append(values['id'])
             ids += self.get_ids_to_clean(values['children'])

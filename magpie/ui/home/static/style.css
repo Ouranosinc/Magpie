@@ -10,7 +10,7 @@ html,body {
 }
 
 .img_button {
-	padding: 0.7em;
+    padding: 0.7em;
     margin: 1em 0em 1em;
 }
 
@@ -62,7 +62,7 @@ input[type="button"].button.delete:hover,
 input[type="button"].button.delete:focus,
 input[type="submit"].button.delete:hover,
 input[type="submit"].button.delete:focus {
-	background-color: #EE6363;
+    background-color: #EE6363;
 }
 
 input[type="button"].img_button.warning,
@@ -84,7 +84,7 @@ input[type="button"].button.warning:hover,
 input[type="button"].button.warning:focus,
 input[type="submit"].button.warning:hover,
 input[type="submit"].button.warning:focus {
-	background-color: #FFAA33;
+    background-color: #FFAA33;
 }
 
 input[type="button"].img_button.cancel,
@@ -114,8 +114,8 @@ a.tab:hover, a.tab:active,
 .img_button:hover, .img_button:focus,
 .admin_button:hover, .admin_button:active,
 input[type="submit"]:hover, input[type="submit"]:focus {
-	background-color: #5CBF60;
-	text-decoration: none;
+    background-color: #5CBF60;
+    text-decoration: none;
 }
 
 .img_button,
@@ -134,7 +134,7 @@ input[type="submit"] {
 }
 
 .img_button>img {
-	height: 1em;
+    height: 1em;
 }
 
 table {
@@ -462,11 +462,13 @@ ul.breadcrumb li a:hover {
 /*---Header---*/
 
 .header {
-	background: #000000;
+    background: #000000;
     background: black; /* For browsers that do not support gradients */
-    background: -webkit-linear-gradient(left bottom, black, gray); /* For Safari 5.1 to 6.0 */
-    background: -o-linear-gradient(bottom top, black, gray); /* For Opera 11.1 to 12.0 */
-    background: -moz-linear-gradient(bottom top, black, gray); /* For Firefox 3.6 to 15 */
+    background: -webkit-linear-gradient(left bottom, black, gray); /* Safari 5.1 to 6.0 */
+    background: -webkit-gradient(...); /* Chrome, Safari4+ */
+    background: -o-linear-gradient(bottom top, black, gray); /* Opera 11.1 to 12.0 */
+    background: -moz-linear-gradient(bottom top, black, gray); /* Firefox 3.6 to 15 */
+    background: -ms-linear-gradient(...); /* IE10+ */
     background: linear-gradient(to bottom top, black, gray); /* Standard syntax (must be last) */
     padding: 1em 1em 0em 1em;
 }
@@ -476,15 +478,15 @@ ul.breadcrumb li a:hover {
 }
 
 .header>div>a{
-	color: white;
-	font-size: 3em;
-	text-decoration: none;
-	float: left;
-	vertical-align: center;
+    color: white;
+    font-size: 3em;
+    text-decoration: none;
+    float: left;
+    vertical-align: center;
 }
 
 .header>button{
-	height: 40px;
+    height: 40px;
     width: 100px;
     float: right;
 }

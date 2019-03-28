@@ -85,27 +85,27 @@ def verify_param(   # noqa: E126
 
     # precondition evaluation of input parameters
     try:
-        if type(notNone) is not bool:
+        if not isinstance(notNone, bool):
             raise TypeError("`notNone` is not a `bool`")
-        if type(notEmpty) is not bool:
+        if not isinstance(notEmpty, bool):
             raise TypeError("`notEmpty` is not a `bool`")
-        if type(notIn) is not bool:
+        if not isinstance(notIn, bool):
             raise TypeError("`notIn` is not a `bool`")
-        if type(notEqual) is not bool:
+        if not isinstance(notEqual, bool):
             raise TypeError("`notEqual` is not a `bool`")
-        if type(isTrue) is not bool:
+        if not isinstance(isTrue, bool):
             raise TypeError("`isTrue` is not a `bool`")
-        if type(isFalse) is not bool:
+        if not isinstance(isFalse, bool):
             raise TypeError("`isFalse` is not a `bool`")
-        if type(isNone) is not bool:
+        if not isinstance(isNone, bool):
             raise TypeError("`isNone` is not a `bool`")
-        if type(isEmpty) is not bool:
+        if not isinstance(isEmpty, bool):
             raise TypeError("`isEmpty` is not a `bool`")
-        if type(isIn) is not bool:
+        if not isinstance(isIn, bool):
             raise TypeError("`isIn` is not a `bool`")
-        if type(isEqual) is not bool:
+        if not isinstance(isEqual, bool):
             raise TypeError("`isEqual` is not a `bool`")
-        if type(ofType) is not bool:
+        if not isinstance(ofType, bool):
             raise TypeError("`ofType` is not a `bool`")
         if paramCompare is None and (isIn or notIn or isEqual or notEqual):
             raise TypeError("`paramCompare` cannot be `None` with specified test flags")
