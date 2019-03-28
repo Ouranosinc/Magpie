@@ -143,8 +143,8 @@ def run_database_migration_when_ready(settings, db_session=None):
     """
 
     db_ready = False
-    if asbool(get_constant('MAGPIE_DB_MIGRATION', settings, 'magpie.db_migration', True,
-                           raise_missing=False, raise_not_set=False, print_missing=True)):
+    if asbool(get_constant('MAGPIE_DB_MIGRATION', settings, 'magpie.db_migration',
+                           default_value=True, raise_missing=False, raise_not_set=False, print_missing=True)):
         attempts = int(get_constant('MAGPIE_DB_MIGRATION_ATTEMPTS', settings, 'magpie.db_migration_attempts',
                                     default_value=5, raise_missing=False, raise_not_set=False, print_missing=True))
 

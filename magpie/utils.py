@@ -53,7 +53,7 @@ def patch_magpie_url(container):
         get_magpie_url(settings)
     except ConfigurationError:
         magpie_url_template = 'http://{hostname}:{port}'
-        port = get_constant('MAGPIE_PORT', settings=settings, settings_name='magpie.port')
+        port = get_constant('MAGPIE_PORT', settings, settings_name='magpie.port')
         if port:
             settings['magpie.port'] = port
         hostname = get_constant('HOSTNAME')

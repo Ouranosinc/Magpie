@@ -8,6 +8,9 @@ import logging
 import warnings
 from magpie.common import raise_log, print_log, get_settings_from_config_ini
 from magpie.definitions.pyramid_definitions import asbool
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Str, Optional, SettingValue, SettingsContainer
 
 # ===========================
 # path variables
@@ -114,8 +117,9 @@ MAGPIE_USER_NAME_MAX_LENGTH = 64
 # ===========================
 
 
-def get_constant(name, settings=None, settings_name=None, default_value=None,
+def get_constant(name, settings_container=None, settings_name=None, default_value=None,
                  raise_missing=True, print_missing=False, raise_not_set=True):
+    # type: (Str, Optional[SettingsContainer], Optional[Str], Optional[SettingValue], bool, bool, bool) -> SettingValue
     """
     Search in order for matched value of `name` :
       1. search in magpie definitions
@@ -123,7 +127,7 @@ def get_constant(name, settings=None, settings_name=None, default_value=None,
       3. search in settings if specified
 
     :param name: key to search for a value
-    :param settings: wsgi app settings
+    :param settings_container: wsgi app settings container
     :param settings_name: alternative name for `settings` if specified
     :param default_value: default value to be returned if not found anywhere, and exception raises are disabled.
     :param raise_missing: raise exception if key is not found anywhere
@@ -132,9 +136,12 @@ def get_constant(name, settings=None, settings_name=None, default_value=None,
     :returns: found value or `default_value`
     :raises: according message based on options (by default raise missing/`None` value)
     """
+    from magpie.utils import get_settings
+
     magpie_globals = globals()
     missing = True
     magpie_value = None
+    settings = get_settings(settings_container) if settings_container else None
     if name in magpie_globals:
         missing = False
         magpie_value = magpie_globals.get(name)

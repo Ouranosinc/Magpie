@@ -15,7 +15,6 @@ import unittest
 import requests
 import warnings
 import json
-import mock
 import six
 # noinspection PyPackageRequirements
 import pytest
@@ -131,6 +130,7 @@ def get_test_magpie_app(settings=None):
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
     config.include('ziggurat_foundations.ext.pyramid.get_user')
     config.registry.settings['magpie.url'] = 'http://localhost:80'
+    config.registry.settings['magpie.db_migration'] = False
     if settings:
         config.registry.settings.update(settings)
     # create the test application
@@ -605,11 +605,9 @@ class TestSetup(object):
     @staticmethod
     def get_Version(test_class):
         app_or_url = get_app_or_url(test_class)
-        # use mocked call since migration seem to fail on travis-ci
-        with mock.patch('magpie.api.home.home.get_database_revision', return_value='mocked-revision'):
-            resp = test_request(app_or_url, 'GET', '/version',
-                                headers=test_class.json_headers,
-                                cookies=test_class.cookies)
+        resp = test_request(app_or_url, 'GET', '/version',
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200)
         return json_body['version']
 

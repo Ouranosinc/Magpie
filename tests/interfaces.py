@@ -1,3 +1,13 @@
+from magpie.api.api_rest_schemas import SwaggerGenerator
+from magpie.common import JSON_TYPE
+from magpie.constants import get_constant
+from magpie.models import resource_type_dict
+from magpie.services import service_type_dict
+from magpie.utils import get_twitcher_protected_service_url
+from tests import utils, runner
+# noinspection PyPackageRequirements
+from six.moves.urllib.parse import urlparse
+from distutils.version import LooseVersion
 import unittest
 import warnings
 # noinspection PyPackageRequirements
@@ -7,16 +17,6 @@ import pyramid.testing
 import mock
 import yaml
 import six
-# noinspection PyPackageRequirements
-from six.moves.urllib.parse import urlparse
-from distutils.version import LooseVersion
-from magpie.api.api_rest_schemas import SwaggerGenerator
-from magpie.common import JSON_TYPE
-from magpie.constants import get_constant
-from magpie.models import resource_type_dict
-from magpie.services import service_type_dict
-from magpie.utils import get_twitcher_protected_service_url
-from tests import utils, runner
 
 
 # don't use 'unittest.TestCase' base

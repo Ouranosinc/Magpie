@@ -11,9 +11,15 @@ def get_version(request):
     """
     Version information of the API.
     """
+    version_db = None
+    # noinspection PyBroadException
+    try:
+        version_db = get_database_revision(request.db)
+    except Exception:
+        pass
     version = {
         u'version': __meta__.__version__,
-        u'db_version': get_database_revision(request.db)
+        u'db_version': version_db
     }
     return ax.valid_http(httpSuccess=HTTPOk, content=version, contentType=JSON_TYPE,
                          detail=s.Version_GET_OkResponseSchema.description)

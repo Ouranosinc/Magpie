@@ -59,7 +59,7 @@ def main(global_config=None, **settings):
     register_default_users(db_session=db_session)
 
     print_log('Register configuration providers...', logger=LOGGER)
-    push_phoenix = asbool(get_constant('PHOENIX_PUSH', settings=settings, settings_name='magpie.phoenix_push',
+    push_phoenix = asbool(get_constant('PHOENIX_PUSH', settings, settings_name='magpie.phoenix_push',
                                        raise_missing=False, raise_not_set=False, print_missing=True))
     prov_cfg = get_constant('MAGPIE_PROVIDERS_CONFIG_PATH', default_value='',
                             raise_missing=False, raise_not_set=False, print_missing=True)

@@ -15,11 +15,11 @@ AUTHOMATIC_LOGGER = get_logger('magpie.authomatic', level=logging.DEBUG)
 
 
 def auth_config_from_settings(settings):
-    magpie_secret = get_constant('MAGPIE_SECRET', settings=settings, settings_name='magpie.secret')
-    magpie_cookie_expire = get_constant('MAGPIE_COOKIE_EXPIRE', settings=settings,
+    magpie_secret = get_constant('MAGPIE_SECRET', settings, settings_name='magpie.secret')
+    magpie_cookie_expire = get_constant('MAGPIE_COOKIE_EXPIRE', settings,
                                         settings_name='magpie.cookie_expire', default_value=None,
                                         raise_missing=False, raise_not_set=False, print_missing=True)
-    magpie_cookie_name = get_constant('MAGPIE_COOKIE_NAME', settings=settings,
+    magpie_cookie_name = get_constant('MAGPIE_COOKIE_NAME', settings,
                                       settings_name='magpie.cookie_name', default_value='auth_tkt',
                                       raise_missing=False, raise_not_set=False, print_missing=True)
     authn_policy = AuthTktAuthenticationPolicy(
@@ -45,7 +45,7 @@ def auth_config_from_settings(settings):
 
 
 def authomatic_setup(request):
-    magpie_secret = get_constant('MAGPIE_SECRET', settings=request.registry.settings, settings_name='magpie.secret')
+    magpie_secret = get_constant('MAGPIE_SECRET', request, settings_name='magpie.secret')
     return Authomatic(
         config=authomatic_config(request),
         secret=magpie_secret,
