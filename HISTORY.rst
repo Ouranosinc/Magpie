@@ -30,6 +30,8 @@ History
 * better handling of ``HTTPUnauthorized [401]`` and ``HTTPForbidden [403]`` according to unauthorized view
   (invalid access token/headers or forbidden operation under view)
 * better handling of ``HTTPNotFound [404]`` and ``HTTPMethodNotAllowed [405]`` on invalid routes and request methods
+* fix travis-ci test suite execution and enable PEP8 lint checks
+* fix yaml security issue using updated package distribution
 
 0.8.x
 ---------------------
