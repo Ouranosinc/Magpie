@@ -1,10 +1,8 @@
-import unittest
-import requests
-import warnings
-import json
-import six
-# noinspection PyPackageRequirements
-import pytest
+from magpie import __meta__, services, app
+from magpie.common import get_settings_from_config_ini, get_header, JSON_TYPE, HTML_TYPE
+from magpie.constants import get_constant
+from magpie.definitions.pyramid_definitions import asbool
+from magpie.utils import get_magpie_url
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from pyramid.testing import setUp as PyramidSetUp
@@ -12,16 +10,19 @@ from pyramid.testing import setUp as PyramidSetUp
 from webtest import TestApp
 # noinspection PyPackageRequirements
 from webtest.response import TestResponse
-from magpie import __meta__, services, magpiectl
-from magpie.common import get_settings_from_config_ini, get_header, JSON_TYPE, HTML_TYPE
-from magpie.constants import get_constant
-from magpie.common import str2bool
-from magpie.utils import get_magpie_url
 from typing import TYPE_CHECKING
+import unittest
+import requests
+import warnings
+import json
+import six
+# noinspection PyPackageRequirements
+import pytest
 if TYPE_CHECKING:
-    from tests.interfaces import Base_Magpie_TestCase    # noqa: F401
+    from tests.interfaces import Base_Magpie_TestCase  # noqa: F401
     from magpie.definitions.typedefs import (  # noqa: F401
-        Str, Callable, Dict, HeadersType, OptionalHeaderCookiesType, Optional, Type, TestAppOrUrlType, AnyResponseType
+        Str, Callable, Dict, HeadersType, OptionalHeaderCookiesType, Optional, Type,
+        AnyMagpieTestType, AnyResponseType, TestAppOrUrlType
     )
 
 OptionalStringType = six.string_types + tuple([type(None)])
@@ -46,8 +47,8 @@ class RunOption(object):
         return '{}[{}]'.format(type(self).__name__, self.message)
 
     def _default_run(self):
-        option_value = str2bool(get_constant(self._name, default_value=True,
-                                             raise_missing=False, raise_not_set=False, print_missing=True))
+        option_value = asbool(get_constant(self._name, default_value=True,
+                                           raise_missing=False, raise_not_set=False, print_missing=True))
         return True if option_value is None else option_value
 
     @property
@@ -128,16 +129,29 @@ def get_test_magpie_app(settings=None):
     config = config_setup_from_ini(get_constant('MAGPIE_INI_FILE_PATH'))
     config.include('ziggurat_foundations.ext.pyramid.sign_in')
     config.include('ziggurat_foundations.ext.pyramid.get_user')
-    config.registry.settings['magpie.db_migration'] = False
     config.registry.settings['magpie.url'] = 'http://localhost:80'
+    config.registry.settings['magpie.db_migration'] = False
     if settings:
         config.registry.settings.update(settings)
     # create the test application
-    app = TestApp(magpiectl.main({}, **config.registry.settings))
-    return app
+    config.include('magpie')
+    magpie_app = TestApp(app.main({}, **config.registry.settings))
+    return magpie_app
 
 
-def get_hostname(app_or_url):
+def get_app_or_url(test_item):
+    # type: (AnyMagpieTestType) -> TestAppOrUrlType
+    if isinstance(test_item, TestApp) or isinstance(test_item, six.string_types):
+        return test_item
+    app_or_url = getattr(test_item, 'app', None) or getattr(test_item, 'url', None)
+    if not app_or_url:
+        raise ValueError("Invalid test class, application or URL could not be found.")
+    return app_or_url
+
+
+def get_hostname(test_item):
+    # type: (AnyMagpieTestType) -> Str
+    app_or_url = get_app_or_url(test_item)
     if isinstance(app_or_url, TestApp):
         app_or_url = get_magpie_url(app_or_url.app.registry)
     return urlparse(app_or_url).hostname
@@ -182,10 +196,10 @@ def warn_version(test, functionality, version, skip=True):
             test.skipTest(reason=msg)
 
 
-def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kwargs):
+def test_request(test_item, method, path, timeout=5, allow_redirects=True, **kwargs):
     """
     Calls the request using either a :class:`webtest.TestApp` instance or :class:`requests.Request` from a string URL.
-    :param app_or_url: `webtest.TestApp` instance of the test application or remote server URL to call with `requests`
+    :param test_item: one of `Base_Magpie_TestCase`, `webtest.TestApp` or remote server URL to call with `requests`
     :param method: request method (GET, POST, PUT, DELETE)
     :param path: test path starting at base path
     :param timeout: `timeout` to pass down to `request`
@@ -204,6 +218,7 @@ def test_request(app_or_url, method, path, timeout=5, allow_redirects=True, **kw
             kwargs.pop(kw)
     json_body = json_body or {}
 
+    app_or_url = get_app_or_url(test_item)
     if isinstance(app_or_url, TestApp):
         # remove any 'cookies' keyword handled by the 'TestApp' instance
         if 'cookies' in kwargs:
@@ -253,7 +268,7 @@ def get_session_user(app_or_url, headers=None):
     return resp
 
 
-def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrlType
+def check_or_try_login_user(test_item,                      # type: AnyMagpieTestType
                             username=None,                  # type: Optional[Str]
                             password=None,                  # type: Optional[Str]
                             provider='ziggurat',            # type: Optional[Str]
@@ -266,7 +281,7 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
     Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
     Validates that the logged user (if any), matched the one specified with `username`.
 
-    :param app_or_url: instance of the test application or remote server URL to call
+    :param test_item: instance of the test application or remote server URL to call
     :param username: name of the user to login or None otherwise
     :param password: password to use for login if the user was not already logged in
     :param provider: provider string to use for login (default: ziggurat, ie: magpie's local signin)
@@ -278,7 +293,7 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
     :return: headers and cookies of the user session or (None, None)
     :raise: Exception on any login failure as required by the caller's specifications (username/password)
     """
-
+    app_or_url = get_app_or_url(test_item)
     headers = headers or {}
     resp = get_session_user(app_or_url, headers)
     body = get_json_body(resp)
@@ -327,14 +342,15 @@ def check_or_try_login_user(app_or_url,                     # type: TestAppOrUrl
     return resp.headers, resp_cookies
 
 
-def check_or_try_logout_user(app_or_url):
-    # type: (TestAppOrUrlType) -> None
+def check_or_try_logout_user(test_item):
+    # type: (AnyMagpieTestType) -> None
     """
     Verifies that any user is logged out, or tries to logout him otherwise.
 
-    :param app_or_url: instance of the test application or remote server URL to call
     :raise: Exception on any logout failure or incapability to validate logout
     """
+
+    app_or_url = get_app_or_url(test_item)
 
     def _is_logged_out():
         resp = get_session_user(app_or_url)
@@ -588,8 +604,10 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
 class TestSetup(object):
     @staticmethod
     def get_Version(test_class):
-        resp = test_request(test_class.url, 'GET', '/version',
-                            headers=test_class.json_headers, cookies=test_class.cookies)
+        app_or_url = get_app_or_url(test_class)
+        resp = test_request(app_or_url, 'GET', '/version',
+                            headers=test_class.json_headers,
+                            cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200)
         return json_body['version']
 
@@ -601,7 +619,8 @@ class TestSetup(object):
 
         :returns: response from the rendered page for further tests
         """
-        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=timeout)
+        app_or_url = get_app_or_url(test_class)
+        resp = test_request(app_or_url, method, path, cookies=test_class.cookies, timeout=timeout)
         check_ui_response_basic_info(resp)
         return resp
 
@@ -633,12 +652,13 @@ class TestSetup(object):
 
         :returns: response from the rendered page for further tests
         """
-        if not isinstance(test_class.url, TestApp):
+        app_or_url = get_app_or_url(test_class)
+        if not isinstance(app_or_url, TestApp):
             test_class.skipTest(reason='test form submit with remote URL not implemented')
         if isinstance(previous_response, TestResponse):
             resp = previous_response
         else:
-            resp = test_request(test_class.url, method, path, cookies=test_class.cookies, timeout=timeout)
+            resp = test_request(app_or_url, method, path, cookies=test_class.cookies, timeout=timeout)
         check_val_equal(resp.status_code, 200, msg="Cannot test form submission, initial page returned an error.")
         form = None
         if isinstance(form_match, int) or isinstance(form_match, six.string_types):
@@ -667,13 +687,15 @@ class TestSetup(object):
         Verifies that Magpie returned an Unauthorized response.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
-        resp = test_request(test_class.url, method, path, cookies=test_class.cookies, expect_errors=True)
+        app_or_url = get_app_or_url(test_class)
+        resp = test_request(app_or_url, method, path, cookies=test_class.cookies, expect_errors=True)
         check_response_basic_info(resp, expected_code=401, expected_type=content_type, expected_method=method)
 
     @staticmethod
     def get_AnyServiceOfTestServiceType(test_class):
+        app_or_url = get_app_or_url(test_class)
         route = '/services/types/{}'.format(test_class.test_service_type)
-        resp = test_request(test_class.url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
+        resp = test_request(app_or_url, 'GET', route, headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method='GET')
         check_val_is_in('services', json_body)
         check_val_is_in(test_class.test_service_type, json_body['services'])
@@ -684,6 +706,7 @@ class TestSetup(object):
 
     @staticmethod
     def create_TestServiceResource(test_class, data_override=None):
+        app_or_url = get_app_or_url(test_class)
         TestSetup.create_TestService(test_class)
         route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
         data = {
@@ -692,15 +715,16 @@ class TestSetup(object):
         }
         if data_override:
             data.update(data_override)
-        resp = test_request(test_class.url, 'POST', route,
+        resp = test_request(app_or_url, 'POST', route,
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
     def get_ExistingTestServiceInfo(test_class):
+        app_or_url = get_app_or_url(test_class)
         route = '/services/{svc}'.format(svc=test_class.test_service_name)
-        resp = test_request(test_class.url, 'GET', route,
+        resp = test_request(app_or_url, 'GET', route,
                             headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = get_json_body(resp)
         svc_getter = 'service'
@@ -710,8 +734,9 @@ class TestSetup(object):
 
     @staticmethod
     def get_TestServiceDirectResources(test_class, ignore_missing_service=False):
+        app_or_url = get_app_or_url(test_class)
         route = '/services/{svc}/resources'.format(svc=test_class.test_service_name)
-        resp = test_request(test_class.url, 'GET', route,
+        resp = test_request(app_or_url, 'GET', route,
                             headers=test_class.json_headers, cookies=test_class.cookies,
                             expect_errors=ignore_missing_service)
         if ignore_missing_service and resp.status_code == 404:
@@ -728,6 +753,7 @@ class TestSetup(object):
 
     @staticmethod
     def delete_TestServiceResource(test_class, override_resource_name=None):
+        app_or_url = get_app_or_url(test_class)
         resource_name = override_resource_name or test_class.test_resource_name
         resources = TestSetup.get_TestServiceDirectResources(test_class, ignore_missing_service=True)
         test_resource = list(filter(lambda r: r['resource_name'] == resource_name, resources))
@@ -735,7 +761,7 @@ class TestSetup(object):
         if len(test_resource) > 0:
             resource_id = test_resource[0]['resource_id']
             route = '/services/{svc}/resources/{res_id}'.format(svc=test_class.test_service_name, res_id=resource_id)
-            resp = test_request(test_class.url, 'DELETE', route,
+            resp = test_request(app_or_url, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_val_equal(resp.status_code, 200)
@@ -743,6 +769,7 @@ class TestSetup(object):
 
     @staticmethod
     def create_TestService(test_class, override_service_name=None, override_service_type=None):
+        app_or_url = get_app_or_url(test_class)
         svc_name = override_service_name or test_class.test_service_name
         svc_type = override_service_type or test_class.test_service_type
         data = {
@@ -750,12 +777,12 @@ class TestSetup(object):
             u'service_type': svc_type,
             u'service_url': u'http://localhost:9000/{}'.format(svc_name)
         }
-        resp = test_request(test_class.url, 'POST', '/services', json=data,
+        resp = test_request(app_or_url, 'POST', '/services', json=data,
                             headers=test_class.json_headers, cookies=test_class.cookies,
                             expect_errors=True)
         if resp.status_code == 409:
             path = '/services/{svc}'.format(svc=svc_name)
-            resp = test_request(test_class.url, 'GET', path,
+            resp = test_request(app_or_url, 'GET', path,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             body = check_response_basic_info(resp, 200, expected_method='GET')
@@ -774,13 +801,14 @@ class TestSetup(object):
 
     @staticmethod
     def delete_TestService(test_class, override_service_name=None):
+        app_or_url = get_app_or_url(test_class)
         service_name = override_service_name or test_class.test_service_name
         services_info = TestSetup.get_RegisteredServicesList(test_class)
         test_service = list(filter(lambda r: r['service_name'] == service_name, services_info))
         # delete as required, skip if non-existing
         if len(test_service) > 0:
             route = '/services/{svc_name}'.format(svc_name=service_name)
-            resp = test_request(test_class.url, 'DELETE', route,
+            resp = test_request(app_or_url, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_val_equal(resp.status_code, 200)
@@ -788,7 +816,8 @@ class TestSetup(object):
 
     @staticmethod
     def get_RegisteredServicesList(test_class):
-        resp = test_request(test_class.url, 'GET', '/services',
+        app_or_url = get_app_or_url(test_class)
+        resp = test_request(app_or_url, 'GET', '/services',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method='GET')
@@ -802,7 +831,8 @@ class TestSetup(object):
 
     @staticmethod
     def get_RegisteredUsersList(test_class):
-        resp = test_request(test_class.url, 'GET', '/users',
+        app_or_url = get_app_or_url(test_class)
+        resp = test_request(app_or_url, 'GET', '/users',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method='GET')
@@ -816,6 +846,7 @@ class TestSetup(object):
 
     @staticmethod
     def create_TestUser(test_class, override_data=None):
+        app_or_url = get_app_or_url(test_class)
         data = {
             "user_name": test_class.test_user_name,
             "email": '{}@mail.com'.format(test_class.test_user_name),
@@ -824,19 +855,20 @@ class TestSetup(object):
         }
         if override_data:
             data.update(override_data)
-        resp = test_request(test_class.url, 'POST', '/users',
+        resp = test_request(app_or_url, 'POST', '/users',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
     def delete_TestUser(test_class, override_user_name=None):
+        app_or_url = get_app_or_url(test_class)
         users = TestSetup.get_RegisteredUsersList(test_class)
         user_name = override_user_name or test_class.test_user_name
         # delete as required, skip if non-existing
         if user_name in users:
             route = '/users/{usr}'.format(usr=user_name)
-            resp = test_request(test_class.url, 'DELETE', route,
+            resp = test_request(app_or_url, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_response_basic_info(resp, 200, expected_method='DELETE')
@@ -844,7 +876,8 @@ class TestSetup(object):
 
     @staticmethod
     def get_RegisteredGroupsList(test_class):
-        resp = test_request(test_class.url, 'GET', '/groups',
+        app_or_url = get_app_or_url(test_class)
+        resp = test_request(app_or_url, 'GET', '/groups',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method='GET')
@@ -858,20 +891,22 @@ class TestSetup(object):
 
     @staticmethod
     def create_TestGroup(test_class, override_group_name=None):
+        app_or_url = get_app_or_url(test_class)
         data = {"group_name": override_group_name or test_class.test_group_name}
-        resp = test_request(test_class.url, 'POST', '/groups',
+        resp = test_request(app_or_url, 'POST', '/groups',
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
         return check_response_basic_info(resp, 201, expected_method='POST')
 
     @staticmethod
     def delete_TestGroup(test_class, override_group_name=None):
+        app_or_url = get_app_or_url(test_class)
         groups = TestSetup.get_RegisteredGroupsList(test_class)
         group_name = override_group_name or test_class.test_group_name
         # delete as required, skip if non-existing
         if group_name in groups:
             route = '/groups/{grp}'.format(grp=group_name)
-            resp = test_request(test_class.url, 'DELETE', route,
+            resp = test_request(app_or_url, 'DELETE', route,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_response_basic_info(resp, 200, expected_method='DELETE')

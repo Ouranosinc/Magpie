@@ -110,22 +110,25 @@ clean-test:
 .PHONY: lint
 lint: install-dev
 	@echo "Checking code style with flake8..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; flake8 magpie tests --ignore=E501,W291 || true'
+	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; flake8'
 
 .PHONY: test
 test: install-dev install
 	@echo "Running tests..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; python setup.py test'
+	bash -c "source $(CONDA_HOME)/bin/activate $(CONDA_ENV); \
+		pytest tests -vv --junitxml $(CURDIR)/tests/results.xml"
 
 .PHONY: test-local
 test-local: install-dev install
 	@echo "Running local tests..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; MAGPIE_TEST_REMOTE=false python setup.py test'
+	bash -c "source $(CONDA_HOME)/bin/activate $(CONDA_ENV); \
+		pytest tests -vv -m 'not remote' --junitxml $(CURDIR)/tests/results.xml"
 
 .PHONY: test-remote
 test-remote: install-dev install
 	@echo "Running remote tests..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; MAGPIE_TEST_LOCAL=false python setup.py test'
+	bash -c "source $(CONDA_HOME)/bin/activate $(CONDA_ENV); \
+		pytest tests -vv -m 'not local' --junitxml $(CURDIR)/tests/results.xml"
 
 .PHONY: test-tox
 test-tox: install-dev install

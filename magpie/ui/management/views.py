@@ -1,5 +1,6 @@
 from magpie.api import api_rest_schemas as schemas
 from magpie.definitions.pyramid_definitions import (
+    asbool,
     view_config,
     HTTPFound,
     HTTPMovedPermanently,
@@ -8,7 +9,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPConflict,
 )
 from magpie.constants import get_constant
-from magpie.common import str2bool, get_json, get_logger, JSON_TYPE
+from magpie.common import get_json, get_logger, JSON_TYPE
 from magpie.helpers.sync_resources import OUT_OF_SYNC
 from magpie.helpers import sync_resources
 from magpie.models import resource_type_dict, remote_resource_tree_service  # TODO: remove, implement getters via API
@@ -260,7 +261,7 @@ class ManagementViews(object):
             requires_update_name = False
 
             if u'inherit_groups_permissions' in self.request.POST:
-                inherit_grp_perms = str2bool(self.request.POST[u'inherit_groups_permissions'])
+                inherit_grp_perms = asbool(self.request.POST[u'inherit_groups_permissions'])
                 user_info[u'inherit_groups_permissions'] = inherit_grp_perms
 
             if u'delete' in self.request.POST:
@@ -757,7 +758,7 @@ class ManagementViews(object):
         if 'edit' in self.request.POST:
             service_name = self.request.POST.get('service_name')
             return HTTPFound(self.request.route_url('edit_service',
-                                       service_name=service_name, cur_svc_type=cur_svc_type))
+                             service_name=service_name, cur_svc_type=cur_svc_type))
 
         return add_template_data(self.request,
                                  {u'cur_svc_type': cur_svc_type,
@@ -804,7 +805,7 @@ class ManagementViews(object):
         # apply default state if arriving on the page for the first time
         # future editions on the page will transfer the last saved state
         service_push_show = cur_svc_type in register.SERVICES_PHOENIX_ALLOWED
-        service_push = str2bool(self.request.POST.get('service_push', service_push_show))
+        service_push = asbool(self.request.POST.get('service_push', service_push_show))
 
         service_info = {u'edit_mode': u'no_edit', u'service_name': service_name, u'service_url': service_url,
                         u'public_url': register.get_twitcher_protected_service_url(service_name),

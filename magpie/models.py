@@ -1,10 +1,28 @@
-from magpie.definitions.pyramid_definitions import *
-from magpie.definitions.ziggurat_definitions import *
-from magpie.definitions.sqlalchemy_definitions import *
-from magpie.definitions.typedefs import AnyStr
 from magpie.api.api_except import evaluate_call
-from magpie.permissions import *
-from six import with_metaclass
+from magpie.definitions.pyramid_definitions import ALLOW, ALL_PERMISSIONS, HTTPInternalServerError
+from magpie.definitions.sqlalchemy_definitions import sa, declared_attr, relationship, declarative_base
+from magpie.definitions.ziggurat_definitions import (
+    get_db_session,
+    permission_to_pyramid_acls,
+    ziggurat_model_init,
+    BaseModel,
+    ExternalIdentityMixin,
+    GroupMixin,
+    GroupPermissionMixin,
+    GroupResourcePermissionMixin,
+    ResourceMixin,
+    ResourceTreeService,
+    ResourceTreeServicePostgreSQL,
+    UserGroupMixin,
+    UserMixin,
+    UserPermissionMixin,
+    UserResourcePermissionMixin,
+    UserService,
+)
+from magpie import permissions as p
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Str  # noqa: F401
 
 Base = declarative_base()
 
@@ -39,14 +57,13 @@ class GroupResourcePermission(GroupResourcePermissionMixin, Base):
 class ResourceMeta(type):
     @property
     def resource_type_name(cls):
-        # type: (...) -> AnyStr
+        # type: (...) -> Str
         """Generic resource type identifier."""
         raise NotImplemented("Resource implementation must define unique type representation"
                              "and must be added to `resource_type_dict`.")
 
 
 class Resource(ResourceMixin, Base):
-#class Resource(with_metaclass(ResourceMeta, ResourceMixin, Base)):
     permission_names = []
     child_resource_allowed = True
     resource_display_name = sa.Column(sa.Unicode(100), nullable=True)
@@ -156,13 +173,13 @@ class Service(Resource):
 
 class Path(object):
     permission_names = [
-        PERMISSION_READ,
-        PERMISSION_WRITE,
-        PERMISSION_GET_CAPABILITIES,
-        PERMISSION_GET_MAP,
-        PERMISSION_GET_FEATURE_INFO,
-        PERMISSION_GET_LEGEND_GRAPHIC,
-        PERMISSION_GET_METADATA,
+        p.PERMISSION_READ,
+        p.PERMISSION_WRITE,
+        p.PERMISSION_GET_CAPABILITIES,
+        p.PERMISSION_GET_MAP,
+        p.PERMISSION_GET_FEATURE_INFO,
+        p.PERMISSION_GET_LEGEND_GRAPHIC,
+        p.PERMISSION_GET_METADATA,
     ]
 
 
@@ -182,15 +199,15 @@ class Workspace(Resource):
     __mapper_args__ = {u'polymorphic_identity': resource_type_name}
 
     permission_names = [
-        PERMISSION_GET_CAPABILITIES,
-        PERMISSION_GET_MAP,
-        PERMISSION_GET_FEATURE_INFO,
-        PERMISSION_GET_LEGEND_GRAPHIC,
-        PERMISSION_GET_METADATA,
-        PERMISSION_GET_FEATURE,
-        PERMISSION_DESCRIBE_FEATURE_TYPE,
-        PERMISSION_LOCK_FEATURE,
-        PERMISSION_TRANSACTION,
+        p.PERMISSION_GET_CAPABILITIES,
+        p.PERMISSION_GET_MAP,
+        p.PERMISSION_GET_FEATURE_INFO,
+        p.PERMISSION_GET_LEGEND_GRAPHIC,
+        p.PERMISSION_GET_METADATA,
+        p.PERMISSION_GET_FEATURE,
+        p.PERMISSION_DESCRIBE_FEATURE_TYPE,
+        p.PERMISSION_LOCK_FEATURE,
+        p.PERMISSION_TRANSACTION,
     ]
 
 
@@ -199,10 +216,10 @@ class Route(Resource):
     __mapper_args__ = {u'polymorphic_identity': resource_type_name}
 
     permission_names = [
-        PERMISSION_READ,            # access with inheritance (this route and all under it)
-        PERMISSION_WRITE,           # access with inheritance (this route and all under it)
-        PERMISSION_READ_MATCH,      # access without inheritance (only on this specific route)
-        PERMISSION_WRITE_MATCH,     # access without inheritance (only on this specific route)
+        p.PERMISSION_READ,            # access with inheritance (this route and all under it)
+        p.PERMISSION_WRITE,           # access with inheritance (this route and all under it)
+        p.PERMISSION_READ_MATCH,      # access without inheritance (only on this specific route)
+        p.PERMISSION_WRITE_MATCH,     # access without inheritance (only on this specific route)
     ]
 
 
@@ -286,11 +303,11 @@ resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
 remote_resource_tree_service = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
 resource_type_dict = {
-    Service.resource_type_name:     Service,
-    Directory.resource_type_name:   Directory,
-    File.resource_type_name:        File,
-    Workspace.resource_type_name:   Workspace,
-    Route.resource_type_name:       Route,
+    Service.resource_type_name:     Service,    # noqa: E241
+    Directory.resource_type_name:   Directory,  # noqa: E241
+    File.resource_type_name:        File,       # noqa: E241
+    Workspace.resource_type_name:   Workspace,  # noqa: E241
+    Route.resource_type_name:       Route,      # noqa: E241
 }
 
 

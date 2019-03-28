@@ -2,6 +2,7 @@ from magpie.api import api_except as ax, api_requests as ar, api_rest_schemas as
 from magpie.api.management.user import user_utils as uu, user_formats as uf
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.definitions.pyramid_definitions import (
+    asbool,
     view_config,
     HTTPOk,
     HTTPCreated,
@@ -14,7 +15,7 @@ from magpie.definitions.pyramid_definitions import (
 )
 from magpie.definitions.ziggurat_definitions import UserService, GroupService
 from magpie.constants import get_constant
-from magpie.common import str2bool, get_logger
+from magpie.common import get_logger
 from magpie import models
 LOGGER = get_logger(__name__)
 
@@ -177,7 +178,7 @@ def delete_user_group_view(request):
 @view_config(route_name=s.UserResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_resources_view(request):
     """List all resources a user has permissions on."""
-    inherit_groups_perms = str2bool(ar.get_query_param(request, 'inherit'))
+    inherit_groups_perms = asbool(ar.get_query_param(request, 'inherit'))
     user = ar.get_user_matchdict_checked_or_logged(request)
     db = request.db
 
@@ -234,8 +235,8 @@ def get_user_resource_permissions_view(request):
     """List all permissions a user has on a specific resource."""
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request, 'resource_id')
-    inherit_groups_perms = str2bool(ar.get_query_param(request, 'inherit'))
-    effective_perms = str2bool(ar.get_query_param(request, 'effective'))
+    inherit_groups_perms = asbool(ar.get_query_param(request, 'inherit'))
+    effective_perms = asbool(ar.get_query_param(request, 'effective'))
     perm_names = uu.get_user_resource_permissions(resource=resource, user=user, request=request,
                                                   inherit_groups_permissions=inherit_groups_perms,
                                                   effective_permissions=effective_perms)
@@ -293,9 +294,9 @@ def delete_user_resource_permission_view(request):
 def get_user_services_view(request):
     """List all services a user has permissions on."""
     user = ar.get_user_matchdict_checked_or_logged(request)
-    cascade_resources = str2bool(ar.get_query_param(request, 'cascade'))
-    inherit_groups_perms = str2bool(ar.get_query_param(request, 'inherit'))
-    format_as_list = str2bool(ar.get_query_param(request, 'list'))
+    cascade_resources = asbool(ar.get_query_param(request, 'cascade'))
+    inherit_groups_perms = asbool(ar.get_query_param(request, 'inherit'))
+    format_as_list = asbool(ar.get_query_param(request, 'list'))
 
     svc_json = uu.get_user_services(user, request=request,
                                     cascade_resources=cascade_resources,
@@ -346,7 +347,7 @@ def get_user_service_permissions_view(request):
     """List all permissions a user has on a service."""
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
-    inherit_groups_perms = str2bool(ar.get_query_param(request, 'inherit'))
+    inherit_groups_perms = asbool(ar.get_query_param(request, 'inherit'))
     perms = ax.evaluate_call(lambda: uu.get_user_service_permissions(service=service, user=user, request=request,
                                                                      inherit_groups_permissions=inherit_groups_perms),
                              fallback=lambda: request.db.rollback(), httpError=HTTPNotFound,
@@ -391,7 +392,7 @@ def delete_user_service_permission_view(request):
 @view_config(route_name=s.UserServiceResourcesAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
 def get_user_service_resources_view(request):
     """List all resources under a service a user has permission on."""
-    inherit_groups_perms = str2bool(ar.get_query_param(request, 'inherit'))
+    inherit_groups_perms = asbool(ar.get_query_param(request, 'inherit'))
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
     service_perms = uu.get_user_service_permissions(

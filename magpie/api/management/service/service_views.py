@@ -2,6 +2,7 @@ from magpie.api.management.resource.resource_utils import create_resource, delet
 from magpie.api.management.service import service_formats as sf, service_utils as su
 from magpie.api import api_requests as ar, api_except as ax, api_rest_schemas as s
 from magpie.definitions.pyramid_definitions import (
+    asbool,
     view_config,
     HTTPOk,
     HTTPBadRequest,
@@ -10,7 +11,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPNotAcceptable,
     HTTPConflict,
 )
-from magpie.common import str2bool, JSON_TYPE
+from magpie.common import JSON_TYPE
 from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
 from magpie.services import service_type_dict
 from magpie import models
@@ -68,7 +69,7 @@ def register_service_view(request):
     service_name = ar.get_value_multiformat_post_checked(request, 'service_name')
     service_url = ar.get_value_multiformat_post_checked(request, 'service_url')
     service_type = ar.get_value_multiformat_post_checked(request, 'service_type')
-    service_push = str2bool(ar.get_multiformat_post(request, 'service_push'))
+    service_push = asbool(ar.get_multiformat_post(request, 'service_push'))
     ax.verify_param(service_type, isIn=True, paramCompare=service_type_dict.keys(),
                     httpError=HTTPBadRequest, msgOnFail=s.Services_POST_BadRequestResponseSchema.description)
     ax.verify_param(models.Service.by_service_name(service_name, db_session=request.db), isNone=True,
@@ -83,7 +84,7 @@ def register_service_view(request):
 def update_service_view(request):
     """Update a service information."""
     service = ar.get_service_matchdict_checked(request)
-    service_push = str2bool(ar.get_multiformat_post(request, 'service_push', default=False))
+    service_push = asbool(ar.get_multiformat_post(request, 'service_push', default=False))
 
     def select_update(new_value, old_value):
         return new_value if new_value is not None and not new_value == '' else old_value
@@ -142,7 +143,7 @@ def get_service_view(request):
 def unregister_service_view(request):
     """Unregister a service."""
     service = ar.get_service_matchdict_checked(request)
-    service_push = str2bool(ar.get_multiformat_delete(request, 'service_push', default=False))
+    service_push = asbool(ar.get_multiformat_delete(request, 'service_push', default=False))
     svc_content = sf.format_service(service, show_private_url=True)
     svc_res_id = service.resource_id
     ax.evaluate_call(lambda: models.resource_tree_service.delete_branch(resource_id=svc_res_id, db_session=request.db),

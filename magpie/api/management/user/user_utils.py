@@ -3,7 +3,6 @@ from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
 from magpie.api.management.user import user_formats as uf
 from magpie.constants import get_constant
-from magpie.definitions.sqlalchemy_definitions import Session
 from magpie.definitions.ziggurat_definitions import (
     GroupService,
     UserService,
@@ -11,7 +10,6 @@ from magpie.definitions.ziggurat_definitions import (
     UserResourcePermissionService,
 )
 from magpie.definitions.pyramid_definitions import (
-    Request,
     HTTPOk,
     HTTPCreated,
     HTTPBadRequest,
@@ -19,13 +17,15 @@ from magpie.definitions.pyramid_definitions import (
     HTTPNotFound,
     HTTPNotAcceptable,
     HTTPConflict,
-    HTTPException,  # noqa: F401
 )
-from magpie.services import service_factory, ResourcePermissionType, ServiceI
+from magpie.services import service_factory
 from magpie import models
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Any, Str, Dict, List, Optional, Union, UserServicesType
+    from magpie.services import ResourcePermissionType, ServiceI  # noqa: F401
+    from magpie.definitions.pyramid_definitions import Request, HTTPException  # noqa: F401
+    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
+    from magpie.definitions.typedefs import Any, Str, Dict, List, Optional, Union, UserServicesType  # noqa: F401
 
 
 def create_user(user_name, password, email, group_name, db_session):

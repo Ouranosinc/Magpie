@@ -29,8 +29,8 @@ down_revision = '439766f6104d'
 
 
 def upgrade():
-    c = get_context()
-    insp = Inspector.from_engine(c.connection.engine)
+    context = get_context()
+    insp = Inspector.from_engine(context.connection.engine)
     # existing migration
     # pre naming convention keys
     groups_permissions_pkey = 'groups_permissions_pkey'
@@ -40,7 +40,7 @@ def upgrade():
     users_permissions_pkey = 'users_permissions_pkey'
     users_resources_permissions_pkey = 'users_resources_permissions_pkey'
 
-    if isinstance(c.connection.engine.dialect, PGDialect):
+    if isinstance(context.connection.engine.dialect, PGDialect):
         op.execute(
             'ALTER INDEX groups_unique_group_name_key RENAME to ix_groups_uq_group_name_key')
 

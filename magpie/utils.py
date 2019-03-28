@@ -1,15 +1,15 @@
 from magpie.common import raise_log, get_logger, JSON_TYPE
 from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import (  # noqa: F401
+from magpie.definitions.pyramid_definitions import (
     HTTPOk, HTTPClientError, ConfigurationError, Configurator, Registry, Request
 )
 from six.moves.urllib.parse import urlparse
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from requests.cookies import RequestsCookieJar
 import logging
 import requests
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, CookiesType, SettingsType, SettingsContainer
+    from magpie.definitions.typedefs import Str, CookiesType, SettingsType, SettingsContainer, Optional  # noqa: F401
 LOGGER = get_logger(__name__)
 
 
@@ -53,7 +53,7 @@ def patch_magpie_url(container):
         get_magpie_url(settings)
     except ConfigurationError:
         magpie_url_template = 'http://{hostname}:{port}'
-        port = get_constant('MAGPIE_PORT', settings=settings, settings_name='magpie.port')
+        port = get_constant('MAGPIE_PORT', settings, settings_name='magpie.port')
         if port:
             settings['magpie.port'] = port
         hostname = get_constant('HOSTNAME')

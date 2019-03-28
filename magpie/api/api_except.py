@@ -24,7 +24,7 @@ RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 
 
 # noinspection PyPep8Naming
-def verify_param(
+def verify_param(   # noqa: E126
                  # --- verification values ---
                  param,                             # type: Any
                  paramCompare=None,                 # type: Optional[Union[Any, List[Any]]]
@@ -48,7 +48,7 @@ def verify_param(
                  isIn=False,                        # type: Optional[bool]
                  isEqual=False,                     # type: Optional[bool]
                  ofType=False,                      # type: Optional[bool]
-                 ):                                 # type: (...) -> None
+                ):                                  # type: (...) -> None
     """
     Evaluate various parameter combinations given the requested verification flags.
     Given a failing verification, directly raises the specified ``httpError``.
@@ -415,9 +415,10 @@ def generate_response_http_format(httpClass, httpKWArgs, jsonContent, outputType
         # otherwise json is contained within the html <body> section
         elif outputType == HTML_TYPE:
             # add preformat <pre> section to output as is within the <body> section
-            htmlBody = httpClass.explanation + "<br><h2>Exception Details</h2>" + \
-                       "<pre style='word-wrap: break-word; white-space: pre-wrap;'>" + \
-                       jsonContent + "</pre>"
+            htmlBody = "{}<br><h2>Exception Details</h2>" \
+                       "<br><h2>Exception Details</h2>" \
+                       "<pre style='word-wrap: break-word; white-space: pre-wrap;'>{}</pre>" \
+                .format(httpClass.explanation, jsonContent)
             httpResponse = httpClass(body_template=htmlBody, content_type=HTML_TYPE, **httpKWArgs)
 
         # default back to plain text

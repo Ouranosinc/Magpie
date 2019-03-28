@@ -1,20 +1,25 @@
-from magpie.definitions.pyramid_definitions import *
-from magpie.definitions.ziggurat_definitions import *
 from magpie.api.login import esgfopenid, wso2
-from magpie.constants import get_constant
 from magpie.common import get_logger
+from magpie.constants import get_constant
+from magpie.definitions.pyramid_definitions import (
+    AuthTktAuthenticationPolicy, ACLAuthorizationPolicy, Configurator, asbool
+)
+from magpie.definitions.ziggurat_definitions import groupfinder
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
+from typing import TYPE_CHECKING
 import logging
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import JsonBody  # noqa: F401
 AUTHOMATIC_LOGGER = get_logger('magpie.authomatic', level=logging.DEBUG)
 
 
 def auth_config_from_settings(settings):
-    magpie_secret = get_constant('MAGPIE_SECRET', settings=settings, settings_name='magpie.secret')
-    magpie_cookie_expire = get_constant('MAGPIE_COOKIE_EXPIRE', settings=settings,
+    magpie_secret = get_constant('MAGPIE_SECRET', settings, settings_name='magpie.secret')
+    magpie_cookie_expire = get_constant('MAGPIE_COOKIE_EXPIRE', settings,
                                         settings_name='magpie.cookie_expire', default_value=None,
                                         raise_missing=False, raise_not_set=False, print_missing=True)
-    magpie_cookie_name = get_constant('MAGPIE_COOKIE_NAME', settings=settings,
+    magpie_cookie_name = get_constant('MAGPIE_COOKIE_NAME', settings,
                                       settings_name='magpie.cookie_name', default_value='auth_tkt',
                                       raise_missing=False, raise_not_set=False, print_missing=True)
     authn_policy = AuthTktAuthenticationPolicy(
@@ -40,7 +45,7 @@ def auth_config_from_settings(settings):
 
 
 def authomatic_setup(request):
-    magpie_secret = get_constant('MAGPIE_SECRET', settings=request.registry.settings, settings_name='magpie.secret')
+    magpie_secret = get_constant('MAGPIE_SECRET', request, settings_name='magpie.secret')
     return Authomatic(
         config=authomatic_config(request),
         secret=magpie_secret,
@@ -52,18 +57,18 @@ def authomatic_setup(request):
 
 def authomatic_config(request=None):
 
-    DEFAULTS = {
+    defaults_config = {
         'popup': True,
     }
 
-    OPENID = {
+    openid_config = {
         'openid': {
             'class_': openid.OpenID,
             'display_name': 'OpenID',
         },
     }
 
-    ESGF = {
+    esgf_config = {
         'dkrz': {
             'class_': esgfopenid.ESGFOpenID,
             'hostname': 'esgf-data.dkrz.de',
@@ -94,7 +99,7 @@ def authomatic_config(request=None):
     }
 
     _get_const_info = dict(raise_missing=False, raise_not_set=False, print_missing=True)
-    OAUTH2 = {
+    oauth2_config = {
         'github': {
             'class_': oauth2.GitHub,
             'display_name': 'GitHub',
@@ -123,11 +128,11 @@ def authomatic_config(request=None):
     }
 
     # Concatenate the configs.
-    config = {}
-    config.update(OAUTH2)
-    config.update(OPENID)
-    config.update(ESGF)
-    config['__defaults__'] = DEFAULTS
+    config = {}  # type: JsonBody
+    config.update(oauth2_config)
+    config.update(openid_config)
+    config.update(esgf_config)
+    config['__defaults__'] = defaults_config
     return config
 
 

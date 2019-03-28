@@ -23,7 +23,6 @@ from magpie.permissions import permissions_supported
 from magpie.services import service_type_dict
 from magpie import models
 from magpie.utils import get_twitcher_protected_service_url, get_phoenix_url, get_magpie_url, get_admin_cookies
-from requests.cookies import RequestsCookieJar
 from typing import TYPE_CHECKING
 import os
 import six
@@ -34,7 +33,9 @@ import requests
 import transaction
 import logging
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, Dict, List, JsonBody, Optional, Tuple, Union  # noqa: F401
+    from magpie.definitions.typedefs import (  # noqa: F401
+        Str, Dict, List, JsonBody, Optional, Tuple, Union, CookiesOrSessionType
+    )
 
 LOGGER = get_logger(__name__)
 
@@ -508,7 +509,7 @@ def use_request(cookies_or_session):
 def parse_resource_path(permission_config_entry,    # type: ConfigItem
                         entry_index,                # type: int
                         service_info,               # type: ConfigItem
-                        cookies_or_session=None,    # type: Union[RequestsCookieJar, Session]
+                        cookies_or_session=None,    # type: CookiesOrSessionType
                         magpie_url=None,            # type: Optional[Str]
                         ):                          # type: (...) -> Tuple[Union[int, None], bool]
     """
@@ -589,7 +590,7 @@ def parse_resource_path(permission_config_entry,    # type: ConfigItem
 def apply_permission_entry(permission_config_entry,     # type: ConfigItem
                            entry_index,                 # type: int
                            resource_id,                 # type: int
-                           cookies_or_session,          # type: Union[RequestsCookieJar, Session]
+                           cookies_or_session,          # type: CookiesOrSessionType
                            magpie_url,                  # type: Optional[Str]
                            ):                           # type: (...) -> None
     """

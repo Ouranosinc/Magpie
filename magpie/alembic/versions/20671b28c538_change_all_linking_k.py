@@ -33,12 +33,10 @@ def upgrade():
     # inspected keys
     groups_permissions_pkey = insp.get_pk_constraint('groups_permissions')['name']
     groups_pkey = insp.get_pk_constraint('groups')['name']
-    groups_resources_permissions_pkey = \
-    insp.get_pk_constraint('groups_resources_permissions')['name']
+    groups_resources_permissions_pkey = insp.get_pk_constraint('groups_resources_permissions')['name']
     users_groups_pkey = insp.get_pk_constraint('users_groups')['name']
     users_permissions_pkey = insp.get_pk_constraint('users_permissions')['name']
-    users_resources_permissions_pkey = \
-    insp.get_pk_constraint('users_resources_permissions')['name']
+    users_resources_permissions_pkey = insp.get_pk_constraint('users_resources_permissions')['name']
 
     op.drop_constraint('groups_pkey', 'groups', type_='primary')
 

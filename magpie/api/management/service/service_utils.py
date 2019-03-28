@@ -3,24 +3,26 @@ from magpie.api.management.group.group_utils import create_group_resource_permis
 from magpie.api.management.service.service_formats import format_service
 from magpie.constants import get_constant
 from magpie.common import get_logger
-from magpie.definitions.sqlalchemy_definitions import Session
 from magpie.definitions.pyramid_definitions import (
     HTTPCreated,
     HTTPForbidden,
     HTTPNotAcceptable,
     HTTPInternalServerError,
-    HTTPException,  # noqa: F401
 )
 from magpie.definitions.ziggurat_definitions import GroupService, ResourceService
 from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
 from magpie.services import service_type_dict
 from magpie import models
-from typing import AnyStr
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Str  # noqa: F401
+    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
+    from magpie.definitions.pyramid_definitions import HTTPException  # noqa: F401
 LOGGER = get_logger(__name__)
 
 
 def create_service(service_name, service_type, service_url, service_push, db_session):
-    # type: (AnyStr, AnyStr, AnyStr, bool, Session) -> HTTPException
+    # type: (Str, Str, Str, bool, Session) -> HTTPException
     """Generates an instance to register a new service."""
 
     def _add_service_magpie_and_phoenix(svc, svc_push, db):
@@ -37,7 +39,7 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
             ax.verify_param(svc.resource_id, notNone=True, paramCompare=int, ofType=True,
                             httpError=HTTPInternalServerError,
                             msgOnFail=s.Services_POST_InternalServerErrorResponseSchema.description,
-                            content={u'service_name': str(service_name),  u'resource_id': svc.resource_id},
+                            content={u'service_name': str(service_name), u'resource_id': svc.resource_id},
                             paramName=u'service_name')
         return svc
 

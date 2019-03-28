@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from magpie.definitions.pyramid_definitions import Response, HTTPException
+from magpie.definitions.pyramid_definitions import Response, HTTPException, truthy
 from webob.headers import ResponseHeaders, EnvironHeaders
 from requests.structures import CaseInsensitiveDict
 from distutils.dir_util import mkpath
@@ -13,7 +13,7 @@ import sys
 import os
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import (  # noqa: F401
-        AnyResponseType, AnyHeadersType, LoggerType, Str, List, Optional, Type, Union
+        AnyResponseType, AnyHeadersType, LoggerType, Any, Str, List, Optional, Type, Union
     )
 
 JSON_TYPE = 'application/json'
@@ -55,11 +55,8 @@ def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
 
 
 def bool2str(value):
-    return 'true' if value in ['on', 'true', 'True', True] else 'false'
-
-
-def str2bool(value):
-    return True if value in ['on', 'true', 'True', True] else False
+    # type: (Any) -> Str
+    return 'true' if str(value).lower() in truthy else 'false'
 
 
 def islambda(func):

@@ -1,3 +1,13 @@
+from magpie.api.api_rest_schemas import SwaggerGenerator
+from magpie.common import JSON_TYPE
+from magpie.constants import get_constant
+from magpie.models import resource_type_dict
+from magpie.services import service_type_dict
+from magpie.utils import get_twitcher_protected_service_url
+from tests import utils, runner
+# noinspection PyPackageRequirements
+from six.moves.urllib.parse import urlparse
+from distutils.version import LooseVersion
 import unittest
 import warnings
 # noinspection PyPackageRequirements
@@ -7,17 +17,6 @@ import pyramid.testing
 import mock
 import yaml
 import six
-# noinspection PyPackageRequirements
-from webtest import TestApp
-from six.moves.urllib.parse import urlparse
-from distutils.version import LooseVersion
-from magpie.api.api_rest_schemas import SwaggerGenerator
-from magpie.common import JSON_TYPE
-from magpie.constants import get_constant
-from magpie.models import resource_type_dict
-from magpie.services import service_type_dict
-from magpie.utils import get_twitcher_protected_service_url
-from tests import utils, runner
 
 
 # don't use 'unittest.TestCase' base
@@ -50,7 +49,7 @@ class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
 
     @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Anonymous(self):
-        resp = utils.test_request(self.url, 'GET', '/session', headers=self.json_headers)
+        resp = utils.test_request(self, 'GET', '/session', headers=self.json_headers)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(json_body['authenticated'], False)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
@@ -61,7 +60,7 @@ class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
             utils.check_val_not_in('group_names', json_body)
 
     def test_GetVersion(self):
-        resp = utils.test_request(self.url, 'GET', '/version', headers=self.json_headers)
+        resp = utils.test_request(self, 'GET', '/version', headers=self.json_headers)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('db_version', json_body)
         utils.check_val_is_in('version', json_body)
@@ -74,7 +73,7 @@ class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
     @runner.MAGPIE_TEST_USERS
     def test_GetCurrentUser(self):
         logged_user = get_constant('MAGPIE_LOGGED_USER')
-        resp = utils.test_request(self.url, 'GET', '/users/{}'.format(logged_user), headers=self.json_headers)
+        resp = utils.test_request(self, 'GET', '/users/{}'.format(logged_user), headers=self.json_headers)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             utils.check_val_equal(json_body['user']['user_name'], self.usr)
@@ -114,7 +113,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
     @classmethod
     def check_requirements(cls):
-        headers, cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd,
+        headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd,
                                                          use_ui_form_submit=True, version=cls.version)
         assert headers and cookies, cls.require
         assert cls.headers and cls.cookies, cls.require
@@ -154,7 +153,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.delete_TestUser(self)
 
     def test_GetAPI(self):
-        resp = utils.test_request(self.url, 'GET', SwaggerGenerator.path, headers=self.json_headers)
+        resp = utils.test_request(self, 'GET', SwaggerGenerator.path, headers=self.json_headers)
         json_body = utils.get_json_body(resp)
         content_types = utils.get_response_content_types_list(resp)
         utils.check_val_is_in(JSON_TYPE, content_types)
@@ -179,25 +178,26 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         """
         utils.warn_version(self, "check for response (401/403) statuses", '0.9.1', skip=True)
 
-        if isinstance(self.url, six.string_types):
+        app_or_url = utils.get_app_or_url(self)
+        if isinstance(app_or_url, six.string_types):
             warnings.warn("cannot validate 403 status with remote server (no mock possible, test with local)",
                           RuntimeWarning)
         else:
             # call a route that will make a forbidden access to db
             with mock.patch('magpie.models.User.all', side_effect=Exception('Test')):
-                resp = utils.test_request(self.url, 'GET', '/users', headers=self.json_headers, expect_errors=True)
+                resp = utils.test_request(self, 'GET', '/users', headers=self.json_headers, expect_errors=True)
                 body = utils.check_response_basic_info(resp, 403, expected_method='GET')
                 utils.check_val_equal(body['code'], 403)
 
         # call a route that is admin-only
-        utils.check_or_try_logout_user(self.url)
-        resp = utils.test_request(self.url, 'GET', '/services', headers=self.json_headers, expect_errors=True)
+        utils.check_or_try_logout_user(app_or_url)
+        resp = utils.test_request(self, 'GET', '/services', headers=self.json_headers, expect_errors=True)
         body = utils.check_response_basic_info(resp, 401, expected_method='GET')
         utils.check_val_equal(body['code'], 401)
 
     @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Administrator(self):
-        resp = utils.test_request(self.url, 'GET', '/session', headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', '/session', headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(json_body['authenticated'], True)
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
@@ -214,7 +214,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUsers(self):
-        resp = utils.test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('user_names', json_body)
         utils.check_val_type(json_body['user_names'], list)
@@ -225,7 +225,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_DEFAULTS
     def test_ValidateDefaultUsers(self):
-        resp = utils.test_request(self.url, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', '/users', headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         users = json_body['user_names']
         utils.check_val_is_in(get_constant('MAGPIE_ANONYMOUS_USER'), users)
@@ -235,7 +235,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def check_GetUserResourcesPermissions(cls, user_name, resource_id, query=None):
         query = '?{}'.format(query) if query else ''
         route = '/users/{usr}/resources/{res_id}/permissions{q}'.format(res_id=resource_id, usr=user_name, q=query)
-        resp = utils.test_request(cls.url, 'GET', route, headers=cls.json_headers, cookies=cls.cookies)
+        resp = utils.test_request(cls, 'GET', route, headers=cls.json_headers, cookies=cls.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('permission_names', json_body)
         utils.check_val_type(json_body['permission_names'], list)
@@ -245,7 +245,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def test_GetCurrentUser(self):
         logged_user = get_constant('MAGPIE_LOGGED_USER')
         path = '/users/{}'.format(logged_user)
-        resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', path, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             utils.check_val_equal(json_body['user']['user_name'], self.usr)
@@ -289,15 +289,15 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         data_recur = {u'permission_name': perm_recur}
         data_match = {u'permission_name': perm_match}
         path = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=test_svc_res_id, usr=self.usr)
-        utils.test_request(self.url, 'POST', path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
+        utils.test_request(self, 'POST', path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
         path = '/groups/{grp}/resources/{res_id}/permissions'.format(res_id=test_svc_res_id, grp=self.grp)
-        utils.test_request(self.url, 'POST', path, data=data_match, headers=self.json_headers, cookies=self.cookies)
+        utils.test_request(self, 'POST', path, data=data_match, headers=self.json_headers, cookies=self.cookies)
         path = '/groups/{grp}/resources/{res_id}/permissions'.format(res_id=test_parent_res_id, grp=self.grp)
-        utils.test_request(self.url, 'POST', path, data=data_match, headers=self.json_headers, cookies=self.cookies)
+        utils.test_request(self, 'POST', path, data=data_match, headers=self.json_headers, cookies=self.cookies)
         path = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=test_child_res_id, usr=anonym_usr)
-        utils.test_request(self.url, 'POST', path, data=data_match, headers=self.json_headers, cookies=self.cookies)
+        utils.test_request(self, 'POST', path, data=data_match, headers=self.json_headers, cookies=self.cookies)
         path = '/groups/{grp}/resources/{res_id}/permissions'.format(res_id=test_svc_res_id, grp=anonym_grp)
-        utils.test_request(self.url, 'POST', path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
+        utils.test_request(self, 'POST', path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
 
         # tests
         q_groups = "inherit=true"
@@ -358,7 +358,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         # test permission creation
         path = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=test_res_id, usr=self.usr)
         data = {u'permission_name': self.test_resource_perm}
-        resp = utils.test_request(self.url, 'POST', path, data=data, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'POST', path, data=data, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 201, expected_method='POST')
         utils.check_val_is_in('permission_name', json_body)
         utils.check_val_is_in('resource_id', json_body)
@@ -381,12 +381,12 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
         path = '/users/{usr}/resources/{res_id}/permissions'.format(res_id=test_res_id, usr=self.usr)
         data = {u'permission_name': self.test_resource_perm}
-        utils.test_request(self.url, 'POST', path, data=data, headers=self.json_headers, cookies=self.cookies)
+        utils.test_request(self, 'POST', path, data=data, headers=self.json_headers, cookies=self.cookies)
         json_body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_res_id)
         utils.check_val_is_in(self.test_resource_perm, json_body['permission_names'],
                               msg="Can't test for conflicting permissions if it doesn't exist first.")
 
-        resp = utils.test_request(self.url, 'POST', path, data=data, headers=self.json_headers, cookies=self.cookies,
+        resp = utils.test_request(self, 'POST', path, data=data, headers=self.json_headers, cookies=self.cookies,
                                   expect_errors=True)
         json_body = utils.check_response_basic_info(resp, 409, expected_method='POST')
         utils.check_val_is_in('permission_name', json_body)
@@ -401,7 +401,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
     @runner.MAGPIE_TEST_USERS
     def test_GetCurrentUserGroups(self):
-        resp = utils.test_request(self.url, 'GET', '/users/current/groups',
+        resp = utils.test_request(self, 'GET', '/users/current/groups',
                                   headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('group_names', json_body)
@@ -416,7 +416,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             route = '/users/{usr}/inherited_resources'.format(usr=self.usr)
         else:
             route = '/users/{usr}/resources?inherit=true'.format(usr=self.usr)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('resources', json_body)
         utils.check_val_type(json_body['resources'], dict)
@@ -450,7 +450,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServices(self):
         route = '/users/{usr}/services'.format(usr=self.usr)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('services', json_body)
         services = json_body['services']
@@ -489,7 +489,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.create_TestService(self)
         utils.TestSetup.create_TestServiceResource(self)
         route = '/users/{usr}/services/{svc}/resources'.format(usr=self.usr, svc=self.test_service_name)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('service', json_body)
         svc_dict = json_body['service']
@@ -537,7 +537,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             'email': 'email@mail.com',
             'group_name': 'users',
         }
-        resp = utils.test_request(self.url, 'POST', '/users', data=data,
+        resp = utils.test_request(self, 'POST', '/users', data=data,
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 400, expected_method='POST')
 
@@ -546,7 +546,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.create_TestUser(self)
         route = '/users/{usr}'.format(usr=get_constant('MAGPIE_LOGGED_USER'))
         data = {'user_name': self.test_user_name + '-new-put-over-current'}
-        resp = utils.test_request(self.url, 'PUT', route, data=data,
+        resp = utils.test_request(self, 'PUT', route, data=data,
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 400, expected_method='PUT')
 
@@ -554,7 +554,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def test_PutUsers_nothing(self):
         utils.TestSetup.create_TestUser(self)
         route = '/users/{usr}'.format(usr=self.test_user_name)
-        resp = utils.test_request(self.url, 'PUT', route, data={},
+        resp = utils.test_request(self, 'PUT', route, data={},
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 400, expected_method='PUT')
 
@@ -569,37 +569,37 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         # update existing user name
         data = {'user_name': new_name}
         route = '/users/{usr}'.format(usr=self.test_user_name)
-        resp = utils.test_request(self.url, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data=data)
+        resp = utils.test_request(self, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data=data)
         utils.check_response_basic_info(resp, 200, expected_method='PUT')
 
         # validate change of user name
         route = '/users/{usr}'.format(usr=new_name)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(body['user']['user_name'], new_name)
 
         # validate removed previous user name
         route = '/users/{usr}'.format(usr=self.test_user_name)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies,
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies,
                                   expect_errors=True)
         utils.check_response_basic_info(resp, 404, expected_method='GET')
 
         # validate effective new user name
-        utils.check_or_try_logout_user(self.url)
-        headers, cookies = utils.check_or_try_login_user(self.url, username=new_name, password=self.test_user_name,
+        utils.check_or_try_logout_user(self)
+        headers, cookies = utils.check_or_try_login_user(self, username=new_name, password=self.test_user_name,
                                                          use_ui_form_submit=True, version=self.version)
-        resp = utils.test_request(self.url, 'GET', '/session', headers=headers, cookies=cookies)
+        resp = utils.test_request(self, 'GET', '/session', headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(body['authenticated'], True)
         utils.check_val_equal(body['user']['user_name'], new_name)
 
         # validate ineffective previous user name
-        utils.check_or_try_logout_user(self.url)
+        utils.check_or_try_logout_user(self)
         headers, cookies = utils.check_or_try_login_user(
-            self.url, username=self.test_user_name, password=self.test_user_name, version=self.version,
+            self, username=self.test_user_name, password=self.test_user_name, version=self.version,
             use_ui_form_submit=True, expect_errors=True)
         utils.check_val_equal(cookies, {}, msg="CookiesType should be empty from login failure.")
-        resp = utils.test_request(self.url, 'GET', '/session', headers=headers, cookies=cookies)
+        resp = utils.test_request(self, 'GET', '/session', headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(body['authenticated'], False)
 
@@ -609,10 +609,10 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         new_email = 'toto@new-email.lol'
         data = {'email': new_email}
         route = '/users/{usr}'.format(usr=self.test_user_name)
-        resp = utils.test_request(self.url, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data=data)
+        resp = utils.test_request(self, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data=data)
         utils.check_response_basic_info(resp, 200, expected_method='PUT')
 
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(body['user']['email'], new_email)
 
@@ -623,24 +623,25 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         new_password = 'n0t-SO-ez-2-Cr4cK'
         data = {'password': new_password}
         route = '/users/{usr}'.format(usr=self.test_user_name)
-        resp = utils.test_request(self.url, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data=data)
+        resp = utils.test_request(self, 'PUT', route, headers=self.json_headers, cookies=self.cookies, data=data)
         utils.check_response_basic_info(resp, 200, expected_method='PUT')
-        utils.check_or_try_logout_user(self.url)
+        utils.check_or_try_logout_user(self)
 
         # validate that the new password is effective
-        headers, cookies = utils.check_or_try_login_user(self.url, username=self.test_user_name, password=new_password,
-                                                         use_ui_form_submit=True, version=self.version)
-        resp = utils.test_request(self.url, 'GET', '/session', headers=headers, cookies=cookies)
+        headers, cookies = utils.check_or_try_login_user(
+            self, username=self.test_user_name, password=new_password,
+            use_ui_form_submit=True, version=self.version)
+        resp = utils.test_request(self, 'GET', '/session', headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(body['authenticated'], True)
         utils.check_val_equal(body['user']['user_name'], self.test_user_name)
-        utils.check_or_try_logout_user(self.url)
+        utils.check_or_try_logout_user(self)
 
         # validate that previous password is ineffective
         headers, cookies = utils.check_or_try_login_user(
-            self.url, username=self.test_user_name, password=old_password, version=self.version,
+            self, username=self.test_user_name, password=old_password, version=self.version,
             use_ui_form_submit=True, expect_errors=True)
-        resp = utils.test_request(self.url, 'GET', '/session', headers=headers, cookies=cookies)
+        resp = utils.test_request(self, 'GET', '/session', headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_equal(body['authenticated'], False)
 
@@ -649,7 +650,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.create_TestUser(self)
 
         route = '/users/{usr}'.format(usr=self.test_user_name)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         if LooseVersion(self.version) >= LooseVersion('0.6.3'):
             utils.check_val_is_in('user', json_body)
@@ -671,14 +672,14 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def test_GetUser_missing(self):
         utils.TestSetup.check_NonExistingTestUser(self)
         route = '/users/{usr}'.format(usr=self.test_user_name)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers,
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers,
                                   cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 404, expected_method='GET')
 
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_DEFAULTS
     def test_ValidateDefaultGroups(self):
-        resp = utils.test_request(self.url, 'GET', '/groups', headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', '/groups', headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         groups = json_body['group_names']
         utils.check_val_is_in(get_constant('MAGPIE_ANONYMOUS_GROUP'), groups)
@@ -695,7 +696,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def test_PostUserGroup_not_found(self):
         route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
         data = {'group_name': 'not_found'}
-        resp = utils.test_request(self.url, 'POST', route, expect_errors=True,
+        resp = utils.test_request(self, 'POST', route, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies, data=data)
         utils.check_response_basic_info(resp, 404, expected_method='POST')
 
@@ -703,14 +704,14 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def test_PostUserGroup_conflict(self):
         route = '/users/{usr}/groups'.format(usr=get_constant('MAGPIE_ADMIN_USER'))
         data = {'group_name': get_constant('MAGPIE_ADMIN_GROUP')}
-        resp = utils.test_request(self.url, 'POST', route, expect_errors=True,
+        resp = utils.test_request(self, 'POST', route, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies, data=data)
         utils.check_response_basic_info(resp, 409, expected_method='POST')
 
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroupUsers(self):
         route = '/groups/{grp}/users'.format(grp=get_constant('MAGPIE_ADMIN_GROUP'))
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('user_names', json_body)
         utils.check_val_type(json_body['user_names'], list)
@@ -720,7 +721,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroupServices(self):
         route = '/groups/{grp}/services'.format(grp=self.grp)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('services', json_body)
         services = json_body['services']
@@ -758,7 +759,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.create_TestService(self)
         utils.TestSetup.create_TestServiceResource(self)
         route = '/groups/{grp}/services/{svc}/resources'.format(grp=self.grp, svc=self.test_service_name)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('service', json_body)
         svc_dict = json_body['service']
@@ -813,7 +814,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.delete_TestService(self, override_service_name=new_svc_name)
         path = '/services/{svc}'.format(svc=service['service_name'])
         data = {'service_name': new_svc_name, 'service_url': new_svc_url}
-        resp = utils.test_request(self.url, 'PUT', path, data=data, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'PUT', path, data=data, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, expected_method='PUT')
         utils.check_val_is_in('service', body)
         utils.check_val_type(body['service'], dict)
@@ -845,7 +846,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             utils.TestSetup.create_TestService(self, override_service_name=new_svc_name)
             path = '/services/{svc}'.format(svc=service['service_name'])
             data = {'service_name': new_svc_name, 'service_url': new_svc_url}
-            resp = utils.test_request(self.url, 'PUT', path, data=data, expect_errors=True,
+            resp = utils.test_request(self, 'PUT', path, data=data, expect_errors=True,
                                       headers=self.json_headers, cookies=self.cookies)
             utils.check_response_basic_info(resp, 409, expected_method='PUT')
         finally:
@@ -855,7 +856,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def test_PutService_NoUpdateInfo(self):
         # no route PUT on '/services/types' (not equivalent to '/services/{service_name}')
         # so not even a forbidden case to handle
-        resp = utils.test_request(self.url, 'PUT', '/services/types', data={}, expect_errors=True,
+        resp = utils.test_request(self, 'PUT', '/services/types', data={}, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
         if LooseVersion(self.version) >= LooseVersion('0.9.5'):
             # directly interpreted as expected route `/services/types` behaviour, so method PUT not allowed
@@ -868,7 +869,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def test_PutService_ReservedKeyword_Types(self):
         # try to PUT on 'types' route should raise the error
         data = {'service_name': 'dummy', 'service_url': 'dummy'}
-        resp = utils.test_request(self.url, 'PUT', '/services/types', data=data, expect_errors=True,
+        resp = utils.test_request(self, 'PUT', '/services/types', data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
         if LooseVersion(self.version) >= LooseVersion('0.9.5'):
             # directly interpreted as expected route `/services/types` behaviour, so method PUT not allowed
@@ -882,7 +883,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.create_TestService(self)
         path = '/services/{}'.format(self.test_service_name)
         data = {'service_name': 'types'}
-        resp = utils.test_request(self.url, 'PUT', path, data=data, expect_errors=True,
+        resp = utils.test_request(self, 'PUT', path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 400, expected_method='PUT')   # don't allow naming to 'types'
 
@@ -890,7 +891,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def test_GetService_ResponseFormat(self):
         utils.TestSetup.create_TestService(self)
         path = '/services/{svc}'.format(svc=self.test_service_name)
-        resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         if LooseVersion(self.version) < LooseVersion('0.9.1'):
             utils.check_val_is_in(self.test_service_name, body)
@@ -927,7 +928,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def test_GetServiceTypes_ResponseFormat(self):
         utils.warn_version(self, "get service types", '0.9.1', skip=True)
 
-        resp = utils.test_request(self.url, 'GET', '/services/types', headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', '/services/types', headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('service_types', body)
         utils.check_val_type(body['service_types'], list)
@@ -939,7 +940,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
         utils.TestSetup.create_TestService(self)
         path = '/services/types/{svc_type}/resources'.format(svc_type=self.test_service_type)
-        resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         utils.check_val_is_in('resource_types', body)
         utils.check_val_type(body['resource_types'], list)
@@ -980,7 +981,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         ]:
             # test response details
             path = '/services/types/{}/resources'.format(svc_type)
-            resp = utils.test_request(self.url, 'GET', path, headers=self.json_headers, cookies=self.cookies)
+            resp = utils.test_request(self, 'GET', path, headers=self.json_headers, cookies=self.cookies)
             body = utils.check_response_basic_info(resp, 200, expected_method='GET')
             utils.check_val_type(body['resource_types'], list)
             utils.check_val_equal(len(body['resource_types']), len(svc_res_info))
@@ -995,7 +996,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.create_TestService(self)
         utils.TestSetup.create_TestServiceResource(self)
         route = '/services/{svc}/resources'.format(svc=self.test_service_name)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         svc_dict = json_body[self.test_service_name]
         utils.check_val_is_in(self.test_service_name, json_body)
@@ -1026,7 +1027,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             svc_name = svc['service_name']
             service_perms = service_type_dict[svc['service_type']].permission_names
             route = '/services/{svc}/permissions'.format(svc=svc_name)
-            resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+            resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
             json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
             utils.check_val_is_in('permission_names', json_body)
             utils.check_val_type(json_body['permission_names'], list)
@@ -1102,7 +1103,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         service_root_id = utils.TestSetup.get_ExistingTestServiceInfo(self)['resource_id']
         child_resource_id = json_body['resource_id']
         route = '/resources/{res_id}'.format(res_id=child_resource_id)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         if LooseVersion(self.version) >= LooseVersion('0.9.2'):
             utils.check_val_is_in('resource', json_body)
@@ -1123,7 +1124,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.create_TestServiceResource(self)
         route = '/services/{svc}/resources'.format(svc=self.test_service_name)
         data = {"resource_name": self.test_resource_name, "resource_type": self.test_resource_type}
-        resp = utils.test_request(self.url, 'POST', route, headers=self.json_headers,
+        resp = utils.test_request(self, 'POST', route, headers=self.json_headers,
                                   cookies=self.cookies, json=data, expect_errors=True)
         json_body = utils.check_response_basic_info(resp, 409, expected_method='POST')
         utils.check_error_param_structure(json_body, version=self.version,
@@ -1141,7 +1142,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             svc_name = svc['service_name']
             if svc_name in self.test_services_info:
                 utils.check_val_equal(svc['service_type'], self.test_services_info[svc_name]['type'])
-                hostname = utils.get_hostname(self.url)
+                hostname = utils.get_hostname(self)
                 # private service URL should match format of Magpie (schema/host)
                 svc_url = self.test_services_info[svc_name]['url'].replace('${HOSTNAME}', hostname)
                 utils.check_val_equal(svc['service_url'], svc_url)
@@ -1162,7 +1163,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         anonymous = get_constant('MAGPIE_ANONYMOUS_USER')
         services_list_getcap = [svc for svc in services_list if 'getcapabilities' in svc['permission_names']]
         route = '/users/{usr}/services'.format(usr=anonymous)
-        resp = utils.test_request(self.url, 'GET', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'GET', route, headers=self.json_headers, cookies=self.cookies)
         json_body = utils.check_response_basic_info(resp, 200, expected_method='GET')
         services_body = json_body['services']
         for svc in services_list_getcap:
@@ -1185,7 +1186,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             "resource_type": self.test_resource_type,
             "parent_id": service_resource_id
         }
-        resp = utils.test_request(self.url, 'POST', '/resources',
+        resp = utils.test_request(self, 'POST', '/resources',
                                   headers=self.json_headers, cookies=self.cookies, data=data)
         json_body = utils.check_response_basic_info(resp, 201, expected_method='POST')
         utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
@@ -1203,7 +1204,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             "resource_type": self.test_resource_type,
             "parent_id": service_resource_id
         }
-        resp = utils.test_request(self.url, 'POST', '/resources',
+        resp = utils.test_request(self, 'POST', '/resources',
                                   headers=self.json_headers, cookies=self.cookies, data=data)
         json_body = utils.check_response_basic_info(resp, 201, expected_method='POST')
         utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
@@ -1223,7 +1224,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             "resource_type": self.test_resource_type,
             "parent_id": direct_resource_id
         }
-        resp = utils.test_request(self.url, 'POST', '/resources',
+        resp = utils.test_request(self, 'POST', '/resources',
                                   headers=self.json_headers, cookies=self.cookies, data=data)
         json_body = utils.check_response_basic_info(resp, 201, expected_method='POST')
         utils.check_post_resource_structure(json_body, self.test_resource_name, self.test_resource_type,
@@ -1235,7 +1236,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             "resource_name": self.test_resource_name,
             "resource_type": self.test_resource_type,
         }
-        resp = utils.test_request(self.url, 'POST', '/resources',
+        resp = utils.test_request(self, 'POST', '/resources',
                                   headers=self.json_headers, cookies=self.cookies, data=data, expect_errors=True)
         json_body = utils.check_response_basic_info(resp, 422, expected_method='POST')
         utils.check_error_param_structure(json_body, version=self.version,
@@ -1250,7 +1251,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             resource_id = json_body['resource_id']
 
         route = '/resources/{res_id}'.format(res_id=resource_id)
-        resp = utils.test_request(self.url, 'DELETE', route, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, 'DELETE', route, headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 200, expected_method='DELETE')
         utils.TestSetup.check_NonExistingTestServiceResource(self)
 
@@ -1336,7 +1337,7 @@ class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
 
     @classmethod
     def check_requirements(cls):
-        headers, cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
+        headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
         assert headers and cookies, cls.require
         assert cls.headers and cls.cookies, cls.require
 
@@ -1410,11 +1411,10 @@ class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
         path = '/ui/services/{type}/{name}'.format(type=self.test_service_type, name=self.test_service_name)
         utils.TestSetup.check_UpStatus(self, method='GET', path=path)
 
+    @runner.MAGPIE_TEST_LOCAL   # not implemented for remote URL
     @runner.MAGPIE_TEST_STATUS
     @runner.MAGPIE_TEST_FUNCTIONAL
     def test_EditService_GotoAddChild_BackToEditService(self):
-        if not isinstance(self.url, TestApp):
-            self.skipTest("test not implemented with remote URL")
         try:
             # make sure any sub-resource are all deleted to avoid conflict, then recreate service to add sub-resource
             utils.TestSetup.delete_TestService(self, override_service_name=self.test_service_parent_resource_name)

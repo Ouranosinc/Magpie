@@ -8,13 +8,13 @@ test_magpie_ui
 Tests for `magpie.ui` module.
 """
 
-import unittest
 from magpie.common import JSON_TYPE
 from magpie.constants import get_constant
 from tests import utils, runner
 
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
+import unittest
 
 
 @runner.MAGPIE_TEST_UI

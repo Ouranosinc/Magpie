@@ -1,9 +1,10 @@
-from magpie.definitions.pyramid_definitions import exception_response, Request, Response, HTTPBadRequest
+from magpie.definitions.pyramid_definitions import exception_response, Request, HTTPBadRequest
 from magpie.common import get_header, JSON_TYPE
 from typing import TYPE_CHECKING
 import json
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, JsonBody, CookiesType, HeadersType, Optional
+    from magpie.definitions.typedefs import Str, JsonBody, CookiesType, HeadersType, Optional  # noqa: F401
+    from magpie.definitions.pyramid_definitions import Response  # noqa: F401
 
 
 def check_response(response):

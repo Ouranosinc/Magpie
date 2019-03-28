@@ -6,7 +6,11 @@ import shutil
 import dotenv
 import logging
 import warnings
-from magpie.common import str2bool, raise_log, print_log, get_settings_from_config_ini
+from magpie.common import raise_log, print_log, get_settings_from_config_ini
+from magpie.definitions.pyramid_definitions import asbool
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Str, Optional, SettingValue, SettingsContainer
 
 # ===========================
 # path variables
@@ -75,13 +79,15 @@ MAGPIE_ANONYMOUS_GROUP = MAGPIE_ANONYMOUS_USER
 MAGPIE_EDITOR_GROUP = os.getenv('MAGPIE_EDITOR_GROUP', 'editors')
 MAGPIE_USERS_GROUP = os.getenv('MAGPIE_USERS_GROUP', 'users')
 MAGPIE_CRON_LOG = os.getenv('MAGPIE_CRON_LOG', '~/magpie-cron.log')
+MAGPIE_DB_MIGRATION = asbool(os.getenv('MAGPIE_DB_MIGRATION', True))
+MAGPIE_DB_MIGRATION_ATTEMPTS = int(os.getenv('MAGPIE_DB_MIGRATION_ATTEMPTS', 5))
 MAGPIE_LOG_LEVEL = os.getenv('MAGPIE_LOG_LEVEL', _default_log_lvl)
-MAGPIE_LOG_REQUEST = str2bool(os.getenv('MAGPIE_LOG_REQUEST', True))
-MAGPIE_LOG_EXCEPTION = str2bool(os.getenv('MAGPIE_LOG_EXCEPTION', True))
+MAGPIE_LOG_REQUEST = asbool(os.getenv('MAGPIE_LOG_REQUEST', True))
+MAGPIE_LOG_EXCEPTION = asbool(os.getenv('MAGPIE_LOG_EXCEPTION', True))
 PHOENIX_USER = os.getenv('PHOENIX_USER', 'phoenix')
 PHOENIX_PASSWORD = os.getenv('PHOENIX_PASSWORD', 'qwerty')
 PHOENIX_PORT = int(os.getenv('PHOENIX_PORT', 8443))
-PHOENIX_PUSH = str2bool(os.getenv('PHOENIX_PUSH', True))
+PHOENIX_PUSH = asbool(os.getenv('PHOENIX_PUSH', True))
 TWITCHER_PROTECTED_PATH = os.getenv('TWITCHER_PROTECTED_PATH', '/ows/proxy')
 TWITCHER_PROTECTED_URL = os.getenv('TWITCHER_PROTECTED_URL', None)
 
@@ -111,8 +117,9 @@ MAGPIE_USER_NAME_MAX_LENGTH = 64
 # ===========================
 
 
-def get_constant(name, settings=None, settings_name=None, default_value=None,
+def get_constant(name, settings_container=None, settings_name=None, default_value=None,
                  raise_missing=True, print_missing=False, raise_not_set=True):
+    # type: (Str, Optional[SettingsContainer], Optional[Str], Optional[SettingValue], bool, bool, bool) -> SettingValue
     """
     Search in order for matched value of `name` :
       1. search in magpie definitions
@@ -120,7 +127,7 @@ def get_constant(name, settings=None, settings_name=None, default_value=None,
       3. search in settings if specified
 
     :param name: key to search for a value
-    :param settings: wsgi app settings
+    :param settings_container: wsgi app settings container
     :param settings_name: alternative name for `settings` if specified
     :param default_value: default value to be returned if not found anywhere, and exception raises are disabled.
     :param raise_missing: raise exception if key is not found anywhere
@@ -129,9 +136,12 @@ def get_constant(name, settings=None, settings_name=None, default_value=None,
     :returns: found value or `default_value`
     :raises: according message based on options (by default raise missing/`None` value)
     """
+    from magpie.utils import get_settings
+
     magpie_globals = globals()
     missing = True
     magpie_value = None
+    settings = get_settings(settings_container) if settings_container else None
     if name in magpie_globals:
         missing = False
         magpie_value = magpie_globals.get(name)

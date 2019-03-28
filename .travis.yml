@@ -16,7 +16,6 @@ env:
     - CONDA_HOME=$HOME/conda
     - DOWNLOAD_CACHE=$HOME/downloads
   matrix:
-    # FIXME: local login not functional, cannot run local tests on travis
     - TEST_TARGET=test-local    START_TARGET=
     - TEST_TARGET=test-remote   START_TARGET=start
     - TEST_TARGET=coverage      START_TARGET=
@@ -56,6 +55,7 @@ install:
     fi
   - make install install-dev
   - make version
+  - ${CONDA_PREFIX}/bin/pip freeze
 before_script:
   - psql -c 'create database magpie;' -U postgres
   - echo $CONDA_PREFIX
@@ -71,6 +71,11 @@ before_script:
 script:
   - export MAGPIE_LOG_LEVEL=INFO
   - make $START_TARGET $TEST_TARGET
+  # run static code checks only once
+  - |
+    if [ "${TRAVIS_PYTHON_VERSION}" -eq "3.6" ]; then
+      make lint
+    fi
 notifications:
   email: false
 after_success:

@@ -4,7 +4,6 @@ from magpie.api.management.resource.resource_utils import check_valid_service_re
 from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.service.service_formats import format_service_resources, format_service
 from magpie.api.management.group.group_formats import format_group
-from magpie.definitions.sqlalchemy_definitions import Session
 from magpie.definitions.ziggurat_definitions import GroupService, GroupResourcePermissionService, ResourceService
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,
@@ -12,11 +11,14 @@ from magpie.definitions.pyramid_definitions import (
     HTTPForbidden,
     HTTPNotFound,
     HTTPConflict,
-    HTTPException,  # noqa: F401
     HTTPInternalServerError
 )
 from magpie import models
-from typing import AnyStr
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from magpie.definitions.pyramid_definitions import HTTPException  # noqa: F401
+    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
+    from magpie.definitions.typedefs import Str  # noqa: F401
 
 
 def get_all_groups(db_session):
@@ -46,7 +48,7 @@ def get_group_resources(group, db_session):
 
 
 def create_group(group_name, db_session):
-    # type: (AnyStr, Session) -> models.Group
+    # type: (Str, Session) -> HTTPException
     """
     Creates a group if it is permitted and not conflicting.
     :returns: corresponding HTTP response according to the encountered situation.
@@ -67,7 +69,7 @@ def create_group(group_name, db_session):
 
 
 def create_group_resource_permission(permission_name, resource, group, db_session):
-    # type: (AnyStr, models.Resource, models.Group, Session) -> HTTPException
+    # type: (Str, models.Resource, models.Group, Session) -> HTTPException
     """
     Creates a permission on a group/resource combination if it is permitted and not conflicting.
     :returns: corresponding HTTP response according to the encountered situation.
@@ -143,7 +145,7 @@ def delete_group_resource_permission(permission_name, resource, group, db_sessio
         fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
         msgOnFail=s.GroupServicePermission_DELETE_ForbiddenGetResponseSchema.description, content=perm_content
     )
-    ax.verify_param(del_perm, notNone=True, httpError=HTTPNotFound,  content=perm_content,
+    ax.verify_param(del_perm, notNone=True, httpError=HTTPNotFound, content=perm_content,
                     msgOnFail=s.GroupServicePermission_DELETE_NotFoundResponseSchema.description)
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                      httpError=HTTPForbidden, content=perm_content,

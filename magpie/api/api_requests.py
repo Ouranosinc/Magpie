@@ -1,8 +1,21 @@
-from magpie.definitions import ziggurat_definitions as zig
-from magpie.definitions.typedefs import Any, AnyStr, Optional
 from magpie.api.api_except import evaluate_call, verify_param
-from magpie.api.api_rest_schemas import *
+from magpie.api import api_rest_schemas as s
+from magpie.common import JSON_TYPE
+from magpie.constants import get_constant
+from magpie.definitions import ziggurat_definitions as zig
+from magpie.definitions.pyramid_definitions import (
+    IAuthenticationPolicy,
+    HTTPForbidden,
+    HTTPNotFound,
+    HTTPNotAcceptable,
+    HTTPUnprocessableEntity,
+    HTTPInternalServerError,
+)
 from magpie import models
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from magpie.definitions.pyramid_definitions import Request  # noqa: F401
+    from magpie.definitions.typedefs import Any, AnyStr, Optional  # noqa: F401
 
 
 def get_request_method_content(request):
@@ -47,7 +60,7 @@ def get_permission_multiformat_post_checked(request, service_resource, permissio
 def get_value_multiformat_post_checked(request, key, default=None):
     val = get_multiformat_any(request, key, default=default)
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
-                 paramName=key, msgOnFail=UnprocessableEntityResponseSchema.description)
+                 paramName=key, msgOnFail=s.UnprocessableEntityResponseSchema.description)
     return val
 
 
@@ -76,9 +89,9 @@ def get_user(request, user_name_or_token):
             anonymous_user = get_constant('MAGPIE_ANONYMOUS_USER')
             anonymous = evaluate_call(lambda: zig.UserService.by_user_name(anonymous_user, db_session=request.db),
                                       fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                                      msgOnFail=User_CheckAnonymous_ForbiddenResponseSchema.description)
+                                      msgOnFail=s.User_CheckAnonymous_ForbiddenResponseSchema.description)
             verify_param(anonymous, notNone=True, httpError=HTTPNotFound,
-                         msgOnFail=User_CheckAnonymous_NotFoundResponseSchema.description)
+                         msgOnFail=s.User_CheckAnonymous_NotFoundResponseSchema.description)
             return anonymous
     else:
         authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
@@ -89,14 +102,15 @@ def get_user(request, user_name_or_token):
             raise HTTPForbidden()
         user = evaluate_call(lambda: zig.UserService.by_user_name(user_name_or_token, db_session=request.db),
                              fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail=User_GET_ForbiddenResponseSchema.description)
-        verify_param(user, notNone=True, httpError=HTTPNotFound, msgOnFail=User_GET_NotFoundResponseSchema.description)
+                             httpError=HTTPForbidden, msgOnFail=s.User_GET_ForbiddenResponseSchema.description)
+        verify_param(user, notNone=True, httpError=HTTPNotFound,
+                     msgOnFail=s.User_GET_NotFoundResponseSchema.description)
         return user
 
 
 def get_user_matchdict_checked_or_logged(request, user_name_key='user_name'):
     logged_user_name = get_constant('MAGPIE_LOGGED_USER')
-    logged_user_path = UserAPI.path.replace('{' + user_name_key + '}', logged_user_name)
+    logged_user_path = s.UserAPI.path.replace('{' + user_name_key + '}', logged_user_name)
     if user_name_key not in request.matchdict and request.path_info.startswith(logged_user_path):
         return get_user(request, logged_user_name)
     return get_user_matchdict_checked(request, user_name_key)
@@ -110,22 +124,22 @@ def get_user_matchdict_checked(request, user_name_key='user_name'):
 def get_group_matchdict_checked(request, group_name_key='group_name'):
     group_name = get_value_matchdict_checked(request, group_name_key)
     group = evaluate_call(lambda: zig.GroupService.by_group_name(group_name, db_session=request.db),
-                          fallback=lambda: request.db.rollback(),
-                          httpError=HTTPForbidden, msgOnFail=Group_MatchDictCheck_ForbiddenResponseSchema.description)
+                          fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                          msgOnFail=s.Group_MatchDictCheck_ForbiddenResponseSchema.description)
     verify_param(group, notNone=True, httpError=HTTPNotFound,
-                 msgOnFail=Group_MatchDictCheck_NotFoundResponseSchema.description)
+                 msgOnFail=s.Group_MatchDictCheck_NotFoundResponseSchema.description)
     return group
 
 
 def get_resource_matchdict_checked(request, resource_name_key='resource_id'):
     resource_id = get_value_matchdict_checked(request, resource_name_key)
     resource_id = evaluate_call(lambda: int(resource_id), httpError=HTTPNotAcceptable,
-                                msgOnFail=Resource_MatchDictCheck_NotAcceptableResponseSchema.description)
+                                msgOnFail=s.Resource_MatchDictCheck_NotAcceptableResponseSchema.description)
     resource = evaluate_call(lambda: zig.ResourceService.by_resource_id(resource_id, db_session=request.db),
                              fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                             msgOnFail=Resource_MatchDictCheck_ForbiddenResponseSchema.description)
+                             msgOnFail=s.Resource_MatchDictCheck_ForbiddenResponseSchema.description)
     verify_param(resource, notNone=True, httpError=HTTPNotFound,
-                 msgOnFail=Resource_MatchDictCheck_NotFoundResponseSchema.description)
+                 msgOnFail=s.Resource_MatchDictCheck_NotFoundResponseSchema.description)
     return resource
 
 
@@ -133,9 +147,9 @@ def get_service_matchdict_checked(request, service_name_key='service_name'):
     service_name = get_value_matchdict_checked(request, service_name_key)
     service = evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
                             fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                            msgOnFail=Service_MatchDictCheck_ForbiddenResponseSchema.description)
+                            msgOnFail=s.Service_MatchDictCheck_ForbiddenResponseSchema.description)
     verify_param(service, notNone=True, httpError=HTTPNotFound, content={u'service_name': service_name},
-                 msgOnFail=Service_MatchDictCheck_NotFoundResponseSchema.description)
+                 msgOnFail=s.Service_MatchDictCheck_NotFoundResponseSchema.description)
     return service
 
 
@@ -150,7 +164,7 @@ def get_permission_matchdict_checked(request, service_resource, permission_name_
 def get_value_matchdict_checked(request, key):
     val = request.matchdict.get(key)
     verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
-                 paramName=key, msgOnFail=UnprocessableEntityResponseSchema.description)
+                 paramName=key, msgOnFail=s.UnprocessableEntityResponseSchema.description)
     return val
 
 

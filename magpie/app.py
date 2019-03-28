@@ -5,8 +5,9 @@
 Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations
 """
 
-from magpie.common import print_log, str2bool, get_logger
+from magpie.common import print_log, get_logger
 from magpie.constants import get_constant
+from magpie.definitions.pyramid_definitions import asbool
 from magpie.helpers.register_default_users import register_default_users
 from magpie.register import (
     magpie_register_services_from_config,
@@ -58,8 +59,8 @@ def main(global_config=None, **settings):
     register_default_users(db_session=db_session)
 
     print_log('Register configuration providers...', logger=LOGGER)
-    push_phoenix = str2bool(get_constant('PHOENIX_PUSH', settings=settings, settings_name='magpie.phoenix_push',
-                                         raise_missing=False, raise_not_set=False, print_missing=True))
+    push_phoenix = asbool(get_constant('PHOENIX_PUSH', settings, settings_name='magpie.phoenix_push',
+                                       raise_missing=False, raise_not_set=False, print_missing=True))
     prov_cfg = get_constant('MAGPIE_PROVIDERS_CONFIG_PATH', default_value='',
                             raise_missing=False, raise_not_set=False, print_missing=True)
     if os.path.isfile(prov_cfg):

@@ -7,6 +7,7 @@ from magpie.definitions.sqlalchemy_definitions import (
     register, sessionmaker, engine_from_config, ZopeTransactionExtension,
     configure_mappers, select, Inspector, Session, sa_exc
 )
+from magpie.definitions.pyramid_definitions import asbool
 from typing import TYPE_CHECKING
 import transaction
 import inspect
@@ -19,7 +20,7 @@ import time
 from magpie import models
 
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, SettingsType, Optional, Union
+    from magpie.definitions.typedefs import Str, SettingsType, Optional, Union  # noqa: F401
 
 
 LOGGER = get_logger(__name__)
@@ -142,10 +143,10 @@ def run_database_migration_when_ready(settings, db_session=None):
     """
 
     db_ready = False
-    if get_constant('MAGPIE_DB_MIGRATION', settings, 'magpie.db_migration', True,
-                    raise_missing=False, raise_not_set=False, print_missing=True):
-        attempts = get_constant('MAGPIE_DB_MIGRATION_ATTEMPTS', settings, 'magpie.db_migration_attempts',
-                                default_value=5, raise_missing=False, raise_not_set=False, print_missing=True)
+    if asbool(get_constant('MAGPIE_DB_MIGRATION', settings, 'magpie.db_migration',
+                           default_value=True, raise_missing=False, raise_not_set=False, print_missing=True)):
+        attempts = int(get_constant('MAGPIE_DB_MIGRATION_ATTEMPTS', settings, 'magpie.db_migration_attempts',
+                                    default_value=5, raise_missing=False, raise_not_set=False, print_missing=True))
 
         print_log('Running database migration (as required) ...')
         attempts = max(attempts, 2)     # enforce at least 2 attempts, 1 for db creation and one for actual migration
