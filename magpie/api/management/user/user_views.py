@@ -367,7 +367,7 @@ def create_user_service_permission_view(request):
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
     perm_name = ar.get_permission_multiformat_post_checked(request, service)
-    return uu.create_user_resource_permission(perm_name, service, user.id, request.db)
+    return uu.create_user_resource_permission(perm_name, service, user, request.db)
 
 
 @s.UserServicePermissionAPI.delete(schema=s.UserServicePermission_DELETE_RequestSchema, tags=[s.UsersTag],
@@ -380,7 +380,7 @@ def delete_user_service_permission_view(request):
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
     perm_name = ar.get_permission_multiformat_post_checked(request, service)
-    return uu.delete_user_resource_permission(perm_name, service, user.id, request.db)
+    return uu.delete_user_resource_permission(perm_name, service, user, request.db)
 
 
 @s.UserServiceResourcesAPI.get(schema=s.UserServiceResources_GET_RequestSchema,

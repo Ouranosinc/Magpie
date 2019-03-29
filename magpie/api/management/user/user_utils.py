@@ -98,14 +98,15 @@ def create_user_resource_permission(permission_name, resource, user, db_session)
                          detail=s.UserResourcePermissions_POST_CreatedResponseSchema.description)
 
 
-def delete_user_resource_permission(permission_name, resource, user_id, db_session):
+def delete_user_resource_permission(permission_name, resource, user, db_session):
+    # type: (Str, models.Resource, models.User, Session) -> HTTPException
     check_valid_service_resource_permission(permission_name, resource, db_session)
     resource_id = resource.resource_id
-    del_perm = UserResourcePermissionService.get(user_id, resource_id, permission_name, db_session)
+    del_perm = UserResourcePermissionService.get(user.id, resource_id, permission_name, db_session)
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                      httpError=HTTPNotFound,
                      msgOnFail=s.UserResourcePermissions_DELETE_NotFoundResponseSchema.description,
-                     content={u'resource_id': resource_id, u'user_id': user_id, u'permission_name': permission_name})
+                     content={u'resource_id': resource_id, u'user_id': user.id, u'permission_name': permission_name})
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.UserResourcePermissions_DELETE_OkResponseSchema.description)
 
 
