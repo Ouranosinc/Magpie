@@ -42,8 +42,7 @@ def get_db_url(username=None, password=None, db_host=None, db_port=None, db_name
 
 def get_engine(settings, prefix='sqlalchemy.'):
     settings[prefix + 'url'] = get_db_url()
-    settings[prefix + 'pool_size'] = 20
-    settings[prefix + 'max_overflow'] = 100
+    settings[prefix + 'pool_pre_ping'] = settings.get(prefix + 'pool_pre_ping', True)
     return engine_from_config(settings, prefix)
 
 
