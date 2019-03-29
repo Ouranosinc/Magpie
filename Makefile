@@ -138,7 +138,8 @@ test-tox: install-dev install
 .PHONY: coverage
 coverage: install-dev install
 	@echo "Running coverage analysis..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage run --source magpie setup.py test || true'
+	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage run --source magpie \
+	 	"$(CONDA_ENV_PATH)/bin/pytest" tests -m "not remote" || true'
 	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage xml -i'
 	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage report -m'
 
