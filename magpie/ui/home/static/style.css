@@ -465,10 +465,9 @@ ul.breadcrumb li a:hover {
     background: #000000;
     background: black; /* For browsers that do not support gradients */
     background: -webkit-linear-gradient(left bottom, black, gray); /* Safari 5.1 to 6.0 */
-    background: -webkit-gradient(...); /* Chrome, Safari4+ */
     background: -o-linear-gradient(bottom top, black, gray); /* Opera 11.1 to 12.0 */
     background: -moz-linear-gradient(bottom top, black, gray); /* Firefox 3.6 to 15 */
-    background: -ms-linear-gradient(...); /* IE10+ */
+    background: -ms-linear-gradient(bottom top, black, gray); /* IE10+ */
     background: linear-gradient(to bottom top, black, gray); /* Standard syntax (must be last) */
     padding: 1em 1em 0em 1em;
 }
