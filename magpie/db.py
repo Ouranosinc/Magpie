@@ -123,7 +123,7 @@ def is_database_ready(db_session=None):
     inspector = Inspector.from_engine(engine)
     table_names = inspector.get_table_names()
 
-    for name, obj in inspect.getmembers(models):
+    for _, obj in inspect.getmembers(models):
         if inspect.isclass(obj):
             # noinspection PyBroadException
             try:

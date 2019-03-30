@@ -1,5 +1,5 @@
 FROM python:2.7-alpine
-MAINTAINER Francis Charette-Migneault
+LABEL maintainer="Francis Charette-Migneault <francis.charette-migneault@crim.ca>"
 
 # the cron service depends on the $MAGPIE_DIR environment variable
 ENV MAGPIE_DIR=/opt/local/src/magpie
