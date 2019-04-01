@@ -2,5 +2,6 @@
 exclude_paths:
   - 'tests/**'
   - 'docs/conf.py'
+  - 'docs/sync.py'
   - 'magpie/definitions/*.py'
   - 'ci/travis_pypi_setup.py'
