@@ -1,7 +1,7 @@
 from magpie.api import api_except as ax, api_rest_schemas as s
 from magpie.definitions.pyramid_definitions import NO_PERMISSION_REQUIRED, HTTPOk, view_config
-from magpie.common import JSON_TYPE
 from magpie.db import get_database_revision
+from magpie.utils import CONTENT_TYPE_JSON
 from magpie import __meta__
 
 
@@ -21,5 +21,5 @@ def get_version(request):
         u'version': __meta__.__version__,
         u'db_version': version_db
     }
-    return ax.valid_http(httpSuccess=HTTPOk, content=version, contentType=JSON_TYPE,
+    return ax.valid_http(httpSuccess=HTTPOk, content=version, contentType=CONTENT_TYPE_JSON,
                          detail=s.Version_GET_OkResponseSchema.description)

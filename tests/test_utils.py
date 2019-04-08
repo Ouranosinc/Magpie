@@ -9,8 +9,7 @@ Tests for the various utility operations employed by magpie.
 """
 
 from magpie.api import api_requests as ar, api_except as ax
-from magpie.common import get_header, JSON_TYPE
-from magpie.definitions.pyramid_definitions import (    # noqa: F401
+from magpie.definitions.pyramid_definitions import (  # noqa: F401
     asbool,
     Request,
     HTTPInternalServerError,
@@ -18,6 +17,7 @@ from magpie.definitions.pyramid_definitions import (    # noqa: F401
     HTTPBadRequest,
     HTTPOk,
 )
+from magpie.utils import get_header, CONTENT_TYPE_JSON
 from pyramid.testing import DummyRequest
 from tests import utils, runner
 from typing import TYPE_CHECKING
@@ -83,15 +83,15 @@ class TestUtils(unittest.TestCase):
 
             with mock.patch('magpie.api.login.login.get_multiformat_post', side_effect=mock_get_multiformat_post):
                 data = {'user_name': 'foo', 'password': 'bar'}
-                headers = {'Content-Type': JSON_TYPE, 'Accept': JSON_TYPE}
+                headers = {'Content-Type': CONTENT_TYPE_JSON, 'Accept': CONTENT_TYPE_JSON}
                 resp = utils.test_request(app, 'POST', paths[0], json=data, headers=headers, expect_errors=True)
                 utils.check_response_basic_info(resp, expected_code=406)    # user name doesn't exist
 
     def test_get_header_split(self):
-        headers = {'Content-Type': '{}; charset=UTF-8'.format(JSON_TYPE)}
+        headers = {'Content-Type': '{}; charset=UTF-8'.format(CONTENT_TYPE_JSON)}
         for name in ['content_type', 'content-type', 'Content_Type', 'Content-Type', 'CONTENT_TYPE', 'CONTENT-TYPE']:
             for split in [';,', ',;', ';', (',', ';'), [';', ',']]:
-                utils.check_val_equal(get_header(name, headers, split=split), JSON_TYPE)
+                utils.check_val_equal(get_header(name, headers, split=split), CONTENT_TYPE_JSON)
 
     def test_get_query_param(self):
         r = self.make_request('/some/path')

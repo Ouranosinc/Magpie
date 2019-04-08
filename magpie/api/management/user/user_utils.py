@@ -1,6 +1,6 @@
 from magpie.api import api_except as ax, api_rest_schemas as s
 from magpie.api.management.service.service_formats import format_service
-from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
+from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
 from magpie.api.management.user import user_formats as uf
 from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import (
@@ -22,14 +22,14 @@ from magpie.services import service_factory
 from magpie import models
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.services import ResourcePermissionType, ServiceI  # noqa: F401
+    from magpie.services import ResourcePermissionType, ServiceInterface  # noqa: F401
     from magpie.definitions.pyramid_definitions import Request, HTTPException  # noqa: F401
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.definitions.typedefs import Any, Str, Dict, List, Optional, Union, UserServicesType  # noqa: F401
+    from magpie.definitions.typedefs import Any, Str, Dict, List, Optional, UserServicesType  # noqa: F401
 
 
 def create_user(user_name, password, email, group_name, db_session):
-    # type: (Str, Union[Str, None], Str, Str, Session) -> HTTPException
+    # type: (Str, Optional[Str], Str, Str, Session) -> HTTPException
     """
     Creates a user if it is permitted and not conflicting.
     Password must be set to `None` if using external identity.
@@ -68,7 +68,7 @@ def create_user(user_name, password, email, group_name, db_session):
                      httpError=HTTPForbidden, msgOnFail=s.UserGroup_GET_ForbiddenResponseSchema.description)
 
     return ax.valid_http(httpSuccess=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
-                         content={u'user': uf.format_user(new_user, [group_name])})
+                         content={u"user": uf.format_user(new_user, [group_name])})
 
 
 def create_user_resource_permission(permission_name, resource, user, db_session):
@@ -77,19 +77,19 @@ def create_user_resource_permission(permission_name, resource, user, db_session)
     Creates a permission on a user/resource combination if it is permitted and not conflicting.
     :returns: corresponding HTTP response according to the encountered situation.
     """
-    check_valid_service_resource_permission(permission_name, resource, db_session)
+    check_valid_service_or_resource_permission(permission_name, resource, db_session)
     resource_id = resource.resource_id
     existing_perm = UserResourcePermissionService.by_resource_user_and_perm(
         user_id=user.id, resource_id=resource_id, perm_name=permission_name, db_session=db_session)
     ax.verify_param(existing_perm, isNone=True, httpError=HTTPConflict,
-                    content={u'resource_id': resource_id, u'user_id': user.id, u'permission_name': permission_name},
+                    content={u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission_name},
                     msgOnFail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
 
     # noinspection PyArgumentList
     new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user.id, perm_name=permission_name)
-    usr_res_data = {u'resource_id': resource_id, u'user_id': user.id, u'permission_name': permission_name}
+    usr_res_data = {u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission_name}
     ax.verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
-                    content={u'resource_id': resource_id, u'user_id': user.id},
+                    content={u"resource_id": resource_id, u"user_id": user.id},
                     msgOnFail=s.UserResourcePermissions_POST_NotAcceptableResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                      httpError=HTTPForbidden, content=usr_res_data,
@@ -100,18 +100,18 @@ def create_user_resource_permission(permission_name, resource, user, db_session)
 
 def delete_user_resource_permission(permission_name, resource, user, db_session):
     # type: (Str, models.Resource, models.User, Session) -> HTTPException
-    check_valid_service_resource_permission(permission_name, resource, db_session)
+    check_valid_service_or_resource_permission(permission_name, resource, db_session)
     resource_id = resource.resource_id
     del_perm = UserResourcePermissionService.get(user.id, resource_id, permission_name, db_session)
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                      httpError=HTTPNotFound,
                      msgOnFail=s.UserResourcePermissions_DELETE_NotFoundResponseSchema.description,
-                     content={u'resource_id': resource_id, u'user_id': user.id, u'permission_name': permission_name})
+                     content={u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission_name})
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.UserResourcePermissions_DELETE_OkResponseSchema.description)
 
 
 def get_resource_root_service(resource, request):
-    # type: (models.Resource, Request) -> ServiceI
+    # type: (models.Resource, Request) -> ServiceInterface
     """Retrieves the service class corresponding to the specified resource's root service-resource."""
     if resource.resource_type == models.Service.resource_type_name:
         res_root_svc = resource
@@ -135,7 +135,7 @@ def get_user_resource_permissions(user, resource, request,
     Alternatively retrieves the effective user resource permissions, where group permissions are implied as `True`.
     """
     if resource.owner_user_id == user.id:
-        permission_names = models.resource_type_dict[resource.type].permission_names
+        permission_names = [p.value for p in models.RESOURCE_TYPE_DICT[resource.type].permissions]
     else:
         db_session = request.db
         if effective_permissions:
@@ -151,7 +151,7 @@ def get_user_resource_permissions(user, resource, request,
 
 def get_user_services(user, request, cascade_resources=False,
                       inherit_groups_permissions=False, format_as_list=False):
-    # type: (models.User, Request, Optional[bool], Optional[bool], Optional[bool]) -> UserServicesType
+    # type: (models.User, Request, bool, bool, bool) -> UserServicesType
     """
     Returns services by type with corresponding services by name containing sub-dict information.
 
@@ -171,16 +171,16 @@ def get_user_services(user, request, cascade_resources=False,
         unless `format_as_dict` is `True`
     """
     db_session = request.db
-    resource_type = None if cascade_resources else ['service']
+    resource_type = None if cascade_resources else [models.Service.resource_type]
     res_perm_dict = get_user_resources_permissions_dict(user, resource_types=resource_type, request=request,
                                                         inherit_groups_permissions=inherit_groups_permissions)
 
     services = {}
     for resource_id, perms in res_perm_dict.items():
         svc = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
-        if svc.resource_type != 'service' and cascade_resources:
+        if svc.resource_type != models.Service.resource_type and cascade_resources:
             svc = get_resource_root_service(svc, request)
-            perms = svc.permission_names
+            perms = svc.permissions
         if svc.type not in services:
             services[svc.type] = {}
         if svc.resource_name not in services[svc.type]:
@@ -197,9 +197,9 @@ def get_user_services(user, request, cascade_resources=False,
 
 
 def get_user_service_permissions(user, service, request, inherit_groups_permissions=True):
-    # type: (models.User, models.Service, Request, Optional[bool]) -> List[Str]
+    # type: (models.User, models.Service, Request, bool) -> List[Str]
     if service.owner_user_id == user.id:
-        permission_names = service_factory(service, request).permission_names
+        permission_names = [p.value for p in service_factory(service, request).permissions]
     else:
         svc_perm_tuple_list = ResourceService.perms_for_user(service, user, db_session=request.db)
         if not inherit_groups_permissions:
@@ -210,7 +210,7 @@ def get_user_service_permissions(user, service, request, inherit_groups_permissi
 
 def get_user_resources_permissions_dict(user, request, resource_types=None,
                                         resource_ids=None, inherit_groups_permissions=True):
-    # type: (models.User, Request, Optional[List[Str]], Optional[List[int]], Optional[bool]) -> Dict[Str, Any]
+    # type: (models.User, Request, Optional[List[Str]], Optional[List[int]], bool) -> Dict[Str, Any]
     """
     Creates a dictionary of resources by id with corresponding permissions of the user.
 
@@ -255,19 +255,19 @@ def get_user_service_resources_permissions_dict(user, service, request, inherit_
 def check_user_info(user_name, email, password, group_name):
     # type: (Str, Str, Str, Str) -> None
     ax.verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    paramName=u'user_name', msgOnFail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
+                    paramName=u"user_name", msgOnFail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
     ax.verify_param(len(user_name), isIn=True, httpError=HTTPBadRequest,
-                    paramName=u'user_name', paramCompare=range(1, 1 + get_constant('MAGPIE_USER_NAME_MAX_LENGTH')),
+                    paramName=u"user_name", paramCompare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
                     msgOnFail=s.Users_CheckInfo_Size_BadRequestResponseSchema.description)
-    ax.verify_param(user_name, paramCompare=get_constant('MAGPIE_LOGGED_USER'), notEqual=True,
-                    paramName=u'user_name', httpError=HTTPBadRequest,
+    ax.verify_param(user_name, paramCompare=get_constant("MAGPIE_LOGGED_USER"), notEqual=True,
+                    paramName=u"user_name", httpError=HTTPBadRequest,
                     msgOnFail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
     ax.verify_param(email, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    paramName=u'email', msgOnFail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
+                    paramName=u"email", msgOnFail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
     ax.verify_param(password, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    paramName=u'password', msgOnFail=s.Users_CheckInfo_Password_BadRequestResponseSchema.description)
+                    paramName=u"password", msgOnFail=s.Users_CheckInfo_Password_BadRequestResponseSchema.description)
     ax.verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    paramName=u'group_name', msgOnFail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
+                    paramName=u"group_name", msgOnFail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
 
 
 def get_user_groups_checked(request, user):

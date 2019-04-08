@@ -7,7 +7,7 @@ ENV MAGPIE_ENV_DIR=$MAGPIE_DIR/env
 WORKDIR $MAGPIE_DIR
 
 # magpie cron service
-ADD magpie-cron /etc/cron.d/magpie-cron
+COPY magpie-cron /etc/cron.d/magpie-cron
 RUN chmod 0644 /etc/cron.d/magpie-cron
 RUN touch ~/magpie_cron_status.log
 # set /etc/environment so that cron runs using the environment variables set by docker

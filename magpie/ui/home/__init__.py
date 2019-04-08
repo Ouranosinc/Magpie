@@ -1,5 +1,5 @@
 from magpie.definitions.pyramid_definitions import IAuthenticationPolicy, Authenticated
-from magpie.common import get_logger
+from magpie.utils import get_logger
 LOGGER = get_logger(__name__)
 
 

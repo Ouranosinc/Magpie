@@ -5,7 +5,6 @@
 Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations
 """
 
-from magpie.common import print_log, get_logger
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import asbool
 from magpie.helpers.register_default_users import register_default_users
@@ -14,7 +13,7 @@ from magpie.register import (
     magpie_register_permissions_from_config,
 )
 from magpie.security import auth_config_from_settings
-from magpie.utils import patch_magpie_url
+from magpie.utils import patch_magpie_url, print_log, get_logger
 from magpie import db, constants
 import os
 import sys

@@ -5,8 +5,7 @@ Store adapters to read data from magpie.
 # noinspection PyUnresolvedReferences
 from magpie.definitions.twitcher_definitions import ServiceStore, Service, ServiceNotFound
 from magpie.definitions.pyramid_definitions import HTTPOk, asbool
-from magpie.common import get_logger, JSON_TYPE
-from magpie.utils import get_admin_cookies, get_magpie_url
+from magpie.utils import get_admin_cookies, get_magpie_url, get_logger, CONTENT_TYPE_JSON
 import requests
 LOGGER = get_logger("TWITCHER")
 
@@ -40,7 +39,7 @@ class MagpieServiceStore(ServiceStore):
         # obtain admin access since 'service_url' is only provided on admin routes
         services = []
         path = '{}/services'.format(self.magpie_url)
-        resp = requests.get(path, cookies=self.magpie_admin_token, headers={'Accept': JSON_TYPE},
+        resp = requests.get(path, cookies=self.magpie_admin_token, headers={'Accept': CONTENT_TYPE_JSON},
                             verify=self.twitcher_ssl_verify)
         if resp.status_code != HTTPOk.code:
             raise resp.raise_for_status()

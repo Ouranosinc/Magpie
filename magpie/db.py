@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from magpie.constants import get_constant
-from magpie.common import get_settings_from_config_ini, print_log, raise_log, get_logger
 from magpie.definitions.alembic_definitions import alembic
 from magpie.definitions.sqlalchemy_definitions import (
     register, sessionmaker, engine_from_config, ZopeTransactionExtension,
     configure_mappers, select, Inspector, Session, sa_exc
 )
 from magpie.definitions.pyramid_definitions import asbool
+from magpie.utils import get_settings_from_config_ini, print_log, raise_log, get_logger
 from typing import TYPE_CHECKING
 import transaction
 import inspect

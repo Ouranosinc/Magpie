@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Constant settings for Magpie application.
+"""
+from magpie.definitions.pyramid_definitions import asbool
+from typing import TYPE_CHECKING
 import os
 import shutil
-# noinspection PyPackageRequirements
 import dotenv
 import logging
 import warnings
-from magpie.common import raise_log, print_log, get_settings_from_config_ini
-from magpie.definitions.pyramid_definitions import asbool
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import Str, Optional, SettingValue, SettingsContainer
 
@@ -18,20 +19,20 @@ if TYPE_CHECKING:
 MAGPIE_MODULE_DIR = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
 MAGPIE_CONFIG_DIR = os.getenv(
-    'MAGPIE_CONFIG_DIR', os.path.join(MAGPIE_ROOT, 'config'))
+    "MAGPIE_CONFIG_DIR", os.path.join(MAGPIE_ROOT, "config"))
 MAGPIE_PROVIDERS_CONFIG_PATH = os.getenv(
-    'MAGPIE_PROVIDERS_CONFIG_PATH', '{}/providers.cfg'.format(MAGPIE_CONFIG_DIR))
+    "MAGPIE_PROVIDERS_CONFIG_PATH", "{}/providers.cfg".format(MAGPIE_CONFIG_DIR))
 MAGPIE_PERMISSIONS_CONFIG_PATH = os.getenv(
-    'MAGPIE_PERMISSIONS_CONFIG_PATH', '{}/permissions.cfg'.format(MAGPIE_CONFIG_DIR))
+    "MAGPIE_PERMISSIONS_CONFIG_PATH", "{}/permissions.cfg".format(MAGPIE_CONFIG_DIR))
 MAGPIE_INI_FILE_PATH = os.getenv(
-    'MAGPIE_INI_FILE_PATH', '{}/magpie.ini'.format(MAGPIE_MODULE_DIR))
+    "MAGPIE_INI_FILE_PATH", "{}/magpie.ini".format(MAGPIE_MODULE_DIR))
 MAGPIE_ALEMBIC_INI_FILE_PATH = os.getenv(
-    'MAGPIE_ALEMBIC_INI_FILE_PATH', '{}/alembic/alembic.ini'.format(MAGPIE_MODULE_DIR))
+    "MAGPIE_ALEMBIC_INI_FILE_PATH", "{}/alembic/alembic.ini".format(MAGPIE_MODULE_DIR))
 # allow custom location of env files directory to avoid
 # loading from installed magpie in python site-packages
-MAGPIE_ENV_DIR = os.getenv('MAGPIE_ENV_DIR', os.path.join(MAGPIE_ROOT, 'env'))
-MAGPIE_ENV_FILE = os.path.join(MAGPIE_ENV_DIR, 'magpie.env')
-MAGPIE_POSTGRES_ENV_FILE = os.path.join(MAGPIE_ENV_DIR, 'postgres.env')
+MAGPIE_ENV_DIR = os.getenv("MAGPIE_ENV_DIR", os.path.join(MAGPIE_ROOT, "env"))
+MAGPIE_ENV_FILE = os.path.join(MAGPIE_ENV_DIR, "magpie.env")
+MAGPIE_POSTGRES_ENV_FILE = os.path.join(MAGPIE_ENV_DIR, "postgres.env")
 
 # create .env from .env.example if not present and load variables into environment
 # if files still cannot be found at 'MAGPIE_ENV_DIR' and variables are still not set,
@@ -52,61 +53,67 @@ except IOError:
     warnings.warn("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR), RuntimeWarning)
     pass
 
-# get default configurations from ini file
-_default_log_lvl = 'INFO'
-# noinspection PyBroadException
-try:
-    _settings = get_settings_from_config_ini(MAGPIE_INI_FILE_PATH, ini_main_section_name='logger_magpie')
-    _default_log_lvl = _settings.get('level', _default_log_lvl)
-except Exception:
-    pass
+
+def _get_default_log_level():
+    """Get default configurations from ini file."""
+    _default_log_lvl = "INFO"
+    # noinspection PyBroadException
+    try:
+        import magpie.utils
+        _settings = magpie.utils.get_settings_from_config_ini(MAGPIE_INI_FILE_PATH,
+                                                              ini_main_section_name="logger_magpie")
+        _default_log_lvl = _settings.get("level", _default_log_lvl)
+    except Exception:
+        pass
+
 
 # ===========================
 # variables from magpie.env
 # ===========================
-MAGPIE_URL = os.getenv('MAGPIE_URL', None)
-MAGPIE_SECRET = os.getenv('MAGPIE_SECRET', 'seekrit')
-MAGPIE_COOKIE_NAME = os.getenv('MAGPIE_COOKIE_NAME', 'auth_tkt')
-MAGPIE_COOKIE_EXPIRE = os.getenv('MAGPIE_COOKIE_EXPIRE', None)
-MAGPIE_ADMIN_USER = os.getenv('MAGPIE_ADMIN_USER', 'admin')
-MAGPIE_ADMIN_PASSWORD = os.getenv('MAGPIE_ADMIN_PASSWORD', 'qwerty')
-MAGPIE_ADMIN_EMAIL = '{}@mail.com'.format(MAGPIE_ADMIN_USER)
-MAGPIE_ADMIN_GROUP = os.getenv('MAGPIE_ADMIN_GROUP', 'administrators')
-MAGPIE_ANONYMOUS_USER = os.getenv('MAGPIE_ANONYMOUS_USER', 'anonymous')
+MAGPIE_URL = os.getenv("MAGPIE_URL", None)
+MAGPIE_SECRET = os.getenv("MAGPIE_SECRET", "seekrit")
+MAGPIE_COOKIE_NAME = os.getenv("MAGPIE_COOKIE_NAME", "auth_tkt")
+MAGPIE_COOKIE_EXPIRE = os.getenv("MAGPIE_COOKIE_EXPIRE", None)
+MAGPIE_ADMIN_USER = os.getenv("MAGPIE_ADMIN_USER", "admin")
+MAGPIE_ADMIN_PASSWORD = os.getenv("MAGPIE_ADMIN_PASSWORD", "qwerty")
+MAGPIE_ADMIN_EMAIL = "{}@mail.com".format(MAGPIE_ADMIN_USER)
+MAGPIE_ADMIN_GROUP = os.getenv("MAGPIE_ADMIN_GROUP", "administrators")
+MAGPIE_ANONYMOUS_USER = os.getenv("MAGPIE_ANONYMOUS_USER", "anonymous")
 MAGPIE_ANONYMOUS_PASSWORD = MAGPIE_ANONYMOUS_USER
-MAGPIE_ANONYMOUS_EMAIL = '{}@mail.com'.format(MAGPIE_ANONYMOUS_USER)
+MAGPIE_ANONYMOUS_EMAIL = "{}@mail.com".format(MAGPIE_ANONYMOUS_USER)
 MAGPIE_ANONYMOUS_GROUP = MAGPIE_ANONYMOUS_USER
-MAGPIE_EDITOR_GROUP = os.getenv('MAGPIE_EDITOR_GROUP', 'editors')
-MAGPIE_USERS_GROUP = os.getenv('MAGPIE_USERS_GROUP', 'users')
-MAGPIE_CRON_LOG = os.getenv('MAGPIE_CRON_LOG', '~/magpie-cron.log')
-MAGPIE_DB_MIGRATION = asbool(os.getenv('MAGPIE_DB_MIGRATION', True))
-MAGPIE_DB_MIGRATION_ATTEMPTS = int(os.getenv('MAGPIE_DB_MIGRATION_ATTEMPTS', 5))
-MAGPIE_LOG_LEVEL = os.getenv('MAGPIE_LOG_LEVEL', _default_log_lvl)
-MAGPIE_LOG_REQUEST = asbool(os.getenv('MAGPIE_LOG_REQUEST', True))
-MAGPIE_LOG_EXCEPTION = asbool(os.getenv('MAGPIE_LOG_EXCEPTION', True))
-PHOENIX_USER = os.getenv('PHOENIX_USER', 'phoenix')
-PHOENIX_PASSWORD = os.getenv('PHOENIX_PASSWORD', 'qwerty')
-PHOENIX_PORT = int(os.getenv('PHOENIX_PORT', 8443))
-PHOENIX_PUSH = asbool(os.getenv('PHOENIX_PUSH', True))
-TWITCHER_PROTECTED_PATH = os.getenv('TWITCHER_PROTECTED_PATH', '/ows/proxy')
-TWITCHER_PROTECTED_URL = os.getenv('TWITCHER_PROTECTED_URL', None)
+MAGPIE_EDITOR_GROUP = os.getenv("MAGPIE_EDITOR_GROUP", "editors")
+MAGPIE_USERS_GROUP = os.getenv("MAGPIE_USERS_GROUP", "users")
+MAGPIE_CRON_LOG = os.getenv("MAGPIE_CRON_LOG", "~/magpie-cron.log")
+MAGPIE_DB_MIGRATION = asbool(os.getenv("MAGPIE_DB_MIGRATION", True))
+MAGPIE_DB_MIGRATION_ATTEMPTS = int(os.getenv("MAGPIE_DB_MIGRATION_ATTEMPTS", 5))
+MAGPIE_LOG_LEVEL = os.getenv("MAGPIE_LOG_LEVEL", _get_default_log_level())
+MAGPIE_LOG_REQUEST = asbool(os.getenv("MAGPIE_LOG_REQUEST", True))
+MAGPIE_LOG_EXCEPTION = asbool(os.getenv("MAGPIE_LOG_EXCEPTION", True))
+MAGPIE_UI_ENABLED = asbool(os.getenv("MAGPIE_UI_ENABLED", True))
+PHOENIX_USER = os.getenv("PHOENIX_USER", "phoenix")
+PHOENIX_PASSWORD = os.getenv("PHOENIX_PASSWORD", "qwerty")
+PHOENIX_PORT = int(os.getenv("PHOENIX_PORT", 8443))
+PHOENIX_PUSH = asbool(os.getenv("PHOENIX_PUSH", True))
+TWITCHER_PROTECTED_PATH = os.getenv("TWITCHER_PROTECTED_PATH", "/ows/proxy")
+TWITCHER_PROTECTED_URL = os.getenv("TWITCHER_PROTECTED_URL", None)
 
 # ===========================
 # variables from postgres.env
 # ===========================
-MAGPIE_POSTGRES_USER = os.getenv('MAGPIE_POSTGRES_USER', 'magpie')
-MAGPIE_POSTGRES_PASSWORD = os.getenv('MAGPIE_POSTGRES_PASSWORD', 'qwerty')
-MAGPIE_POSTGRES_HOST = os.getenv('MAGPIE_POSTGRES_HOST', 'postgres')
-MAGPIE_POSTGRES_PORT = int(os.getenv('MAGPIE_POSTGRES_PORT', 5432))
-MAGPIE_POSTGRES_DB = os.getenv('MAGPIE_POSTGRES_DB', 'magpie')
+MAGPIE_POSTGRES_USER = os.getenv("MAGPIE_POSTGRES_USER", "magpie")
+MAGPIE_POSTGRES_PASSWORD = os.getenv("MAGPIE_POSTGRES_PASSWORD", "qwerty")
+MAGPIE_POSTGRES_HOST = os.getenv("MAGPIE_POSTGRES_HOST", "postgres")
+MAGPIE_POSTGRES_PORT = int(os.getenv("MAGPIE_POSTGRES_PORT", 5432))
+MAGPIE_POSTGRES_DB = os.getenv("MAGPIE_POSTGRES_DB", "magpie")
 
 # ===========================
 # other constants
 # ===========================
-MAGPIE_ADMIN_PERMISSION = 'admin'
+MAGPIE_ADMIN_PERMISSION = "admin"
 # MAGPIE_ADMIN_PERMISSION = NO_PERMISSION_REQUIRED
-MAGPIE_LOGGED_USER = 'current'
-MAGPIE_DEFAULT_PROVIDER = 'ziggurat'
+MAGPIE_LOGGED_USER = "current"
+MAGPIE_DEFAULT_PROVIDER = "ziggurat"
 
 # above this length is considered a token,
 # refuse longer username creation
@@ -136,7 +143,7 @@ def get_constant(name, settings_container=None, settings_name=None, default_valu
     :returns: found value or `default_value`
     :raises: according message based on options (by default raise missing/`None` value)
     """
-    from magpie.utils import get_settings
+    from magpie.utils import get_settings, raise_log, print_log
 
     magpie_globals = globals()
     missing = True

@@ -1,7 +1,6 @@
-from magpie.common import JSON_TYPE
-import abc
+from magpie.utils import CONTENT_TYPE_JSON
 from collections import OrderedDict
-
+import abc
 import requests
 import threddsclient
 
@@ -61,7 +60,7 @@ class _SyncServiceGeoserver(_SyncServiceInterface):
         # Only workspaces are fetched for now
         resource_type = "route"
         workspaces_url = "{}/{}".format(self.url, "workspaces")
-        resp = requests.get(workspaces_url, headers={"Accept": JSON_TYPE})
+        resp = requests.get(workspaces_url, headers={"Accept": CONTENT_TYPE_JSON})
         resp.raise_for_status()
         workspaces_list = resp.json().get("workspaces", {}).get("workspace", {})
 

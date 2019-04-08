@@ -1,6 +1,6 @@
-from magpie.services import service_type_dict
+from magpie.services import SERVICE_TYPE_DICT
 from magpie.api import api_except as ax, api_rest_schemas as s
-from magpie.api.management.resource.resource_utils import check_valid_service_resource_permission
+from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
 from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.service.service_formats import format_service_resources, format_service
 from magpie.api.management.group.group_formats import format_group
@@ -75,7 +75,7 @@ def create_group_resource_permission(permission_name, resource, group, db_sessio
     :returns: corresponding HTTP response according to the encountered situation.
     """
     resource_id = resource.resource_id
-    check_valid_service_resource_permission(permission_name, resource, db_session)
+    check_valid_service_or_resource_permission(permission_name, resource, db_session)
     perm_content = {u'permission_name': str(permission_name),
                     u'resource': format_resource(resource, basic_info=True),
                     u'group': format_group(group, basic_info=True)}
@@ -121,7 +121,7 @@ def get_group_resources_permissions_dict(group, db_session, resource_ids=None, r
 def get_group_resource_permissions(group, resource, db_session):
     def get_grp_res_perms(grp, res, db):
         if res.owner_group_id == grp.id:
-            perm_names = models.resource_type_dict[res.type].permission_names
+            perm_names = models.RESOURCE_TYPE_DICT[res.type].permission_names
         else:
             grp_res_perm = db.query(models.GroupResourcePermission) \
                 .filter(models.GroupResourcePermission.resource_id == res.resource_id) \
@@ -136,7 +136,7 @@ def get_group_resource_permissions(group, resource, db_session):
 
 def delete_group_resource_permission(permission_name, resource, group, db_session):
     resource_id = resource.resource_id
-    check_valid_service_resource_permission(permission_name, resource, db_session)
+    check_valid_service_or_resource_permission(permission_name, resource, db_session)
     perm_content = {u'permission_name': str(permission_name),
                     u'resource': format_resource(resource, basic_info=True),
                     u'group': format_group(group, basic_info=True)}
@@ -168,7 +168,7 @@ def get_group_services(resources_permissions_dict, db_session):
 def get_group_service_permissions(group, service, db_session):
     def get_grp_svc_perms(grp, svc, db):
         if svc.owner_group_id == grp.id:
-            perm_names = service_type_dict[svc.type].permission_names
+            perm_names = SERVICE_TYPE_DICT[svc.type].permission_names
         else:
             grp_res_perm = db.query(models.GroupResourcePermission) \
                 .filter(models.GroupResourcePermission.resource_id == svc.resource_id) \

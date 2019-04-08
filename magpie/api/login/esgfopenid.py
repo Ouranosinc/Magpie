@@ -7,12 +7,12 @@ Providers which implement the |openid|_ protocol based on the
     This providers are dependent on the |python-openid|_ package.
 """
 
-import ssl
-from six.moves.urllib.request import urlopen
+from magpie.utils import get_logger
 from authomatic.providers.openid import OpenID
 # noinspection PyProtectedMember, PyUnresolvedReferences
 from openid.fetchers import Urllib2Fetcher  # , setDefaultFetcher
-from magpie.common import get_logger
+from six.moves.urllib.request import urlopen
+import ssl
 LOGGER = get_logger(__name__)
 
 __all__ = ['ESGFOpenID']

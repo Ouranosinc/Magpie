@@ -1,10 +1,8 @@
 """
 Store adapters to read data from magpie.
 """
-from magpie.utils import get_magpie_url, get_admin_cookies
 from magpie.api.api_except import raise_http
 from magpie.constants import get_constant
-from magpie.common import get_logger, JSON_TYPE
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,
     HTTPCreated,
@@ -13,6 +11,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPNotImplemented,
     asbool,
 )
+from magpie.utils import get_magpie_url, get_admin_cookies, get_logger, CONTENT_TYPE_JSON
 
 # import 'process' elements separately than 'twitcher_definitions' because not defined in master
 # noinspection PyUnresolvedReferences
@@ -59,7 +58,7 @@ class MagpieProcessStore(ProcessStore):
         self.default_process_store = DefaultAdapter().processstore_factory(registry)
         self.twitcher_config = get_twitcher_configuration(registry.settings)
         self.twitcher_url = get_twitcher_url(registry.settings)
-        self.json_headers = {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE}
+        self.json_headers = {'Accept': CONTENT_TYPE_JSON, 'Content-Type': CONTENT_TYPE_JSON}
 
         # setup basic configuration ('/ems' service of type 'api', '/ems/processes' resource, admin full permissions)
         ems_res_id = self._create_resource(self.magpie_service, resource_parent_id=None, resource_type='service',
@@ -111,7 +110,7 @@ class MagpieProcessStore(ProcessStore):
             raise_http(httpError=HTTPNotFound, detail=detail)
 
     def _get_service_processes_resource(self):
-        # type: (...) -> Union[int, None]
+        # type: () -> Optional[int]
         """
         Finds the magpie resource 'processes' corresponding to '/ems/processes'.
 
@@ -378,7 +377,7 @@ class MagpieProcessStore(ProcessStore):
         return processes
 
     def fetch_by_id(self, process_id, visibility=None, request=None):
-        # type: (AnyStr, Optional[AnyStr], Optional[requests.Request]) -> Union[Process, None]
+        # type: (AnyStr, Optional[AnyStr], Optional[requests.Request]) -> Optional[Process]
         """
         Get a process if visible for user.
 

@@ -6,7 +6,7 @@ The OWSRequest is based on pywps code:
 """
 
 from magpie.api.api_except import raise_http
-from magpie.common import get_logger, get_header, JSON_TYPE, PLAIN_TYPE
+from magpie.utils import get_logger, get_header, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
 from pyramid.httpexceptions import HTTPMethodNotAllowed
 from typing import TYPE_CHECKING
 # noinspection PyUnresolvedReferences
@@ -24,23 +24,23 @@ def ows_parser_factory(request):
     Default to JSON if no ``Content-Type`` is specified or if it is 'text/plain' but can be parsed as JSON.
     Otherwise, use the GET/POST WPS parsers.
     """
-    content_type = get_header('Content-Type', request.headers, default=JSON_TYPE, split=';,')
-    if content_type == PLAIN_TYPE:
+    content_type = get_header("Content-Type", request.headers, default=CONTENT_TYPE_JSON, split=";,")
+    if content_type == CONTENT_TYPE_PLAIN:
         try:
             # noinspection PyUnresolvedReferences
             if request.body:
                 # raises if parsing fails
                 # noinspection PyUnresolvedReferences
                 json.loads(request.body)
-            content_type = JSON_TYPE
+            content_type = CONTENT_TYPE_JSON
         except ValueError:
             pass
-    if content_type == JSON_TYPE:
+    if content_type == CONTENT_TYPE_JSON:
         return JSONParser(request)
     else:
-        if request.method == 'GET':
+        if request.method == "GET":
             return WPSGet(request)
-        elif request.method == 'POST':
+        elif request.method == "POST":
             return WPSPost(request)
 
     # method not supported, raise using the specified content type header
@@ -85,11 +85,11 @@ class WPSGet(OWSParser):
 def lxml_strip_ns(tree):
     for node in tree.iter():
         try:
-            has_namespace = node.tag.startswith('{')
+            has_namespace = node.tag.startswith("{")
         except AttributeError:
             continue  # node.tag is not a string (node is a comment or similar)
         if has_namespace:
-            node.tag = node.tag.split('}', 1)[1]
+            node.tag = node.tag.split("}", 1)[1]
 
 
 class WPSPost(OWSParser):
@@ -103,7 +103,7 @@ class WPSPost(OWSParser):
     def _get_param_value(self, param):
         if param in self.document.attrib:
             return self.document.attrib[param].lower()
-        elif param == 'request':
+        elif param == "request":
             return self.document.tag.lower()
         else:
             return None

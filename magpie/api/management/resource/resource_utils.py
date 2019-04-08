@@ -1,4 +1,4 @@
-from magpie.services import service_type_dict
+from magpie.services import SERVICE_TYPE_DICT
 from magpie.register import sync_services_phoenix
 from magpie.definitions.ziggurat_definitions import ResourceService
 from magpie.definitions.pyramid_definitions import (
@@ -19,23 +19,25 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from magpie.definitions.pyramid_definitions import HTTPException  # noqa: F401
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.definitions.typedefs import Str, Union  # noqa: F401
+    from magpie.definitions.typedefs import List, Str, Optional  # noqa: F401
+    from magpie.permissions import Permission  # noqa: F401
 
 
-def check_valid_service_resource_permission(permission_name, service_resource, db_session):
+def check_valid_service_or_resource_permission(permission_name, service_resource, db_session):
     """
-    Checks if a permission is valid to be applied to a specific service or a resource under a specific service.
+    Checks if a permission is valid to be applied to a specific `service` or a `resource` under a root service.
+
     :param permission_name: permission to apply
     :param service_resource: resource item corresponding to either a Service or a Resource
     :param db_session:
     :return:
     """
-    svc_res_perms = get_resource_permissions(service_resource, db_session=db_session)
+    svc_res_perm_names = [p.value for p in get_resource_permissions(service_resource, db_session=db_session)]
     svc_res_type = service_resource.resource_type
     svc_res_name = service_resource.resource_name
-    ax.verify_param(permission_name, paramName=u'permission_name', paramCompare=svc_res_perms, isIn=True,
+    ax.verify_param(permission_name, paramName=u"permission_name", paramCompare=svc_res_perm_names, isIn=True,
                     httpError=HTTPBadRequest,
-                    content={u'resource_type': str(svc_res_type), u'resource_name': str(svc_res_name)},
+                    content={u"resource_type": str(svc_res_type), u"resource_name": str(svc_res_name)},
                     msgOnFail=s.UserResourcePermissions_POST_BadRequestResponseSchema.description)
 
 
@@ -44,33 +46,33 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
     Checks if a new Resource can be contained under a parent Resource given the requested type and
     the corresponding Service under which the parent Resource is already assigned.
 
-    :param parent_resource: Resource under which the new Resource of `resource_type` must be placed
-    :param resource_type: desired Resource type
+    :param parent_resource: Resource under which the new resource of `resource_type` must be placed
+    :param resource_type: desired resource type
     :param db_session:
     :return: root Service if all checks were successful
     """
     parent_type = parent_resource.resource_type_name
-    ax.verify_param(models.resource_type_dict[parent_type].child_resource_allowed, isEqual=True,
+    ax.verify_param(models.RESOURCE_TYPE_DICT[parent_type].child_resource_allowed, isEqual=True,
                     paramCompare=True, httpError=HTTPNotAcceptable,
-                    msgOnFail="Child resource not allowed for specified parent resource type `{}`".format(parent_type))
+                    msgOnFail="Child resource not allowed for specified parent resource type '{}'".format(parent_type))
     root_service = get_resource_root_service(parent_resource, db_session=db_session)
     ax.verify_param(root_service, notNone=True, httpError=HTTPInternalServerError,
-                    msgOnFail="Failed retrieving `root_service` from db")
+                    msgOnFail="Failed retrieving 'root_service' from db")
     ax.verify_param(root_service.resource_type, isEqual=True, httpError=HTTPInternalServerError,
-                    paramName=u'resource_type', paramCompare=models.Service.resource_type_name,
-                    msgOnFail="Invalid `root_service` retrieved from db is not a service")
-    ax.verify_param(service_type_dict[root_service.type].child_resource_allowed, isEqual=True,
+                    paramName=u"resource_type", paramCompare=models.Service.resource_type_name,
+                    msgOnFail="Invalid 'root_service' retrieved from db is not a service")
+    ax.verify_param(SERVICE_TYPE_DICT[root_service.type].child_resource_allowed, isEqual=True,
                     paramCompare=True, httpError=HTTPNotAcceptable,
-                    msgOnFail="Child resource not allowed for specified service type `{}`".format(root_service.type))
+                    msgOnFail="Child resource not allowed for specified service type '{}'".format(root_service.type))
     ax.verify_param(resource_type, isIn=True, httpError=HTTPNotAcceptable,
-                    paramName=u'resource_type', paramCompare=service_type_dict[root_service.type].resource_types,
-                    msgOnFail="Invalid `resource_type` specified for service type `{}`".format(root_service.type))
+                    paramName=u"resource_type", paramCompare=SERVICE_TYPE_DICT[root_service.type].resource_types,
+                    msgOnFail="Invalid 'resource_type' specified for service type '{}'".format(root_service.type))
     return root_service
 
 
 def crop_tree_with_permission(children, resource_id_list):
     for child_id, child_dict in list(children.items()):
-        new_children = child_dict[u'children']
+        new_children = child_dict[u"children"]
         children_returned, resource_id_list = crop_tree_with_permission(new_children, resource_id_list)
         if child_id not in resource_id_list and not children_returned:
             children.pop(child_id)
@@ -81,47 +83,49 @@ def crop_tree_with_permission(children, resource_id_list):
 
 def get_resource_path(resource_id, db_session):
     parent_resources = models.resource_tree_service.path_upper(resource_id, db_session=db_session)
-    parent_path = ''
+    parent_path = ""
     for parent_resource in parent_resources:
-        parent_path = '/' + parent_resource.resource_name + parent_path
+        parent_path = "/" + parent_resource.resource_name + parent_path
     return parent_path
 
 
 def get_service_or_resource_types(service_resource):
     if isinstance(service_resource, models.Service):
-        svc_res_type_obj = service_type_dict[service_resource.type]
+        svc_res_type_obj = SERVICE_TYPE_DICT[service_resource.type]
         svc_res_type_str = u"service"
     elif isinstance(service_resource, models.Resource):
-        svc_res_type_obj = models.resource_type_dict[service_resource.resource_type]
+        svc_res_type_obj = models.RESOURCE_TYPE_DICT[service_resource.resource_type]
         svc_res_type_str = u"resource"
     else:
         ax.raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
-                      content={u'service_resource': repr(type(service_resource))})
+                      content={u"service_resource": repr(type(service_resource))})
     # noinspection PyUnboundLocalVariable
     return svc_res_type_obj, svc_res_type_str
 
 
 def get_resource_permissions(resource, db_session):
-    ax.verify_param(resource, notNone=True, httpError=HTTPNotAcceptable, paramName=u'resource',
+    # type: (models.Resource, Session) -> List[Permission]
+    ax.verify_param(resource, notNone=True, httpError=HTTPNotAcceptable, paramName=u"resource",
                     msgOnFail=s.UserResourcePermissions_GET_NotAcceptableResourceResponseSchema.description)
     # directly access the service resource
     if resource.root_service_id is None:
         service = resource
-        return service_type_dict[service.type].permission_names
+        return SERVICE_TYPE_DICT[service.type].permission_names
 
     # otherwise obtain root level service to infer sub-resource permissions
     service = ResourceService.by_resource_id(resource.root_service_id, db_session=db_session)
     ax.verify_param(service.resource_type, isEqual=True, httpError=HTTPNotAcceptable,
-                    paramName=u'resource_type', paramCompare=models.Service.resource_type_name,
+                    paramName=u"resource_type", paramCompare=models.Service.resource_type_name,
                     msgOnFail=s.UserResourcePermissions_GET_NotAcceptableRootServiceResponseSchema.description)
-    service_obj = service_type_dict[service.type]
+    service_obj = SERVICE_TYPE_DICT[service.type]
     ax.verify_param(resource.resource_type, isIn=True, httpError=HTTPNotAcceptable,
-                    paramName=u'resource_type', paramCompare=service_obj.resource_types,
+                    paramName=u"resource_type", paramCompare=service_obj.resource_types,
                     msgOnFail=s.UserResourcePermissions_GET_NotAcceptableResourceTypeResponseSchema.description)
     return service_obj.resource_types_permissions[resource.resource_type]
 
 
 def get_resource_root_service(resource, db_session):
+    # type: (models.Resource, Session) -> Optional[models.Resource]
     """
     Recursively rewinds back through the top of the resource tree up to the top-level service-resource.
 
@@ -138,18 +142,18 @@ def get_resource_root_service(resource, db_session):
 
 
 def create_resource(resource_name, resource_display_name, resource_type, parent_id, db_session):
-    # type: (Str, Union[Str, None], Str, int, Session) -> HTTPException
-    ax.verify_param(resource_name, paramName=u'resource_name', notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    msgOnFail="Invalid `resource_name` specified for child resource creation.")
-    ax.verify_param(resource_type, paramName=u'resource_type', notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    msgOnFail="Invalid `resource_type` specified for child resource creation.")
-    ax.verify_param(parent_id, paramName=u'parent_id', notNone=True, notEmpty=True, paramCompare=int, ofType=True,
+    # type: (Str, Optional[Str], Str, int, Session) -> HTTPException
+    ax.verify_param(resource_name, paramName=u"resource_name", notNone=True, notEmpty=True, httpError=HTTPBadRequest,
+                    msgOnFail="Invalid 'resource_name' specified for child resource creation.")
+    ax.verify_param(resource_type, paramName=u"resource_type", notNone=True, notEmpty=True, httpError=HTTPBadRequest,
+                    msgOnFail="Invalid 'resource_type' specified for child resource creation.")
+    ax.verify_param(parent_id, paramName=u"parent_id", notNone=True, notEmpty=True, paramCompare=int, ofType=True,
                     httpError=HTTPBadRequest, msgOnFail="Invalid `parent_id` specified for child resource creation.")
     parent_resource = ax.evaluate_call(lambda: ResourceService.by_resource_id(parent_id, db_session=db_session),
                                        fallback=lambda: db_session.rollback(), httpError=HTTPNotFound,
                                        msgOnFail=s.Resources_POST_NotFoundResponseSchema.description,
-                                       content={u'parent_id': str(parent_id), u'resource_name': str(resource_name),
-                                                u'resource_type': str(resource_type)})
+                                       content={u"parent_id": str(parent_id), u"resource_name": str(resource_name),
+                                                u"resource_type": str(resource_type)})
 
     # verify for valid permissions from top-level service-specific corresponding resources permissions
     root_service = check_valid_service_resource(parent_resource, resource_type, db_session)

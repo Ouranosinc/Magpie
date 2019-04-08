@@ -8,7 +8,7 @@ from sqlalchemy.engine import create_engine, Connection, Connectable
 from sqlalchemy_utils import database_exists, create_database
 from magpie.db import get_db_url
 from magpie.constants import get_constant
-from magpie.common import get_logger
+from magpie.utils import get_logger
 LOGGER = get_logger(__name__)
 
 

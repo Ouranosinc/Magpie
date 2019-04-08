@@ -1,4 +1,5 @@
 from magpie.api import api_rest_schemas as schemas
+from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import (
     asbool,
     view_config,
@@ -8,16 +9,14 @@ from magpie.definitions.pyramid_definitions import (
     HTTPNotFound,
     HTTPConflict,
 )
-from magpie.constants import get_constant
-from magpie.common import get_json, get_logger, JSON_TYPE
 from magpie.helpers.sync_resources import OUT_OF_SYNC
 from magpie.helpers import sync_resources
-from magpie.models import resource_type_dict, remote_resource_tree_service  # TODO: remove, implement getters via API
+from magpie.models import RESOURCE_TYPE_DICT, remote_resource_tree_service  # TODO: remove, implement getters via API
 from magpie.ui.utils import check_response, request_api, error_badrequest
 from magpie.ui.home import add_template_data
-from magpie import register, __meta__
+from magpie.utils import get_json, get_logger, CONTENT_TYPE_JSON
+from magpie import register
 from collections import OrderedDict
-from distutils.version import LooseVersion
 import datetime
 import humanize
 import json
@@ -49,15 +48,15 @@ class ManagementViews(object):
     @error_badrequest
     def get_user_groups(self, user_name):
         path = schemas.UserGroupsAPI.path.format(user_name=user_name)
-        resp = request_api(self.request, path, 'GET')
+        resp = request_api(self.request, path, "GET")
         check_response(resp)
-        return get_json(resp)['group_names']
+        return get_json(resp)["group_names"]
 
     @error_badrequest
     def get_user_names(self):
-        resp = request_api(self.request, schemas.UsersAPI.path, 'GET')
+        resp = request_api(self.request, schemas.UsersAPI.path, "GET")
         check_response(resp)
-        return get_json(resp)['user_names']
+        return get_json(resp)["user_names"]
 
     @error_badrequest
     def get_user_emails(self):
@@ -65,12 +64,9 @@ class ManagementViews(object):
         emails = list()
         for user in user_names:
             path = schemas.UserAPI.path.format(user_name=user)
-            resp = request_api(self.request, path, 'GET')
+            resp = request_api(self.request, path, "GET")
             check_response(resp)
-            if LooseVersion(__meta__.__version__) >= LooseVersion('0.6.3'):
-                user_email = get_json(resp)['user']['email']
-            else:
-                user_email = get_json(resp)['email']
+            user_email = get_json(resp)["user"]["email"]
             emails.append(user_email)
         return emails
 
@@ -79,18 +75,18 @@ class ManagementViews(object):
         :return: dictionary of all resources as {id: 'resource_type'}
         :rtype: dict
         """
-        resp = request_api(self.request, schemas.ResourcesAPI.path, 'GET')
+        resp = request_api(self.request, schemas.ResourcesAPI.path, "GET")
         check_response(resp)
-        res_dic = self.default_get(get_json(resp), 'resources', dict())
+        res_dic = self.default_get(get_json(resp), "resources", dict())
         res_ids = dict()
         self.flatten_tree_resource(res_dic, res_ids)
         return res_ids
 
     @error_badrequest
     def get_services(self, cur_svc_type):
-        resp = request_api(self.request, schemas.ServicesAPI.path, 'GET')
+        resp = request_api(self.request, schemas.ServicesAPI.path, "GET")
         check_response(resp)
-        all_services = get_json(resp)['services']
+        all_services = get_json(resp)["services"]
         svc_types = sorted(all_services.keys())
         if cur_svc_type not in svc_types:
             cur_svc_type = svc_types[0]
@@ -100,48 +96,48 @@ class ManagementViews(object):
     @error_badrequest
     def get_service_data(self, service_name):
         path = schemas.ServiceAPI.path.format(service_name=service_name)
-        resp = request_api(self.request, path, 'GET')
+        resp = request_api(self.request, path, "GET")
         check_response(resp)
-        return get_json(resp)['service']
+        return get_json(resp)["service"]
 
     def get_service_types(self):
-        svc_types_resp = request_api(self.request, schemas.ServiceTypesAPI.path, 'GET')
-        return get_json(svc_types_resp)['service_types']
+        svc_types_resp = request_api(self.request, schemas.ServiceTypesAPI.path, "GET")
+        return get_json(svc_types_resp)["service_types"]
 
     @error_badrequest
     def update_service_name(self, old_service_name, new_service_name, service_push):
         svc_data = self.get_service_data(old_service_name)
-        svc_data['service_name'] = new_service_name
-        svc_data['resource_name'] = new_service_name
-        svc_data['service_push'] = service_push
-        svc_id = str(svc_data['resource_id'])
+        svc_data["service_name"] = new_service_name
+        svc_data["resource_name"] = new_service_name
+        svc_data["service_push"] = service_push
+        svc_id = str(svc_data["resource_id"])
         path = schemas.ResourceAPI.path.format(resource_id=svc_id)
-        resp = request_api(self.request, path, 'PUT', data=svc_data)
+        resp = request_api(self.request, path, "PUT", data=svc_data)
         check_response(resp)
 
     @error_badrequest
     def update_service_url(self, service_name, new_service_url, service_push):
         svc_data = self.get_service_data(service_name)
-        svc_data['service_url'] = new_service_url
-        svc_data['service_push'] = service_push
+        svc_data["service_url"] = new_service_url
+        svc_data["service_push"] = service_push
         path = schemas.ServiceAPI.path.format(service_name=service_name)
-        resp = request_api(self.request, path, 'PUT', data=svc_data)
+        resp = request_api(self.request, path, "PUT", data=svc_data)
         check_response(resp)
 
     @error_badrequest
     def goto_service(self, resource_id):
         path = schemas.ResourceAPI.path.format(resource_id=resource_id)
-        resp = request_api(self.request, path, 'GET')
+        resp = request_api(self.request, path, "GET")
         check_response(resp)
         body = get_json(resp)
-        svc_name = body['resource']['resource_name']
+        svc_name = body["resource"]["resource_name"]
         # get service type instead of 'cur_svc_type' in case of 'default' ('cur_svc_type' not set yet)
         path = schemas.ServiceAPI.path.format(service_name=svc_name)
-        resp = request_api(self.request, path, 'GET')
+        resp = request_api(self.request, path, "GET")
         check_response(resp)
         body = get_json(resp)
-        svc_type = body['service']['service_type']
-        return HTTPFound(self.request.route_url('edit_service', service_name=svc_name, cur_svc_type=svc_type))
+        svc_type = body["service"]["service_type"]
+        return HTTPFound(self.request.route_url("edit_service", service_name=svc_name, cur_svc_type=svc_type))
 
     @staticmethod
     def flatten_tree_resource(resource_node, resource_dict):
@@ -859,11 +855,11 @@ class ManagementViews(object):
         check_response(resp)
         svc_body = get_json(resp)['service']
 
-        # TODO: use an API request instead of direct access to `resource_type_dict`
+        # TODO: use an API request instead of direct access to `RESOURCE_TYPE_DICT`
         service_info['resources'] = resources
         service_info['resources_id_type'] = resources_id_type
-        service_info['resources_no_child'] = [res for res in resource_type_dict
-                                              if not resource_type_dict[res].child_resource_allowed]
+        service_info['resources_no_child'] = [res for res in RESOURCE_TYPE_DICT
+                                              if not RESOURCE_TYPE_DICT[res].child_resource_allowed]
         service_info['service_no_child'] = not svc_body['resource_child_allowed']
         return add_template_data(self.request, service_info)
 
@@ -881,7 +877,7 @@ class ManagementViews(object):
                     u'resource_type': resource_type,
                     u'parent_id': int(resource_id) if resource_id else None}
             resp = request_api(self.request, schemas.ResourcesAPI.path, 'POST', data=data,
-                               headers={'Content-Type': JSON_TYPE})
+                               headers={'Content-Type': CONTENT_TYPE_JSON})
             check_response(resp)
 
             return HTTPFound(self.request.route_url('edit_service',

@@ -15,7 +15,7 @@ from magpie.definitions.pyramid_definitions import (
 )
 from magpie.definitions.ziggurat_definitions import UserService, GroupService
 from magpie.constants import get_constant
-from magpie.common import get_logger
+from magpie.utils import get_logger
 from magpie import models
 LOGGER = get_logger(__name__)
 

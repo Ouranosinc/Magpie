@@ -4,7 +4,7 @@ from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.models import get_user
 from magpie.security import auth_config_from_settings
 from magpie.db import get_session_factory, get_tm_session, get_engine
-from magpie.common import get_logger
+from magpie.utils import get_logger
 from magpie import __meta__
 LOGGER = get_logger("TWITCHER")
 

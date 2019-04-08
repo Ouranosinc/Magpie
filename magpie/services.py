@@ -10,35 +10,37 @@ from magpie.definitions.pyramid_definitions import (
 )
 from magpie.api import api_except as ax
 from magpie.owsrequest import ows_parser_factory
-from magpie import models, permissions as p
+from magpie.permissions import Permission
+from magpie import models
 from typing import TYPE_CHECKING
 from six import with_metaclass
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, List, Dict, Union  # noqa: F401
+    from magpie.definitions.typedefs import Str, List, Dict, Type, ResourcePermissionType  # noqa: F401
     from magpie.definitions.pyramid_definitions import Request  # noqa: F401
-    ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
 
 
 class ServiceMeta(type):
     @property
     def resource_types(cls):
-        # type: (...) -> List[Str]
+        # type: (Type[ServiceInterface]) -> List[Str]
         """Allowed resources types under the service."""
         return list(cls.resource_types_permissions.keys())
 
     @property
     def child_resource_allowed(cls):
-        # type: (...) -> bool
+        # type: (Type[ServiceInterface]) -> bool
         return len(cls.resource_types) > 0
 
 
-class ServiceI(with_metaclass(ServiceMeta)):
+class ServiceInterface(with_metaclass(ServiceMeta)):
+    # required service type identifier (unique)
+    service_type = None                 # type: Str
     # required request parameters for the service
     params_expected = []                # type: List[Str]
     # global permissions allowed for the service (top-level resource)
-    permission_names = []               # type: List[Str]
+    permissions = []                    # type: List[Permission]
     # dict of list for each corresponding allowed resource permissions (children resources)
-    resource_types_permissions = {}     # type: Dict[Str, List[Str]]
+    resource_types_permissions = {}     # type: Dict[models.Resource, List[Permission]]
 
     def __init__(self, service, request):
         self.service = service
@@ -62,20 +64,20 @@ class ServiceI(with_metaclass(ServiceMeta)):
                 for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
                     self.acl.append((outcome, perm_user, perm_name,))
             else:
-                user = UserService.by_user_name(get_constant('MAGPIE_ANONYMOUS_USER'), db_session=self.request.db)
+                user = UserService.by_user_name(get_constant("MAGPIE_ANONYMOUS_USER"), db_session=self.request.db)
                 if user is None:
-                    raise Exception('No Anonymous user in the database')
+                    raise Exception("No Anonymous user in the database")
                 else:
                     permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
                     for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
                         self.acl.append((outcome, EVERYONE, perm_name,))
 
     def permission_requested(self):
-        # type: (...) -> Str
+        # type: () -> Str
         try:
-            return self.parser.params[u'request']
+            return self.parser.params[u"request"]
         except Exception as e:
-            # if 'ServiceI', 'params_expected' is empty and will raise a KeyError
+            # if 'ServiceInterface', 'params_expected' is empty and will raise a KeyError
             raise NotImplementedError("Exception: [" + repr(e) + "]")
 
     def effective_permissions(self, resource, user):
@@ -95,18 +97,19 @@ class ServiceI(with_metaclass(ServiceMeta)):
         return resource_effective_perms
 
 
-class ServiceWPS(ServiceI):
+class ServiceWPS(ServiceInterface):
+    service_type = u"wps"
 
-    permission_names = [
-        p.PERMISSION_GET_CAPABILITIES,
-        p.PERMISSION_DESCRIBE_PROCESS,
-        p.PERMISSION_EXECUTE,
+    permissions = [
+        Permission.GET_CAPABILITIES,
+        Permission.DESCRIBE_PROCESS,
+        Permission.EXECUTE,
     ]
 
     params_expected = [
-        u'service',
-        u'request',
-        u'version'
+        u"service",
+        u"request",
+        u"version"
     ]
 
     resource_types_permissions = {}
@@ -120,58 +123,59 @@ class ServiceWPS(ServiceI):
         return self.acl
 
 
-class ServiceWMS(ServiceI):
-    permission_names = [
-        p.PERMISSION_GET_CAPABILITIES,
-        p.PERMISSION_GET_MAP,
-        p.PERMISSION_GET_FEATURE_INFO,
-        p.PERMISSION_GET_LEGEND_GRAPHIC,
-        p.PERMISSION_GET_METADATA,
+class ServiceBaseWMS(ServiceInterface):
+    permissions = [
+        Permission.GET_CAPABILITIES,
+        Permission.GET_MAP,
+        Permission.GET_FEATURE_INFO,
+        Permission.GET_LEGEND_GRAPHIC,
+        Permission.GET_METADATA,
     ]
 
     params_expected = [
-        u'service',
-        u'request',
-        u'version',
-        u'layers',
-        u'layername',
-        u'dataset'
+        u"service",
+        u"request",
+        u"version",
+        u"layers",
+        u"layername",
+        u"dataset"
     ]
 
     resource_types_permissions = {
-        models.Workspace.resource_type_name: [
-            p.PERMISSION_GET_CAPABILITIES,
-            p.PERMISSION_GET_MAP,
-            p.PERMISSION_GET_FEATURE_INFO,
-            p.PERMISSION_GET_LEGEND_GRAPHIC,
-            p.PERMISSION_GET_METADATA,
+        models.Workspace: [
+            Permission.GET_CAPABILITIES,
+            Permission.GET_MAP,
+            Permission.GET_FEATURE_INFO,
+            Permission.GET_LEGEND_GRAPHIC,
+            Permission.GET_METADATA,
         ]
     }
 
     def __init__(self, service, request):
-        super(ServiceWMS, self).__init__(service, request)
+        super(ServiceBaseWMS, self).__init__(service, request)
 
     @property
     def __acl__(self):
         raise NotImplementedError
 
 
-class ServiceNCWMS2(ServiceWMS):
+class ServiceNCWMS2(ServiceBaseWMS):
+    service_type = u"ncwms"
 
     resource_types_permissions = {
-        models.File.resource_type_name: [
-            p.PERMISSION_GET_CAPABILITIES,
-            p.PERMISSION_GET_MAP,
-            p.PERMISSION_GET_FEATURE_INFO,
-            p.PERMISSION_GET_LEGEND_GRAPHIC,
-            p.PERMISSION_GET_METADATA,
+        models.File: [
+            Permission.GET_CAPABILITIES,
+            Permission.GET_MAP,
+            Permission.GET_FEATURE_INFO,
+            Permission.GET_LEGEND_GRAPHIC,
+            Permission.GET_METADATA,
         ],
-        models.Directory.resource_type_name: [
-            p.PERMISSION_GET_CAPABILITIES,
-            p.PERMISSION_GET_MAP,
-            p.PERMISSION_GET_FEATURE_INFO,
-            p.PERMISSION_GET_LEGEND_GRAPHIC,
-            p.PERMISSION_GET_METADATA,
+        models.Directory: [
+            Permission.GET_CAPABILITIES,
+            Permission.GET_MAP,
+            Permission.GET_FEATURE_INFO,
+            Permission.GET_LEGEND_GRAPHIC,
+            Permission.GET_METADATA,
         ]
     }
 
@@ -185,37 +189,37 @@ class ServiceNCWMS2(ServiceWMS):
         # According to the permission, the resource we want to authorize is not formatted the same way
         permission_requested = self.permission_requested()
         netcdf_file = None
-        if permission_requested == p.PERMISSION_GET_CAPABILITIES:
+        if permission_requested == Permission.GET_CAPABILITIES:
             # https://colibri.crim.ca/twitcher/ows/proxy/ncWMS2/wms?SERVICE=WMS&REQUEST=GetCapabilities&
             #   VERSION=1.3.0&DATASET=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc
-            if 'dataset' in self.parser.params.keys():
-                netcdf_file = self.parser.params['dataset']
+            if "dataset" in self.parser.params.keys():
+                netcdf_file = self.parser.params["dataset"]
 
-        elif permission_requested == p.PERMISSION_GET_MAP:
+        elif permission_requested == Permission.GET_MAP:
             # https://colibri.crim.ca/ncWMS2/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image%2Fpng&
             #   TRANSPARENT=TRUE&ABOVEMAXCOLOR=extend&STYLES=default-scalar%2Fseq-Blues&
             #   LAYERS=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc/PCP&EPSG=4326
-            netcdf_file = self.parser.params['layers']
+            netcdf_file = self.parser.params["layers"]
             if netcdf_file:
-                netcdf_file = netcdf_file.rsplit('/', 1)[0]
+                netcdf_file = netcdf_file.rsplit("/", 1)[0]
 
-        elif permission_requested == p.PERMISSION_GET_METADATA:
+        elif permission_requested == Permission.GET_METADATA:
             # https://colibri.crim.ca/ncWMS2/wms?request=GetMetadata&item=layerDetails&
             #   layerName=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc/PCP
-            netcdf_file = self.parser.params['layername']
+            netcdf_file = self.parser.params["layername"]
             if netcdf_file:
-                netcdf_file = netcdf_file.rsplit('/', 1)[0]
+                netcdf_file = netcdf_file.rsplit("/", 1)[0]
 
         else:
             return [(ALLOW, EVERYONE, permission_requested,)]
 
         if netcdf_file:
-            ax.verify_param('outputs/', paramCompare=netcdf_file, httpError=HTTPNotFound,
-                            msgOnFail='outputs/ is not in path', notIn=True)
-            netcdf_file = netcdf_file.replace('outputs/', 'birdhouse/')
+            ax.verify_param("outputs/", paramCompare=netcdf_file, httpError=HTTPNotFound,
+                            msgOnFail="'outputs/' is not in path", notIn=True)
+            netcdf_file = netcdf_file.replace("outputs/", "birdhouse/")
 
             db_session = self.request.db
-            path_elems = netcdf_file.split('/')
+            path_elems = netcdf_file.split("/")
             new_child = self.service
             while new_child and path_elems:
                 elem_name = path_elems.pop(0)
@@ -227,10 +231,11 @@ class ServiceNCWMS2(ServiceWMS):
         return self.acl
 
 
-class ServiceGeoserver(ServiceWMS):
+class ServiceGeoserverWMS(ServiceBaseWMS):
+    service_type = u"geoserverwms"
 
     def __init__(self, service, request):
-        super(ServiceGeoserver, self).__init__(service, request)
+        super(ServiceGeoserverWMS, self).__init__(service, request)
 
     @property
     def __acl__(self):
@@ -245,16 +250,16 @@ class ServiceGeoserver(ServiceWMS):
         # here we need to check the workspace in the path
 
         request_type = self.permission_requested()
-        if request_type == p.PERMISSION_GET_CAPABILITIES:
-            path_elem = self.request.path.split('/')
-            wms_idx = path_elem.index('wms')
-            if path_elem[wms_idx - 1] != 'geoserver':
+        if request_type == Permission.GET_CAPABILITIES:
+            path_elem = self.request.path.split("/")
+            wms_idx = path_elem.index("wms")
+            if path_elem[wms_idx - 1] != "geoserver":
                 workspace_name = path_elem[wms_idx - 1]
             else:
-                workspace_name = ''
+                workspace_name = ""
         else:
-            layer_name = self.parser.params['layers']
-            workspace_name = layer_name.split(':')[0]
+            layer_name = self.parser.params["layers"]
+            workspace_name = layer_name.split(":")[0]
 
         # load workspace resource from the database
         workspace = models.find_children_by_name(child_name=workspace_name,
@@ -265,9 +270,13 @@ class ServiceGeoserver(ServiceWMS):
         return self.acl
 
 
-class ServiceAccess(ServiceI):
-    permission_names = [p.PERMISSION_ACCESS]
+class ServiceAccess(ServiceInterface):
+    service_type = u"access"
+
+    permissions = [Permission.ACCESS]
+
     params_expected = []
+
     resource_types_permissions = {}
 
     def __init__(self, service, request):
@@ -279,16 +288,18 @@ class ServiceAccess(ServiceI):
         return self.acl
 
     def permission_requested(self):
-        return p.PERMISSION_ACCESS
+        return Permission.ACCESS
 
 
-class ServiceAPI(ServiceI):
-    permission_names = models.Route.permission_names
+class ServiceAPI(ServiceInterface):
+    service_type = u"api"
+
+    permissions = models.Route.permissions
 
     params_expected = []
 
     resource_types_permissions = {
-        models.Route.resource_type_name: models.Route.permission_names
+        models.Route: models.Route.permissions
     }
 
     def __init__(self, service, request):
@@ -302,7 +313,7 @@ class ServiceAPI(ServiceI):
         self.expand_acl(self.service, self.request.user)
 
         match_index = 0
-        route_parts = self.request.path.split('/')
+        route_parts = self.request.path.split("/")
         route_api_base = self.service.resource_name if sub_api_route is None else sub_api_route
 
         if self.service.resource_name in route_parts and route_api_base in route_parts:
@@ -324,45 +335,46 @@ class ServiceAPI(ServiceI):
         # process read/write-match specific permission access
         # (convert exact route 'match' to read/write counterparts only if matching last item's permissions)
         for i in range(match_index, len(self.acl)):
-            if self.acl[i][2] == p.PERMISSION_READ_MATCH:
-                self.acl[i] = (self.acl[i][0], self.acl[i][1], p.PERMISSION_READ)
-            if self.acl[i][2] == p.PERMISSION_WRITE_MATCH:
-                self.acl[i] = (self.acl[i][0], self.acl[i][1], p.PERMISSION_WRITE)
+            if self.acl[i][2] == Permission.READ_MATCH:
+                self.acl[i] = (self.acl[i][0], self.acl[i][1], Permission.READ)
+            if self.acl[i][2] == Permission.WRITE_MATCH:
+                self.acl[i] = (self.acl[i][0], self.acl[i][1], Permission.WRITE)
 
         return self.acl
 
     def permission_requested(self):
         # only read/write are used for 'real' access control, 'match' permissions must be updated accordingly
-        if self.request.method.upper() in ['GET', 'HEAD']:
-            return p.PERMISSION_READ
-        return p.PERMISSION_WRITE
+        if self.request.method.upper() in ["GET", "HEAD"]:
+            return Permission.READ
+        return Permission.WRITE
 
     def effective_permissions(self, resource, user):
         # if 'match' permissions are on the specified 'resource', keep them
         # otherwise, keep only the non 'match' variations from inherited parent resources permissions
         resource_effective_perms = super(ServiceAPI, self).effective_permissions(resource, user)
         return filter(lambda perm:
-                      (perm.perm_name in [p.PERMISSION_READ, p.PERMISSION_WRITE]) or
-                      (perm.perm_name in [p.PERMISSION_READ_MATCH, p.PERMISSION_WRITE_MATCH] and
+                      (perm.perm_name in [Permission.READ.value, Permission.WRITE.value]) or
+                      (perm.perm_name in [Permission.READ_MATCH.value, Permission.WRITE_MATCH.value] and
                        perm.resource.resource_id == resource.resource_id),
                       resource_effective_perms)
 
 
-class ServiceWFS(ServiceI):
+class ServiceWFS(ServiceInterface):
+    service_type = u"wfs"
 
-    permission_names = [
-        p.PERMISSION_GET_CAPABILITIES,
-        p.PERMISSION_DESCRIBE_FEATURE_TYPE,
-        p.PERMISSION_GET_FEATURE,
-        p.PERMISSION_LOCK_FEATURE,
-        p.PERMISSION_TRANSACTION,
+    permissions = [
+        Permission.GET_CAPABILITIES,
+        Permission.DESCRIBE_FEATURE_TYPE,
+        Permission.GET_FEATURE,
+        Permission.LOCK_FEATURE,
+        Permission.TRANSACTION,
     ]
 
     params_expected = [
-        u'service',
-        u'request',
-        u'version',
-        u'typenames'
+        u"service",
+        u"request",
+        u"version",
+        u"typenames"
     ]
 
     resource_types_permissions = {}
@@ -374,16 +386,16 @@ class ServiceWFS(ServiceI):
     def __acl__(self):
         self.expand_acl(self.service, self.request.user)
         request_type = self.permission_requested()
-        if request_type == p.PERMISSION_GET_CAPABILITIES:
-            path_elem = self.request.path.split('/')
-            wms_idx = path_elem.index('wfs')
-            if path_elem[wms_idx - 1] != 'geoserver':
+        if request_type == Permission.GET_CAPABILITIES:
+            path_elem = self.request.path.split("/")
+            wms_idx = path_elem.index("wfs")
+            if path_elem[wms_idx - 1] != "geoserver":
                 workspace_name = path_elem[wms_idx - 1]
             else:
-                workspace_name = ''
+                workspace_name = ""
         else:
-            layer_name = self.parser.params['typenames']
-            workspace_name = layer_name.split(':')[0]
+            layer_name = self.parser.params["typenames"]
+            workspace_name = layer_name.split(":")[0]
 
         # load workspace resource from the database
         workspace = models.find_children_by_name(child_name=workspace_name,
@@ -394,20 +406,21 @@ class ServiceWFS(ServiceI):
         return self.acl
 
 
-class ServiceTHREDDS(ServiceI):
+class ServiceTHREDDS(ServiceInterface):
+    service_type = u"thredds"
 
-    permission_names = [
-        p.PERMISSION_READ,
-        p.PERMISSION_WRITE,
+    permissions = [
+        Permission.READ,
+        Permission.WRITE,
     ]
 
     params_expected = [
-        u'request'
+        u"request"
     ]
 
     resource_types_permissions = {
-        models.Directory.resource_type_name: permission_names,
-        models.File.resource_type_name: permission_names,
+        models.Directory: permissions,
+        models.File: permissions,
     }
 
     def __init__(self, service, request):
@@ -416,16 +429,16 @@ class ServiceTHREDDS(ServiceI):
     @property
     def __acl__(self):
         self.expand_acl(self.service, self.request.user)
-        elems = self.request.path.split('/')
+        elems = self.request.path.split("/")
 
-        if 'fileServer' in elems:
-            first_idx = elems.index('fileServer')
-        elif 'dodsC' in elems:
-            first_idx = elems.index('dodsC')
-            elems[-1] = elems[-1].replace('.html', '')
-        elif 'catalog' in elems:
-            first_idx = elems.index('catalog')
-        elif elems[-1] == 'catalog.html':
+        if "fileServer" in elems:
+            first_idx = elems.index("fileServer")
+        elif "dodsC" in elems:
+            first_idx = elems.index("dodsC")
+            elems[-1] = elems[-1].replace(".html", "")
+        elif "catalog" in elems:
+            first_idx = elems.index("catalog")
+        elif elems[-1] == "catalog.html":
             first_idx = elems.index(self.service.resource_name) - 1
         else:
             return self.acl
@@ -443,38 +456,25 @@ class ServiceTHREDDS(ServiceI):
         return self.acl
 
     def permission_requested(self):
-        return u'read'
+        return Permission.READ.value
 
 
-service_type_dict = {
-    u'access':          ServiceAccess,      # noqa: E241
-    u'api':             ServiceAPI,         # noqa: E241
-    u'geoserverwms':    ServiceGeoserver,   # noqa: E241
-    u'ncwms':           ServiceNCWMS2,      # noqa: E241
-    u'thredds':         ServiceTHREDDS,     # noqa: E241
-    u'wfs':             ServiceWFS,         # noqa: E241
-    u'wps':             ServiceWPS,         # noqa: E241
-}
+SERVICE_TYPE_DICT = dict()
+for svc in [ServiceAccess, ServiceAPI, ServiceGeoserverWMS, ServiceNCWMS2, ServiceTHREDDS, ServiceWFS, ServiceWPS]:
+    SERVICE_TYPE_DICT[svc.service_type] = svc
 
 
 def service_factory(service, request):
-    # type: (models.Service, Request) -> ServiceI
+    # type: (models.Service, Request) -> ServiceInterface
     """Retrieve the specific service class from the provided database service entry."""
     ax.verify_param(service, paramCompare=models.Service, ofType=True,
-                    httpError=HTTPBadRequest, content={u'service': repr(service)},
+                    httpError=HTTPBadRequest, content={u"service": repr(service)},
                     msgOnFail="Cannot process invalid service object")
     service_type = ax.evaluate_call(lambda: service.type, httpError=HTTPInternalServerError,
                                     msgOnFail="Cannot retrieve service type from object")
-    ax.verify_param(service_type, isIn=True, paramCompare=service_type_dict.keys(),
-                    httpError=HTTPNotImplemented, content={u'service_type': service_type},
+    ax.verify_param(service_type, isIn=True, paramCompare=SERVICE_TYPE_DICT.keys(),
+                    httpError=HTTPNotImplemented, content={u"service_type": service_type},
                     msgOnFail="Undefined service type mapping to service object")
-    return ax.evaluate_call(lambda: service_type_dict[service_type](service, request),
+    return ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service_type](service, request),
                             httpError=HTTPInternalServerError,
                             msgOnFail="Failed to find requested service type.")
-
-
-def get_all_service_permission_names():
-    all_permission_names_list = set()
-    for service_type in service_type_dict.keys():
-        all_permission_names_list.update(service_type_dict[service_type].permission_names)
-    return all_permission_names_list

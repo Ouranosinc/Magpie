@@ -8,8 +8,8 @@ test_register
 Tests for `magpie.register` operations.
 """
 from magpie.constants import get_constant
-from magpie.common import JSON_TYPE
 from magpie.db import get_db_session_from_settings
+from magpie.utils import CONTENT_TYPE_JSON
 from magpie import register
 from tests import utils, runner
 import unittest
@@ -25,7 +25,7 @@ class TestRegister(unittest.TestCase):
         cls.grp = get_constant('MAGPIE_ADMIN_GROUP')
         cls.usr = get_constant('MAGPIE_TEST_ADMIN_USERNAME')
         cls.pwd = get_constant('MAGPIE_TEST_ADMIN_PASSWORD')
-        cls.json_headers = utils.get_headers(cls.url, {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE})
+        cls.json_headers = utils.get_headers(cls.url, {'Accept': CONTENT_TYPE_JSON, 'Content-Type': CONTENT_TYPE_JSON})
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
         # TODO: fix UI views so that they can be 'found' directly in the WebTest.TestApp

@@ -1,3 +1,5 @@
+from magpie.api.api_except import raise_http
+from magpie.api import api_rest_schemas as s
 from magpie.definitions.pyramid_definitions import (
     IAuthenticationPolicy,
     Authenticated,
@@ -9,16 +11,14 @@ from magpie.definitions.pyramid_definitions import (
     HTTPInternalServerError,
     HTTPServerError,
 )
-from magpie.api.api_except import raise_http
-from magpie.api import api_rest_schemas as s
-from magpie.common import get_header, JSON_TYPE
+from magpie.utils import get_header, CONTENT_TYPE_JSON
 from simplejson import JSONDecodeError
 
 
 def internal_server_error(request):
     content = get_request_info(request, default_message=s.InternalServerErrorResponseSchema.description)
     return raise_http(nothrow=True, httpError=HTTPInternalServerError, detail=content['detail'], content=content,
-                      contentType=get_header('Accept', request.headers, default=JSON_TYPE, split=';,'))
+                      contentType=get_header('Accept', request.headers, default=CONTENT_TYPE_JSON, split=';,'))
 
 
 def not_found_or_method_not_allowed(request):
@@ -41,7 +41,7 @@ def not_found_or_method_not_allowed(request):
         http_msg = s.NotFoundResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
     return raise_http(nothrow=True, httpError=http_err, detail=content['detail'], content=content,
-                      contentType=get_header('Accept', request.headers, default=JSON_TYPE, split=';,'))
+                      contentType=get_header('Accept', request.headers, default=CONTENT_TYPE_JSON, split=';,'))
 
 
 def unauthorized_or_forbidden(request):
@@ -67,7 +67,7 @@ def unauthorized_or_forbidden(request):
     content = get_request_info(request, default_message=http_msg)
 
     return raise_http(nothrow=True, httpError=http_err, detail=content['detail'], content=content,
-                      contentType=get_header('Accept', request.headers, default=JSON_TYPE, split=';,'))
+                      contentType=get_header('Accept', request.headers, default=CONTENT_TYPE_JSON, split=';,'))
 
 
 def get_request_info(request, default_message="undefined"):

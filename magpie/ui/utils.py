@@ -1,9 +1,9 @@
 from magpie.definitions.pyramid_definitions import exception_response, Request, HTTPBadRequest
-from magpie.common import get_header, JSON_TYPE
+from magpie.utils import get_header, CONTENT_TYPE_JSON
 from typing import TYPE_CHECKING
 import json
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, JsonBody, CookiesType, HeadersType, Optional  # noqa: F401
+    from magpie.definitions.typedefs import Str, JSON, CookiesType, HeadersType, Optional  # noqa: F401
     from magpie.definitions.pyramid_definitions import Response  # noqa: F401
 
 
@@ -16,7 +16,7 @@ def check_response(response):
 def request_api(request,            # type: Request
                 path,               # type: Str
                 method='GET',       # type: Optional[Str]
-                data=None,          # type: Optional[JsonBody]
+                data=None,          # type: Optional[JSON]
                 headers=None,       # type: Optional[HeadersType]
                 cookies=None,       # type: Optional[CookiesType]
                 ):                  # type: (...) -> Response
@@ -26,7 +26,7 @@ def request_api(request,            # type: Request
 
     Some information is retrieved from ``request`` to pass down to the sub-request (eg: headers, cookies).
     If they are passed as argument, corresponding values will override the ones found in ``request``.
-    All sub-requests to the API are assumed to be of ``magpie.common.JSON_TYPE``.
+    All sub-requests to the API are assumed to be of ``magpie.common.CONTENT_TYPE_JSON``.
     """
     method = method.upper()
     extra_kwargs = {'method': method}
@@ -34,7 +34,7 @@ def request_api(request,            # type: Request
     if headers:
         headers = dict(headers)
     if not headers and not request.headers:
-        headers = {'Accept': JSON_TYPE, 'Content-Type': JSON_TYPE}
+        headers = {'Accept': CONTENT_TYPE_JSON, 'Content-Type': CONTENT_TYPE_JSON}
     if not headers:
         headers = request.headers
     # although no body is required per-say for HEAD/GET requests, add it if missing
@@ -43,7 +43,7 @@ def request_api(request,            # type: Request
     # of local/remote testing with corresponding `webtest.TestApp`/`requests.Request`
     if not data:
         data = u''
-    if isinstance(data, dict) and get_header('Content-Type', headers, split=[',', ';']) == JSON_TYPE:
+    if isinstance(data, dict) and get_header('Content-Type', headers, split=[',', ';']) == CONTENT_TYPE_JSON:
         data = json.dumps(data)
 
     if isinstance(cookies, dict):

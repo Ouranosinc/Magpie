@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from magpie import db, models, constants
 from magpie.helpers import sync_services
-from magpie.common import get_logger
+from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
 

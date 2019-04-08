@@ -14,9 +14,9 @@ from magpie.definitions.pyramid_definitions import (
     HTTPInternalServerError,
     NO_PERMISSION_REQUIRED,
 )
-from magpie.common import JSON_TYPE
 from magpie.constants import get_constant
-from magpie.utils import get_magpie_url
+from magpie.permissions import Permission
+from magpie.utils import get_magpie_url, CONTENT_TYPE_JSON
 # from magpie.security import get_provider_names
 from magpie import __meta__
 import six
@@ -30,19 +30,19 @@ InfoAPI = {
 
 
 # Tags
-APITag = 'API'
-LoginTag = 'Login'
-UsersTag = 'User'
-LoggedUserTag = 'Logged User'
-GroupsTag = 'Group'
-ResourcesTag = 'Resource'
-ServicesTag = 'Service'
+APITag = "API"
+LoginTag = "Login"
+UsersTag = "User"
+LoggedUserTag = "Logged User"
+GroupsTag = "Group"
+ResourcesTag = "Resource"
+ServicesTag = "Service"
 
 
 # Security
-SecurityCookieAuthAPI = {'cookieAuth': {'type': 'apiKey', 'in': 'cookie', 'name': get_constant('MAGPIE_COOKIE_NAME')}}
-SecurityDefinitionsAPI = {'securityDefinitions': SecurityCookieAuthAPI}
-SecurityAdministratorAPI = [{'cookieAuth': []}]
+SecurityCookieAuthAPI = {"cookieAuth": {"type": "apiKey", "in": "cookie", "name": get_constant("MAGPIE_COOKIE_NAME")}}
+SecurityDefinitionsAPI = {"securityDefinitions": SecurityCookieAuthAPI}
+SecurityAdministratorAPI = [{"cookieAuth": []}]
 SecurityEveryoneAPI = [{}]
 
 
@@ -54,219 +54,219 @@ def get_security(service, method):
         if met == method:
             break
     # automatically retrieve permission if specified within the view definition
-    permission = args.get('permission')
+    permission = args.get("permission")
     if permission == NO_PERMISSION_REQUIRED:
         return SecurityEveryoneAPI
-    elif permission == get_constant('MAGPIE_ADMIN_PERMISSION'):
+    elif permission == get_constant("MAGPIE_ADMIN_PERMISSION"):
         return SecurityAdministratorAPI
     # return default admin permission otherwise unless specified form cornice decorator
-    return SecurityAdministratorAPI if 'security' not in args else args['security']
+    return SecurityAdministratorAPI if "security" not in args else args["security"]
 
 
 # Service Routes
 def service_api_route_info(service_api):
-    return {'name': service_api.name, 'pattern': service_api.path}
+    return {"name": service_api.name, "pattern": service_api.path}
 
 
-LoggedUserBase = '/users/{}'.format(get_constant('MAGPIE_LOGGED_USER'))
+LoggedUserBase = "/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
 
 
 SwaggerGenerator = Service(
-    path='/json',
-    name='swagger_schema_json')
+    path="/json",
+    name="swagger_schema_json")
 SwaggerAPI = Service(
-    path='/api',
-    name='swagger_schema_ui',
+    path="/api",
+    name="swagger_schema_ui",
     description="{} documentation".format(TitleAPI))
 UsersAPI = Service(
-    path='/users',
-    name='Users')
+    path="/users",
+    name="Users")
 UserAPI = Service(
-    path='/users/{user_name}',
-    name='User')
+    path="/users/{user_name}",
+    name="User")
 UserGroupsAPI = Service(
-    path='/users/{user_name}/groups',
-    name='UserGroups')
+    path="/users/{user_name}/groups",
+    name="UserGroups")
 UserGroupAPI = Service(
-    path='/users/{user_name}/groups/{group_name}',
-    name='UserGroup')
+    path="/users/{user_name}/groups/{group_name}",
+    name="UserGroup")
 UserInheritedResourcesAPI = Service(
-    path='/users/{user_name}/inherited_resources',
-    name='UserInheritedResources')
+    path="/users/{user_name}/inherited_resources",
+    name="UserInheritedResources")
 UserResourcesAPI = Service(
-    path='/users/{user_name}/resources',
-    name='UserResources')
+    path="/users/{user_name}/resources",
+    name="UserResources")
 UserResourceInheritedPermissionsAPI = Service(
-    path='/users/{user_name}/resources/{resource_id}/inherited_permissions',
-    name='UserResourceInheritedPermissions')
+    path="/users/{user_name}/resources/{resource_id}/inherited_permissions",
+    name="UserResourceInheritedPermissions")
 UserResourcePermissionAPI = Service(
-    path='/users/{user_name}/resources/{resource_id}/permissions/{permission_name}',
-    name='UserResourcePermission')
+    path="/users/{user_name}/resources/{resource_id}/permissions/{permission_name}",
+    name="UserResourcePermission")
 UserResourcePermissionsAPI = Service(
-    path='/users/{user_name}/resources/{resource_id}/permissions',
-    name='UserResourcePermissions')
+    path="/users/{user_name}/resources/{resource_id}/permissions",
+    name="UserResourcePermissions")
 UserResourceTypesAPI = Service(
-    path='/users/{user_name}/resources/types/{resource_type}',
-    name='UserResourceTypes')
+    path="/users/{user_name}/resources/types/{resource_type}",
+    name="UserResourceTypes")
 UserInheritedServicesAPI = Service(
-    path='/users/{user_name}/inherited_services',
-    name='UserInheritedServices')
+    path="/users/{user_name}/inherited_services",
+    name="UserInheritedServices")
 UserServicesAPI = Service(
-    path='/users/{user_name}/services',
-    name='UserServices')
+    path="/users/{user_name}/services",
+    name="UserServices")
 UserServiceAPI = Service(
-    path='/users/{user_name}/services/{service_name}',
-    name='UserService')
+    path="/users/{user_name}/services/{service_name}",
+    name="UserService")
 UserServiceInheritedResourcesAPI = Service(
-    path='/users/{user_name}/services/{service_name}/inherited_resources',
-    name='UserServiceInheritedResources')
+    path="/users/{user_name}/services/{service_name}/inherited_resources",
+    name="UserServiceInheritedResources")
 UserServiceResourcesAPI = Service(
-    path='/users/{user_name}/services/{service_name}/resources',
-    name='UserServiceResources')
+    path="/users/{user_name}/services/{service_name}/resources",
+    name="UserServiceResources")
 UserServiceInheritedPermissionsAPI = Service(
-    path='/users/{user_name}/services/{service_name}/inherited_permissions',
-    name='UserServiceInheritedPermissions')
+    path="/users/{user_name}/services/{service_name}/inherited_permissions",
+    name="UserServiceInheritedPermissions")
 UserServicePermissionsAPI = Service(
-    path='/users/{user_name}/services/{service_name}/permissions',
-    name='UserServicePermissions')
+    path="/users/{user_name}/services/{service_name}/permissions",
+    name="UserServicePermissions")
 UserServicePermissionAPI = Service(
-    path='/users/{user_name}/services/{service_name}/permissions/{permission_name}',
-    name='UserServicePermission')
+    path="/users/{user_name}/services/{service_name}/permissions/{permission_name}",
+    name="UserServicePermission")
 LoggedUserAPI = Service(
     path=LoggedUserBase,
-    name='LoggedUser')
+    name="LoggedUser")
 LoggedUserGroupsAPI = Service(
-    path=LoggedUserBase + '/groups',
-    name='LoggedUserGroups')
+    path=LoggedUserBase + "/groups",
+    name="LoggedUserGroups")
 LoggedUserGroupAPI = Service(
-    path=LoggedUserBase + '/groups/{group_name}',
-    name='LoggedUserGroup')
+    path=LoggedUserBase + "/groups/{group_name}",
+    name="LoggedUserGroup")
 LoggedUserInheritedResourcesAPI = Service(
-    path=LoggedUserBase + '/inherited_resources',
-    name='LoggedUserInheritedResources')
+    path=LoggedUserBase + "/inherited_resources",
+    name="LoggedUserInheritedResources")
 LoggedUserResourcesAPI = Service(
-    path=LoggedUserBase + '/resources',
-    name='LoggedUserResources')
+    path=LoggedUserBase + "/resources",
+    name="LoggedUserResources")
 LoggedUserResourceInheritedPermissionsAPI = Service(
-    path=LoggedUserBase + '/resources/{resource_id}/inherited_permissions',
-    name='LoggedUserResourceInheritedPermissions')
+    path=LoggedUserBase + "/resources/{resource_id}/inherited_permissions",
+    name="LoggedUserResourceInheritedPermissions")
 LoggedUserResourcePermissionAPI = Service(
-    path=LoggedUserBase + '/resources/{resource_id}/permissions/{permission_name}',
-    name='LoggedUserResourcePermission')
+    path=LoggedUserBase + "/resources/{resource_id}/permissions/{permission_name}",
+    name="LoggedUserResourcePermission")
 LoggedUserResourcePermissionsAPI = Service(
-    path=LoggedUserBase + '/resources/{resource_id}/permissions',
-    name='LoggedUserResourcePermissions')
+    path=LoggedUserBase + "/resources/{resource_id}/permissions",
+    name="LoggedUserResourcePermissions")
 LoggedUserResourceTypesAPI = Service(
-    path=LoggedUserBase + '/resources/types/{resource_type}',
-    name='LoggedUserResourceTypes')
+    path=LoggedUserBase + "/resources/types/{resource_type}",
+    name="LoggedUserResourceTypes")
 LoggedUserInheritedServicesAPI = Service(
-    path=LoggedUserBase + '/inherited_services',
-    name='LoggedUserInheritedServices')
+    path=LoggedUserBase + "/inherited_services",
+    name="LoggedUserInheritedServices")
 LoggedUserServicesAPI = Service(
-    path=LoggedUserBase + '/services',
-    name='LoggedUserServices')
+    path=LoggedUserBase + "/services",
+    name="LoggedUserServices")
 LoggedUserServiceInheritedResourcesAPI = Service(
-    path=LoggedUserBase + '/services/{service_name}/inherited_resources',
-    name='LoggedUserServiceInheritedResources')
+    path=LoggedUserBase + "/services/{service_name}/inherited_resources",
+    name="LoggedUserServiceInheritedResources")
 LoggedUserServiceResourcesAPI = Service(
-    path=LoggedUserBase + '/services/{service_name}/resources',
-    name='LoggedUserServiceResources')
+    path=LoggedUserBase + "/services/{service_name}/resources",
+    name="LoggedUserServiceResources")
 LoggedUserServiceInheritedPermissionsAPI = Service(
-    path=LoggedUserBase + '/services/{service_name}/inherited_permissions',
-    name='LoggedUserServiceInheritedPermissions')
+    path=LoggedUserBase + "/services/{service_name}/inherited_permissions",
+    name="LoggedUserServiceInheritedPermissions")
 LoggedUserServicePermissionsAPI = Service(
-    path=LoggedUserBase + '/services/{service_name}/permissions',
-    name='LoggedUserServicePermissions')
+    path=LoggedUserBase + "/services/{service_name}/permissions",
+    name="LoggedUserServicePermissions")
 LoggedUserServicePermissionAPI = Service(
-    path=LoggedUserBase + '/services/{service_name}/permissions/{permission_name}',
-    name='LoggedUserServicePermission')
+    path=LoggedUserBase + "/services/{service_name}/permissions/{permission_name}",
+    name="LoggedUserServicePermission")
 GroupsAPI = Service(
-    path='/groups',
-    name='Groups')
+    path="/groups",
+    name="Groups")
 GroupAPI = Service(
-    path='/groups/{group_name}',
-    name='Group')
+    path="/groups/{group_name}",
+    name="Group")
 GroupUsersAPI = Service(
-    path='/groups/{group_name}/users',
-    name='GroupUsers')
+    path="/groups/{group_name}/users",
+    name="GroupUsers")
 GroupServicesAPI = Service(
-    path='/groups/{group_name}/services',
-    name='GroupServices')
+    path="/groups/{group_name}/services",
+    name="GroupServices")
 GroupServicePermissionsAPI = Service(
-    path='/groups/{group_name}/services/{service_name}/permissions',
-    name='GroupServicePermissions')
+    path="/groups/{group_name}/services/{service_name}/permissions",
+    name="GroupServicePermissions")
 GroupServicePermissionAPI = Service(
-    path='/groups/{group_name}/services/{service_name}/permissions/{permission_name}',
-    name='GroupServicePermission')
+    path="/groups/{group_name}/services/{service_name}/permissions/{permission_name}",
+    name="GroupServicePermission")
 GroupServiceResourcesAPI = Service(
-    path='/groups/{group_name}/services/{service_name}/resources',
-    name='GroupServiceResources')
+    path="/groups/{group_name}/services/{service_name}/resources",
+    name="GroupServiceResources")
 GroupResourcesAPI = Service(
-    path='/groups/{group_name}/resources',
-    name='GroupResources')
+    path="/groups/{group_name}/resources",
+    name="GroupResources")
 GroupResourcePermissionsAPI = Service(
-    path='/groups/{group_name}/resources/{resource_id}/permissions',
-    name='GroupResourcePermissions')
+    path="/groups/{group_name}/resources/{resource_id}/permissions",
+    name="GroupResourcePermissions")
 GroupResourcePermissionAPI = Service(
-    path='/groups/{group_name}/resources/{resource_id}/permissions/{permission_name}',
-    name='GroupResourcePermission')
+    path="/groups/{group_name}/resources/{resource_id}/permissions/{permission_name}",
+    name="GroupResourcePermission")
 GroupResourceTypesAPI = Service(
-    path='/groups/{group_name}/resources/types/{resource_type}',
-    name='GroupResourceTypes')
+    path="/groups/{group_name}/resources/types/{resource_type}",
+    name="GroupResourceTypes")
 ResourcesAPI = Service(
-    path='/resources',
-    name='Resources')
+    path="/resources",
+    name="Resources")
 ResourceAPI = Service(
-    path='/resources/{resource_id}',
-    name='Resource')
+    path="/resources/{resource_id}",
+    name="Resource")
 ResourcePermissionsAPI = Service(
-    path='/resources/{resource_id}/permissions',
-    name='ResourcePermissions')
+    path="/resources/{resource_id}/permissions",
+    name="ResourcePermissions")
 ServicesAPI = Service(
-    path='/services',
-    name='Services')
+    path="/services",
+    name="Services")
 ServiceAPI = Service(
-    path='/services/{service_name}',
-    name='Service')
+    path="/services/{service_name}",
+    name="Service")
 ServiceTypesAPI = Service(
-    path='/services/types',
-    name='ServiceTypes')
+    path="/services/types",
+    name="ServiceTypes")
 ServiceTypeAPI = Service(
-    path='/services/types/{service_type}',
-    name='ServiceType')
+    path="/services/types/{service_type}",
+    name="ServiceType")
 ServicePermissionsAPI = Service(
-    path='/services/{service_name}/permissions',
-    name='ServicePermissions')
+    path="/services/{service_name}/permissions",
+    name="ServicePermissions")
 ServiceResourcesAPI = Service(
-    path='/services/{service_name}/resources',
-    name='ServiceResources')
+    path="/services/{service_name}/resources",
+    name="ServiceResources")
 ServiceResourceAPI = Service(
-    path='/services/{service_name}/resources/{resource_id}',
-    name='ServiceResource')
+    path="/services/{service_name}/resources/{resource_id}",
+    name="ServiceResource")
 ServiceTypeResourcesAPI = Service(
-    path='/services/types/{service_type}/resources',
-    name='ServiceTypeResources')
+    path="/services/types/{service_type}/resources",
+    name="ServiceTypeResources")
 ServiceTypeResourceTypesAPI = Service(
-    path='/services/types/{service_type}/resources/types',
-    name='ServiceTypeResourceTypes')
+    path="/services/types/{service_type}/resources/types",
+    name="ServiceTypeResourceTypes")
 ProvidersAPI = Service(
-    path='/providers',
-    name='Providers')
+    path="/providers",
+    name="Providers")
 ProviderSigninAPI = Service(
-    path='/providers/{provider_name}/signin',
-    name='ProviderSignin')
+    path="/providers/{provider_name}/signin",
+    name="ProviderSignin")
 SigninAPI = Service(
-    path='/signin',
-    name='signin')
+    path="/signin",
+    name="signin")
 SignoutAPI = Service(
-    path='/signout',
-    name='signout')
+    path="/signout",
+    name="signout")
 SessionAPI = Service(
-    path='/session',
-    name='Session')
+    path="/session",
+    name="Session")
 VersionAPI = Service(
-    path='/version',
-    name='Version')
+    path="/version",
+    name="Version")
 
 
 # Common path parameters
@@ -301,21 +301,21 @@ ServiceNameParameter = colander.SchemaNode(
 class HeaderResponseSchema(colander.MappingSchema):
     content_type = colander.SchemaNode(
         colander.String(),
-        default=JSON_TYPE,
-        example=JSON_TYPE,
-        description='Content type of the response body.',
+        default=CONTENT_TYPE_JSON,
+        example=CONTENT_TYPE_JSON,
+        description="Content type of the response body.",
     )
-    content_type.name = 'Content-Type'
+    content_type.name = "Content-Type"
 
 
 class HeaderRequestSchema(colander.MappingSchema):
     content_type = colander.SchemaNode(
         colander.String(),
-        default=JSON_TYPE,
-        example=JSON_TYPE,
+        default=CONTENT_TYPE_JSON,
+        example=CONTENT_TYPE_JSON,
         missing=colander.drop,
     )
-    content_type.name = 'Content-Type'
+    content_type.name = "Content-Type"
 
 
 QueryEffectivePermissions = colander.SchemaNode(
@@ -343,11 +343,11 @@ class BaseResponseBodySchema(colander.MappingSchema):
         self.__desc = description
 
         # update the values
-        child_nodes = getattr(self, 'children')
+        child_nodes = getattr(self, "children")
         for node in child_nodes:
-            if node.name == 'code':
+            if node.name == "code":
                 node.example = self.__code
-            if node.name == 'detail':
+            if node.name == "detail":
                 node.example = self.__desc
 
     code = colander.SchemaNode(
@@ -357,7 +357,7 @@ class BaseResponseBodySchema(colander.MappingSchema):
     type = colander.SchemaNode(
         colander.String(),
         description="Response content type",
-        example=JSON_TYPE)
+        example=CONTENT_TYPE_JSON)
     detail = colander.SchemaNode(
         colander.String(),
         description="Response status message",
@@ -399,13 +399,13 @@ class ErrorResponseBodySchema(BaseResponseBodySchema):
 
 class InternalServerErrorResponseBodySchema(ErrorResponseBodySchema):
     def __init__(self, **kw):
-        kw['code'] = HTTPInternalServerError.code
+        kw["code"] = HTTPInternalServerError.code
         super(InternalServerErrorResponseBodySchema, self).__init__(**kw)
 
 
 class UnauthorizedResponseBodySchema(BaseResponseBodySchema):
     def __init__(self, **kw):
-        kw['code'] = HTTPUnauthorized.code
+        kw["code"] = HTTPUnauthorized.code
         super(UnauthorizedResponseBodySchema, self).__init__(**kw)
 
     route_name = colander.SchemaNode(colander.String(), description="Specified route")
@@ -523,7 +523,7 @@ class ServiceBodySchema(colander.MappingSchema):
         description="Resource identification number",
     )
     permission_names = PermissionListSchema(
-        example=['read', 'write']
+        example=["read", "write"]
     )
     service_name = colander.SchemaNode(
         colander.String(),
