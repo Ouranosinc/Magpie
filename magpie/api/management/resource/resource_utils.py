@@ -1,5 +1,5 @@
-from magpie.services import SERVICE_TYPE_DICT
-from magpie.register import sync_services_phoenix
+from magpie.api import api_requests as ar, api_except as ax, api_rest_schemas as s
+from magpie.api.management.resource.resource_formats import format_resource
 from magpie.definitions.ziggurat_definitions import ResourceService
 from magpie.definitions.pyramid_definitions import (
     asbool,
@@ -12,34 +12,37 @@ from magpie.definitions.pyramid_definitions import (
     HTTPConflict,
     HTTPInternalServerError,
 )
-from magpie.api import api_requests as ar, api_except as ax, api_rest_schemas as s
-from magpie.api.management.resource.resource_formats import format_resource
 from magpie import models
+from magpie.permissions import Permission
+from magpie.register import sync_services_phoenix
+from magpie.services import SERVICE_TYPE_DICT
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from magpie.definitions.pyramid_definitions import HTTPException  # noqa: F401
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.definitions.typedefs import List, Str, Optional, Tuple, Union  # noqa: F401
-    from magpie.permissions import Permission  # noqa: F401
+    from magpie.definitions.typedefs import List, Str, Optional, Tuple, Type, ServiceOrResourceType  # noqa: F401
     from magpie.services import ServiceInterface  # noqa: F401
 
 
-def check_valid_service_or_resource_permission(permission_name, service_resource, db_session):
+def check_valid_service_or_resource_permission(permission_name, service_or_resource, db_session):
+    # type: (Str, ServiceOrResourceType, Session) -> Optional[Permission]
     """
     Checks if a permission is valid to be applied to a specific `service` or a `resource` under a root service.
 
-    :param permission_name: permission to apply
-    :param service_resource: resource item corresponding to either a Service or a Resource
-    :param db_session:
-    :return:
+    :param permission_name: permission name to be validated
+    :param service_or_resource: resource item corresponding to either a Service or a Resource
+    :param db_session: db connection
+    :return: valid Permission if allowed by the service/resource
     """
-    svc_res_perm_names = [p.value for p in get_resource_permissions(service_resource, db_session=db_session)]
-    svc_res_type = service_resource.resource_type
-    svc_res_name = service_resource.resource_name
-    ax.verify_param(permission_name, paramName=u"permission_name", paramCompare=svc_res_perm_names, isIn=True,
+    svc_res_permissions = get_resource_permissions(service_or_resource, db_session=db_session)
+    svc_res_type = service_or_resource.resource_type
+    svc_res_name = service_or_resource.resource_name
+    svc_res_perm = Permission.get(permission_name)
+    ax.verify_param(svc_res_perm, paramName=u"permission_name", paramCompare=svc_res_permissions, isIn=True,
                     httpError=HTTPBadRequest,
                     content={u"resource_type": str(svc_res_type), u"resource_name": str(svc_res_name)},
                     msgOnFail=s.UserResourcePermissions_POST_BadRequestResponseSchema.description)
+    return svc_res_perm
 
 
 def check_valid_service_resource(parent_resource, resource_type, db_session):
@@ -66,7 +69,7 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
                     paramCompare=True, httpError=HTTPNotAcceptable,
                     msgOnFail="Child resource not allowed for specified service type '{}'".format(root_service.type))
     ax.verify_param(resource_type, isIn=True, httpError=HTTPNotAcceptable,
-                    paramName=u"resource_type", paramCompare=SERVICE_TYPE_DICT[root_service.type].resource_types,
+                    paramName=u"resource_type", paramCompare=SERVICE_TYPE_DICT[root_service.type].resource_type_names,
                     msgOnFail="Invalid 'resource_type' specified for service type '{}'".format(root_service.type))
     return root_service
 
@@ -91,8 +94,8 @@ def get_resource_path(resource_id, db_session):
 
 
 def get_service_or_resource_types(service_or_resource):
-    # type: (Union[models.Service, models.Resource]) -> Tuple[ServiceInterface]
-    """Obtain the `service` or `resource` class """
+    # type: (ServiceOrResourceType) -> Tuple[Type[ServiceInterface], Str]
+    """Obtain the `service` or `resource` class and a corresponding ``"service"`` or ``"resource"`` type identifier."""
     if isinstance(service_or_resource, models.Service):
         svc_res_type_cls = SERVICE_TYPE_DICT[service_or_resource.type]
         svc_res_type_str = u"service"
@@ -120,11 +123,11 @@ def get_resource_permissions(resource, db_session):
     ax.verify_param(service.resource_type, isEqual=True, httpError=HTTPNotAcceptable,
                     paramName=u"resource_type", paramCompare=models.Service.resource_type_name,
                     msgOnFail=s.UserResourcePermissions_GET_NotAcceptableRootServiceResponseSchema.description)
-    service_obj = SERVICE_TYPE_DICT[service.type]
-    ax.verify_param(resource.resource_type, isIn=True, httpError=HTTPNotAcceptable,
-                    paramName=u"resource_type", paramCompare=service_obj.resource_types,
+    service_class = SERVICE_TYPE_DICT[service.type]
+    ax.verify_param(resource.resource_type_name, isIn=True, httpError=HTTPNotAcceptable,
+                    paramName=u"resource_type", paramCompare=service_class.resource_type_names,
                     msgOnFail=s.UserResourcePermissions_GET_NotAcceptableResourceTypeResponseSchema.description)
-    return service_obj.resource_types_permissions[resource.resource_type]
+    return service_class.get_resource_permissions(resource.resource_type_name)
 
 
 def get_resource_root_service(resource, db_session):

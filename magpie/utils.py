@@ -308,3 +308,11 @@ class ExtendedEnumMeta(EnumMeta):
         # type: (Type[Enum]) -> List[AnyKey]
         """Returns the literal values assigned to each enum element."""
         return [m.value for m in cls.__members__.values()]
+
+    def get(cls, key_or_value, default=None):
+        # type: (Type[Enum], AnyKey, Optional[Any]) -> Optional[Type[Enum]]
+        """Finds a enum entry by defined name or its value."""
+        for m_key, m_val in cls.__members__.items():
+            if key_or_value == m_key or key_or_value == m_val.value:
+                return m_val
+        return default

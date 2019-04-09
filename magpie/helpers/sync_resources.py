@@ -5,7 +5,6 @@ To implement a new service, see the _SyncServiceInterface class.
 """
 from magpie import db, models, constants
 from magpie.helpers.sync_services import SYNC_SERVICES_TYPES, is_valid_resource_schema, SyncServiceDefault
-from magpie.definitions.sqlalchemy_definitions import Session, create_engine
 from magpie.utils import get_logger
 from collections import OrderedDict
 import copy
@@ -353,5 +352,5 @@ def main():
     LOGGER.info("Success, exiting.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     fetch()

@@ -6,7 +6,7 @@ LOGGER = get_logger(__name__)
 
 
 def includeme(config):
-    LOGGER.info("Adding swagger ...")
+    LOGGER.info("Adding swagger...")
     config.add_route(**s.service_api_route_info(s.SwaggerAPI))
     config.add_route(**s.service_api_route_info(s.SwaggerGenerator))
     config.add_view(s.api_schema, route_name=s.SwaggerGenerator.name, request_method="GET",

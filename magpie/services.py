@@ -10,7 +10,7 @@ from magpie.definitions.pyramid_definitions import (
 )
 from magpie.api import api_except as ax
 from magpie.owsrequest import ows_parser_factory
-from magpie.permissions import Permission
+from magpie.permissions import Permission, format_permissions
 from magpie import models
 from typing import TYPE_CHECKING
 from six import with_metaclass
@@ -22,9 +22,15 @@ if TYPE_CHECKING:
 class ServiceMeta(type):
     @property
     def resource_types(cls):
+        # type: (Type[ServiceInterface]) -> List[models.Resource]
+        """Allowed resources type classes under the service."""
+        return list(cls.resource_types_permissions.keys())
+
+    @property
+    def resource_type_names(cls):
         # type: (Type[ServiceInterface]) -> List[Str]
         """Allowed resources type names under the service."""
-        return [r.resource_type_name for r in cls.resource_types_permissions]
+        return [r.resource_type_name for r in cls.resource_types]
 
     @property
     def child_resource_allowed(cls):
@@ -36,7 +42,7 @@ class ServiceMeta(type):
         """Obtains the allowed permissions names of the service's child resource fetched by resource type name."""
         for res in cls.resource_types_permissions:  # type: models.Resource
             if res.resource_type_name == resource_type_name:
-                return [p.value for p in res.permissions]
+                return format_permissions(res.permissions)
         return []
 
 

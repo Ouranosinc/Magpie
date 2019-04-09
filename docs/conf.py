@@ -184,7 +184,7 @@ html_static_path = ['_static']
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 # html_show_sphinx = True
 
-# If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
+# If true, "(C) Copyright..." is shown in the HTML footer. Default is True.
 # html_show_copyright = True
 
 # If true, an OpenSearch description file will be output, and all pages will

@@ -168,7 +168,7 @@ def get_service_permissions_view(request):
     """List all applicable permissions for a service."""
     service = ar.get_service_matchdict_checked(request)
     svc_content = sf.format_service(service, show_private_url=True)
-    svc_perms = ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service.type].permission_names,
+    svc_perms = ax.evaluate_call(lambda: [p.value for p in SERVICE_TYPE_DICT[service.type].permissions],
                                  fallback=request.db.rollback(), httpError=HTTPNotAcceptable, content=svc_content,
                                  msgOnFail=s.ServicePermissions_GET_NotAcceptableResponseSchema.description)
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.ServicePermissions_GET_OkResponseSchema.description,
@@ -223,7 +223,7 @@ def get_service_type_resources_view(request):
     ax.verify_param(service_type, paramCompare=SERVICE_TYPE_DICT.keys(), isIn=True, httpError=HTTPNotFound,
                     msgOnFail=s.ServiceTypeResources_GET_NotFoundResponseSchema.description)
     resource_types_names = ax.evaluate_call(
-        lambda: SERVICE_TYPE_DICT[service_type].resource_types,
+        lambda: SERVICE_TYPE_DICT[service_type].resource_type_names,
         httpError=HTTPForbidden, content={u"service_type": str(service_type)},
         msgOnFail=s.ServiceTypeResourceTypes_GET_ForbiddenResponseSchema.description)
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.ServiceTypeResourceTypes_GET_OkResponseSchema.description,
@@ -237,7 +237,7 @@ def get_service_type_resource_types_view(request):
     service_type = ar.get_value_matchdict_checked(request, "service_type")
     ax.verify_param(service_type, paramCompare=SERVICE_TYPE_DICT.keys(), isIn=True, httpError=HTTPNotFound,
                     msgOnFail=s.ServiceTypeResourceTypes_GET_NotFoundResponseSchema.description)
-    resource_types = ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service_type].resource_types,
+    resource_types = ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service_type].resource_type_names,
                                       httpError=HTTPForbidden, content={u"service_type": str(service_type)},
                                       msgOnFail=s.ServiceTypeResourceTypes_GET_ForbiddenResponseSchema.description)
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.ServiceTypeResourceTypes_GET_OkResponseSchema.description,

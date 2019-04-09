@@ -49,6 +49,7 @@ if TYPE_CHECKING:
 
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
+    ServiceOrResourceType = Union[models.Service, models.Resource]
 
     TestAppOrUrlType = Union[Str, TestApp]
     AnyMagpieTestType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase, TestAppOrUrlType]

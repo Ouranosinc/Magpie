@@ -15,7 +15,7 @@ from six.moves.urllib.request import urlopen
 import ssl
 LOGGER = get_logger(__name__)
 
-__all__ = ['ESGFOpenID']
+__all__ = ["ESGFOpenID"]
 
 
 class MyFetcher(Urllib2Fetcher):
@@ -45,12 +45,12 @@ class ESGFOpenID(OpenID):
         """
         super(ESGFOpenID, self).__init__(*args, **kwargs)
 
-        self.hostname = self._kwarg(kwargs, 'hostname', 'localhost')
-        self.provider_url = self._kwarg(kwargs, 'provider_url', 'https://{hostname}/providers-idp/openid/{username}')
+        self.hostname = self._kwarg(kwargs, "hostname", "localhost")
+        self.provider_url = self._kwarg(kwargs, "provider_url", "https://{hostname}/providers-idp/openid/{username}")
 
         # if username is given set provider identifier using the provider url
-        if 'username' in self.params:
-            self.username = self.params.get('username')
+        if "username" in self.params:
+            self.username = self.params.get("username")
             self.identifier = self.provider_url.format(hostname=self.hostname, username=self.username)
 
         # use fetcher with disabled ssl verification

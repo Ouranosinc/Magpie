@@ -153,7 +153,7 @@ def run_database_migration_when_ready(settings, db_session=None):
         attempts = int(get_constant("MAGPIE_DB_MIGRATION_ATTEMPTS", settings, "magpie.db_migration_attempts",
                                     default_value=5, raise_missing=False, raise_not_set=False, print_missing=True))
 
-        print_log("Running database migration (as required) ...")
+        print_log("Running database migration (as required)...")
         attempts = max(attempts, 2)     # enforce at least 2 attempts, 1 for db creation and one for actual migration
         for i in range(1, attempts + 1):
             try:

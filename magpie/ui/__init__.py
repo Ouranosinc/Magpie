@@ -3,7 +3,7 @@ LOGGER = get_logger(__name__)
 
 
 def includeme(config):
-    LOGGER.info("Adding ui routes ...")
+    LOGGER.info("Adding ui routes...")
 
     # Add all the admin ui routes
     config.include("magpie.ui.login")

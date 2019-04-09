@@ -4,7 +4,7 @@ LOGGER = get_logger(__name__)
 
 
 def includeme(config):
-    LOGGER.info('Adding api user ...')
+    LOGGER.info('Adding api user...')
     # Add all the rest api routes
     config.add_route(**s.service_api_route_info(s.UsersAPI))
     config.add_route(**s.service_api_route_info(s.UserAPI))

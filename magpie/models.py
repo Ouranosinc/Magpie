@@ -22,7 +22,7 @@ from magpie.definitions.ziggurat_definitions import (
 from magpie.permissions import Permission
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str  # noqa: F401
+    from magpie.definitions.typedefs import Str, List  # noqa: F401
 
 Base = declarative_base()
 
@@ -64,7 +64,11 @@ class ResourceMeta(type):
 
 
 class Resource(ResourceMixin, Base):
-    permissions = []
+    # required resource type identifier (unique)
+    resource_type_name = None                 # type: Str
+    # permissions allowed for the resource (under a service)
+    permissions = []                    # type: List[Permission]
+
     child_resource_allowed = True
     resource_display_name = sa.Column(sa.Unicode(100), nullable=True)
 
@@ -129,6 +133,11 @@ class Service(Resource):
     __mapper_args__ = {u"polymorphic_identity": resource_type_name,
                        u"inherit_condition": resource_id == Resource.resource_id}
 
+    @property
+    def permissions(self):
+        raise TypeError("Service permissions must be accessed by 'magpie.services.ServiceInterface' "
+                        "instead of 'magpie.models.Service'.")
+
     @declared_attr
     def url(self):
         # http://localhost:8083
@@ -137,13 +146,13 @@ class Service(Resource):
     @declared_attr
     def type(self):
         """Identifier matching ``magpie.services.ServiceInterface.service_type``."""
-        # wps, wms, thredds, ...
+        # wps, wms, thredds,...
         return sa.Column(sa.UnicodeText())
 
     @declared_attr
     def sync_type(self):
         """Identifier matching ``magpie.helpers.SyncServiceInterface.sync_type``."""
-        # project-api, geoserver-api, ...
+        # project-api, geoserver-api,...
         return sa.Column(sa.UnicodeText(), nullable=True)
 
     @staticmethod
@@ -153,7 +162,7 @@ class Service(Resource):
         return service
 
 
-class Path(object):
+class PathBase(object):
     permissions = [
         Permission.READ,
         Permission.WRITE,
@@ -165,13 +174,13 @@ class Path(object):
     ]
 
 
-class File(Resource, Path):
+class File(Resource, PathBase):
     child_resource_allowed = False
     resource_type_name = u"file"
     __mapper_args__ = {u"polymorphic_identity": resource_type_name}
 
 
-class Directory(Resource, Path):
+class Directory(Resource, PathBase):
     resource_type_name = u"directory"
     __mapper_args__ = {u"polymorphic_identity": resource_type_name}
 

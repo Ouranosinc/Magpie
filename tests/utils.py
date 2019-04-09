@@ -79,7 +79,7 @@ def RunDecorator(run_option):
 
     Allows to decorate a function or class such that::
 
-        option = RunDecorator(RunOption('MAGPIE_TEST_CUSTOM_MARKER'))
+        option = RunDecorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
 
         @option
         def test_func():
@@ -88,7 +88,7 @@ def RunDecorator(run_option):
     is equivalent to::
 
         @pytest.mark.custom_marker
-        @unittest.skipUnless(runner.MAGPIE_TEST_CUSTOM_MARKER, reason='...')
+        @unittest.skipUnless(runner.MAGPIE_TEST_CUSTOM_MARKER, reason="...")
         def test_func():
             <test>
 
@@ -108,11 +108,11 @@ class RunOptionDecorator(object):
     """
     Simplifies the call to::
 
-        RunDecorator(RunOption('MAGPIE_TEST_CUSTOM_MARKER'))
+        RunDecorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
 
     by::
 
-        RunOptionDecorator('MAGPIE_TEST_CUSTOM_MARKER')
+        RunOptionDecorator("MAGPIE_TEST_CUSTOM_MARKER")
     """
     def __new__(cls, name):
         return RunDecorator(RunOption(name))

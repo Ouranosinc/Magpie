@@ -10,12 +10,13 @@ from magpie.definitions.pyramid_definitions import (
     HTTPUnprocessableEntity,
     HTTPInternalServerError,
 )
+from magpie.permissions import Permission
 from magpie.utils import CONTENT_TYPE_JSON
 from magpie import models
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from magpie.definitions.pyramid_definitions import Request  # noqa: F401
-    from magpie.definitions.typedefs import Any, Str, Optional  # noqa: F401
+    from magpie.definitions.typedefs import Any, Str, Optional, ServiceOrResourceType  # noqa: F401
 
 
 def get_request_method_content(request):
@@ -25,6 +26,8 @@ def get_request_method_content(request):
 
 
 def get_multiformat_any(request, key, default=None):
+    # type: (Request, Str, Optional[Any]) -> Any
+    """Obtains the ``key`` element from the request body using found `Content-Type` header."""
     msg = "Key '{key}' could not be extracted from '{method}' of type '{type}'" \
           .format(key=repr(key), method=request.method, type=request.content_type)
     if request.content_type == CONTENT_TYPE_JSON:
@@ -49,12 +52,15 @@ def get_multiformat_delete(request, key, default=None):
     return get_multiformat_any(request, key, default)
 
 
-def get_permission_multiformat_post_checked(request, service_resource, permission_name_key="permission_name"):
+def get_permission_multiformat_post_checked(request, service_or_resource, permission_name_key="permission_name"):
+    # type: (Request, ServiceOrResourceType, Str) -> Permission
+    """
+    Retrieves the permission from the body and validates that it is allowed for the specified `service` or `resource`.
+    """
     # import here to avoid circular import error with undefined functions between (api_request, resource_utils)
     from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
     perm_name = get_value_multiformat_post_checked(request, permission_name_key)
-    check_valid_service_or_resource_permission(perm_name, service_resource, request.db)
-    return perm_name
+    return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
 
 
 def get_value_multiformat_post_checked(request, key, default=None):
@@ -132,6 +138,7 @@ def get_group_matchdict_checked(request, group_name_key="group_name"):
 
 
 def get_resource_matchdict_checked(request, resource_name_key="resource_id"):
+    # type: (Request, Str) -> models.Resource
     resource_id = get_value_matchdict_checked(request, resource_name_key)
     resource_id = evaluate_call(lambda: int(resource_id), httpError=HTTPNotAcceptable,
                                 msgOnFail=s.Resource_MatchDictCheck_NotAcceptableResponseSchema.description)
@@ -154,7 +161,7 @@ def get_service_matchdict_checked(request, service_name_key="service_name"):
 
 
 def get_permission_matchdict_checked(request, service_or_resource, permission_name_key="permission_name"):
-    # type: (Request, models.Resource, Str) -> Str
+    # type: (Request, models.Resource, Str) -> Permission
     """
     Obtains the `permission` specified in the ``request`` path and validates that it is allowed for the
     specified ``service_or_resource`` which can be a `service` or a children `resource`.
@@ -167,8 +174,7 @@ def get_permission_matchdict_checked(request, service_or_resource, permission_na
     # import here to avoid circular import error with undefined functions between (api_request, resource_utils)
     from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
     perm_name = get_value_matchdict_checked(request, permission_name_key)
-    check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
-    return perm_name
+    return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
 
 
 def get_value_matchdict_checked(request, key):

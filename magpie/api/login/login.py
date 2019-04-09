@@ -31,7 +31,7 @@ from magpie.api.api_requests import get_multiformat_post, get_value_multiformat_
 from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
 from magpie.constants import get_constant
-from magpie.models import User, ExternalIdentity
+from magpie import models
 from magpie.utils import get_magpie_url, convert_response, get_logger, CONTENT_TYPE_JSON
 from authomatic.adapters import WebObAdapter
 from authomatic.core import LoginResult, Credentials, resolve_provider_class
@@ -118,7 +118,8 @@ def login_failure(request, reason=None):
             http_err = HTTPBadRequest
             reason = s.Signin_POST_BadRequestResponseSchema.description
         else:
-            user_name_list = ax.evaluate_call(lambda: [user.user_name for user in User.all(db_session=request.db)],
+            user_name_list = ax.evaluate_call(lambda: [user.user_name for user in
+                                                       UserService.all(models.User, db_session=request.db)],
                                               fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                                               msgOnFail=s.Signin_POST_ForbiddenResponseSchema.description)
             if user_name in user_name_list:
@@ -138,8 +139,8 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
 
     user = UserService.by_user_name(internal_user_name, db_session=db_session)
     # noinspection PyArgumentList
-    ex_identity = ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
-                                   local_user_id=user.id, provider_name=provider_name)
+    ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
+                                          local_user_id=user.id, provider_name=provider_name)
     ax.evaluate_call(lambda: db_session.add(ex_identity), fallback=lambda: db_session.rollback(),
                      httpError=HTTPConflict, msgOnFail=s.Signin_POST_ConflictResponseSchema.description,
                      content={u"provider_name": str(provider_name),

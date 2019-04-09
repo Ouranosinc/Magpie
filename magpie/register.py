@@ -563,7 +563,7 @@ def parse_resource_path(permission_config_entry,    # type: ConfigItem
                         parent = res_info["resource_id"]
                         continue
                 # missing resource, attempt creation
-                svc_res_types = SERVICE_TYPE_DICT[svc_type].resource_types
+                svc_res_types = SERVICE_TYPE_DICT[svc_type].resource_type_names
                 type_count = len(svc_res_types)
                 if type_count != 1:
                     warn_permission("Cannot automatically generate resources", entry_index,
@@ -637,15 +637,15 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
         if _usr_name:
             usr = UserService.by_user_name(_usr_name, db_session=cookies_or_session)
             if create_perm:
-                return ut.create_user_resource_permission(perm_name, res, usr, db_session=cookies_or_session)
+                return ut.create_user_resource_permission_response(usr, res, perm, db_session=cookies_or_session)
             else:
-                return ut.delete_user_resource_permission(perm_name, res, usr, db_session=cookies_or_session)
+                return ut.delete_user_resource_permission_response(usr, res, perm, db_session=cookies_or_session)
         if _grp_name:
             grp = GroupService.by_group_name(_grp_name, db_session=cookies_or_session)
             if create_perm:
-                return gt.create_group_resource_permission(perm_name, res, grp, db_session=cookies_or_session)
+                return gt.create_group_resource_permission_response(grp, res, perm, db_session=cookies_or_session)
             else:
-                return gt.delete_group_resource_permission(perm_name, res, grp, db_session=cookies_or_session)
+                return gt.delete_group_resource_permission_response(grp, res, perm, db_session=cookies_or_session)
 
     def _apply_profile(_usr_name=None, _grp_name=None):
         """Creates the user/group profile as required."""
@@ -704,6 +704,7 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
     perm_name = permission_config_entry["permission"]
     usr_name = permission_config_entry.get("user")
     grp_name = permission_config_entry.get("group")
+    perm = Permission.get(perm_name)
 
     _validate_response(lambda: _apply_profile(usr_name, None), is_create=True)
     _validate_response(lambda: _apply_profile(None, grp_name), is_create=True)
@@ -743,28 +744,28 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
         cookies_or_session = db_session
 
     logging.info("Found {} permissions to update.".format(len(permissions)))
-    for i, perm in enumerate(permissions):
+    for i, perm_cfg in enumerate(permissions):
         # parameter validation
-        if not isinstance(perm, dict) or not all(f in perm for f in ["permission", "service"]):
-            warn_permission("Invalid permission format for [{!s}]".format(perm), i)
+        if not isinstance(perm_cfg, dict) or not all(f in perm_cfg for f in ["permission", "service"]):
+            warn_permission("Invalid permission format for [{!s}]".format(perm_cfg), i)
             continue
-        if perm["permission"] not in Permission.values():
-            warn_permission("Unknown permission [{!s}]".format(perm['permission']), i)
+        if perm_cfg["permission"] not in Permission.values():
+            warn_permission("Unknown permission [{!s}]".format(perm_cfg['permission']), i)
             continue
-        usr_name = perm.get("user")
-        grp_name = perm.get("group")
+        usr_name = perm_cfg.get("user")
+        grp_name = perm_cfg.get("group")
         if not any([usr_name, grp_name]):
             warn_permission("Missing required user and/or group field.", i)
             continue
-        if "action" not in perm:
+        if "action" not in perm_cfg:
             warn_permission("Unspecified action", i, trail="using default (create)...")
-            perm["action"] = "create"
-        if perm["action"] not in ["create", "remove"]:
-            warn_permission("Unknown action [{!s}]".format(perm["action"]), i)
+            perm_cfg["action"] = "create"
+        if perm_cfg["action"] not in ["create", "remove"]:
+            warn_permission("Unknown action [{!s}]".format(perm_cfg["action"]), i)
             continue
 
         # retrieve service for permissions validation
-        svc_name = perm["service"]
+        svc_name = perm_cfg["service"]
         if use_request(cookies_or_session):
             svc_path = magpie_url + ServiceAPI.path.format(service_name=svc_name)
             svc_resp = requests.get(svc_path, cookies=cookies_or_session)
@@ -782,11 +783,11 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
             service_info = format_service(svc)
 
         # apply permission config
-        resource_id, found = parse_resource_path(perm, i, service_info, cookies_or_session, magpie_url)
+        resource_id, found = parse_resource_path(perm_cfg, i, service_info, cookies_or_session, magpie_url)
         if found:
             if not resource_id:
                 resource_id = service_info["resource_id"]
-            apply_permission_entry(perm, i, resource_id, cookies_or_session, magpie_url)
+            apply_permission_entry(perm_cfg, i, resource_id, cookies_or_session, magpie_url)
 
     if not use_request(cookies_or_session):
         transaction.commit()
