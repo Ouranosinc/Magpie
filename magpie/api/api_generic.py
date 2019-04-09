@@ -17,8 +17,8 @@ from simplejson import JSONDecodeError
 
 def internal_server_error(request):
     content = get_request_info(request, default_message=s.InternalServerErrorResponseSchema.description)
-    return raise_http(nothrow=True, httpError=HTTPInternalServerError, detail=content['detail'], content=content,
-                      contentType=get_header('Accept', request.headers, default=CONTENT_TYPE_JSON, split=';,'))
+    return raise_http(nothrow=True, httpError=HTTPInternalServerError, detail=content["detail"], content=content,
+                      contentType=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
 
 
 def not_found_or_method_not_allowed(request):
@@ -40,8 +40,8 @@ def not_found_or_method_not_allowed(request):
         http_err = HTTPNotFound
         http_msg = s.NotFoundResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
-    return raise_http(nothrow=True, httpError=http_err, detail=content['detail'], content=content,
-                      contentType=get_header('Accept', request.headers, default=CONTENT_TYPE_JSON, split=';,'))
+    return raise_http(nothrow=True, httpError=http_err, detail=content["detail"], content=content,
+                      contentType=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
 
 
 def unauthorized_or_forbidden(request):
@@ -66,27 +66,31 @@ def unauthorized_or_forbidden(request):
             http_msg = s.UnauthorizedResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
 
-    return raise_http(nothrow=True, httpError=http_err, detail=content['detail'], content=content,
-                      contentType=get_header('Accept', request.headers, default=CONTENT_TYPE_JSON, split=';,'))
+    return raise_http(nothrow=True, httpError=http_err, detail=content["detail"], content=content,
+                      contentType=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
 
 
 def get_request_info(request, default_message="undefined"):
-    content = {u'route_name': str(request.upath_info), u'request_url': str(request.url),
-               u'detail': default_message, u'method': request.method}
-    if hasattr(request, 'exception'):
-        # handle error raised simply by checking for 'json' property in python 3 when body is invalid
+    content = {
+        u"route_name": str(request.upath_info),
+        u"request_url": str(request.url),
+        u"detail": default_message,
+        u"method": request.method
+    }
+    if hasattr(request, "exception"):
+        # handle error raised simply by checking for "json" property in python 3 when body is invalid
         has_json = False
         try:
-            has_json = hasattr(request.exception, 'json')
+            has_json = hasattr(request.exception, "json")
         except JSONDecodeError:
             pass
         if has_json and isinstance(request.exception.json, dict):
             content.update(request.exception.json)
-        elif isinstance(request.exception, HTTPServerError) and hasattr(request.exception, 'message'):
-            content.update({u'exception': str(request.exception.message)})
-        if not content[u'detail']:
-            content[u'detail'] = str(request.exception)
-    elif hasattr(request, 'matchdict'):
-        if request.matchdict is not None and request.matchdict != '':
+        elif isinstance(request.exception, HTTPServerError) and hasattr(request.exception, "message"):
+            content.update({u"exception": str(request.exception.message)})
+        if not content[u"detail"]:
+            content[u"detail"] = str(request.exception)
+    elif hasattr(request, "matchdict"):
+        if request.matchdict is not None and request.matchdict != "":
             content.update(request.matchdict)
     return content

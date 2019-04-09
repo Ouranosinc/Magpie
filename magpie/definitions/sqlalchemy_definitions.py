@@ -5,6 +5,8 @@ from sqlalchemy.dialects.postgresql.base import PGDialect                       
 # noinspection PyUnresolvedReferences
 from sqlalchemy.engine import reflection                                                        # noqa: F401
 # noinspection PyUnresolvedReferences
+from sqlalchemy.engine.base import Engine                                                       # noqa: F401
+# noinspection PyUnresolvedReferences
 from sqlalchemy.engine.reflection import Inspector                                              # noqa: F401
 # noinspection PyUnresolvedReferences
 from sqlalchemy.ext.declarative import declarative_base, declared_attr                          # noqa: F401

@@ -14,29 +14,31 @@ if TYPE_CHECKING:
 
 
 def format_service(service, permissions=None, show_private_url=False, show_resources_allowed=False):
-    # type: (Service, Optional[Permission], Optional[bool], Optional[bool]) -> JSON
+    # type: (Service, Optional[List[Permission]], bool, bool) -> JSON
     def fmt_svc(svc, perms):
+
         svc_info = {
-            u'public_url': str(get_twitcher_protected_service_url(svc.resource_name)),
-            u'service_name': str(svc.resource_name),
-            u'service_type': str(svc.type),
-            u'service_sync_type': str(svc.sync_type) if svc.sync_type is not None else svc.sync_type,
-            u'resource_id': svc.resource_id,
-            u'permission_names': sorted(SERVICE_TYPE_DICT[svc.type].permissions
-                                        if perms is None else [p.value for p in perms])
+            u"public_url": str(get_twitcher_protected_service_url(svc.resource_name)),
+            u"service_name": str(svc.resource_name),
+            u"service_type": str(svc.type),
+            u"service_sync_type": str(svc.sync_type) if svc.sync_type is not None else svc.sync_type,
+            u"resource_id": svc.resource_id,
         }
+        if not perms:
+            perms = SERVICE_TYPE_DICT[svc.type].permissions
+        svc_info[u"permission_names"] = sorted([p.value for p in perms])
         if show_private_url:
-            svc_info[u'service_url'] = str(svc.url)
+            svc_info[u"service_url"] = str(svc.url)
         if show_resources_allowed:
-            svc_info[u'resource_types_allowed'] = sorted(SERVICE_TYPE_DICT[svc.type].resource_types)
-            svc_info[u'resource_child_allowed'] = SERVICE_TYPE_DICT[svc.type].child_resource_allowed
+            svc_info[u"resource_types_allowed"] = sorted(SERVICE_TYPE_DICT[svc.type].resource_types)
+            svc_info[u"resource_child_allowed"] = SERVICE_TYPE_DICT[svc.type].child_resource_allowed
         return svc_info
 
     return evaluate_call(
         lambda: fmt_svc(service, permissions),
         httpError=HTTPInternalServerError,
         msgOnFail="Failed to format service.",
-        content={u'service': repr(service), u'permissions': repr(permissions)}
+        content={u"service": repr(service), u"permissions": repr(permissions)}
     )
 
 
@@ -44,8 +46,8 @@ def format_service_resources(service,                       # type: Service
                              db_session,                    # type: Session
                              service_perms=None,            # type: Optional[List[AnyStr]]
                              resources_perms_dict=None,     # type: Optional[Dict[AnyStr, List[AnyStr]]]
-                             show_all_children=False,       # type: Optional[bool]
-                             show_private_url=True,         # type: Optional[bool]
+                             show_all_children=False,       # type: bool
+                             show_private_url=True,         # type: bool
                              ):                             # type: (...) -> JSON
     """
     Formats the service and its resource tree as a JSON body.
@@ -65,7 +67,7 @@ def format_service_resources(service,                       # type: Service
 
         svc_perms = SERVICE_TYPE_DICT[svc.type].permission_names if svc_perms is None else svc_perms
         svc_res = format_service(svc, svc_perms, show_private_url=show_private_url)
-        svc_res[u'resources'] = format_resource_tree(tree, resources_perms_dict=res_perms, db_session=db)
+        svc_res[u"resources"] = format_resource_tree(tree, resources_perms_dict=res_perms, db_session=db)
         return svc_res
 
     return evaluate_call(
@@ -79,7 +81,7 @@ def format_service_resources(service,                       # type: Service
 def format_service_resource_type(resource_type, service_type):
     # type: (Resource, ServiceInterface) -> JSON
     return {
-        u'resource_type': resource_type.resource_type_name,
-        u'resource_child_allowed': resource_type.child_resource_allowed,
-        u'permission_names': service_type.resource_types_permissions[resource_type.resource_type_name],
+        u"resource_type": resource_type.resource_type_name,
+        u"resource_child_allowed": resource_type.child_resource_allowed,
+        u"permission_names": service_type.get_resource_permissions(resource_type),
     }

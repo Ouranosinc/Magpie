@@ -23,13 +23,21 @@ class ServiceMeta(type):
     @property
     def resource_types(cls):
         # type: (Type[ServiceInterface]) -> List[Str]
-        """Allowed resources types under the service."""
-        return list(cls.resource_types_permissions.keys())
+        """Allowed resources type names under the service."""
+        return [r.resource_type_name for r in cls.resource_types_permissions]
 
     @property
     def child_resource_allowed(cls):
         # type: (Type[ServiceInterface]) -> bool
         return len(cls.resource_types) > 0
+
+    def get_resource_permissions(cls, resource_type_name):
+        # type: (Type[ServiceInterface], Str) -> List[Str]
+        """Obtains the allowed permissions names of the service's child resource fetched by resource type name."""
+        for res in cls.resource_types_permissions:  # type: models.Resource
+            if res.resource_type_name == resource_type_name:
+                return [p.value for p in res.permissions]
+        return []
 
 
 class ServiceInterface(with_metaclass(ServiceMeta)):
@@ -76,9 +84,9 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
         # type: () -> Str
         try:
             return self.parser.params[u"request"]
-        except Exception as e:
+        except KeyError as ex:
             # if 'ServiceInterface', 'params_expected' is empty and will raise a KeyError
-            raise NotImplementedError("Exception: [" + repr(e) + "]")
+            raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(ex, type(self)))
 
     def effective_permissions(self, resource, user):
         # type: (models.Resource, models.User) -> List[ResourcePermissionType]
@@ -307,9 +315,9 @@ class ServiceAPI(ServiceInterface):
 
     @property
     def __acl__(self):
-        return self.route_acl()
+        return self._route_acl()
 
-    def route_acl(self, sub_api_route=None):
+    def _route_acl(self, sub_api_route=None):
         self.expand_acl(self.service, self.request.user)
 
         match_index = 0
@@ -461,6 +469,8 @@ class ServiceTHREDDS(ServiceInterface):
 
 SERVICE_TYPE_DICT = dict()
 for svc in [ServiceAccess, ServiceAPI, ServiceGeoserverWMS, ServiceNCWMS2, ServiceTHREDDS, ServiceWFS, ServiceWPS]:
+    if svc.service_type in SERVICE_TYPE_DICT:
+        raise KeyError("Duplicate resource type identifiers not allowed")
     SERVICE_TYPE_DICT[svc.service_type] = svc
 
 

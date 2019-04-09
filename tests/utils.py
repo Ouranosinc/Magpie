@@ -1,6 +1,7 @@
 from magpie import __meta__, services, app
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import asbool
+from magpie.services import ServiceAccess
 from magpie.utils import get_magpie_url, get_settings_from_config_ini, get_header, CONTENT_TYPE_JSON, CONTENT_TYPE_HTML
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
@@ -142,7 +143,7 @@ def get_app_or_url(test_item):
     # type: (AnyMagpieTestType) -> TestAppOrUrlType
     if isinstance(test_item, TestApp) or isinstance(test_item, six.string_types):
         return test_item
-    app_or_url = getattr(test_item, 'app', None) or getattr(test_item, 'url', None)
+    app_or_url = getattr(test_item, "app", None) or getattr(test_item, "url", None)
     if not app_or_url:
         raise ValueError("Invalid test class, application or URL could not be found.")
     return app_or_url
@@ -175,12 +176,12 @@ def get_json_body(response):
 def get_service_types_for_version(version):
     available_service_types = set(services.SERVICE_TYPE_DICT.keys())
     if LooseVersion(version) <= LooseVersion("0.6.1"):
-        available_service_types = available_service_types - {"access"}
+        available_service_types = available_service_types - {ServiceAccess.service_type}
     return list(available_service_types)
 
 
 def warn_version(test, functionality, version, skip=True):
-    # type: (Base_Magpie_TestCase, Str, Str, Optional[bool]) -> None
+    # type: (Base_Magpie_TestCase, Str, Str, bool) -> None
     """
     Verifies that ``test.version`` value meets the minimal ``version`` requirement to execute a test.
     (ie: ``test.version >= version``).
@@ -480,7 +481,7 @@ def check_response_basic_info(response, expected_code=200, expected_type=CONTENT
 
 def check_ui_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_HTML):
     msg = None \
-        if get_header('Content-Type', response.headers) != CONTENT_TYPE_JSON \
+        if get_header("Content-Type", response.headers) != CONTENT_TYPE_JSON \
         else "Response body: {}".format(get_json_body(response))
     check_val_equal(response.status_code, expected_code, msg=msg)
     check_val_is_in("Content-Type", dict(response.headers))

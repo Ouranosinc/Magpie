@@ -7,7 +7,7 @@ from typing import (  # noqa: F401
 )
 if TYPE_CHECKING:
     from magpie.definitions.sqlalchemy_definitions import Session
-    from magpie.models import GroupPermission, UserPermission
+    from magpie import models
     from webob.headers import ResponseHeaders, EnvironHeaders
     from webob.response import Response as WebobResponse
     from webtest.response import TestResponse
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     Number = Union[int, float]
     SettingValue = Union[Str, Number, bool, None]
     SettingsType = Dict[Str, SettingValue]
-    SettingsContainer = Union[Configurator, Registry, Request, SettingsType]
+    AnySettingsContainer = Union[Configurator, Registry, Request, SettingsType]
 
     ParamsType = Dict[Str, Any]
     CookiesType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     JSON = Dict[AnyKey, BaseJSON]
 
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
-    ResourcePermissionType = Union[GroupPermission, UserPermission]
+    ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
 
     TestAppOrUrlType = Union[Str, TestApp]
     AnyMagpieTestType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase, TestAppOrUrlType]

@@ -19,8 +19,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from magpie.definitions.pyramid_definitions import HTTPException  # noqa: F401
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.definitions.typedefs import List, Str, Optional  # noqa: F401
+    from magpie.definitions.typedefs import List, Str, Optional, Tuple, Union  # noqa: F401
     from magpie.permissions import Permission  # noqa: F401
+    from magpie.services import ServiceInterface  # noqa: F401
 
 
 def check_valid_service_or_resource_permission(permission_name, service_resource, db_session):
@@ -89,18 +90,20 @@ def get_resource_path(resource_id, db_session):
     return parent_path
 
 
-def get_service_or_resource_types(service_resource):
-    if isinstance(service_resource, models.Service):
-        svc_res_type_obj = SERVICE_TYPE_DICT[service_resource.type]
+def get_service_or_resource_types(service_or_resource):
+    # type: (Union[models.Service, models.Resource]) -> Tuple[ServiceInterface]
+    """Obtain the `service` or `resource` class """
+    if isinstance(service_or_resource, models.Service):
+        svc_res_type_cls = SERVICE_TYPE_DICT[service_or_resource.type]
         svc_res_type_str = u"service"
-    elif isinstance(service_resource, models.Resource):
-        svc_res_type_obj = models.RESOURCE_TYPE_DICT[service_resource.resource_type]
+    elif isinstance(service_or_resource, models.Resource):
+        svc_res_type_cls = models.RESOURCE_TYPE_DICT[service_or_resource.resource_type]
         svc_res_type_str = u"resource"
     else:
         ax.raise_http(httpError=HTTPInternalServerError, detail="Invalid service/resource object",
-                      content={u"service_resource": repr(type(service_resource))})
+                      content={u"service_resource": repr(type(service_or_resource))})
     # noinspection PyUnboundLocalVariable
-    return svc_res_type_obj, svc_res_type_str
+    return svc_res_type_cls, svc_res_type_str
 
 
 def get_resource_permissions(resource, db_session):
@@ -110,7 +113,7 @@ def get_resource_permissions(resource, db_session):
     # directly access the service resource
     if resource.root_service_id is None:
         service = resource
-        return SERVICE_TYPE_DICT[service.type].permission_names
+        return SERVICE_TYPE_DICT[service.type].permissions
 
     # otherwise obtain root level service to infer sub-resource permissions
     service = ResourceService.by_resource_id(resource.root_service_id, db_session=db_session)
@@ -148,7 +151,7 @@ def create_resource(resource_name, resource_display_name, resource_type, parent_
     ax.verify_param(resource_type, paramName=u"resource_type", notNone=True, notEmpty=True, httpError=HTTPBadRequest,
                     msgOnFail="Invalid 'resource_type' specified for child resource creation.")
     ax.verify_param(parent_id, paramName=u"parent_id", notNone=True, notEmpty=True, paramCompare=int, ofType=True,
-                    httpError=HTTPBadRequest, msgOnFail="Invalid `parent_id` specified for child resource creation.")
+                    httpError=HTTPBadRequest, msgOnFail="Invalid 'parent_id' specified for child resource creation.")
     parent_resource = ax.evaluate_call(lambda: ResourceService.by_resource_id(parent_id, db_session=db_session),
                                        fallback=lambda: db_session.rollback(), httpError=HTTPNotFound,
                                        msgOnFail=s.Resources_POST_NotFoundResponseSchema.description,
@@ -166,10 +169,10 @@ def create_resource(resource_name, resource_display_name, resource_type, parent_
     # Two resources with the same parent can't have the same name !
     tree_struct = models.resource_tree_service.from_parent_deeper(parent_id, limit_depth=1, db_session=db_session)
     tree_struct_dict = models.resource_tree_service.build_subtree_strut(tree_struct)
-    direct_children = tree_struct_dict[u'children']
-    ax.verify_param(resource_name, paramName=u'resource_name', notIn=True, httpError=HTTPConflict,
+    direct_children = tree_struct_dict[u"children"]
+    ax.verify_param(resource_name, paramName=u"resource_name", notIn=True, httpError=HTTPConflict,
                     msgOnFail=s.Resources_POST_ConflictResponseSchema.description,
-                    paramCompare=[child_dict[u'node'].resource_name for child_dict in direct_children.values()])
+                    paramCompare=[child_dict[u"node"].resource_name for child_dict in direct_children.values()])
 
     def add_resource_in_tree(new_res, db):
         db_session.add(new_res)
@@ -181,13 +184,13 @@ def create_resource(resource_name, resource_display_name, resource_type, parent_
                      fallback=lambda: db_session.rollback(),
                      httpError=HTTPForbidden, msgOnFail=s.Resources_POST_ForbiddenResponseSchema.description)
     return ax.valid_http(httpSuccess=HTTPCreated, detail=s.Resources_POST_CreatedResponseSchema.description,
-                         content={u'resource': format_resource(new_resource, basic_info=True)})
+                         content={u"resource": format_resource(new_resource, basic_info=True)})
 
 
 def delete_resource(request):
     resource = ar.get_resource_matchdict_checked(request)
-    service_push = asbool(ar.get_multiformat_post(request, 'service_push'))
-    res_content = {u'resource': format_resource(resource, basic_info=True)}
+    service_push = asbool(ar.get_multiformat_post(request, "service_push"))
+    res_content = {u"resource": format_resource(resource, basic_info=True)}
     ax.evaluate_call(
         lambda: models.resource_tree_service.delete_branch(resource_id=resource.resource_id, db_session=request.db),
         fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
@@ -195,7 +198,7 @@ def delete_resource(request):
     )
 
     def remove_service_magpie_and_phoenix(res, svc_push, db):
-        if res.resource_type != 'service':
+        if res.resource_type != "service":
             svc_push = False
         db.delete(res)
         if svc_push:

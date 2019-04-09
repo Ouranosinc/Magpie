@@ -1,7 +1,7 @@
 from magpie.api.api_rest_schemas import SwaggerGenerator
 from magpie.constants import get_constant
 from magpie.models import RESOURCE_TYPE_DICT
-from magpie.services import SERVICE_TYPE_DICT, ServiceAPI
+from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceTHREDDS
 from magpie.utils import get_twitcher_protected_service_url, CONTENT_TYPE_JSON
 from tests import utils, runner
 # noinspection PyPackageRequirements
@@ -443,7 +443,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
                     utils.check_val_is_in("service_sync_type", svc_dict)
                     utils.check_val_type(svc_dict["service_sync_type"], utils.OptionalStringType)
                     utils.check_val_not_in("service_url", svc_dict,
-                                           msg="Services under user routes shouldn"t show private url.")
+                                           msg="Services under user routes shouldn't show private url.")
                 else:
                     utils.check_val_is_in("service_url", svc_dict)
                     utils.check_val_type(svc_dict["service_url"], six.string_types)
@@ -1079,9 +1079,9 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         else:
             test_resource_id = json_body["resource_id"]
         utils.check_val_is_in(test_resource_id, resources_ids,
-                              msg="service resource must exist to create children resource")
+                              msg="service resource must exist to create child resource")
 
-        # create the children resource under the direct resource and validate response info
+        # create the child resource under the direct resource and validate response info
         child_resource_name = self.test_resource_name + "-children"
         data_override = {
             "resource_name": child_resource_name,
@@ -1100,7 +1100,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.check_val_is_in("resource_type", json_body)
         utils.check_val_equal(json_body["resource_type"], self.test_resource_type)
 
-        # validate created children resource info
+        # validate created child resource info
         service_root_id = utils.TestSetup.get_ExistingTestServiceInfo(self)["resource_id"]
         child_resource_id = json_body["resource_id"]
         route = "/resources/{res_id}".format(res_id=child_resource_id)
@@ -1384,7 +1384,7 @@ class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
         form = {"edit": None, "service_name": self.test_service_name}
         path = "/ui/services/{}".format(self.test_service_type)
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path=path)
-        find = "<span class="panel_value">{}</span>".format(self.test_service_name)
+        find = "<span class=\"panel_value\">{}</span>".format(self.test_service_name)
         utils.check_val_is_in(find, resp.text, msg=utils.null)
 
     @runner.MAGPIE_TEST_STATUS

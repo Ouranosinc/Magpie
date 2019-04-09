@@ -3,33 +3,21 @@ Synchronize local and remote resources.
 
 To implement a new service, see the _SyncServiceInterface class.
 """
-
+from magpie import db, models, constants
+from magpie.helpers.sync_services import SYNC_SERVICES_TYPES, is_valid_resource_schema, SyncServiceDefault
+from magpie.definitions.sqlalchemy_definitions import Session, create_engine
+from magpie.utils import get_logger
+from collections import OrderedDict
 import copy
 import datetime
-from collections import OrderedDict, defaultdict
 import logging
 import os
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-
-from magpie import db, models, constants
-from magpie.helpers import sync_services
-from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
 
 CRON_SERVICE = False
 
 OUT_OF_SYNC = datetime.timedelta(hours=3)
-# noinspection PyProtectedMember
-SYNC_SERVICES_TYPES = defaultdict(lambda: sync_services._SyncServiceDefault)
-# noinspection PyTypeChecker, PyProtectedMember
-SYNC_SERVICES_TYPES.update({
-    "thredds": sync_services._SyncServiceThreads,
-    "geoserver-api": sync_services._SyncServiceGeoserver,
-    "project-api": sync_services._SyncServiceProjectAPI,
-})
 
 # try to instantiate classes right away
 for sync_service_class in SYNC_SERVICES_TYPES.values():
@@ -55,14 +43,14 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
         - remote_id: id of the RemoteResource
         - matches_remote: True or False depending if the resource is present on the remote server
 
-    returns a dictionary of the form validated by 'sync_services.is_valid_resource_schema'
+    :returns: dictionary of the form validated by `magpie.helpers.sync_services.is_valid_resource_schema`.
 
     """
     if not resources_remote:
         return resources_local
 
-    assert sync_services.is_valid_resource_schema(resources_local)
-    assert sync_services.is_valid_resource_schema(resources_remote)
+    assert is_valid_resource_schema(resources_local)
+    assert is_valid_resource_schema(resources_remote)
 
     if not resources_local:
         raise ValueError("The resources must contain at least the service name.")
@@ -74,30 +62,30 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
         # loop local resources, looking for matches in remote resources
         for resource_name_local, values in _resources_local.items():
             matches_remote = resource_name_local in _resources_remote
-            remote_id = _resources_remote.get(resource_name_local, {}).get('remote_id', '')
+            remote_id = _resources_remote.get(resource_name_local, {}).get("remote_id", "")
             deeper_than_fetched = depth >= max_depth if max_depth is not None else False
 
-            values['remote_id'] = remote_id
-            values['matches_remote'] = matches_remote or deeper_than_fetched
+            values["remote_id"] = remote_id
+            values["matches_remote"] = matches_remote or deeper_than_fetched
 
-            resource_remote_children = _resources_remote[resource_name_local]['children'] if matches_remote else {}
-            recurse(values['children'], resource_remote_children, depth + 1)
+            resource_remote_children = _resources_remote[resource_name_local]["children"] if matches_remote else {}
+            recurse(values["children"], resource_remote_children, depth + 1)
 
         # loop remote resources, looking for matches in local resources
         for resource_name_remote, values in _resources_remote.items():
             if resource_name_remote not in _resources_local:
-                new_resource = {'permission_names': [],
-                                'children': {},
-                                'id': None,
-                                'remote_id': values['remote_id'],
-                                'resource_display_name': values.get('resource_display_name', resource_name_remote),
-                                'matches_remote': True}
+                new_resource = {"permission_names": [],
+                                "children": {},
+                                "id": None,
+                                "remote_id": values["remote_id"],
+                                "resource_display_name": values.get("resource_display_name", resource_name_remote),
+                                "matches_remote": True}
                 _resources_local[resource_name_remote] = new_resource
-                recurse(new_resource['children'], values['children'], depth + 1)
+                recurse(new_resource["children"], values["children"], depth + 1)
 
     recurse(merged_resources, resources_remote)
 
-    assert sync_services.is_valid_resource_schema(merged_resources)
+    assert is_valid_resource_schema(merged_resources)
 
     return merged_resources
 
@@ -109,8 +97,8 @@ def _sort_resources(resources):
     :return: None
     """
     for resource_name, values in resources.items():
-        values['children'] = OrderedDict(sorted(values['children'].items()))
-        return _sort_resources(values['children'])
+        values["children"] = OrderedDict(sorted(values["children"].items()))
+        return _sort_resources(values["children"])
 
 
 def _ensure_sync_info_exists(service_resource_id, session):
@@ -139,7 +127,7 @@ def _get_remote_resources(service):
         service_url = service_url[:-1]
 
     # noinspection PyProtectedMember
-    sync_svc_cls = SYNC_SERVICES_TYPES.get(service.sync_type.lower(), sync_services._SyncServiceDefault)
+    sync_svc_cls = SYNC_SERVICES_TYPES.get(service.sync_type.lower(), SyncServiceDefault)
     sync_service = sync_svc_cls(service.resource_name, service_url)
     return sync_service.get_resources()
 
@@ -185,21 +173,21 @@ def _update_db(remote_resources, service_id, session):
 
     def add_children(resources, parent_id, position=0):
         for resource_name, values in resources.items():
-            resource_display_name = str(values.get('resource_display_name', resource_name))
+            resource_display_name = str(values.get("resource_display_name", resource_name))
             # noinspection PyArgumentList
             new_resource = models.RemoteResource(service_id=sync_info.service_id,
                                                  resource_name=str(resource_name),
                                                  resource_display_name=resource_display_name,
-                                                 resource_type=values['resource_type'],
+                                                 resource_type=values["resource_type"],
                                                  parent_id=parent_id,
                                                  ordering=position)
             session.add(new_resource)
             session.flush()
             position += 1
-            add_children(values['children'], new_resource.resource_id)
+            add_children(values["children"], new_resource.resource_id)
 
     first_item = list(remote_resources)[0]
-    add_children(remote_resources[first_item]['children'], sync_info.remote_resource_id)
+    add_children(remote_resources[first_item]["children"], sync_info.remote_resource_id)
 
     sync_info.last_sync = datetime.datetime.now()
 
@@ -221,32 +209,32 @@ def _get_resource_children(resource, db_session):
         {node:Resource, children:{node_id: RemoteResource}}
         """
         items = list(result)
-        root_elem = {'node': None, 'children': OrderedDict()}
+        root_elem = {"node": None, "children": OrderedDict()}
         if len(items) == 0:
             return root_elem
         for i, node in enumerate(items):
-            new_elem = {'node': node.RemoteResource, 'children': OrderedDict()}
-            path = list(map(int, node.path.split('/')))
+            new_elem = {"node": node.RemoteResource, "children": OrderedDict()}
+            path = list(map(int, node.path.split("/")))
             parent_node = root_elem
             normalized_path = path[:-1]
             if normalized_path:
                 for path_part in normalized_path:
-                    parent_node = parent_node['children'][path_part]
-            parent_node['children'][new_elem['node'].resource_id] = new_elem
+                    parent_node = parent_node["children"][path_part]
+            parent_node["children"][new_elem["node"].resource_id] = new_elem
         return root_elem
 
-    return build_subtree_strut(query)['children']
+    return build_subtree_strut(query)["children"]
 
 
 def _format_resource_tree(children):
     fmt_res_tree = {}
     for child_id, child_dict in children.items():
-        resource = child_dict[u'node']
-        new_children = child_dict[u'children']
+        resource = child_dict[u"node"]
+        new_children = child_dict[u"children"]
         resource_display_name = resource.resource_display_name or resource.resource_name
-        resource_dict = {'children': _format_resource_tree(new_children),
-                         'remote_id': resource.resource_id,
-                         'resource_display_name': resource_display_name}
+        resource_dict = {"children": _format_resource_tree(new_children),
+                         "remote_id": resource.resource_id,
+                         "resource_display_name": resource_display_name}
         fmt_res_tree[resource.resource_name] = resource_dict
     return fmt_res_tree
 
@@ -265,7 +253,7 @@ def _query_remote_resources_in_database(service_id, session):
     tree = _get_resource_children(main_resource, session)
 
     remote_resources = _format_resource_tree(tree)
-    return {service.resource_name: {'children': remote_resources, 'remote_id': main_resource.resource_id}}
+    return {service.resource_name: {"children": remote_resources, "remote_id": main_resource.resource_id}}
 
 
 def get_last_sync(service_id, session):
@@ -317,13 +305,8 @@ def fetch():
     """
     Main function to get all remote resources for each service and write to database.
     """
-    LOGGER.info("Getting database url")
-    db_url = db.get_db_url()
-
-    LOGGER.debug("Database url: %s" % db_url)
-    engine = create_engine(db_url, convert_unicode=True, echo=False)
-
-    session = Session(bind=engine)
+    LOGGER.info("Getting database session")
+    session = db.get_db_session_from_settings(echo=False)
 
     for service_type in SYNC_SERVICES_TYPES:
         LOGGER.info("Fetching data for service type: %s" % service_type)

@@ -98,7 +98,6 @@ class UserResourcePermission(UserResourcePermissionMixin, Base):
 
 
 class User(UserMixin, Base):
-    # ... your own properties....
     pass
 
 
@@ -115,9 +114,6 @@ class RootFactory(object):
                 self.__acl__.append((outcome, perm_user, perm_name))
 
 
-# you can define multiple resource derived models to build a complex
-# application like CMS, forum or other permission based solution
-
 class Service(Resource):
     """Resource of `service` type."""
 
@@ -133,8 +129,6 @@ class Service(Resource):
     __mapper_args__ = {u"polymorphic_identity": resource_type_name,
                        u"inherit_condition": resource_id == Resource.resource_id}
 
-    # ... your own properties....
-
     @declared_attr
     def url(self):
         # http://localhost:8083
@@ -142,11 +136,13 @@ class Service(Resource):
 
     @declared_attr
     def type(self):
+        """Identifier matching ``magpie.services.ServiceInterface.service_type``."""
         # wps, wms, thredds, ...
         return sa.Column(sa.UnicodeText())
 
     @declared_attr
     def sync_type(self):
+        """Identifier matching ``magpie.helpers.SyncServiceInterface.sync_type``."""
         # project-api, geoserver-api, ...
         return sa.Column(sa.UnicodeText(), nullable=True)
 
@@ -155,18 +151,6 @@ class Service(Resource):
         db = get_db_session(db_session)
         service = db.query(Service).filter(Resource.resource_name == service_name).first()
         return service
-
-    def permission_requested(self, request):
-        raise NotImplementedError
-
-    def extend_acl(self, resource, user):
-        # Ownership acl
-        for ace in resource.__acl__:
-            self.__acl__.append(ace)
-        # Custom acl
-        permissions = resource.perms_for_user(user)
-        for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-            self.__acl__.append((outcome, perm_user, perm_name,))
 
 
 class Path(object):
@@ -300,13 +284,11 @@ ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
 resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
 remote_resource_tree_service = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
-RESOURCE_TYPE_DICT = {
-    Service.resource_type_name:     Service,    # noqa: E241
-    Directory.resource_type_name:   Directory,  # noqa: E241
-    File.resource_type_name:        File,       # noqa: E241
-    Workspace.resource_type_name:   Workspace,  # noqa: E241
-    Route.resource_type_name:       Route,      # noqa: E241
-}
+RESOURCE_TYPE_DICT = dict()
+for res in [Service, Directory, File, Workspace, Route]:
+    if res.resource_type_name in RESOURCE_TYPE_DICT:
+        raise KeyError("Duplicate resource type identifiers not allowed")
+    RESOURCE_TYPE_DICT[res.resource_type_name] = res
 
 
 def resource_factory(**kwargs):

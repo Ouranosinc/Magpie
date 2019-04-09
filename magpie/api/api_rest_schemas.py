@@ -287,7 +287,7 @@ ProviderNameParameter = colander.SchemaNode(
 PermissionNameParameter = colander.SchemaNode(
     colander.String(),
     description="Permissions applicable to the service/resource.",
-    example="read",)
+    example=Permission.READ.value,)
 ResourceIdParameter = colander.SchemaNode(
     colander.String(),
     description="Registered resource ID.",

@@ -27,7 +27,7 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
         db_session.add(new_user)
         registered_user = UserService.by_user_name(user_name, db_session=db_session)
     else:
-        print_log('User `{}` already exist'.format(user_name), level=logging.DEBUG)
+        print_log("User '{}' already exist".format(user_name), level=logging.DEBUG)
 
     # noinspection PyBroadException
     try:
@@ -70,7 +70,7 @@ def init_admin(db_session):
             db_session.add(new_group_permission)
         except Exception as e:
             db_session.rollback()
-            raise_log('Failed to create admin user-group permission', exception=type(e))
+            raise_log("Failed to create admin user-group permission", exception=type(e))
 
 
 def init_user_group(db_session):
@@ -79,7 +79,7 @@ def init_user_group(db_session):
         user_group = models.Group(group_name=constants.MAGPIE_USERS_GROUP)
         db_session.add(user_group)
     else:
-        print_log('MAGPIE_USERS_GROUP already initialized', level=logging.DEBUG)
+        print_log("MAGPIE_USERS_GROUP already initialized", level=logging.DEBUG)
 
 
 def register_default_users(db_session=None):
@@ -88,7 +88,7 @@ def register_default_users(db_session=None):
         db_session = db.get_db_session_from_config_ini(constants.MAGPIE_INI_FILE_PATH)
     if not db.is_database_ready(db_session):
         time.sleep(2)
-        raise_log('Database not ready')
+        raise_log("Database not ready")
 
     init_admin(db_session)
     init_anonymous(db_session)
@@ -97,5 +97,5 @@ def register_default_users(db_session=None):
     db_session.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     register_default_users()

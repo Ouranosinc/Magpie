@@ -7,7 +7,7 @@ from magpie.definitions.sqlalchemy_definitions import (
     configure_mappers, select, Inspector, Session, sa_exc
 )
 from magpie.definitions.pyramid_definitions import asbool
-from magpie.utils import get_settings_from_config_ini, print_log, raise_log, get_logger
+from magpie.utils import get_settings_from_config_ini, get_settings, print_log, raise_log, get_logger
 from typing import TYPE_CHECKING
 import transaction
 import inspect
@@ -20,7 +20,8 @@ import time
 from magpie import models
 
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, SettingsType, Optional, Union  # noqa: F401
+    from magpie.definitions.typedefs import Any, AnySettingsContainer, SettingsType, Str, Optional, Union  # noqa: F401
+    from magpie.definitions.sqlalchemy_definitions import Engine  # noqa: F401
 
 
 LOGGER = get_logger(__name__)
@@ -32,18 +33,22 @@ configure_mappers()
 
 def get_db_url(username=None, password=None, db_host=None, db_port=None, db_name=None, settings=None):
     return "postgresql://%s:%s@%s:%s/%s" % (
-        username if username is not None else get_constant('MAGPIE_POSTGRES_USER', settings, 'postgres.user'),
-        password if password is not None else get_constant('MAGPIE_POSTGRES_PASSWORD', settings, 'postgres.password'),
-        db_host if db_host is not None else get_constant('MAGPIE_POSTGRES_HOST', settings, 'postgres.host'),
-        db_port if db_port is not None else get_constant('MAGPIE_POSTGRES_PORT', settings, 'postgres.port'),
-        db_name if db_name is not None else get_constant('MAGPIE_POSTGRES_DB', settings, 'postgres.db'),
+        username if username is not None else get_constant("MAGPIE_POSTGRES_USER", settings, "postgres.user"),
+        password if password is not None else get_constant("MAGPIE_POSTGRES_PASSWORD", settings, "postgres.password"),
+        db_host if db_host is not None else get_constant("MAGPIE_POSTGRES_HOST", settings, "postgres.host"),
+        db_port if db_port is not None else get_constant("MAGPIE_POSTGRES_PORT", settings, "postgres.port"),
+        db_name if db_name is not None else get_constant("MAGPIE_POSTGRES_DB", settings, "postgres.db"),
     )
 
 
-def get_engine(settings, prefix='sqlalchemy.'):
-    settings[prefix + 'url'] = get_db_url()
-    settings[prefix + 'pool_pre_ping'] = settings.get(prefix + 'pool_pre_ping', True)
-    return engine_from_config(settings, prefix)
+def get_engine(container=None, prefix="sqlalchemy.", **kwargs):
+    # type: (Optional[AnySettingsContainer], Str, Any) -> Engine
+    settings = get_settings(container or {})
+    settings[prefix + "url"] = get_db_url()
+    settings[prefix + "pool_pre_ping"] = settings.get(prefix + "pool_pre_ping", True)
+    kwargs = kwargs or {}
+    kwargs["convert_unicode"] = True
+    return engine_from_config(settings, prefix, **kwargs)
 
 
 def get_session_factory(engine):
@@ -78,13 +83,14 @@ def get_tm_session(session_factory, transaction_manager):
     return db_session
 
 
-def get_db_session_from_settings(settings):
-    session_factory = get_session_factory(get_engine(settings))
+def get_db_session_from_settings(settings=None, **kwargs):
+    # type: (Optional[AnySettingsContainer], Any) -> Session
+    session_factory = get_session_factory(get_engine(settings, **kwargs))
     db_session = get_tm_session(session_factory, transaction)
     return db_session
 
 
-def get_db_session_from_config_ini(config_ini_path, ini_main_section_name='app:magpie_app', settings_override=None):
+def get_db_session_from_config_ini(config_ini_path, ini_main_section_name="app:magpie_app", settings_override=None):
     settings = get_settings_from_config_ini(config_ini_path, ini_main_section_name)
     if isinstance(settings_override, dict):
         settings.update(settings_override)
@@ -94,9 +100,9 @@ def get_db_session_from_config_ini(config_ini_path, ini_main_section_name='app:m
 def run_database_migration(db_session=None):
     # type: (Optional[Session]) -> None
     """Runs db migration operations with alembic, using db session or a new engine connection."""
-    ini_file = get_constant('MAGPIE_ALEMBIC_INI_FILE_PATH')
+    ini_file = get_constant("MAGPIE_ALEMBIC_INI_FILE_PATH")
     LOGGER.info("Using file '{}' for migration.".format(ini_file))
-    alembic_args = ['-c', ini_file, 'upgrade', 'heads']
+    alembic_args = ["-c", ini_file, "upgrade", "heads"]
     if not isinstance(db_session, Session):
         alembic.config.main(argv=alembic_args)
     else:
@@ -109,9 +115,9 @@ def run_database_migration(db_session=None):
 
 def get_database_revision(db_session):
     # type: (Session) -> Str
-    s = select(['version_num'], from_obj='alembic_version')
+    s = select(["version_num"], from_obj="alembic_version")
     result = db_session.execute(s).fetchone()
-    return result['version_num']
+    return result["version_num"]
 
 
 def is_database_ready(db_session=None):
@@ -142,12 +148,12 @@ def run_database_migration_when_ready(settings, db_session=None):
     """
 
     db_ready = False
-    if asbool(get_constant('MAGPIE_DB_MIGRATION', settings, 'magpie.db_migration',
+    if asbool(get_constant("MAGPIE_DB_MIGRATION", settings, "magpie.db_migration",
                            default_value=True, raise_missing=False, raise_not_set=False, print_missing=True)):
-        attempts = int(get_constant('MAGPIE_DB_MIGRATION_ATTEMPTS', settings, 'magpie.db_migration_attempts',
+        attempts = int(get_constant("MAGPIE_DB_MIGRATION_ATTEMPTS", settings, "magpie.db_migration_attempts",
                                     default_value=5, raise_missing=False, raise_not_set=False, print_missing=True))
 
-        print_log('Running database migration (as required) ...')
+        print_log("Running database migration (as required) ...")
         attempts = max(attempts, 2)     # enforce at least 2 attempts, 1 for db creation and one for actual migration
         for i in range(1, attempts + 1):
             try:
@@ -158,15 +164,15 @@ def run_database_migration_when_ready(settings, db_session=None):
                 pass
             except Exception as e:
                 if i <= attempts:
-                    print_log('Database migration failed [{!r}]. Retrying... ({}/{})'.format(e, i, attempts))
+                    print_log("Database migration failed [{!r}]. Retrying... ({}/{})".format(e, i, attempts))
                     time.sleep(2)
                     continue
                 else:
-                    raise_log('Database migration failed [{!r}]'.format(e), exception=RuntimeError)
+                    raise_log("Database migration failed [{!r}]".format(e), exception=RuntimeError)
 
             db_ready = is_database_ready(db_session)
             if not db_ready:
-                print_log('Database not ready. Retrying... ({}/{})'.format(i, attempts))
+                print_log("Database not ready. Retrying... ({}/{})".format(i, attempts))
                 time.sleep(2)
                 continue
             break
@@ -174,17 +180,17 @@ def run_database_migration_when_ready(settings, db_session=None):
         db_ready = is_database_ready(db_session)
     if not db_ready:
         time.sleep(2)
-        raise_log('Database not ready', exception=RuntimeError)
+        raise_log("Database not ready", exception=RuntimeError)
 
 
 def set_sqlalchemy_log_level(magpie_log_level):
     # type: (Union[Str, int]) -> SettingsType
     """Suppresses sqlalchemy logging if not in debug for magpie."""
     log_lvl = logging.getLevelName(magpie_log_level) if isinstance(magpie_log_level, int) else magpie_log_level
-    sa_settings = {'sqlalchemy.echo': True}
-    if log_lvl.upper() != 'DEBUG':
-        sa_settings['sqlalchemy.echo'] = False
-        sa_loggers = 'sqlalchemy.engine.base.Engine'.split('.')
+    sa_settings = {"sqlalchemy.echo": True}
+    if log_lvl.upper() != "DEBUG":
+        sa_settings["sqlalchemy.echo"] = False
+        sa_loggers = "sqlalchemy.engine.base.Engine".split(".")
         sa_log = logging.getLogger(sa_loggers[0])
         sa_log.setLevel(logging.WARN)   # WARN to avoid INFO logs
         for h in sa_log.handlers:
@@ -196,24 +202,15 @@ def set_sqlalchemy_log_level(magpie_log_level):
 
 
 def includeme(config):
-    """
-    Initialize the model for a Pyramid app.
-
-    Activate this setup using ``config.include('pyramid_blogr.models')``.
-
-    """
-    settings = config.get_settings()
-
     # use pyramid_tm to hook the transaction lifecycle to the request
-    config.include('pyramid_tm')
-
-    session_factory = get_session_factory(get_engine(settings))
-    config.registry['db_session_factory'] = session_factory
+    config.include("pyramid_tm")
+    session_factory = get_session_factory(get_engine(config))
+    config.registry["db_session_factory"] = session_factory
 
     # make `request.db` available for use in Pyramid
     config.add_request_method(
         # r.tm is the transaction manager used by pyramid_tm
         lambda r: get_tm_session(session_factory, r.tm),
-        'db',
+        "db",
         reify=True
     )

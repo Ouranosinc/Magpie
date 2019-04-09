@@ -15,7 +15,7 @@ def check_response(response):
 
 def request_api(request,            # type: Request
                 path,               # type: Str
-                method='GET',       # type: Optional[Str]
+                method="GET",       # type: Str
                 data=None,          # type: Optional[JSON]
                 headers=None,       # type: Optional[HeadersType]
                 cookies=None,       # type: Optional[CookiesType]
@@ -29,21 +29,21 @@ def request_api(request,            # type: Request
     All sub-requests to the API are assumed to be of ``magpie.common.CONTENT_TYPE_JSON``.
     """
     method = method.upper()
-    extra_kwargs = {'method': method}
+    extra_kwargs = {"method": method}
 
     if headers:
         headers = dict(headers)
     if not headers and not request.headers:
-        headers = {'Accept': CONTENT_TYPE_JSON, 'Content-Type': CONTENT_TYPE_JSON}
+        headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
     if not headers:
         headers = request.headers
     # although no body is required per-say for HEAD/GET requests, add it if missing
     # this avoid downstream errors when 'request.POST' is accessed
-    # we use a plain empty byte str because `{}` or `None` cause errors on each case
+    # we use a plain empty byte str because empty dict `{}` or `None` cause errors on each case
     # of local/remote testing with corresponding `webtest.TestApp`/`requests.Request`
     if not data:
-        data = u''
-    if isinstance(data, dict) and get_header('Content-Type', headers, split=[',', ';']) == CONTENT_TYPE_JSON:
+        data = u""
+    if isinstance(data, dict) and get_header("Content-Type", headers, split=[",", ";"]) == CONTENT_TYPE_JSON:
         data = json.dumps(data)
 
     if isinstance(cookies, dict):
@@ -51,12 +51,12 @@ def request_api(request,            # type: Request
     if cookies and isinstance(headers, dict):
         headers = list(cookies.items())
         for c, v in cookies:
-            headers.append(('Set-Cookie', '{}={}'.format(c, v)))
+            headers.append(("Set-Cookie", "{}={}".format(c, v)))
     if not cookies:
         cookies = request.cookies
     # cookies must be added to kw only if populated, iterable error otherwise
     if cookies:
-        extra_kwargs['cookies'] = cookies
+        extra_kwargs["cookies"] = cookies
 
     subreq = Request.blank(path, base_url=request.application_url, headers=headers, POST=data, **extra_kwargs)
     return request.invoke_subrequest(subreq)

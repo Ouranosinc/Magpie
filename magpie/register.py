@@ -339,7 +339,7 @@ def magpie_update_services_conflict(conflict_services, services_dict, request_co
 
 def magpie_register_services_with_requests(services_dict, push_to_phoenix, username, password, provider,
                                            force_update=False, disable_getcapabilities=False):
-    # type: (ConfigDict, bool, Str, Str, Str, Optional[bool], Optional[bool]) -> bool
+    # type: (ConfigDict, bool, Str, Str, Str, bool, bool) -> bool
     """
     Registers magpie services using the provided services configuration.
 
@@ -429,24 +429,24 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
                                  sync_type=svc_sync_type)
             db_session.add(svc)
 
-        getcap_perm_name = Permission.GET_CAPABILITIES.value
+        getcap_perm = Permission.GET_CAPABILITIES
         if update_getcapabilities_permissions and anonymous_user is None:
             print_log("Cannot update 'getcapabilities' permission of non existing anonymous user",
                       level=logging.WARN, logger=LOGGER)
-        elif update_getcapabilities_permissions and getcap_perm_name in SERVICE_TYPE_DICT[svc_type].permission_names:
+        elif update_getcapabilities_permissions and getcap_perm in SERVICE_TYPE_DICT[svc_type].permissions:
             svc = db_session.query(models.Service.resource_id).filter_by(resource_name=svc_name).first()
             svc_perm_getcapabilities = UserResourcePermissionService.by_resource_user_and_perm(
                 user_id=anonymous_user.id,
-                perm_name=getcap_perm_name,
+                perm_name=getcap_perm.value,
                 resource_id=svc.resource_id,
                 db_session=db_session
             )
             if svc_perm_getcapabilities is None:
-                print_log("Adding '{}' permission to anonymous user.".format(getcap_perm_name), logger=LOGGER)
+                print_log("Adding '{}' permission to anonymous user.".format(getcap_perm.value), logger=LOGGER)
                 # noinspection PyArgumentList
                 svc_perm_getcapabilities = models.UserResourcePermission(
                     user_id=anonymous_user.id,
-                    perm_name=getcap_perm_name,
+                    perm_name=getcap_perm.value,
                     resource_id=svc.resource_id
                 )
                 db_session.add(svc_perm_getcapabilities)
@@ -475,7 +475,7 @@ def _load_config(path_or_dict, section):
 
 def magpie_register_services_from_config(service_config_file_path, push_to_phoenix=False,
                                          force_update=False, disable_getcapabilities=False, db_session=None):
-    # type: (Str, Optional[bool], Optional[bool], Optional[bool], Optional[Session]) -> None
+    # type: (Str, bool, bool, bool, Optional[Session]) -> None
     """
     Registers Magpie services from a `providers.cfg` file.
     Uses the provided DB session to directly update service definitions, or uses API request routes as admin.
