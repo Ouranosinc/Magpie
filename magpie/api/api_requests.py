@@ -10,13 +10,13 @@ from magpie.definitions.pyramid_definitions import (
     HTTPUnprocessableEntity,
     HTTPInternalServerError,
 )
-from magpie.permissions import Permission
 from magpie.utils import CONTENT_TYPE_JSON
 from magpie import models
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from magpie.definitions.pyramid_definitions import Request  # noqa: F401
     from magpie.definitions.typedefs import Any, Str, Optional, ServiceOrResourceType  # noqa: F401
+    from magpie.permissions import Permission  # noqa: F401
 
 
 def get_request_method_content(request):

@@ -11,7 +11,7 @@ import dotenv
 import logging
 import warnings
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, Optional, SettingValue, AnySettingsContainer
+    from magpie.definitions.typedefs import Str, Optional, SettingValue, AnySettingsContainer  # noqa: F401
 
 # ===========================
 # path variables
@@ -124,9 +124,14 @@ MAGPIE_USER_NAME_MAX_LENGTH = 64
 # ===========================
 
 
-def get_constant(name, settings_container=None, settings_name=None, default_value=None,
-                 raise_missing=True, print_missing=False, raise_not_set=True):
-    # type: (Str, Optional[AnySettingsContainer], Optional[Str], Optional[SettingValue], bool, bool, bool) -> SettingValue
+def get_constant(name,                      # type: Str
+                 settings_container=None,   # type: Optional[AnySettingsContainer]
+                 settings_name=None,        # type: Optional[Str]
+                 default_value=None,        # type: Optional[SettingValue], bool, bool, bool
+                 raise_missing=True,        # type: bool
+                 print_missing=False,       # type: bool
+                 raise_not_set=True         # type: bool
+                 ):                         # type: (...) -> SettingValue
     """
     Search in order for matched value of `name` :
       1. search in magpie definitions

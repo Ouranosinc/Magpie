@@ -1,6 +1,5 @@
 from magpie.api import api_requests as ar, api_except as ax, api_rest_schemas as s
 from magpie.api.management.group import group_utils as gu, group_formats as gf
-from magpie.api.management.service.service_formats import format_service, format_service_resources
 from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import GroupService
 from magpie.definitions.pyramid_definitions import (
@@ -11,8 +10,6 @@ from magpie.definitions.pyramid_definitions import (
     HTTPConflict,
     HTTPInternalServerError,
 )
-from magpie import models
-from magpie.permissions import format_permissions
 
 
 @s.GroupsAPI.get(tags=[s.GroupsTag], response_schemas=s.Groups_GET_responses)

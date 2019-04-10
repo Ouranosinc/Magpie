@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from magpie.definitions.typedefs import Optional, JSON, AnyStr, Dict, List, Type  # noqa: F401
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
     from magpie.models import Resource, Service  # noqa: F401
-    from magpie.permissions import Permission
+    from magpie.permissions import Permission  # noqa: F401
     from magpie.services import ServiceInterface  # noqa: F401
 
 

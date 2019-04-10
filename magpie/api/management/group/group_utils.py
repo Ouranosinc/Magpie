@@ -14,12 +14,13 @@ from magpie.definitions.pyramid_definitions import (
     HTTPInternalServerError
 )
 from magpie import models
-from magpie.permissions import Permission, format_permissions, convert_permission
+from magpie.permissions import format_permissions, convert_permission
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from magpie.definitions.pyramid_definitions import HTTPException  # noqa: F401
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
     from magpie.definitions.typedefs import Str, Iterable, List, Optional, JSON, ServiceOrResourceType  # noqa: F401
+    from magpie.permissions import Permission  # noqa: F401
 
 
 def get_all_group_names(db_session):

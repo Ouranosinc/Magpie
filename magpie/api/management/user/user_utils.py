@@ -19,7 +19,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPConflict,
     HTTPInternalServerError,
 )
-from magpie.permissions import convert_permission, format_permissions, Permission
+from magpie.permissions import convert_permission, format_permissions
 from magpie.services import service_factory
 from magpie import models
 from typing import TYPE_CHECKING
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from magpie.definitions.typedefs import (  # noqa: F401
         Any, Str, Dict, List, Optional, ResourcePermissionType, UserServicesType, ServiceOrResourceType
     )
+    from magpie.permissions import Permission  # noqa: F401
 
 
 def create_user(user_name, password, email, group_name, db_session):
