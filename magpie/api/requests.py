@@ -1,5 +1,5 @@
-from magpie.api.api_except import evaluate_call, verify_param
-from magpie.api import api_rest_schemas as s
+from magpie.api.exception import evaluate_call, verify_param
+from magpie.api import schemas as s
 from magpie.constants import get_constant
 from magpie.definitions import ziggurat_definitions as zig
 from magpie.definitions.pyramid_definitions import (

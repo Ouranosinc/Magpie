@@ -1,4 +1,4 @@
-from magpie.api import api_requests as ar, api_except as ax, api_rest_schemas as s
+from magpie.api import requests as ar, exception as ax, schemas as s
 from magpie.api.management.resource.resource_formats import format_resource
 from magpie.definitions.ziggurat_definitions import ResourceService
 from magpie.definitions.pyramid_definitions import (

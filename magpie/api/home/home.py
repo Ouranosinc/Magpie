@@ -1,4 +1,4 @@
-from magpie.api import api_except as ax, api_rest_schemas as s
+from magpie.api import exception as ax, schemas as s
 from magpie.definitions.pyramid_definitions import NO_PERMISSION_REQUIRED, HTTPOk, view_config
 from magpie.db import get_database_revision
 from magpie.utils import CONTENT_TYPE_JSON

@@ -1,4 +1,4 @@
-from magpie.api import api_except as ax, api_requests as ar, api_rest_schemas as s
+from magpie.api import exception as ax, requests as ar, schemas as s
 from magpie.api.management.user import user_utils as uu, user_formats as uf
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.constants import get_constant

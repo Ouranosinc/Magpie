@@ -5,7 +5,7 @@ The OWSRequest is based on pywps code:
 * https://github.com/geopython/pywps/blob/master/pywps/app/WPSRequest.py
 """
 
-from magpie.api.api_except import raise_http
+from magpie.api.exception import raise_http
 from magpie.utils import get_logger, get_header, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
 from pyramid.httpexceptions import HTTPMethodNotAllowed
 from typing import TYPE_CHECKING

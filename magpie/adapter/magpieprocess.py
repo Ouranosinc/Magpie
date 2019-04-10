@@ -1,7 +1,7 @@
 """
 Store adapters to read data from magpie.
 """
-from magpie.api.api_except import raise_http
+from magpie.api.exception import raise_http
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,

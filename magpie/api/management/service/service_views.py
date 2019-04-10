@@ -1,6 +1,6 @@
 from magpie.api.management.resource.resource_utils import create_resource, delete_resource
 from magpie.api.management.service import service_formats as sf, service_utils as su
-from magpie.api import api_requests as ar, api_except as ax, api_rest_schemas as s
+from magpie.api import requests as ar, exception as ax, schemas as s
 from magpie.definitions.pyramid_definitions import (
     asbool,
     view_config,

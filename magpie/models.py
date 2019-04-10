@@ -1,4 +1,4 @@
-from magpie.api.api_except import evaluate_call
+from magpie.api.exception import evaluate_call
 from magpie.definitions.pyramid_definitions import ALLOW, ALL_PERMISSIONS, HTTPInternalServerError
 from magpie.definitions.sqlalchemy_definitions import sa, declared_attr, relationship, declarative_base
 from magpie.definitions.ziggurat_definitions import (

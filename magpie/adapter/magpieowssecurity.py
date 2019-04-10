@@ -1,4 +1,4 @@
-from magpie.api.api_except import evaluate_call, verify_param
+from magpie.api.exception import evaluate_call, verify_param
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,

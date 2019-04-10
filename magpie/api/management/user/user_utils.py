@@ -1,4 +1,4 @@
-from magpie.api import api_except as ax, api_rest_schemas as s
+from magpie.api import exception as ax, schemas as s
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
 from magpie.api.management.user import user_formats as uf

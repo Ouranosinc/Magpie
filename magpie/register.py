@@ -1,4 +1,4 @@
-from magpie.api.api_rest_schemas import (
+from magpie.api.schemas import (
     SigninAPI,
     SignoutAPI,
     ServicesAPI,

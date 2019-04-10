@@ -8,7 +8,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPNotImplemented,
     HTTPInternalServerError,
 )
-from magpie.api import api_except as ax
+from magpie.api import exception as ax
 from magpie.owsrequest import ows_parser_factory
 from magpie.permissions import Permission
 from magpie import models

@@ -1,4 +1,4 @@
-from magpie.api.api_except import evaluate_call
+from magpie.api.exception import evaluate_call
 from magpie.api.management.resource.resource_utils import crop_tree_with_permission
 from magpie.api.management.resource.resource_formats import get_resource_children, format_resource_tree
 from magpie.definitions.pyramid_definitions import HTTPInternalServerError

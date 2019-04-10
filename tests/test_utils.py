@@ -8,7 +8,7 @@ test_utils
 Tests for the various utility operations employed by magpie.
 """
 
-from magpie.api import api_requests as ar, api_except as ax
+from magpie.api import requests as ar, exception as ax
 from magpie.definitions.pyramid_definitions import (  # noqa: F401
     asbool,
     Request,
@@ -81,7 +81,7 @@ class TestUtils(unittest.TestCase):
             return get_post_item(*args, p=paths.pop(0), **kwargs)
 
         def get_post_item(request, name, default=None, p=None):
-            from magpie.api.api_requests import get_multiformat_post as real_get_multiformat_post
+            from magpie.api.requests import get_multiformat_post as real_get_multiformat_post
             utils.check_val_equal(request.url, base_url + p,
                                   "Proxied path should have been auto-resolved [URL: {}].".format(url))
             return real_get_multiformat_post(request, name, default=default)

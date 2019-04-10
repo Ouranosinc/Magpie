@@ -1,4 +1,4 @@
-from magpie.api import api_rest_schemas as s
+from magpie.api import schemas as s
 from magpie.constants import MAGPIE_MODULE_DIR
 import os
 

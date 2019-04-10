@@ -1,4 +1,4 @@
-from magpie.api import api_except as ax, api_rest_schemas as s
+from magpie.api import exception as ax, schemas as s
 from magpie.api.management.group.group_utils import create_group_resource_permission_response
 from magpie.api.management.service.service_formats import format_service
 from magpie.constants import get_constant

@@ -1,4 +1,4 @@
-from magpie.api import api_rest_schemas as s
+from magpie.api import schemas as s
 from magpie.definitions.pyramid_definitions import NO_PERMISSION_REQUIRED
 from magpie.ui.swagger.views import api_swagger
 from magpie.utils import get_logger

@@ -1,5 +1,5 @@
-from magpie.api.api_except import raise_http
-from magpie.api import api_rest_schemas as s
+from magpie.api.exception import raise_http
+from magpie.api import schemas as s
 from magpie.definitions.pyramid_definitions import (
     IAuthenticationPolicy,
     Authenticated,

@@ -1,4 +1,4 @@
-from magpie.api import api_rest_schemas as schemas
+from magpie.api import schemas as schemas
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import (
     asbool,

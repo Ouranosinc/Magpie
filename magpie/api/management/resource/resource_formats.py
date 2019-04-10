@@ -2,7 +2,7 @@ from magpie.definitions.pyramid_definitions import HTTPInternalServerError
 from magpie.definitions.ziggurat_definitions import ResourceService
 from magpie.models import resource_tree_service
 from magpie.services import SERVICE_TYPE_DICT
-from magpie.api.api_except import evaluate_call
+from magpie.api.exception import evaluate_call
 
 
 def format_resource(resource, permissions=None, basic_info=False):

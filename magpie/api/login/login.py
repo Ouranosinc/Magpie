@@ -26,8 +26,8 @@ from magpie.definitions.ziggurat_definitions import (
     ZigguratSignInBadAuth,
     ZigguratSignOut,
 )
-from magpie.api import api_generic as ag, api_except as ax, api_rest_schemas as s
-from magpie.api.api_requests import get_multiformat_post, get_value_multiformat_post_checked
+from magpie.api import generic as ag, exception as ax, schemas as s
+from magpie.api.requests import get_multiformat_post, get_value_multiformat_post_checked
 from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
 from magpie.constants import get_constant

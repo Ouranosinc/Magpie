@@ -1,4 +1,4 @@
-from magpie.api.api_rest_schemas import SwaggerGenerator
+from magpie.api.schemas import SwaggerGenerator
 from magpie.constants import get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Route
 from magpie.permissions import Permission

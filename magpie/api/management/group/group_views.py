@@ -1,4 +1,4 @@
-from magpie.api import api_requests as ar, api_except as ax, api_rest_schemas as s
+from magpie.api import requests as ar, exception as ax, schemas as s
 from magpie.api.management.group import group_utils as gu, group_formats as gf
 from magpie.constants import get_constant
 from magpie.definitions.ziggurat_definitions import GroupService

@@ -1,5 +1,5 @@
-from magpie.api.api_requests import HTTPInternalServerError
-from magpie.api.api_except import evaluate_call
+from magpie.api.requests import HTTPInternalServerError
+from magpie.api.exception import evaluate_call
 
 
 def format_group(group, basic_info=False):

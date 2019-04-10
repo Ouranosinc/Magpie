@@ -1,4 +1,4 @@
-from magpie.api import api_rest_schemas as schemas
+from magpie.api import schemas as schemas
 from magpie.definitions.pyramid_definitions import (
     NO_PERMISSION_REQUIRED,
     view_config,

@@ -1,5 +1,5 @@
 from magpie.services import SERVICE_TYPE_DICT
-from magpie.api import api_except as ax, api_rest_schemas as s
+from magpie.api import exception as ax, schemas as s
 from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
 from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.service.service_formats import format_service_resources, format_service
