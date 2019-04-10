@@ -8,6 +8,7 @@ from typing import (  # noqa: F401
 if TYPE_CHECKING:
     from magpie.definitions.sqlalchemy_definitions import Session
     from magpie import models
+    from magpie.permissions import Permission
     from webob.headers import ResponseHeaders, EnvironHeaders
     from webob.response import Response as WebobResponse
     from webtest.response import TestResponse
@@ -48,8 +49,9 @@ if TYPE_CHECKING:
     JSON = Dict[AnyKey, BaseJSON]
 
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
-    ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
     ServiceOrResourceType = Union[models.Service, models.Resource]
+    ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
+    AnyPermissionType = Union[Permission, ResourcePermissionType, Str]
 
     TestAppOrUrlType = Union[Str, TestApp]
     AnyMagpieTestType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase, TestAppOrUrlType]

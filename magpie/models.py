@@ -22,7 +22,7 @@ from magpie.definitions.ziggurat_definitions import (
 from magpie.permissions import Permission
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, List  # noqa: F401
+    from magpie.definitions.typedefs import Str  # noqa: F401
 
 Base = declarative_base()
 
@@ -54,20 +54,9 @@ class GroupResourcePermission(GroupResourcePermissionMixin, Base):
     pass
 
 
-class ResourceMeta(type):
-    @property
-    def resource_type_name(cls):
-        # type: () -> Str
-        """Generic resource type identifier."""
-        raise NotImplemented("Resource implementation must define unique type representation"
-                             "and must be added to 'RESOURCE_TYPE_DICT'.")
-
-
 class Resource(ResourceMixin, Base):
     # required resource type identifier (unique)
-    resource_type_name = None                 # type: Str
-    # permissions allowed for the resource (under a service)
-    permissions = []                    # type: List[Permission]
+    resource_type_name = None       # type: Str
 
     child_resource_allowed = True
     resource_display_name = sa.Column(sa.Unicode(100), nullable=True)

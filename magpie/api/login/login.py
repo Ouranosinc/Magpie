@@ -16,6 +16,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPNotFound,
     HTTPConflict,
     HTTPInternalServerError,
+    HTTPException,
     NO_PERMISSION_REQUIRED,
 )
 from magpie.definitions.ziggurat_definitions import (
@@ -112,9 +113,10 @@ def login_failure(request, reason=None):
     http_err = HTTPUnauthorized
     if reason is None:
         reason = s.Signin_POST_UnauthorizedResponseSchema.description
-        user_name = get_multiformat_post(request, "user_name", default=None)
-        password = get_multiformat_post(request, "password", default=None)
-        if any(cred is None for cred in (user_name, password)):
+        try:
+            user_name = get_value_multiformat_post_checked(request, "user_name", default=None)
+            get_value_multiformat_post_checked(request, "password", default=None)
+        except HTTPException:
             http_err = HTTPBadRequest
             reason = s.Signin_POST_BadRequestResponseSchema.description
         else:

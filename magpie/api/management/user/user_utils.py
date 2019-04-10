@@ -19,7 +19,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPConflict,
     HTTPInternalServerError,
 )
-from magpie.permissions import format_permissions, Permission
+from magpie.permissions import convert_permission, format_permissions, Permission
 from magpie.services import service_factory
 from magpie import models
 from typing import TYPE_CHECKING
@@ -147,11 +147,12 @@ def get_user_resource_permissions_response(user, resource, request,
     :returns: valid HTTP response on successful operations.
     :raises HTTPException: error HTTP response of corresponding situation.
     """
+    db_session = request.db
+
     def get_usr_res_perms():
         if resource.owner_user_id == user.id:
             res_perm_list = models.RESOURCE_TYPE_DICT[resource.type].permissions
         else:
-            db_session = request.db
             if effective_permissions:
                 svc = get_resource_root_service(resource, request)
                 res_perm_list = svc.effective_permissions(resource, user)
@@ -163,7 +164,7 @@ def get_user_resource_permissions_response(user, resource, request,
 
     perm_names = ax.evaluate_call(
         lambda: get_usr_res_perms(),
-        fallback=lambda: request.db.rollback(), httpError=HTTPInternalServerError,
+        fallback=lambda: db_session.rollback(), httpError=HTTPInternalServerError,
         msgOnFail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
         content={u"resource_name": str(resource.resource_name), u"user_name": str(user.user_name)})
     return ax.valid_http(httpSuccess=HTTPOk, content={u"permission_names": perm_names},
@@ -220,13 +221,12 @@ def get_user_services(user, request, cascade_resources=False,
 def get_user_service_permissions(user, service, request, inherit_groups_permissions=True):
     # type: (models.User, models.Service, Request, bool) -> List[Permission]
     if service.owner_user_id == user.id:
-        permissions = service_factory(service, request).permissions
+        usr_svc_perms = service_factory(service, request).permissions
     else:
-        svc_perm_tuple_list = ResourceService.perms_for_user(service, user, db_session=request.db)
+        usr_svc_perms = ResourceService.perms_for_user(service, user, db_session=request.db)
         if not inherit_groups_permissions:
-            svc_perm_tuple_list = filter_user_permission(svc_perm_tuple_list, user)
-        permissions = [Permission.get(permission.perm_name) for permission in svc_perm_tuple_list]
-    return sorted(set(permissions))  # remove any duplicates that could be incorporated by multiple groups
+            usr_svc_perms = filter_user_permission(usr_svc_perms, user)
+    return [convert_permission(p) for p in usr_svc_perms]
 
 
 def get_user_resources_permissions_dict(user, request, resource_types=None,

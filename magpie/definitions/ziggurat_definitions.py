@@ -15,6 +15,8 @@ from ziggurat_foundations.models.group_resource_permission import GroupResourceP
 # noinspection PyUnresolvedReferences
 from ziggurat_foundations.models.resource import ResourceMixin                                              # noqa: F401
 # noinspection PyUnresolvedReferences
+from ziggurat_foundations.models.services import BaseService                                                # noqa: F401
+# noinspection PyUnresolvedReferences
 from ziggurat_foundations.models.services.external_identity import ExternalIdentityService                  # noqa: F401
 # noinspection PyUnresolvedReferences
 from ziggurat_foundations.models.services.group import GroupService                                         # noqa: F401

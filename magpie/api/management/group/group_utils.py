@@ -14,12 +14,12 @@ from magpie.definitions.pyramid_definitions import (
     HTTPInternalServerError
 )
 from magpie import models
-from magpie.permissions import Permission, format_permissions
+from magpie.permissions import Permission, format_permissions, convert_permission
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from magpie.definitions.pyramid_definitions import HTTPException  # noqa: F401
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.definitions.typedefs import Str, List, Union, JSON, ServiceOrResourceType  # noqa: F401
+    from magpie.definitions.typedefs import Str, Iterable, List, Optional, JSON, ServiceOrResourceType  # noqa: F401
 
 
 def get_all_group_names(db_session):
@@ -89,12 +89,12 @@ def create_group_resource_permission_response(group, resource, permission, db_se
     perm_content = {u"permission_name": str(permission.value),
                     u"resource": format_resource(resource, basic_info=True),
                     u"group": format_group(group, basic_info=True)}
-    create_perm = ax.evaluate_call(
+    existing_perm = ax.evaluate_call(
         lambda: GroupResourcePermissionService.get(group.id, resource_id, permission.value, db_session=db_session),
         fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
         msgOnFail=s.GroupResourcePermissions_POST_ForbiddenGetResponseSchema.description, content=perm_content
     )
-    ax.verify_param(create_perm, isNone=True, httpError=HTTPConflict,
+    ax.verify_param(existing_perm, isNone=True, httpError=HTTPConflict,
                     msgOnFail=s.GroupResourcePermissions_POST_ConflictResponseSchema.description, content=perm_content)
     # noinspection PyArgumentList
     new_perm = ax.evaluate_call(
@@ -109,6 +109,11 @@ def create_group_resource_permission_response(group, resource, permission, db_se
 
 
 def get_group_resources_permissions_dict(group, db_session, resource_ids=None, resource_types=None):
+    # type: (models.Group, Session, Optional[Iterable[int]], Optional[Iterable[Str]]) -> JSON
+    """
+    Get a dictionary of resources and corresponding permissions that a group has on the resources.
+    Filter search by ``resource_ids`` and/or ``resource_types`` if specified.
+    """
     def get_grp_res_perm(grp, db, res_ids, res_types):
         res_perms_tup = GroupService.resources_with_possible_perms(
             grp, resource_ids=res_ids, resource_types=res_types, db_session=db)
@@ -139,9 +144,10 @@ def get_group_resource_permissions_response(group, resource, db_session):
     def get_grp_res_perms(grp, res, db):
         if res.owner_group_id == grp.id:
             return models.RESOURCE_TYPE_DICT[res.type].permissions
-        return db.query(models.GroupResourcePermission) \
-                 .filter(models.GroupResourcePermission.resource_id == res.resource_id) \
-                 .filter(models.GroupResourcePermission.group_id == grp.id)
+        perms = db.query(models.GroupResourcePermission) \
+                  .filter(models.GroupResourcePermission.resource_id == res.resource_id) \
+                  .filter(models.GroupResourcePermission.group_id == grp.id)
+        return [convert_permission(p) for p in perms]
 
     group_perm_names = ax.evaluate_call(
         lambda: format_permissions(get_grp_res_perms(group, resource, db_session)),
@@ -179,6 +185,8 @@ def delete_group_resource_permission_response(group, resource, permission, db_se
 
 
 def get_group_services(resources_permissions_dict, db_session):
+    # type: (JSON, Session) -> JSON
+    """Nest and regroup the resource permissions under corresponding root service types."""
     grp_svc_dict = {}
     for res_id, perms in resources_permissions_dict.items():
         svc = ResourceService.by_resource_id(resource_id=res_id, db_session=db_session)
@@ -190,14 +198,35 @@ def get_group_services(resources_permissions_dict, db_session):
     return grp_svc_dict
 
 
+def get_group_services_response(group, db_session):
+    # type: (models.Group, Session) -> HTTPException
+    """
+    Get validated response of services the group has permissions on.
+
+    :returns: valid HTTP response on successful operations.
+    :raises HTTPException: error HTTP response of corresponding situation.
+    """
+    res_perm_dict = get_group_resources_permissions_dict(group,
+                                                         resource_types=[models.Service.resource_type_name],
+                                                         db_session=db_session)
+    grp_svc_json = ax.evaluate_call(lambda: get_group_services(res_perm_dict, db_session),
+                                    httpError=HTTPInternalServerError,
+                                    msgOnFail=s.GroupServices_InternalServerErrorResponseSchema.description,
+                                    content={u"group": format_group(group)})
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.GroupServices_GET_OkResponseSchema.description,
+                         content={u"services": grp_svc_json})
+
+
 def get_group_service_permissions(group, service, db_session):
-    # type: (models.Group, models.Service, Session) -> List[Union[Permission, models.GroupResourcePermission]]
+    # type: (models.Group, models.Service, Session) -> List[Permission]
+    """Get all permissions the group has on a specific service."""
     def get_grp_svc_perms(grp, svc, db):
         if svc.owner_group_id == grp.id:
             return SERVICE_TYPE_DICT[svc.type].permissions
-        return db.query(models.GroupResourcePermission) \
-                 .filter(models.GroupResourcePermission.resource_id == svc.resource_id) \
-                 .filter(models.GroupResourcePermission.group_id == grp.id)
+        perms = db.query(models.GroupResourcePermission) \
+                  .filter(models.GroupResourcePermission.resource_id == svc.resource_id) \
+                  .filter(models.GroupResourcePermission.group_id == grp.id)
+        return [convert_permission(p) for p in perms]
 
     return ax.evaluate_call(lambda: get_grp_svc_perms(group, service, db_session),
                             httpError=HTTPInternalServerError,
@@ -205,25 +234,49 @@ def get_group_service_permissions(group, service, db_session):
                             content={u"group": repr(group), u"service": repr(service)})
 
 
-def get_group_services_permissions(group, db_session, resource_ids=None):
-    def get_grp_svc_perms(grp, db_ses, res_ids):
-        res_perms = get_group_resources_permissions_dict(
-            grp, resource_types=[models.Service.resource_type_name], db_session=db_ses, resource_ids=res_ids
-        )
-        grp_svc_perms = []
-        for res_id, res_perm in res_perms.items():
-            svc = ResourceService.by_resource_id(res_id, db_session=db_ses)
-            grp_svc_perms.append((svc, res_perm))
-        return grp_svc_perms
+def get_group_service_permissions_response(group, service, db_session):
+    # type: (models.Group, models.Service, Session) -> HTTPException
+    """
+    Get validated response of found group service permissions.
 
-    return ax.evaluate_call(lambda: get_grp_svc_perms(group, db_session, resource_ids),
-                            httpError=HTTPInternalServerError,
-                            msgOnFail="Failed to obtain group service permissions",
-                            content={u"group": format_group(group), u"resource_ids": repr(resource_ids)})
+    :returns: valid HTTP response on successful operations.
+    :raises HTTPException: error HTTP response of corresponding situation.
+    """
+    svc_perms_found = ax.evaluate_call(
+        lambda: format_permissions(get_group_service_permissions(group, service, db_session)),
+        httpError=HTTPInternalServerError,
+        msgOnFail=s.GroupServicePermissions_GET_InternalServerErrorResponseSchema.description,
+        content={u"group": format_group(group), u"service": format_service(service)})
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.GroupServicePermissions_GET_OkResponseSchema.description,
+                         content={u"permission_names": svc_perms_found})
 
 
 def get_group_service_resources_permissions_dict(group, service, db_session):
+    # type: (models.Group, models.Service, Session) -> JSON
+    """Get all permissions the group has on a specific service's children resources."""
     res_id = service.resource_id
     res_under_svc = models.resource_tree_service.from_parent_deeper(parent_id=res_id, db_session=db_session)
     res_ids = [resource.Resource.resource_id for resource in res_under_svc]
     return get_group_resources_permissions_dict(group, db_session, resource_types=None, resource_ids=res_ids)
+
+
+def get_group_service_resources_response(group, service, db_session):
+    # type: (models.Group, models.Service, Session) -> HTTPException
+    """
+    Get validated response of all found service resources which the group has permissions on.
+
+    :returns: valid HTTP response on successful operations.
+    :raises HTTPException: error HTTP response of corresponding situation.
+    """
+    svc_perms = get_group_service_permissions(group=group, service=service, db_session=db_session)
+    res_perms = get_group_service_resources_permissions_dict(group=group, service=service, db_session=db_session)
+    svc_res_json = format_service_resources(
+        service=service,
+        db_session=db_session,
+        service_perms=svc_perms,
+        resources_perms_dict=res_perms,
+        show_all_children=False,
+        show_private_url=False,
+    )
+    return ax.valid_http(httpSuccess=HTTPOk, detail=s.GroupServiceResources_GET_OkResponseSchema.description,
+                         content={u"service": svc_res_json})

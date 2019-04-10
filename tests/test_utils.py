@@ -17,9 +17,10 @@ from magpie.definitions.pyramid_definitions import (  # noqa: F401
     HTTPBadRequest,
     HTTPOk,
 )
-from magpie import models
+from magpie import models, __meta__
 from magpie.permissions import format_permissions, Permission
 from magpie.utils import get_header, ExtendedEnumMeta, CONTENT_TYPE_JSON
+from distutils.version import LooseVersion
 from pyramid.testing import DummyRequest
 from tests import utils, runner
 from enum import Enum
@@ -37,6 +38,7 @@ class DummyEnum(six.with_metaclass(ExtendedEnumMeta, Enum)):
 
 
 @runner.MAGPIE_TEST_UTILS
+@runner.MAGPIE_TEST_LOCAL
 class TestUtils(unittest.TestCase):
     @staticmethod
     def make_request(request_path_query):
@@ -53,9 +55,8 @@ class TestUtils(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        pass
+        cls.version = __meta__.__version__  # only local test
 
-    @runner.MAGPIE_TEST_LOCAL
     def test_magpie_prefix_direct_request(self):
         base_url = "http://localhost"
         for url in ["http://localhost", "http://localhost/magpie"]:
@@ -67,7 +68,6 @@ class TestUtils(unittest.TestCase):
             utils.check_val_equal(resp.request.url, base_url + path,
                                   "Proxied path should have been auto-resolved [URL: {}].".format(url))
 
-    @runner.MAGPIE_TEST_LOCAL
     def test_magpie_prefix_request_with_multiple_route_url(self):
         """
         Test multiple request routing with fixed "MAGPIE_URL" within the API application.
@@ -87,14 +87,19 @@ class TestUtils(unittest.TestCase):
             return real_get_multiformat_post(request, name, default=default)
 
         for url in ["http://localhost", "http://localhost/magpie"]:
-            paths = ["/signin", "/signin_internal"]
+            paths = ["/signin", "/signin_internal"]  # updated on each *direct* 'get_multiformat_post' call in 'login'
             app = utils.get_test_magpie_app({"magpie.url": url})
 
             with mock.patch("magpie.api.login.login.get_multiformat_post", side_effect=mock_get_multiformat_post):
                 data = {"user_name": "foo", "password": "bar"}
                 headers = {"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON}
                 resp = utils.test_request(app, "POST", paths[0], json=data, headers=headers, expect_errors=True)
-                utils.check_response_basic_info(resp, expected_code=406)    # user name doesn't exist
+                if LooseVersion(self.version) < LooseVersion("0.10.0"):
+                    # user name doesn't exist
+                    utils.check_response_basic_info(resp, expected_code=406, expected_method="POST")
+                else:
+                    # invalid username/password credentials
+                    utils.check_response_basic_info(resp, expected_code=401, expected_method="POST")
 
     def test_get_header_split(self):
         headers = {"Content-Type": "{}; charset=UTF-8".format(CONTENT_TYPE_JSON)}

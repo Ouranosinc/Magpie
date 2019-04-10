@@ -89,15 +89,7 @@ def get_group_users_view(request):
 def get_group_services_view(request):
     """List all services a group has permission on."""
     group = ar.get_group_matchdict_checked(request)
-    res_perm_dict = gu.get_group_resources_permissions_dict(group,
-                                                            resource_types=[models.Service.resource_type_name],
-                                                            db_session=request.db)
-    grp_svc_json = ax.evaluate_call(lambda: gu.get_group_services(res_perm_dict, request.db),
-                                    httpError=HTTPInternalServerError,
-                                    msgOnFail=s.GroupServices_InternalServerErrorResponseSchema.description,
-                                    content={u"group": gf.format_group(group)})
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.GroupServices_GET_OkResponseSchema.description,
-                         content={u"services": grp_svc_json})
+    return gu.get_group_services_response(group, request.db)
 
 
 @s.GroupServicePermissionsAPI.get(tags=[s.GroupsTag], response_schemas=s.GroupServicePermissions_GET_responses)
@@ -106,13 +98,7 @@ def get_group_service_permissions_view(request):
     """List all permissions a group has on a specific service."""
     group = ar.get_group_matchdict_checked(request)
     service = ar.get_service_matchdict_checked(request)
-    svc_perms_found = ax.evaluate_call(
-        lambda: format_permissions(gu.get_group_service_permissions(group, service, request.db)),
-        httpError=HTTPInternalServerError,
-        msgOnFail=s.GroupServicePermissions_GET_InternalServerErrorResponseSchema.description,
-        content={u"group": gf.format_group(group), u"service": format_service(service)})
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.GroupServicePermissions_GET_OkResponseSchema.description,
-                         content={u"permission_names": svc_perms_found})
+    return gu.get_group_service_permissions_response(group, service, request.db)
 
 
 @s.GroupServicePermissionsAPI.post(schema=s.GroupServicePermissions_POST_RequestSchema(), tags=[s.GroupsTag],
@@ -187,15 +173,4 @@ def get_group_service_resources_view(request):
     """List all resources under a service a group has permission on."""
     group = ar.get_group_matchdict_checked(request)
     service = ar.get_service_matchdict_checked(request)
-    svc_perms = gu.get_group_service_permissions(group=group, service=service, db_session=request.db)
-    res_perms = gu.get_group_service_resources_permissions_dict(group=group, service=service, db_session=request.db)
-    svc_res_json = format_service_resources(
-        service=service,
-        db_session=request.db,
-        service_perms=svc_perms,
-        resources_perms_dict=res_perms,
-        show_all_children=False,
-        show_private_url=False,
-    )
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.GroupServiceResources_GET_OkResponseSchema.description,
-                         content={u"service": svc_res_json})
+    return gu.get_group_service_resources_response(group, service, request.db)

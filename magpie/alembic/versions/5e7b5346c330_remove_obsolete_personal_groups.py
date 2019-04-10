@@ -16,12 +16,12 @@ root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
 # noinspection PyUnresolvedReferences
-from alembic.context import get_context                             # noqa: F401
-from alembic import op                                              # noqa: F401
-from sqlalchemy.orm import sessionmaker                             # noqa: F401
-from magpie import models, constants                                # noqa: F401
-from magpie.definitions.ziggurat_definitions import UserService     # noqa: F401
-from magpie.definitions.sqlalchemy_definitions import PGDialect     # noqa: F401
+from alembic.context import get_context                                         # noqa: F401
+from alembic import op                                                          # noqa: F401
+from sqlalchemy.orm import sessionmaker                                         # noqa: F401
+from magpie import models, constants                                            # noqa: F401
+from magpie.definitions.ziggurat_definitions import UserService, BaseService    # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import PGDialect                 # noqa: F401
 
 Session = sessionmaker()
 
@@ -36,10 +36,10 @@ def upgrade():
     context = get_context()
     session = Session(bind=op.get_bind())
     if isinstance(context.connection.engine.dialect, PGDialect):
-        all_users = session.query(models.User)
-        all_groups = session.query(models.Group)
-        all_user_group_refs = models.UserGroup.all(db_session=session)
-        all_user_res_perms = models.GroupResourcePermission.all(db_session=session)
+        all_users = BaseService.all(models.User, db_session=session)
+        all_groups = BaseService.all(models.Group, db_session=session)
+        all_user_group_refs = BaseService.all(models.UserGroup, db_session=session)
+        all_user_res_perms = BaseService.all(models.GroupResourcePermission, db_session=session)
 
         ignore_groups = {constants.MAGPIE_ADMIN_GROUP, constants.MAGPIE_USERS_GROUP}
         user_names = {usr.user_name for usr in all_users}

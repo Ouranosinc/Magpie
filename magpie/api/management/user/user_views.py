@@ -238,7 +238,7 @@ def get_user_resource_permissions_view(request):
     resource = ar.get_resource_matchdict_checked(request, "resource_id")
     inherit_groups_perms = asbool(ar.get_query_param(request, "inherit"))
     effective_perms = asbool(ar.get_query_param(request, "effective"))
-    return uu.get_user_resource_permissions_response(resource=resource, user=user, request=request,
+    return uu.get_user_resource_permissions_response(user, resource, request,
                                                      inherit_groups_permissions=inherit_groups_perms,
                                                      effective_permissions=effective_perms)
 

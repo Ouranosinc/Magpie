@@ -182,11 +182,11 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
         app_or_url = utils.get_app_or_url(self)
         if isinstance(app_or_url, six.string_types):
-            warnings.warn("cannot validate 403 status with remote server (no mock possible, test with local)",
+            warnings.warn("cannot validate 403 status with remote server (no mock possible, must test with local)",
                           RuntimeWarning)
         else:
             # call a route that will make a forbidden access to db
-            with mock.patch("magpie.models.User.all", side_effect=Exception("Test")):
+            with mock.patch("magpie.models.User", side_effect=Exception("Test")):
                 resp = utils.test_request(self, "GET", "/users", headers=self.json_headers, expect_errors=True)
                 body = utils.check_response_basic_info(resp, 403, expected_method="GET")
                 utils.check_val_equal(body["code"], 403)
@@ -994,7 +994,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
                 utils.check_val_is_in(r["resource_type"], svc_res_info)
                 r_type = svc_res_info[r["resource_type"]]
                 utils.check_val_equal(r["resource_child_allowed"], r_type["child"])
-                utils.check_all_equal(r["permission_names"], r_type["perms"])
+                utils.check_all_equal(r["permission_names"], r_type["perms"], any_order=True)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServiceResources(self):

@@ -79,10 +79,12 @@ def format_service_resources(service,                       # type: Service
     )
 
 
-def format_service_resource_type(resource_type, service_type):
-    # type: (Resource, Type[ServiceInterface]) -> JSON
+def format_service_resource_type(resource_class, service_class):
+    # type: (Type[Resource], Type[ServiceInterface]) -> JSON
     return {
-        u"resource_type": resource_type.resource_type_name,
-        u"resource_child_allowed": resource_type.child_resource_allowed,
-        u"permission_names": service_type.get_resource_permissions(resource_type),
+        u"resource_type": resource_class.resource_type_name,
+        u"resource_child_allowed": resource_class.child_resource_allowed,
+        u"permission_names": format_permissions(
+            service_class.get_resource_permissions(resource_class.resource_type_name)
+        ),
     }

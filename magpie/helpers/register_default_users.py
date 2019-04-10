@@ -1,6 +1,6 @@
 from magpie import constants, db, models
 from magpie.definitions.sqlalchemy_definitions import Session
-from magpie.definitions.ziggurat_definitions import GroupService, UserService
+from magpie.definitions.ziggurat_definitions import GroupService, UserService, BaseService
 from magpie.utils import print_log, raise_log, get_logger
 from typing import TYPE_CHECKING
 import transaction
@@ -32,7 +32,7 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
     # noinspection PyBroadException
     try:
         # ensure the reference between user/group exists (user joined the group)
-        user_group_refs = models.UserGroup.all(db_session=db_session)
+        user_group_refs = BaseService.all(models.UserGroup, db_session=db_session)
         user_group_refs_tup = [(ref.group_id, ref.user_id) for ref in user_group_refs]
         if (registered_group.id, registered_user.id) not in user_group_refs_tup:
             # noinspection PyArgumentList
