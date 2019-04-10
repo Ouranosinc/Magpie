@@ -15,7 +15,6 @@ from magpie.definitions.pyramid_definitions import (
     HTTPForbidden,
     HTTPNotFound,
     HTTPConflict,
-    HTTPNotAcceptable,
     HTTPInternalServerError,
     NO_PERMISSION_REQUIRED,
 )
@@ -41,8 +40,8 @@ LOGGER = get_logger(__name__)
 
 
 # dictionaries of {'provider_id': 'provider_display_name'}
-default_provider = get_constant("MAGPIE_DEFAULT_PROVIDER")
-MAGPIE_INTERNAL_PROVIDERS = {default_provider: default_provider.capitalize()}
+MAGPIE_DEFAULT_PROVIDER = get_constant("MAGPIE_DEFAULT_PROVIDER")
+MAGPIE_INTERNAL_PROVIDERS = {MAGPIE_DEFAULT_PROVIDER: MAGPIE_DEFAULT_PROVIDER.capitalize()}
 MAGPIE_EXTERNAL_PROVIDERS = get_provider_names()
 MAGPIE_PROVIDER_KEYS = list(MAGPIE_INTERNAL_PROVIDERS.keys()) + list(MAGPIE_EXTERNAL_PROVIDERS.keys())
 
@@ -75,7 +74,8 @@ def verify_provider(provider_name):
 @view_config(route_name=s.SigninAPI.name, request_method="POST", permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
     """Signs in a user session."""
-    provider_name = get_value_multiformat_post_checked(request, "provider_name", default=default_provider).lower()
+    provider_name = get_value_multiformat_post_checked(request, "provider_name", default=MAGPIE_DEFAULT_PROVIDER)
+    provider_name = provider_name.lower()
     user_name = get_value_multiformat_post_checked(request, "user_name")
     password = get_multiformat_post(request, "password")   # no check since password is None for external login
     verify_provider(provider_name)
@@ -89,13 +89,13 @@ def sign_in(request):
         signin_response = request.invoke_subrequest(signin_sub_request)
         if signin_response.status_code == HTTPOk.code:
             return convert_response(signin_response)
-        login_failure(request, "Incorrect credentials.")
+        login_failure(request, s.Signin_POST_UnauthorizedResponseSchema.description)
 
     elif provider_name in MAGPIE_EXTERNAL_PROVIDERS.keys():
         return ax.evaluate_call(lambda: process_sign_in_external(request, user_name, provider_name),
                                 httpError=HTTPInternalServerError,
                                 content={u"user_name": user_name, u"provider_name": provider_name},
-                                msgOnFail=s.Signin_POST_InternalServerErrorResponseSchema.description)
+                                msgOnFail=s.Signin_POST_External_InternalServerErrorResponseSchema.description)
 
 
 # swagger responses referred in `sign_in`
@@ -111,22 +111,22 @@ def login_success_ziggurat(request):
 def login_failure(request, reason=None):
     http_err = HTTPUnauthorized
     if reason is None:
-        http_err = HTTPNotAcceptable
-        reason = s.Signin_POST_NotAcceptableResponseSchema.description
+        reason = s.Signin_POST_UnauthorizedResponseSchema.description
         user_name = get_multiformat_post(request, "user_name", default=None)
-        if user_name is None:
+        password = get_multiformat_post(request, "password", default=None)
+        if any(cred is None for cred in (user_name, password)):
             http_err = HTTPBadRequest
             reason = s.Signin_POST_BadRequestResponseSchema.description
         else:
-            user_name_list = ax.evaluate_call(lambda: [user.user_name for user in
-                                                       UserService.all(models.User, db_session=request.db)],
-                                              fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                                              msgOnFail=s.Signin_POST_ForbiddenResponseSchema.description)
+            user_name_list = ax.evaluate_call(
+                lambda: [user.user_name for user in UserService.all(models.User, db_session=request.db)],
+                fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                msgOnFail=s.Signin_POST_ForbiddenResponseSchema.description)
             if user_name in user_name_list:
-                http_err = HTTPUnauthorized
-                reason = "Incorrect credentials."
+                http_err = HTTPInternalServerError
+                reason = s.Signin_POST_Internal_InternalServerErrorResponseSchema.description
     content = ag.get_request_info(request, default_message=s.Signin_POST_UnauthorizedResponseSchema.description)
-    content.update({u'reason': str(reason)})
+    content.update({u"reason": str(reason)})
     ax.raise_http(httpError=http_err, content=content, detail=s.Signin_POST_UnauthorizedResponseSchema.description)
 
 

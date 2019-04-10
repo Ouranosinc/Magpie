@@ -419,7 +419,6 @@ def generate_response_http_format(httpClass, httpKWArgs, jsonContent, outputType
         elif outputType == CONTENT_TYPE_HTML:
             # add preformat <pre> section to output as is within the <body> section
             htmlBody = "{}<br><h2>Exception Details</h2>" \
-                       "<br><h2>Exception Details</h2>" \
                        "<pre style='word-wrap: break-word; white-space: pre-wrap;'>{}</pre>" \
                 .format(httpClass.explanation, jsonContent)
             httpResponse = httpClass(body_template=htmlBody, content_type=CONTENT_TYPE_HTML, **httpKWArgs)

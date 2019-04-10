@@ -8,6 +8,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPFound,
     HTTPUnauthorized,
     HTTPInternalServerError,
+    HTTPException,
 )
 from magpie.ui.utils import check_response, request_api
 from magpie.ui.home import add_template_data
@@ -68,7 +69,11 @@ class LoginViews(object):
                     return_data[u"invalid_credentials"] = True
                 else:
                     return_data[u"error"] = True
-                return add_template_data(self.request, return_data)
+        except HTTPException as e:
+            if e.status_code == HTTPUnauthorized.code:
+                return_data[u"invalid_credentials"] = True
+            else:
+                return_data[u"error"] = True
         except Exception as e:
             return HTTPInternalServerError(detail=repr(e))
 

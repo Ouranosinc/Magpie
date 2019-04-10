@@ -20,7 +20,7 @@
 <div class="alert danger visible" id="Login_ErrorFailureAlert">
     <h3 class="alert_title danger">Login Error!</h3>
     <p>
-        Login procedure generated an unhandled error.
+        Login procedure generated an error.
     </p>
     <form action="${request.path}" method="post">
         <input type="submit" class="button cancel" name="close" value="Close"

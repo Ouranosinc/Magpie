@@ -321,7 +321,7 @@ class HeaderRequestSchema(colander.MappingSchema):
 QueryEffectivePermissions = colander.SchemaNode(
     colander.Boolean(), default=False, missing=colander.drop,
     description="User groups effective permissions resolved with corresponding service inheritance functionality. "
-                "(Note: group inheritance is enforced regardless of any `inherit` flag).")
+                "(Note: group inheritance is enforced regardless of any 'inherit' flag).")
 QueryInheritGroupsPermissions = colander.SchemaNode(
     colander.Boolean(), default=False, missing=colander.drop,
     description="User groups memberships inheritance to resolve service resource permissions.")
@@ -477,7 +477,7 @@ class PermissionListSchema(colander.SequenceSchema):
     permission_name = colander.SchemaNode(
         colander.String(),
         description="Permissions applicable to the service/resource",
-        example="read"
+        example=Permission.READ.value
     )
 
 
@@ -488,7 +488,7 @@ class UserBodySchema(colander.MappingSchema):
         description="Email of the user.",
         example="toto@mail.com")
     group_names = GroupNamesListSchema(
-        example=['administrators', 'users']
+        example=["administrators", "users"]
     )
 
 
@@ -512,7 +512,7 @@ class GroupBodySchema(colander.MappingSchema):
         example=2,
         missing=colander.drop)
     user_names = UserNamesListSchema(
-        example=['alice', 'bob'],
+        example=["alice", "bob"],
         missing=colander.drop
     )
 
@@ -523,7 +523,7 @@ class ServiceBodySchema(colander.MappingSchema):
         description="Resource identification number",
     )
     permission_names = PermissionListSchema(
-        example=["read", "write"]
+        example=[Permission.READ.value, Permission.WRITE.value]
     )
     service_name = colander.SchemaNode(
         colander.String(),
@@ -584,7 +584,7 @@ class ResourceBodySchema(colander.MappingSchema):
         default=colander.null,  # if no parent
         missing=colander.drop   # if not returned (basic_info = True)
     )
-    permission_names = PermissionListSchema(example=['read', 'write'])
+    permission_names = PermissionListSchema(example=[Permission.READ.value, Permission.WRITE.value])
     permission_names.default = colander.null  # if no parent
     permission_names.missing = colander.drop  # if not returned (basic_info = True)
 
@@ -596,7 +596,7 @@ class Resource_ChildrenContainerWithoutChildResourceBodySchema(ResourceBodySchem
 
 class Resource_ChildResourceWithoutChildrenBodySchema(colander.MappingSchema):
     id = Resource_ChildrenContainerWithoutChildResourceBodySchema()
-    id.name = '{resource_id}'
+    id.name = "{resource_id}"
 
 
 class Resource_ParentResourceWithChildrenContainerBodySchema(ResourceBodySchema):
@@ -609,7 +609,7 @@ class Resource_ChildrenContainerWithChildResourceBodySchema(ResourceBodySchema):
 
 class Resource_ChildResourceWithChildrenContainerBodySchema(colander.MappingSchema):
     id = Resource_ChildrenContainerWithChildResourceBodySchema()
-    id.name = '{resource_id}'
+    id.name = "{resource_id}"
 
 
 class Resource_ServiceWithChildrenResourcesContainerBodySchema(ServiceBodySchema):
@@ -653,7 +653,7 @@ class Resource_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
 
 
 class Resource_MatchDictCheck_NotAcceptableResponseSchema(colander.MappingSchema):
-    description = "Resource ID is an invalid literal for `int` type."
+    description = "Resource ID is an invalid literal for 'int' type."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
@@ -793,7 +793,7 @@ class Resources_POST_CreatedResponseSchema(colander.MappingSchema):
 
 
 class Resources_POST_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Invalid [`resource_name`|`resource_type`|`parent_id`] specified for child resource creation."
+    description = "Invalid ['resource_name'|'resource_type'|'parent_id'] specified for child resource creation."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
@@ -817,7 +817,7 @@ class Resources_POST_ConflictResponseSchema(colander.MappingSchema):
 
 
 class ResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema(example=['read', 'write'])
+    permission_names = PermissionListSchema(example=[Permission.READ.value, Permission.WRITE.value])
 
 
 class ResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):
@@ -957,7 +957,7 @@ class Services_GET_NotAcceptableResponseBodySchema(BaseResponseBodySchema):
 
 
 class Services_GET_NotAcceptableResponseSchema(colander.MappingSchema):
-    description = "Invalid `service_type` value does not correspond to any of the existing service types."
+    description = "Invalid 'service_type' value does not correspond to any of the existing service types."
     header = HeaderResponseSchema()
     body = Services_GET_NotAcceptableResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
@@ -997,7 +997,7 @@ class Services_POST_CreatedResponseSchema(colander.MappingSchema):
 
 
 class Services_POST_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Invalid `service_type` value does not correspond to any of the existing service types."
+    description = "Invalid 'service_type' value does not correspond to any of the existing service types."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
@@ -1009,7 +1009,7 @@ class Services_POST_ForbiddenResponseSchema(colander.MappingSchema):
 
 
 class Services_POST_ConflictResponseSchema(colander.MappingSchema):
-    description = "Specified `service_name` value already exists."
+    description = "Specified 'service_name' value already exists."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPConflict.code, description=description)
 
@@ -1071,7 +1071,7 @@ class Service_PUT_BadRequestResponseSchema(colander.MappingSchema):
 
 
 class Service_PUT_BadRequestResponseSchema_ReservedKeyword(colander.MappingSchema):
-    description = "Update service name to `types` not allowed (reserved keyword)."
+    description = "Update service name to 'types' not allowed (reserved keyword)."
     header = HeaderResponseSchema()
     body = Service_FailureBodyResponseSchema(code=HTTPBadRequest.code, description=description)
 
@@ -1083,7 +1083,7 @@ class Service_PUT_ForbiddenResponseSchema(colander.MappingSchema):
 
 
 class Service_PUT_ConflictResponseSchema(colander.MappingSchema):
-    description = "Specified `service_name` already exists."
+    description = "Specified 'service_name' already exists."
     header = HeaderResponseSchema()
     body = Service_FailureBodyResponseSchema(code=HTTPConflict.code, description=description)
 
@@ -1107,7 +1107,7 @@ class Service_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
 
 
 class ServicePermissions_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema(example=['read', 'write'])
+    permission_names = PermissionListSchema(example=[Permission.READ.value, Permission.WRITE.value])
 
 
 class ServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
@@ -1173,7 +1173,7 @@ class ServiceTypeResourceInfo(colander.MappingSchema):
     )
     permission_names = PermissionListSchema(
         description="Permissions applicable to the specific resource type.",
-        example=['read', 'write']
+        example=[Permission.READ.value, Permission.WRITE.value]
     )
 
 
@@ -1198,7 +1198,7 @@ class ServiceTypeResources_GET_ForbiddenResponseSchema(colander.MappingSchema):
 
 
 class ServiceTypeResources_GET_NotFoundResponseSchema(colander.MappingSchema):
-    description = "Invalid `service_type` does not exist to obtain its resource types."
+    description = "Invalid 'service_type' does not exist to obtain its resource types."
     header = HeaderResponseSchema()
     body = ServiceTypeResourceTypes_GET_FailureBodyResponseSchema(code=HTTPNotFound.code, description=description)
 
@@ -1220,7 +1220,7 @@ class ServiceTypeResourceTypes_GET_ForbiddenResponseSchema(colander.MappingSchem
 
 
 class ServiceTypeResourceTypes_GET_NotFoundResponseSchema(colander.MappingSchema):
-    description = "Invalid `service_type` does not exist to obtain its resource types."
+    description = "Invalid 'service_type' does not exist to obtain its resource types."
     header = HeaderResponseSchema()
     body = ServiceTypeResourceTypes_GET_FailureBodyResponseSchema(code=HTTPNotFound.code, description=description)
 
@@ -1246,38 +1246,38 @@ class Users_CheckInfo_ResponseBodySchema(BaseResponseBodySchema):
 
 
 class Users_CheckInfo_Name_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Invalid `user_name` value specified."
+    description = "Invalid 'user_name' value specified."
     header = HeaderResponseSchema()
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class Users_CheckInfo_Size_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Invalid `user_name` length specified (>{length} characters)." \
+    description = "Invalid 'user_name' length specified (>{length} characters)." \
         .format(length=get_constant('MAGPIE_USER_NAME_MAX_LENGTH'))
     header = HeaderResponseSchema()
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class Users_CheckInfo_Email_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Invalid `email` value specified."
+    description = "Invalid 'email' value specified."
     header = HeaderResponseSchema()
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class Users_CheckInfo_Password_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Invalid `password` value specified."
+    description = "Invalid 'password' value specified."
     header = HeaderResponseSchema()
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class Users_CheckInfo_GroupName_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Invalid `group_name` value specified."
+    description = "Invalid 'group_name' value specified."
     header = HeaderResponseSchema()
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Invalid `user_name` not allowed (reserved keyword)."
+    description = "Invalid 'user_name' not allowed (reserved keyword)."
     header = HeaderResponseSchema()
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPConflict.code, description=description)
 
@@ -1607,7 +1607,7 @@ class UserResourcePermissions_GET_RequestSchema(colander.MappingSchema):
 
 
 class UserResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema(example=['read', 'write'])
+    permission_names = PermissionListSchema(example=[Permission.READ.value, Permission.WRITE.value])
 
 
 class UserResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):
@@ -1617,9 +1617,9 @@ class UserResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):
 
 
 class UserResourcePermissions_GET_NotAcceptableParamResponseSchema(colander.MappingSchema):
-    name = colander.SchemaNode(colander.String(), description='name of the parameter tested', example='resource_type')
-    value = colander.SchemaNode(colander.String(), description='value of the parameter tested')
-    compare = colander.SchemaNode(colander.String(), description='comparison value of the parameter tested',
+    name = colander.SchemaNode(colander.String(), description="name of the parameter tested", example="resource_type")
+    value = colander.SchemaNode(colander.String(), description="value of the parameter tested")
+    compare = colander.SchemaNode(colander.String(), description="comparison value of the parameter tested",
                                   missing=colander.drop)
 
 
@@ -1628,21 +1628,21 @@ class UserResourcePermissions_GET_NotAcceptableResponseBodySchema(colander.Mappi
 
 
 class UserResourcePermissions_GET_NotAcceptableRootServiceResponseSchema(colander.MappingSchema):
-    description = "Invalid `resource` specified for resource permission retrieval."
+    description = "Invalid 'resource' specified for resource permission retrieval."
     header = HeaderResponseSchema()
     body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(
         code=HTTPNotAcceptable.code, description=description)
 
 
 class UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(colander.MappingSchema):
-    description = "Invalid `resource` specified for resource permission retrieval."
+    description = "Invalid 'resource' specified for resource permission retrieval."
     header = HeaderResponseSchema()
     body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(
         code=HTTPNotAcceptable.code, description=description)
 
 
 class UserResourcePermissions_GET_NotAcceptableResourceTypeResponseSchema(colander.MappingSchema):
-    description = "Invalid `resource_type` for corresponding service resource permission retrieval."
+    description = "Invalid 'resource_type' for corresponding service resource permission retrieval."
     header = HeaderResponseSchema()
     body = UserResourcePermissions_GET_NotAcceptableResponseBodySchema(
         code=HTTPNotAcceptable.code, description=description)
@@ -1698,7 +1698,7 @@ class UserResourcePermissions_POST_BadResponseBodySchema(BaseResponseBodySchema)
 
 
 class UserResourcePermissions_POST_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Permission not allowed for specified `resource_type`."
+    description = "Permission not allowed for specified 'resource_type'."
     header = HeaderResponseSchema()
     body = UserResourcePermissions_POST_BadResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
@@ -1710,7 +1710,7 @@ class UserResourcePermissions_POST_ForbiddenResponseSchema(colander.MappingSchem
 
 
 class UserResourcePermissions_POST_NotAcceptableResponseSchema(colander.MappingSchema):
-    description = "Failed to create permission using specified `resource_id` and `user_id`."
+    description = "Failed to create permission using specified 'resource_id' and 'user_id'."
     header = HeaderResponseSchema()
     body = UserResourcePermissions_POST_BadResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
@@ -1822,7 +1822,7 @@ class UserServicePermissions_GET_RequestSchema(colander.MappingSchema):
 
 
 class UserServicePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema(example=['read', 'write'])
+    permission_names = PermissionListSchema(example=[Permission.READ.value, Permission.WRITE.value])
 
 
 class UserServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
@@ -1832,7 +1832,7 @@ class UserServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
 
 
 class UserServicePermissions_GET_NotFoundResponseSchema(colander.MappingSchema):
-    description = "Could not find permissions using specified `service_name` and `user_name`."
+    description = "Could not find permissions using specified 'service_name' and 'user_name'."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
@@ -1947,20 +1947,20 @@ class Group_PUT_OkResponseSchema(colander.MappingSchema):
 
 
 class Group_PUT_Name_NotAcceptableResponseSchema(colander.MappingSchema):
-    description = "Invalid `group_name` value specified."
+    description = "Invalid 'group_name' value specified."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
 
 class Group_PUT_Size_NotAcceptableResponseSchema(colander.MappingSchema):
-    description = "Invalid `group_name` length specified (>{length} characters)." \
+    description = "Invalid 'group_name' length specified (>{length} characters)." \
         .format(length=get_constant('MAGPIE_USER_NAME_MAX_LENGTH'))
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
 
 class Group_PUT_Same_NotAcceptableResponseSchema(colander.MappingSchema):
-    description = "Invalid `group_name` must be different than current name."
+    description = "Invalid 'group_name' must be different than current name."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
@@ -2023,7 +2023,7 @@ class GroupServices_InternalServerErrorResponseSchema(colander.MappingSchema):
 
 
 class GroupServicePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema(example=['read', 'write'])
+    permission_names = PermissionListSchema(example=[Permission.READ.value, Permission.WRITE.value])
 
 
 class GroupServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
@@ -2153,7 +2153,7 @@ class GroupResources_GET_InternalServerErrorResponseSchema(colander.MappingSchem
 
 
 class GroupResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permissions_names = PermissionListSchema(example=['read', 'write'])
+    permissions_names = PermissionListSchema(example=[Permission.READ.value, Permission.WRITE.value])
 
 
 class GroupResourcePermissions_GET_OkResponseSchema(colander.MappingSchema):
@@ -2311,7 +2311,7 @@ class ProviderSignin_GET_NotFoundResponseBodySchema(ErrorResponseBodySchema):
 
 
 class ProviderSignin_GET_NotFoundResponseSchema(colander.MappingSchema):
-    description = "Invalid `provider_name` not found within available providers."
+    description = "Invalid 'provider_name' not found within available providers."
     header = HeaderResponseSchema()
     body = ProviderSignin_GET_NotFoundResponseBodySchema(code=HTTPNotFound.code, description=description)
 
@@ -2335,27 +2335,21 @@ class Signin_POST_OkResponseSchema(colander.MappingSchema):
 
 
 class Signin_POST_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Could not retrieve `user_name`."
+    description = "Missing credentials."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class Signin_POST_UnauthorizedResponseSchema(colander.MappingSchema):
-    description = "Login failure."
+    description = "Incorrect credentials."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPUnauthorized.code, description=description)
 
 
 class Signin_POST_ForbiddenResponseSchema(colander.MappingSchema):
-    description = "Could not verify `user_name`."
+    description = "Could not verify 'user_name'."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
-
-
-class Signin_POST_NotAcceptableResponseSchema(colander.MappingSchema):
-    description = "Undefined `user_name`."
-    header = HeaderResponseSchema()
-    body = ErrorResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
 
 class Signin_POST_ConflictResponseBodySchema(ErrorResponseBodySchema):
@@ -2376,10 +2370,16 @@ class Signin_POST_InternalServerErrorBodySchema(InternalServerErrorResponseBodyS
     provider_name = colander.SchemaNode(colander.String(), description="Specified provider retrieved from the request.")
 
 
-class Signin_POST_InternalServerErrorResponseSchema(colander.MappingSchema):
+class Signin_POST_Internal_InternalServerErrorResponseSchema(colander.MappingSchema):
+    description = "Unknown login error."
+    header = HeaderResponseSchema()
+    body = Signin_POST_InternalServerErrorBodySchema(code=HTTPInternalServerError.code, description=description)
+
+
+class Signin_POST_External_InternalServerErrorResponseSchema(colander.MappingSchema):
     description = "Error occurred while signing in with external provider."
     header = HeaderResponseSchema()
-    body = InternalServerErrorResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
+    body = Signin_POST_InternalServerErrorBodySchema(code=HTTPInternalServerError.code, description=description)
 
 
 class Version_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -2401,461 +2401,460 @@ class Version_GET_OkResponseSchema(colander.MappingSchema):
 
 # Responses for specific views
 Resource_GET_responses = {
-    '200': Resource_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-    '500': Resource_GET_InternalServerErrorResponseSchema()
+    "200": Resource_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
+    "406": Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
+    "500": Resource_GET_InternalServerErrorResponseSchema()
 }
 Resource_PUT_responses = {
-    '200': Resource_PUT_OkResponseSchema(),
-    '403': Resource_PUT_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": Resource_PUT_OkResponseSchema(),
+    "403": Resource_PUT_ForbiddenResponseSchema(),
+    "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
+    "406": Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 Resources_GET_responses = {
-    '200': Resources_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '500': Resource_GET_InternalServerErrorResponseSchema()
+    "200": Resources_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "500": Resource_GET_InternalServerErrorResponseSchema()
 }
 Resources_POST_responses = {
-    '201': Resources_POST_CreatedResponseSchema(),
-    '400': Resources_POST_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Resources_POST_ForbiddenResponseSchema(),
-    '404': Resources_POST_NotFoundResponseSchema(),
-    '409': Resources_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "201": Resources_POST_CreatedResponseSchema(),
+    "400": Resources_POST_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Resources_POST_ForbiddenResponseSchema(),
+    "404": Resources_POST_NotFoundResponseSchema(),
+    "409": Resources_POST_ConflictResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 Resources_DELETE_responses = {
-    '200': Resource_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Resource_DELETE_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": Resource_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Resource_DELETE_ForbiddenResponseSchema(),
+    "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
+    "406": Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 ResourcePermissions_GET_responses = {
-    '200': ResourcePermissions_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': ResourcePermissions_GET_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": ResourcePermissions_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
+    "406": ResourcePermissions_GET_NotAcceptableResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 ServiceTypes_GET_responses = {
-    '200': ServiceTypes_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
+    "200": ServiceTypes_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
 }
 ServiceType_GET_responses = {
-    '200': Services_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '406': Services_GET_NotAcceptableResponseSchema(),
+    "200": Services_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "406": Services_GET_NotAcceptableResponseSchema(),
 }
 Services_GET_responses = {
-    '200': Services_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '406': Services_GET_NotAcceptableResponseSchema(),
+    "200": Services_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "406": Services_GET_NotAcceptableResponseSchema(),
 }
 Services_POST_responses = {
-    '201': Services_POST_CreatedResponseSchema(),
-    '400': Services_POST_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Services_POST_ForbiddenResponseSchema(),
-    '409': Services_POST_ConflictResponseSchema(),
-    '422': Services_POST_UnprocessableEntityResponseSchema(),
+    "201": Services_POST_CreatedResponseSchema(),
+    "400": Services_POST_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Services_POST_ForbiddenResponseSchema(),
+    "409": Services_POST_ConflictResponseSchema(),
+    "422": Services_POST_UnprocessableEntityResponseSchema(),
 }
 Service_GET_responses = {
-    '200': Service_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    "200": Service_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Service_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Service_MatchDictCheck_NotFoundResponseSchema(),
 }
 Service_PUT_responses = {
-    '200': Service_PUT_OkResponseSchema(),
-    '400': Service_PUT_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Service_PUT_ForbiddenResponseSchema(),
-    '409': Service_PUT_ConflictResponseSchema(),
+    "200": Service_PUT_OkResponseSchema(),
+    "400": Service_PUT_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Service_PUT_ForbiddenResponseSchema(),
+    "409": Service_PUT_ConflictResponseSchema(),
 }
 Service_DELETE_responses = {
-    '200': Service_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Service_DELETE_ForbiddenResponseSchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
+    "200": Service_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Service_DELETE_ForbiddenResponseSchema(),
+    "404": Service_MatchDictCheck_NotFoundResponseSchema(),
 }
 ServicePermissions_GET_responses = {
-    '200': ServicePermissions_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
-    '406': ServicePermissions_GET_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": ServicePermissions_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Service_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Service_MatchDictCheck_NotFoundResponseSchema(),
+    "406": ServicePermissions_GET_NotAcceptableResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 ServiceResources_GET_responses = {
-    '200': ServiceResources_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Service_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": ServiceResources_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Service_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Service_MatchDictCheck_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 ServiceResources_POST_responses = {
-    '201': ServiceResources_POST_CreatedResponseSchema(),
-    '400': ServiceResources_POST_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': ServiceResources_POST_ForbiddenResponseSchema(),
-    '404': ServiceResources_POST_NotFoundResponseSchema(),
-    '409': ServiceResources_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "201": ServiceResources_POST_CreatedResponseSchema(),
+    "400": ServiceResources_POST_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": ServiceResources_POST_ForbiddenResponseSchema(),
+    "404": ServiceResources_POST_NotFoundResponseSchema(),
+    "409": ServiceResources_POST_ConflictResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 ServiceTypeResources_GET_responses = {
-    '200': ServiceTypeResources_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': ServiceTypeResources_GET_ForbiddenResponseSchema(),
-    '404': ServiceTypeResources_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": ServiceTypeResources_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": ServiceTypeResources_GET_ForbiddenResponseSchema(),
+    "404": ServiceTypeResources_GET_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 ServiceTypeResourceTypes_GET_responses = {
-    '200': ServiceTypeResourceTypes_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': ServiceTypeResourceTypes_GET_ForbiddenResponseSchema(),
-    '404': ServiceTypeResourceTypes_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": ServiceTypeResourceTypes_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": ServiceTypeResourceTypes_GET_ForbiddenResponseSchema(),
+    "404": ServiceTypeResourceTypes_GET_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 ServiceResource_DELETE_responses = {
-    '200': ServiceResource_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': ServiceResource_DELETE_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": ServiceResource_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": ServiceResource_DELETE_ForbiddenResponseSchema(),
+    "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
+    "406": Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 Users_GET_responses = {
-    '200': Users_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Users_GET_ForbiddenResponseSchema(),
+    "200": Users_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Users_GET_ForbiddenResponseSchema(),
 }
 Users_POST_responses = {
-    '201': Users_POST_CreatedResponseSchema(),
-    '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Users_POST_ForbiddenResponseSchema(),
-    '406': UserGroup_GET_NotAcceptableResponseSchema(),
-    '409': User_Check_ConflictResponseSchema(),
+    "201": Users_POST_CreatedResponseSchema(),
+    "400": Users_CheckInfo_Name_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Users_POST_ForbiddenResponseSchema(),
+    "406": UserGroup_GET_NotAcceptableResponseSchema(),
+    "409": User_Check_ConflictResponseSchema(),
 }
 User_GET_responses = {
-    '200': User_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": User_GET_OkResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": User_CheckAnonymous_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 User_PUT_responses = {
-    '200': Users_PUT_OkResponseSchema(),
-    '400': Users_CheckInfo_Name_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': UserGroup_GET_ForbiddenResponseSchema(),
-    '406': UserGroup_GET_NotAcceptableResponseSchema(),
-    '409': User_Check_ConflictResponseSchema(),
+    "200": Users_PUT_OkResponseSchema(),
+    "400": Users_CheckInfo_Name_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": UserGroup_GET_ForbiddenResponseSchema(),
+    "406": UserGroup_GET_NotAcceptableResponseSchema(),
+    "409": User_Check_ConflictResponseSchema(),
 }
 User_DELETE_responses = {
-    '200': User_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": User_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": User_CheckAnonymous_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 UserResources_GET_responses = {
-    '200': UserResources_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': UserResources_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserResources_GET_OkResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": UserResources_GET_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 UserGroups_GET_responses = {
-    '200': UserGroups_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserGroups_GET_OkResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": User_CheckAnonymous_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 UserGroups_POST_responses = {
-    '201': UserGroups_POST_CreatedResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '409': UserGroups_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "201": UserGroups_POST_CreatedResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": User_CheckAnonymous_NotFoundResponseSchema(),
+    "409": UserGroups_POST_ConflictResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 UserGroup_DELETE_responses = {
-    '200': UserGroup_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserGroup_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": User_CheckAnonymous_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 UserResourcePermissions_GET_responses = {
-    '200': UserResourcePermissions_GET_OkResponseSchema(),
-    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserResourcePermissions_GET_OkResponseSchema(),
+    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
+    "406": Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 UserResourcePermissions_POST_responses = {
-    '201': UserResourcePermissions_POST_CreatedResponseSchema(),
-    '400': UserResourcePermissions_POST_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': UserResourcePermissions_POST_ForbiddenResponseSchema(),
-    '406': UserResourcePermissions_POST_NotAcceptableResponseSchema(),
-    '409': UserResourcePermissions_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "201": UserResourcePermissions_POST_CreatedResponseSchema(),
+    "400": UserResourcePermissions_POST_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": UserResourcePermissions_POST_ForbiddenResponseSchema(),
+    "406": UserResourcePermissions_POST_NotAcceptableResponseSchema(),
+    "409": UserResourcePermissions_POST_ConflictResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 UserResourcePermission_DELETE_responses = {
-    '200': UserResourcePermissions_DELETE_OkResponseSchema(),
-    '400': UserResourcePermissions_DELETE_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '404': UserResourcePermissions_DELETE_NotFoundResponseSchema(),
-    '406': UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserResourcePermissions_DELETE_OkResponseSchema(),
+    "400": UserResourcePermissions_DELETE_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "404": UserResourcePermissions_DELETE_NotFoundResponseSchema(),
+    "406": UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 UserServices_GET_responses = {
-    '200': UserServices_GET_OkResponseSchema(),
-    '403': User_GET_ForbiddenResponseSchema(),
-    '404': User_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserServices_GET_OkResponseSchema(),
+    "403": User_GET_ForbiddenResponseSchema(),
+    "404": User_GET_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 UserServicePermissions_GET_responses = {
-    '200': UserServicePermissions_GET_OkResponseSchema(),
-    '403': User_GET_ForbiddenResponseSchema(),
-    '404': UserServicePermissions_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserServicePermissions_GET_OkResponseSchema(),
+    "403": User_GET_ForbiddenResponseSchema(),
+    "404": UserServicePermissions_GET_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 UserServiceResources_GET_responses = {
-    '200': UserServiceResources_GET_OkResponseSchema(),
-    '403': User_GET_ForbiddenResponseSchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserServiceResources_GET_OkResponseSchema(),
+    "403": User_GET_ForbiddenResponseSchema(),
+    "404": Service_MatchDictCheck_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 UserServicePermissions_POST_responses = UserResourcePermissions_POST_responses
 UserServicePermission_DELETE_responses = UserResourcePermission_DELETE_responses
 LoggedUser_GET_responses = {
-    '200': User_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": User_GET_OkResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": User_CheckAnonymous_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUser_PUT_responses = {
-    '200': Users_PUT_OkResponseSchema(),
-    '400': User_PUT_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_PUT_ForbiddenResponseSchema(),
-    '406': UserGroup_GET_NotAcceptableResponseSchema(),
-    '409': User_PUT_ConflictResponseSchema(),
+    "200": Users_PUT_OkResponseSchema(),
+    "400": User_PUT_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": User_PUT_ForbiddenResponseSchema(),
+    "406": UserGroup_GET_NotAcceptableResponseSchema(),
+    "409": User_PUT_ConflictResponseSchema(),
 }
 LoggedUser_DELETE_responses = {
-    '200': User_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": User_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": User_CheckAnonymous_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUserResources_GET_responses = {
-    '200': UserResources_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': UserResources_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserResources_GET_OkResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": UserResources_GET_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUserGroups_GET_responses = {
-    '200': UserGroups_GET_OkResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserGroups_GET_OkResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": User_CheckAnonymous_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUserGroups_POST_responses = {
-    '201': UserGroups_POST_CreatedResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '409': UserGroups_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "201": UserGroups_POST_CreatedResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": User_CheckAnonymous_NotFoundResponseSchema(),
+    "409": UserGroups_POST_ConflictResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUserGroup_DELETE_responses = {
-    '200': UserGroup_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': User_CheckAnonymous_ForbiddenResponseSchema(),
-    '404': User_CheckAnonymous_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserGroup_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
+    "404": User_CheckAnonymous_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUserResourcePermissions_GET_responses = {
-    '200': UserResourcePermissions_GET_OkResponseSchema(),
-    '403': Resource_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Resource_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Resource_MatchDictCheck_NotAcceptableResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserResourcePermissions_GET_OkResponseSchema(),
+    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
+    "406": Resource_MatchDictCheck_NotAcceptableResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUserResourcePermissions_POST_responses = {
-    '201': UserResourcePermissions_POST_CreatedResponseSchema(),
-    '400': UserResourcePermissions_POST_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '406': UserResourcePermissions_POST_NotAcceptableResponseSchema(),
-    '409': UserResourcePermissions_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "201": UserResourcePermissions_POST_CreatedResponseSchema(),
+    "400": UserResourcePermissions_POST_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "406": UserResourcePermissions_POST_NotAcceptableResponseSchema(),
+    "409": UserResourcePermissions_POST_ConflictResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUserResourcePermission_DELETE_responses = {
-    '200': UserResourcePermissions_DELETE_OkResponseSchema(),
-    '400': UserResourcePermissions_DELETE_BadRequestResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '404': UserResourcePermissions_DELETE_NotFoundResponseSchema(),
-    '406': UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserResourcePermissions_DELETE_OkResponseSchema(),
+    "400": UserResourcePermissions_DELETE_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "404": UserResourcePermissions_DELETE_NotFoundResponseSchema(),
+    "406": UserResourcePermissions_GET_NotAcceptableResourceResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUserServices_GET_responses = {
-    '200': UserServices_GET_OkResponseSchema(),
-    '403': User_GET_ForbiddenResponseSchema(),
-    '404': User_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserServices_GET_OkResponseSchema(),
+    "403": User_GET_ForbiddenResponseSchema(),
+    "404": User_GET_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUserServicePermissions_GET_responses = {
-    '200': UserServicePermissions_GET_OkResponseSchema(),
-    '403': User_GET_ForbiddenResponseSchema(),
-    '404': UserServicePermissions_GET_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserServicePermissions_GET_OkResponseSchema(),
+    "403": User_GET_ForbiddenResponseSchema(),
+    "404": UserServicePermissions_GET_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUserServiceResources_GET_responses = {
-    '200': UserServiceResources_GET_OkResponseSchema(),
-    '403': User_GET_ForbiddenResponseSchema(),
-    '404': Service_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": UserServiceResources_GET_OkResponseSchema(),
+    "403": User_GET_ForbiddenResponseSchema(),
+    "404": Service_MatchDictCheck_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 LoggedUserServicePermissions_POST_responses = LoggedUserResourcePermissions_POST_responses
 LoggedUserServicePermission_DELETE_responses = LoggedUserResourcePermission_DELETE_responses
 Groups_GET_responses = {
-    '200': Groups_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Groups_GET_ForbiddenResponseSchema(),
+    "200": Groups_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Groups_GET_ForbiddenResponseSchema(),
 }
 Groups_POST_responses = {
-    '201': Groups_POST_CreatedResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Groups_POST_ForbiddenCreateResponseSchema(),
-    '409': Groups_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "201": Groups_POST_CreatedResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Groups_POST_ForbiddenCreateResponseSchema(),
+    "409": Groups_POST_ConflictResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 Group_GET_responses = {
-    '200': Group_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Group_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Group_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": Group_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Group_MatchDictCheck_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 Group_PUT_responses = {
-    '200': Group_PUT_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Group_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Group_MatchDictCheck_NotFoundResponseSchema(),
-    '406': Group_PUT_Name_NotAcceptableResponseSchema(),
-    '409': Group_PUT_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": Group_PUT_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Group_MatchDictCheck_NotFoundResponseSchema(),
+    "406": Group_PUT_Name_NotAcceptableResponseSchema(),
+    "409": Group_PUT_ConflictResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 Group_DELETE_responses = {
-    '200': Group_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Group_DELETE_ForbiddenResponseSchema(),
-    '404': Group_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": Group_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Group_DELETE_ForbiddenResponseSchema(),
+    "404": Group_MatchDictCheck_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 GroupUsers_GET_responses = {
-    '200': GroupUsers_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': GroupUsers_GET_ForbiddenResponseSchema(),
-    '404': Group_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": GroupUsers_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": GroupUsers_GET_ForbiddenResponseSchema(),
+    "404": Group_MatchDictCheck_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 GroupServices_GET_responses = {
-    '200': GroupServices_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '404': Group_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-    '500': GroupServices_InternalServerErrorResponseSchema(),
+    "200": GroupServices_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "404": Group_MatchDictCheck_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
+    "500": GroupServices_InternalServerErrorResponseSchema(),
 }
 GroupServicePermissions_GET_responses = {
-    '200': GroupServicePermissions_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Group_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Group_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-    '500': GroupServicePermissions_GET_InternalServerErrorResponseSchema(),
+    "200": GroupServicePermissions_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Group_MatchDictCheck_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
+    "500": GroupServicePermissions_GET_InternalServerErrorResponseSchema(),
 }
 GroupServiceResources_GET_responses = {
-    '200': GroupServiceResources_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Group_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Group_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": GroupServiceResources_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Group_MatchDictCheck_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 GroupResourcePermissions_POST_responses = {
-    '201': GroupResourcePermissions_POST_CreatedResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': GroupResourcePermissions_POST_ForbiddenGetResponseSchema(),
-    '404': Group_MatchDictCheck_NotFoundResponseSchema(),
-    '409': GroupResourcePermissions_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "201": GroupResourcePermissions_POST_CreatedResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": GroupResourcePermissions_POST_ForbiddenGetResponseSchema(),
+    "404": Group_MatchDictCheck_NotFoundResponseSchema(),
+    "409": GroupResourcePermissions_POST_ConflictResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 GroupServicePermissions_POST_responses = GroupResourcePermissions_POST_responses
 GroupServicePermission_DELETE_responses = {
-    '200': GroupServicePermission_DELETE_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': GroupServicePermission_DELETE_ForbiddenResponseSchema(),
-    '404': GroupServicePermission_DELETE_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": GroupServicePermission_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": GroupServicePermission_DELETE_ForbiddenResponseSchema(),
+    "404": GroupServicePermission_DELETE_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 GroupResources_GET_responses = {
-    '200': GroupResources_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Group_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Group_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-    '500': GroupResources_GET_InternalServerErrorResponseSchema(),
+    "200": GroupResources_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Group_MatchDictCheck_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
+    "500": GroupResources_GET_InternalServerErrorResponseSchema(),
 }
 GroupResourcePermissions_GET_responses = {
-    '200': GroupResourcePermissions_GET_OkResponseSchema(),
-    '401': UnauthorizedResponseSchema(),
-    '403': Group_MatchDictCheck_ForbiddenResponseSchema(),
-    '404': Group_MatchDictCheck_NotFoundResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
+    "200": GroupResourcePermissions_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Group_MatchDictCheck_NotFoundResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
 }
 GroupResourcePermission_DELETE_responses = GroupServicePermission_DELETE_responses
 Providers_GET_responses = {
-    '200': Providers_GET_OkResponseSchema(),
+    "200": Providers_GET_OkResponseSchema(),
 }
 ProviderSignin_GET_responses = {
-    '302': ProviderSignin_GET_FoundResponseSchema(),
-    '400': ProviderSignin_GET_BadRequestResponseSchema(),
-    '401': ProviderSignin_GET_UnauthorizedResponseSchema(),
-    '403': ProviderSignin_GET_ForbiddenResponseSchema(),
-    '404': ProviderSignin_GET_NotFoundResponseSchema(),
-    '500': InternalServerErrorResponseSchema()
+    "302": ProviderSignin_GET_FoundResponseSchema(),
+    "400": ProviderSignin_GET_BadRequestResponseSchema(),
+    "401": ProviderSignin_GET_UnauthorizedResponseSchema(),
+    "403": ProviderSignin_GET_ForbiddenResponseSchema(),
+    "404": ProviderSignin_GET_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema()
 }
 Signin_POST_responses = {
-    '200': Signin_POST_OkResponseSchema(),
-    '400': Signin_POST_BadRequestResponseSchema(),
-    '401': Signin_POST_UnauthorizedResponseSchema(),
-    '403': Signin_POST_ForbiddenResponseSchema(),
-    '404': ProviderSignin_GET_NotFoundResponseSchema(),
-    '406': Signin_POST_NotAcceptableResponseSchema(),
-    '409': Signin_POST_ConflictResponseSchema(),
-    '422': UnprocessableEntityResponseSchema(),
-    '500': Signin_POST_InternalServerErrorResponseSchema(),
+    "200": Signin_POST_OkResponseSchema(),
+    "400": Signin_POST_BadRequestResponseSchema(),
+    "401": Signin_POST_UnauthorizedResponseSchema(),
+    "403": Signin_POST_ForbiddenResponseSchema(),
+    "404": ProviderSignin_GET_NotFoundResponseSchema(),
+    "409": Signin_POST_ConflictResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
+    "500": Signin_POST_Internal_InternalServerErrorResponseSchema(),
 }
 Signout_GET_responses = {
-    '200': Signout_GET_OkResponseSchema(),
+    "200": Signout_GET_OkResponseSchema(),
 }
 Session_GET_responses = {
-    '200': Session_GET_OkResponseSchema(),
-    '500': Session_GET_InternalServerErrorResponseSchema()
+    "200": Session_GET_OkResponseSchema(),
+    "500": Session_GET_InternalServerErrorResponseSchema()
 }
 Version_GET_responses = {
-    '200': Version_GET_OkResponseSchema()
+    "200": Version_GET_OkResponseSchema()
 }
 
 

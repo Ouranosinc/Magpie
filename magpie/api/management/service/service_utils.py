@@ -64,7 +64,7 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
 
 def get_services_by_type(service_type, db_session):
     ax.verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                    msgOnFail="Invalid `service_type` value '" + str(service_type) + "' specified")
+                    msgOnFail="Invalid 'service_type' value '" + str(service_type) + "' specified")
     services = db_session.query(models.Service).filter(models.Service.type == service_type)
     return sorted(services, key=lambda svc: svc.resource_name)
 
