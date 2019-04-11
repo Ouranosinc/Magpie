@@ -8,7 +8,6 @@ from magpie.definitions.pyramid_definitions import (
     HTTPBadRequest,
     HTTPForbidden,
     HTTPNotFound,
-    HTTPNotAcceptable,
     HTTPConflict,
     HTTPInternalServerError,
 )
@@ -57,7 +56,7 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
     """
     parent_type = parent_resource.resource_type_name
     ax.verify_param(models.RESOURCE_TYPE_DICT[parent_type].child_resource_allowed, isEqual=True,
-                    paramCompare=True, httpError=HTTPNotAcceptable,
+                    paramCompare=True, httpError=HTTPBadRequest,
                     msgOnFail="Child resource not allowed for specified parent resource type '{}'".format(parent_type))
     root_service = get_resource_root_service(parent_resource, db_session=db_session)
     ax.verify_param(root_service, notNone=True, httpError=HTTPInternalServerError,
@@ -66,9 +65,9 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
                     paramName=u"resource_type", paramCompare=models.Service.resource_type_name,
                     msgOnFail="Invalid 'root_service' retrieved from db is not a service")
     ax.verify_param(SERVICE_TYPE_DICT[root_service.type].child_resource_allowed, isEqual=True,
-                    paramCompare=True, httpError=HTTPNotAcceptable,
+                    paramCompare=True, httpError=HTTPBadRequest,
                     msgOnFail="Child resource not allowed for specified service type '{}'".format(root_service.type))
-    ax.verify_param(resource_type, isIn=True, httpError=HTTPNotAcceptable,
+    ax.verify_param(resource_type, isIn=True, httpError=HTTPBadRequest,
                     paramName=u"resource_type", paramCompare=SERVICE_TYPE_DICT[root_service.type].resource_type_names,
                     msgOnFail="Invalid 'resource_type' specified for service type '{}'".format(root_service.type))
     return root_service
@@ -111,8 +110,8 @@ def get_service_or_resource_types(service_or_resource):
 
 def get_resource_permissions(resource, db_session):
     # type: (models.Resource, Session) -> List[Permission]
-    ax.verify_param(resource, notNone=True, httpError=HTTPNotAcceptable, paramName=u"resource",
-                    msgOnFail=s.UserResourcePermissions_GET_NotAcceptableResourceResponseSchema.description)
+    ax.verify_param(resource, notNone=True, httpError=HTTPBadRequest, paramName=u"resource",
+                    msgOnFail=s.UserResourcePermissions_GET_BadRequestResourceResponseSchema.description)
     # directly access the service resource
     if resource.root_service_id is None:
         service = resource
@@ -120,13 +119,13 @@ def get_resource_permissions(resource, db_session):
 
     # otherwise obtain root level service to infer sub-resource permissions
     service = ResourceService.by_resource_id(resource.root_service_id, db_session=db_session)
-    ax.verify_param(service.resource_type, isEqual=True, httpError=HTTPNotAcceptable,
+    ax.verify_param(service.resource_type, isEqual=True, httpError=HTTPBadRequest,
                     paramName=u"resource_type", paramCompare=models.Service.resource_type_name,
-                    msgOnFail=s.UserResourcePermissions_GET_NotAcceptableRootServiceResponseSchema.description)
+                    msgOnFail=s.UserResourcePermissions_GET_BadRequestRootServiceResponseSchema.description)
     service_class = SERVICE_TYPE_DICT[service.type]
-    ax.verify_param(resource.resource_type_name, isIn=True, httpError=HTTPNotAcceptable,
+    ax.verify_param(resource.resource_type_name, isIn=True, httpError=HTTPBadRequest,
                     paramName=u"resource_type", paramCompare=service_class.resource_type_names,
-                    msgOnFail=s.UserResourcePermissions_GET_NotAcceptableResourceTypeResponseSchema.description)
+                    msgOnFail=s.UserResourcePermissions_GET_BadRequestResourceTypeResponseSchema.description)
     return service_class.get_resource_permissions(resource.resource_type_name)
 
 

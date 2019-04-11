@@ -13,8 +13,8 @@ from magpie.definitions.pyramid_definitions import (  # noqa: F401
     asbool,
     Request,
     HTTPInternalServerError,
-    HTTPNotAcceptable,
     HTTPBadRequest,
+    HTTPForbidden,
     HTTPOk,
 )
 from magpie import models, __meta__
@@ -142,41 +142,41 @@ class TestUtils(unittest.TestCase):
 
     def test_verify_param_proper_verifications(self):
         # with default error
-        utils.check_raises(lambda: ax.verify_param("b", paramCompare=["a", "b"], notIn=True), HTTPNotAcceptable)
-        utils.check_raises(lambda: ax.verify_param("x", paramCompare=["a", "b"], isIn=True), HTTPNotAcceptable)
-        utils.check_raises(lambda: ax.verify_param("1", paramCompare=int, ofType=True), HTTPNotAcceptable)
-        utils.check_raises(lambda: ax.verify_param("x", paramCompare="x", notEqual=True), HTTPNotAcceptable)
-        utils.check_raises(lambda: ax.verify_param("x", paramCompare="y", isEqual=True), HTTPNotAcceptable)
-        utils.check_raises(lambda: ax.verify_param(False, isTrue=True), HTTPNotAcceptable)
-        utils.check_raises(lambda: ax.verify_param(True, isFalse=True), HTTPNotAcceptable)
-        utils.check_raises(lambda: ax.verify_param(None, notNone=True), HTTPNotAcceptable)
-        utils.check_raises(lambda: ax.verify_param(1, isNone=True), HTTPNotAcceptable)
-        utils.check_raises(lambda: ax.verify_param("", notEmpty=True), HTTPNotAcceptable)
-        utils.check_raises(lambda: ax.verify_param("abc", isEmpty=True), HTTPNotAcceptable)
+        utils.check_raises(lambda: ax.verify_param("b", paramCompare=["a", "b"], notIn=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("x", paramCompare=["a", "b"], isIn=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("1", paramCompare=int, ofType=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("x", paramCompare="x", notEqual=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("x", paramCompare="y", isEqual=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(False, isTrue=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(True, isFalse=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(None, notNone=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(1, isNone=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("", notEmpty=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("abc", isEmpty=True), HTTPBadRequest)
 
         # with requested error
         utils.check_raises(lambda: ax.verify_param("b", paramCompare=["a", "b"], notIn=True,
-                                                   httpError=HTTPBadRequest), HTTPBadRequest)
+                                                   httpError=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param("x", paramCompare=["a", "b"], isIn=True,
-                                                   httpError=HTTPBadRequest), HTTPBadRequest)
+                                                   httpError=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param("1", paramCompare=int, ofType=True,
-                                                   httpError=HTTPBadRequest), HTTPBadRequest)
+                                                   httpError=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param("x", paramCompare="x", notEqual=True,
-                                                   httpError=HTTPBadRequest), HTTPBadRequest)
+                                                   httpError=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param("x", paramCompare="y", isEqual=True,
-                                                   httpError=HTTPBadRequest), HTTPBadRequest)
+                                                   httpError=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param(False, isTrue=True,
-                                                   httpError=HTTPBadRequest), HTTPBadRequest)
+                                                   httpError=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param(True, isFalse=True,
-                                                   httpError=HTTPBadRequest), HTTPBadRequest)
+                                                   httpError=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param(None, notNone=True,
-                                                   httpError=HTTPBadRequest), HTTPBadRequest)
+                                                   httpError=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param(1, isNone=True,
-                                                   httpError=HTTPBadRequest), HTTPBadRequest)
+                                                   httpError=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param("", notEmpty=True,
-                                                   httpError=HTTPBadRequest), HTTPBadRequest)
+                                                   httpError=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param("abc", isEmpty=True,
-                                                   httpError=HTTPBadRequest), HTTPBadRequest)
+                                                   httpError=HTTPForbidden), HTTPForbidden)
 
     # noinspection PyTypeChecker
     def test_verify_param_incorrect_usage(self):

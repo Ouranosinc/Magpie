@@ -4,7 +4,7 @@ import os
 
 
 # noinspection PyUnusedLocal
-@s.SwaggerAPI.get(tags=[s.APITag])
+@s.SwaggerAPI.get(tags=[s.APITag], response_schemas=s.SwaggerAPI_GET_responses)
 def api_swagger(request):
     """
     Swagger UI route to display the Magpie REST API schemas.

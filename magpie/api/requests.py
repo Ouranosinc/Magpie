@@ -4,9 +4,9 @@ from magpie.constants import get_constant
 from magpie.definitions import ziggurat_definitions as zig
 from magpie.definitions.pyramid_definitions import (
     IAuthenticationPolicy,
+    HTTPBadRequest,
     HTTPForbidden,
     HTTPNotFound,
-    HTTPNotAcceptable,
     HTTPUnprocessableEntity,
     HTTPInternalServerError,
 )
@@ -140,8 +140,8 @@ def get_group_matchdict_checked(request, group_name_key="group_name"):
 def get_resource_matchdict_checked(request, resource_name_key="resource_id"):
     # type: (Request, Str) -> models.Resource
     resource_id = get_value_matchdict_checked(request, resource_name_key)
-    resource_id = evaluate_call(lambda: int(resource_id), httpError=HTTPNotAcceptable,
-                                msgOnFail=s.Resource_MatchDictCheck_NotAcceptableResponseSchema.description)
+    resource_id = evaluate_call(lambda: int(resource_id), httpError=HTTPBadRequest,
+                                msgOnFail=s.Resource_MatchDictCheck_BadRequestResponseSchema.description)
     resource = evaluate_call(lambda: zig.ResourceService.by_resource_id(resource_id, db_session=request.db),
                              fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
                              msgOnFail=s.Resource_MatchDictCheck_ForbiddenResponseSchema.description)

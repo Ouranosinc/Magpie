@@ -44,7 +44,7 @@ from pyramid.interfaces import IAuthenticationPolicy, IAuthorizationPolicy      
 # noinspection PyUnresolvedReferences
 from pyramid.response import Response, FileResponse                                 # noqa: F401
 # noinspection PyUnresolvedReferences
-from pyramid.tweens import EXCVIEW                                                  # noqa: F401
+from pyramid.tweens import EXCVIEW, MAIN, INGRESS                                   # noqa: F401
 # noinspection PyUnresolvedReferences
 from pyramid.view import (      # noqa: F401
     view_config,

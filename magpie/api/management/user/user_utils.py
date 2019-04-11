@@ -15,7 +15,6 @@ from magpie.definitions.pyramid_definitions import (
     HTTPBadRequest,
     HTTPForbidden,
     HTTPNotFound,
-    HTTPNotAcceptable,
     HTTPConflict,
     HTTPInternalServerError,
 )
@@ -45,8 +44,8 @@ def create_user(user_name, password, email, group_name, db_session):
     group_check = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db_session),
                                    httpError=HTTPForbidden,
                                    msgOnFail=s.UserGroup_GET_ForbiddenResponseSchema.description)
-    ax.verify_param(group_check, notNone=True, httpError=HTTPNotAcceptable,
-                    msgOnFail=s.UserGroup_Check_ForbiddenResponseSchema.description)
+    ax.verify_param(group_check, notNone=True, httpError=HTTPBadRequest,
+                    msgOnFail=s.UserGroup_Check_BadRequestResponseSchema.description)
 
     # Check if user already exists
     user_check = ax.evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
@@ -93,9 +92,9 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     # noinspection PyArgumentList
     new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user.id, perm_name=permission.value)
     usr_res_data = {u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission.value}
-    ax.verify_param(new_perm, notNone=True, httpError=HTTPNotAcceptable,
+    ax.verify_param(new_perm, notNone=True, httpError=HTTPForbidden,
                     content={u"resource_id": resource_id, u"user_id": user.id},
-                    msgOnFail=s.UserResourcePermissions_POST_NotAcceptableResponseSchema.description)
+                    msgOnFail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                      httpError=HTTPForbidden, content=usr_res_data,
                      msgOnFail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)

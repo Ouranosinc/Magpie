@@ -275,7 +275,7 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
 
 def log_request_format(request):
     # type: (Request) -> Str
-    return "{!s:8} {!s} {!s}".format(request.method, request.host, request.path)
+    return "{!s} {!s} {!s}".format(request.method, request.host, request.path)
 
 
 def log_request(event):
@@ -284,7 +284,7 @@ def log_request(event):
 
 
 # noinspection PyUnusedLocal
-def log_exception(handler, registry):
+def log_exception_tween(handler, registry):
     """
     Tween factory that logs any exception before re-raising it.
     Application errors are marked as ``ERROR`` while non critical HTTP errors are marked as ``WARNING``.

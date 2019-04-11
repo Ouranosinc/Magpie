@@ -5,8 +5,8 @@ from magpie.definitions.ziggurat_definitions import GroupService
 from magpie.definitions.pyramid_definitions import (
     view_config,
     HTTPOk,
+    HTTPBadRequest,
     HTTPForbidden,
-    HTTPNotAcceptable,
     HTTPConflict,
     HTTPInternalServerError,
 )
@@ -44,13 +44,13 @@ def edit_group_view(request):
     """Update a group by name."""
     group = ar.get_group_matchdict_checked(request, group_name_key="group_name")
     new_group_name = ar.get_multiformat_post(request, "group_name")
-    ax.verify_param(new_group_name, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                    msgOnFail=s.Group_PUT_Name_NotAcceptableResponseSchema.description)
-    ax.verify_param(len(new_group_name), isIn=True, httpError=HTTPNotAcceptable,
+    ax.verify_param(new_group_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
+                    msgOnFail=s.Group_PUT_Name_BadRequestResponseSchema.description)
+    ax.verify_param(len(new_group_name), isIn=True, httpError=HTTPBadRequest,
                     paramCompare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
-                    msgOnFail=s.Group_PUT_Size_NotAcceptableResponseSchema.description)
-    ax.verify_param(new_group_name, notEqual=True, httpError=HTTPNotAcceptable,
-                    paramCompare=group.group_name, msgOnFail=s.Group_PUT_Same_NotAcceptableResponseSchema.description)
+                    msgOnFail=s.Group_PUT_Size_BadRequestResponseSchema.description)
+    ax.verify_param(new_group_name, notEqual=True, httpError=HTTPBadRequest,
+                    paramCompare=group.group_name, msgOnFail=s.Group_PUT_Same_BadRequestResponseSchema.description)
     ax.verify_param(GroupService.by_group_name(new_group_name, db_session=request.db),
                     isNone=True, httpError=HTTPConflict,
                     msgOnFail=s.Group_PUT_ConflictResponseSchema.description)

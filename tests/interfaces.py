@@ -24,7 +24,6 @@ import six
 # noinspection PyPep8Naming
 class Base_Magpie_TestCase(object):
     version = None
-    url = None
 
     __test__ = False
 

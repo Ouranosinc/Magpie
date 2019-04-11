@@ -3,6 +3,16 @@
 History
 =======
 
+0.10.x
+---------------------
+
+* refactoring of literal strings to corresponding ``Permission`` enum (#167)
+* change all incorrect usages of ``HTTPNotAcceptable [406]`` to ``HTTPBadRequest [400]`` (#163)
+* add ``Accept`` header type checking before requests and return ``HTTPNotAcceptable [406]`` if invalid
+* code formatting changes for consistency and cleanup of redundant/misguiding names (#162)
+* add option ``MAGPIE_UI_ENABLED`` allowing to completely disable all ``/ui`` route (enabled by default)
+* swagger response improvements (#126)
+
 0.9.x
 ---------------------
 

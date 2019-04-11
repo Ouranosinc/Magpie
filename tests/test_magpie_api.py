@@ -15,6 +15,8 @@ from tests import utils, runner
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti  # noqa: F401
 import unittest
+import mock
+import os
 
 
 @runner.MAGPIE_TEST_API
@@ -137,6 +139,20 @@ class TestCase_MagpieAPI_AdminAuth_Remote(ti.Interface_MagpieAPI_AdminAuth, unit
         cls.version = utils.TestSetup.get_Version(cls)
         cls.check_requirements()
         cls.setup_test_values()
+
+
+@runner.MAGPIE_TEST_API
+class TestCase_MagpieAPI_NoUI(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        with mock.patch.dict(os.environ, {"MAGPIE_UI_ENABLED": "false"}):
+            cls.app = utils.get_test_magpie_app()
+
+    def test_magpie_homepage(self):
+        resp = utils.test_request(self.app, "GET", "/")
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("name", body)
+        utils.check_val_is_in("magpie", body["name"])
 
 
 if __name__ == "__main__":

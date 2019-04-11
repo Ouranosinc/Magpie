@@ -9,3 +9,4 @@ def includeme(config):
     config.include("magpie.api.home")
     config.include("magpie.api.login")
     config.include("magpie.api.management")
+    config.include("magpie.api.swagger")

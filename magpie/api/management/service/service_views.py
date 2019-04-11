@@ -8,10 +8,9 @@ from magpie.definitions.pyramid_definitions import (
     HTTPBadRequest,
     HTTPForbidden,
     HTTPNotFound,
-    HTTPNotAcceptable,
     HTTPConflict,
 )
-from magpie.permissions import Permission
+from magpie.permissions import Permission, format_permissions
 from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import CONTENT_TYPE_JSON
@@ -48,7 +47,7 @@ def get_services_runner(request):
         service_types = SERVICE_TYPE_DICT.keys()
     else:
         ax.verify_param(service_type_filter, paramCompare=SERVICE_TYPE_DICT.keys(), isIn=True,
-                        httpError=HTTPNotAcceptable, msgOnFail=s.Services_GET_NotAcceptableResponseSchema.description,
+                        httpError=HTTPBadRequest, msgOnFail=s.Services_GET_BadRequestResponseSchema.description,
                         content={u"service_type": str(service_type_filter)}, contentType=CONTENT_TYPE_JSON)
         service_types = [service_type_filter]
 
@@ -169,10 +168,10 @@ def get_service_permissions_view(request):
     service = ar.get_service_matchdict_checked(request)
     svc_content = sf.format_service(service, show_private_url=True)
     svc_perms = ax.evaluate_call(lambda: [p.value for p in SERVICE_TYPE_DICT[service.type].permissions],
-                                 fallback=request.db.rollback(), httpError=HTTPNotAcceptable, content=svc_content,
-                                 msgOnFail=s.ServicePermissions_GET_NotAcceptableResponseSchema.description)
+                                 fallback=request.db.rollback(), httpError=HTTPBadRequest, content=svc_content,
+                                 msgOnFail=s.ServicePermissions_GET_BadRequestResponseSchema.description)
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.ServicePermissions_GET_OkResponseSchema.description,
-                         content={u'permission_names': sorted(svc_perms)})
+                         content={u'permission_names': format_permissions(svc_perms)})
 
 
 @s.ServiceResourceAPI.delete(schema=s.ServiceResource_DELETE_RequestSchema(), tags=[s.ServicesTag],

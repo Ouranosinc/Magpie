@@ -22,7 +22,8 @@ def includeme(config):
     if get_constant("MAGPIE_LOG_REQUEST"):
         config.add_subscriber("magpie.utils.log_request", NewRequest)
     if get_constant("MAGPIE_LOG_EXCEPTION"):
-        config.add_tween("magpie.utils.log_exception", under=EXCVIEW)
+        config.add_tween("magpie.utils.log_exception_tween", under=EXCVIEW)
+    config.add_tween("magpie.api.generic.validate_accept_header_tween", under="magpie.utils.log_exception_tween")
 
     config.include("cornice")
     config.include("cornice_swagger")
@@ -33,3 +34,5 @@ def includeme(config):
     config.include("magpie.db")
     if get_constant("MAGPIE_UI_ENABLED"):
         config.include("magpie.ui")
+    else:
+        logger.warning("Magpie UI not enabled.")

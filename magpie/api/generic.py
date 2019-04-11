@@ -1,4 +1,4 @@
-from magpie.api.exception import raise_http
+from magpie.api.exception import raise_http, verify_param
 from magpie.api import schemas as s
 from magpie.definitions.pyramid_definitions import (
     IAuthenticationPolicy,
@@ -8,10 +8,11 @@ from magpie.definitions.pyramid_definitions import (
     HTTPForbidden,
     HTTPNotFound,
     HTTPMethodNotAllowed,
+    HTTPNotAcceptable,
     HTTPInternalServerError,
     HTTPServerError,
 )
-from magpie.utils import get_header, get_logger, CONTENT_TYPE_JSON
+from magpie.utils import get_header, get_logger, CONTENT_TYPE_ANY, CONTENT_TYPE_JSON, SUPPORTED_CONTENT_TYPES
 from simplejson import JSONDecodeError
 LOGGER = get_logger(__name__)
 
@@ -69,6 +70,25 @@ def unauthorized_or_forbidden(request):
 
     return raise_http(nothrow=True, httpError=http_err, detail=content[u"detail"], content=content,
                       contentType=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
+
+
+# noinspection PyUnusedLocal
+def validate_accept_header_tween(handler, registry):
+    """
+    Tween that validates that the specified request ``Accept`` header (if any), is a supported one by the application.
+
+    :raises HTTPNotAcceptable: if `Accept` header was specified and is not supported.
+    """
+    def validate_accept_header(request):
+        # ignore types defined under UI or static routes to allow rendering
+        path = request.path if not request.path.startswith("/magpie") else request.path.replace("/magpie", "", 1)
+        if not any(path.startswith(p) for p in ("/ui", "/static")):
+            any_supported_header = SUPPORTED_CONTENT_TYPES + [CONTENT_TYPE_ANY]
+            accept = get_header("accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
+            verify_param(accept, isIn=True, paramCompare=any_supported_header, paramName="Accept Header",
+                         httpError=HTTPNotAcceptable, msgOnFail=s.NotAcceptableResponseSchema.description)
+        return handler(request)
+    return validate_accept_header
 
 
 def get_request_info(request, default_message=u"undefined"):

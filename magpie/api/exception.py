@@ -2,7 +2,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPError,
     HTTPException,
     HTTPInternalServerError,
-    HTTPNotAcceptable,
+    HTTPBadRequest,
     HTTPSuccessful,
     HTTPRedirection,
     HTTPOk,
@@ -34,7 +34,7 @@ def verify_param(   # noqa: E126
                  # --- output options on failure ---
                  paramName=None,                    # type: Optional[Str]
                  withParam=True,                    # type: bool
-                 httpError=HTTPNotAcceptable,       # type: HTTPError
+                 httpError=HTTPBadRequest,          # type: HTTPError
                  httpKWArgs=None,                   # type: Optional[ParamsType]
                  msgOnFail="",                      # type: Str
                  content=None,                      # type: Optional[JSON]
@@ -63,7 +63,7 @@ def verify_param(   # noqa: E126
         other value(s) to test `param` against, can be an iterable (single value resolved as iterable unless `None`)
         to test for `None` type, use `isNone`/`notNone` flags instead
     :param paramName: name of the tested parameter returned in response if specified for debugging purposes
-    :param httpError: derived exception to raise on test failure (default: `HTTPNotAcceptable`)
+    :param httpError: derived exception to raise on test failure (default: `HTTPBadRequest`)
     :param httpKWArgs: additional keyword arguments to pass to `httpError` if called in case of HTTP exception
     :param msgOnFail: message details to return in HTTP exception if flag condition failed
     :param content: json formatted additional content to provide in case of exception
@@ -80,7 +80,7 @@ def verify_param(   # noqa: E126
     :param isEqual: test that `param` equals `paramCompare` value
     :param ofType: test that `param` is of same type as specified by `paramCompare` type
     :param withParam: on raise, adds values of `param`, `paramName` and `paramCompare` to json response if specified
-    :raises `HTTPError`: if tests fail, specified exception is raised (default: `HTTPNotAcceptable`)
+    :raises `HTTPError`: if tests fail, specified exception is raised (default: `HTTPBadRequest`)
     :raises `HTTPInternalServerError`: for evaluation error
     :return: nothing if all tests passed
     """
