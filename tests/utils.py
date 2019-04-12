@@ -37,7 +37,7 @@ class RunOption(object):
         self._enabled = self._default_run()
 
     def __call__(self, *args, **kwargs):
-        """Return (condition, reason) matching `unittest.skipUnless` decorator."""
+        """Return (condition, reason) matching ``unittest.skipUnless`` decorator."""
         return self._enabled, self.message
 
     def __str__(self):

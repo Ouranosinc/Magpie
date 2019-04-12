@@ -16,7 +16,6 @@ from tests import utils, runner
 import tests.interfaces as ti  # noqa: F401
 import unittest
 import mock
-import os
 
 
 @runner.MAGPIE_TEST_API
@@ -142,16 +141,24 @@ class TestCase_MagpieAPI_AdminAuth_Remote(ti.Interface_MagpieAPI_AdminAuth, unit
 
 
 @runner.MAGPIE_TEST_API
-class TestCase_MagpieAPI_NoUI(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        with mock.patch.dict(os.environ, {"MAGPIE_UI_ENABLED": "false"}):
-            cls.app = utils.get_test_magpie_app()
+def test_magpie_homepage():
+    from magpie.constants import get_constant as real_get_constant
 
-    def test_magpie_homepage(self):
-        resp = utils.test_request(self.app, "GET", "/")
+    def mock_get_constant(*args, **kwargs):
+        if args[0] == "MAGPIE_UI_ENABLED":
+            return False
+        return real_get_constant(*args, **kwargs)
+
+    with mock.patch("magpie.constants.get_constant", side_effect=mock_get_constant), \
+            mock.patch("magpie.api.home.get_constant", side_effect=mock_get_constant):
+        app = utils.get_test_magpie_app()
+        resp = utils.test_request(app, "GET", "/")
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in("name", body)
+        utils.check_val_is_in("title", body)
+        utils.check_val_is_in("contact", body)
+        utils.check_val_is_in("description", body)
+        utils.check_val_is_in("documentation", body)
         utils.check_val_is_in("magpie", body["name"])
 
 
