@@ -7,10 +7,14 @@ from magpie import db, models, constants
 from magpie.helpers.sync_services import SYNC_SERVICES_TYPES, is_valid_resource_schema, SyncServiceDefault
 from magpie.utils import get_logger
 from collections import OrderedDict
+from typing import TYPE_CHECKING
 import copy
 import datetime
 import logging
 import os
+if TYPE_CHECKING:
+    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
+    from magpie.definitions.typedefs import Optional  # noqa: F401
 
 LOGGER = get_logger(__name__)
 
@@ -256,6 +260,7 @@ def _query_remote_resources_in_database(service_id, session):
 
 
 def get_last_sync(service_id, session):
+    # type: (int, Session) -> Optional[datetime.datetime]
     last_sync = None
     _ensure_sync_info_exists(service_id, session)
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)

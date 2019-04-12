@@ -75,6 +75,43 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         cls.test_service_child_resource_type = Route.resource_type_name
         cls.test_service_child_resource_name = "magpie-unittest-ui-tree-child"
 
+    @runner.MAGPIE_TEST_LOCAL   # not implemented for remote URL
+    @runner.MAGPIE_TEST_STATUS
+    @runner.MAGPIE_TEST_FUNCTIONAL
+    def test_EditService_GotoAddChild_BackToEditService(self):
+        """
+        Verifies that UI button redirects work for the workflow:
+            0. Starting on "Service View", press "Add Child" button (redirects to "New Resource" form)
+            1. Fill form and press "Add" button (creates the service resource and redirects to "Service View")
+            2. Back on "Service View", <new-resource> is visible in the list.
+
+        Note:
+            Only implemented locally with form submission of ``TestApp``.
+        """
+        try:
+            # make sure any sub-resource are all deleted to avoid conflict, then recreate service to add sub-resource
+            utils.TestSetup.delete_TestService(self, override_service_name=self.test_service_parent_resource_name)
+            body = utils.TestSetup.create_TestService(self,
+                                                      override_service_name=self.test_service_parent_resource_name,
+                                                      override_service_type=self.test_service_parent_resource_type)
+            svc_res_id = body["service"]["resource_id"]
+            form = {"add_child": None, "resource_id": str(svc_res_id)}
+            path = "/ui/services/{}/{}".format(self.test_service_parent_resource_type,
+                                               self.test_service_parent_resource_name)
+            resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="add_child", path=path)
+            utils.check_val_is_in("New Resource", resp.text, msg=utils.null)    # add resource page reached
+            data = {
+                "resource_name": self.test_service_child_resource_name,
+                "resource_type": self.test_service_child_resource_type,
+            }
+            resp = utils.TestSetup.check_FormSubmit(self, form_match="add_resource_form", form_submit="add_child",
+                                                    form_data=data, previous_response=resp)
+            for res_name in (self.test_service_parent_resource_name, self.test_service_child_resource_name):
+                find = "<div class=\"tree_item\">{}</div>".format(res_name)
+                utils.check_val_is_in(find, resp.text, msg=utils.null)
+        finally:
+            utils.TestSetup.delete_TestService(self, override_service_name=self.test_service_parent_resource_name)
+
 
 @runner.MAGPIE_TEST_UI
 @runner.MAGPIE_TEST_REMOTE

@@ -16,6 +16,14 @@ if TYPE_CHECKING:
 
 def format_service(service, permissions=None, show_private_url=False, show_resources_allowed=False):
     # type: (Service, Optional[List[Permission]], bool, bool) -> JSON
+    """
+    Formats the ``service`` information into JSON.
+
+    Note:
+        Automatically finds ``permissions`` of the service if not specified.
+        To preserve `empty` permissions such as during listing of `user`/`group` resource permissions,
+        an empty ``list`` should be specified.
+    """
     def fmt_svc(svc, perms):
 
         svc_info = {
@@ -25,7 +33,7 @@ def format_service(service, permissions=None, show_private_url=False, show_resou
             u"service_sync_type": str(svc.sync_type) if svc.sync_type is not None else svc.sync_type,
             u"resource_id": svc.resource_id,
         }
-        if not perms:
+        if perms is None:  # user/group permission specify empty list
             perms = SERVICE_TYPE_DICT[svc.type].permissions
         svc_info[u"permission_names"] = format_permissions(perms)
         if show_private_url:
