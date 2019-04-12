@@ -13,6 +13,7 @@ History
 * add option ``MAGPIE_UI_ENABLED`` allowing to completely disable all ``/ui`` route (enabled by default)
 * swagger response improvements (#126)
 * fix invalid member count value returned on ``/groups/{id}`` request
+* fix invalid ``DELETE /users/{usr}/services/{svc}/permissions/{perm}`` request not working
 * add more unittests (#74)
 
 0.9.x

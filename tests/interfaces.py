@@ -139,6 +139,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
         cls.test_service_name = u"magpie-unittest-service-api"
         cls.test_service_type = ServiceAPI.service_type
+        cls.test_service_perm = SERVICE_TYPE_DICT[cls.test_service_type].permissions[0].value
         utils.TestSetup.create_TestService(cls)
 
         cls.test_resource_name = u"magpie-unittest-resource"
@@ -247,7 +248,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     @classmethod
     def check_GetUserResourcesPermissions(cls, user_name, resource_id, query=None):
         query = "?{}".format(query) if query else ""
-        path = "/users/{usr}/resources/{res_id}/permissions{q}".format(res_id=resource_id, usr=user_name, q=query)
+        path = "/users/{usr}/resources/{res}/permissions{q}".format(res=resource_id, usr=user_name, q=query)
         resp = utils.test_request(cls, "GET", path, headers=cls.json_headers, cookies=cls.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("permission_names", body)
@@ -302,15 +303,15 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         perm_match = Permission.READ_MATCH.value
         data_recur = {u"permission_name": perm_recur}
         data_match = {u"permission_name": perm_match}
-        path = "/users/{usr}/resources/{res_id}/permissions".format(res_id=test_svc_res_id, usr=self.usr)
+        path = "/users/{usr}/resources/{res}/permissions".format(res=test_svc_res_id, usr=self.usr)
         utils.test_request(self, "POST", path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
-        path = "/groups/{grp}/resources/{res_id}/permissions".format(res_id=test_svc_res_id, grp=self.grp)
+        path = "/groups/{grp}/resources/{res}/permissions".format(res=test_svc_res_id, grp=self.grp)
         utils.test_request(self, "POST", path, data=data_match, headers=self.json_headers, cookies=self.cookies)
-        path = "/groups/{grp}/resources/{res_id}/permissions".format(res_id=test_parent_res_id, grp=self.grp)
+        path = "/groups/{grp}/resources/{res}/permissions".format(res=test_parent_res_id, grp=self.grp)
         utils.test_request(self, "POST", path, data=data_match, headers=self.json_headers, cookies=self.cookies)
-        path = "/users/{usr}/resources/{res_id}/permissions".format(res_id=test_child_res_id, usr=anonym_usr)
+        path = "/users/{usr}/resources/{res}/permissions".format(res=test_child_res_id, usr=anonym_usr)
         utils.test_request(self, "POST", path, data=data_match, headers=self.json_headers, cookies=self.cookies)
-        path = "/groups/{grp}/resources/{res_id}/permissions".format(res_id=test_svc_res_id, grp=anonym_grp)
+        path = "/groups/{grp}/resources/{res}/permissions".format(res=test_svc_res_id, grp=anonym_grp)
         utils.test_request(self, "POST", path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
 
         # tests
@@ -370,7 +371,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         test_res_id = body["resource"]["resource_id"]
 
         # test permission creation
-        path = "/users/{usr}/resources/{res_id}/permissions".format(res_id=test_res_id, usr=self.usr)
+        path = "/users/{usr}/resources/{res}/permissions".format(res=test_res_id, usr=self.usr)
         data = {u"permission_name": self.test_resource_perm_name}
         resp = utils.test_request(self, "POST", path, data=data, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 201, expected_method="POST")
@@ -393,7 +394,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         body = utils.TestSetup.create_TestServiceResource(self, data_override=data)
         test_res_id = body["resource"]["resource_id"]
 
-        path = "/users/{usr}/resources/{res_id}/permissions".format(res_id=test_res_id, usr=self.usr)
+        path = "/users/{usr}/resources/{res}/permissions".format(res=test_res_id, usr=self.usr)
         data = {u"permission_name": self.test_resource_perm_name}
         utils.test_request(self, "POST", path, data=data, headers=self.json_headers, cookies=self.cookies)
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_res_id)
@@ -535,6 +536,46 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
                 else:
                     utils.check_val_is_in("service_url", svc_dict)
                     utils.check_val_type(svc_dict["service_url"], six.string_types)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_DeleteUserResourcePermission(self):
+        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestService(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        res_id = body["resource"]["resource_id"]
+        path = "/users/{usr}/resources/{res}/permissions".format(usr=self.test_user_name, res=res_id)
+        data = {"permission_name": self.test_resource_perm_name}
+        resp = utils.test_request(self, "POST", path, headers=self.json_headers, cookies=self.cookies, data=data)
+        utils.check_response_basic_info(resp, 201, expected_method="POST")
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in(self.test_resource_perm_name, body["permission_names"])
+
+        path_perm = "{path}/{perm}".format(path=path, perm=self.test_resource_perm_name)
+        resp = utils.test_request(self, "DELETE", path_perm, headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_not_in(self.test_resource_perm_name, body["permission_names"])
+
+    @runner.MAGPIE_TEST_USERS
+    def test_DeleteUserServicePermission(self):
+        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestService(self)
+        path = "/users/{usr}/services/{svc}/permissions".format(usr=self.test_user_name, svc=self.test_service_name)
+        data = {"permission_name": self.test_service_perm}
+        resp = utils.test_request(self, "POST", path, headers=self.json_headers, cookies=self.cookies, data=data)
+        utils.check_response_basic_info(resp, 201, expected_method="POST")
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in(self.test_service_perm, body["permission_names"])
+
+        path_perm = "{path}/{perm}".format(path=path, perm=self.test_service_perm)
+        resp = utils.test_request(self, "DELETE", path_perm, headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_not_in(self.test_service_perm, body["permission_names"])
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServices(self):
