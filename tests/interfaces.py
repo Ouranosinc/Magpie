@@ -79,6 +79,13 @@ class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
         else:
             utils.check_val_equal(json_body["user_name"], self.usr)
 
+    def test_NotAcceptableRequest(self):
+        utils.warn_version(self, "Unsupported 'Accept' header returns 406 directly.", "0.10.0", skip=True)
+        for path in ["/", "/users/current"]:
+            resp = utils.test_request(self, "GET", path, expect_errors=True,
+                                      headers={"Accept": "application/pdf"})  # anything not supported
+            utils.check_response_basic_info(resp, expected_code=406)
+
 
 # noinspection PyAbstractClass, PyPep8Naming
 @unittest.skip("Not implemented.")

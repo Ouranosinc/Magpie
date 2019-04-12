@@ -19,11 +19,13 @@ def includeme(config):
     config.add_notfound_view(not_found_or_method_not_allowed)
 
     config.set_default_permission(get_constant("MAGPIE_ADMIN_PERMISSION"))
+    tween_position = EXCVIEW
     if get_constant("MAGPIE_LOG_REQUEST"):
         config.add_subscriber("magpie.utils.log_request", NewRequest)
     if get_constant("MAGPIE_LOG_EXCEPTION"):
-        config.add_tween("magpie.utils.log_exception_tween", under=EXCVIEW)
-    config.add_tween("magpie.api.generic.validate_accept_header_tween", under="magpie.utils.log_exception_tween")
+        config.add_tween("magpie.utils.log_exception_tween", under=tween_position)
+        tween_position = "magpie.utils.log_exception_tween"
+    config.add_tween("magpie.api.generic.validate_accept_header_tween", under=tween_position)
 
     config.include("cornice")
     config.include("cornice_swagger")
