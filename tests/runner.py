@@ -12,7 +12,7 @@ from tests.utils import RunOptionDecorator  # noqa: F401
 
 
 def filter_test_files(root, filename):
-    return os.path.isfile(os.path.join(root, filename)) and filename.startswith('test') and filename.endswith('.py')
+    return os.path.isfile(os.path.join(root, filename)) and filename.startswith("test") and filename.endswith(".py")
 
 
 test_root_path = os.path.abspath(os.path.dirname(__file__))
@@ -22,20 +22,20 @@ test_modules = [os.path.splitext(f)[0] for f in filter(lambda i: filter_test_fil
 
 
 # run test options
-MAGPIE_TEST_DEFAULTS = RunOptionDecorator('MAGPIE_TEST_DEFAULTS')   # default users, providers and views
-MAGPIE_TEST_REGISTER = RunOptionDecorator('MAGPIE_TEST_REGISTER')   # methods employed in 'register' module
-MAGPIE_TEST_LOGIN = RunOptionDecorator('MAGPIE_TEST_LOGIN')
-MAGPIE_TEST_SERVICES = RunOptionDecorator('MAGPIE_TEST_SERVICES')
-MAGPIE_TEST_RESOURCES = RunOptionDecorator('MAGPIE_TEST_RESOURCES')
-MAGPIE_TEST_GROUPS = RunOptionDecorator('MAGPIE_TEST_GROUPS')
-MAGPIE_TEST_USERS = RunOptionDecorator('MAGPIE_TEST_USERS')
-MAGPIE_TEST_STATUS = RunOptionDecorator('MAGPIE_TEST_STATUS')  # validate views found/displayed as per permissions
-MAGPIE_TEST_REMOTE = RunOptionDecorator('MAGPIE_TEST_REMOTE')
-MAGPIE_TEST_LOCAL = RunOptionDecorator('MAGPIE_TEST_LOCAL')
-MAGPIE_TEST_API = RunOptionDecorator('MAGPIE_TEST_API')
-MAGPIE_TEST_UI = RunOptionDecorator('MAGPIE_TEST_UI')
-MAGPIE_TEST_UTILS = RunOptionDecorator('MAGPIE_TEST_UTILS')
-MAGPIE_TEST_FUNCTIONAL = RunOptionDecorator('MAGPIE_TEST_FUNCTIONAL')   # operations sequence
+MAGPIE_TEST_DEFAULTS = RunOptionDecorator("MAGPIE_TEST_DEFAULTS")   # default users, providers and views
+MAGPIE_TEST_REGISTER = RunOptionDecorator("MAGPIE_TEST_REGISTER")   # methods employed in 'register' module
+MAGPIE_TEST_LOGIN = RunOptionDecorator("MAGPIE_TEST_LOGIN")
+MAGPIE_TEST_SERVICES = RunOptionDecorator("MAGPIE_TEST_SERVICES")
+MAGPIE_TEST_RESOURCES = RunOptionDecorator("MAGPIE_TEST_RESOURCES")
+MAGPIE_TEST_GROUPS = RunOptionDecorator("MAGPIE_TEST_GROUPS")
+MAGPIE_TEST_USERS = RunOptionDecorator("MAGPIE_TEST_USERS")
+MAGPIE_TEST_STATUS = RunOptionDecorator("MAGPIE_TEST_STATUS")  # validate views found/displayed as per permissions
+MAGPIE_TEST_REMOTE = RunOptionDecorator("MAGPIE_TEST_REMOTE")
+MAGPIE_TEST_LOCAL = RunOptionDecorator("MAGPIE_TEST_LOCAL")
+MAGPIE_TEST_API = RunOptionDecorator("MAGPIE_TEST_API")
+MAGPIE_TEST_UI = RunOptionDecorator("MAGPIE_TEST_UI")
+MAGPIE_TEST_UTILS = RunOptionDecorator("MAGPIE_TEST_UTILS")
+MAGPIE_TEST_FUNCTIONAL = RunOptionDecorator("MAGPIE_TEST_FUNCTIONAL")   # operations sequence
 
 
 def test_suite():
@@ -43,8 +43,8 @@ def test_suite():
     for t in test_modules:
         try:
             # If the module defines a suite() function, call it to get the suite.
-            mod = __import__(t, globals(), locals(), ['suite'])
-            suite_fn = getattr(mod, 'suite')
+            mod = __import__(t, globals(), locals(), ["suite"])
+            suite_fn = getattr(mod, "suite")
             suite.addTest(suite_fn())
         except (ImportError, AttributeError):
             try:
@@ -65,5 +65,5 @@ def run_suite():
         unittest.TextTestRunner().run(test_suite())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_suite()

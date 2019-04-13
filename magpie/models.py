@@ -18,6 +18,7 @@ from magpie.definitions.ziggurat_definitions import (
     UserPermissionMixin,
     UserResourcePermissionMixin,
     UserService,
+    BaseService,
 )
 from magpie.permissions import Permission
 from typing import TYPE_CHECKING
@@ -39,7 +40,8 @@ def get_user(request):
 
 
 class Group(GroupMixin, Base):
-    pass
+    def get_member_count(self, db_session=None):
+        return BaseService.all(UserGroup, db_session=db_session).filter(UserGroup.group_id == self.id).count()
 
 
 class GroupPermission(GroupPermissionMixin, Base):

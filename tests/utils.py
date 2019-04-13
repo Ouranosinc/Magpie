@@ -185,7 +185,7 @@ def warn_version(test, functionality, version, skip=True):
     """
     Verifies that ``test.version`` value meets the minimal ``version`` requirement to execute a test.
     (ie: ``test.version >= version``).
-    If condition is not met, a warning is raised and the test is skipped according to ``skip`` value.
+    If version condition is not met, a warning is emitted and the test is skipped according to ``skip`` value.
     """
     if LooseVersion(test.version) < LooseVersion(version):
         msg = "Functionality [{}] not yet implemented in version [{}], upgrade to [>={}]." \
@@ -199,6 +199,7 @@ def warn_version(test, functionality, version, skip=True):
 def test_request(test_item, method, path, timeout=5, allow_redirects=True, **kwargs):
     """
     Calls the request using either a :class:`webtest.TestApp` instance or :class:`requests.Request` from a string URL.
+
     :param test_item: one of `Base_Magpie_TestCase`, `webtest.TestApp` or remote server URL to call with `requests`
     :param method: request method (GET, POST, PUT, DELETE)
     :param path: test path starting at base path
@@ -506,6 +507,7 @@ def check_error_param_structure(json_body, param_value=Null, param_name=Null, pa
                                 is_param_value_literal_unicode=False, param_compare_exists=False, version=None):
     """
     Validates error response 'param' information based on different Magpie version formats.
+
     :param json_body: json body of the response to validate.
     :param param_value: expected 'value' of param, not verified if <Null>
     :param param_name: expected 'name' of param, not verified if <Null> or non existing for Magpie version
@@ -513,7 +515,7 @@ def check_error_param_structure(json_body, param_value=Null, param_name=Null, pa
     :param is_param_value_literal_unicode: param value is represented as `u'{paramValue}'` for older Magpie version
     :param param_compare_exists: verify that 'compare'/'paramCompare' is in the body, not validating its actual value
     :param version: version of application/remote server to use for format validation, use local Magpie version if None
-    :raise failing condition
+    :raises AssertionError: failing condition
     """
     check_val_type(json_body, dict)
     check_val_is_in("param", json_body)
@@ -540,12 +542,13 @@ def check_error_param_structure(json_body, param_value=Null, param_name=Null, pa
 def check_post_resource_structure(json_body, resource_name, resource_type, resource_display_name, version=None):
     """
     Validates POST /resource response information based on different Magpie version formats.
+
     :param json_body: json body of the response to validate.
     :param resource_name: name of the resource to validate.
     :param resource_type: type of the resource to validate.
     :param resource_display_name: display name of the resource to validate.
     :param version: version of application/remote server to use for format validation, use local Magpie version if None.
-    :raise failing condition
+    :raises AssertionError: failing condition
     """
     version = version or __meta__.__version__
     if LooseVersion(version) >= LooseVersion("0.6.3"):
@@ -571,10 +574,11 @@ def check_post_resource_structure(json_body, resource_name, resource_type, resou
 def check_resource_children(resource_dict, parent_resource_id, root_service_id):
     """
     Crawls through a resource-children tree to validate data field, types and corresponding values.
+
     :param resource_dict: top-level 'resources' dictionary possibly containing children resources.
     :param parent_resource_id: top-level resource/service id (int)
     :param root_service_id: top-level service id (int)
-    :raise any invalid match on expected data field, type or value
+    :raises AssertionError: any invalid match on expected data field, type or value
     """
     check_val_type(resource_dict, dict)
     for resource_id in resource_dict:
@@ -695,8 +699,8 @@ class TestSetup(object):
     @staticmethod
     def get_AnyServiceOfTestServiceType(test_class):
         app_or_url = get_app_or_url(test_class)
-        route = "/services/types/{}".format(test_class.test_service_type)
-        resp = test_request(app_or_url, "GET", route, headers=test_class.json_headers, cookies=test_class.cookies)
+        path = "/services/types/{}".format(test_class.test_service_type)
+        resp = test_request(app_or_url, "GET", path, headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method="GET")
         check_val_is_in("services", json_body)
         check_val_is_in(test_class.test_service_type, json_body["services"])
@@ -709,14 +713,14 @@ class TestSetup(object):
     def create_TestServiceResource(test_class, data_override=None):
         app_or_url = get_app_or_url(test_class)
         TestSetup.create_TestService(test_class)
-        route = "/services/{svc}/resources".format(svc=test_class.test_service_name)
+        path = "/services/{svc}/resources".format(svc=test_class.test_service_name)
         data = {
             "resource_name": test_class.test_resource_name,
             "resource_type": test_class.test_resource_type,
         }
         if data_override:
             data.update(data_override)
-        resp = test_request(app_or_url, "POST", route,
+        resp = test_request(app_or_url, "POST", path,
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
         return check_response_basic_info(resp, 201, expected_method="POST")
@@ -724,8 +728,8 @@ class TestSetup(object):
     @staticmethod
     def get_ExistingTestServiceInfo(test_class):
         app_or_url = get_app_or_url(test_class)
-        route = "/services/{svc}".format(svc=test_class.test_service_name)
-        resp = test_request(app_or_url, "GET", route,
+        path = "/services/{svc}".format(svc=test_class.test_service_name)
+        resp = test_request(app_or_url, "GET", path,
                             headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = get_json_body(resp)
         svc_getter = "service"
@@ -736,8 +740,8 @@ class TestSetup(object):
     @staticmethod
     def get_TestServiceDirectResources(test_class, ignore_missing_service=False):
         app_or_url = get_app_or_url(test_class)
-        route = "/services/{svc}/resources".format(svc=test_class.test_service_name)
-        resp = test_request(app_or_url, "GET", route,
+        path = "/services/{svc}/resources".format(svc=test_class.test_service_name)
+        resp = test_request(app_or_url, "GET", path,
                             headers=test_class.json_headers, cookies=test_class.cookies,
                             expect_errors=ignore_missing_service)
         if ignore_missing_service and resp.status_code == 404:
@@ -761,8 +765,8 @@ class TestSetup(object):
         # delete as required, skip if non-existing
         if len(test_resource) > 0:
             resource_id = test_resource[0]["resource_id"]
-            route = "/services/{svc}/resources/{res_id}".format(svc=test_class.test_service_name, res_id=resource_id)
-            resp = test_request(app_or_url, "DELETE", route,
+            path = "/services/{svc}/resources/{res_id}".format(svc=test_class.test_service_name, res_id=resource_id)
+            resp = test_request(app_or_url, "DELETE", path,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_val_equal(resp.status_code, 200)
@@ -808,8 +812,8 @@ class TestSetup(object):
         test_service = list(filter(lambda r: r["service_name"] == service_name, services_info))
         # delete as required, skip if non-existing
         if len(test_service) > 0:
-            route = "/services/{svc_name}".format(svc_name=service_name)
-            resp = test_request(app_or_url, "DELETE", route,
+            path = "/services/{svc_name}".format(svc_name=service_name)
+            resp = test_request(app_or_url, "DELETE", path,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_val_equal(resp.status_code, 200)
@@ -850,7 +854,7 @@ class TestSetup(object):
         app_or_url = get_app_or_url(test_class)
         data = {
             "user_name": test_class.test_user_name,
-            "email": '{}@mail.com'.format(test_class.test_user_name),
+            "email": "{}@mail.com".format(test_class.test_user_name),
             "password": test_class.test_user_name,
             "group_name": test_class.test_user_group,
         }
@@ -868,12 +872,36 @@ class TestSetup(object):
         user_name = override_user_name or test_class.test_user_name
         # delete as required, skip if non-existing
         if user_name in users:
-            route = "/users/{usr}".format(usr=user_name)
-            resp = test_request(app_or_url, "DELETE", route,
-                                headers=test_class.json_headers,
-                                cookies=test_class.cookies)
+            path = "/users/{usr}".format(usr=user_name)
+            resp = test_request(app_or_url, "DELETE", path, headers=test_class.json_headers, cookies=test_class.cookies)
             check_response_basic_info(resp, 200, expected_method="DELETE")
         TestSetup.check_NonExistingTestUser(test_class, override_user_name=user_name)
+
+    @staticmethod
+    def check_UserIsGroupMember(test_class, override_user_name=None, override_group_name=None):
+        app_or_url = get_app_or_url(test_class)
+        usr_name = override_user_name or test_class.test_user_name
+        grp_name = override_group_name or test_class.test_group_name
+        path = "/groups/{grp}/users".format(grp=grp_name)
+        resp = test_request(app_or_url, "GET", path, headers=test_class.json_headers, cookies=test_class.cookies)
+        body = check_response_basic_info(resp, 200, expected_method="GET")
+        check_val_is_in(usr_name, body["user_names"])
+
+    @staticmethod
+    def assign_TestUserGroup(test_class, override_user_name=None, override_group_name=None):
+        app_or_url = get_app_or_url(test_class)
+        usr_name = override_user_name or test_class.test_user_name
+        grp_name = override_group_name or test_class.test_group_name
+        path = "/groups/{grp}/users".format(grp=grp_name)
+        resp = test_request(app_or_url, "GET", path, headers=test_class.json_headers, cookies=test_class.cookies)
+        body = check_response_basic_info(resp, 200, expected_method="GET")
+        if usr_name not in body["user_names"]:
+            path = "/users/{usr}/groups".format(usr=usr_name)
+            data = {"group_name": grp_name}
+            resp = test_request(app_or_url, "POST", path, data=data,
+                                headers=test_class.json_headers, cookies=test_class.cookies)
+            check_response_basic_info(resp, 201, expected_method="POST")
+        TestSetup.check_UserIsGroupMember(test_class, override_user_name=usr_name, override_group_name=grp_name)
 
     @staticmethod
     def get_RegisteredGroupsList(test_class):
@@ -906,8 +934,8 @@ class TestSetup(object):
         group_name = override_group_name or test_class.test_group_name
         # delete as required, skip if non-existing
         if group_name in groups:
-            route = "/groups/{grp}".format(grp=group_name)
-            resp = test_request(app_or_url, "DELETE", route,
+            path = "/groups/{grp}".format(grp=group_name)
+            resp = test_request(app_or_url, "DELETE", path,
                                 headers=test_class.json_headers,
                                 cookies=test_class.cookies)
             check_response_basic_info(resp, 200, expected_method="DELETE")

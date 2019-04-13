@@ -35,7 +35,7 @@ def get_group_view(request):
     """Get group information."""
     group = ar.get_group_matchdict_checked(request, group_name_key="group_name")
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.Group_GET_OkResponseSchema.description,
-                         content={u"group": gf.format_group(group)})
+                         content={u"group": gf.format_group(group, db_session=request.db)})
 
 
 @s.GroupAPI.put(schema=s.Group_PUT_RequestSchema(), tags=[s.GroupsTag], response_schemas=s.Group_PUT_responses)

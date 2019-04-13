@@ -14,18 +14,26 @@ from magpie.definitions.pyramid_definitions import (
 )
 from magpie.utils import get_header, get_logger, CONTENT_TYPE_ANY, CONTENT_TYPE_JSON, SUPPORTED_CONTENT_TYPES
 from simplejson import JSONDecodeError
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Str, JSON  # noqa: F401
+    from magpie.definitions.pyramid_definitions import Request, HTTPException  # noqa: F401
 LOGGER = get_logger(__name__)
 
 
 def internal_server_error(request):
-    content = get_request_info(request, default_message=s.InternalServerErrorResponseSchema.description)
+    # type: (Request) -> HTTPException
+    """Overrides default HTTP"""
+    content = get_request_info(request, exception_details=True,
+                               default_message=s.InternalServerErrorResponseSchema.description)
     return raise_http(nothrow=True, httpError=HTTPInternalServerError, detail=content[u"detail"], content=content,
                       contentType=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
 
 
 def not_found_or_method_not_allowed(request):
+    # type: (Request) -> HTTPException
     """
-    Overrides the default is HTTPNotFound [404] by appropriate HTTPMethodNotAllowed [405] when applicable.
+    Overrides the default ``HTTPNotFound`` [404] by appropriate ``HTTPMethodNotAllowed`` [405] when applicable.
 
     Not found response can correspond to underlying process operation not finding a required item, or a completely
     unknown route (path did not match any existing API definition).
@@ -47,8 +55,9 @@ def not_found_or_method_not_allowed(request):
 
 
 def unauthorized_or_forbidden(request):
+    # type: (Request) -> HTTPException
     """
-    Overrides the default is HTTPForbidden [403] by appropriate HTTPUnauthorized [401] when applicable.
+    Overrides the default ``HTTPForbidden`` [403] by appropriate ``HTTPUnauthorized`` [401] when applicable.
 
     Unauthorized response is for restricted user access according to credentials and/or authorization headers.
     Forbidden response is for operation refused by the underlying process operations.
@@ -91,7 +100,9 @@ def validate_accept_header_tween(handler, registry):
     return validate_accept_header
 
 
-def get_request_info(request, default_message=u"undefined"):
+def get_request_info(request, default_message=u"undefined", exception_details=False):
+    # type: (Request, Str, bool) -> JSON
+    """Obtains additional content details about the ``request`` according to available information."""
     content = {
         u"route_name": str(request.upath_info),
         u"request_url": str(request.url),
@@ -109,7 +120,7 @@ def get_request_info(request, default_message=u"undefined"):
             content.update(request.exception.json)
         elif isinstance(request.exception, HTTPServerError) and hasattr(request.exception, "message"):
             content.update({u"exception": str(request.exception.message)})
-        elif isinstance(request.exception, Exception):
+        elif isinstance(request.exception, Exception) and exception_details:
             content.update({u"exception": repr(request.exception)})
             # get 'request.exc_info' or 'sys.exc_info', whichever one is available
             LOGGER.error("Request exception.", exc_info=getattr(request, "exc_info", True))

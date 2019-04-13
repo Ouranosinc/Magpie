@@ -378,7 +378,7 @@ def delete_user_service_permission_view(request):
     """Delete a direct permission on a service for a user (not including his groups permissions)."""
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
-    permission = ar.get_permission_multiformat_post_checked(request, service)
+    permission = ar.get_permission_matchdict_checked(request, service)
     return uu.delete_user_resource_permission_response(user, service, permission, request.db)
 
 

@@ -1,24 +1,28 @@
 from magpie.definitions.pyramid_definitions import HTTPInternalServerError
 from magpie.definitions.ziggurat_definitions import ResourceService
 from magpie.models import resource_tree_service
+from magpie.permissions import format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.api.exception import evaluate_call
 
 
 def format_resource(resource, permissions=None, basic_info=False):
+    """
+    Formats the ``resource`` information into JSON.
+    """
     def fmt_res(res, perms, info):
         result = {
-            u'resource_name': str(res.resource_name),
-            u'resource_display_name': str(res.resource_display_name or res.resource_name),
-            u'resource_type': str(res.resource_type),
-            u'resource_id': res.resource_id
+            u"resource_name": str(res.resource_name),
+            u"resource_display_name": str(res.resource_display_name or res.resource_name),
+            u"resource_type": str(res.resource_type),
+            u"resource_id": res.resource_id
         }
         if not info:
             result.update({
-                u'parent_id': res.parent_id,
-                u'root_service_id': res.root_service_id,
-                u'children': {},
-                u'permission_names': list() if perms is None else sorted(perms)
+                u"parent_id": res.parent_id,
+                u"root_service_id": res.root_service_id,
+                u"children": {},
+                u"permission_names": list() if perms is None else format_permissions(perms)
             })
         return result
 
@@ -26,7 +30,7 @@ def format_resource(resource, permissions=None, basic_info=False):
         lambda: fmt_res(resource, permissions, basic_info),
         httpError=HTTPInternalServerError,
         msgOnFail="Failed to format resource.",
-        content={u'resource': repr(resource), u'permissions': repr(permissions), u'basic_info': str(basic_info)}
+        content={u"resource": repr(resource), u"permissions": repr(permissions), u"basic_info": str(basic_info)}
     )
 
 

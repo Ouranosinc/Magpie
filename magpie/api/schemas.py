@@ -520,6 +520,9 @@ class GroupBodySchema(colander.MappingSchema):
         colander.Integer(),
         description="ID of the group.",
         example=1)
+
+
+class GroupDetailBodySchema(GroupBodySchema):
     description = colander.SchemaNode(
         colander.String(),
         description="Description associated to the group.",
@@ -1928,7 +1931,7 @@ class Groups_POST_ConflictResponseSchema(colander.MappingSchema):
 
 
 class Group_GET_ResponseBodySchema(BaseResponseBodySchema):
-    group = GroupBodySchema()
+    group = GroupDetailBodySchema()
 
 
 class Group_GET_OkResponseSchema(colander.MappingSchema):
@@ -2002,10 +2005,14 @@ class Group_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
+class GroupUsers_GET_ResponseBodySchema(BaseResponseBodySchema):
+    user_names = UserNamesListSchema()
+
+
 class GroupUsers_GET_OkResponseSchema(colander.MappingSchema):
     description = "Get group users successful."
     header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+    body = GroupUsers_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class GroupUsers_GET_ForbiddenResponseSchema(colander.MappingSchema):

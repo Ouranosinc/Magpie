@@ -17,10 +17,15 @@ from magpie.ui.home import add_template_data
 from magpie.utils import get_json, get_logger, CONTENT_TYPE_JSON
 from magpie import register
 from collections import OrderedDict
-import datetime
+from datetime import datetime
+from typing import TYPE_CHECKING
 import humanize
 import json
 import six
+if TYPE_CHECKING:
+    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
+    from magpie.definitions.typedefs import List, Optional  # noqa: F401
+
 LOGGER = get_logger(__name__)
 
 
@@ -634,19 +639,22 @@ class ManagementViews(object):
     def get_remote_resources_info(self, res_perms, services, session):
         last_sync_humanized = "Never"
         ids_to_clean, out_of_sync = [], []
-        now = datetime.datetime.now()
+        now = datetime.now()
 
         service_ids = [s["resource_id"] for s in services.values()]
-        last_sync_datetimes = self.get_last_sync_datetimes(service_ids, session)
+        last_sync_datetimes = filter(bool, self.get_last_sync_datetimes(service_ids, session))
 
         if any(last_sync_datetimes):
-            last_sync_datetime = min(filter(bool, last_sync_datetimes))     # type: datetime.datetime
+            # noinspection PyTypeChecker
+            last_sync_datetime = min(last_sync_datetimes)
+            # noinspection PyTypeChecker
             last_sync_humanized = humanize.naturaltime(now - last_sync_datetime)
             res_perms = self.merge_remote_resources(res_perms, services, session)
 
         for last_sync, service_name in zip(last_sync_datetimes, services):
             if last_sync:
                 ids_to_clean += self.get_ids_to_clean(res_perms[service_name]["children"])
+                # noinspection PyTypeChecker
                 if now - last_sync > OUT_OF_SYNC:
                     out_of_sync.append(service_name)
         return res_perms, ids_to_clean, last_sync_humanized, out_of_sync
@@ -663,6 +671,7 @@ class ManagementViews(object):
 
     @staticmethod
     def get_last_sync_datetimes(service_ids, session):
+        # type: (List[int], Session) -> List[Optional[datetime]]
         return [sync_resources.get_last_sync(s, session) for s in service_ids]
 
     def delete_resource(self, res_id):

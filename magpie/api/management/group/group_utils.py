@@ -36,7 +36,7 @@ def get_group_resources(group, db_session):
     # type: (models.Group, Session) -> JSON
     """Get formatted JSON body describing all service resources the ``group`` as permissions on."""
     json_response = {}
-    for svc in ResourceService.all(models.Service, db_session=db_session):
+    for svc in list(ResourceService.all(models.Service, db_session=db_session)):
         svc_perms = get_group_service_permissions(group=group, service=svc, db_session=db_session)
         svc_name = str(svc.resource_name)
         svc_type = str(svc.type)
@@ -213,7 +213,7 @@ def get_group_services_response(group, db_session):
     grp_svc_json = ax.evaluate_call(lambda: get_group_services(res_perm_dict, db_session),
                                     httpError=HTTPInternalServerError,
                                     msgOnFail=s.GroupServices_InternalServerErrorResponseSchema.description,
-                                    content={u"group": format_group(group)})
+                                    content={u"group": format_group(group, basic_info=True)})
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.GroupServices_GET_OkResponseSchema.description,
                          content={u"services": grp_svc_json})
 
@@ -247,7 +247,7 @@ def get_group_service_permissions_response(group, service, db_session):
         lambda: format_permissions(get_group_service_permissions(group, service, db_session)),
         httpError=HTTPInternalServerError,
         msgOnFail=s.GroupServicePermissions_GET_InternalServerErrorResponseSchema.description,
-        content={u"group": format_group(group), u"service": format_service(service)})
+        content={u"group": format_group(group, basic_info=True), u"service": format_service(service)})
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.GroupServicePermissions_GET_OkResponseSchema.description,
                          content={u"permission_names": svc_perms_found})
 
