@@ -423,8 +423,16 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.check_val_type(body["group_names"], list)
         utils.check_val_is_in(get_constant("MAGPIE_ADMIN_GROUP"), body["group_names"])
 
-    @runner.MAGPIE_TEST_USERS
-    def test_GetUserResources_OnlyUserAndInheritedGroupPermissions_values(self):
+    def setup_UniquePermissionsForEach_UserGroupServiceResource(self):
+        """
+        Setups a new user, a new group, a new service and a new child resource of this service.
+        The only member of the new group is the new user.
+
+        For each variation of the created (user/group, service/resource), creates an unique permission.
+        The user and group don't have any other permission than the ones above.
+
+        Returns a tuple of all employed and generated information above.
+        """
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self, override_data={"group_name": self.test_group_name})
         utils.TestSetup.create_TestService(self)
@@ -463,36 +471,44 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         resp = utils.test_request(self, "POST", path, headers=self.json_headers, cookies=self.cookies, data=data)
         utils.check_response_basic_info(resp, 201, expected_method="POST")
 
+        return (perm_svc_usr, perm_svc_grp, perm_res_usr, perm_res_grp,
+                self.test_user_name, self.test_group_name, self.test_service_name, self.test_service_type, res_id)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_GetUserResources_OnlyUserAndInheritedGroupPermissions_values(self):
+        values = self.setup_UniquePermissionsForEach_UserGroupServiceResource()
+        perm_svc_usr, perm_svc_grp, perm_res_usr, perm_res_grp, usr_name, grp_name, svc_name, svc_type, res_id = values
+
         # with or without inherit flag, "other" services and resources should all have no permission
         service_types = utils.get_service_types_for_version(self.version)
-        service_type_no_perm = set(service_types) - {self.test_service_type}
+        service_type_no_perm = set(service_types) - {svc_type}
         utils.check_val_not_equal(len(service_type_no_perm), 0,
                                   msg="Cannot evaluate response values with insufficient service types.")
         for query in ["", "?inherit=true"]:
-            path = "/users/{usr}/resources{q}".format(usr=self.test_user_name, q=query)
+            path = "/users/{usr}/resources{q}".format(usr=usr_name, q=query)
             resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
             body = utils.check_response_basic_info(resp, 200, expected_method="GET")
             utils.check_val_is_in("resources", body)
-            for svc_type in service_type_no_perm:
-                svc_type_body = body["resources"][svc_type]
-                for svc_name in svc_type_body:
-                    utils.check_val_equal(len(svc_type_body[svc_name]["resources"]), 0)
-                    utils.check_val_equal(len(svc_type_body[svc_name]["permission_names"]), 0)
+            for svc_type_no_perm in service_type_no_perm:
+                svc_type_body = body["resources"][svc_type_no_perm]
+                for svc_name_no_perm in svc_type_body:
+                    utils.check_val_equal(len(svc_type_body[svc_name_no_perm]["resources"]), 0)
+                    utils.check_val_equal(len(svc_type_body[svc_name_no_perm]["permission_names"]), 0)
 
         # without inherit flag, only user permissions are visible on service and resource
-        path = "/users/{usr}/resources".format(usr=self.test_user_name)
+        path = "/users/{usr}/resources".format(usr=usr_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        test_service = body["resources"][self.test_service_type][self.test_service_name]
+        test_service = body["resources"][svc_type][svc_name]
         utils.check_val_equal(test_service["permission_names"], [perm_svc_usr])
         utils.check_val_is_in(str(res_id), test_service["resources"])
         utils.check_val_equal(test_service["resources"][str(res_id)]["permission_names"], [perm_res_usr])
 
         # with inherit flag, both user and group permissions are visible on service and resource
-        path = "/users/{usr}/resources?inherit=true".format(usr=self.test_user_name)
+        path = "/users/{usr}/resources?inherit=true".format(usr=usr_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        test_service = body["resources"][self.test_service_type][self.test_service_name]
+        test_service = body["resources"][svc_type][svc_name]
         utils.check_all_equal(test_service["permission_names"], [perm_svc_usr, perm_svc_grp], any_order=True)
         utils.check_val_is_in(str(res_id), test_service["resources"])
         utils.check_all_equal(test_service["resources"][str(res_id)]["permission_names"],
@@ -615,7 +631,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
                     utils.check_val_type(svc_dict["service_url"], six.string_types)
 
     @runner.MAGPIE_TEST_USERS
-    def test_GetUserServiceResources(self):
+    def test_GetUserServiceResources_format(self):
         utils.TestSetup.create_TestService(self)
         utils.TestSetup.create_TestServiceResource(self)
         path = "/users/{usr}/services/{svc}/resources".format(usr=self.usr, svc=self.test_service_name)
@@ -643,6 +659,32 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         else:
             utils.check_val_is_in("service_url", svc_dict)
             utils.check_val_type(svc_dict["service_url"], six.string_types)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_GetUserServiceResources_OnlyUserAndInheritedGroupPermissions_values(self):
+        values = self.setup_UniquePermissionsForEach_UserGroupServiceResource()
+        perm_svc_usr, perm_svc_grp, perm_res_usr, perm_res_grp, usr_name, grp_name, svc_name, svc_type, res_id = values
+
+        # without inherit flag, only user permissions are visible on service and resource
+        path = "/users/{usr}/services/{svc}/resources".format(usr=usr_name, svc=svc_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["service"]["service_name"], svc_name)
+        utils.check_val_equal(body["service"]["service_type"], svc_type)
+        utils.check_val_equal(body["service"]["permission_names"], [perm_svc_usr])
+        utils.check_val_is_in(str(res_id), body["service"]["resources"])
+        utils.check_val_equal(body["service"]["resources"][str(res_id)]["permission_names"], [perm_res_usr])
+
+        # with inherit flag, both user and group permissions are visible on service and resource
+        path = "/users/{usr}/services/{svc}/resources?inherit=true".format(usr=usr_name, svc=svc_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["service"]["service_name"], svc_name)
+        utils.check_val_equal(body["service"]["service_type"], svc_type)
+        utils.check_all_equal(body["service"]["permission_names"], [perm_svc_usr, perm_svc_grp], any_order=True)
+        utils.check_val_is_in(str(res_id), body["service"]["resources"])
+        utils.check_all_equal(body["service"]["resources"][str(res_id)]["permission_names"],
+                              [perm_res_usr, perm_res_grp], any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers(self):
