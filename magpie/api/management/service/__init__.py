@@ -1,10 +1,10 @@
-from magpie.api import api_rest_schemas as s
-from magpie.common import get_logger
+from magpie.api import schemas as s
+from magpie.utils import get_logger
 LOGGER = get_logger(__name__)
 
 
 def includeme(config):
-    LOGGER.info('Adding api service ...')
+    LOGGER.info('Adding api service...')
     # NOTE:
     #   routes 'by type' must be before 'by name' to be evaluated first
     #   order is important to preserve expected behaviour,

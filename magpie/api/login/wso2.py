@@ -1,4 +1,4 @@
-from magpie.common import get_logger
+from magpie.utils import get_logger
 from authomatic.providers.oauth2 import OAuth2
 from authomatic.core import SupportedUserAttributes
 from os import path

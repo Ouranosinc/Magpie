@@ -1,6 +1,5 @@
-from magpie.api.api_except import evaluate_call, verify_param
+from magpie.api.exception import evaluate_call, verify_param
 from magpie.constants import get_constant
-from magpie.common import get_logger, JSON_TYPE
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,
     HTTPNotFound,
@@ -19,7 +18,7 @@ from magpie.definitions.twitcher_definitions import (
 )
 from magpie.models import Service
 from magpie.services import service_factory
-from magpie.utils import get_magpie_url
+from magpie.utils import get_magpie_url, get_logger, CONTENT_TYPE_JSON
 from requests.cookies import RequestsCookieJar
 from six.moves.urllib.parse import urlparse
 import requests
@@ -31,8 +30,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
     def __init__(self, registry):
         super(MagpieOWSSecurity, self).__init__()
         self.magpie_url = get_magpie_url(registry)
-        self.twitcher_ssl_verify = asbool(registry.settings.get('twitcher.ows_proxy_ssl_verify', True))
-        self.twitcher_protected_path = registry.settings.get('twitcher.ows_proxy_protected_path', '/ows')
+        self.twitcher_ssl_verify = asbool(registry.settings.get("twitcher.ows_proxy_ssl_verify", True))
+        self.twitcher_protected_path = registry.settings.get("twitcher.ows_proxy_protected_path", "/ows")
 
     def check_request(self, request):
         if request.path.startswith(self.twitcher_protected_path):
@@ -64,13 +63,13 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         Only update if `MAGPIE_COOKIE_NAME` is missing and is retrievable from `access_token` in `Authorization` header.
         Counter-validate the login procedure by calling Magpie's `/session` which should indicated a logged user.
         """
-        token_name = get_constant('MAGPIE_COOKIE_NAME', settings_name=request.registry.settings)
+        token_name = get_constant("MAGPIE_COOKIE_NAME", settings_name=request.registry.settings)
         not_default = get_twitcher_configuration(request.registry.settings) != TWITCHER_CONFIGURATION_DEFAULT
-        if not_default and 'Authorization' in request.headers and token_name not in request.cookies:
-            magpie_prov = request.params.get('provider', 'WSO2')
-            magpie_auth = '{host}/providers/{provider}/signin'.format(host=self.magpie_url, provider=magpie_prov)
+        if not_default and "Authorization" in request.headers and token_name not in request.cookies:
+            magpie_prov = request.params.get("provider", "WSO2")
+            magpie_auth = "{host}/providers/{provider}/signin".format(host=self.magpie_url, provider=magpie_prov)
             headers = dict(request.headers)
-            headers.update({'Homepage-Route': '/session', 'Accept': JSON_TYPE})
+            headers.update({"Homepage-Route": "/session", "Accept": CONTENT_TYPE_JSON})
             session_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)
             if session_resp.status_code != HTTPOk.code:
                 raise OWSAccessForbidden("Not authorized to access this resource. " +
@@ -83,7 +82,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             magpie_cookies = list(filter(lambda cookie: cookie.name == token_name, request_cookies))
             magpie_domain = urlparse(self.magpie_url).hostname if len(magpie_cookies) > 1 else None
             session_cookies = RequestsCookieJar.get(request_cookies, token_name, domain=magpie_domain)
-            if not session_resp.json().get('authenticated') or not session_cookies:
+            if not session_resp.json().get("authenticated") or not session_cookies:
                 raise OWSAccessForbidden("Not authorized to access this resource. " +
                                          "Session authentication could not be verified.")
             request.cookies.update({token_name: session_cookies})

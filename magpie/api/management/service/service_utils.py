@@ -1,17 +1,18 @@
-from magpie.api import api_except as ax, api_rest_schemas as s
-from magpie.api.management.group.group_utils import create_group_resource_permission
+from magpie.api import exception as ax, schemas as s
+from magpie.api.management.group.group_utils import create_group_resource_permission_response
 from magpie.api.management.service.service_formats import format_service
 from magpie.constants import get_constant
-from magpie.common import get_logger
 from magpie.definitions.pyramid_definitions import (
     HTTPCreated,
+    HTTPBadRequest,
     HTTPForbidden,
-    HTTPNotAcceptable,
     HTTPInternalServerError,
 )
 from magpie.definitions.ziggurat_definitions import GroupService, ResourceService
 from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
-from magpie.services import service_type_dict
+from magpie.services import SERVICE_TYPE_DICT
+from magpie.permissions import Permission
+from magpie.utils import get_logger
 from magpie import models
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -62,19 +63,19 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
 
 
 def get_services_by_type(service_type, db_session):
-    ax.verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPNotAcceptable,
-                    msgOnFail="Invalid `service_type` value '" + str(service_type) + "' specified")
+    ax.verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
+                    msgOnFail="Invalid 'service_type' value '" + str(service_type) + "' specified")
     services = db_session.query(models.Service).filter(models.Service.type == service_type)
     return sorted(services, key=lambda svc: svc.resource_name)
 
 
 def add_service_getcapabilities_perms(service, db_session, group_name=None):
-    if service.type in SERVICES_PHOENIX_ALLOWED \
-    and 'getcapabilities' in service_type_dict[service.type].permission_names:  # noqa: F401
+    if service.type in SERVICES_PHOENIX_ALLOWED and \
+            Permission.GET_CAPABILITIES in SERVICE_TYPE_DICT[service.type].permissions:
         if group_name is None:
             group_name = get_constant('MAGPIE_ANONYMOUS_USER')
         group = GroupService.by_group_name(group_name, db_session=db_session)
         perm = ResourceService.perm_by_group_and_perm_name(service.resource_id, group.id,
-                                                           u'getcapabilities', db_session)
+                                                           Permission.GET_CAPABILITIES.value, db_session)
         if perm is None:  # not set, create it
-            create_group_resource_permission(u'getcapabilities', service, group, db_session)
+            create_group_resource_permission_response(group, service, Permission.GET_CAPABILITIES, db_session)

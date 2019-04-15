@@ -15,11 +15,11 @@ root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
 # noinspection PyUnresolvedReferences
-from alembic.context import get_context                                                 # noqa: F401
-from alembic import op                                                                  # noqa: F401
-from magpie import models, constants                                                    # noqa: F401
-from magpie.definitions.sqlalchemy_definitions import PGDialect, sessionmaker           # noqa: F401
-from magpie.definitions.ziggurat_definitions import GroupService, UserService           # noqa: F401
+from alembic.context import get_context                                                     # noqa: F401
+from alembic import op                                                                      # noqa: F401
+from magpie import models, constants                                                        # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import PGDialect, sessionmaker               # noqa: F401
+from magpie.definitions.ziggurat_definitions import GroupService, UserService, BaseService  # noqa: F401
 
 Session = sessionmaker()
 
@@ -47,7 +47,7 @@ def upgrade():
 
     if isinstance(context.connection.engine.dialect, PGDialect):
         all_groups = session.query(models.Group)
-        all_user_group_refs = models.UserGroup.all(db_session=session)
+        all_user_group_refs = BaseService.all(models.UserGroup, db_session=session)
         map_groups = {OLD_GROUP_ADMIN: NEW_GROUP_ADMIN, OLD_GROUP_USERS: NEW_GROUP_USERS}
 
         for group in all_groups:

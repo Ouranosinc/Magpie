@@ -1,5 +1,5 @@
 from magpie.definitions.pyramid_definitions import HTTPInternalServerError
-from magpie.api.api_except import evaluate_call
+from magpie.api.exception import evaluate_call
 from magpie.constants import get_constant
 
 

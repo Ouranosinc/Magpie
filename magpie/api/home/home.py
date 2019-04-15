@@ -1,12 +1,27 @@
-from magpie.api import api_except as ax, api_rest_schemas as s
+from magpie.api import exception as ax, schemas as s
 from magpie.definitions.pyramid_definitions import NO_PERMISSION_REQUIRED, HTTPOk, view_config
-from magpie.common import JSON_TYPE
 from magpie.db import get_database_revision
+from magpie.utils import get_magpie_url, CONTENT_TYPE_JSON
 from magpie import __meta__
+from copy import deepcopy
+
+
+# noinspection PyUnusedLocal
+@s.HomepageAPI.get(tags=[s.APITag], api_security=s.SecurityEveryoneAPI, response_schemas=s.Homepage_GET_responses)
+def get_homepage(request):
+    """Magpie API homepage (only if Magpie UI is not enabled)."""
+    body = deepcopy(s.InfoAPI)
+    body.update({
+        u"title": s.TitleAPI,
+        u"name": __meta__.__package__,
+        u"documentation": get_magpie_url() + s.SwaggerAPI.path
+    })
+    return ax.valid_http(httpSuccess=HTTPOk, content=body, contentType=CONTENT_TYPE_JSON,
+                         detail=s.Version_GET_OkResponseSchema.description)
 
 
 @s.VersionAPI.get(tags=[s.APITag], api_security=s.SecurityEveryoneAPI, response_schemas=s.Version_GET_responses)
-@view_config(route_name=s.VersionAPI.name, request_method='GET', permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=s.VersionAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
 def get_version(request):
     """
     Version information of the API.
@@ -18,8 +33,8 @@ def get_version(request):
     except Exception:
         pass
     version = {
-        u'version': __meta__.__version__,
-        u'db_version': version_db
+        u"version": __meta__.__version__,
+        u"db_version": version_db
     }
-    return ax.valid_http(httpSuccess=HTTPOk, content=version, contentType=JSON_TYPE,
+    return ax.valid_http(httpSuccess=HTTPOk, content=version, contentType=CONTENT_TYPE_JSON,
                          detail=s.Version_GET_OkResponseSchema.description)

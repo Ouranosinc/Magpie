@@ -1,5 +1,5 @@
 from magpie.definitions.pyramid_definitions import IAuthenticationPolicy, Authenticated
-from magpie.common import get_logger
+from magpie.utils import get_logger
 LOGGER = get_logger(__name__)
 
 
@@ -23,7 +23,7 @@ def add_template_data(request, data=None):
 
 
 def includeme(config):
-    LOGGER.info('Adding home ...')
+    LOGGER.info('Adding home...')
     config.add_route('home', '/')
     config.add_static_view('static', 'static', cache_max_age=3600)
     config.scan()

@@ -1,16 +1,16 @@
 from magpie.api.login import esgfopenid, wso2
-from magpie.common import get_logger
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import (
     AuthTktAuthenticationPolicy, ACLAuthorizationPolicy, Configurator, asbool
 )
 from magpie.definitions.ziggurat_definitions import groupfinder
+from magpie.utils import get_logger
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
 from typing import TYPE_CHECKING
 import logging
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import JsonBody  # noqa: F401
+    from magpie.definitions.typedefs import JSON  # noqa: F401
 AUTHOMATIC_LOGGER = get_logger('magpie.authomatic', level=logging.DEBUG)
 
 
@@ -128,7 +128,7 @@ def authomatic_config(request=None):
     }
 
     # Concatenate the configs.
-    config = {}  # type: JsonBody
+    config = {}  # type: JSON
     config.update(oauth2_config)
     config.update(openid_config)
     config.update(esgf_config)

@@ -1,24 +1,28 @@
 from magpie.definitions.pyramid_definitions import HTTPInternalServerError
 from magpie.definitions.ziggurat_definitions import ResourceService
 from magpie.models import resource_tree_service
-from magpie.services import service_type_dict
-from magpie.api.api_except import evaluate_call
+from magpie.permissions import format_permissions
+from magpie.services import SERVICE_TYPE_DICT
+from magpie.api.exception import evaluate_call
 
 
 def format_resource(resource, permissions=None, basic_info=False):
+    """
+    Formats the ``resource`` information into JSON.
+    """
     def fmt_res(res, perms, info):
         result = {
-            u'resource_name': str(res.resource_name),
-            u'resource_display_name': str(res.resource_display_name or res.resource_name),
-            u'resource_type': str(res.resource_type),
-            u'resource_id': res.resource_id
+            u"resource_name": str(res.resource_name),
+            u"resource_display_name": str(res.resource_display_name or res.resource_name),
+            u"resource_type": str(res.resource_type),
+            u"resource_id": res.resource_id
         }
         if not info:
             result.update({
-                u'parent_id': res.parent_id,
-                u'root_service_id': res.root_service_id,
-                u'children': {},
-                u'permission_names': list() if perms is None else sorted(perms)
+                u"parent_id": res.parent_id,
+                u"root_service_id": res.root_service_id,
+                u"children": {},
+                u"permission_names": list() if perms is None else format_permissions(perms)
             })
         return result
 
@@ -26,7 +30,7 @@ def format_resource(resource, permissions=None, basic_info=False):
         lambda: fmt_res(resource, permissions, basic_info),
         httpError=HTTPInternalServerError,
         msgOnFail="Failed to format resource.",
-        content={u'resource': repr(resource), u'permissions': repr(permissions), u'basic_info': str(basic_info)}
+        content={u"resource": repr(resource), u"permissions": repr(permissions), u"basic_info": str(basic_info)}
     )
 
 
@@ -61,13 +65,13 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, intern
                 service_id = resource.resource_id
                 # add to dict only if not already added
                 if service_id not in internal_svc_res_perm_dict:
-                    internal_svc_res_perm_dict[service_id] = service_type_dict[service.type].resource_types_permissions
+                    internal_svc_res_perm_dict[service_id] = SERVICE_TYPE_DICT[service.type].resource_types_permissions
             # obtain corresponding top-level service resource if not already available
             else:
                 service_id = resource.root_service_id
                 if service_id not in internal_svc_res_perm_dict:
                     service = ResourceService.by_resource_id(service_id, db_session=db_session)
-                    internal_svc_res_perm_dict[service_id] = service_type_dict[service.type].resource_types_permissions
+                    internal_svc_res_perm_dict[service_id] = SERVICE_TYPE_DICT[service.type].resource_types_permissions
 
             perms = internal_svc_res_perm_dict[service_id][resource.resource_type]
 

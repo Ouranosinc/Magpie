@@ -7,9 +7,9 @@
     % else:
         <div class="tree_button"><input type="submit" value="Delete" name="delete_child" class="button disabled" disabled></div>
     % endif
-    % if 'id' in value.keys():
-        % if int(value['id']) in resources_id_type.keys():
-            % if not resources_id_type[int(value['id'])] in resources_no_child:
+    % if "id" in value.keys():
+        % if int(value["id"]) in resources_id_type.keys():
+            % if not resources_id_type[int(value["id"])] in resources_no_child:
                 <div class="tree_button"><input type="submit" value="Add child" name="add_child"></div>
             % else:
                 <div class="tree_button"><input type="submit" value="Add child" name="add_child" class="button disabled" disabled></div>
@@ -49,9 +49,9 @@
         %endif
         <div>
             <input type="submit" class="button delete" name="delete" value="Delete"
-                   onclick="this.parentElement.style.display='none';">
+                   onclick="this.parentElement.style.display="none";">
             <input type="submit" class="button cancel"name="cancel" value="Cancel"
-                   onclick="this.parentElement.style.display='none';">
+                   onclick="this.parentElement.style.display="none";">
         </div>
     </form>
 </div>
@@ -108,7 +108,7 @@
                     </p>
                     <p class="panel_line">
                         <span class="panel_entry">Protected URL: </span>
-                        %if edit_mode == 'edit_url':
+                        %if edit_mode == "edit_url":
                             <input type="text" value="${service_url}" name="new_svc_url"
                                    id="input_url" onkeyup="adjustWidth('input_url')">
                             <input type="submit" value="Save" name="save_url">

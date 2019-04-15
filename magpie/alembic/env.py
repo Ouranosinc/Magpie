@@ -8,7 +8,7 @@ from sqlalchemy.engine import create_engine, Connection, Connectable
 from sqlalchemy_utils import database_exists, create_database
 from magpie.db import get_db_url
 from magpie.constants import get_constant
-from magpie.common import get_logger
+from magpie.utils import get_logger
 LOGGER = get_logger(__name__)
 
 
@@ -38,7 +38,6 @@ target_metadata = MetaData(naming_convention={
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 
 
 def run_migrations_offline():

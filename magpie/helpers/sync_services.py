@@ -1,9 +1,12 @@
-from magpie.common import JSON_TYPE
+from magpie.utils import CONTENT_TYPE_JSON
+from collections import OrderedDict, defaultdict
+from six import with_metaclass
+from typing import TYPE_CHECKING
 import abc
-from collections import OrderedDict
-
 import requests
 import threddsclient
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Dict, Str, Type  # noqa: F401
 
 
 def is_valid_resource_schema(resources):
@@ -19,16 +22,16 @@ def is_valid_resource_schema(resources):
     :return: bool
     """
     for resource_name, values in resources.items():
-        if 'children' not in values:
+        if "children" not in values:
             return False
-        if not isinstance(values['children'], (OrderedDict, dict)):
+        if not isinstance(values["children"], (OrderedDict, dict)):
             return False
-        return is_valid_resource_schema(values['children'])
+        return is_valid_resource_schema(values["children"])
     return True
 
 
-class _SyncServiceInterface:
-    __metaclass__ = abc.ABCMeta
+class SyncServiceInterface(with_metaclass(abc.ABCMeta)):
+    sync_type = None    # type: Str
 
     def __init__(self, service_name, url):
         self.service_name = service_name
@@ -52,7 +55,9 @@ class _SyncServiceInterface:
         pass
 
 
-class _SyncServiceGeoserver(_SyncServiceInterface):
+class SyncServiceGeoserver(SyncServiceInterface):
+    sync_type = u"geoserver-api"
+
     @property
     def max_depth(self):
         return None
@@ -61,7 +66,7 @@ class _SyncServiceGeoserver(_SyncServiceInterface):
         # Only workspaces are fetched for now
         resource_type = "route"
         workspaces_url = "{}/{}".format(self.url, "workspaces")
-        resp = requests.get(workspaces_url, headers={"Accept": JSON_TYPE})
+        resp = requests.get(workspaces_url, headers={"Accept": CONTENT_TYPE_JSON})
         resp.raise_for_status()
         workspaces_list = resp.json().get("workspaces", {}).get("workspace", {})
 
@@ -77,7 +82,9 @@ class _SyncServiceGeoserver(_SyncServiceInterface):
         return resources
 
 
-class _SyncServiceProjectAPI(_SyncServiceInterface):
+class SyncServiceProjectAPI(SyncServiceInterface):
+    sync_type = u"project-api"
+
     @property
     def max_depth(self):
         return None
@@ -99,7 +106,9 @@ class _SyncServiceProjectAPI(_SyncServiceInterface):
         return resources
 
 
-class _SyncServiceThreads(_SyncServiceInterface):
+class SyncServiceThredds(SyncServiceInterface):
+    sync_type = u"thredds"
+
     @property
     def max_depth(self):
         return 3
@@ -134,10 +143,17 @@ class _SyncServiceThreads(_SyncServiceInterface):
         return resources
 
 
-class _SyncServiceDefault(_SyncServiceInterface):
+class SyncServiceDefault(SyncServiceInterface):
     @property
     def max_depth(self):
         return None
 
     def get_resources(self):
         return {}
+
+
+SYNC_SERVICES_TYPES = defaultdict(lambda: SyncServiceDefault)   # type: Dict[Str, Type[SyncServiceInterface]]
+for sync_svc in [SyncServiceThredds, SyncServiceGeoserver, SyncServiceProjectAPI]:
+    if sync_svc.sync_type in SYNC_SERVICES_TYPES:
+        raise KeyError("Duplicate sync service type identifiers not allowed")
+    SYNC_SERVICES_TYPES[sync_svc.sync_type] = sync_svc

@@ -1,4 +1,4 @@
-from magpie.api.api_except import evaluate_call
+from magpie.api.exception import evaluate_call
 from magpie.definitions.pyramid_definitions import ALLOW, ALL_PERMISSIONS, HTTPInternalServerError
 from magpie.definitions.sqlalchemy_definitions import sa, declared_attr, relationship, declarative_base
 from magpie.definitions.ziggurat_definitions import (
@@ -18,8 +18,9 @@ from magpie.definitions.ziggurat_definitions import (
     UserPermissionMixin,
     UserResourcePermissionMixin,
     UserService,
+    BaseService,
 )
-from magpie import permissions as p
+from magpie.permissions import Permission
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import Str  # noqa: F401
@@ -39,7 +40,8 @@ def get_user(request):
 
 
 class Group(GroupMixin, Base):
-    pass
+    def get_member_count(self, db_session=None):
+        return BaseService.all(UserGroup, db_session=db_session).filter(UserGroup.group_id == self.id).count()
 
 
 class GroupPermission(GroupPermissionMixin, Base):
@@ -54,17 +56,10 @@ class GroupResourcePermission(GroupResourcePermissionMixin, Base):
     pass
 
 
-class ResourceMeta(type):
-    @property
-    def resource_type_name(cls):
-        # type: (...) -> Str
-        """Generic resource type identifier."""
-        raise NotImplemented("Resource implementation must define unique type representation"
-                             "and must be added to `resource_type_dict`.")
-
-
 class Resource(ResourceMixin, Base):
-    permission_names = []
+    # required resource type identifier (unique)
+    resource_type_name = None       # type: Str
+
     child_resource_allowed = True
     resource_display_name = sa.Column(sa.Unicode(100), nullable=True)
 
@@ -73,9 +68,9 @@ class Resource(ResourceMixin, Base):
     @declared_attr
     def root_service_id(self):
         return sa.Column(sa.Integer,
-                         sa.ForeignKey('services.resource_id',
-                                       onupdate='CASCADE',
-                                       ondelete='SET NULL'), index=True)
+                         sa.ForeignKey("services.resource_id",
+                                       onupdate="CASCADE",
+                                       ondelete="SET NULL"), index=True)
 
     @property
     def __acl__(self):
@@ -98,7 +93,6 @@ class UserResourcePermission(UserResourcePermissionMixin, Base):
 
 
 class User(UserMixin, Base):
-    # ... your own properties....
     pass
 
 
@@ -115,27 +109,25 @@ class RootFactory(object):
                 self.__acl__.append((outcome, perm_user, perm_name))
 
 
-# you can define multiple resource derived models to build a complex
-# application like CMS, forum or other permission based solution
-
 class Service(Resource):
-    """
-    Resource of `service` type
-    """
+    """Resource of `service` type."""
 
-    __tablename__ = u'services'
+    __tablename__ = u"services"
 
     resource_id = sa.Column(sa.Integer(),
-                            sa.ForeignKey('resources.resource_id',
-                                          onupdate='CASCADE',
-                                          ondelete='CASCADE', ),
+                            sa.ForeignKey("resources.resource_id",
+                                          onupdate="CASCADE",
+                                          ondelete="CASCADE", ),
                             primary_key=True, )
 
-    resource_type_name = u'service'
-    __mapper_args__ = {u'polymorphic_identity': resource_type_name,
-                       u'inherit_condition': resource_id == Resource.resource_id}
+    resource_type_name = u"service"
+    __mapper_args__ = {u"polymorphic_identity": resource_type_name,
+                       u"inherit_condition": resource_id == Resource.resource_id}
 
-    # ... your own properties....
+    @property
+    def permissions(self):
+        raise TypeError("Service permissions must be accessed by 'magpie.services.ServiceInterface' "
+                        "instead of 'magpie.models.Service'.")
 
     @declared_attr
     def url(self):
@@ -144,12 +136,14 @@ class Service(Resource):
 
     @declared_attr
     def type(self):
-        # wps, wms, thredds, ...
+        """Identifier matching ``magpie.services.ServiceInterface.service_type``."""
+        # wps, wms, thredds,...
         return sa.Column(sa.UnicodeText())
 
     @declared_attr
     def sync_type(self):
-        # project-api, geoserver-api, ...
+        """Identifier matching ``magpie.helpers.SyncServiceInterface.sync_type``."""
+        # project-api, geoserver-api,...
         return sa.Column(sa.UnicodeText(), nullable=True)
 
     @staticmethod
@@ -158,68 +152,56 @@ class Service(Resource):
         service = db.query(Service).filter(Resource.resource_name == service_name).first()
         return service
 
-    def permission_requested(self, request):
-        raise NotImplementedError
 
-    def extend_acl(self, resource, user):
-        # Ownership acl
-        for ace in resource.__acl__:
-            self.__acl__.append(ace)
-        # Custom acl
-        permissions = resource.perms_for_user(user)
-        for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-            self.__acl__.append((outcome, perm_user, perm_name,))
-
-
-class Path(object):
-    permission_names = [
-        p.PERMISSION_READ,
-        p.PERMISSION_WRITE,
-        p.PERMISSION_GET_CAPABILITIES,
-        p.PERMISSION_GET_MAP,
-        p.PERMISSION_GET_FEATURE_INFO,
-        p.PERMISSION_GET_LEGEND_GRAPHIC,
-        p.PERMISSION_GET_METADATA,
+class PathBase(object):
+    permissions = [
+        Permission.READ,
+        Permission.WRITE,
+        Permission.GET_CAPABILITIES,
+        Permission.GET_MAP,
+        Permission.GET_FEATURE_INFO,
+        Permission.GET_LEGEND_GRAPHIC,
+        Permission.GET_METADATA,
     ]
 
 
-class File(Resource, Path):
+class File(Resource, PathBase):
     child_resource_allowed = False
-    resource_type_name = u'file'
-    __mapper_args__ = {u'polymorphic_identity': resource_type_name}
+    resource_type_name = u"file"
+    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
 
 
-class Directory(Resource, Path):
-    resource_type_name = u'directory'
-    __mapper_args__ = {u'polymorphic_identity': resource_type_name}
+class Directory(Resource, PathBase):
+    resource_type_name = u"directory"
+    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
 
 
 class Workspace(Resource):
-    resource_type_name = u'workspace'
-    __mapper_args__ = {u'polymorphic_identity': resource_type_name}
+    resource_type_name = u"workspace"
+    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
 
-    permission_names = [
-        p.PERMISSION_GET_CAPABILITIES,
-        p.PERMISSION_GET_MAP,
-        p.PERMISSION_GET_FEATURE_INFO,
-        p.PERMISSION_GET_LEGEND_GRAPHIC,
-        p.PERMISSION_GET_METADATA,
-        p.PERMISSION_GET_FEATURE,
-        p.PERMISSION_DESCRIBE_FEATURE_TYPE,
-        p.PERMISSION_LOCK_FEATURE,
-        p.PERMISSION_TRANSACTION,
+    permissions = [
+        Permission.GET_CAPABILITIES,
+        Permission.GET_MAP,
+        Permission.GET_FEATURE_INFO,
+        Permission.GET_LEGEND_GRAPHIC,
+        Permission.GET_METADATA,
+        Permission.GET_FEATURE,
+        Permission.DESCRIBE_FEATURE_TYPE,
+        Permission.LOCK_FEATURE,
+        Permission.TRANSACTION,
     ]
 
 
 class Route(Resource):
-    resource_type_name = u'route'
-    __mapper_args__ = {u'polymorphic_identity': resource_type_name}
+    resource_type_name = u"route"
+    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
 
-    permission_names = [
-        p.PERMISSION_READ,            # access with inheritance (this route and all under it)
-        p.PERMISSION_WRITE,           # access with inheritance (this route and all under it)
-        p.PERMISSION_READ_MATCH,      # access without inheritance (only on this specific route)
-        p.PERMISSION_WRITE_MATCH,     # access without inheritance (only on this specific route)
+    permissions = [
+        Permission.READ,            # access with inheritance (this route and all under it)
+        Permission.WRITE,           # access with inheritance (this route and all under it)
+        Permission.READ_MATCH,      # access without inheritance (only on this specific route)
+        Permission.WRITE_MATCH,     # access without inheritance (only on this specific route)
     ]
 
 
@@ -231,15 +213,15 @@ class RemoteResource(BaseModel, Base):
 
     resource_id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
     service_id = sa.Column(sa.Integer(),
-                           sa.ForeignKey('services.resource_id',
-                                         onupdate='CASCADE',
-                                         ondelete='CASCADE'),
+                           sa.ForeignKey("services.resource_id",
+                                         onupdate="CASCADE",
+                                         ondelete="CASCADE"),
                            index=True,
                            nullable=False)
     parent_id = sa.Column(sa.Integer(),
-                          sa.ForeignKey('remote_resources.resource_id',
-                                        onupdate='CASCADE',
-                                        ondelete='SET NULL'),
+                          sa.ForeignKey("remote_resources.resource_id",
+                                        onupdate="CASCADE",
+                                        ondelete="SET NULL"),
                           nullable=True)
     ordering = sa.Column(sa.Integer(), default=0, nullable=False)
     resource_name = sa.Column(sa.Unicode(100), nullable=False)
@@ -248,7 +230,7 @@ class RemoteResource(BaseModel, Base):
 
     def __repr__(self):
         info = self.resource_type, self.resource_name, self.resource_id, self.ordering, self.parent_id
-        return '<RemoteResource: %s, %s, id: %s position: %s, parent_id: %s>' % info
+        return "<RemoteResource: %s, %s, id: %s position: %s, parent_id: %s>" % info
 
 
 class RemoteResourcesSyncInfo(BaseModel, Base):
@@ -256,15 +238,15 @@ class RemoteResourcesSyncInfo(BaseModel, Base):
 
     id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
     service_id = sa.Column(sa.Integer(),
-                           sa.ForeignKey('services.resource_id',
-                                         onupdate='CASCADE',
-                                         ondelete='CASCADE'),
+                           sa.ForeignKey("services.resource_id",
+                                         onupdate="CASCADE",
+                                         ondelete="CASCADE"),
                            index=True,
                            nullable=False)
     service = relationship("Service", foreign_keys=[service_id])
     remote_resource_id = sa.Column(sa.Integer(),
-                                   sa.ForeignKey('remote_resources.resource_id', onupdate='CASCADE',
-                                                 ondelete='CASCADE'))
+                                   sa.ForeignKey("remote_resources.resource_id", onupdate="CASCADE",
+                                                 ondelete="CASCADE"))
     last_sync = sa.Column(sa.DateTime(), nullable=True)
 
     @staticmethod
@@ -276,7 +258,7 @@ class RemoteResourcesSyncInfo(BaseModel, Base):
     def __repr__(self):
         last_modified = self.last_sync.strftime("%Y-%m-%dT%H:%M:%S") if self.last_sync else None
         info = self.service_id, last_modified, self.id
-        return '<RemoteResourcesSyncInfo service_id: %s, last_sync: %s, id: %s>' % info
+        return "<RemoteResourcesSyncInfo service_id: %s, last_sync: %s, id: %s>" % info
 
 
 class RemoteResourceTreeService(ResourceTreeService):
@@ -302,29 +284,20 @@ ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
 resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
 remote_resource_tree_service = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
-resource_type_dict = {
-    Service.resource_type_name:     Service,    # noqa: E241
-    Directory.resource_type_name:   Directory,  # noqa: E241
-    File.resource_type_name:        File,       # noqa: E241
-    Workspace.resource_type_name:   Workspace,  # noqa: E241
-    Route.resource_type_name:       Route,      # noqa: E241
-}
+RESOURCE_TYPE_DICT = dict()
+for res in [Service, Directory, File, Workspace, Route]:
+    if res.resource_type_name in RESOURCE_TYPE_DICT:
+        raise KeyError("Duplicate resource type identifiers not allowed")
+    RESOURCE_TYPE_DICT[res.resource_type_name] = res
 
 
 def resource_factory(**kwargs):
-    resource_type = evaluate_call(lambda: kwargs['resource_type'], httpError=HTTPInternalServerError,
-                                  msgOnFail="kwargs do not contain required `resource_type`",
-                                  content={u'kwargs': repr(kwargs)})
-    return evaluate_call(lambda: resource_type_dict[resource_type](**kwargs), httpError=HTTPInternalServerError,
-                         msgOnFail="kwargs unpacking failed from specified `resource_type` and `resource_type_dict`",
-                         content={u'kwargs': repr(kwargs), u'resource_type_dict': repr(resource_type_dict)})
-
-
-def get_all_resource_permission_names():
-    all_permission_names_list = set()
-    for service_type in resource_type_dict.keys():
-        all_permission_names_list.update(resource_type_dict[service_type].permission_names)
-    return all_permission_names_list
+    resource_type = evaluate_call(lambda: kwargs["resource_type"], httpError=HTTPInternalServerError,
+                                  msgOnFail="kwargs do not contain required 'resource_type'",
+                                  content={u"kwargs": repr(kwargs)})
+    return evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs), httpError=HTTPInternalServerError,
+                         msgOnFail="kwargs unpacking failed from specified 'resource_type' and 'RESOURCE_TYPE_DICT'",
+                         content={u"kwargs": repr(kwargs), u"RESOURCE_TYPE_DICT": repr(RESOURCE_TYPE_DICT)})
 
 
 def find_children_by_name(child_name, parent_id, db_session):
