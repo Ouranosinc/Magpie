@@ -345,9 +345,6 @@ QueryCascadeResourcesPermissions = colander.SchemaNode(
 
 
 class BaseResponseBodySchema(colander.MappingSchema):
-    __code = None
-    __desc = None
-
     def __init__(self, code, description, **kw):
         super(BaseResponseBodySchema, self).__init__(**kw)
         assert isinstance(code, int)
@@ -356,25 +353,22 @@ class BaseResponseBodySchema(colander.MappingSchema):
         self.__desc = description
 
         # update the values
-        child_nodes = getattr(self, "children")
-        for node in child_nodes:
-            if node.name == "code":
-                node.example = self.__code
-            if node.name == "detail":
-                node.example = self.__desc
-
-    code = colander.SchemaNode(
-        colander.Integer(),
-        description="HTTP response code",
-        example=__code)
-    type = colander.SchemaNode(
-        colander.String(),
-        description="Response content type",
-        example=CONTENT_TYPE_JSON)
-    detail = colander.SchemaNode(
-        colander.String(),
-        description="Response status message",
-        example=__desc)
+        child_nodes = getattr(self, "children", [])
+        child_nodes.append(colander.SchemaNode(
+            colander.Integer(),
+            name="code",
+            description="HTTP response code",
+            example=code))
+        child_nodes.append(colander.SchemaNode(
+            colander.String(),
+            name="type",
+            description="Response content type",
+            example=CONTENT_TYPE_JSON))
+        child_nodes.append(colander.SchemaNode(
+            colander.String(),
+            name="detail",
+            description="Response status message",
+            example=description))
 
 
 class ErrorVerifyParamBodySchema(colander.MappingSchema):
