@@ -13,12 +13,10 @@ from magpie.definitions.twitcher_definitions import (
     OWSSecurityInterface,
     OWSAccessForbidden,
     parse_service_name,
-    get_twitcher_configuration,
-    TWITCHER_CONFIGURATION_DEFAULT,
 )
 from magpie.models import Service
 from magpie.services import service_factory
-from magpie.utils import get_magpie_url, get_logger, CONTENT_TYPE_JSON
+from magpie.utils import get_magpie_url, get_settings, get_logger, CONTENT_TYPE_JSON
 from requests.cookies import RequestsCookieJar
 from six.moves.urllib.parse import urlparse
 import requests
@@ -30,6 +28,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
     def __init__(self, registry):
         super(MagpieOWSSecurity, self).__init__()
         self.magpie_url = get_magpie_url(registry)
+        self.settings = get_settings(registry)
         self.twitcher_ssl_verify = asbool(registry.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.twitcher_protected_path = registry.settings.get("twitcher.ows_proxy_protected_path", "/ows")
 
@@ -64,8 +63,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         Counter-validate the login procedure by calling Magpie's `/session` which should indicated a logged user.
         """
         token_name = get_constant("MAGPIE_COOKIE_NAME", settings_name=request.registry.settings)
-        not_default = get_twitcher_configuration(request.registry.settings) != TWITCHER_CONFIGURATION_DEFAULT
-        if not_default and "Authorization" in request.headers and token_name not in request.cookies:
+        if "Authorization" in request.headers and token_name not in request.cookies:
             magpie_prov = request.params.get("provider", "WSO2")
             magpie_auth = "{host}/providers/{provider}/signin".format(host=self.magpie_url, provider=magpie_prov)
             headers = dict(request.headers)

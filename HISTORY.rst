@@ -3,29 +3,46 @@
 History
 =======
 
-0.10.x
+Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* add ``Dockerfile.adapter`` to build and configure ``MagpieAdapter`` on top of ``Twitcher >= 0.4.0``
+* add auto-bump of history version
+* update history with more specific sections
+* improve ``Makefile`` targets with more checks and re-using variables
+* add constant alternative search of variant ``magpie.[variable_name]`` for ``MAGPIE_[VARIABLE_NAME]``
+* add tests for ``get_constant`` function
+
+0.10.0 (2019-04-15)
+---------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * refactoring of literal strings to corresponding ``Permission`` enum (#167)
 * change all incorrect usages of ``HTTPNotAcceptable [406]`` to ``HTTPBadRequest [400]`` (#163)
 * add ``Accept`` header type checking before requests and return ``HTTPNotAcceptable [406]`` if invalid
 * code formatting changes for consistency and cleanup of redundant/misguiding names (#162)
 * add option ``MAGPIE_UI_ENABLED`` allowing to completely disable all ``/ui`` route (enabled by default)
+* add more unittests (#74)
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
 * fix swagger responses status code and description and fix erroneous body (#126)
 * fix invalid member count value returned on ``/groups/{id}`` request
 * fix invalid ``DELETE /users/{usr}/services/{svc}/permissions/{perm}`` request not working
-* add more unittests (#74)
 
 0.9.x
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * greatly reduce docker image size
 * allow quick functional testing using sequences of local app form submissions
-* fix UI add child button broken by introduced ``int`` resource id type checking
 * add test methods for UI redirects to other views from button click in displayed page
 * change resource response for generic ``resource: {<info>}`` instead of ``{resource-id}: {<info>}``
 * add permissions config to auto-generate user/group rules on startup
-* fix many invalid or erroneous swagger specifications
 * attempt db creation on first migration if not existing
 * add continuous integration testing and deployment (with python 2/3 tests)
 * ensure python compatibility for Python 2.7, 3.5, 3.6 (via `Travis-CI`)
@@ -38,17 +55,24 @@ History
 * add new route ``/services/types/{svc_type}/resources`` for details about child service type resources
 * error handling of reserved route keywords service `types` and current user ``MAGPIE_LOGGED_USER``
 * additional tests for new routes and operations previously left unevaluated
-* fix invalid conflict service name check on service update request
 * logging requests and exceptions according to `MAGPIE_LOG_REQUEST` and `MAGPIE_LOG_EXCEPTION` values
 * better handling of ``HTTPUnauthorized [401]`` and ``HTTPForbidden [403]`` according to unauthorized view
   (invalid access token/headers or forbidden operation under view)
 * better handling of ``HTTPNotFound [404]`` and ``HTTPMethodNotAllowed [405]`` on invalid routes and request methods
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix UI add child button broken by introduced ``int`` resource id type checking
 * fix travis-ci test suite execution and enable PEP8 lint checks
 * fix yaml security issue using updated package distribution
+* fix invalid conflict service name check on service update request
+* fix many invalid or erroneous swagger specifications
 
 0.8.x
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * update `MagpieAdapter` to match process store changes
 * provide user ID on API routes returning user info
 
@@ -57,23 +81,30 @@ History
 
 `Magpie REST API latest documentation`_
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * add service resource auto-sync feature
 * return user/group services if any sub-resource has permissions
 * add inherited resource permission with querystring (deprecate `inherited_<>` routes warnings)
 * add flag to return `effective` permissions from user resource permissions requests
 * hide service private URL on non administrator level requests
-* fix external providers login support (validated for `DKRZ`, `GitHub` and `WSO2`)
 * make cookies expire-able by setting ``MAGPIE_COOKIE_EXPIRE`` and provide cookie only on http (`JS CSRF` attack protection)
 * update ``MagpieAdapter.MagpieOWSSecurity`` for `WSO2` seamless integration with Authentication header token
 * update ``MagpieAdapter.MagpieProcess`` for automatic handling of REST-API WPS process route access permissions
 * update ``MagpieAdapter.MagpieService`` accordingly to inherited resources and service URL changes
-* bug fixes related to postgres DB entry conflicting inserts and validations
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fixes related to postgres DB entry conflicting inserts and validations
+* fix external providers login support (validated for `DKRZ`, `GitHub` and `WSO2`)
 
 0.6.x
 ---------------------
 
 `Magpie REST API 0.6.x documentation`_
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * add ``/magpie/api/`` route to locally display the Magpie REST API documentation
 * move many source files around to regroup by API/UI functionality
 * auto-generation of swagger REST API documentation
@@ -89,6 +120,8 @@ History
 
 `Magpie REST API 0.5.x documentation`_
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * independent user/group permissions, no more 'personal' group to reflect user permissions
 * service specific resources with service*-typed* resource permissions
 * more verification of resources permissions under specific services
@@ -101,6 +134,8 @@ History
 
 `Magpie REST API 0.4.x documentation`_
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * default admin permissions
 * block UI view permissions of all pages if not logged in
 * signout clear header to forget user
@@ -111,6 +146,8 @@ History
 
 `Magpie REST API 0.3.x documentation`_
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * `ncWMS` support for `getmap`, `getcapabilities`, `getmetadata` on ``thredds`` resource
 * `ncWMS2` added to default providers
 * add `geoserverwms` service
@@ -119,15 +156,20 @@ History
 * major update of `Magpie REST API 0.2.x documentation`_ to match returned codes/messages from 0.2.0 changes
 * normalise additional HTTP request responses omitted from 0.2.0 (404, 500, and other missed responses)
 * remove internal api call, separate login external from local, direct access to `ziggurat` login
-* fixes UI ``"Magpie Administration"`` to redirect toward home page instead of `PAVICS` platform
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix UI ``"Magpie Administration"`` to redirect toward home page instead of `PAVICS` platform
 * fix bug during user creation against preemptive checks
-* bug fixes from `0.2.x` versions
+* fix issues from `0.2.x` versions
 
 0.2.0
 ---------------------
 
 `Magpie REST API 0.2.0 documentation`_
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * Revamp HTTP standard error output format, messages, values and general error/exception handling.
 * Update `Magpie REST API 0.2.0 documentation`_
 
@@ -136,6 +178,8 @@ History
 
 `Magpie REST API 0.1.1 documentation`_
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * Add edition of service URL via ``PUT /{service_name}``.
 
 0.1.0

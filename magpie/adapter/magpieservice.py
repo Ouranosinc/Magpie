@@ -3,22 +3,27 @@ Store adapters to read data from magpie.
 """
 
 # noinspection PyUnresolvedReferences
-from magpie.definitions.twitcher_definitions import ServiceStore, Service, ServiceNotFound
+from magpie.definitions.twitcher_definitions import ServiceStoreInterface, Service, ServiceNotFound
 from magpie.definitions.pyramid_definitions import HTTPOk, asbool
-from magpie.utils import get_admin_cookies, get_magpie_url, get_logger, CONTENT_TYPE_JSON
+from magpie.utils import get_admin_cookies, get_magpie_url, get_settings, get_logger, CONTENT_TYPE_JSON
+from typing import TYPE_CHECKING
 import requests
+if TYPE_CHECKING:
+    from pyramid.request import Request  # noqa: F401
 LOGGER = get_logger("TWITCHER")
 
 
 # noinspection PyUnusedLocal
-class MagpieServiceStore(ServiceStore):
+class MagpieServiceStore(ServiceStoreInterface):
     """
     Registry for OWS services. Uses magpie to fetch service url and attributes.
     """
-    def __init__(self, registry):
-        super(MagpieServiceStore, self).__init__()
-        self.magpie_url = get_magpie_url(registry)
-        self.twitcher_ssl_verify = asbool(registry.settings.get("twitcher.ows_proxy_ssl_verify", True))
+    def __init__(self, request):
+        # type: (Request) -> None
+        super(MagpieServiceStore, self).__init__(request)
+        self.settings = get_settings(request)
+        self.magpie_url = get_magpie_url(request)
+        self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.magpie_admin_token = get_admin_cookies(self.magpie_url, self.twitcher_ssl_verify)
 
     def save_service(self, service, overwrite=True, request=None):

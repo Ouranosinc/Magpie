@@ -11,17 +11,16 @@ export BROWSER_PYSCRIPT
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
 # Application
-CUR_DIR := $(abspath $(lastword $(MAKEFILE_LIST))/..)
-APP_ROOT := $(CUR_DIR)
-APP_NAME := $(shell basename $(APP_ROOT))
-DOCKER_REPO := pavics/magpie
+MAGPIE_ROOT    := $(abspath $(lastword $(MAKEFILE_LIST))/..)
+MAGPIE_NAME    := $(shell basename $(MAGPIE_ROOT))
+MAGPIE_VERSION := 0.10.0
 
 # conda
-CONDA_ENV ?= $(APP_NAME)
-CONDA_HOME ?= $(HOME)/.conda
+CONDA_ENV      ?= $(MAGPIE_NAME)
+CONDA_HOME     ?= $(HOME)/.conda
 CONDA_ENVS_DIR ?= $(CONDA_HOME)/envs
 CONDA_ENV_PATH := $(CONDA_ENVS_DIR)/$(CONDA_ENV)
-DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
+DOWNLOAD_CACHE ?= $(MAGPIE_ROOT)/downloads
 PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
 
 # choose conda installer depending on your OS
@@ -35,6 +34,14 @@ else
 FN := unknown
 endif
 
+CONDA_CMD := source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)";
+
+# docker
+MAGPIE_VERSION_RAW   :=
+MAGPIE_DOCKER_REPO   := pavics/magpie
+MAGPIE_DOCKER_TAG    := $(MAGPIE_DOCKER_REPO):$(MAGPIE_VERSION)
+TWITCHER_DOCKER_REPO := pavics/twitcher
+TWITCHER_DOCKER_TAG  := $(TWITCHER_DOCKER_REPO):magpie-$(MAGPIE_VERSION)
 
 .DEFAULT_GOAL := help
 
@@ -51,25 +58,26 @@ help:
 	@echo "    clean-pyc:       remove Python file artifacts"
 	@echo "    clean-test:      remove test and coverage artifacts"
 	@echo "  Build and deploy:"
-	@echo "    bump             bump version using version specified as user input"
-	@echo "    bump-dry         bump version using version specified as user input (dry-run)"
-	@echo "    bump-tag         bump version using version specified as user input, tags it and commits change in git"
-	@echo "    dist:            package"
+	@echo "    bump             bump version using VERSION specified as user input"
+	@echo "    dry              run any 'bump' target without applying changes (dry-run)"
+	@echo "    dist:            package for distribution"
 	@echo "    release:         package and upload a release"
 	@echo "    docker-info:     tag version of docker image for build/push"
-	@echo "    docker-build:    build docker image"
-	@echo "    docker-push:     push built docker image"
-	@echo "    version:         current version"
+	@echo "    docker-build:    build docker images for Magpie application and MagpieAdapter for Twitcher"
+	@echo "    docker-push:     push built docker images for Magpie application and MagpieAdapter for Twitcher"
+	@echo "    version:         display current version"
 	@echo "  Install and run"
 	@echo "    docs:            generate Sphinx HTML documentation, including API docs"
+	@echo "    docs-show:       display HTML webpage of generated documentation (build docs if missing)"
 	@echo "    install:         install the package to the active Python's site-packages"
 	@echo "    install-dev:     install package requirements for development and testing"
 	@echo "    install-sys:     install system dependencies and required installers/runners"
 	@echo "    migrate:         run postgres database migration with alembic"
 	@echo "    start:           start magpie instance with gunicorn"
 	@echo "  Test and coverage"
-	@echo "    coverage:        check code coverage and generate a report"
-	@echo "    coverage-show:   check code coverage and generate a report served on a web interface"
+	@echo "    coverage:        check code coverage and generate an analysis report"
+	@echo "    coverage-table:  display a commandline table of the generated report (run coverage if missing)"
+	@echo "    coverage-show:   display HTML webpage of generated coverage report (run coverage if missing)"
 	@echo "    lint:            check style with flake8"
 	@echo "    test:            run tests quickly with the default Python"
 	@echo "    test-local:      run only local tests with the default Python"
@@ -90,7 +98,7 @@ clean-build:
 
 clean-docs:
 	@echo "Cleaning doc artifacts..."
-	"$(MAKE)" -C "$(CUR_DIR)/docs" clean || true
+	"$(MAKE)" -C "$(MAGPIE_ROOT)/docs" clean || true
 
 clean-pyc:
 	@echo "Cleaning Python artifacts..."
@@ -105,71 +113,80 @@ clean-test:
 	rm -fr .pytest_cache/
 	rm -f .coverage
 	rm -f coverage.xml
-	rm -fr "$(CUR_DIR)/coverage/"
+	rm -fr "$(MAGPIE_ROOT)/coverage/"
 
 .PHONY: lint
 lint: install-dev
 	@echo "Checking code style with flake8..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; flake8'
+	@bash -c '$(CONDA_CMD) flake8'
 
 .PHONY: test
 test: install-dev install
 	@echo "Running tests..."
-	bash -c "source $(CONDA_HOME)/bin/activate $(CONDA_ENV); \
-		pytest tests -vv --junitxml $(CURDIR)/tests/results.xml"
+	bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(MAGPIE_ROOT)/tests/results.xml"'
 
 .PHONY: test-local
 test-local: install-dev install
 	@echo "Running local tests..."
-	bash -c "source $(CONDA_HOME)/bin/activate $(CONDA_ENV); \
-		pytest tests -vv -m 'not remote' --junitxml $(CURDIR)/tests/results.xml"
+	bash -c '$(CONDA_CMD) pytest tests -vv -m "not remote" --junitxml "$(MAGPIE_ROOT)/tests/results.xml"'
 
 .PHONY: test-remote
 test-remote: install-dev install
 	@echo "Running remote tests..."
-	bash -c "source $(CONDA_HOME)/bin/activate $(CONDA_ENV); \
-		pytest tests -vv -m 'not local' --junitxml $(CURDIR)/tests/results.xml"
+	bash -c '$(CONDA_CMD) pytest tests -vv -m "not local" --junitxml "$(MAGPIE_ROOT)/tests/results.xml"'
 
 .PHONY: test-tox
 test-tox: install-dev install
 	@echo "Running tests with tox..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; tox'
+	@bash -c '$(CONDA_CMD) tox'
+
+COVERAGE_FILE := $(MAGPIE_ROOT)/.coverage
+COVERAGE_HTML := $(MAGPIE_ROOT)/coverage/index.html
+$(COVERAGE_FILE):
+	@echo "Running coverage analysis..."
+	@bash -c '$(CONDA_CMD) coverage run --source "$(MAGPIE_ROOT)/magpie" \
+		"$(CONDA_ENV_PATH)/bin/pytest" tests -m "not remote" || true'
+	@bash -c '$(CONDA_CMD) coverage xml -i'
+	@bash -c '$(CONDA_CMD) coverage report -m'
+	@bash -c '$(CONDA_CMD) coverage html -d "$(MAGPIE_ROOT)/coverage"'
+	@-echo "Coverage report available: file://$(COVERAGE_HTML)"
 
 .PHONY: coverage
-coverage: install-dev install
-	@echo "Running coverage analysis..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage run --source magpie \
-	 	"$(CONDA_ENV_PATH)/bin/pytest" tests -m "not remote" || true'
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage xml -i'
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage report -m'
+coverage: install-dev install $(COVERAGE_FILE)
 
 .PHONY: coverage-show
-coverage-show: coverage
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; coverage html -d coverage'
-	"$(BROWSER)" "$(CUR_DIR)/coverage/index.html"
+coverage-show: $(COVERAGE_HTML)
+	@-test -f "$(COVERAGE_HTML)" || $(MAKE) -C "$(MAGPIE_ROOT)" coverage
+	$(BROWSER) "$(COVERAGE_HTML)"
 
 .PHONY: migrate
 migrate: install conda-env
 	@echo "Running database migration..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; \
-		alembic -c "$(CUR_DIR)/magpie/alembic/alembic.ini" upgrade head'
+	@bash -c '$(CONDA_CMD) alembic -c "$(MAGPIE_ROOT)/magpie/alembic/alembic.ini" upgrade head'
+
+DOC_LOCATION := $(MAGPIE_ROOT)/docs/_build/html/index.html
+$(DOC_LOCATION):
+	@echo "Building docs..."
+	rm -f $(MAGPIE_ROOT)/docs/magpie.rst
+	rm -f $(MAGPIE_ROOT)/docs/modules.rst
+	@bash -c '$(CONDA_CMD) \
+		sphinx-apidoc -o "$(MAGPIE_ROOT)/docs/" "$(MAGPIE_ROOT)/magpie"; \
+		"$(MAKE)" -C "$(MAGPIE_ROOT)/docs" clean; \
+		"$(MAKE)" -C "$(MAGPIE_ROOT)/docs" html;'
+	@-echo "Documentation available: file://$(DOC_LOCATION)"
 
 .PHONY: docs
-docs: install-dev
-	@echo "Building docs..."
-	rm -f $(CUR_DIR)/docs/magpie.rst
-	rm -f $(CUR_DIR)/docs/modules.rst
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; \
-		sphinx-apidoc -o "$(CUR_DIR)/docs/" "$(CUR_DIR)/magpie"; \
-		"$(MAKE)" -C "$(CUR_DIR)/docs" clean; \
-		"$(MAKE)" -C "$(CUR_DIR)/docs" html;'
-	"$(BROWSER)" "$(CUR_DIR)/docs/_build/html/index.html"'
+docs: install-dev $(DOC_LOCATION)
+
+.PHONY: docs-show
+docs-show: $(DOC_LOCATION)
+	@-test -f "$(DOC_LOCATION)" || $(MAKE) -C "$(MAGPIE_ROOT)" docs
+	"$(BROWSER)" "$(DOC_LOCATION)"'
 
 .PHONY: serve-docs
 serve-docs: docs install-dev
 	@echo "Serving docs..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; \
-		watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .'
+	@bash -c '$(CONDA_CMD) watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .'
 
 .PHONY: release
 release: clean install
@@ -177,56 +194,52 @@ release: clean install
 	python setup.py sdist upload
 	python setup.py bdist_wheel upload
 
+# Bumpversion 'dry' config
+# if 'dry' is specified as target, any bumpversion call using 'BUMP_XARGS' will not apply changes
+BUMP_XARGS ?= --verbose --allow-dirty --tag
+ifeq ($(filter dry, $(MAKECMDGOALS)), dry)
+	BUMP_XARGS := $(BUMP_XARGS) --dry-run
+endif
+
+.PHONY: dry
+dry: setup.cfg
+ifeq ($(findstring bump, $(MAKECMDGOALS)),)
+	$(error Target 'dry' must be combined with a 'bump' target)
+endif
+
 .PHONY: bump
 bump:
-	$(shell bash -c 'read -p "Version: " VERSION_PART; \
-		source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; \
-		test -f "$(CONDA_ENV_PATH)/bin/bumpversion" || pip install bumpversion; \
-		"$(CONDA_ENV_PATH)/bin/bumpversion" --config-file "$(CUR_DIR)/.bumpversion.cfg" \
-		--verbose --allow-dirty --no-tag --new-version $$VERSION_PART patch;')
-
-.PHONY: bump-dry
-bump-dry:
-	$(shell bash -c 'read -p "Version: " VERSION_PART; \
-		source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; \
-		test -f "$(CONDA_ENV_PATH)/bin/bumpversion" || pip install bumpversion; \
-		"$(CONDA_ENV_PATH)/bin/bumpversion" --config-file "$(CUR_DIR)/.bumpversion.cfg" \
-		--verbose --allow-dirty --dry-run --tag --tag-name "{new_version}" --new-version $$VERSION_PART patch;')
-
-.PHONY: bump-tag
-bump-tag:
-	$(shell bash -c 'read -p "Version: " VERSION_PART; \
-		source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; \
-		test -f $(CONDA_ENV_PATH)/bin/bumpversion || pip install bumpversion; \
-		"$(CONDA_ENV_PATH)/bin/bumpversion" --config-file "$(CUR_DIR)/.bumpversion.cfg" \
-		--verbose --allow-dirty --tag --tag-name "{new_version}" --new-version $$VERSION_PART patch;')
+	@-echo "Updating package version ..."
+	@[ "${VERSION}" ] || ( echo ">> 'VERSION' is not set"; exit 1 )
+	@-bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/bump2version || pip install bump2version'
+	@-bash -c '$(CONDA_CMD) bump2version $(BUMP_XARGS) --new-version "${VERSION}" patch;'
 
 .PHONY: dist
 dist: clean conda-env
 	@echo "Creating distribution..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; python setup.py sdist'
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; python setup.py bdist_wheel'
+	@bash -c '$(CONDA_CMD) python setup.py sdist'
+	@bash -c '$(CONDA_CMD) python setup.py bdist_wheel'
 	ls -l dist
 
 .PHONY: install-sys
 install-sys: clean conda-env
 	@echo "Installing system dependencies..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install --upgrade pip setuptools'
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install gunicorn'
+	@bash -c '$(CONDA_CMD) pip install --upgrade pip setuptools'
+	@bash -c '$(CONDA_CMD) pip install gunicorn'
 
 .PHONY: install
 install: install-sys
 	@echo "Installing Magpie..."
 	# TODO: remove when merged
 	# --- ensure fix is applied
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; \
+	@bash -c '$(CONDA_CMD) \
 		pip install --force-reinstall "https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic"'
 	# ---
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install --upgrade -e "$(CUR_DIR)" --no-cache'
+	@bash -c '$(CONDA_CMD) pip install --upgrade -e "$(MAGPIE_ROOT)" --no-cache'
 
 .PHONY: install-dev
 install-dev: conda-env
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; pip install -r "$(CUR_DIR)/requirements-dev.txt"'
+	@bash -c '$(CONDA_CMD) pip install -r "$(MAGPIE_ROOT)/requirements-dev.txt"'
 	@echo "Successfully installed dev requirements."
 
 .PHONY: cron
@@ -237,29 +250,30 @@ cron:
 .PHONY: start
 start: install
 	@echo "Starting Magpie..."
-	@bash -c 'source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)"; \
-		exec gunicorn -b 0.0.0.0:2001 --paste "$(CUR_DIR)/magpie/magpie.ini" --workers 10 --preload &'
+	@bash -c '$(CONDA_CMD) exec gunicorn -b 0.0.0.0:2001 --paste "$(MAGPIE_ROOT)/magpie/magpie.ini" --workers 10 --preload &'
 
 .PHONY: version
 version:
-	@echo "Mapie version:"
-	@python -c 'from magpie.__meta__ import __version__; print(__version__)'
+	@-echo "Mapie version: $(MAGPIE_VERSION)"
 
 ## Docker targets
 
 .PHONY: docker-info
 docker-info:
-	@echo "Will be built, tagged and pushed as:"
-	@echo "$(DOCKER_REPO):`python -c 'from magpie.__meta__ import __version__; print(__version__)'`"
+	@echo "Magpie image will be built, tagged and pushed as:"
+	@echo "$(MAGPIE_DOCKER_TAG)"
+	@echo "MagpieAdapter image will be built, tagged and pushed as:"
+	@echo "$(TWITCHER_DOCKER_TAG)"
 
 .PHONY: docker-build
 docker-build:
-	@bash -c "docker build $(CUR_DIR) \
-		-t $(DOCKER_REPO):`python -c 'from magpie.__meta__ import __version__; print(__version__)'`"
+	docker build "$(MAGPIE_ROOT)" -t "$(MAGPIE_DOCKER_TAG)"
+	docker build "$(MAGPIE_ROOT)" -t "$(TWITCHER_DOCKER_TAG)" -f Dockerfile.adapter
 
 .PHONY: docker-push
 docker-push: docker-build
-	@bash -c "docker push $(DOCKER_REPO):`python -c 'from magpie.__meta__ import __version__; print(__version__)'`"
+	docker push "$(MAGPIE_DOCKER_TAG)"
+	docker push "$(TWITCHER_DOCKER_TAG)"
 
 ## Conda targets
 
