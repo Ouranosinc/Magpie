@@ -79,8 +79,8 @@ def run_migrations_online(connection=None):
 
     if not database_exists(url):
         db_name = get_constant('MAGPIE_POSTGRES_DB')
-        LOGGER.info('database [{}] not found, attempting creation...'.format(db_name))
-        connection = create_database(url, encoding='utf8', template='template1')
+        LOGGER.warning('Database [{}] not found, attempting creation...'.format(db_name))
+        connection = create_database(url, encoding='utf8', template='template0')
 
     # retry connection and run migration
     with connect(connection) as migrate_conn:

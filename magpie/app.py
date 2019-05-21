@@ -19,7 +19,6 @@ import os
 import sys
 # noinspection PyUnresolvedReferences
 import logging
-# import logging.config   # find config in 'logging.ini'
 LOGGER = get_logger(__name__)
 # transfer root logger handler to magpie to avoid duplicate logs
 if logging.root.handlers:
