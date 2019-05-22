@@ -15,6 +15,7 @@ from magpie.definitions.twitcher_definitions import (
     parse_service_name,
 )
 from magpie.models import Service
+from magpie.permissions import Permission
 from magpie.services import service_factory
 from magpie.utils import get_magpie_url, get_settings, get_logger, CONTENT_TYPE_JSON
 from requests.cookies import RequestsCookieJar
@@ -25,12 +26,12 @@ LOGGER = get_logger("TWITCHER")
 
 class MagpieOWSSecurity(OWSSecurityInterface):
 
-    def __init__(self, registry):
+    def __init__(self, request):
         super(MagpieOWSSecurity, self).__init__()
-        self.magpie_url = get_magpie_url(registry)
-        self.settings = get_settings(registry)
-        self.twitcher_ssl_verify = asbool(registry.settings.get("twitcher.ows_proxy_ssl_verify", True))
-        self.twitcher_protected_path = registry.settings.get("twitcher.ows_proxy_protected_path", "/ows")
+        self.magpie_url = get_magpie_url(request)
+        self.settings = get_settings(request)
+        self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
+        self.twitcher_protected_path = self.settings.get("twitcher.ows_proxy_protected_path", "/ows")
 
     def check_request(self, request):
         if request.path.startswith(self.twitcher_protected_path):
@@ -45,6 +46,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             # should contain all the acl, this the only thing important
             # parse request (GET/POST) to get the permission requested for that service
             permission_requested = service_specific.permission_requested()
+            # convert permission enum to str for comparison
+            permission_requested = Permission.get(permission_requested).value if permission_requested else None
 
             if permission_requested:
                 self.update_request_cookies(request)

@@ -2,7 +2,7 @@ from magpie.definitions.twitcher_definitions import AdapterInterface, owsproxy_d
 from magpie.adapter.magpieowssecurity import MagpieOWSSecurity
 from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.models import get_user
-from magpie.security import auth_config_from_settings
+from magpie.security import get_auth_config
 from magpie.db import get_session_factory, get_tm_session, get_engine
 from magpie.utils import get_logger, get_settings
 from magpie import __meta__
@@ -27,7 +27,7 @@ class MagpieAdapter(AdapterInterface):
         settings["twitcher.rpcinterface"] = False
 
         LOGGER.info("Loading MagpieAdapter config")
-        config = auth_config_from_settings(settings)
+        config = get_auth_config(container)
         config.add_request_method(get_user, "user", reify=True)
 
         # use pyramid_tm to hook the transaction lifecycle to the request
@@ -44,7 +44,7 @@ class MagpieAdapter(AdapterInterface):
 
         return config
 
-    def owsproxy_config(self, config):
+    def owsproxy_config(self, container):
         LOGGER.info("Loading MagpieAdapter owsproxy config")
-        config = self.configurator_factory(config)
+        config = self.configurator_factory(container)
         owsproxy_defaultconfig(config)  # let Twitcher configure the rest normally

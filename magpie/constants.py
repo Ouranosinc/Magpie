@@ -136,7 +136,7 @@ def get_constant_setting_name(name):
 def get_constant(constant_name,             # type: Str
                  settings_container=None,   # type: Optional[AnySettingsContainer]
                  settings_name=None,        # type: Optional[Str]
-                 default_value=None,        # type: Optional[SettingValue], bool, bool, bool
+                 default_value=None,        # type: Optional[SettingValue]
                  raise_missing=True,        # type: bool
                  print_missing=False,       # type: bool
                  raise_not_set=True         # type: bool

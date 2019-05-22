@@ -8,12 +8,22 @@ Unreleased
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* add ``Dockerfile.adapter`` to build and configure ``MagpieAdapter`` on top of ``Twitcher >= 0.4.0``
+* add ``Dockerfile.adapter`` to build and configure ``MagpieAdapter`` on top of ``Twitcher >= 0.5.0``
 * add auto-bump of history version
 * update history with more specific sections
 * improve ``Makefile`` targets with more checks and re-using variables
 * add constant alternative search of variant ``magpie.[variable_name]`` for ``MAGPIE_[VARIABLE_NAME]``
 * add tests for ``get_constant`` function
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* use an already created configurator when calling ``MagpieAdapter.configurator_factory``
+  instead of recreating it from settings to preserve potential previous setup and includes
+* use default ``WPSGet``/``WPSPost`` for ``magpie.owsrequest.OWSParser`` when no ``Content-Type`` header is specified
+  (``JSONParser`` was used by default since missing ``Content-Type`` was resolved to ``application/json``, which
+  resulted in incorrect parsing of `WPS` requests parameters)
+* actually fetch required `JSON` parameter from the request body if ``Content-Type`` is ``application/json``
+* convert ``Permission`` enum to string for proper ACL comparison in ``MagpieOWSSecurity``
 
 0.10.0 (2019-04-15)
 ---------------------

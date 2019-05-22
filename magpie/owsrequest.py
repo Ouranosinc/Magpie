@@ -6,6 +6,7 @@ The OWSRequest is based on pywps code:
 """
 
 from magpie.api.exception import raise_http
+from magpie.api.requests import get_multiformat_any
 from magpie.utils import get_logger, get_header, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
 from pyramid.httpexceptions import HTTPMethodNotAllowed
 from typing import TYPE_CHECKING
@@ -24,7 +25,7 @@ def ows_parser_factory(request):
     Default to JSON if no ``Content-Type`` is specified or if it is 'text/plain' but can be parsed as JSON.
     Otherwise, use the GET/POST WPS parsers.
     """
-    content_type = get_header("Content-Type", request.headers, default=CONTENT_TYPE_JSON, split=";,")
+    content_type = get_header("Content-Type", request.headers, default=None, split=";,")
     if content_type == CONTENT_TYPE_PLAIN:
         try:
             # noinspection PyUnresolvedReferences
@@ -111,5 +112,4 @@ class WPSPost(OWSParser):
 
 class JSONParser(OWSParser):
     def _get_param_value(self, param):
-        param = param or ''  # in case None
-        return self.params.get(param.lower(), '').lower()
+        return get_multiformat_any(self.request, param, None)
