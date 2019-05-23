@@ -40,4 +40,4 @@ COPY ./ $MAGPIE_DIR
 # equivalent of `make install` without conda env and pre-installed packages
 RUN pip install --no-dependencies -e $MAGPIE_DIR
 # equivalent of `make cron start` without conda env
-CMD crond && gunicorn -b 0.0.0.0:2001 --paste $MAGPIE_DIR/magpie/magpie.ini --workers 10 --preload
+CMD crond && gunicorn -b 0.0.0.0:2001 --paste $MAGPIE_DIR/config/magpie.ini --workers 10 --preload

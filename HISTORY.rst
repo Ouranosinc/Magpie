@@ -14,6 +14,9 @@ Features / Changes
 * improve ``Makefile`` targets with more checks and re-using variables
 * add constant alternative search of variant ``magpie.[variable_name]`` for ``MAGPIE_[VARIABLE_NAME]``
 * add tests for ``get_constant`` function
+* regroup all configurations in a common file located in ``config/magpie.ini``
+* remove all other configuration files (``tox.ini``, ``alembic.ini``, ``logging.ini``)
+* drop `Makefile` target ``test-tox``
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

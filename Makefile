@@ -14,6 +14,7 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 MAGPIE_ROOT    := $(abspath $(lastword $(MAKEFILE_LIST))/..)
 MAGPIE_NAME    := $(shell basename $(MAGPIE_ROOT))
 MAGPIE_VERSION := 0.10.0
+MAGPIE_INI     ?= $(MAGPIE_ROOT)/config/magpie.ini
 
 # conda
 CONDA_ENV      ?= $(MAGPIE_NAME)
@@ -135,11 +136,6 @@ test-remote: install-dev install
 	@echo "Running remote tests..."
 	bash -c '$(CONDA_CMD) pytest tests -vv -m "not local" --junitxml "$(MAGPIE_ROOT)/tests/results.xml"'
 
-.PHONY: test-tox
-test-tox: install-dev install
-	@echo "Running tests with tox..."
-	@bash -c '$(CONDA_CMD) tox'
-
 COVERAGE_FILE := $(MAGPIE_ROOT)/.coverage
 COVERAGE_HTML := $(MAGPIE_ROOT)/coverage/index.html
 $(COVERAGE_FILE):
@@ -162,7 +158,7 @@ coverage-show: $(COVERAGE_HTML)
 .PHONY: migrate
 migrate: install conda-env
 	@echo "Running database migration..."
-	@bash -c '$(CONDA_CMD) alembic -c "$(MAGPIE_ROOT)/magpie/alembic/alembic.ini" upgrade head'
+	@bash -c '$(CONDA_CMD) alembic -c "$(MAGPIE_INI)" upgrade head'
 
 DOC_LOCATION := $(MAGPIE_ROOT)/docs/_build/html/index.html
 $(DOC_LOCATION):
@@ -250,7 +246,7 @@ cron:
 .PHONY: start
 start: install
 	@echo "Starting Magpie..."
-	@bash -c '$(CONDA_CMD) exec gunicorn -b 0.0.0.0:2001 --paste "$(MAGPIE_ROOT)/magpie/magpie.ini" --workers 10 --preload &'
+	@bash -c '$(CONDA_CMD) exec gunicorn -b 0.0.0.0:2001 --paste "$(MAGPIE_INI)" --workers 10 --preload &'
 
 .PHONY: version
 version:
