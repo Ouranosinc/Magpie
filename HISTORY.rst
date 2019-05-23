@@ -24,6 +24,7 @@ Bug Fixes
   resulted in incorrect parsing of `WPS` requests parameters)
 * actually fetch required `JSON` parameter from the request body if ``Content-Type`` is ``application/json``
 * convert ``Permission`` enum to string for proper ACL comparison in ``MagpieOWSSecurity``
+* fix ``raise_log`` function to allow proper evaluation against ``Exception`` type instead of ``message`` property
 
 0.10.0 (2019-04-15)
 ---------------------

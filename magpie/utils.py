@@ -63,7 +63,7 @@ def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
     if not logger:
         logger = get_logger(__name__)
     logger.log(level, msg)
-    if not hasattr(exception, "message"):
+    if not isclass(exception) or not issubclass(exception, Exception):
         exception = Exception
     raise exception(msg)
 
