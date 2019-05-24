@@ -29,9 +29,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
 .. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/1.0.0.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/Magpie/compare/v1.0.0...master
+    :target: https://github.com/Ouranosinc/Magpie/compare/1.0.0...master
 
-.. |version| image:: https://img.shields.io/github/tag/ouranosinc/magpie.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-1.0.0-blue.svg?style=flat
     :alt: Latest Tag
     :target: https://github.com/Ouranosinc/Magpie/tree/1.0.0
 
