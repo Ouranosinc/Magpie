@@ -4,7 +4,7 @@ from magpie.definitions.pyramid_definitions import (
     AuthTktAuthenticationPolicy, ACLAuthorizationPolicy, Configurator, asbool
 )
 from magpie.definitions.ziggurat_definitions import groupfinder
-from magpie.utils import get_logger
+from magpie.utils import get_logger, get_settings
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
 from typing import TYPE_CHECKING
@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 AUTHOMATIC_LOGGER = get_logger('magpie.authomatic', level=logging.DEBUG)
 
 
-def auth_config_from_settings(settings):
+def get_auth_config(container):
+    settings = get_settings(container)
     magpie_secret = get_constant('MAGPIE_SECRET', settings, settings_name='magpie.secret')
     magpie_cookie_expire = get_constant('MAGPIE_COOKIE_EXPIRE', settings,
                                         settings_name='magpie.cookie_expire', default_value=None,
@@ -34,8 +35,11 @@ def auth_config_from_settings(settings):
     )
     authz_policy = ACLAuthorizationPolicy()
 
+    # create configurator or use one defined as input to preserve previous setup/include/etc.
+    config = Configurator() if not isinstance(container, Configurator) else container
+
     from magpie import models
-    config = Configurator(
+    config.setup_registry(
         settings=settings,
         root_factory=models.RootFactory,
         authentication_policy=authn_policy,

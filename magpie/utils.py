@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         Any, AnyKey, Str, List, Optional, Type, Union,
         AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,
     )
-    from enum import Enum  # noqa: F401
+    from typing import _TC  # noqa: F401
 
 CONTENT_TYPE_ANY = "*/*"
 CONTENT_TYPE_JSON = "application/json"
@@ -63,7 +63,7 @@ def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
     if not logger:
         logger = get_logger(__name__)
     logger.log(level, msg)
-    if not hasattr(exception, "message"):
+    if not isclass(exception) or not issubclass(exception, Exception):
         exception = Exception
     raise exception(msg)
 
@@ -304,14 +304,24 @@ def log_exception_tween(handler, registry):
 
 
 class ExtendedEnumMeta(EnumMeta):
+    def names(cls):
+        # type: () -> List[Str]
+        """Returns the member names assigned to corresponding enum elements."""
+        return list(cls.__members__)
+
     def values(cls):
-        # type: (Type[Enum]) -> List[AnyKey]
-        """Returns the literal values assigned to each enum element."""
+        # type: () -> List[AnyKey]
+        """Returns the literal values assigned to corresponding enum elements."""
         return [m.value for m in cls.__members__.values()]
 
     def get(cls, key_or_value, default=None):
-        # type: (Type[Enum], AnyKey, Optional[Any]) -> Optional[Type[Enum]]
-        """Finds a enum entry by defined name or its value."""
+        # type: (AnyKey, Optional[Any]) -> Optional[_TC]
+        """
+        Finds a enum entry by defined name or its value.
+        Returns the entry directly if it is already a valid enum.
+        """
+        if key_or_value in cls:
+            return key_or_value
         for m_key, m_val in cls.__members__.items():
             if key_or_value == m_key or key_or_value == m_val.value:
                 return m_val

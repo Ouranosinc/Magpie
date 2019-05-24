@@ -1,4 +1,4 @@
-bumpversion==0.5.3
+bump2version
 codacy-coverage
 coverage==4.0
 flake8==3.5.0
