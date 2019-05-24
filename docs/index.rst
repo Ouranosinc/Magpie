@@ -3,25 +3,25 @@ Magpie documentation
 
 .. include:: ../README.rst
 
-User's guide
-------------
-
-.. toctree::
-   :maxdepth: 4
-
-   usage
-
 
 Package information
--------------------
+===================
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
 
+   usage
    installation
    contributing
    authors
    history
+
+
+Source code
+===================
+
+.. toctree::
+   :maxdepth: 2
 
 
 Indices and tables

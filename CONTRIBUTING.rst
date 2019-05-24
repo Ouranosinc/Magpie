@@ -32,7 +32,7 @@ articles, and such.
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at francois-xavier.derue@crim.ca.
+The best way to send feedback is to file an issue on https://github.com/Ouranosinc/Magpie.
 
 If you are proposing a feature:
 
@@ -47,35 +47,21 @@ Get Started!
 
 Ready to contribute? Here's how to set up `magpie` for local development.
 
-1. Clone the `keyword_worker_refcom` repo from the Mercurial repository.
+1. Clone the repository from https://github.com/Ouranosinc/Magpie ::
 
-    hg clone <repo_location>
+    git clone https://github.com/Ouranosinc/Magpie
 
-2. Install your local copy and use a virtualenv. Assuming you have
-   virtualenv installed, this is how you set up your fork for local
-   development::
 
-    $ cd magpie/
-    $ virtualenv -p python 3.5 env
-    $ source env/bin/activate.csh
-    $ python setup.py develop
+2. Install your local copy (see :doc:`installation`)
 
-   Now you can make your changes locally.
+3. When you're done making changes, check that your changes pass code formatting and tests::
 
-3. When you're done making changes, check that your changes pass flake8 and the
-   tests, including testing other Python versions with tox::
+    make lint
+    make test
 
-    $ flake8 magpie tests
-    $ python setup.py test
-    $ tox
 
-   To get flake8 and tox, just pip install them into your virtualenv.
-
-4. Commit your changes and push your branch to GitHub::
-
-    $ hg commit -m "Your detailed description of your changes."
-
-5. Submit a pull request to the author.
+4. Commit your changes and push your branch to GitHub.
+5. Submit a pull request to the author (tests will run to evaluate that everything still works).
 
 
 Pull Request Guidelines
@@ -86,8 +72,8 @@ Before you submit a pull request, check that it meets these guidelines:
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
-   feature to the list in README.rst.
-3. The tests should work for the specifid version of Python for this project.
+   feature to the list in :doc:`history` (under relevant category of section `Unreleased`).
+3. The tests should work for the specified version of Python for this project.
 
 
 Tips
@@ -95,4 +81,5 @@ Tips
 
 To run a subset of tests::
 
-    $ python -m unittest tests.test_magpie
+    python -m unittest tests.test_magpie
+

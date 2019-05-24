@@ -10,7 +10,7 @@ from shlex import split
 import argparse
 
 
-from conf import __version__ as VERSION
+from .conf import __meta__
 
 DOC_DESTINATION = None  # TODO: Edit this
 
@@ -30,7 +30,7 @@ def send_static(destination=DOC_DESTINATION):
     Send static site on server.
     """
     cmd = split("rsync -av _build/html/")
-    cmd += [urljoin(destination, VERSION)]
+    cmd += [urljoin(destination, __meta__.__version__)]
     check_call(cmd)
 
 

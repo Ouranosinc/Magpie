@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     import six
 
     if six.PY2:
-        Str = Union[_AnyStr, unicode]
+        Str = Union[_AnyStr, unicode]   # noqa: F821
     else:
         Str = _AnyStr
     AnyStr = Str

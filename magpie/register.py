@@ -130,6 +130,7 @@ def phoenix_login(cookies):
 def phoenix_login_check(cookies):
     """
     Since Phoenix always return 200, even on invalid login, 'hack' check unauthorized access.
+
     :param cookies: temporary cookies file storage used for login with `phoenix_login`.
     :return: status indicating if login access was granted with defined credentials.
     """

@@ -36,13 +36,17 @@ def format_resource(resource, permissions=None, basic_info=False):
 
 def format_resource_tree(children, db_session, resources_perms_dict=None, internal_svc_res_perm_dict=None):
     """
+    Generates the formatted service/resource tree with all its children resources by calling :function:`format_resource`
+    recursively.
 
-    :param children:
-    :param db_session:
-    :param resources_perms_dict: any pre-established user- or group-specific permissions. Only those are shown if given
+    Filters resource permissions with ``resources_perms_dict`` if provided.
+
+    :param children: service or resource for which to generate the formatted resource tree
+    :param db_session: connection to db
+    :param resources_perms_dict: any pre-established user- or group-specific permissions. Only those are shown if given.
     :param internal_svc_res_perm_dict: *for this function's use only*,
-    avoid re-fetch of already obtained permissions for corresponding resources
-    :return:
+        avoid re-fetch of already obtained permissions for corresponding resources
+    :return: formatted resource tree
     """
     internal_svc_res_perm_dict = dict() if internal_svc_res_perm_dict is None else internal_svc_res_perm_dict
 

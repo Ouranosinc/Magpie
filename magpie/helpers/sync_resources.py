@@ -47,7 +47,6 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
         - matches_remote: True or False depending if the resource is present on the remote server
 
     :returns: dictionary of the form validated by `magpie.helpers.sync_services.is_valid_resource_schema`.
-
     """
     if not resources_remote:
         return resources_local
@@ -97,6 +96,7 @@ def _sort_resources(resources):
     """
     Sorts a resource dictionary of the type validated by 'sync_services.is_valid_resource_schema'
     by using an OrderedDict
+
     :return: None
     """
     for resource_name, values in resources.items():
@@ -107,6 +107,7 @@ def _sort_resources(resources):
 def _ensure_sync_info_exists(service_resource_id, session):
     """
     Make sure the RemoteResourcesSyncInfo entry exists in the database.
+
     :param service_resource_id:
     :param session:
     """
@@ -122,6 +123,7 @@ def _ensure_sync_info_exists(service_resource_id, session):
 def _get_remote_resources(service):
     """
     Request remote resources, depending on service type.
+
     :param service: (models.Service)
     :return:
     """
@@ -138,6 +140,7 @@ def _get_remote_resources(service):
 def _delete_records(service_id, session):
     """
     Delete all RemoteResource based on a Service.resource_id
+
     :param service_id:
     :param session:
     """
@@ -151,6 +154,7 @@ def _create_main_resource(service_id, session):
 
     Each RemoteResourcesSyncInfo has a main RemoteResource of the same name as the service.
     This is similar to the Service and Resource relationship.
+
     :param service_id:
     :param session:
     """
@@ -168,6 +172,7 @@ def _create_main_resource(service_id, session):
 def _update_db(remote_resources, service_id, session):
     """
     Writes remote resources to database.
+
     :param remote_resources:
     :param service_id:
     :param session:
@@ -200,6 +205,7 @@ def _update_db(remote_resources, service_id, session):
 def _get_resource_children(resource, db_session):
     """
     Mostly copied from ziggurat_foundations to use RemoteResource instead of Resource
+
     :param resource:
     :param db_session:
     :return:
@@ -245,6 +251,7 @@ def _format_resource_tree(children):
 def _query_remote_resources_in_database(service_id, session):
     """
     Reads remote resources from the RemoteResources table. No external request is made.
+
     :return: a dictionary of the form defined in 'sync_services.is_valid_resource_schema'
     """
     service = session.query(models.Service).filter_by(resource_id=service_id).first()
@@ -272,6 +279,7 @@ def get_last_sync(service_id, session):
 def fetch_all_services_by_type(service_type, session):
     """
     Get remote resources for all services of a certain type.
+
     :param service_type:
     :param session:
     """
@@ -290,6 +298,7 @@ def fetch_all_services_by_type(service_type, session):
 def fetch_single_service(service, session):
     """
     Get remote resources for a single service.
+
     :param service: (models.Service) or service_id
     :param session:
     """

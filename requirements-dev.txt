@@ -5,6 +5,7 @@ flake8==3.5.0
 mock
 nose==1.3.7
 pytest
-Sphinx==1.3.1
+Sphinx
+sphinx-autoapi
 tox>=3.0
 webtest

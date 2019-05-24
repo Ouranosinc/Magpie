@@ -13,7 +13,8 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 # Application
 MAGPIE_ROOT    := $(abspath $(lastword $(MAKEFILE_LIST))/..)
 MAGPIE_NAME    := $(shell basename $(MAGPIE_ROOT))
-MAGPIE_VERSION := 0.10.0
+MAGPIE_VERSION ?= 0.10.0
+MAGPIE_INI     ?= $(MAGPIE_ROOT)/config/magpie.ini
 
 # conda
 CONDA_ENV      ?= $(MAGPIE_NAME)
@@ -37,7 +38,6 @@ endif
 CONDA_CMD := source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)";
 
 # docker
-MAGPIE_VERSION_RAW   :=
 MAGPIE_DOCKER_REPO   := pavics/magpie
 MAGPIE_DOCKER_TAG    := $(MAGPIE_DOCKER_REPO):$(MAGPIE_VERSION)
 TWITCHER_DOCKER_REPO := pavics/twitcher
@@ -135,11 +135,6 @@ test-remote: install-dev install
 	@echo "Running remote tests..."
 	bash -c '$(CONDA_CMD) pytest tests -vv -m "not local" --junitxml "$(MAGPIE_ROOT)/tests/results.xml"'
 
-.PHONY: test-tox
-test-tox: install-dev install
-	@echo "Running tests with tox..."
-	@bash -c '$(CONDA_CMD) tox'
-
 COVERAGE_FILE := $(MAGPIE_ROOT)/.coverage
 COVERAGE_HTML := $(MAGPIE_ROOT)/coverage/index.html
 $(COVERAGE_FILE):
@@ -162,7 +157,7 @@ coverage-show: $(COVERAGE_HTML)
 .PHONY: migrate
 migrate: install conda-env
 	@echo "Running database migration..."
-	@bash -c '$(CONDA_CMD) alembic -c "$(MAGPIE_ROOT)/magpie/alembic/alembic.ini" upgrade head'
+	@bash -c '$(CONDA_CMD) alembic -c "$(MAGPIE_INI)" upgrade head'
 
 DOC_LOCATION := $(MAGPIE_ROOT)/docs/_build/html/index.html
 $(DOC_LOCATION):
@@ -176,7 +171,7 @@ $(DOC_LOCATION):
 	@-echo "Documentation available: file://$(DOC_LOCATION)"
 
 .PHONY: docs
-docs: install-dev $(DOC_LOCATION)
+docs: install-dev clean-docs $(DOC_LOCATION)
 
 .PHONY: docs-show
 docs-show: $(DOC_LOCATION)
@@ -250,7 +245,7 @@ cron:
 .PHONY: start
 start: install
 	@echo "Starting Magpie..."
-	@bash -c '$(CONDA_CMD) exec gunicorn -b 0.0.0.0:2001 --paste "$(MAGPIE_ROOT)/magpie/magpie.ini" --workers 10 --preload &'
+	@bash -c '$(CONDA_CMD) exec gunicorn -b 0.0.0.0:2001 --paste "$(MAGPIE_INI)" --workers 10 --preload &'
 
 .PHONY: version
 version:
@@ -265,15 +260,27 @@ docker-info:
 	@echo "MagpieAdapter image will be built, tagged and pushed as:"
 	@echo "$(TWITCHER_DOCKER_TAG)"
 
-.PHONY: docker-build
-docker-build:
-	docker build "$(MAGPIE_ROOT)" -t "$(MAGPIE_DOCKER_TAG)"
+.PHONY: docker-build-adapter
+docker-build-adapter:
 	docker build "$(MAGPIE_ROOT)" -t "$(TWITCHER_DOCKER_TAG)" -f Dockerfile.adapter
 
-.PHONY: docker-push
-docker-push: docker-build
-	docker push "$(MAGPIE_DOCKER_TAG)"
+.PHONY: docker-build-magpie
+docker-build-magpie:
+	docker build "$(MAGPIE_ROOT)" -t "$(MAGPIE_DOCKER_TAG)"
+
+.PHONY: docker-build
+docker-build: docker-build-magpie docker-build-adapter
+
+.PHONY: docker-push-adapter
+docker-push-adapter: docker-build-adapter
 	docker push "$(TWITCHER_DOCKER_TAG)"
+
+.PHONY: docker-push-magpie
+docker-push-magpie: docker-build-magpie
+	docker push "$(MAGPIE_DOCKER_TAG)"
+
+.PHONY: docker-push
+docker-push: docker-push-magpie docker-push-adapter
 
 ## Conda targets
 
