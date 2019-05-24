@@ -70,7 +70,6 @@ REST API Documentation
 ======================
 
 The documentation is auto-generated and served under `{HOSTNAME}/api/` using Swagger-UI with tag `latest`.
-For convenience, older API versions are also provided.
 
 
 Build package
@@ -78,9 +77,9 @@ Build package
 
 At the command line::
 
-    $ conda create -n magpie
-    $ source activate magpie
-    $ make install
+    conda create -n magpie
+    source activate magpie
+    make install
 
 
 Installation
@@ -88,10 +87,38 @@ Installation
 
 At the command line::
 
-    $ pip install magpie
+    pip install magpie
+
+
+Docker Images
+=============
+
+Following most recent variants are available:
+
+.. |br| raw:: html
+
+    <br>
+
+.. list-table::
+    :header-rows: 1
+
+    * - Magpie
+      - Twitcher |br|
+        (with integrated ``MagpieAdapter``)
+    * - pavics/magpie:0.10.0
+      - pavics/twitcher:magpie-0.10.0
+    * - pavics/magpie:latest
+      - pavics/twitcher:magpie-latest
+
+
+**Notes:**
+
+- Older tags the are also available: `Magpie Docker Images`_
+- `Twitcher`_ image with integrated ``MagpieAdapter`` are only available for Magpie ``>=1.0.0``
 
 
 .. _RestAPI: https://swaggerhub.com/apis/CRIM/magpie-rest-api
 .. _Authomatic: https://authomatic.github.io/authomatic/
 .. _Ziggurat-Foundations: https://github.com/ergo/ziggurat_foundations
-
+.. _Magpie Docker Images: https://hub.docker.com/r/pavics/magpie/tags
+.. _Twitcher: https://github.com/bird-house/twitcher

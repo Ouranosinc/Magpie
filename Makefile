@@ -171,7 +171,7 @@ $(DOC_LOCATION):
 	@-echo "Documentation available: file://$(DOC_LOCATION)"
 
 .PHONY: docs
-docs: install-dev $(DOC_LOCATION)
+docs: install-dev clean-docs $(DOC_LOCATION)
 
 .PHONY: docs-show
 docs-show: $(DOC_LOCATION)

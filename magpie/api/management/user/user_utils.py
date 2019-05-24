@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from magpie.definitions.pyramid_definitions import Request, HTTPException  # noqa: F401
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
     from magpie.definitions.typedefs import (  # noqa: F401
-        Any, Str, Dict, List, Optional, ResourcePermissionType, UserServicesType, ServiceOrResourceType
+        Any, Str, Dict, Iterable, List, Optional, ResourcePermissionType, UserServicesType, ServiceOrResourceType
     )
     from magpie.permissions import Permission  # noqa: F401
 
@@ -37,6 +37,7 @@ def create_user(user_name, password, email, group_name, db_session):
     """
     Creates a user if it is permitted and not conflicting.
     Password must be set to `None` if using external identity.
+
     :returns: valid HTTP response on successful operation.
     """
 
@@ -79,6 +80,7 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     # type: (models.User, ServiceOrResourceType, Permission, Session) -> HTTPException
     """
     Creates a permission on a user/resource combination if it is permitted and not conflicting.
+
     :returns: valid HTTP response on successful operation.
     """
     check_valid_service_or_resource_permission(permission.value, resource, db_session)
@@ -131,10 +133,12 @@ def get_resource_root_service(resource, request):
 
 
 def filter_user_permission(resource_permission_list, user):
-    # type: (List[ResourcePermissionType], models.User) -> List[ResourcePermissionType]
+    # type: (List[ResourcePermissionType], models.User) -> Iterable[ResourcePermissionType]
     """Retrieves only direct user permissions on resources amongst a list of user/group resource/service permissions."""
-    return filter(lambda perm: perm.group is None and perm.type == u"user" and perm.user.user_name == user.user_name,
-                  resource_permission_list)
+    def is_user_perm(perm):
+        return perm.group is None and perm.type == u"user" and perm.user.user_name == user.user_name
+    # noinspection PyTypeChecker
+    return filter(is_user_perm, resource_permission_list)
 
 
 def get_user_resource_permissions_response(user, resource, request,

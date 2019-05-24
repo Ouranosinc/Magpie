@@ -44,8 +44,13 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx'
+    'sphinx.ext.intersphinx',
+    'autoapi.extension',
 ]
+
+autoapi_dirs = [os.path.join(PROJECT_ROOT, 'magpie')]
+autoapi_ignore = [os.path.join(PROJECT_ROOT, 'magpie/alembic/*')]
+autoapi_python_class_content = 'both'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
