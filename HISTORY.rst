@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.0.0 (2019-05-24)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * add ``Dockerfile.adapter`` to build and configure ``MagpieAdapter`` on top of ``Twitcher >= 0.5.0``
