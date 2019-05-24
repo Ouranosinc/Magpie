@@ -160,7 +160,8 @@ def run_database_migration_when_ready(settings, db_session=None):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
                     run_database_migration(db_session)
-            except ImportError:
+            except ImportError as e:
+                print_log("Database migration produced [{!r}] (ignored).".format(e, i, attempts), level=logging.WARNING)
                 pass
             except Exception as e:
                 if i <= attempts:
