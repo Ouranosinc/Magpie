@@ -13,7 +13,7 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 # Application
 MAGPIE_ROOT    := $(abspath $(lastword $(MAKEFILE_LIST))/..)
 MAGPIE_NAME    := $(shell basename $(MAGPIE_ROOT))
-MAGPIE_VERSION := 0.10.0
+MAGPIE_VERSION ?= 0.10.0
 MAGPIE_INI     ?= $(MAGPIE_ROOT)/config/magpie.ini
 
 # conda
@@ -38,7 +38,6 @@ endif
 CONDA_CMD := source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)";
 
 # docker
-MAGPIE_VERSION_RAW   :=
 MAGPIE_DOCKER_REPO   := pavics/magpie
 MAGPIE_DOCKER_TAG    := $(MAGPIE_DOCKER_REPO):$(MAGPIE_VERSION)
 TWITCHER_DOCKER_REPO := pavics/twitcher
@@ -261,15 +260,27 @@ docker-info:
 	@echo "MagpieAdapter image will be built, tagged and pushed as:"
 	@echo "$(TWITCHER_DOCKER_TAG)"
 
-.PHONY: docker-build
-docker-build:
-	docker build "$(MAGPIE_ROOT)" -t "$(MAGPIE_DOCKER_TAG)"
+.PHONY: docker-build-adapter
+docker-build-adapter:
 	docker build "$(MAGPIE_ROOT)" -t "$(TWITCHER_DOCKER_TAG)" -f Dockerfile.adapter
 
-.PHONY: docker-push
-docker-push: docker-build
-	docker push "$(MAGPIE_DOCKER_TAG)"
+.PHONY: docker-build-magpie
+docker-build-magpie:
+	docker build "$(MAGPIE_ROOT)" -t "$(MAGPIE_DOCKER_TAG)"
+
+.PHONY: docker-build
+docker-build: docker-build-magpie docker-build-adapter
+
+.PHONY: docker-push-adapter
+docker-push-adapter: docker-build-adapter
 	docker push "$(TWITCHER_DOCKER_TAG)"
+
+.PHONY: docker-push-magpie
+docker-push-magpie: docker-build-magpie
+	docker push "$(MAGPIE_DOCKER_TAG)"
+
+.PHONY: docker-push
+docker-push: docker-push-magpie docker-push-adapter
 
 ## Conda targets
 
