@@ -737,9 +737,10 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
 
     if use_request(db_session):
         magpie_url = magpie_url or get_magpie_url()
+        settings = {'magpie.url': magpie_url}
         logging.debug("Editing permissions using requests to [{}]...".format(magpie_url))
         err_msg = "Invalid credentials to register Magpie permissions."
-        cookies_or_session = get_admin_cookies(magpie_url, raise_message=err_msg)
+        cookies_or_session = get_admin_cookies(settings, raise_message=err_msg)
     else:
         logging.debug("Editing permissions using db session...")
         cookies_or_session = db_session

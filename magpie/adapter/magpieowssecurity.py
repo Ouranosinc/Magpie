@@ -1,4 +1,5 @@
 from magpie.api.exception import evaluate_call, verify_param
+from magpie.api.schemas import ProviderSigninAPI
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import (
     HTTPOk,
@@ -68,7 +69,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         token_name = get_constant("MAGPIE_COOKIE_NAME", settings_name=request.registry.settings)
         if "Authorization" in request.headers and token_name not in request.cookies:
             magpie_prov = request.params.get("provider", "WSO2")
-            magpie_auth = "{host}/providers/{provider}/signin".format(host=self.magpie_url, provider=magpie_prov)
+            magpie_path = ProviderSigninAPI.path.format(provider_name=magpie_prov)
+            magpie_auth = "{}{}".format(self.magpie_url, magpie_path)
             headers = dict(request.headers)
             headers.update({"Homepage-Route": "/session", "Accept": CONTENT_TYPE_JSON})
             session_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)

@@ -6,6 +6,19 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* prioritize settings (ie: `magpie.ini` values) before environment variables and ``magpie.constants`` globals.
+* allow specifying ``magpie.scheme`` setting to generate the ``magpie.url`` with it if the later was omitted.
+* look in settings for required parameters for function ``get_admin_cookies``.
+* use API definitions instead of literal strings for routes employed in ``MagpieAdapter``.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix erroneous ``Content-Type`` header retrieved from form submission getting forwarded to API requests.
+* fix user name update failing because of incomplete db transaction.
+
 1.0.0 (2019-05-24)
 ---------------------
 
