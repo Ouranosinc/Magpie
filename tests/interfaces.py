@@ -6,15 +6,12 @@ from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, Servic
 from magpie.utils import get_twitcher_protected_service_url, CONTENT_TYPE_JSON
 from tests import utils, runner
 from copy import deepcopy
-# noinspection PyPackageRequirements
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 import unittest
 import warnings
-# noinspection PyPackageRequirements
 import pytest
 import pyramid.testing
-# noinspection PyPackageRequirements
 import mock
 import yaml
 import six

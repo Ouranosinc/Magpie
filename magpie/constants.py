@@ -2,6 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 Constant settings for Magpie application.
+
+Constants defined with format ``MAGPIE_[VARIABLE_NAME]`` can be matched with corresponding
+settings formatted as ``magpie.[variable_name]`` in the ``magpie.ini`` configuration file.
+
+.. note::
+    Since the ``magpie.ini`` file has to be loaded by the application to retrieve various configuration settings,
+    constant ``MAGPIE_INI_FILE_PATH`` (or any other `path variable` defined before it - see below) has to be defined
+    by environment variable if the default location is not desired (ie: if you want to provide your own configuration).
 """
 from magpie.definitions.pyramid_definitions import asbool
 from typing import TYPE_CHECKING

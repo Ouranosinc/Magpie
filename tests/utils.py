@@ -6,9 +6,7 @@ from magpie.utils import get_magpie_url, get_settings_from_config_ini, get_heade
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from pyramid.testing import setUp as PyramidSetUp
-# noinspection PyPackageRequirements
 from webtest import TestApp
-# noinspection PyPackageRequirements
 from webtest.response import TestResponse
 from typing import TYPE_CHECKING
 import unittest
@@ -16,7 +14,6 @@ import requests
 import warnings
 import json
 import six
-# noinspection PyPackageRequirements
 import pytest
 if TYPE_CHECKING:
     from tests.interfaces import Base_Magpie_TestCase  # noqa: F401

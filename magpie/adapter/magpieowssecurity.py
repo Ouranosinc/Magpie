@@ -9,7 +9,6 @@ from magpie.definitions.pyramid_definitions import (
     IAuthorizationPolicy,
     asbool,
 )
-# noinspection PyUnresolvedReferences
 from magpie.definitions.twitcher_definitions import (
     OWSSecurityInterface,
     OWSAccessForbidden,

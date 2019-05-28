@@ -33,8 +33,8 @@ def get_version(request):
     # noinspection PyBroadException
     try:
         version_db = get_database_revision(request.db)
-    except Exception:
-        print_log("Failed to retrieve database revision: [{!r}]", LOGGER, logging.WARNING)
+    except Exception as ex:
+        print_log("Failed to retrieve database revision: [{!r}]".format(ex), LOGGER, logging.WARNING)
     version = {
         u"version": __meta__.__version__,
         u"db_version": version_db

@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 """Magpie additional typing definitions."""
 
-# noinspection PyUnresolvedReferences
-from typing import (  # noqa: F401
-    Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union, TYPE_CHECKING
-)
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    # noinspection PyUnresolvedReferences
+    from typing import (  # noqa: F401
+        Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union
+    )
     from magpie.definitions.sqlalchemy_definitions import Session
     from magpie import models
     from magpie.permissions import Permission
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     import six
 
     if six.PY2:
+        # noinspection PyUnresolvedReferences
         Str = Union[_AnyStr, unicode]   # noqa: F821
     else:
         Str = _AnyStr

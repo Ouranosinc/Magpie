@@ -6,6 +6,12 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* provide some documentation about ``magpie.constants`` module behaviour.
+* remove some inspection comments by using combined requirements files.
+
+
 1.1.0 (2019-05-28)
 ---------------------
 
@@ -121,7 +127,8 @@ Features / Changes
 * add inherited resource permission with querystring (deprecate `inherited_<>` routes warnings)
 * add flag to return `effective` permissions from user resource permissions requests
 * hide service private URL on non administrator level requests
-* make cookies expire-able by setting ``MAGPIE_COOKIE_EXPIRE`` and provide cookie only on http (`JS CSRF` attack protection)
+* make cookies expire-able by setting ``MAGPIE_COOKIE_EXPIRE`` and provide cookie only on http
+  (`JS CSRF` attack protection)
 * update ``MagpieAdapter.MagpieOWSSecurity`` for `WSO2` seamless integration with Authentication header token
 * update ``MagpieAdapter.MagpieProcess`` for automatic handling of REST-API WPS process route access permissions
 * update ``MagpieAdapter.MagpieService`` accordingly to inherited resources and service URL changes

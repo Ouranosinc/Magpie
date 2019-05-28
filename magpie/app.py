@@ -14,7 +14,7 @@ from magpie.register import (
 )
 from magpie.security import get_auth_config
 from magpie.utils import patch_magpie_url, print_log, get_logger
-from magpie import db, constants
+from magpie import db
 import os
 import sys
 # noinspection PyUnresolvedReferences
@@ -31,8 +31,7 @@ def main(global_config=None, **settings):
     """
     This function returns a Pyramid WSGI application.
     """
-    settings["magpie.root"] = constants.MAGPIE_ROOT
-    settings["magpie.module"] = constants.MAGPIE_MODULE_DIR
+    config_ini = get_constant("MAGPIE_INI_FILE_PATH", raise_missing=True)
 
     print_log("Setting up loggers...", LOGGER)
     log_lvl = get_constant("MAGPIE_LOG_LEVEL", settings, "magpie.log_level", default_value="INFO",
@@ -50,7 +49,6 @@ def main(global_config=None, **settings):
     db.set_sqlalchemy_log_level(log_lvl)
     # fetch db session here, otherwise, any following db engine connection will re-initialize
     # with a new engine class and logging settings don't get re-evaluated/applied
-    config_ini = get_constant("MAGPIE_INI_FILE_PATH", raise_missing=True)
     db_session = db.get_db_session_from_config_ini(config_ini, settings_override=sa_settings)
 
     print_log("Register default users...", LOGGER)
@@ -62,7 +60,7 @@ def main(global_config=None, **settings):
     prov_cfg = get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", default_value="",
                             raise_missing=False, raise_not_set=False, print_missing=True)
     if os.path.isfile(prov_cfg):
-        magpie_register_services_from_config(constants.MAGPIE_PROVIDERS_CONFIG_PATH, push_to_phoenix=push_phoenix,
+        magpie_register_services_from_config(prov_cfg, push_to_phoenix=push_phoenix,
                                              force_update=True, disable_getcapabilities=False, db_session=db_session)
     else:
         print_log("No configuration file found for providers registration, skipping...", LOGGER, logging.WARN)
