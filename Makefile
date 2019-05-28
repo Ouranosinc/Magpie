@@ -13,7 +13,7 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 # Application
 MAGPIE_ROOT    := $(abspath $(lastword $(MAKEFILE_LIST))/..)
 MAGPIE_NAME    := $(shell basename $(MAGPIE_ROOT))
-MAGPIE_VERSION ?= 1.0.0
+MAGPIE_VERSION ?= 1.1.0
 MAGPIE_INI     ?= $(MAGPIE_ROOT)/config/magpie.ini
 
 # conda
