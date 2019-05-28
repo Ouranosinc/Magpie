@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         Any, AnyKey, Str, List, Optional, Type, Union,
         AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,
     )
+    # noinspection PyProtectedMember
     from typing import _TC  # noqa: F401
 
 CONTENT_TYPE_ANY = "*/*"
@@ -172,16 +173,19 @@ def convert_response(response):
     return pyramid_response
 
 
-def get_admin_cookies(magpie_url, verify=True, raise_message=None):
-    # type: (Str, bool, Optional[Str]) -> CookiesType
-    magpie_login_url = "{}/signin".format(magpie_url)
-    cred = {"user_name": get_constant("MAGPIE_ADMIN_USER"), "password": get_constant("MAGPIE_ADMIN_PASSWORD")}
+def get_admin_cookies(container, verify=True, raise_message=None):
+    # type: (AnySettingsContainer, bool, Optional[Str]) -> CookiesType
+    from magpie.api.schemas import SigninAPI
+    magpie_url = get_magpie_url(container)
+    magpie_login_url = "{}{}".format(magpie_url, SigninAPI.path)
+    cred = {"user_name": get_constant("MAGPIE_ADMIN_USER", container),
+            "password": get_constant("MAGPIE_ADMIN_PASSWORD", container)}
     resp = requests.post(magpie_login_url, data=cred, headers={"Accept": CONTENT_TYPE_JSON}, verify=verify)
     if resp.status_code != HTTPOk.code:
         if raise_message:
             raise_log(raise_message, logger=LOGGER)
         raise resp.raise_for_status()
-    token_name = get_constant("MAGPIE_COOKIE_NAME")
+    token_name = get_constant("MAGPIE_COOKIE_NAME", container)
 
     # use specific domain to differentiate between `.{hostname}` and `{hostname}` variations if applicable
     # noinspection PyProtectedMember
@@ -211,13 +215,16 @@ def patch_magpie_url(container):
     try:
         get_magpie_url(settings)
     except ConfigurationError:
-        magpie_url_template = "http://{hostname}:{port}"
-        port = get_constant("MAGPIE_PORT", settings, settings_name="magpie.port")
+        magpie_url_template = "{scheme}://{hostname}:{port}"
+        port = get_constant("MAGPIE_PORT", settings, raise_not_set=False)
+        scheme = get_constant("MAGPIE_SCHEME", settings, raise_missing=False, raise_not_set=False, default_value="http")
         if port:
             settings["magpie.port"] = port
         hostname = get_constant("HOSTNAME")
         if hostname:
-            settings["magpie.url"] = magpie_url_template.format(hostname=hostname, port=settings["magpie.port"])
+            magpie_url = magpie_url_template.format(scheme=scheme, hostname=hostname, port=settings["magpie.port"])
+            print_log("Updating 'magpie.url' value: {}".format(magpie_url), LOGGER, logging.WARNING)
+            settings["magpie.url"] = magpie_url
     return settings
 
 
@@ -233,18 +240,19 @@ def get_magpie_url(container=None):
         if not hostname:
             raise ConfigurationError("Missing or unset MAGPIE_HOST or HOSTNAME value.")
         magpie_port = get_constant("MAGPIE_PORT", raise_not_set=False)
-        return "http://{0}{1}".format(hostname, ":{}".format(magpie_port) if magpie_port else "")
+        magpie_scheme = get_constant("MAGPIE_SCHEME", raise_not_set=False, raise_missing=False, default_value="http")
+        return "{}://{}{}".format(magpie_scheme, hostname, ":{}".format(magpie_port) if magpie_port else "")
     try:
         # add "http" scheme to url if omitted from config since further 'requests' calls fail without it
         # mostly for testing when only "localhost" is specified
-        # otherwise twitcher config should explicitly define it in MAGPIE_URL
+        # otherwise config should explicitly define it with 'MAGPIE_URL' env or 'magpie.url' config
         settings = get_settings(container)
         url_parsed = urlparse(get_constant("MAGPIE_URL", settings, "magpie.url").strip("/"))
         if url_parsed.scheme in ["http", "https"]:
             return url_parsed.geturl()
         else:
             magpie_url = "http://{}".format(url_parsed.geturl())
-            LOGGER.warning("Missing scheme from settings URL, new value: '{}'".format(magpie_url))
+            print_log("Missing scheme from settings URL, new value: '{}'".format(magpie_url), LOGGER, logging.WARNING)
             return magpie_url
     except AttributeError:
         # If magpie.url does not exist, calling strip fct over None will raise this issue

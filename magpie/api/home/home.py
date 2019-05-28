@@ -1,9 +1,12 @@
 from magpie.api import exception as ax, schemas as s
 from magpie.definitions.pyramid_definitions import NO_PERMISSION_REQUIRED, HTTPOk, view_config
 from magpie.db import get_database_revision
-from magpie.utils import get_magpie_url, CONTENT_TYPE_JSON
+from magpie.utils import print_log, get_logger, get_magpie_url, CONTENT_TYPE_JSON
 from magpie import __meta__
 from copy import deepcopy
+
+import logging
+LOGGER = get_logger(__name__)
 
 
 # noinspection PyUnusedLocal
@@ -31,7 +34,7 @@ def get_version(request):
     try:
         version_db = get_database_revision(request.db)
     except Exception:
-        pass
+        print_log("Failed to retrieve database revision: [{!r}]", LOGGER, logging.WARNING)
     version = {
         u"version": __meta__.__version__,
         u"db_version": version_db

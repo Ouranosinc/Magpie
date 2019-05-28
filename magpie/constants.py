@@ -143,10 +143,10 @@ def get_constant(constant_name,             # type: Str
                  ):                         # type: (...) -> SettingValue
     """
     Search in order for matched value of ``constant_name``:
-      1. search in ``magpie.constants`` definitions
-      2. search in environment variables
-      3. search in settings if specified
-      4. search alternative setting names
+      1. search in settings if specified
+      2. search alternative setting names
+      3. search in ``magpie.constants`` definitions
+      4. search in environment variables
 
     Parameter ``constant_name`` is expected to have the format ``MAGPIE_[VARIABLE_NAME]`` although any value can
     be passed to retrieve generic settings from all above mentioned search locations.
@@ -168,22 +168,9 @@ def get_constant(constant_name,             # type: Str
     """
     from magpie.utils import get_settings, raise_log, print_log
 
-    magpie_globals = globals()
     missing = True
     magpie_value = None
     settings = get_settings(settings_container) if settings_container else None
-    if constant_name in magpie_globals:
-        missing = False
-        magpie_value = magpie_globals.get(constant_name)
-        if magpie_value is not None:
-            print_log("Constant found in definitions with: {}".format(constant_name), level=logging.DEBUG)
-            return magpie_value
-    if constant_name in os.environ:
-        missing = False
-        magpie_value = os.environ.get(constant_name)
-        if magpie_value is not None:
-            print_log("Constant found in environment with: {}".format(constant_name), level=logging.DEBUG)
-            return magpie_value
     if settings and constant_name in settings:
         missing = False
         magpie_value = settings.get(constant_name)
@@ -198,6 +185,19 @@ def get_constant(constant_name,             # type: Str
         magpie_value = settings.get(settings_name)
         if magpie_value is not None:
             print_log("Constant found in settings with: {}".format(settings_name), level=logging.DEBUG)
+            return magpie_value
+    magpie_globals = globals()
+    if constant_name in magpie_globals:
+        missing = False
+        magpie_value = magpie_globals.get(constant_name)
+        if magpie_value is not None:
+            print_log("Constant found in definitions with: {}".format(constant_name), level=logging.DEBUG)
+            return magpie_value
+    if constant_name in os.environ:
+        missing = False
+        magpie_value = os.environ.get(constant_name)
+        if magpie_value is not None:
+            print_log("Constant found in environment with: {}".format(constant_name), level=logging.DEBUG)
             return magpie_value
     if not missing and raise_not_set:
         raise_log("Constant was found but was not set: {}".format(constant_name),

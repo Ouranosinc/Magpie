@@ -1,5 +1,6 @@
 from magpie import constants as c
 import pytest
+import mock
 
 
 def test_get_constant_with_same_name():
@@ -51,3 +52,13 @@ def test_get_constant_raise_not_set_when_requested():
         assert value is None
     except LookupError:
         pytest.fail(msg="Should not have raised although constant is not set.")
+
+
+def test_constant_prioritize_setting_before_env_when_specified():
+    settings = {"magpie.some_existing_var": "FROM_SETTING"}
+    override = {"MAGPIE_SOME_EXISTING_VAR": "FROM_ENV"}
+    with mock.patch.dict("os.environ", override):
+        v = c.get_constant("MAGPIE_SOME_EXISTING_VAR", settings)
+        assert v == settings["magpie.some_existing_var"]
+        v = c.get_constant("MAGPIE_SOME_EXISTING_VAR")
+        assert v == override["MAGPIE_SOME_EXISTING_VAR"]

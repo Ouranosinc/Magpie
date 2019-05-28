@@ -316,6 +316,9 @@ class ManagementViews(object):
             if is_save_user_info:
                 resp = request_api(self.request, user_path, "PUT", data=user_info)
                 check_response(resp)
+                # need to commit updates since we are using the same session
+                # otherwise, updated user doesn't exist yet in the db for next calls
+                self.request.tm.commit()
 
             # always remove password from output
             user_info.pop(u"password", None)

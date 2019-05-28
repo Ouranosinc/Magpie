@@ -130,7 +130,6 @@ def get_test_magpie_app(settings=None):
     config.include("ziggurat_foundations.ext.pyramid.sign_in")
     config.include("ziggurat_foundations.ext.pyramid.get_user")
     config.registry.settings["magpie.url"] = "http://localhost:80"
-    config.registry.settings["magpie.db_migration"] = False
     if settings:
         config.registry.settings.update(settings)
     # create the test application
