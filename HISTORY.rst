@@ -10,7 +10,9 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * provide some documentation about ``magpie.constants`` module behaviour.
 * remove some inspection comments by using combined requirements files.
-
+* add constant ``MAGPIE_LOG_PRINT`` (default: ``False``) to enforce printing logs to console
+  (equivalent to specifying a ``sys.stdout/stderr StreamHandler`` in ``magpie.ini``, but is not enforced anymore)
+* update logging config to avoid duplicate outputs and adjust code to respect specified config.
 
 1.1.0 (2019-05-28)
 ---------------------

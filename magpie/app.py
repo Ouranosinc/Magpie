@@ -16,14 +16,9 @@ from magpie.security import get_auth_config
 from magpie.utils import patch_magpie_url, print_log, get_logger
 from magpie import db
 import os
-import sys
 # noinspection PyUnresolvedReferences
 import logging
 LOGGER = get_logger(__name__)
-# transfer root logger handler to magpie to avoid duplicate logs
-if logging.root.handlers:
-    logging.root.handlers.pop(0)
-LOGGER.addHandler(logging.StreamHandler(sys.stderr))
 
 
 # noinspection PyUnusedLocal

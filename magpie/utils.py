@@ -49,18 +49,21 @@ LOGGER = get_logger(__name__)
 
 
 def print_log(msg, logger=None, level=logging.INFO):
+    # type: (Str, Optional[LoggerType], int) -> None
+    from magpie.constants import MAGPIE_LOG_PRINT  # cannot use 'get_constant', recursive call
     if not logger:
         logger = get_logger(__name__)
-    all_handlers = logging.root.handlers + logger.handlers
-    if not any(isinstance(h, logging.StreamHandler) for h in all_handlers):
-        logger.addHandler(logging.StreamHandler(sys.stdout))
+    if MAGPIE_LOG_PRINT:
+        all_handlers = logging.root.handlers + logger.handlers
+        if not any(isinstance(h, logging.StreamHandler) for h in all_handlers):
+            logger.addHandler(logging.StreamHandler(sys.stdout))
     if logger.disabled:
         logger.disabled = False
     logger.log(level, msg)
 
 
 def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
-    # type: (Str, Optional[Type[Exception]], Optional[LoggerType], Optional[int]) -> None
+    # type: (Str, Optional[Type[Exception]], Optional[LoggerType], int) -> None
     if not logger:
         logger = get_logger(__name__)
     logger.log(level, msg)
