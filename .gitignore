@@ -28,6 +28,7 @@ magpie/local/
 magpie/pip-selfcheck.json
 magpie/share/
 magpie.egg-info/
+requirements-all.txt
 src/
 share/
 tests/results.xml

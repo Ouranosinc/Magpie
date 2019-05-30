@@ -12,7 +12,7 @@ LOGGER = get_logger("TWITCHER")
 # noinspection PyAbstractClass, PyMethodMayBeStatic, PyUnusedLocal
 class MagpieAdapter(AdapterInterface):
     def describe_adapter(self):
-        return {"name": self.__class__.__name__, "version": __meta__.__version__}
+        return {"name": self.name(), "version": __meta__.__version__}
 
     def servicestore_factory(self, request, headers=None):
         return MagpieServiceStore(request)

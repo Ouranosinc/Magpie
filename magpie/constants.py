@@ -2,6 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 Constant settings for Magpie application.
+
+Constants defined with format ``MAGPIE_[VARIABLE_NAME]`` can be matched with corresponding
+settings formatted as ``magpie.[variable_name]`` in the ``magpie.ini`` configuration file.
+
+.. note::
+    Since the ``magpie.ini`` file has to be loaded by the application to retrieve various configuration settings,
+    constant ``MAGPIE_INI_FILE_PATH`` (or any other `path variable` defined before it - see below) has to be defined
+    by environment variable if the default location is not desired (ie: if you want to provide your own configuration).
 """
 from magpie.definitions.pyramid_definitions import asbool
 from typing import TYPE_CHECKING
@@ -86,11 +94,12 @@ MAGPIE_ANONYMOUS_GROUP = MAGPIE_ANONYMOUS_USER
 MAGPIE_EDITOR_GROUP = os.getenv("MAGPIE_EDITOR_GROUP", "editors")
 MAGPIE_USERS_GROUP = os.getenv("MAGPIE_USERS_GROUP", "users")
 MAGPIE_CRON_LOG = os.getenv("MAGPIE_CRON_LOG", "~/magpie-cron.log")
-MAGPIE_DB_MIGRATION = asbool(os.getenv("MAGPIE_DB_MIGRATION", True))
+MAGPIE_DB_MIGRATION = asbool(os.getenv("MAGPIE_DB_MIGRATION", True))            # run db migration on startup
 MAGPIE_DB_MIGRATION_ATTEMPTS = int(os.getenv("MAGPIE_DB_MIGRATION_ATTEMPTS", 5))
-MAGPIE_LOG_LEVEL = os.getenv("MAGPIE_LOG_LEVEL", _get_default_log_level())
-MAGPIE_LOG_REQUEST = asbool(os.getenv("MAGPIE_LOG_REQUEST", True))
-MAGPIE_LOG_EXCEPTION = asbool(os.getenv("MAGPIE_LOG_EXCEPTION", True))
+MAGPIE_LOG_LEVEL = os.getenv("MAGPIE_LOG_LEVEL", _get_default_log_level())      # log level to apply to the loggers
+MAGPIE_LOG_PRINT = asbool(os.getenv("MAGPIE_LOG_PRINT", False))                 # log also forces print to the console
+MAGPIE_LOG_REQUEST = asbool(os.getenv("MAGPIE_LOG_REQUEST", True))              # log detail of every incoming request
+MAGPIE_LOG_EXCEPTION = asbool(os.getenv("MAGPIE_LOG_EXCEPTION", True))          # log detail of generated exceptions
 MAGPIE_UI_ENABLED = asbool(os.getenv("MAGPIE_UI_ENABLED", True))
 PHOENIX_USER = os.getenv("PHOENIX_USER", "phoenix")
 PHOENIX_PASSWORD = os.getenv("PHOENIX_PASSWORD", "qwerty")

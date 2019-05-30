@@ -2,7 +2,6 @@
 Store adapters to read data from magpie.
 """
 
-# noinspection PyUnresolvedReferences
 from magpie.definitions.twitcher_definitions import ServiceStoreInterface, Service, ServiceNotFound
 from magpie.definitions.pyramid_definitions import HTTPOk, asbool
 from magpie.api.schemas import ServicesAPI
