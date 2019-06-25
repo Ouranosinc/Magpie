@@ -15,7 +15,9 @@ from magpie import models
 from typing import TYPE_CHECKING
 from six import with_metaclass
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, List, Dict, Type, ResourcePermissionType  # noqa: F401
+    from magpie.definitions.typedefs import (  # noqa: F401
+        AccessControlListType, Str, List, Dict, Type, ResourcePermissionType
+    )
     from magpie.definitions.pyramid_definitions import Request  # noqa: F401
 
 
@@ -59,12 +61,14 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
     def __init__(self, service, request):
         self.service = service
         self.request = request
-        self.acl = []
+        self.acl = []                   # type: AccessControlListType
         self.parser = ows_parser_factory(request)
         self.parser.parse(self.params_expected)
 
     @property
     def __acl__(self):
+        # type: () -> AccessControlListType
+        """List of access control rules defining (outcome, user/group, permission) combinations."""
         raise NotImplementedError
 
     def expand_acl(self, resource, user):
@@ -87,9 +91,13 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
                         self.acl.append((outcome, EVERYONE, perm_name,))
 
     def permission_requested(self):
-        # type: () -> Str
+        # type: () -> Permission
         try:
-            return self.parser.params[u"request"]
+            req = self.parser.params[u"request"]
+            perm = Permission.get(req)
+            if perm is None:
+                raise NotImplementedError("Undefined 'Permission' from 'request' parameter: {!s}".format(req))
+            return perm
         except KeyError as ex:
             # if 'ServiceInterface', 'params_expected' is empty and will raise a KeyError
             raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(ex, type(self)))
@@ -225,7 +233,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
                 netcdf_file = netcdf_file.rsplit("/", 1)[0]
 
         else:
-            return [(ALLOW, EVERYONE, permission_requested,)]
+            return [(ALLOW, EVERYONE, permission_requested.value,)]
 
         if netcdf_file:
             ax.verify_param("outputs/", paramCompare=netcdf_file, httpError=HTTPNotFound,
@@ -470,7 +478,7 @@ class ServiceTHREDDS(ServiceInterface):
         return self.acl
 
     def permission_requested(self):
-        return Permission.READ.value
+        return Permission.READ
 
 
 SERVICE_TYPE_DICT = dict()

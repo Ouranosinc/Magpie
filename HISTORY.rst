@@ -13,6 +13,12 @@ Features / Changes
 * add constant ``MAGPIE_LOG_PRINT`` (default: ``False``) to enforce printing logs to console
   (equivalent to specifying a ``sys.stdout/stderr StreamHandler`` in ``magpie.ini``, but is not enforced anymore)
 * update logging config to avoid duplicate outputs and adjust code to respect specified config.
+* add some typing for ACL methods
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix ``Permission`` enum vs literal string usage during ACL resolution for some services and return enums when calling
+  ``ServiceInterface.permission_requested`` method.
 
 1.1.0 (2019-05-28)
 ---------------------

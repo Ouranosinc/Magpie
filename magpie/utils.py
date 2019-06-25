@@ -328,7 +328,7 @@ class ExtendedEnumMeta(EnumMeta):
     def get(cls, key_or_value, default=None):
         # type: (AnyKey, Optional[Any]) -> Optional[_TC]
         """
-        Finds a enum entry by defined name or its value.
+        Finds an enum entry by defined name or its value.
         Returns the entry directly if it is already a valid enum.
         """
         if key_or_value in cls:
