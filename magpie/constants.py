@@ -74,6 +74,7 @@ def _get_default_log_level():
         _default_log_lvl = _settings.get("level", _default_log_lvl)
     except Exception:
         pass
+    return _default_log_lvl
 
 
 # ===========================
