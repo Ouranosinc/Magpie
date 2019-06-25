@@ -349,10 +349,10 @@ class ServiceAPI(ServiceInterface):
         # process read/write-match specific permission access
         # (convert exact route 'match' to read/write counterparts only if matching last item's permissions)
         for i in range(match_index, len(self.acl)):
-            if self.acl[i][2] == Permission.READ_MATCH:
-                self.acl[i] = (self.acl[i][0], self.acl[i][1], Permission.READ)
-            if self.acl[i][2] == Permission.WRITE_MATCH:
-                self.acl[i] = (self.acl[i][0], self.acl[i][1], Permission.WRITE)
+            if Permission.get(self.acl[i][2]) == Permission.READ_MATCH:
+                self.acl[i] = (self.acl[i][0], self.acl[i][1], Permission.READ.value)
+            if Permission.get(self.acl[i][2]) == Permission.WRITE_MATCH:
+                self.acl[i] = (self.acl[i][0], self.acl[i][1], Permission.WRITE.value)
 
         return self.acl
 
