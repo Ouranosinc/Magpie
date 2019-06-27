@@ -484,6 +484,7 @@ class ManagementViews(object):
             data = {u"permission_name": perm}
             resp = request_api(self.request, res_perms_path, "POST", data=data)
             check_response(resp)
+        return removed_perms, new_perms
 
     def get_user_or_group_resources_permissions_dict(self, user_or_group_name, services, service_type,
                                                      is_user=False, is_inherit_groups_permissions=False):
@@ -532,6 +533,16 @@ class ManagementViews(object):
                 children=self.resource_tree_parser(raw_resources["resources"], permission))
         return resources_permission_names, resources
 
+    def update_user_or_group_resources_permissions_dict(self, res_perms, res_id, removed_perms, new_perms):
+        for key, res in res_perms.items():
+            if int(res['id']) == int(res_id):
+                res['permission_names'] = sorted(res['permission_names'] + new_perms)
+                res['permission_names'] = [perm for perm in res['permission_names'] if perm not in removed_perms]
+                return True
+            if self.update_user_or_group_resources_permissions_dict(res['children'], res_id, removed_perms, new_perms):
+                return True
+        return False
+
     @view_config(route_name="edit_group", renderer="templates/edit_group.mako")
     def edit_group(self):
         group_name = self.request.matchdict["group_name"]
@@ -550,6 +561,13 @@ class ManagementViews(object):
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
+
+        # In case of update, changes are not reflected when calling
+        # get_user_or_group_resources_permissions_dict so we must take care
+        # of them
+        res_id = None
+        removed_perms = None
+        new_perms = None
 
         # move to service or edit requested group/permission changes
         if self.request.method == "POST":
@@ -579,7 +597,8 @@ class ManagementViews(object):
                     services_names = [s["service_name"] for s in services.values()]
                     res_id = self.add_remote_resource(cur_svc_type, services_names, group_name,
                                                       remote_id, is_user=False)
-                self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
+                removed_perms, new_perms = \
+                    self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
             elif u"member" in self.request.POST:
                 self.edit_group_users(group_name)
             elif u"force_sync" in self.request.POST:
@@ -607,6 +626,9 @@ class ManagementViews(object):
             )
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
+
+        if res_id and (removed_perms or new_perms):
+            self.update_user_or_group_resources_permissions_dict(res_perms, res_id, removed_perms, new_perms)
 
         sync_types = [s["service_sync_type"] for s in services.values()]
         sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
