@@ -50,6 +50,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             permission_requested = Permission.get(permission_requested).value if permission_requested else None
 
             if permission_requested:
+                LOGGER.info('"{0}" request "{1}" permission on "{2}"'.format(request.user, permission_requested, request.path))
                 self.update_request_cookies(request)
                 authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
                 authz_policy = request.registry.queryUtility(IAuthorizationPolicy)
