@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.2.0 (2019-06-27)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * provide some documentation about ``magpie.constants`` module behaviour.
