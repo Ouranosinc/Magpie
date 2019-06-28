@@ -255,6 +255,13 @@ class ManagementViews(object):
         user_info[u"inherit_groups_permissions"] = inherit_grp_perms
         error_message = ""
 
+        # In case of update, changes are not reflected when calling
+        # get_user_or_group_resources_permissions_dict so we must take care
+        # of them
+        res_id = None
+        removed_perms = None
+        new_perms = None
+        
         if self.request.method == "POST":
             res_id = self.request.POST.get(u"resource_id")
             is_edit_group_membership = False
@@ -279,7 +286,9 @@ class ManagementViews(object):
                     remote_id = int(self.request.POST.get("remote_id"))
                     services_names = [s["service_name"] for s in services.values()]
                     res_id = self.add_remote_resource(cur_svc_type, services_names, user_name, remote_id, is_user=True)
-                self.edit_user_or_group_resource_permissions(user_name, res_id, is_user=True)
+
+                removed_perms, new_perms = \
+                    self.edit_user_or_group_resource_permissions(user_name, res_id, is_user=True)
             elif u"edit_group_membership" in self.request.POST:
                 is_edit_group_membership = True
             elif u"edit_username" in self.request.POST:
@@ -355,6 +364,9 @@ class ManagementViews(object):
         except Exception as e:
             raise HTTPBadRequest(detail=repr(e))
 
+        if res_id and (removed_perms or new_perms):
+            self.update_user_or_group_resources_permissions_dict(res_perms, res_id, removed_perms, new_perms)
+            
         sync_types = [s["service_sync_type"] for s in services.values()]
         sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
 
