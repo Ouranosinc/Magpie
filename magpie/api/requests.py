@@ -70,22 +70,6 @@ def get_value_multiformat_post_checked(request, key, default=None):
     return val
 
 
-def get_userid_by_token(token, authn_policy):
-    cookie_helper = authn_policy.cookie
-    cookie = token
-    if cookie is None:
-        return None
-    remote_addr = "0.0.0.0"
-
-    timestamp, userid, tokens, user_data = cookie_helper.parse_ticket(
-        cookie_helper.secret,
-        cookie,
-        remote_addr,
-        cookie_helper.hashalg
-    )
-    return userid
-
-
 def get_user(request, user_name_or_token):
     if user_name_or_token == get_constant("MAGPIE_LOGGED_USER"):
         curr_user = request.user
