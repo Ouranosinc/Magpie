@@ -19,6 +19,7 @@ Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix ``Permission`` enum vs literal string usage during ACL resolution for some services and return enums when calling
   ``ServiceInterface.permission_requested`` method.
+* fix user/group permission checkboxes not immediately reflected in UI after clicking them (#160)
 
 1.1.0 (2019-05-28)
 ---------------------

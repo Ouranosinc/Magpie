@@ -52,7 +52,7 @@ def get_engine(container=None, prefix="sqlalchemy.", **kwargs):
 
 
 def get_session_factory(engine):
-    factory = sessionmaker(extension=ZopeTransactionExtension())
+    factory = sessionmaker()
     factory.configure(bind=engine)
     return factory
 
