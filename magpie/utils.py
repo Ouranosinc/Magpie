@@ -39,9 +39,12 @@ def get_logger(name, level=None):
     Immediately sets the logger level to avoid duplicate log outputs
     from the `root logger` and `this logger` when `level` is `NOTSET`.
     """
-    from magpie.constants import MAGPIE_LOG_LEVEL
     logger = logging.getLogger(name)
-    logger.setLevel(level or MAGPIE_LOG_LEVEL)
+    if logger.level == logging.NOTSET:
+        if level is None:
+            from magpie.constants import MAGPIE_LOG_LEVEL
+            level = MAGPIE_LOG_LEVEL
+        logger.setLevel(level)
     return logger
 
 

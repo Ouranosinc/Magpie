@@ -32,13 +32,6 @@ def get_session_callable(request):
     return request.db
 
 
-def get_user(request):
-    user_id = request.unauthenticated_userid
-    db_session = get_session_callable(request)
-    if user_id is not None:
-        return UserService.by_id(user_id, db_session=db_session)
-
-
 class Group(GroupMixin, Base):
     def get_member_count(self, db_session=None):
         return BaseService.all(UserGroup, db_session=db_session).filter(UserGroup.group_id == self.id).count()

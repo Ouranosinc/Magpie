@@ -70,8 +70,12 @@ def get_value_multiformat_post_checked(request, key, default=None):
     return val
 
 
-def get_user(request, user_name_or_token):
-    if user_name_or_token == get_constant("MAGPIE_LOGGED_USER"):
+def get_user(request, user_name_or_token=None):
+    # type: (Request, Optional[Str]) -> models.User
+    logged_user_name = get_constant("MAGPIE_LOGGED_USER")
+    if user_name_or_token is None:
+        user_name_or_token = logged_user_name
+    if user_name_or_token == logged_user_name:
         curr_user = request.user
         if curr_user:
             return curr_user
