@@ -17,6 +17,10 @@ Features / Changes
 * add route ``/verify`` with ``POST`` request to verify matching Authentication Policy tokens retrieved between
   `Magpie` and `Twitcher` (via ``MagpieAdapter``)
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix ``MagpieAdapter`` name incorrectly called when displayed using route ``/info`` from `Twitcher`
+
 1.2.1 (2019-06-28)
 ---------------------
 
