@@ -15,7 +15,59 @@ import requests
 LOGGER = get_logger("TWITCHER")
 
 
-# noinspection PyAbstractClass, PyUnusedLocal, PyProtectedMember
+# noinspection PyProtectedMember
+def debug_cookie_identify(request):
+    """
+    .. WARNING::
+
+        This function is intended for debugging purposes only. It reveals sensible configuration information.
+
+    Re-implements basic functionality of :function:`pyramid.AuthTktAuthenticationPolicy.cookie.identify` called via
+    :function:`request.unauthenticated_userid` within :function:`get_user` to provide additional logging.
+
+    .. seealso::
+        - :class:`pyramid.authentication.AuthTktCookieHelper`
+        - :class:`pyramid.authentication.AuthTktAuthenticationPolicy`
+    """
+    cookie_inst = request._get_authentication_policy().cookie
+    cookie = request.cookies.get(cookie_inst.cookie_name)
+
+    LOGGER.debug(
+        "Cookie (name : {0}, secret : {1}, hashalg : {2}) : {3}".format(
+            cookie_inst.cookie_name,
+            cookie_inst.secret,
+            cookie_inst.hashalg,
+            cookie))
+
+    if not cookie:
+        LOGGER.debug('No Cookie!')
+    else:
+        if cookie_inst.include_ip:
+            environ = request.environ
+            remote_addr = environ['REMOTE_ADDR']
+        else:
+            remote_addr = '0.0.0.0'
+
+        LOGGER.debug(
+            "Cookie remote addr (include_ip : {0}) : {1}".format(cookie_inst.include_ip, remote_addr))
+
+        now = time.time()
+        timestamp, userid, tokens, user_data = cookie_inst.parse_ticket(
+            cookie_inst.secret, cookie, remote_addr,
+            cookie_inst.hashalg)
+
+        LOGGER.debug(
+            "Cookie timestamp : {0}, timeout : {1}, now : {2}".format(timestamp, cookie_inst.timeout, now))
+
+        if cookie_inst.timeout and (
+                (timestamp + cookie_inst.timeout) < now):
+            # the auth_tkt data has expired
+            LOGGER.debug("Cookie is expired")
+
+        # Could raise useful exception explaining why unauthenticated_userid is None
+        request._get_authentication_policy().cookie.identify(request)
+
+
 def get_user(request):
     user_id = request.unauthenticated_userid
     LOGGER.debug('Current user id is {0}'.format(user_id))
@@ -26,43 +78,7 @@ def get_user(request):
             'Current user has been resolved has {0}'.format(user))
         return user
     elif LOGGER.isEnabledFor(logging.DEBUG):
-        cookie_inst = request._get_authentication_policy().cookie
-        cookie = request.cookies.get(cookie_inst.cookie_name)
-
-        LOGGER.debug(
-            "Cookie (name : {0}, secret : {1}, hashalg : {2}) : {3}".format(
-                cookie_inst.cookie_name,
-                cookie_inst.secret,
-                cookie_inst.hashalg,
-                cookie))
-
-        if not cookie:
-            LOGGER.debug('No Cookie!')
-        else:
-            if cookie_inst.include_ip:
-                environ = request.environ
-                remote_addr = environ['REMOTE_ADDR']
-            else:
-                remote_addr = '0.0.0.0'
-
-            LOGGER.debug(
-                "Cookie remote addr (include_ip : {0}) : {1}".format(cookie_inst.include_ip, remote_addr))
-
-            now = time.time()
-            timestamp, userid, tokens, user_data = cookie_inst.parse_ticket(
-                cookie_inst.secret, cookie, remote_addr,
-                cookie_inst.hashalg)
-
-            LOGGER.debug(
-                "Cookie timestamp : {0}, timeout : {1}, now : {2}".format(timestamp, cookie_inst.timeout, now))
-
-            if cookie_inst.timeout and (
-                    (timestamp + cookie_inst.timeout) < now):
-                # the auth_tkt data has expired
-                LOGGER.debug("Cookie is expired")
-
-            # Could raise useful exception explaining why unauthenticated_userid is None
-            request._get_authentication_policy().cookie.identify(request)
+        debug_cookie_identify(request)
 
 
 def verify_user(request):
