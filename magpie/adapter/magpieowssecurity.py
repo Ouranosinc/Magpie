@@ -21,6 +21,7 @@ from magpie.utils import get_magpie_url, get_settings, get_logger, CONTENT_TYPE_
 from requests.cookies import RequestsCookieJar
 from six.moves.urllib.parse import urlparse
 import requests
+import logging
 LOGGER = get_logger("TWITCHER")
 
 
@@ -56,6 +57,12 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                 authz_policy = request.registry.queryUtility(IAuthorizationPolicy)
                 principals = authn_policy.effective_principals(request)
                 has_permission = authz_policy.permits(service_specific, principals, permission_requested)
+
+                LOGGER.debug("{} - AUTHN policy configurations:".format(type(self).__name__))
+                base_attr = [attr for attr in dir(authn_policy.cookie) if not attr.startswith("_")]
+                for attr_name in base_attr:
+                    LOGGER.debug("  {}: {}".format(attr_name, getattr(authn_policy.cookie, attr_name)))
+
                 if not has_permission:
                     raise OWSAccessForbidden("Not authorized to access this resource. " +
                                              "User does not meet required permissions.")

@@ -1,7 +1,7 @@
 from magpie.definitions.twitcher_definitions import AdapterInterface, owsproxy_defaultconfig
+from magpie.definitions.ziggurat_definitions import UserService
 from magpie.adapter.magpieowssecurity import MagpieOWSSecurity
 from magpie.adapter.magpieservice import MagpieServiceStore
-from magpie.models import get_user
 from magpie.security import get_auth_config
 from magpie.db import get_session_factory, get_tm_session, get_engine
 from magpie.utils import get_logger, get_settings
@@ -28,7 +28,6 @@ class MagpieAdapter(AdapterInterface):
 
         LOGGER.info("Loading MagpieAdapter config")
         config = get_auth_config(container)
-        config.add_request_method(get_user, "user", reify=True)
 
         # use pyramid_tm to hook the transaction lifecycle to the request
         # make request.db available for use in Pyramid
@@ -41,6 +40,15 @@ class MagpieAdapter(AdapterInterface):
             "db",
             reify=True
         )
+
+        def get_user(request):
+            user_id = request.unauthenticated_userid
+            if user_id is not None:
+                return UserService.by_id(user_id, db_session=request.db)
+
+        # use same 'get_user' method as ziggurat to access 'request.user' from
+        # request with auth token with exactly the same behaviour in Twitcher
+        config.add_request_method(get_user, "user", reify=True)
 
         return config
 

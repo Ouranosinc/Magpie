@@ -6,12 +6,19 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* move ``get_user`` function used specifically for `Twitcher` via ``MagpieAdapter`` where it is employed.
+* remove obsolete, unused and less secure code that converted a token to a matching user by ID.
+* avoid overriding a logger level specified by configuration by checking for ``NOTSET`` beforehand.
+* add debug logging of Authentication Policy employed within ``MagpieAdapter``
+
 1.2.1 (2019-06-28)
 ---------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Log every permission requests.
+* log every permission requests.
 
 1.2.0 (2019-06-27)
 ---------------------
