@@ -6,6 +6,10 @@ from magpie.security import get_auth_config
 from magpie.db import get_session_factory, get_tm_session, get_engine
 from magpie.utils import get_logger, get_settings
 from magpie import __meta__
+import time
+import logging
+
+
 LOGGER = get_logger("TWITCHER")
 
 
@@ -43,8 +47,53 @@ class MagpieAdapter(AdapterInterface):
 
         def get_user(request):
             user_id = request.unauthenticated_userid
+            LOGGER.debug('Current user id is {0}'.format(user_id))
+
             if user_id is not None:
-                return UserService.by_id(user_id, db_session=request.db)
+                user = UserService.by_id(user_id, db_session=request.db)
+                LOGGER.debug(
+                    'Current user has been resolved has {0}'.format(user))
+                return user
+            elif LOGGER.isEnabledFor(logging.DEBUG):
+                cookie_inst = request._get_authentication_policy().cookie
+                cookie = request.cookies.get(cookie_inst.cookie_name)
+
+                LOGGER.debug(
+                    "Cookie (name : {0}, secret : {1}, hashalg : {2}) : {3}".
+                    format(cookie_inst.cookie_name,
+                           cookie_inst.secret,
+                           cookie_inst.hashalg,
+                           cookie))
+
+                if not cookie:
+                    LOGGER.debug('No Cookie!')
+                else:
+                    if cookie_inst.include_ip:
+                        environ = request.environ
+                        remote_addr = environ['REMOTE_ADDR']
+                    else:
+                        remote_addr = '0.0.0.0'
+
+                    LOGGER.debug(
+                        "Cookie remote addr (include_ip : {0}) : {1}".
+                        format(cookie_inst.include_ip, remote_addr))
+
+                    now = time.time()
+                    timestamp, userid, tokens, user_data = cookie_inst.parse_ticket(
+                        cookie_inst.secret, cookie, remote_addr,
+                        cookie_inst.hashalg)
+
+                    LOGGER.debug(
+                        "Cookie timestamp : {0}, timeout : {1}, now : {2}".
+                        format(timestamp, cookie_inst.timeout, now))
+
+                    if cookie_inst.timeout and (
+                            (timestamp + cookie_inst.timeout) < now):
+                        # the auth_tkt data has expired
+                        LOGGER.debug("Cookie is expired")
+
+                    # Could raise useful exception explaining why unauthenticated_userid is None
+                    request._get_authentication_policy().cookie.identify(request)
 
         # use same 'get_user' method as ziggurat to access 'request.user' from
         # request with auth token with exactly the same behaviour in Twitcher
