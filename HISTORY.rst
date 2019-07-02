@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.3.0 (2019-07-02)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * move ``get_user`` function used specifically for `Twitcher` via ``MagpieAdapter`` where it is employed.
