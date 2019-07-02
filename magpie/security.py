@@ -12,7 +12,7 @@ import logging
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import JSON  # noqa: F401
 AUTHOMATIC_LOGGER = get_logger('magpie.authomatic', level=logging.DEBUG)
-
+LOGGER = get_logger('magpie.security')
 
 def get_auth_config(container):
     settings = get_settings(container)
@@ -23,6 +23,13 @@ def get_auth_config(container):
     magpie_cookie_name = get_constant('MAGPIE_COOKIE_NAME', settings,
                                       settings_name='magpie.cookie_name', default_value='auth_tkt',
                                       raise_missing=False, raise_not_set=False, print_missing=True)
+    LOGGER.debug('************************************************************')
+    LOGGER.debug('Secret : {0}, Cookie name : {1}, Timeout : {2}'.format(
+        magpie_secret,
+        magpie_cookie_name,
+        magpie_cookie_expire
+    ))
+    LOGGER.debug('************************************************************')
     authn_policy = AuthTktAuthenticationPolicy(
         magpie_secret,
         cookie_name=magpie_cookie_name,
