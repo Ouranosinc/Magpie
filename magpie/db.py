@@ -3,7 +3,7 @@
 from magpie.constants import get_constant
 from magpie.definitions.alembic_definitions import alembic
 from magpie.definitions.sqlalchemy_definitions import (
-    register, sessionmaker, engine_from_config, ZopeTransactionExtension,
+    register, sessionmaker, engine_from_config,
     configure_mappers, select, Inspector, Session, sa_exc
 )
 from magpie.definitions.pyramid_definitions import asbool
@@ -46,6 +46,7 @@ def get_engine(container=None, prefix="sqlalchemy.", **kwargs):
     settings = get_settings(container or {})
     settings[prefix + "url"] = get_db_url()
     settings[prefix + "pool_pre_ping"] = settings.get(prefix + "pool_pre_ping", True)
+    settings[prefix + "pool_threadlocal"] = True
     kwargs = kwargs or {}
     kwargs["convert_unicode"] = True
     return engine_from_config(settings, prefix, **kwargs)
