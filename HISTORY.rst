@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.3.1 (2019-07-05)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * add ``pool_threadlocal=True`` setting for database session creation to allow further connections across workers
