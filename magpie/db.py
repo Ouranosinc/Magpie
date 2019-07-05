@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from sqlalchemy.orm import scoped_session
+
 from magpie.constants import get_constant
 from magpie.definitions.alembic_definitions import alembic
 from magpie.definitions.sqlalchemy_definitions import (
@@ -46,16 +48,13 @@ def get_engine(container=None, prefix="sqlalchemy.", **kwargs):
     settings = get_settings(container or {})
     settings[prefix + "url"] = get_db_url()
     settings[prefix + "pool_pre_ping"] = settings.get(prefix + "pool_pre_ping", True)
-    settings[prefix + "pool_threadlocal"] = True
     kwargs = kwargs or {}
     kwargs["convert_unicode"] = True
     return engine_from_config(settings, prefix, **kwargs)
 
 
 def get_session_factory(engine):
-    factory = sessionmaker()
-    factory.configure(bind=engine)
-    return factory
+    return scoped_session(sessionmaker(bind=engine))
 
 
 def get_tm_session(session_factory, transaction_manager):
