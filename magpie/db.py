@@ -86,7 +86,7 @@ def get_tm_session(session_factory, transaction_manager):
 def get_db_session_from_settings(settings=None, **kwargs):
     # type: (Optional[AnySettingsContainer], Any) -> Session
     session_factory = get_session_factory(get_engine(settings, **kwargs))
-    db_session = get_tm_session(session_factory, transaction)
+    db_session = get_tm_session(session_factory, transaction.manager)
     return db_session
 
 
