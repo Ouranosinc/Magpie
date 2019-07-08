@@ -54,7 +54,7 @@ def get_engine(container=None, prefix="sqlalchemy.", **kwargs):
 
 
 def get_session_factory(engine):
-    return scoped_session(sessionmaker(bind=engine))
+    return sessionmaker(bind=engine)
 
 
 def get_tm_session(session_factory, transaction_manager):
