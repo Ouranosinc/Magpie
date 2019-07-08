@@ -59,7 +59,7 @@ def request_api(request,            # type: Request
         extra_kwargs["cookies"] = cookies
 
     subreq = Request.blank(path, base_url=request.application_url, headers=headers, POST=data, **extra_kwargs)
-    return request.invoke_subrequest(subreq)
+    return request.invoke_subrequest(subreq, use_tweens=True)
 
 
 def error_badrequest(func):
