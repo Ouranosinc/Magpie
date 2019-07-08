@@ -47,7 +47,7 @@ def get_engine(container=None, prefix="sqlalchemy.", **kwargs):
     # type: (Optional[AnySettingsContainer], Str, Any) -> Engine
     settings = get_settings(container or {})
     settings[prefix + "url"] = get_db_url()
-    settings[prefix + "pool_pre_ping"] = settings.get(prefix + "pool_pre_ping", True)
+    settings.setdefault(prefix + "pool_pre_ping", True)
     kwargs = kwargs or {}
     kwargs["convert_unicode"] = True
     return engine_from_config(settings, prefix, **kwargs)
