@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.3.2 (2019-07-09)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * add ``use_tweens=True`` to ``request.invoke_subrequest`` calls in order to properly handle the nested database
