@@ -87,7 +87,7 @@ def sign_in(request):
         signin_internal_data = {u"user_name": user_name, u"password": password, u"provider_name": provider_name}
         signin_sub_request = Request.blank(signin_internal_path, base_url=request.application_url,
                                            headers={"Accept": CONTENT_TYPE_JSON}, POST=signin_internal_data)
-        signin_response = request.invoke_subrequest(signin_sub_request)
+        signin_response = request.invoke_subrequest(signin_sub_request, use_tweens=True)
         if signin_response.status_code == HTTPOk.code:
             return convert_response(signin_response)
         login_failure(request, s.Signin_POST_UnauthorizedResponseSchema.description)

@@ -6,6 +6,12 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* add ``use_tweens=True`` to ``request.invoke_subrequest`` calls in order to properly handle the nested database
+  transaction states with the manager (#203). Automatically provides ``pool_threadlocal`` functionality added in
+  ``1.3.1`` as per implementation of ``pyramid_tm`` (#201).
+
 1.3.1 (2019-07-05)
 ---------------------
 
