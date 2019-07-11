@@ -6,6 +6,11 @@ History
 Unreleased
 ---------------------
 
+* update ``MagpieAdapter`` to use `Twitcher` version ``0.5.2`` to employ HTTP status code fixes and additional
+  API route details
+  - https://github.com/bird-house/twitcher/pull/79
+  - https://github.com/bird-house/twitcher/pull/84
+
 1.3.2 (2019-07-09)
 ---------------------
 
