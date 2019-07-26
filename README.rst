@@ -5,7 +5,7 @@ Magpie (the smart-bird)
   *a very smart bird who knows everything about you.*
 
 Magpie is service for AuthN/AuthZ accessible via a `RestAPI`_ implemented with the Pyramid web framework.
-It allows you to manage User/Group/Resource/permission with a postgres database.
+It allows you to manage User/Group/Resource/Permission with a postgres database.
 Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
 
@@ -69,7 +69,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 REST API Documentation
 ======================
 
-The documentation is auto-generated and served under `{HOSTNAME}/api/` using Swagger-UI with tag `latest`.
+The documentation is auto-generated and served under ``{HOSTNAME}/api/`` using Swagger-UI with tag ``latest``.
 
 
 Build package
