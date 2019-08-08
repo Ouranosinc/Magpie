@@ -6,9 +6,15 @@ History
 Unreleased
 ---------------------
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix migration script errors due to incorrect object fetching from db [Ouranosinc/PAVICS#149]
+
 1.3.3 (2019-07-11)
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * update ``MagpieAdapter`` to use `Twitcher` version ``0.5.2`` to employ HTTP status code fixes and additional
   API route details
   - https://github.com/bird-house/twitcher/pull/79
