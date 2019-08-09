@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.3.4 (2019-08-09)
+---------------------
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix migration script errors due to incorrect object fetching from db [Ouranosinc/PAVICS#149]
