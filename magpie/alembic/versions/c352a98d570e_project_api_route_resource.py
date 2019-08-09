@@ -15,10 +15,9 @@ root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
 # noinspection PyUnresolvedReferences
-from magpie.definitions.alembic_definitions import get_context, op                  # noqa: F401
-from magpie.definitions.sqlalchemy_definitions import sessionmaker, PGDialect       # noqa: F401
-from magpie import models                                                           # noqa: F401
-
+from magpie.definitions.alembic_definitions import get_context, op              # noqa: F401
+from magpie.definitions.sqlalchemy_definitions import PGDialect, sessionmaker   # noqa: F401
+from magpie import models                                                       # noqa: F401
 
 # revision identifiers, used by Alembic.
 revision = 'c352a98d570e'
@@ -34,17 +33,14 @@ def change_project_api_resource_type(new_type_name):
     if isinstance(context.connection.engine.dialect, PGDialect):
         # obtain service 'project-api'
         session = Session(bind=op.get_bind())
-        project_api_svc = session.query(models.Service.resource_id).filter_by(resource_name='project-api').first()
+        project_api_svc_id = session.query(models.Service.resource_id).filter_by(resource_name='project-api').first()
 
-        # nothing to edit if it doesn't exist, otherwise change resource types to 'route'
-        if project_api_svc:
-            project_api_id = project_api_svc.resource_id
+        # nothing to edit if it doesn't exist, otherwise change resource types name
+        if project_api_svc_id:
             columns = models.Resource.resource_type, models.Resource.root_service_id
-            project_api_res = session.query(columns).filter(models.Resource.root_service_id == project_api_id)
-
-            for res in project_api_res:
-                res.resource_type = 'route'
-
+            session.query(columns)\
+                .filter(models.Resource.root_service_id == project_api_svc_id)\
+                .update({models.Resource.resource_type: new_type_name})
             session.commit()
 
 
