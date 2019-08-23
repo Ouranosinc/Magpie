@@ -39,9 +39,9 @@ def upgrade():
         all_users = BaseService.all(models.User, db_session=session)
         all_groups = BaseService.all(models.Group, db_session=session)
         all_user_group_refs = BaseService.all(models.UserGroup, db_session=session)
-        all_user_res_perms = BaseService.all(models.GroupResourcePermission, db_session=session)
+        all_grp_res_perms = BaseService.all(models.GroupResourcePermission, db_session=session)
 
-        ignore_groups = {constants.MAGPIE_ADMIN_GROUP, constants.MAGPIE_USERS_GROUP}
+        ignore_groups = {constants.MAGPIE_ADMIN_GROUP, constants.MAGPIE_USERS_GROUP, constants.MAGPIE_ANONYMOUS_GROUP}
         user_names = {usr.user_name for usr in all_users}
 
         # parse through 'personal' groups matching an existing user
@@ -53,7 +53,7 @@ def upgrade():
                 user = UserService.by_user_name(user_name=group_name, db_session=session)
 
                 # transfer permissions from 'personal' group to user
-                user_group_res_perm = [urp for urp in all_user_res_perms if urp.group_id == group.id]
+                user_group_res_perm = [urp for urp in all_grp_res_perms if urp.group_id == group.id]
                 for group_perm in user_group_res_perm:
                     # noinspection PyArgumentList
                     user_perm = models.UserResourcePermission(resource_id=group_perm.resource_id,

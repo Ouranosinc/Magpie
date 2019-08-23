@@ -22,7 +22,7 @@ import mock
 @runner.MAGPIE_TEST_LOCAL
 class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.TestCase):
     """
-    Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_GROUP`` & ``MAGPIE_ANONYMOUS_USER``).
+    Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_USER``).
     Use a local Magpie test application.
     """
 
@@ -35,7 +35,6 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
         cls.usr = get_constant("MAGPIE_ANONYMOUS_USER")
-        cls.grp = get_constant("MAGPIE_ANONYMOUS_GROUP")
 
 
 @runner.MAGPIE_TEST_API
@@ -85,7 +84,7 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
 @runner.MAGPIE_TEST_REMOTE
 class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.TestCase):
     """
-    Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_GROUP`` & ``MAGPIE_ANONYMOUS_USER``).
+    Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_USER``).
     Use an already running remote bird server.
     """
 
@@ -97,7 +96,6 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
         cls.json_headers = utils.get_headers(cls.url, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.cookies = None
         cls.usr = get_constant("MAGPIE_ANONYMOUS_USER")
-        cls.grp = get_constant("MAGPIE_ANONYMOUS_GROUP")
         cls.version = utils.TestSetup.get_Version(cls)
 
 

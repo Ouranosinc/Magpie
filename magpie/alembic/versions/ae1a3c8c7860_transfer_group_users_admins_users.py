@@ -1,4 +1,4 @@
-"""tranfer group users-admins users
+"""transfer group users-admins users
 
 Revision ID: ae1a3c8c7860
 Revises: 5e7b5346c330
@@ -87,15 +87,6 @@ def upgrade():
                 for user_group in all_user_group_refs:
                     if user_group.group_id == group.id:
                         session.delete(user_group)
-
-        # remove anonymous group references
-        MAGPIE_ANONYMOUS_GROUP = GroupService.by_group_name(
-            group_name=constants.MAGPIE_ANONYMOUS_USER, db_session=session)
-        if MAGPIE_ANONYMOUS_GROUP:
-            for user_group in all_user_group_refs:
-                if user_group.group_id == MAGPIE_ANONYMOUS_GROUP.id:
-                    session.delete(user_group)
-            session.delete(MAGPIE_ANONYMOUS_GROUP)
 
         session.commit()
 
