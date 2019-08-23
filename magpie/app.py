@@ -47,7 +47,7 @@ def main(global_config=None, **settings):
     db_session = db.get_db_session_from_config_ini(config_ini, settings_override=sa_settings)
 
     print_log("Register default users...", LOGGER)
-    register_default_users(db_session=db_session)
+    register_default_users(db_session=db_session, settings=settings)
 
     print_log("Register configuration providers...", logger=LOGGER)
     push_phoenix = asbool(get_constant("PHOENIX_PUSH", settings, settings_name="magpie.phoenix_push",

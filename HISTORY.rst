@@ -6,6 +6,16 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* deprecate ``MAGPIE_ANONYMOUS_GROUP`` and its group creation to use only ``MAGPIE_ANONYMOUS_USER``
+* migrate all ``MAGPIE_ANONYMOUS_GROUP`` resource permissions under ``MAGPIE_ANONYMOUS_USER``
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix migration script hastily removing anonymous group permissions without handling and transferring them accordingly
+* use settings during default user creation instead of relying only on environment variables, to reflect runtime usage
+
 1.3.4 (2019-08-09)
 ---------------------
 
