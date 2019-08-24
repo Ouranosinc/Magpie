@@ -130,7 +130,6 @@ def get_test_magpie_app(settings=None):
     if settings:
         config.registry.settings.update(settings)
     # create the test application
-    config.include("magpie")
     magpie_app = TestApp(app.main({}, **config.registry.settings))
     return magpie_app
 

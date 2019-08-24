@@ -7,7 +7,7 @@ from magpie.utils import get_twitcher_protected_service_url
 from magpie.services import SERVICE_TYPE_DICT
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Optional, JSON, AnyStr, Dict, List, Type  # noqa: F401
+    from magpie.definitions.typedefs import Optional, JSON, Str, Dict, List, Type  # noqa: F401
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
     from magpie.models import Resource, Service  # noqa: F401
     from magpie.permissions import Permission  # noqa: F401
@@ -54,7 +54,7 @@ def format_service(service, permissions=None, show_private_url=False, show_resou
 def format_service_resources(service,                       # type: Service
                              db_session,                    # type: Session
                              service_perms=None,            # type: Optional[List[Permission]]
-                             resources_perms_dict=None,     # type: Optional[Dict[AnyStr, List[AnyStr]]]
+                             resources_perms_dict=None,     # type: Optional[Dict[Str, List[Str]]]
                              show_all_children=False,       # type: bool
                              show_private_url=True,         # type: bool
                              ):                             # type: (...) -> JSON

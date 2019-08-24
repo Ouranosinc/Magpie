@@ -8,31 +8,31 @@ import transaction
 import logging
 import time
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import AnySettingsContainer, AnyStr, Optional  # noqa: F401
+    from magpie.definitions.typedefs import AnySettingsContainer, Str, Optional  # noqa: F401
 LOGGER = get_logger(__name__)
 
 
 def register_user_with_group(user_name, group_name, email, password, db_session):
-    # type: (AnyStr, Optional[AnyStr], AnyStr, AnyStr, Session) -> None
+    # type: (Str, Str, Str, Str, Session) -> None
     """
     Registers the user if missing and associate him to a group specified by name, also created if missing.
-
-    If ``group_name`` is ``None``, no group gets created (only the user) and group association is not applied.
 
     :param user_name: name of the user to create (if missing) and to make part of the group (if specified)
     :param group_name: name of the group to create (if missing and specified) and to make the user join (if not already)
     :param email: email of the user to be created (if missing)
     :param password: password of the user to be created (if missing)
     :param db_session: database connexion to apply changes
+
+    .. warning::
+        Should be employed only for **special** users/groups in this module as other expected API behaviour
+        and operations will not be applied (ex: create additional permissions or user-group references).
     """
 
-    registered_group = None
-    if group_name is not None:
-        if not GroupService.by_group_name(group_name, db_session=db_session):
-            # noinspection PyArgumentList
-            new_group = models.Group(group_name=group_name)
-            db_session.add(new_group)
-        registered_group = GroupService.by_group_name(group_name=group_name, db_session=db_session)
+    if not GroupService.by_group_name(group_name, db_session=db_session):
+        # noinspection PyArgumentList
+        new_group = models.Group(group_name=group_name)
+        db_session.add(new_group)
+    registered_group = GroupService.by_group_name(group_name=group_name, db_session=db_session)
 
     registered_user = UserService.by_user_name(user_name, db_session=db_session)
     if not registered_user:
@@ -46,25 +46,27 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
     else:
         print_log("User '{}' already exist".format(user_name), level=logging.DEBUG)
 
-    if group_name is not None:
-        # noinspection PyBroadException
-        try:
-            # ensure the reference between user/group exists (user joined the group)
-            user_group_refs = BaseService.all(models.UserGroup, db_session=db_session)
-            user_group_refs_tup = [(ref.group_id, ref.user_id) for ref in user_group_refs]
-            if (registered_group.id, registered_user.id) not in user_group_refs_tup:
-                # noinspection PyArgumentList
-                group_entry = models.UserGroup(group_id=registered_group.id, user_id=registered_user.id)
-                db_session.add(group_entry)
-        except Exception:  # in case reference already exists, avoid duplicate error
-            db_session.rollback()
+    # noinspection PyBroadException
+    try:
+        # ensure the reference between user/group exists (user joined the group)
+        user_group_refs = BaseService.all(models.UserGroup, db_session=db_session)
+        user_group_refs_tup = [(ref.group_id, ref.user_id) for ref in user_group_refs]
+        if (registered_group.id, registered_user.id) not in user_group_refs_tup:
+            # noinspection PyArgumentList
+            group_entry = models.UserGroup(group_id=registered_group.id, user_id=registered_user.id)
+            db_session.add(group_entry)
+    except Exception:  # in case reference already exists, avoid duplicate error
+        db_session.rollback()
 
 
 def init_anonymous(db_session, settings=None):
     # type: (Session, Optional[AnySettingsContainer]) -> None
-    """Registers in db the group matching ``MAGPIE_ANONYMOUS_USER`` if not defined."""
+    """
+    Registers in db the user and group matching ``MAGPIE_ANONYMOUS_USER`` and ``MAGPIE_ANONYMOUS_GROUP`` respectively
+    if not defined.
+    """
     register_user_with_group(user_name=get_constant("MAGPIE_ANONYMOUS_USER", settings_container=settings),
-                             group_name=None,  # anonymous group deprecated
+                             group_name=get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=settings),
                              email=get_constant("MAGPIE_ANONYMOUS_EMAIL", settings_container=settings),
                              password=get_constant("MAGPIE_ANONYMOUS_PASSWORD", settings_container=settings),
                              db_session=db_session)
@@ -74,7 +76,7 @@ def init_admin(db_session, settings=None):
     # type: (Session, Optional[AnySettingsContainer]) -> None
     """
     Registers in db the user and group matching ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_GROUP`` respectively
-    if not defined. Also associates the created admin user with the admin group and give him admin permissions.
+    if not defined. Also associates the created admin user with the admin group and give it admin permissions.
     """
     admin_usr_name = get_constant("MAGPIE_ADMIN_USER", settings_container=settings)
     admin_grp_name = get_constant("MAGPIE_ADMIN_GROUP", settings_container=settings)

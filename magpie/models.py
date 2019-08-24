@@ -98,8 +98,7 @@ class RootFactory(object):
         self.__acl__ = []
         if request.user:
             permissions = UserService.permissions(request.user, request.db)
-            for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-                self.__acl__.append((outcome, perm_user, perm_name))
+            self.__acl__.extend(permission_to_pyramid_acls(permissions))
 
 
 class Service(Resource):

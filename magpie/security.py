@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 AUTHOMATIC_LOGGER = get_logger('magpie.authomatic', level=logging.DEBUG)
 LOGGER = get_logger('magpie.security')
 
+
 def get_auth_config(container):
     settings = get_settings(container)
     magpie_secret = get_constant('MAGPIE_SECRET', settings, settings_name='magpie.secret')

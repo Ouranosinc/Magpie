@@ -8,8 +8,8 @@ Unreleased
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* deprecate ``MAGPIE_ANONYMOUS_GROUP`` and its group creation to use only ``MAGPIE_ANONYMOUS_USER``
-* migrate all ``MAGPIE_ANONYMOUS_GROUP`` resource permissions under ``MAGPIE_ANONYMOUS_USER``
+* apply ``MAGPIE_ANONYMOUS_GROUP`` to every new user to ensure they can access public resources when they are logged in
+  and that they don't have the same resource permission explicitly set for them
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
