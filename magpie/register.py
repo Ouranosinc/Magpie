@@ -663,7 +663,8 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
         else:
             if _usr_name:
                 from magpie.api.management.user.user_utils import create_user
-                return create_user(**usr_data, db_session=cookies_or_session)
+                usr_data['db_session'] = cookies_or_session  # back-compatibility python 2 cannot have kw after **unpack
+                return create_user(**usr_data)
             if _grp_name:
                 from magpie.api.management.group.group_utils import create_group
                 return create_group(_grp_name, cookies_or_session)
