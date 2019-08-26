@@ -890,7 +890,10 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("group_names", body)
         utils.check_val_type(body["group_names"], list)
-        utils.check_all_equal(body["group_names"], [self.test_group_name, self.test_user_group])
+        expected_groups = {self.test_group_name, self.test_user_group}
+        if LooseVersion(self.version) >= LooseVersion("1.3.5"):
+            expected_groups.add(get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        utils.check_all_equal(body["group_names"], expected_groups)
 
     @runner.MAGPIE_TEST_USERS
     def test_DeleteUser(self):
