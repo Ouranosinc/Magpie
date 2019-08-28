@@ -18,7 +18,7 @@ sys.path.insert(0, root_dir)
 from alembic.context import get_context                                                         # noqa: F401
 from alembic import op                                                                          # noqa: F401
 from magpie.definitions.sqlalchemy_definitions import sessionmaker, PGDialect                   # noqa: F401
-from magpie.helpers.register_default_users import init_anonymous, init_admin, init_user_group   # noqa: F401
+from magpie.helpers.register_default_users import init_anonymous, init_admin, init_users_group  # noqa: F401
 from magpie import models                                                                       # noqa: F401
 
 Session = sessionmaker()
@@ -169,7 +169,7 @@ def upgrade():
         clean_user_groups(session)
         init_admin(session)
         init_anonymous(session)
-        init_user_group(session)
+        init_users_group(session)
         session.commit()
 
 

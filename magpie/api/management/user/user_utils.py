@@ -38,20 +38,30 @@ def create_user(user_name, password, email, group_name, db_session):
     Creates a user if it is permitted and not conflicting.
     Password must be set to `None` if using external identity.
 
+    Created user will be part of group matching ``group_name`` (can be ``MAGPIE_ANONYMOUS_GROUP`` for minimal access).
+    Furthermore, the user will also *always* be associated with ``MAGPIE_ANONYMOUS_GROUP`` (if not already explicitly
+    requested with ``group_name``) to allow access to resources with public permission. The ``group_name`` **must**
+    be an existing group.
+
     :returns: valid HTTP response on successful operation.
     """
 
+    def _get_group(grp_name):
+        # type: (Str) -> models.Group
+        grp = ax.evaluate_call(lambda: GroupService.by_group_name(grp_name, db_session=db_session),
+                               httpError=HTTPForbidden,
+                               msgOnFail=s.UserGroup_GET_ForbiddenResponseSchema.description)
+        ax.verify_param(grp, notNone=True, httpError=HTTPBadRequest,
+                        msgOnFail=s.UserGroup_Check_BadRequestResponseSchema.description)
+        return grp
+
     # Check that group already exists
-    group_check = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db_session),
-                                   httpError=HTTPForbidden,
-                                   msgOnFail=s.UserGroup_GET_ForbiddenResponseSchema.description)
-    ax.verify_param(group_check, notNone=True, httpError=HTTPBadRequest,
-                    msgOnFail=s.UserGroup_Check_BadRequestResponseSchema.description)
+    group_checked = _get_group(group_name)
 
     # Check if user already exists
-    user_check = ax.evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
-                                  httpError=HTTPForbidden, msgOnFail=s.User_Check_ForbiddenResponseSchema.description)
-    ax.verify_param(user_check, isNone=True, httpError=HTTPConflict,
+    user_checked = ax.evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
+                                    httpError=HTTPForbidden, msgOnFail=s.User_Check_ForbiddenResponseSchema.description)
+    ax.verify_param(user_checked, isNone=True, httpError=HTTPConflict,
                     msgOnFail=s.User_Check_ConflictResponseSchema.description)
 
     # Create user with specified name and group to assign
@@ -66,14 +76,24 @@ def create_user(user_name, password, email, group_name, db_session):
     new_user = ax.evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db_session),
                                 httpError=HTTPForbidden, msgOnFail=s.UserNew_POST_ForbiddenResponseSchema.description)
 
+    def _add_to_group(usr, grp):
+        # type: (models.User, models.Group) -> None
+        # noinspection PyArgumentList
+        group_entry = models.UserGroup(group_id=grp.id, user_id=usr.id)
+        ax.evaluate_call(lambda: db_session.add(group_entry), fallback=lambda: db_session.rollback(),
+                         httpError=HTTPForbidden, msgOnFail=s.UserGroup_GET_ForbiddenResponseSchema.description)
+
     # Assign user to group
-    # noinspection PyArgumentList
-    group_entry = models.UserGroup(group_id=group_check.id, user_id=new_user.id)
-    ax.evaluate_call(lambda: db_session.add(group_entry), fallback=lambda: db_session.rollback(),
-                     httpError=HTTPForbidden, msgOnFail=s.UserGroup_GET_ForbiddenResponseSchema.description)
+    new_user_groups = [group_name]
+    _add_to_group(new_user, group_checked)
+    # Also add user to anonymous group if not already done
+    anonym_grp_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
+    if group_checked.group_name != anonym_grp_name:
+        _add_to_group(new_user, _get_group(anonym_grp_name))
+        new_user_groups.append(anonym_grp_name)
 
     return ax.valid_http(httpSuccess=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
-                         content={u"user": uf.format_user(new_user, [group_name])})
+                         content={u"user": uf.format_user(new_user, new_user_groups)})
 
 
 def create_user_resource_permission_response(user, resource, permission, db_session):

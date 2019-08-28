@@ -6,6 +6,16 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* apply ``MAGPIE_ANONYMOUS_GROUP`` to every new user to ensure they can access public resources when they are logged in
+  and that they don't have the same resource permission explicitly set for them
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix migration script hastily removing anonymous group permissions without handling and transferring them accordingly
+* use settings during default user creation instead of relying only on environment variables, to reflect runtime usage
+
 1.3.4 (2019-08-09)
 ---------------------
 
