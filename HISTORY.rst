@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.4.0 (2019-08-28)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * apply ``MAGPIE_ANONYMOUS_GROUP`` to every new user to ensure they can access public resources when they are logged in

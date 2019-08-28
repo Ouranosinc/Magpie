@@ -27,13 +27,13 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Requires Python 2.7, 3.5+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/1.3.4.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/1.4.0.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/Magpie/compare/1.3.4...master
+    :target: https://github.com/Ouranosinc/Magpie/compare/1.4.0...master
 
-.. |version| image:: https://img.shields.io/badge/tag-1.3.4-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-1.4.0-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/Magpie/tree/1.3.4
+    :target: https://github.com/Ouranosinc/Magpie/tree/1.4.0
 
 .. |requires| image:: https://requires.io/github/Ouranosinc/Magpie/requirements.svg?branch=master
     :alt: Requirements Status
@@ -43,9 +43,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Travis-CI Build Status (master branch)
     :target: https://travis-ci.com/Ouranosinc/Magpie
 
-.. |travis_tag| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/1.3.4.svg?label=1.3.4
+.. |travis_tag| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/1.4.0.svg?label=1.4.0
     :alt: Travis-CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/tree/1.3.4
+    :target: https://github.com/Ouranosinc/Magpie/tree/1.4.0
 
 .. |coverage| image:: https://img.shields.io/codecov/c/gh/Ouranosinc/Magpie.svg?label=coverage
     :alt: Travis-CI CodeCov Coverage
@@ -105,8 +105,8 @@ Following most recent variants are available:
     * - Magpie
       - Twitcher |br|
         (with integrated ``MagpieAdapter``)
-    * - pavics/magpie:1.3.4
-      - pavics/twitcher:magpie-1.3.4
+    * - pavics/magpie:1.4.0
+      - pavics/twitcher:magpie-1.4.0
     * - pavics/magpie:latest
       - pavics/twitcher:magpie-latest
 
