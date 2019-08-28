@@ -56,12 +56,12 @@ def create_user(user_name, password, email, group_name, db_session):
         return grp
 
     # Check that group already exists
-    group_check = _get_group(group_name)
+    group_checked = _get_group(group_name)
 
     # Check if user already exists
-    user_check = ax.evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
-                                  httpError=HTTPForbidden, msgOnFail=s.User_Check_ForbiddenResponseSchema.description)
-    ax.verify_param(user_check, isNone=True, httpError=HTTPConflict,
+    user_checked = ax.evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
+                                    httpError=HTTPForbidden, msgOnFail=s.User_Check_ForbiddenResponseSchema.description)
+    ax.verify_param(user_checked, isNone=True, httpError=HTTPConflict,
                     msgOnFail=s.User_Check_ConflictResponseSchema.description)
 
     # Create user with specified name and group to assign
@@ -85,10 +85,10 @@ def create_user(user_name, password, email, group_name, db_session):
 
     # Assign user to group
     new_user_groups = [group_name]
-    _add_to_group(new_user, group_check)
+    _add_to_group(new_user, group_checked)
     # Also add user to anonymous group if not already done
     anonym_grp_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
-    if group_check.group_name != anonym_grp_name:
+    if group_checked.group_name != anonym_grp_name:
         _add_to_group(new_user, _get_group(anonym_grp_name))
         new_user_groups.append(anonym_grp_name)
 
