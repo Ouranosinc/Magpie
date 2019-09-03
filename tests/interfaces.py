@@ -483,18 +483,30 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
                                   msg="Cannot evaluate response values with insufficient service types.")
         for query in ["", "?inherit=true"]:
             path = "/users/{usr}/resources{q}".format(usr=usr_name, q=query)
-            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies, timeout=20)
             body = utils.check_response_basic_info(resp, 200, expected_method="GET")
             utils.check_val_is_in("resources", body)
+            # Starting with 1.4.0, users are automatically members of anonymous group, and therefore
+            # inherit their permissions. Find the number of anonymous-only permissions, there shouldn't be any other.
+            anonymous_services = {}
+            if LooseVersion(self.version) >= LooseVersion("1.4.0") and query:
+                path = "/groups/{grp}/resources".format(grp=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                anonymous_services = utils.check_response_basic_info(resp, 200, expected_method="GET")
+            # validation
             for svc_type_no_perm in service_type_no_perm:
                 svc_type_body = body["resources"][svc_type_no_perm]
                 for svc_name_no_perm in svc_type_body:
                     utils.check_val_equal(len(svc_type_body[svc_name_no_perm]["resources"]), 0)
-                    utils.check_val_equal(len(svc_type_body[svc_name_no_perm]["permission_names"]), 0)
+                    svc_type_res_anonymous = anonymous_services.get("resources", {}).get(svc_type_no_perm, {})
+                    svc_perms_anonymous = svc_type_res_anonymous.get(svc_name_no_perm, {}).get("permission_names", [])
+                    svc_perms_test_user = svc_type_body[svc_name_no_perm]["permission_names"]
+                    svc_perms_only_user = set(svc_perms_test_user) - set(svc_perms_anonymous)
+                    utils.check_val_equal(len(svc_perms_only_user), 0)
 
         # without inherit flag, only user permissions are visible on service and resource
         path = "/users/{usr}/resources".format(usr=usr_name)
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies, timeout=20)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         test_service = body["resources"][svc_type][svc_name]
         utils.check_val_equal(test_service["permission_names"], [perm_svc_usr])
@@ -503,7 +515,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
         # with inherit flag, both user and group permissions are visible on service and resource
         path = "/users/{usr}/resources?inherit=true".format(usr=usr_name)
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies, timeout=20)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         test_service = body["resources"][svc_type][svc_name]
         utils.check_all_equal(test_service["permission_names"], [perm_svc_usr, perm_svc_grp], any_order=True)
@@ -519,7 +531,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             path = "/users/{usr}/inherited_resources".format(usr=self.usr)
         else:
             path = "/users/{usr}/resources?inherit=true".format(usr=self.usr)
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies, timeout=20)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("resources", body)
         utils.check_val_type(body["resources"], dict)
@@ -893,7 +905,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         expected_groups = {self.test_group_name, self.test_user_group}
         if LooseVersion(self.version) >= LooseVersion("1.4.0"):
             expected_groups.add(get_constant("MAGPIE_ANONYMOUS_GROUP"))
-        utils.check_all_equal(body["group_names"], expected_groups)
+        utils.check_all_equal(body["group_names"], expected_groups, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     def test_DeleteUser(self):
@@ -1474,8 +1486,11 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             utils.check_val_is_in(svc_name, registered_svc_names)
 
         # ensure that 'getcapabilities' permission is given to anonymous for applicable services
+        # ignore extra services not in providers configuration that *could* be in the tested database
         anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
-        services_list_getcap = [svc for svc in services_list if "getcapabilities" in svc["permission_names"]]
+        services_list_getcap = [svc for svc in services_list
+                                if "getcapabilities" in svc["permission_names"]
+                                and svc["service_name"] in self.test_services_info]
         path = "/users/{usr}/services".format(usr=anonymous)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
