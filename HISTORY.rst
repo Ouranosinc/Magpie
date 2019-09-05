@@ -6,6 +6,13 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix issue of form submission not behaving as expected when pressing ``<ENTER>`` key (#209)
+
 1.4.0 (2019-08-28)
 ---------------------
 
