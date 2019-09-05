@@ -78,22 +78,22 @@
     })
 </script>
 
-<form action="${request.path}" method="post">
-    <div class="panel_box">
-        <div class="panel_heading">
-            <span class="panel_title">Service: </span>
-            <span class="panel_value">${service_name}</span>
-            <span class="panel_heading_button">
-                <input type="button" value="Remove Service" class="button delete"
-                       onclick="$('#EditService_DeleteAlert').show();">
-            </span>
-        </div>
-        <div class="panel_body">
-            <div class="panel_box">
-                <div class="panel_heading">
-                    <div class="panel_title">Details</div>
-                </div>
-                <div>
+<div class="panel_box">
+    <div class="panel_heading">
+        <span class="panel_title">Service: </span>
+        <span class="panel_value">${service_name}</span>
+        <span class="panel_heading_button">
+            <input type="button" value="Remove Service" class="button delete"
+                   onclick="$('#EditService_DeleteAlert').show();">
+        </span>
+    </div>
+    <div class="panel_body">
+        <div class="panel_box">
+            <div class="panel_heading">
+                <div class="panel_title">Details</div>
+            </div>
+            <div>
+                <form action="${request.path}" method="post">
                     <p class="panel_line">
                         <span class="panel_entry">Name: </span>
                         %if edit_mode == 'edit_name':
@@ -106,6 +106,8 @@
                             <input type="submit" value="Edit" name="edit_name">
                         %endif
                     </p>
+                </form>
+                <form action="${request.path}" method="post">
                     <p class="panel_line">
                         <span class="panel_entry">Protected URL: </span>
                         %if edit_mode == "edit_url":
@@ -118,53 +120,53 @@
                             <input type="submit" value="Edit" name="edit_url">
                         %endif
                     </p>
-                    <p class="panel_line">
-                        <span class="panel_entry">Public URL: </span>
-                        <a href="${public_url}" class="panel_value">${public_url}</a>
-                    </p>
-                    <p class="panel_line">
-                        <span class="panel_entry">Type: </span>
-                        <span class="label info">${cur_svc_type}</span>
-                    </p>
-                    <p class="panel_line">
-                        <span class="panel_entry">Permissions: </span>
-                        %for perm in service_perm:
-                            <span class="label warning">${perm}</span>
-                        %endfor
-                    </p>
-                    <p class="panel_line">
-                        <span class="panel_entry">ID: </span>
-                        <span class="panel_value">${service_id}</span>
-                    </p>
-                    %if service_push_show:
-                        <div class="checkbox_align">
-                            <label for="push_phoenix_checkbox_details">
-                                <input type="hidden" name="service_push" value="off"/>
-                                %if service_push:
-                                    <input type="checkbox" name="service_push"
-                                           id="push_phoenix_checkbox_details" checked/>
-                                %else:
-                                    <input type="checkbox" name="service_push"
-                                           id="push_phoenix_checkbox_details"/>
-                                %endif
-                                <span>Push updates to Phoenix?</span>
-                            </label>
-                        </div>
-                    %endif
-                </div>
-            </div>
-
-            <div class="panel_box">
-                <div class="panel_heading">
-                    <div class="panel_title">Resources</div>
-                </div>
-                <div>
-                    <div class="clear"></div>
-                    <div class="tree">
-                        ${tree.render_tree(render_item, resources)}
+                </form>
+                <p class="panel_line">
+                    <span class="panel_entry">Public URL: </span>
+                    <a href="${public_url}" class="panel_value">${public_url}</a>
+                </p>
+                <p class="panel_line">
+                    <span class="panel_entry">Type: </span>
+                    <span class="label info">${cur_svc_type}</span>
+                </p>
+                <p class="panel_line">
+                    <span class="panel_entry">Permissions: </span>
+                    %for perm in service_perm:
+                        <span class="label warning">${perm}</span>
+                    %endfor
+                </p>
+                <p class="panel_line">
+                    <span class="panel_entry">ID: </span>
+                    <span class="panel_value">${service_id}</span>
+                </p>
+                %if service_push_show:
+                    <div class="checkbox_align">
+                        <label for="push_phoenix_checkbox_details">
+                            <input type="hidden" name="service_push" value="off"/>
+                            %if service_push:
+                                <input type="checkbox" name="service_push"
+                                       id="push_phoenix_checkbox_details" checked/>
+                            %else:
+                                <input type="checkbox" name="service_push"
+                                       id="push_phoenix_checkbox_details"/>
+                            %endif
+                            <span>Push updates to Phoenix?</span>
+                        </label>
                     </div>
+                %endif
+            </div>
+        </div>
+
+        <div class="panel_box">
+            <div class="panel_heading">
+                <div class="panel_title">Resources</div>
+            </div>
+            <div>
+                <div class="clear"></div>
+                <div class="tree">
+                    ${tree.render_tree(render_item, resources)}
                 </div>
             </div>
         </div>
     </div>
-</form>
+</div>

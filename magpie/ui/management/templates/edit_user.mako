@@ -54,7 +54,7 @@
 
 
 <div class="panel_box">
-    <form id="edit_info" action="${request.path}" method="post">
+    <form id="delete_user" action="${request.path}" method="post">
         <div class="panel_heading">
             <span class="panel_title">User: </span>
             <span class="panel_value">${user_name}</span>
@@ -62,12 +62,14 @@
                 <input type="submit" value="Delete" name="delete" class="button delete">
             </span>
         </div>
-        <div class="panel_body">
-            <div class="panel_box">
-                <div class="panel_heading">
-                    <div class="panel_title">Details</div>
-                </div>
-                <div>
+    </form>
+    <div class="panel_body">
+        <div class="panel_box">
+            <div class="panel_heading">
+                <div class="panel_title">Details</div>
+            </div>
+            <div>
+                <form id="edit_username" action="${request.path}" method="post">
                     <p class="panel_line">
                         <span class="panel_entry">Username: </span>
                         %if edit_mode == 'edit_username':
@@ -80,6 +82,8 @@
                             <input type="submit" value="Edit" name="edit_username">
                         %endif
                     </p>
+                </form>
+                <form id="edit_password" action="${request.path}" method="post">
                     <p class="panel_line">
                         <span class="panel_entry">Password: </span>
                         %if edit_mode == 'edit_password':
@@ -92,6 +96,8 @@
                             <input type="submit" value="Edit" name="edit_password">
                         %endif
                     </p>
+                </form>
+                <form id="edit_email" action="${request.path}" method="post">
                     <p class="panel_line">
                         <span class="panel_entry">Email: </span>
                         %if edit_mode == 'edit_email':
@@ -104,10 +110,10 @@
                             <input type="submit" value="Edit" name="edit_email">
                         %endif
                     </p>
-                </div>
+                </form>
             </div>
         </div>
-    </form>
+    </div>
 </div>
 
 
