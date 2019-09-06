@@ -6,6 +6,10 @@ History
 Unreleased
 ---------------------
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix issue where pressing return when editing user info deletes the user completely
+
 1.4.0 (2019-08-28)
 ---------------------
 

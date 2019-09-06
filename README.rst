@@ -90,6 +90,19 @@ At the command line::
     pip install magpie
 
 
+Installation
+============
+
+Here are some infos that can help with a local setup working with the other services of GeoImageNet :
+
+- in the GeoImageNet project :
+	- in geoimagenet.conf.template in the magpie section, change the proxy_pass variable according to your setup (ex.: using Vagrant, use the IP address defined in your Vagrantfile, "proxy_pass http://192.168.99.201:2001/;")
+	- in docker-compose.yml : comment the dependencies to Magpie for each concerned service ( "depends_on: #magpie" )
+- launch all containers from the GeoImageNet project, except Magpie
+    ./geoimagenet-compose.sh up -d frontend graphql api geoserver_setup migrations ml nginx postgis postgis_backups geoserver mongodb mongodb_backup twitcher
+- run Magpie container with a docker-compose.yml (see docker-compose.yml.example in the magpie repository)
+
+
 Docker Images
 =============
 
