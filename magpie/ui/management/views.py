@@ -887,7 +887,7 @@ class ManagementViews(object):
 
         if "delete_child" in self.request.POST:
             resource_id = self.request.POST.get("resource_id")
-            path = schemas.ResourceAPI.format(resource_id=resource_id)
+            path = schemas.ResourceAPI.path.format(resource_id=resource_id)
             resp = request_api(self.request, path, "DELETE")
             check_response(resp)
 

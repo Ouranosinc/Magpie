@@ -12,6 +12,7 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix issue of form submission not behaving as expected when pressing ``<ENTER>`` key (#209)
+* fix 500 error when deleting a service resource from UI (#195)
 
 1.4.0 (2019-08-28)
 ---------------------
