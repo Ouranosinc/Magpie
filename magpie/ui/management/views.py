@@ -879,18 +879,25 @@ class ManagementViews(object):
                         u"service_perm": service_perm, u"service_id": service_id, u"service_push": service_push,
                         u"service_push_show": service_push_show, u"cur_svc_type": cur_svc_type}
 
+        service_info["invalid_service_name"] = False
+        
         if "edit_name" in self.request.POST:
             service_info["edit_mode"] = u"edit_name"
 
         if "save_name" in self.request.POST:
             new_svc_name = self.request.POST.get("new_svc_name")
-            if service_name != new_svc_name and new_svc_name != "":
-                self.update_service_name(service_name, new_svc_name, service_push)
-                service_info["service_name"] = new_svc_name
-                service_info["public_url"] = register.get_twitcher_protected_service_url(new_svc_name),
-            service_info["edit_mode"] = u"no_edit"
-            # return directly to "regenerate" the URL with the modified name
-            return HTTPFound(self.request.route_url("edit_service", **service_info))
+
+            if not utils.invalid_url_param(new_svc_name):
+                if service_name != new_svc_name and new_svc_name != "":
+                    self.update_service_name(service_name, new_svc_name, service_push)
+                    service_info["service_name"] = new_svc_name
+                    service_info["public_url"] = register.get_twitcher_protected_service_url(new_svc_name),
+                service_info["edit_mode"] = u"no_edit"
+
+                # return directly to "regenerate" the URL with the modified name
+                return HTTPFound(self.request.route_url("edit_service", **service_info))
+            else:
+                service_info["invalid_service_name"] = True
 
         if "edit_url" in self.request.POST:
             service_info["edit_mode"] = u"edit_url"
