@@ -57,7 +57,7 @@
                     <div class="panel_title">Details</div>
                 </div>
                 <div>
-                    <p class="panel_line">
+                    <p style="width: 500px" class="panel_line">
                         <span class="panel_entry">Name: </span>
                         %if edit_mode == 'edit_group_name':
                             <input type="text" value="${group_name}" name="new_group_name"
@@ -67,6 +67,10 @@
                         %else:
                             <span class="panel_value">${group_name}</span>
                             <input type="submit" value="Edit" name="edit_group_name">
+                        %endif
+                        %if invalid_group_name:
+                            <span style="float: right;" class="alert_form_error">
+                                <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </span>
                         %endif
                     </p>
                 </div>
