@@ -70,7 +70,7 @@
             </div>
             <div>
                 <form id="edit_username" action="${request.path}" method="post">
-                    <p class="panel_line">
+                    <p class="panel_line" style="width: 500px">
                         <span class="panel_entry">Username: </span>
                         %if edit_mode == 'edit_username':
                             <input type="text" value="${user_name}" name="new_user_name"
@@ -80,6 +80,10 @@
                         %else:
                             <span class="panel_value">${user_name}</span>
                             <input type="submit" value="Edit" name="edit_username">
+                        %endif
+                        %if invalid_user_name:
+                            <span style="float: right;" class="alert_form_error">
+                                <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </span>
                         %endif
                     </p>
                 </form>
