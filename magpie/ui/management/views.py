@@ -824,11 +824,30 @@ class ManagementViews(object):
         cur_svc_type = self.request.matchdict["cur_svc_type"]
         svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
 
+        services_keys_sorted = self.get_service_types()
+        services_phoenix_indices = [(1 if services_keys_sorted[i] in register.SERVICES_PHOENIX_ALLOWED else 0)
+                                    for i in range(len(services_keys_sorted))]
+
+        return_data = {u"invalid_service_name": False, u"invalid_service_url": False, u"form_service_name": u"", u"form_service_url": u"", u"cur_svc_type": cur_svc_type, u"service_types": svc_types, u"services_phoenix": register.SERVICES_PHOENIX_ALLOWED, u"services_phoenix_indices": services_phoenix_indices}
+        check_data = [u"invalid_service_name", u"invalid_service_url"]
+
         if "register" in self.request.POST:
             service_name = self.request.POST.get("service_name")
             service_url = self.request.POST.get("service_url")
             service_type = self.request.POST.get("service_type")
             service_push = self.request.POST.get("service_push")
+            return_data[u"form_service_name"] = service_name
+            return_data[u"form_service_url"] = service_url
+
+            if utils.invalid_url_param(service_name):
+                return_data[u"invalid_service_name"] = True
+            if service_url == "":
+                return_data[u"invalid_service_url"] = True
+
+            for check_fail in check_data:
+                if return_data.get(check_fail, False):
+                    return add_template_data(self.request, return_data)
+
             data = {u"service_name": service_name,
                     u"service_url": service_url,
                     u"service_type": service_type,
@@ -837,14 +856,7 @@ class ManagementViews(object):
             check_response(resp)
             return HTTPFound(self.request.route_url("view_services", cur_svc_type=service_type))
 
-        services_keys_sorted = self.get_service_types()
-        services_phoenix_indices = [(1 if services_keys_sorted[i] in register.SERVICES_PHOENIX_ALLOWED else 0)
-                                    for i in range(len(services_keys_sorted))]
-        return add_template_data(self.request,
-                                 {u"cur_svc_type": cur_svc_type,
-                                  u"service_types": svc_types,
-                                  u"services_phoenix": register.SERVICES_PHOENIX_ALLOWED,
-                                  u"services_phoenix_indices": services_phoenix_indices})
+        return add_template_data(self.request, return_data)
 
     @view_config(route_name="edit_service", renderer="templates/edit_service.mako")
     def edit_service(self):

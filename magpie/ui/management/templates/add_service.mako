@@ -25,14 +25,24 @@
         <tr>
             <td>Service name (unique):</td>
             <div class="input_container">
-                <td><input type="text" value="" name="service_name" class="equal_width" placeholder="emu"></td>
+                <td><input type="text" name="service_name" value="${form_service_name}" class="equal_width" placeholder="emu"></td>
             </div>
+            %if invalid_service_name:
+                <td><p class="alert_form_error">
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                </td>
+            %endif
         </tr>
         <tr>
             <td>Service url:</td>
             <div class="input_container">
-                <td><input type="text" value="" name="service_url" class="equal_width" placeholder="http://localhost:8093"></td>
+                <td><input type="text" name="service_url" value="${form_service_url}" class="equal_width" placeholder="http://localhost:8093"></td>
             </div>
+            %if invalid_service_url:
+                <td><p class="alert_form_error">
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                </td>
+            %endif
         </tr>
         <tr><td>Service type:</td>
             <div class="input_container">
