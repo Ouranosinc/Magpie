@@ -94,7 +94,7 @@
                     <div class="panel_title">Details</div>
                 </div>
                 <div>
-                    <p class="panel_line">
+                    <p class="panel_line" style="width: 500px">
                         <span class="panel_entry">Name: </span>
                         %if edit_mode == 'edit_name':
                             <input type="text" value="${service_name}" name="new_svc_name"
@@ -104,6 +104,10 @@
                         %else:
                             <span class="panel_value">${service_name}</span>
                             <input type="submit" value="Edit" name="edit_name">
+                        %endif
+                        %if invalid_service_name:
+                            <span style="float: right" class="alert_form_error">
+                                <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </span>
                         %endif
                     </p>
                     <p class="panel_line">
