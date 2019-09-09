@@ -21,6 +21,7 @@ import types
 import six
 import sys
 import os
+import re
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import (  # noqa: F401
         Any, AnyKey, Str, List, Optional, Type, Union,
@@ -366,3 +367,11 @@ def is_json_body(body):
     except (ValueError, TypeError):
         return False
     return True
+
+
+def invalid_url_param(str):
+    return not is_ascii(str) or "/" in str or " " in str
+
+
+def is_ascii(str): 
+    return re.match('^[\x00-\x7F]+$', str)
