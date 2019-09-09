@@ -421,6 +421,9 @@ class ManagementViews(object):
             if group_name == "":
                 return_data[u"invalid_group_name"] = True
                 return add_template_data(self.request, return_data)
+            if utils.invalid_url_param(group_name):
+                return_data[u"invalid_group_name"] = True
+                return add_template_data(self.request, return_data)
 
             data = {u"group_name": group_name}
             resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
