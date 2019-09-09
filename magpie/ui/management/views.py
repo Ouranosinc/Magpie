@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING
 import humanize
 import json
 import six
+import utils
+
 if TYPE_CHECKING:
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
     from magpie.definitions.typedefs import List, Optional  # noqa: F401
@@ -207,6 +209,8 @@ class ManagementViews(object):
             if user_name in self.get_user_names():
                 return_data[u"conflict_user_name"] = True
             if user_name == "":
+                return_data[u"invalid_user_name"] = True
+            if utils.invalid_url_param(user_name):
                 return_data[u"invalid_user_name"] = True
             if password == "":
                 return_data[u"invalid_password"] = True

@@ -136,7 +136,6 @@ MAGPIE_USER_NAME_MAX_LENGTH = 64
 
 _REGEX_ASCII_ONLY = re.compile(r'\W|^(?=\d)')
 
-
 def get_constant_setting_name(name):
     """Lower-case name and replace all non-ascii chars by `_`."""
     name = re.sub(_REGEX_ASCII_ONLY, '_', name.strip().lower())

@@ -19,6 +19,7 @@ import types
 import six
 import sys
 import os
+import re
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import (  # noqa: F401
         Any, AnyKey, Str, List, Optional, Type, Union,
@@ -340,3 +341,9 @@ class ExtendedEnumMeta(EnumMeta):
             if key_or_value == m_key or key_or_value == m_val.value:
                 return m_val
         return default
+
+def invalid_url_param(str):
+    return not is_ascii(str) or "/" in str or " " in str
+
+def is_ascii(str): 
+    return re.match('^[\x00-\x7F]+$', str)
