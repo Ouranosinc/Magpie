@@ -597,6 +597,8 @@ class ManagementViews(object):
             res_id = self.request.POST.get("resource_id")
             group_path = schemas.GroupAPI.path.format(group_name=group_name)
 
+            group_info["invalid_group_name"] = False
+
             if u"delete" in self.request.POST:
                 resp = request_api(self.request, group_path, "DELETE")
                 check_response(resp)
@@ -604,11 +606,18 @@ class ManagementViews(object):
             elif u"edit_group_name" in self.request.POST:
                 group_info[u"edit_mode"] = u"edit_group_name"
             elif u"save_group_name" in self.request.POST:
-                group_info[u"group_name"] = self.request.POST.get(u"new_group_name")
-                resp = request_api(self.request, group_path, "PUT", data=group_info)
-                check_response(resp)
-                # return immediately with updated URL to group with new name
-                return HTTPFound(self.request.route_url("edit_group", **group_info))
+                new_group_name = self.request.POST.get(u"new_group_name")
+
+                if not utils.invalid_url_param(new_group_name):
+                    group_info[u"group_name"] = new_group_name
+                    resp = request_api(self.request, group_path, "PUT", data=group_info)
+                    check_response(resp)
+
+                    # return immediately with updated URL to group with new name
+                    return HTTPFound(self.request.route_url("edit_group", **group_info))
+                else:
+                    group_info["invalid_group_name"] = True
+
             elif u"goto_service" in self.request.POST:
                 return self.goto_service(res_id)
             elif u"clean_resource" in self.request.POST:
