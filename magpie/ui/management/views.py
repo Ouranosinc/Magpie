@@ -195,25 +195,7 @@ class ManagementViews(object):
             return_data[u"form_user_name"] = user_name
             return_data[u"form_user_email"] = user_email
 
-            if group_name not in groups:
-                data = {u"group_name": group_name}
-                resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
-                if resp.status_code == HTTPConflict.code:
-                    return_data[u"conflict_group_name"] = True
-            if user_email in self.get_user_emails():
-                return_data[u"conflict_user_email"] = True
-            if user_email == "":
-                return_data[u"invalid_user_email"] = True
-            if len(user_name) > get_constant("MAGPIE_USER_NAME_MAX_LENGTH"):
-                return_data[u"too_long_user_name"] = True
-            if user_name in self.get_user_names():
-                return_data[u"conflict_user_name"] = True
-            if user_name == "":
-                return_data[u"invalid_user_name"] = True
-            if utils.invalid_url_param(user_name):
-                return_data[u"invalid_user_name"] = True
-            if password == "":
-                return_data[u"invalid_password"] = True
+            return_data = validate_add_user_form(self, return_data, groups, user_name, group_name, user_email, password)
 
             for check_fail in check_data:
                 if return_data.get(check_fail, False):
@@ -960,3 +942,27 @@ class ManagementViews(object):
             u"cur_svc_res": svc_res_types,
         }
         return add_template_data(self.request, data)
+
+
+def validate_add_user_form(self, return_data, groups, user_name, group_name, user_email, password):
+        if group_name not in groups:
+            data = {u"group_name": group_name}
+            resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
+            if resp.status_code == HTTPConflict.code:
+                return_data[u"conflict_group_name"] = True
+        if user_email in self.get_user_emails():
+            return_data[u"conflict_user_email"] = True
+        if user_email == "":
+            return_data[u"invalid_user_email"] = True
+        if len(user_name) > get_constant("MAGPIE_USER_NAME_MAX_LENGTH"):
+            return_data[u"too_long_user_name"] = True
+        if user_name in self.get_user_names():
+            return_data[u"conflict_user_name"] = True
+        if user_name == "":
+            return_data[u"invalid_user_name"] = True
+        if utils.invalid_url_param(user_name):
+            return_data[u"invalid_user_name"] = True
+        if password == "":
+            return_data[u"invalid_password"] = True
+
+        return return_data
