@@ -9,6 +9,9 @@ Unreleased
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
+* use singleton interface for ``MagpieAdapter`` and ``MagpieServiceStore`` to avoid class recreation and reduce request
+  time by `Twitcher` when checking for a service by name.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix issue of form submission not behaving as expected when pressing ``<ENTER>`` key (#209)
