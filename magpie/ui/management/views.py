@@ -284,9 +284,12 @@ class ManagementViews(object):
             elif u"edit_email" in self.request.POST:
                 user_info[u"edit_mode"] = u"edit_email"
             elif u"save_username" in self.request.POST:
-                user_info[u"user_name"] = self.request.POST.get(u"new_user_name")
-                is_save_user_info = True
-                requires_update_name = True
+                if not utils.invalid_url_param(self.request.POST.get(u"new_user_name")):
+                    user_info[u"user_name"] = self.request.POST.get(u"new_user_name")
+                    is_save_user_info = True
+                    requires_update_name = True
+                else:
+                    user_info[u"invalid_user_name"] = True
             elif u"save_password" in self.request.POST:
                 user_info[u"password"] = self.request.POST.get(u"new_user_password")
                 is_save_user_info = True
