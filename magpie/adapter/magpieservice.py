@@ -1,9 +1,10 @@
 """
 Store adapters to read data from magpie.
 """
-
+from magpie.api.exception import verify_param
+from magpie.models import Service as MagpieService
 from magpie.definitions.twitcher_definitions import ServiceStoreInterface, Service, ServiceNotFound
-from magpie.definitions.pyramid_definitions import HTTPOk, asbool
+from magpie.definitions.pyramid_definitions import HTTPOk, asbool, HTTPNotFound
 from magpie.api.schemas import ServicesAPI
 from magpie.utils import get_admin_cookies, get_magpie_url, get_settings, get_logger, CONTENT_TYPE_JSON
 from typing import TYPE_CHECKING
@@ -22,6 +23,7 @@ class MagpieServiceStore(ServiceStoreInterface):
         # type: (Request) -> None
         super(MagpieServiceStore, self).__init__(request)
         self.settings = get_settings(request)
+        self.session_factory = request.registry["dbsession_factory"]
         self.magpie_url = get_magpie_url(request)
         self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.magpie_admin_token = get_admin_cookies(self.settings, self.twitcher_ssl_verify)
@@ -61,11 +63,19 @@ class MagpieServiceStore(ServiceStoreInterface):
         """
         Gets service for given ``name`` from magpie.
         """
-        services = self.list_services(request=request)
-        for service in services:
-            if service.name == name:
-                return service
-        raise ServiceNotFound
+
+        session = self.session_factory()
+
+        try:
+            service = MagpieService.by_service_name(name, db_session=session)
+            if service is None:
+                raise ServiceNotFound("Service name not found.")
+
+            return Service(url=service.url,
+                           name=service.resource_name,
+                           type=service.type)
+        finally:
+            session.close()
 
     def fetch_by_url(self, url, request=None):
         """
