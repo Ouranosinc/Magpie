@@ -95,16 +95,41 @@ def verify_user(request):
     return valid_http(HTTPOk, detail="Twitcher login verified successfully with Magpie login.")
 
 
+# taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
+# works in Python 2 & 3
+class _Singleton(type):
+    """ A metaclass that creates a Singleton base class when called. """
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(_Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+class Singleton(_Singleton('SingletonMeta', (object,), {})):
+    pass
+
+
 # noinspection PyMethodMayBeStatic
-class MagpieAdapter(AdapterInterface):
+class MagpieAdapter(AdapterInterface, Singleton):
+    def __init__(self, container):
+        self._servicestore = None
+        self._owssecurity = None
+        super(MagpieAdapter, self).__init__(container)
+
     def describe_adapter(self):
         return {"name": self.name, "version": __meta__.__version__}
 
     def servicestore_factory(self, request, headers=None):
-        return MagpieServiceStore(request)
+        if self._servicestore is None:
+            self._servicestore = MagpieServiceStore(request)
+        return self._servicestore
 
     def owssecurity_factory(self, request):
-        return MagpieOWSSecurity(request)
+        if self._owssecurity is None:
+            self._owssecurity = MagpieOWSSecurity(request)
+        return self._owssecurity
 
     def owsproxy_config(self, container):
         LOGGER.info("Loading MagpieAdapter owsproxy config")
