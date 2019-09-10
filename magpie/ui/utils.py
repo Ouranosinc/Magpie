@@ -2,6 +2,7 @@ from magpie.definitions.pyramid_definitions import exception_response, Request, 
 from magpie.utils import get_header, CONTENT_TYPE_JSON
 from typing import TYPE_CHECKING
 import json
+import re
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import Str, JSON, CookiesType, HeadersType, Optional  # noqa: F401
     from magpie.definitions.pyramid_definitions import Response  # noqa: F401
@@ -70,3 +71,7 @@ def error_badrequest(func):
         except Exception as e:
             raise HTTPBadRequest(detail=str(e))
     return wrap
+
+
+def invalid_url_param(str):
+    return not str.isalpha();

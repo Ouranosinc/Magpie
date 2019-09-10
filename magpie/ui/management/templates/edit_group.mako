@@ -57,7 +57,7 @@
                     <div class="panel_title">Details</div>
                 </div>
                 <div>
-                    <p style="width: 500px" class="panel_line">
+                    <p style="width: 20em" class="panel_line">
                         <span class="panel_entry">Name: </span>
                         %if edit_mode == 'edit_group_name':
                             <input type="text" value="${group_name}" name="new_group_name"

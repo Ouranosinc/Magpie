@@ -94,7 +94,7 @@
                     <div class="panel_title">Details</div>
                 </div>
                 <div>
-                    <p class="panel_line" style="width: 500px">
+                    <p class="panel_line" style="width: 20em">
                         <span class="panel_entry">Name: </span>
                         %if edit_mode == 'edit_name':
                             <input type="text" value="${service_name}" name="new_svc_name"
