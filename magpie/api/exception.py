@@ -51,6 +51,7 @@ def verify_param(   # noqa: E126
                  isIn=False,                        # type: bool
                  isEqual=False,                     # type: bool
                  ofType=False,                      # type: bool
+                 isAlpha=False,                     # type: bool
                 ):                                  # type: (...) -> None
     """
     Evaluate various parameter combinations given the requested verification flags.
@@ -79,6 +80,7 @@ def verify_param(   # noqa: E126
     :param isIn: test that `param` exists in `paramCompare` values
     :param isEqual: test that `param` equals `paramCompare` value
     :param ofType: test that `param` is of same type as specified by `paramCompare` type
+    :param isAlpha: test that `param` is an alphanumeric string
     :param withParam: on raise, adds values of `param`, `paramName` and `paramCompare` to json response if specified
     :raises `HTTPError`: if tests fail, specified exception is raised (default: `HTTPBadRequest`)
     :raises `HTTPInternalServerError`: for evaluation error
@@ -110,6 +112,8 @@ def verify_param(   # noqa: E126
             raise TypeError("'isEqual' is not a 'bool'")
         if not isinstance(ofType, bool):
             raise TypeError("'ofType' is not a 'bool'")
+        if not isinstance(isAlpha, bool):
+            raise TypeError("'isAlpha' is not a 'bool'")
         if paramCompare is None and (isIn or notIn or isEqual or notEqual):
             raise TypeError("'paramCompare' cannot be 'None' with specified test flags")
         if isEqual or notEqual:
@@ -153,6 +157,8 @@ def verify_param(   # noqa: E126
         fail_verify = fail_verify or (param != paramCompare)
     if ofType:
         fail_verify = fail_verify or (not isinstance(param, paramCompare))
+    if isAlpha:
+        fail_verify = fail_verify or (not param.isalpha())
     if fail_verify:
         if withParam:
             content[u"param"] = {u"value": str(param)}

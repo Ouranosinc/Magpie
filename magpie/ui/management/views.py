@@ -197,8 +197,8 @@ class ManagementViews(object):
             if group_name not in groups:
                 data = {u"group_name": group_name}
                 resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
-            if resp.status_code == HTTPConflict.code:
-                return_data[u"conflict_group_name"] = True
+                if resp.status_code == HTTPConflict.code:
+                    return_data[u"conflict_group_name"] = True
             if user_email in self.get_user_emails():
                 return_data[u"conflict_user_email"] = True
             if user_email == "":
