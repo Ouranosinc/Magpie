@@ -124,7 +124,7 @@ def verify_param(   # noqa: E126
         if not hasattr(paramCompare, "__iter__") and (isIn or notIn):
             paramCompare = [paramCompare]
         # error if none of the flags specified
-        if not any([notNone, notEmpty, notIn, notEqual, isTrue, isFalse, isNone, isEmpty, isIn, isEqual, ofType]):
+        if not any([notNone, notEmpty, notIn, notEqual, isTrue, isFalse, isNone, isEmpty, isIn, isEqual, ofType, isAlpha]):
             raise ValueError("no comparison flag specified for verification")
     except Exception as e:
         content[u"traceback"] = repr(exc_info())
