@@ -78,6 +78,7 @@ def register_service_view(request):
     service_url = ar.get_value_multiformat_post_checked(request, "service_url")
     service_type = ar.get_value_multiformat_post_checked(request, "service_type")
     service_push = asbool(ar.get_multiformat_post(request, "service_push"))
+    ax.verify_param(service_name, httpError=HTTPBadRequest, msgOnFail=s.Services_POST_BadRequestResponseSchema.description, isAlpha=True)
     ax.verify_param(service_type, isIn=True, paramCompare=SERVICE_TYPE_DICT.keys(),
                     httpError=HTTPBadRequest, msgOnFail=s.Services_POST_BadRequestResponseSchema.description)
     ax.verify_param(models.Service.by_service_name(service_name, db_session=request.db), isNone=True,
@@ -104,7 +105,7 @@ def update_service_view(request):
     svc_url = select_update(ar.get_multiformat_post(request, "service_url"), service.url)
     ax.verify_param(svc_name, paramCompare="types", notEqual=True,
                     paramName="service_name", httpError=HTTPBadRequest,
-                    msgOnFail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
+                    msgOnFail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description, isAlpha=True)
     ax.verify_param(svc_name == service.resource_name and svc_url == service.url, notEqual=True,
                     paramCompare=True, paramName="service_name/service_url",
                     httpError=HTTPBadRequest, msgOnFail=s.Service_PUT_BadRequestResponseSchema.description)

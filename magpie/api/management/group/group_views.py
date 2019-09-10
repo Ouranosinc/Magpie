@@ -30,6 +30,8 @@ def create_group_view(request):
     Create a group.
     """
     group_name = ar.get_value_multiformat_post_checked(request, "group_name")
+    ax.verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
+                    msgOnFail=s.Group_POST_Name_BadRequestResponseSchema.description, isAlpha=True)
     return gu.create_group(group_name, request.db)
 
 
@@ -53,7 +55,7 @@ def edit_group_view(request):
     group = ar.get_group_matchdict_checked(request, group_name_key="group_name")
     new_group_name = ar.get_multiformat_post(request, "group_name")
     ax.verify_param(new_group_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    msgOnFail=s.Group_PUT_Name_BadRequestResponseSchema.description)
+                    msgOnFail=s.Group_PUT_Name_BadRequestResponseSchema.description, isAlpha=True)
     ax.verify_param(len(new_group_name), isIn=True, httpError=HTTPBadRequest,
                     paramCompare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
                     msgOnFail=s.Group_PUT_Size_BadRequestResponseSchema.description)
