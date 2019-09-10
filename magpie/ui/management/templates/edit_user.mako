@@ -70,7 +70,7 @@
             </div>
             <div>
                 <form id="edit_username" action="${request.path}" method="post">
-                    <p class="panel_line" style="width: 500px">
+                    <p class="panel_line" style="width: 20em">
                         <span class="panel_entry">Username: </span>
                         %if edit_mode == 'edit_username':
                             <input type="text" value="${user_name}" name="new_user_name"

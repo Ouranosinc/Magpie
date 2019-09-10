@@ -12,7 +12,7 @@ from magpie.definitions.pyramid_definitions import (
 from magpie.helpers.sync_resources import OUT_OF_SYNC
 from magpie.helpers import sync_resources
 from magpie.models import RESOURCE_TYPE_DICT, remote_resource_tree_service  # TODO: remove, implement getters via API
-from magpie.ui.utils import check_response, request_api, error_badrequest
+from magpie.ui.utils import check_response, request_api, error_badrequest, invalid_url_param
 from magpie.ui.home import add_template_data
 from magpie.utils import get_json, get_logger, CONTENT_TYPE_JSON
 from magpie import register
@@ -23,7 +23,6 @@ import transaction
 import humanize
 import json
 import six
-import utils
 
 if TYPE_CHECKING:
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
@@ -210,7 +209,7 @@ class ManagementViews(object):
                 return_data[u"conflict_user_name"] = True
             if user_name == "":
                 return_data[u"invalid_user_name"] = True
-            if utils.invalid_url_param(user_name):
+            if invalid_url_param(user_name):
                 return_data[u"invalid_user_name"] = True
             if password == "":
                 return_data[u"invalid_password"] = True
@@ -302,7 +301,7 @@ class ManagementViews(object):
             elif u"edit_email" in self.request.POST:
                 user_info[u"edit_mode"] = u"edit_email"
             elif u"save_username" in self.request.POST:
-                if not utils.invalid_url_param(self.request.POST.get(u"new_user_name")):
+                if not invalid_url_param(self.request.POST.get(u"new_user_name")):
                     user_info[u"user_name"] = self.request.POST.get(u"new_user_name")
                     is_save_user_info = True
                     requires_update_name = True
@@ -424,7 +423,7 @@ class ManagementViews(object):
             if group_name == "":
                 return_data[u"invalid_group_name"] = True
                 return add_template_data(self.request, return_data)
-            if utils.invalid_url_param(group_name):
+            if invalid_url_param(group_name):
                 return_data[u"invalid_group_name"] = True
                 return add_template_data(self.request, return_data)
 
@@ -608,7 +607,7 @@ class ManagementViews(object):
             elif u"save_group_name" in self.request.POST:
                 new_group_name = self.request.POST.get(u"new_group_name")
 
-                if not utils.invalid_url_param(new_group_name):
+                if not invalid_url_param(new_group_name):
                     group_info[u"group_name"] = new_group_name
                     resp = request_api(self.request, group_path, "PUT", data=group_info)
                     check_response(resp)
@@ -851,7 +850,7 @@ class ManagementViews(object):
             return_data[u"form_service_name"] = service_name
             return_data[u"form_service_url"] = service_url
 
-            if utils.invalid_url_param(service_name):
+            if invalid_url_param(service_name):
                 return_data[u"invalid_service_name"] = True
             if service_url == "":
                 return_data[u"invalid_service_url"] = True
@@ -896,7 +895,7 @@ class ManagementViews(object):
         if "save_name" in self.request.POST:
             new_svc_name = self.request.POST.get("new_svc_name")
 
-            if not utils.invalid_url_param(new_svc_name):
+            if not invalid_url_param(new_svc_name):
                 if service_name != new_svc_name and new_svc_name != "":
                     self.update_service_name(service_name, new_svc_name, service_push)
                     service_info["service_name"] = new_svc_name
@@ -980,4 +979,4 @@ class ManagementViews(object):
             u"resource_id": resource_id,
             u"cur_svc_res": svc_res_types,
         }
-        return add_template_data(self.request, data)        
+        return add_template_data(self.request, data)

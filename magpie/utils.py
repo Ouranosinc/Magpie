@@ -21,7 +21,7 @@ import types
 import six
 import sys
 import os
-import re
+
 if TYPE_CHECKING:
     from magpie.definitions.typedefs import (  # noqa: F401
         Any, AnyKey, Str, List, Optional, Type, Union,
