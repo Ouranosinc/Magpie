@@ -9,6 +9,7 @@ from magpie.security import get_auth_config
 from magpie.db import get_session_factory, get_tm_session, get_engine
 from magpie.utils import get_logger, get_settings, get_magpie_url, CONTENT_TYPE_JSON
 from magpie import __meta__
+from pyramid_beaker import set_cache_regions_from_settings
 import time
 import logging
 import requests
@@ -142,6 +143,7 @@ class MagpieAdapter(AdapterInterface, Singleton):
 
     def configurator_factory(self, container):
         settings = get_settings(container)
+        set_cache_regions_from_settings(settings)
 
         # disable rpcinterface which is conflicting with postgres db
         settings["twitcher.rpcinterface"] = False

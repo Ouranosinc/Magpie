@@ -12,6 +12,7 @@ from magpie.api import exception as ax
 from magpie.owsrequest import ows_parser_factory
 from magpie.permissions import Permission
 from magpie import models
+from beaker.cache import cache_region, cache_regions
 from typing import TYPE_CHECKING
 from six import with_metaclass
 if TYPE_CHECKING:
@@ -77,6 +78,19 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
         """
         List of access control rules defining (outcome, user/group, permission) combinations.
         """
+        if 'adapter' not in cache_regions:
+            cache_regions['adapter'] = {'enabled': False}
+        return self._get_acl_cached(self.service.resource_id, self.request.user)
+
+    @cache_region('adapter')
+    def _get_acl_cached(self, service_id, user):
+        """Beaker will cache this method based on the service id and the user.
+
+        If the cache is not hit, call the self.get_acl() method
+        """
+        return self.get_acl()
+
+    def get_acl(self):
         raise NotImplementedError
 
     def expand_acl(self, resource, user):
@@ -147,8 +161,7 @@ class ServiceWPS(ServiceInterface):
     def __init__(self, service, request):
         super(ServiceWPS, self).__init__(service, request)
 
-    @property
-    def __acl__(self):
+    def get_acl(self):
         self.expand_acl(self.service, self.request.user)
         return self.acl
 
@@ -184,8 +197,7 @@ class ServiceBaseWMS(ServiceInterface):
     def __init__(self, service, request):
         super(ServiceBaseWMS, self).__init__(service, request)
 
-    @property
-    def __acl__(self):
+    def get_acl(self):
         raise NotImplementedError
 
 
@@ -212,8 +224,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
     def __init__(self, service, request):
         super(ServiceNCWMS2, self).__init__(service, request)
 
-    @property
-    def __acl__(self):
+    def get_acl(self):
         self.expand_acl(self.service, self.request.user)
 
         # According to the permission, the resource we want to authorize is not formatted the same way
@@ -267,8 +278,7 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
     def __init__(self, service, request):
         super(ServiceGeoserverWMS, self).__init__(service, request)
 
-    @property
-    def __acl__(self):
+    def get_acl(self):
         self.expand_acl(self.service, self.request.user)
 
         # localhost:8087/geoserver/WATERSHED/wms?layers=WATERSHED:BV_1NS&request=getmap
@@ -312,8 +322,7 @@ class ServiceAccess(ServiceInterface):
     def __init__(self, service, request):
         super(ServiceAccess, self).__init__(service, request)
 
-    @property
-    def __acl__(self):
+    def get_acl(self):
         self.expand_acl(self.service, self.request.user)
         return self.acl
 
@@ -335,11 +344,7 @@ class ServiceAPI(ServiceInterface):
     def __init__(self, service, request):
         super(ServiceAPI, self).__init__(service, request)
 
-    @property
-    def __acl__(self):
-        return self._route_acl()
-
-    def _route_acl(self, sub_api_route=None):
+    def get_acl(self, sub_api_route=None):
         self.expand_acl(self.service, self.request.user)
 
         match_index = 0
@@ -369,7 +374,6 @@ class ServiceAPI(ServiceInterface):
                 self.acl[i] = (self.acl[i][0], self.acl[i][1], Permission.READ.value)
             if Permission.get(self.acl[i][2]) == Permission.WRITE_MATCH:
                 self.acl[i] = (self.acl[i][0], self.acl[i][1], Permission.WRITE.value)
-
         return self.acl
 
     def permission_requested(self):
@@ -412,8 +416,7 @@ class ServiceWFS(ServiceInterface):
     def __init__(self, service, request):
         super(ServiceWFS, self).__init__(service, request)
 
-    @property
-    def __acl__(self):
+    def get_acl(self):
         self.expand_acl(self.service, self.request.user)
         request_type = self.permission_requested()
         if request_type == Permission.GET_CAPABILITIES:
@@ -456,8 +459,7 @@ class ServiceTHREDDS(ServiceInterface):
     def __init__(self, service, request):
         super(ServiceTHREDDS, self).__init__(service, request)
 
-    @property
-    def __acl__(self):
+    def get_acl(self):
         self.expand_acl(self.service, self.request.user)
         elems = self.request.path.split("/")
 
