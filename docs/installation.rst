@@ -22,3 +22,4 @@ If you want the full setup for development, use::
     make install-dev
 
 
+You can run the Magpie container with a docker-compose.yml for a local setup (see docker-compose.yml.example)
