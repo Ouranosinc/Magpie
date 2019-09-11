@@ -78,11 +78,11 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
         """
         List of access control rules defining (outcome, user/group, permission) combinations.
         """
-        if 'adapter' not in cache_regions:
-            cache_regions['adapter'] = {'enabled': False}
+        if 'acl' not in cache_regions:
+            cache_regions['acl'] = {'enabled': False}
         return self._get_acl_cached(self.service.resource_id, self.request.user)
 
-    @cache_region('adapter')
+    @cache_region('acl')
     def _get_acl_cached(self, service_id, user):
         """Beaker will cache this method based on the service id and the user.
 
