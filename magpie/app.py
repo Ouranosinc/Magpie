@@ -15,6 +15,7 @@ from magpie.register import (
 from magpie.security import get_auth_config
 from magpie.utils import patch_magpie_url, print_log, get_logger
 from magpie import db
+from pyramid_beaker import set_cache_regions_from_settings
 import os
 # noinspection PyUnresolvedReferences
 import logging
@@ -75,6 +76,7 @@ def main(global_config=None, **settings):
     settings["handle_exceptions"] = False
 
     config = get_auth_config(settings)
+    set_cache_regions_from_settings(settings)
 
     # Don't use scan otherwise modules like 'magpie.adapter' are
     # automatically found and cause import errors on missing packages

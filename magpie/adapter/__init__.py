@@ -150,6 +150,7 @@ class MagpieAdapter(AdapterInterface, Singleton):
 
         LOGGER.info("Loading MagpieAdapter config")
         config = get_auth_config(container)
+        config.include("pyramid_beaker")
 
         # use pyramid_tm to hook the transaction lifecycle to the request
         # make request.db available for use in Pyramid
