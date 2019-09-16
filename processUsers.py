@@ -65,7 +65,7 @@ def delete_users(user_names, magpie_url, magpie_admin_user_name, magpie_admin_pa
 
 if __name__ == '__main__':
     email_list = sys.argv[1:]
-    magpie_url = "http://192.168.99.201:2001/magpie"
+    magpie_url = "http://localhost/magpie"
     magpie_admin_user_name = "admin"
     magpie_admin_password = "admin"
 
