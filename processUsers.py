@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
+import argparse
 import datetime
+import logging
 import random
 import requests
 import string
 import sys
 
+LOGGER = logging.getLogger(__name__)
 
 def format_response(response):
     response_json = response.json()
@@ -18,7 +21,7 @@ def create_users(email_list, magpie_url, magpie_admin_user_name, magpie_admin_pa
                                                           'password': magpie_admin_password,
                                                           'provider_name': 'ziggurat'})
     if not response.ok:
-        print(format_response(response))
+        LOGGER.error(format_response(response))
         return []
 
     users = []
@@ -53,7 +56,7 @@ def delete_users(user_names, magpie_url, magpie_admin_user_name, magpie_admin_pa
                                                           'password': magpie_admin_password,
                                                           'provider_name': 'ziggurat'})
     if not response.ok:
-        print(format_response(response))
+        LOGGER.error(format_response(response))
         return
 
     users = []
@@ -64,27 +67,32 @@ def delete_users(user_names, magpie_url, magpie_admin_user_name, magpie_admin_pa
 
 
 if __name__ == '__main__':
-    email_list = sys.argv[1:]
-    magpie_url = "http://localhost/magpie"
-    magpie_admin_user_name = "admin"
-    magpie_admin_password = "admin"
+    parser = argparse.ArgumentParser(description='Create users on Magpie')
+    parser.add_argument('url', help='url used to access the magpie service')
+    parser.add_argument('user_name', help='admin username for magpie login')
+    parser.add_argument('password', help='admin password for magpie login')
+    parser.add_argument('emails', nargs='*', help='list of emails for users to be created')
+    args = parser.parse_args()
 
-    users = create_users(email_list, magpie_url, magpie_admin_user_name, magpie_admin_password)
+    LOGGER.setLevel(logging.DEBUG)
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+
+    users = create_users(args.emails, args.url, args.user_name, args.password)
 
     if len(users) == 0:
-        print("No users to create")
+        LOGGER.warning("No users to create")
     else:
         COLUMN_SIZE = 60
-        output = "USERNAME".ljust(COLUMN_SIZE) + "PASSWORD".ljust(COLUMN_SIZE) + "RESULT".ljust(COLUMN_SIZE) + "\n"
+        output = "\nUSERNAME".ljust(COLUMN_SIZE) + "PASSWORD".ljust(COLUMN_SIZE) + "RESULT".ljust(COLUMN_SIZE) + "\n"
         output += "".ljust(COLUMN_SIZE * 3, "_") + "\n\n"
         for user in users:
             output += user['user_name'].ljust(COLUMN_SIZE) + user['password'].ljust(COLUMN_SIZE) + user['result'].ljust(
                 COLUMN_SIZE) + "\n"
 
-        filename = "createUsers_log__" + datetime.datetime.now().strftime('%Y%m%d__%H%M%S') + ".txt"
-        file = open(filename, "w+")
-        file.write(output)
-        file.close()
+        LOGGER.info(output)
 
-        print(output)
-        print("Output results sent to " + filename)
+        filename = "createUsers_log__" + datetime.datetime.now().strftime('%Y%m%d__%H%M%S') + ".txt"
+        with open(filename, "w+") as file:
+            file.write(output)
+            LOGGER.info("Output results sent to " + filename)
+
