@@ -3,6 +3,10 @@
 History
 =======
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* add an utility script ``create_users`` for quickly creating multiple users from a list of email adresses (#219).
+
 Unreleased
 ---------------------
 
@@ -11,7 +15,6 @@ Unreleased
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-
 * use singleton interface for ``MagpieAdapter`` and ``MagpieServiceStore`` to avoid class recreation and reduce request
   time by `Twitcher` when checking for a service by name.
 
