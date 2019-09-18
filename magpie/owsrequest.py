@@ -26,7 +26,7 @@ def ows_parser_factory(request):
     Otherwise, use the GET/POST WPS parsers.
     """
     content_type = get_header("Content-Type", request.headers, default=None, split=";,")
-    if content_type == CONTENT_TYPE_PLAIN:
+    if content_type is None or content_type == CONTENT_TYPE_PLAIN:
         try:
             # noinspection PyUnresolvedReferences
             if request.body:
