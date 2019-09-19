@@ -1,11 +1,13 @@
+autopep8
 bump2version
 codacy-coverage
 coverage==4.0
-flake8==3.5.0
+docformatter
+flake8
 mock
 nose==1.3.7
 pytest
-Sphinx
+sphinx>=1.6
 sphinx-autoapi
 tox>=3.0
 webtest

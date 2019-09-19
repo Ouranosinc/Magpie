@@ -48,46 +48,20 @@ TWITCHER_DOCKER_TAG  := $(TWITCHER_DOCKER_REPO):magpie-$(MAGPIE_VERSION)
 .PHONY: all
 all: help
 
+# Auto documented help from target comments
+#	https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 .PHONY: help
 help:
-	@echo "Please use \`make <target>' where <target> is one of:"
-	@echo "  Cleaning:"
-	@echo "    clean:           remove all build, test, coverage and Python artifacts"
-	@echo "    clean-build:     remove build artifacts"
-	@echo "    clean-docs: 	    remove doc artifacts"
-	@echo "    clean-pyc:       remove Python file artifacts"
-	@echo "    clean-test:      remove test and coverage artifacts"
-	@echo "  Build and deploy:"
-	@echo "    bump             bump version using VERSION specified as user input"
-	@echo "    dry              run any 'bump' target without applying changes (dry-run)"
-	@echo "    dist:            package for distribution"
-	@echo "    release:         package and upload a release"
-	@echo "    docker-info:     tag version of docker image for build/push"
-	@echo "    docker-build:    build docker images for Magpie application and MagpieAdapter for Twitcher"
-	@echo "    docker-push:     push built docker images for Magpie application and MagpieAdapter for Twitcher"
-	@echo "    version:         display current version"
-	@echo "  Install and run"
-	@echo "    docs:            generate Sphinx HTML documentation, including API docs"
-	@echo "    docs-show:       display HTML webpage of generated documentation (build docs if missing)"
-	@echo "    install:         install the package to the active Python's site-packages"
-	@echo "    install-dev:     install package requirements for development and testing"
-	@echo "    install-sys:     install system dependencies and required installers/runners"
-	@echo "    migrate:         run postgres database migration with alembic"
-	@echo "    start:           start magpie instance with gunicorn"
-	@echo "  Test and coverage"
-	@echo "    coverage:        check code coverage and generate an analysis report"
-	@echo "    coverage-table:  display a commandline table of the generated report (run coverage if missing)"
-	@echo "    coverage-show:   display HTML webpage of generated coverage report (run coverage if missing)"
-	@echo "    lint:            check style with flake8"
-	@echo "    test:            run tests quickly with the default Python"
-	@echo "    test-local:      run only local tests with the default Python"
-	@echo "    test-remote:     run only remote tests with the default Python"
-	@echo "    test-tox:        run tests on every Python version with tox"
+	@echo "magpie help"
+	@echo "Please use 'make <target>' where <target> is one of:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2}'
+
+## clean targets
 
 .PHONY: clean clean-build clean-pyc clean-test
-clean: clean-build clean-pyc clean-test clean-docs
+clean: clean-build clean-pyc clean-test clean-docs	## remove all build, test, coverage and Python artifacts
 
-clean-build:
+clean-build:	## remove build artifacts
 	@echo "Cleaning build artifacts..."
 	rm -fr build/
 	rm -fr dist/
@@ -96,18 +70,18 @@ clean-build:
 	find . -type d -name '*.egg-info' -exec rm -fr {} +
 	find . -type f -name '*.egg' -exec rm -f {} +
 
-clean-docs:
+clean-docs:		## remove doc artifacts
 	@echo "Cleaning doc artifacts..."
 	"$(MAKE)" -C "$(MAGPIE_ROOT)/docs" clean || true
 
-clean-pyc:
+clean-pyc:		## remove Python file artifacts
 	@echo "Cleaning Python artifacts..."
 	find . -type f -name '*.pyc' -exec rm -f {} +
 	find . -type f -name '*.pyo' -exec rm -f {} +
 	find . -type f -name '*~' -exec rm -f {} +
 	find . -type f -name '__pycache__' -exec rm -fr {} +
 
-clean-test:
+clean-test:		## remove test and coverage artifacts
 	@echo "Cleaning tests artifacts..."
 	rm -fr .tox/
 	rm -fr .pytest_cache/
@@ -116,22 +90,27 @@ clean-test:
 	rm -fr "$(MAGPIE_ROOT)/coverage/"
 
 .PHONY: lint
-lint: install-dev
-	@echo "Checking code style with flake8..."
+lint: install-dev	## check PEP8 code style
+	@echo "Checking PEP8 code style problems..."
 	@bash -c '$(CONDA_CMD) flake8'
 
+.PHONY: lint-fix
+lint-fix: install-dev	## automatically fix PEP8 code style problems
+	@echo "Fixing PEP8 code style problems..."
+	@bash -c '$(CONDA_CMD) autopep8 -i -r $(MAGPIE_ROOT) && docformatter -i -r $(MAGPIE_ROOT)'
+
 .PHONY: test
-test: install-dev install
+test: install-dev install			## run tests quickly with the default Python
 	@echo "Running tests..."
 	bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(MAGPIE_ROOT)/tests/results.xml"'
 
 .PHONY: test-local
-test-local: install-dev install
+test-local: install-dev install		## run only local tests with the default Python
 	@echo "Running local tests..."
 	bash -c '$(CONDA_CMD) pytest tests -vv -m "not remote" --junitxml "$(MAGPIE_ROOT)/tests/results.xml"'
 
 .PHONY: test-remote
-test-remote: install-dev install
+test-remote: install-dev install	## run only remote tests with the default Python
 	@echo "Running remote tests..."
 	bash -c '$(CONDA_CMD) pytest tests -vv -m "not local" --junitxml "$(MAGPIE_ROOT)/tests/results.xml"'
 
@@ -147,15 +126,15 @@ $(COVERAGE_FILE):
 	@-echo "Coverage report available: file://$(COVERAGE_HTML)"
 
 .PHONY: coverage
-coverage: install-dev install $(COVERAGE_FILE)
+coverage: install-dev install $(COVERAGE_FILE)	## check code coverage and generate an analysis report
 
 .PHONY: coverage-show
-coverage-show: $(COVERAGE_HTML)
+coverage-show: $(COVERAGE_HTML)		## display HTML webpage of generated coverage report (run coverage if missing)
 	@-test -f "$(COVERAGE_HTML)" || $(MAKE) -C "$(MAGPIE_ROOT)" coverage
 	$(BROWSER) "$(COVERAGE_HTML)"
 
 .PHONY: migrate
-migrate: install conda-env
+migrate: install conda-env	## run postgres database migration with alembic
 	@echo "Running database migration..."
 	@bash -c '$(CONDA_CMD) alembic -c "$(MAGPIE_INI)" upgrade head'
 
@@ -171,23 +150,12 @@ $(DOC_LOCATION):
 	@-echo "Documentation available: file://$(DOC_LOCATION)"
 
 .PHONY: docs
-docs: install-dev clean-docs $(DOC_LOCATION)
+docs: install-dev clean-docs $(DOC_LOCATION)	## generate Sphinx HTML documentation, including API docs
 
 .PHONY: docs-show
-docs-show: $(DOC_LOCATION)
+docs-show: $(DOC_LOCATION)	## display HTML webpage of generated documentation (build docs if missing)
 	@-test -f "$(DOC_LOCATION)" || $(MAKE) -C "$(MAGPIE_ROOT)" docs
-	"$(BROWSER)" "$(DOC_LOCATION)"'
-
-.PHONY: serve-docs
-serve-docs: docs install-dev
-	@echo "Serving docs..."
-	@bash -c '$(CONDA_CMD) watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .'
-
-.PHONY: release
-release: clean install
-	@echo "Creating release..."
-	python setup.py sdist upload
-	python setup.py bdist_wheel upload
+	$(BROWSER) "$(DOC_LOCATION)"
 
 # Bumpversion 'dry' config
 # if 'dry' is specified as target, any bumpversion call using 'BUMP_XARGS' will not apply changes
@@ -197,33 +165,33 @@ ifeq ($(filter dry, $(MAKECMDGOALS)), dry)
 endif
 
 .PHONY: dry
-dry: setup.cfg
+dry: setup.cfg	## run 'bump' target without applying changes (dry-run)
 ifeq ($(findstring bump, $(MAKECMDGOALS)),)
 	$(error Target 'dry' must be combined with a 'bump' target)
 endif
 
 .PHONY: bump
-bump:
+bump:	## bump version using VERSION specified as user input
 	@-echo "Updating package version ..."
 	@[ "${VERSION}" ] || ( echo ">> 'VERSION' is not set"; exit 1 )
 	@-bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/bump2version || pip install bump2version'
 	@-bash -c '$(CONDA_CMD) bump2version $(BUMP_XARGS) --new-version "${VERSION}" patch;'
 
 .PHONY: dist
-dist: clean conda-env
+dist: clean conda-env	## package for distribution
 	@echo "Creating distribution..."
 	@bash -c '$(CONDA_CMD) python setup.py sdist'
 	@bash -c '$(CONDA_CMD) python setup.py bdist_wheel'
 	ls -l dist
 
 .PHONY: install-sys
-install-sys: clean conda-env
+install-sys: clean conda-env	## install system dependencies and required installers/runners
 	@echo "Installing system dependencies..."
 	@bash -c '$(CONDA_CMD) pip install --upgrade pip setuptools'
 	@bash -c '$(CONDA_CMD) pip install gunicorn'
 
 .PHONY: install
-install: install-sys
+install: install-sys	## install the package to the active Python's site-packages
 	@echo "Installing Magpie..."
 	# TODO: remove when merged
 	# --- ensure fix is applied
@@ -233,7 +201,7 @@ install: install-sys
 	@bash -c '$(CONDA_CMD) pip install --upgrade -e "$(MAGPIE_ROOT)" --no-cache'
 
 .PHONY: install-dev
-install-dev: conda-env
+install-dev: conda-env	## install package requirements for development and testing
 	@bash -c '$(CONDA_CMD) pip install -r "$(MAGPIE_ROOT)/requirements-dev.txt"'
 	@echo "Successfully installed dev requirements."
 
@@ -243,44 +211,44 @@ cron:
 	cron
 
 .PHONY: start
-start: install
+start: install	## start magpie instance with gunicorn
 	@echo "Starting Magpie..."
 	@bash -c '$(CONDA_CMD) exec gunicorn -b 0.0.0.0:2001 --paste "$(MAGPIE_INI)" --workers 10 --preload &'
 
 .PHONY: version
-version:
+version:	## display current version
 	@-echo "Mapie version: $(MAGPIE_VERSION)"
 
 ## Docker targets
 
 .PHONY: docker-info
-docker-info:
+docker-info:	## tag version of docker image for build/push
 	@echo "Magpie image will be built, tagged and pushed as:"
 	@echo "$(MAGPIE_DOCKER_TAG)"
 	@echo "MagpieAdapter image will be built, tagged and pushed as:"
 	@echo "$(TWITCHER_DOCKER_TAG)"
 
 .PHONY: docker-build-adapter
-docker-build-adapter:
+docker-build-adapter:	## build only docker image for Magpie application
 	docker build "$(MAGPIE_ROOT)" -t "$(TWITCHER_DOCKER_TAG)" -f Dockerfile.adapter
 
 .PHONY: docker-build-magpie
-docker-build-magpie:
+docker-build-magpie:	## build only docker image of MagpieAdapter for Twitcher
 	docker build "$(MAGPIE_ROOT)" -t "$(MAGPIE_DOCKER_TAG)"
 
 .PHONY: docker-build
-docker-build: docker-build-magpie docker-build-adapter
+docker-build: docker-build-magpie docker-build-adapter	## build docker images for Magpie application and MagpieAdapter for Twitcher
 
 .PHONY: docker-push-adapter
-docker-push-adapter: docker-build-adapter
+docker-push-adapter: docker-build-adapter	## push only built docker image of MagpieAdapter for Twitcher
 	docker push "$(TWITCHER_DOCKER_TAG)"
 
 .PHONY: docker-push-magpie
-docker-push-magpie: docker-build-magpie
+docker-push-magpie: docker-build-magpie		## push only built docker image for Magpie application
 	docker push "$(MAGPIE_DOCKER_TAG)"
 
 .PHONY: docker-push
-docker-push: docker-push-magpie docker-push-adapter
+docker-push: docker-push-magpie docker-push-adapter	 ## push built docker images for Magpie application and MagpieAdapter for Twitcher
 
 ## Conda targets
 
