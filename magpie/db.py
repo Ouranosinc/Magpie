@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from sqlalchemy.orm import scoped_session
-
 from magpie.constants import get_constant
 from magpie.definitions.alembic_definitions import alembic
 from magpie.definitions.sqlalchemy_definitions import (
@@ -76,7 +74,6 @@ def get_tm_session(session_factory, transaction_manager):
           session_factory = get_session_factory(engine)
           with transaction.manager:
               db_session = get_tm_session(session_factory, transaction.manager)
-
     """
     db_session = session_factory()
     register(db_session, transaction_manager=transaction_manager)
@@ -99,7 +96,9 @@ def get_db_session_from_config_ini(config_ini_path, ini_main_section_name="app:m
 
 def run_database_migration(db_session=None):
     # type: (Optional[Session]) -> None
-    """Runs db migration operations with alembic, using db session or a new engine connection."""
+    """
+    Runs db migration operations with alembic, using db session or a new engine connection.
+    """
     ini_file = get_constant("MAGPIE_ALEMBIC_INI_FILE_PATH")
     LOGGER.info("Using file '{}' for migration.".format(ini_file))
     alembic_args = ["-c", ini_file, "upgrade", "heads"]
@@ -186,7 +185,9 @@ def run_database_migration_when_ready(settings, db_session=None):
 
 def set_sqlalchemy_log_level(magpie_log_level):
     # type: (Union[Str, int]) -> SettingsType
-    """Suppresses sqlalchemy logging if not in debug for magpie."""
+    """
+    Suppresses sqlalchemy logging if not in debug for magpie.
+    """
     log_lvl = logging.getLevelName(magpie_log_level) if isinstance(magpie_log_level, int) else magpie_log_level
     sa_settings = {"sqlalchemy.echo": True}
     if log_lvl.upper() != "DEBUG":

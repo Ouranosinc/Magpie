@@ -21,7 +21,6 @@ from magpie.utils import get_magpie_url, get_settings, get_logger, CONTENT_TYPE_
 from requests.cookies import RequestsCookieJar
 from six.moves.urllib.parse import urlparse
 import requests
-import logging
 LOGGER = get_logger("TWITCHER")
 
 
@@ -70,6 +69,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
     def update_request_cookies(self, request):
         """
         Ensure login of the user and update the request cookies if Twitcher is in a special configuration.
+
         Only update if `MAGPIE_COOKIE_NAME` is missing and is retrievable from `access_token` in `Authorization` header.
         Counter-validate the login procedure by calling Magpie's `/session` which should indicated a logged user.
         """

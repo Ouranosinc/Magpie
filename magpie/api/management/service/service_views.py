@@ -21,7 +21,9 @@ from magpie import models
 @s.ServiceTypesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypes_GET_responses)
 @view_config(route_name=s.ServiceTypesAPI.name, request_method="GET")
 def get_service_types_view(request):
-    """List all available service types."""
+    """
+    List all available service types.
+    """
     return ax.valid_http(httpSuccess=HTTPOk, content={u"service_types": list(sorted(SERVICE_TYPE_DICT.keys()))},
                          detail=s.ServiceTypes_GET_OkResponseSchema.description)
 
@@ -29,14 +31,18 @@ def get_service_types_view(request):
 @s.ServiceTypeAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceType_GET_responses)
 @view_config(route_name=s.ServiceTypeAPI.name, request_method="GET")
 def get_services_by_type_view(request):
-    """List all registered services from a specific type."""
+    """
+    List all registered services from a specific type.
+    """
     return get_services_runner(request)
 
 
 @s.ServicesAPI.get(tags=[s.ServicesTag], response_schemas=s.Services_GET_responses)
 @view_config(route_name=s.ServicesAPI.name, request_method="GET")
 def get_services_view(request):
-    """List all registered services."""
+    """
+    List all registered services.
+    """
     return get_services_runner(request)
 
 
@@ -65,7 +71,9 @@ def get_services_runner(request):
                     response_schemas=s.Services_POST_responses)
 @view_config(route_name=s.ServicesAPI.name, request_method="POST")
 def register_service_view(request):
-    """Registers a new service."""
+    """
+    Registers a new service.
+    """
     service_name = ar.get_value_multiformat_post_checked(request, "service_name")
     service_url = ar.get_value_multiformat_post_checked(request, "service_url")
     service_type = ar.get_value_multiformat_post_checked(request, "service_type")
@@ -82,7 +90,9 @@ def register_service_view(request):
                   response_schemas=s.Service_PUT_responses)
 @view_config(route_name=s.ServiceAPI.name, request_method="PUT")
 def update_service_view(request):
-    """Update a service information."""
+    """
+    Update a service information.
+    """
     service = ar.get_service_matchdict_checked(request)
     service_push = asbool(ar.get_multiformat_post(request, "service_push", default=False))
 
@@ -130,7 +140,9 @@ def update_service_view(request):
 @s.ServiceAPI.get(tags=[s.ServicesTag], response_schemas=s.Service_GET_responses)
 @view_config(route_name=s.ServiceAPI.name, request_method="GET")
 def get_service_view(request):
-    """Get a service information."""
+    """
+    Get a service information.
+    """
     service = ar.get_service_matchdict_checked(request)
     service_info = sf.format_service(service, show_private_url=True, show_resources_allowed=True)
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.Service_GET_OkResponseSchema.description,
@@ -141,7 +153,9 @@ def get_service_view(request):
                      response_schemas=s.Service_DELETE_responses)
 @view_config(route_name=s.ServiceAPI.name, request_method="DELETE")
 def unregister_service_view(request):
-    """Unregister a service."""
+    """
+    Unregister a service.
+    """
     service = ar.get_service_matchdict_checked(request)
     service_push = asbool(ar.get_multiformat_delete(request, "service_push", default=False))
     svc_content = sf.format_service(service, show_private_url=True)
@@ -164,7 +178,9 @@ def unregister_service_view(request):
 @s.ServicePermissionsAPI.get(tags=[s.ServicesTag], response_schemas=s.ServicePermissions_GET_responses)
 @view_config(route_name=s.ServicePermissionsAPI.name, request_method='GET')
 def get_service_permissions_view(request):
-    """List all applicable permissions for a service."""
+    """
+    List all applicable permissions for a service.
+    """
     service = ar.get_service_matchdict_checked(request)
     svc_content = sf.format_service(service, show_private_url=True)
     svc_perms = ax.evaluate_call(lambda: [p.value for p in SERVICE_TYPE_DICT[service.type].permissions],
@@ -178,14 +194,18 @@ def get_service_permissions_view(request):
                              response_schemas=s.ServiceResource_DELETE_responses)
 @view_config(route_name=s.ServiceResourceAPI.name, request_method="DELETE")
 def delete_service_resource_view(request):
-    """Unregister a resource."""
+    """
+    Unregister a resource.
+    """
     return delete_resource(request)
 
 
 @s.ServiceResourcesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceResources_GET_responses)
 @view_config(route_name=s.ServiceResourcesAPI.name, request_method="GET")
 def get_service_resources_view(request):
-    """List all resources registered under a service."""
+    """
+    List all resources registered under a service.
+    """
     service = ar.get_service_matchdict_checked(request)
     svc_res_json = sf.format_service_resources(service, db_session=request.db,
                                                show_all_children=True, show_private_url=True)
@@ -197,7 +217,9 @@ def get_service_resources_view(request):
                             response_schemas=s.ServiceResources_POST_responses)
 @view_config(route_name=s.ServiceResourcesAPI.name, request_method="POST")
 def create_service_direct_resource_view(request):
-    """Register a new resource directly under a service."""
+    """
+    Register a new resource directly under a service.
+    """
     service = ar.get_service_matchdict_checked(request)
     resource_name = ar.get_multiformat_post(request, "resource_name")
     resource_display_name = ar.get_multiformat_post(request, "resource_display_name", default=resource_name)
@@ -212,7 +234,9 @@ def create_service_direct_resource_view(request):
 @s.ServiceTypeResourcesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypeResources_GET_responses)
 @view_config(route_name=s.ServiceTypeResourcesAPI.name, request_method="GET")
 def get_service_type_resources_view(request):
-    """List details of resource types supported under a specific service type."""
+    """
+    List details of resource types supported under a specific service type.
+    """
 
     def _get_resource_types_info(res_type_names):
         res_type_classes = [rtc for rtn, rtc in models.RESOURCE_TYPE_DICT.items() if rtn in res_type_names]
@@ -232,7 +256,9 @@ def get_service_type_resources_view(request):
 @s.ServiceTypeResourceTypesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypeResourceTypes_GET_responses)
 @view_config(route_name=s.ServiceTypeResourceTypesAPI.name, request_method="GET")
 def get_service_type_resource_types_view(request):
-    """List all resource types supported under a specific service type."""
+    """
+    List all resource types supported under a specific service type.
+    """
     service_type = ar.get_value_matchdict_checked(request, "service_type")
     ax.verify_param(service_type, paramCompare=SERVICE_TYPE_DICT.keys(), isIn=True, httpError=HTTPNotFound,
                     msgOnFail=s.ServiceTypeResourceTypes_GET_NotFoundResponseSchema.description)

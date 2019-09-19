@@ -2,7 +2,7 @@
 # coding: utf-8
 
 """
-Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations
+Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 """
 
 from magpie.constants import get_constant

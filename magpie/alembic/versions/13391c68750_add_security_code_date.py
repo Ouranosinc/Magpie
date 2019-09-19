@@ -1,9 +1,9 @@
-"""add security_code_date
+"""
+add security_code_date.
 
 Revision ID: 13391c68750
 Revises: 438c27ec1c9
 Create Date: 2015-06-14 21:28:30.672968
-
 """
 from __future__ import unicode_literals
 from alembic import op

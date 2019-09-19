@@ -1,9 +1,9 @@
-"""make password hash field bigger
+"""
+make password hash field bigger.
 
 Revision ID: 46a9c4fb9560
 Revises: 5c84d7260c5
 Create Date: 2011-12-20 17:59:16.961112
-
 """
 from __future__ import unicode_literals
 from alembic import op

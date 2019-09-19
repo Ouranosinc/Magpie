@@ -25,7 +25,9 @@ if TYPE_CHECKING:
 
 def get_all_group_names(db_session):
     # type: (Session) -> List[Str]
-    """Get all existing group names from the database."""
+    """
+    Get all existing group names from the database.
+    """
     group_names = ax.evaluate_call(
         lambda: [grp.group_name for grp in GroupService.all(models.Group, db_session=db_session)],
         httpError=HTTPForbidden, msgOnFail=s.Groups_GET_ForbiddenResponseSchema.description)
@@ -34,7 +36,9 @@ def get_all_group_names(db_session):
 
 def get_group_resources(group, db_session):
     # type: (models.Group, Session) -> JSON
-    """Get formatted JSON body describing all service resources the ``group`` as permissions on."""
+    """
+    Get formatted JSON body describing all service resources the ``group`` as permissions on.
+    """
     json_response = {}
     for svc in list(ResourceService.all(models.Service, db_session=db_session)):
         svc_perms = get_group_service_permissions(group=group, service=svc, db_session=db_session)
@@ -113,6 +117,7 @@ def get_group_resources_permissions_dict(group, db_session, resource_ids=None, r
     # type: (models.Group, Session, Optional[Iterable[int]], Optional[Iterable[Str]]) -> JSON
     """
     Get a dictionary of resources and corresponding permissions that a group has on the resources.
+
     Filter search by ``resource_ids`` and/or ``resource_types`` if specified.
     """
     def get_grp_res_perm(grp, db, res_ids, res_types):
@@ -187,7 +192,9 @@ def delete_group_resource_permission_response(group, resource, permission, db_se
 
 def get_group_services(resources_permissions_dict, db_session):
     # type: (JSON, Session) -> JSON
-    """Nest and regroup the resource permissions under corresponding root service types."""
+    """
+    Nest and regroup the resource permissions under corresponding root service types.
+    """
     grp_svc_dict = {}
     for res_id, perms in resources_permissions_dict.items():
         svc = ResourceService.by_resource_id(resource_id=res_id, db_session=db_session)
@@ -220,7 +227,9 @@ def get_group_services_response(group, db_session):
 
 def get_group_service_permissions(group, service, db_session):
     # type: (models.Group, models.Service, Session) -> List[Permission]
-    """Get all permissions the group has on a specific service."""
+    """
+    Get all permissions the group has on a specific service.
+    """
     def get_grp_svc_perms(grp, svc, db):
         if svc.owner_group_id == grp.id:
             return SERVICE_TYPE_DICT[svc.type].permissions
@@ -254,7 +263,9 @@ def get_group_service_permissions_response(group, service, db_session):
 
 def get_group_service_resources_permissions_dict(group, service, db_session):
     # type: (models.Group, models.Service, Session) -> JSON
-    """Get all permissions the group has on a specific service's children resources."""
+    """
+    Get all permissions the group has on a specific service's children resources.
+    """
     res_id = service.resource_id
     res_under_svc = models.resource_tree_service.from_parent_deeper(parent_id=res_id, db_session=db_session)
     res_ids = [resource.Resource.resource_id for resource in res_under_svc]

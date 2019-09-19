@@ -46,8 +46,8 @@ def check_valid_service_or_resource_permission(permission_name, service_or_resou
 
 def check_valid_service_resource(parent_resource, resource_type, db_session):
     """
-    Checks if a new Resource can be contained under a parent Resource given the requested type and
-    the corresponding Service under which the parent Resource is already assigned.
+    Checks if a new Resource can be contained under a parent Resource given the requested type and the corresponding
+    Service under which the parent Resource is already assigned.
 
     :param parent_resource: Resource under which the new resource of `resource_type` must be placed
     :param resource_type: desired resource type
@@ -94,7 +94,9 @@ def get_resource_path(resource_id, db_session):
 
 def get_service_or_resource_types(service_or_resource):
     # type: (ServiceOrResourceType) -> Tuple[Type[ServiceInterface], Str]
-    """Obtain the `service` or `resource` class and a corresponding ``"service"`` or ``"resource"`` type identifier."""
+    """
+    Obtain the `service` or `resource` class and a corresponding ``"service"`` or ``"resource"`` type identifier.
+    """
     if isinstance(service_or_resource, models.Service):
         svc_res_type_cls = SERVICE_TYPE_DICT[service_or_resource.type]
         svc_res_type_str = u"service"

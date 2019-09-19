@@ -1,9 +1,9 @@
-"""add service as resource
+"""
+add service as resource.
 
 Revision ID: ddb788864221
 Revises: 0974132183ad
 Create Date: 2017-07-21 18:44:53.429481
-
 """
 from alembic import op
 import sqlalchemy as sa

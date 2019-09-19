@@ -1,9 +1,9 @@
-"""add local_user_id
+"""
+add local_user_id.
 
 Revision ID: 57bbf0c387c
 Revises: 13391c68750
 Create Date: 2016-04-02 09:54:09.643644
-
 """
 from __future__ import unicode_literals
 from alembic import op

@@ -1,9 +1,9 @@
-"""alter user
+"""
+alter user.
 
 Revision ID: 0974132183ad
 Revises:
 Create Date: 2017-07-21 18:40:24.918345
-
 """
 from alembic import op
 import sqlalchemy as sa

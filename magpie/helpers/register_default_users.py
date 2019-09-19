@@ -62,8 +62,8 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
 def init_anonymous(db_session, settings=None):
     # type: (Session, Optional[AnySettingsContainer]) -> None
     """
-    Registers in db the user and group matching ``MAGPIE_ANONYMOUS_USER`` and ``MAGPIE_ANONYMOUS_GROUP`` respectively
-    if not defined.
+    Registers in db the user and group matching ``MAGPIE_ANONYMOUS_USER`` and ``MAGPIE_ANONYMOUS_GROUP`` respectively if
+    not defined.
     """
     register_user_with_group(user_name=get_constant("MAGPIE_ANONYMOUS_USER", settings_container=settings),
                              group_name=get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=settings),
@@ -75,8 +75,10 @@ def init_anonymous(db_session, settings=None):
 def init_admin(db_session, settings=None):
     # type: (Session, Optional[AnySettingsContainer]) -> None
     """
-    Registers in db the user and group matching ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_GROUP`` respectively
-    if not defined. Also associates the created admin user with the admin group and give it admin permissions.
+    Registers in db the user and group matching ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_GROUP`` respectively if not
+    defined.
+
+    Also associates the created admin user with the admin group and give it admin permissions.
     """
     admin_usr_name = get_constant("MAGPIE_ADMIN_USER", settings_container=settings)
     admin_grp_name = get_constant("MAGPIE_ADMIN_GROUP", settings_container=settings)
@@ -104,7 +106,9 @@ def init_admin(db_session, settings=None):
 
 def init_users_group(db_session, settings=None):
     # type: (Session, Optional[AnySettingsContainer]) -> None
-    """Registers in db the group matching ``MAGPIE_USERS_GROUP`` if not defined."""
+    """
+    Registers in db the group matching ``MAGPIE_USERS_GROUP`` if not defined.
+    """
     usr_grp_name = get_constant("MAGPIE_USERS_GROUP", settings_container=settings)
     if not GroupService.by_group_name(usr_grp_name, db_session=db_session):
         # noinspection PyArgumentList
@@ -118,10 +122,11 @@ def register_default_users(db_session=None, settings=None):
     # type: (Optional[Session], Optional[AnySettingsContainer]) -> None
     """
     Registers in db every undefined default users and groups matching following variables :
-        - ``MAGPIE_ANONYMOUS_USER``
-        - ``MAGPIE_USERS_GROUP``
-        - ``MAGPIE_ADMIN_GROUP``
-        - ``MAGPIE_ADMIN_USER``
+
+    - ``MAGPIE_ANONYMOUS_USER``
+    - ``MAGPIE_USERS_GROUP``
+    - ``MAGPIE_ADMIN_GROUP``
+    - ``MAGPIE_ADMIN_USER``
     """
     if not isinstance(db_session, Session):
         ini_file_path = get_constant("MAGPIE_INI_FILE_PATH", settings_container=settings)

@@ -1,9 +1,9 @@
-"""create remote sync tables
+"""
+create remote sync tables.
 
 Revision ID: d01af1f2e445
 Revises: c352a98d570e
 Create Date: 2018-09-11 10:56:23.779143
-
 """
 import os
 import sys

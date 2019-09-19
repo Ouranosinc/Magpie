@@ -1,9 +1,9 @@
-"""unified api service
+"""
+unified api service.
 
 Revision ID: 73639c63c4fc
 Revises: d01af1f2e445
 Create Date: 2018-09-27 16:12:02.282830
-
 """
 import os
 import sys

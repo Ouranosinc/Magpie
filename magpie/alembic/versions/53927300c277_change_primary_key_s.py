@@ -1,9 +1,9 @@
-"""change primary key sizes
+"""
+change primary key sizes.
 
 Revision ID: 53927300c277
 Revises: 54d08f9adc8c
 Create Date: 2012-06-05 23:33:17.943844
-
 """
 from __future__ import unicode_literals
 

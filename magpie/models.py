@@ -102,7 +102,9 @@ class RootFactory(object):
 
 
 class Service(Resource):
-    """Resource of `service` type."""
+    """
+    Resource of `service` type.
+    """
 
     __tablename__ = u"services"
 
@@ -128,13 +130,17 @@ class Service(Resource):
 
     @declared_attr
     def type(self):
-        """Identifier matching ``magpie.services.ServiceInterface.service_type``."""
+        """
+        Identifier matching ``magpie.services.ServiceInterface.service_type``.
+        """
         # wps, wms, thredds,...
         return sa.Column(sa.UnicodeText())
 
     @declared_attr
     def sync_type(self):
-        """Identifier matching ``magpie.helpers.SyncServiceInterface.sync_type``."""
+        """
+        Identifier matching ``magpie.helpers.SyncServiceInterface.sync_type``.
+        """
         # project-api, geoserver-api,...
         return sa.Column(sa.UnicodeText(), nullable=True)
 
@@ -261,8 +267,8 @@ class RemoteResourceTreeService(ResourceTreeService):
 
 class RemoteResourceTreeServicePostgresSQL(ResourceTreeServicePostgreSQL):
     """
-    This is necessary, because ResourceTreeServicePostgresSQL.model is the Resource class.
-    If we want to change it for a RemoteResource, we need this class.
+    This is necessary, because ResourceTreeServicePostgresSQL.model is the Resource class. If we want to change it for a
+    RemoteResource, we need this class.
 
     The ResourceTreeService.__init__ call sets the model.
     """

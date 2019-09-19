@@ -6,9 +6,9 @@ import logging
 import random
 import requests
 import string
-import sys
 
 LOGGER = logging.getLogger(__name__)
+
 
 def format_response(response):
     response_json = response.json()
@@ -95,4 +95,3 @@ if __name__ == '__main__':
         with open(filename, "w+") as file:
             file.write(output)
             LOGGER.info("Output results sent to " + filename)
-

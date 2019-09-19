@@ -27,7 +27,9 @@ def get_request_method_content(request):
 
 def get_multiformat_any(request, key, default=None):
     # type: (Request, Str, Optional[Any]) -> Any
-    """Obtains the ``key`` element from the request body using found `Content-Type` header."""
+    """
+    Obtains the ``key`` element from the request body using found `Content-Type` header.
+    """
     msg = "Key '{key}' could not be extracted from '{method}' of type '{type}'" \
           .format(key=repr(key), method=request.method, type=request.content_type)
     if request.content_type == CONTENT_TYPE_JSON:
@@ -151,8 +153,8 @@ def get_service_matchdict_checked(request, service_name_key="service_name"):
 def get_permission_matchdict_checked(request, service_or_resource, permission_name_key="permission_name"):
     # type: (Request, models.Resource, Str) -> Permission
     """
-    Obtains the `permission` specified in the ``request`` path and validates that it is allowed for the
-    specified ``service_or_resource`` which can be a `service` or a children `resource`.
+    Obtains the `permission` specified in the ``request`` path and validates that it is allowed for the specified
+    ``service_or_resource`` which can be a `service` or a children `resource`.
 
     Allowed permissions correspond to the direct `service` permissions or restrained permissions of the `resource`
     under its root `service`.
@@ -174,7 +176,9 @@ def get_value_matchdict_checked(request, key):
 
 def get_query_param(request, case_insensitive_key, default=None):
     # type: (Request, Str, Optional[Any]) -> Any
-    """Retrieves a query string value by name (case insensitive), or returns the default if not present."""
+    """
+    Retrieves a query string value by name (case insensitive), or returns the default if not present.
+    """
     for p in request.params:
         if p.lower() == case_insensitive_key:
             return request.params.get(p)

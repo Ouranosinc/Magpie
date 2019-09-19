@@ -1,10 +1,9 @@
 """
 Store adapters to read data from magpie.
 """
-from magpie.api.exception import verify_param
 from magpie.models import Service as MagpieService
 from magpie.definitions.twitcher_definitions import ServiceStoreInterface, Service, ServiceNotFound
-from magpie.definitions.pyramid_definitions import HTTPOk, asbool, HTTPNotFound
+from magpie.definitions.pyramid_definitions import HTTPOk, asbool
 from magpie.api.schemas import ServicesAPI
 from magpie.utils import get_admin_cookies, get_magpie_url, get_settings, get_logger, CONTENT_TYPE_JSON
 from typing import TYPE_CHECKING
@@ -17,8 +16,11 @@ LOGGER = get_logger("TWITCHER")
 # noinspection PyUnusedLocal
 class MagpieServiceStore(ServiceStoreInterface):
     """
-    Registry for OWS services. Uses magpie to fetch service url and attributes.
+    Registry for OWS services.
+
+    Uses magpie to fetch service url and attributes.
     """
+
     def __init__(self, request):
         # type: (Request) -> None
         super(MagpieServiceStore, self).__init__(request)
@@ -30,13 +32,13 @@ class MagpieServiceStore(ServiceStoreInterface):
 
     def save_service(self, service, overwrite=True, request=None):
         """
-        Magpie store is read-only, use magpie api to add services
+        Magpie store is read-only, use magpie api to add services.
         """
         raise NotImplementedError
 
     def delete_service(self, name, request=None):
         """
-        Magpie store is read-only, use magpie api to delete services
+        Magpie store is read-only, use magpie api to delete services.
         """
         raise NotImplementedError
 
@@ -89,6 +91,6 @@ class MagpieServiceStore(ServiceStoreInterface):
 
     def clear_services(self, request=None):
         """
-        Magpie store is read-only, use magpie api to delete services
+        Magpie store is read-only, use magpie api to delete services.
         """
         raise NotImplementedError

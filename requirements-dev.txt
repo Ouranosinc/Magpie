@@ -6,6 +6,7 @@ docformatter
 flake8
 mock
 nose==1.3.7
+pycodestyle<2.4.0
 pytest
 sphinx>=1.6
 sphinx-autoapi

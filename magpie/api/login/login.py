@@ -74,7 +74,9 @@ def verify_provider(provider_name):
 @s.SigninAPI.post(schema=s.Signin_POST_RequestSchema(), tags=[s.LoginTag], response_schemas=s.Signin_POST_responses)
 @view_config(route_name=s.SigninAPI.name, request_method="POST", permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
-    """Signs in a user session."""
+    """
+    Signs in a user session.
+    """
     provider_name = get_value_multiformat_post_checked(request, "provider_name", default=MAGPIE_DEFAULT_PROVIDER)
     provider_name = provider_name.lower()
     user_name = get_value_multiformat_post_checked(request, "user_name")
@@ -133,7 +135,9 @@ def login_failure(request, reason=None):
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):
-    """Create new user with an External Identity"""
+    """
+    Create new user with an External Identity.
+    """
     internal_user_name = external_id + "_" + provider_name
     internal_user_name = internal_user_name.replace(" ", "_")
     group_name = get_constant("MAGPIE_USERS_GROUP")
@@ -185,7 +189,9 @@ def login_success_external(request, external_user_name, external_id, email, prov
                          response_schemas=s.ProviderSignin_GET_responses)
 @view_config(route_name=s.ProviderSigninAPI.name, permission=NO_PERMISSION_REQUIRED)
 def authomatic_login(request):
-    """Signs in a user session using an external provider."""
+    """
+    Signs in a user session using an external provider.
+    """
 
     provider_name = request.matchdict.get("provider_name", "").lower()
     response = Response()
@@ -255,7 +261,9 @@ def authomatic_login(request):
 @s.SignoutAPI.get(tags=[s.LoginTag], response_schemas=s.Signout_GET_responses)
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
 def sign_out(request):
-    """Signs out the current user session."""
+    """
+    Signs out the current user session.
+    """
     return ax.valid_http(httpSuccess=HTTPOk, httpKWArgs={"headers": forget(request)},
                          detail=s.Signout_GET_OkResponseSchema.description)
 
@@ -263,7 +271,9 @@ def sign_out(request):
 @s.SessionAPI.get(tags=[s.LoginTag], response_schemas=s.Session_GET_responses)
 @view_config(route_name=s.SessionAPI.name, permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
-    """Get information about current session."""
+    """
+    Get information about current session.
+    """
     def _get_session(req):
         authn_policy = req.registry.queryUtility(IAuthenticationPolicy)
         principals = authn_policy.effective_principals(req)
@@ -283,7 +293,9 @@ def get_session(request):
 @s.ProvidersAPI.get(tags=[s.LoginTag], response_schemas=s.Providers_GET_responses)
 @view_config(route_name=s.ProvidersAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
 def get_providers(request):
-    """Get list of login providers."""
+    """
+    Get list of login providers.
+    """
     return ax.valid_http(httpSuccess=HTTPOk, detail=s.Providers_GET_OkResponseSchema.description,
                          content={u"providers": {u"internal": sorted(MAGPIE_INTERNAL_PROVIDERS.values()),
                                                  u"external": sorted(MAGPIE_EXTERNAL_PROVIDERS.values()), }})

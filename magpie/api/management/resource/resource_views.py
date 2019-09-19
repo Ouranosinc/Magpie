@@ -19,7 +19,9 @@ from magpie import models
 @s.ResourcesAPI.get(tags=[s.ResourcesTag], response_schemas=s.Resources_GET_responses)
 @view_config(route_name=s.ResourcesAPI.name, request_method="GET")
 def get_resources_view(request):
-    """List all registered resources."""
+    """
+    List all registered resources.
+    """
     res_json = {}
     for svc_type in SERVICE_TYPE_DICT.keys():
         services = get_services_by_type(svc_type, db_session=request.db)
@@ -34,7 +36,9 @@ def get_resources_view(request):
 @s.ResourceAPI.get(tags=[s.ResourcesTag], response_schemas=s.Resource_GET_responses)
 @view_config(route_name=s.ResourceAPI.name, request_method="GET")
 def get_resource_view(request):
-    """Get resource information."""
+    """
+    Get resource information.
+    """
     resource = ar.get_resource_matchdict_checked(request)
     res_json = ax.evaluate_call(lambda: rf.format_resource_with_children(resource, db_session=request.db),
                                 fallback=lambda: request.db.rollback(), httpError=HTTPInternalServerError,
@@ -48,7 +52,9 @@ def get_resource_view(request):
                      response_schemas=s.Resources_POST_responses)
 @view_config(route_name=s.ResourcesAPI.name, request_method="POST")
 def create_resource_view(request):
-    """Register a new resource."""
+    """
+    Register a new resource.
+    """
     resource_name = ar.get_value_multiformat_post_checked(request, "resource_name")
     resource_display_name = ar.get_multiformat_any(request, "resource_display_name", default=resource_name)
     resource_type = ar.get_value_multiformat_post_checked(request, "resource_type")
@@ -60,7 +66,9 @@ def create_resource_view(request):
                       response_schemas=s.Resources_DELETE_responses)
 @view_config(route_name=s.ResourceAPI.name, request_method="DELETE")
 def delete_resource_view(request):
-    """Unregister a resource."""
+    """
+    Unregister a resource.
+    """
     return ru.delete_resource(request)
 
 
@@ -68,7 +76,9 @@ def delete_resource_view(request):
                    response_schemas=s.Resource_PUT_responses)
 @view_config(route_name=s.ResourceAPI.name, request_method="PUT")
 def update_resource(request):
-    """Update a resource information."""
+    """
+    Update a resource information.
+    """
     resource = ar.get_resource_matchdict_checked(request, "resource_id")
     service_push = asbool(ar.get_multiformat_post(request, "service_push"))
     res_old_name = resource.resource_name
@@ -94,7 +104,9 @@ def update_resource(request):
 @s.ResourcePermissionsAPI.get(tags=[s.ResourcesTag], response_schemas=s.ResourcePermissions_GET_responses)
 @view_config(route_name=s.ResourcePermissionsAPI.name, request_method="GET")
 def get_resource_permissions_view(request):
-    """List all applicable permissions for a resource."""
+    """
+    List all applicable permissions for a resource.
+    """
     resource = ar.get_resource_matchdict_checked(request, "resource_id")
     res_perm = ax.evaluate_call(lambda: ru.get_resource_permissions(resource, db_session=request.db),
                                 fallback=lambda: request.db.rollback(), httpError=HTTPBadRequest,

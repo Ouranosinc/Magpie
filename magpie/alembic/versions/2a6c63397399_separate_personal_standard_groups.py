@@ -1,9 +1,9 @@
-"""separate personal standard groups
+"""
+separate personal standard groups.
 
 Revision ID: 2a6c63397399
 Revises: 9fd4589cc82c
 Create Date: 2018-05-23 17:17:51.205891
-
 """
 import os
 import sys
@@ -64,6 +64,7 @@ def get_users_groups(db_session):
 def upgrade_migrate(old_group, old_user, new_group, new_name, db_session):
     """
     Migrates a user and its personal user-group to a standard group.
+
     Reassigns the user references to link to the new standard group.
     """
 
@@ -99,6 +100,7 @@ def upgrade_migrate(old_group, old_user, new_group, new_name, db_session):
 def downgrade_migrate(old_group, old_user, new_group, old_name, db_session):
     """
     Migrates a standard group back to the original user and corresponding personal user-group.
+
     Reassigns the user references to link to the old personal group.
     """
 
@@ -136,6 +138,7 @@ def downgrade_migrate(old_group, old_user, new_group, old_name, db_session):
 def clean_user_groups(db_session):
     """
     Ensures that each user is the only one pointing to it's corresponding personal user-group.
+
     Invalid user references are dropped.
     """
 

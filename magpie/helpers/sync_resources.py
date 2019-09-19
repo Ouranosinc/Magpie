@@ -29,7 +29,9 @@ for sync_service_class in SYNC_SERVICES_TYPES.values():
 
 
 def merge_local_and_remote_resources(resources_local, service_sync_type, service_id, session):
-    """Main function to sync resources with remote server"""
+    """
+    Main function to sync resources with remote server.
+    """
     if not get_last_sync(service_id, session):
         return resources_local
     remote_resources = _query_remote_resources_in_database(service_id, session=session)
@@ -94,8 +96,8 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
 
 def _sort_resources(resources):
     """
-    Sorts a resource dictionary of the type validated by 'sync_services.is_valid_resource_schema'
-    by using an OrderedDict
+    Sorts a resource dictionary of the type validated by 'sync_services.is_valid_resource_schema' by using an
+    OrderedDict.
 
     :return: None
     """
@@ -139,7 +141,7 @@ def _get_remote_resources(service):
 
 def _delete_records(service_id, session):
     """
-    Delete all RemoteResource based on a Service.resource_id
+    Delete all RemoteResource based on a Service.resource_id.
 
     :param service_id:
     :param session:
@@ -204,7 +206,7 @@ def _update_db(remote_resources, service_id, session):
 
 def _get_resource_children(resource, db_session):
     """
-    Mostly copied from ziggurat_foundations to use RemoteResource instead of Resource
+    Mostly copied from ziggurat_foundations to use RemoteResource instead of Resource.
 
     :param resource:
     :param db_session:
@@ -214,7 +216,8 @@ def _get_resource_children(resource, db_session):
 
     def build_subtree_strut(result):
         """
-        Returns a dictionary in form of
+        Returns a dictionary in form of.
+
         {node:Resource, children:{node_id: RemoteResource}}
         """
         items = list(result)

@@ -22,8 +22,9 @@ def ows_parser_factory(request):
     # type: (Request) -> OWSParser
     """
     Retrieve the appropriate ``OWSRequest`` parser using the ``Content-Type`` header.
-    Default to JSON if no ``Content-Type`` is specified or if it is 'text/plain' but can be parsed as JSON.
-    Otherwise, use the GET/POST WPS parsers.
+
+    Default to JSON if no ``Content-Type`` is specified or if it is 'text/plain' but can be parsed as JSON. Otherwise,
+    use the GET/POST WPS parsers.
     """
     content_type = get_header("Content-Type", request.headers, default=None, split=";,")
     if content_type == CONTENT_TYPE_PLAIN:

@@ -80,7 +80,8 @@ def login_loop(login_url, cookies_file, data=None, message="Login response"):
 
 def request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg="Response"):
     # type: (Str, Optional[Str], Optional[Str], Optional[Str], Optional[Str]) -> Tuple[int, int]
-    """Executes a request using cURL.
+    """
+    Executes a request using cURL.
 
     :returns: tuple of the returned system command code and the response http code
     """
@@ -144,7 +145,8 @@ def phoenix_login_check(cookies):
 
 def phoenix_remove_services():
     # type: () -> bool
-    """Removes the Phoenix services using temporary cookies retrieved from login with defined `PHOENIX` constants.
+    """
+    Removes the Phoenix services using temporary cookies retrieved from login with defined `PHOENIX` constants.
 
     :returns: success status of the procedure.
     """
@@ -244,8 +246,8 @@ def register_services(where,                        # type: Optional[Str]
 
 def sync_services_phoenix(services_object_dict, services_as_dicts=False):
     """
-    Syncs Magpie services by pushing updates to Phoenix.
-    Services must be one of types specified in SERVICES_PHOENIX_ALLOWED.
+    Syncs Magpie services by pushing updates to Phoenix. Services must be one of types specified in
+    SERVICES_PHOENIX_ALLOWED.
 
     :param services_object_dict: dictionary of {svc-name: models.Service} objects containing each service's information
     :param services_as_dicts: alternatively specify `services_object_dict` as dict of {svc-name: {service-info}}
@@ -318,7 +320,9 @@ def magpie_add_register_services_perms(services, statuses, curl_cookies, request
 
 def magpie_update_services_conflict(conflict_services, services_dict, request_cookies):
     # type: (List[Str], ConfigDict, Dict[Str, Str]) -> Dict[Str, int]
-    """Resolve conflicting services by name during registration by updating them only if pointing to different URL."""
+    """
+    Resolve conflicting services by name during registration by updating them only if pointing to different URL.
+    """
     magpie_url = get_magpie_url()
     statuses = dict()
     for svc_name in conflict_services:
@@ -461,7 +465,9 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
 
 def _load_config(path_or_dict, section):
     # type: (Union[Str, ConfigDict], Str) -> ConfigDict
-    """Loads a file path or dictionary as YAML/JSON configuration."""
+    """
+    Loads a file path or dictionary as YAML/JSON configuration.
+    """
     try:
         if isinstance(path_or_dict, six.string_types):
             cfg = yaml.safe_load(open(path_or_dict, 'r'))
@@ -479,8 +485,9 @@ def magpie_register_services_from_config(service_config_file_path, push_to_phoen
     # type: (Str, bool, bool, bool, Optional[Session]) -> None
     """
     Registers Magpie services from a `providers.cfg` file.
-    Uses the provided DB session to directly update service definitions, or uses API request routes as admin.
-    Optionally pushes updates to Phoenix.
+
+    Uses the provided DB session to directly update service definitions, or uses API request routes as admin. Optionally
+    pushes updates to Phoenix.
     """
     services = _load_config(service_config_file_path, "providers")
     if not services:
@@ -522,8 +529,8 @@ def parse_resource_path(permission_config_entry,    # type: ConfigItem
                         magpie_url=None,            # type: Optional[Str]
                         ):                          # type: (...) -> Tuple[Optional[int], bool]
     """
-    Parses the `resource` field of a permission config entry and retrieves the final resource id.
-    Creates missing resources as necessary if they can be automatically resolved.
+    Parses the `resource` field of a permission config entry and retrieves the final resource id. Creates missing
+    resources as necessary if they can be automatically resolved.
 
     If `cookies` are provided, uses requests to a running `Magpie` instance (with `magpie_url`) to apply permission.
     If `session` to db is provided, uses direct db connection instead to apply permission.
@@ -604,12 +611,15 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
                            ):                           # type: (...) -> None
     """
     Applies the single permission entry retrieved from the permission configuration.
-    Assumes that permissions fields where pre-validated.
-    Permission is applied for the user/group/resource using request or db session accordingly to arguments.
+
+    Assumes that permissions fields where pre-validated. Permission is applied for the user/group/resource using request
+    or db session accordingly to arguments.
     """
 
     def _apply_request(_usr_name=None, _grp_name=None):
-        """Apply operation using HTTP request."""
+        """
+        Apply operation using HTTP request.
+        """
         action_oper = None
         if usr_name:
             action_oper = UserResourcePermissionsAPI.path.replace("{user_name}", _usr_name)
@@ -630,7 +640,9 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
         return action_resp
 
     def _apply_session(_usr_name=None, _grp_name=None):
-        """Apply operation using db session."""
+        """
+        Apply operation using db session.
+        """
         from magpie.api.management.user import user_utils as ut
         from magpie.api.management.group import group_utils as gt
 
@@ -649,7 +661,9 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
                 return gt.delete_group_resource_permission_response(grp, res, perm, db_session=cookies_or_session)
 
     def _apply_profile(_usr_name=None, _grp_name=None):
-        """Creates the user/group profile as required."""
+        """
+        Creates the user/group profile as required.
+        """
         usr_data = {"user_name": _usr_name, "password": "12345", "email": "{}@mail.com".format(_usr_name),
                     "group_name": get_constant("MAGPIE_ANONYMOUS_GROUP")}
         if use_request(cookies_or_session):
@@ -670,7 +684,9 @@ def apply_permission_entry(permission_config_entry,     # type: ConfigItem
                 return create_group(_grp_name, cookies_or_session)
 
     def _validate_response(operation, is_create, item_type="Permission"):
-        """Validate action/operation applied."""
+        """
+        Validate action/operation applied.
+        """
         # handle HTTPException raised
         if not islambda(operation):
             raise Exception("invalid use of method")

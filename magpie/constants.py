@@ -64,7 +64,9 @@ except IOError:
 
 
 def _get_default_log_level():
-    """Get default configurations from ini file."""
+    """
+    Get default configurations from ini file.
+    """
     _default_log_lvl = "INFO"
     # noinspection PyBroadException
     try:
@@ -138,7 +140,9 @@ _REGEX_ASCII_ONLY = re.compile(r'\W|^(?=\d)')
 
 
 def get_constant_setting_name(name):
-    """Lower-case name and replace all non-ascii chars by `_`."""
+    """
+    Lower-case name and replace all non-ascii chars by `_`.
+    """
     name = re.sub(_REGEX_ASCII_ONLY, '_', name.strip().lower())
     return name.replace('magpie_', 'magpie.', 1)
 

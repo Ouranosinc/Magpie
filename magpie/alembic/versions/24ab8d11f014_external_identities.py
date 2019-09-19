@@ -1,9 +1,9 @@
-"""add external identity tables
+"""
+add external identity tables.
 
 Revision ID: 24ab8d11f014
 Revises: 2bb1ba973f0b
 Create Date: 2011-11-10 23:18:19.446844
-
 """
 from __future__ import unicode_literals
 from alembic import op      # noqa: F401

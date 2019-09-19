@@ -92,12 +92,26 @@ clean-test:		## remove test and coverage artifacts
 .PHONY: lint
 lint: install-dev	## check PEP8 code style
 	@echo "Checking PEP8 code style problems..."
-	@bash -c '$(CONDA_CMD) flake8'
+	@bash -c '$(CONDA_CMD) \
+		flake8 && \
+		docformatter \
+			--pre-summary-newline \
+			--wrap-descriptions 120 \
+			--wrap-summaries 120 \
+			--make-summary-multi-line \
+			-c -r $(MAGPIE_ROOT)'
 
 .PHONY: lint-fix
 lint-fix: install-dev	## automatically fix PEP8 code style problems
 	@echo "Fixing PEP8 code style problems..."
-	@bash -c '$(CONDA_CMD) autopep8 -i -r $(MAGPIE_ROOT) && docformatter -i -r $(MAGPIE_ROOT)'
+	@bash -c '$(CONDA_CMD) \
+		autopep8 -v -j 0 -i -r $(MAGPIE_ROOT) && \
+		docformatter \
+			--pre-summary-newline \
+			--wrap-descriptions 120 \
+			--wrap-summaries 120 \
+			--make-summary-multi-line \
+			-i -r $(MAGPIE_ROOT)'
 
 .PHONY: test
 test: install-dev install			## run tests quickly with the default Python
