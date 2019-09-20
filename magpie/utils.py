@@ -37,8 +37,8 @@ SUPPORTED_CONTENT_TYPES = [CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PL
 
 def get_logger(name, level=None):
     """
-    Immediately sets the logger level to avoid duplicate log outputs
-    from the `root logger` and `this logger` when `level` is `NOTSET`.
+    Immediately sets the logger level to avoid duplicate log outputs from the `root logger` and `this logger` when
+    `level` is `NOTSET`.
     """
     logger = logging.getLogger(name)
     if logger.level == logging.NOTSET:
@@ -114,8 +114,7 @@ def get_settings_from_config_ini(config_ini_path, ini_main_section_name="app:mag
 
 def get_json(response):
     """
-    Retrieves the 'JSON' body of a response using the property/callable
-    according to the response's implementation.
+    Retrieves the 'JSON' body of a response using the property/callable according to the response's implementation.
     """
     if isinstance(response.json, dict):
         return response.json
@@ -125,8 +124,8 @@ def get_json(response):
 def get_header(header_name, header_container, default=None, split=None):
     # type: (Str, AnyHeadersType, Optional[Str], Optional[Union[Str, List[Str]]]) -> Optional[Str]
     """
-    Retrieves ``header_name`` by fuzzy match (independently of upper/lower-case and underscore/dash)
-    from various framework implementations of ``Headers``.
+    Retrieves ``header_name`` by fuzzy match (independently of upper/lower-case and underscore/dash) from various
+    framework implementations of ``Headers``.
 
     If ``split`` is specified, the matched ``header_name`` is first split with it and the first item is returned.
     This allows to parse complex headers (e.g.: ``text/plain; charset=UTF-8`` to ``text/plain`` with ``split=';'``).
@@ -162,8 +161,8 @@ def get_header(header_name, header_container, default=None, split=None):
 def convert_response(response):
     # type: (AnyResponseType) -> Response
     """
-    Converts a ``response`` implementation (e.g.: ``requests.Response``)
-    to an equivalent ``pyramid.response.Response`` version.
+    Converts a ``response`` implementation (e.g.: ``requests.Response``) to an equivalent ``pyramid.response.Response``
+    version.
     """
     if isinstance(response, Response):
         return response
@@ -217,7 +216,9 @@ def get_settings(container):
 
 def patch_magpie_url(container):
     # type: (AnySettingsContainer) -> SettingsType
-    """Updates potentially missing configuration settings for normal application execution."""
+    """
+    Updates potentially missing configuration settings for normal application execution.
+    """
     settings = get_settings(container)
     try:
         get_magpie_url(settings)
@@ -294,7 +295,9 @@ def log_request_format(request):
 
 
 def log_request(event):
-    """Subscriber event that logs basic details about the incoming requests."""
+    """
+    Subscriber event that logs basic details about the incoming requests.
+    """
     LOGGER.info("Request: [{}]".format(log_request_format(event.request)))
 
 
@@ -302,6 +305,7 @@ def log_request(event):
 def log_exception_tween(handler, registry):
     """
     Tween factory that logs any exception before re-raising it.
+
     Application errors are marked as ``ERROR`` while non critical HTTP errors are marked as ``WARNING``.
     """
     def log_exc(request):
@@ -321,18 +325,23 @@ def log_exception_tween(handler, registry):
 class ExtendedEnumMeta(EnumMeta):
     def names(cls):
         # type: () -> List[Str]
-        """Returns the member names assigned to corresponding enum elements."""
+        """
+        Returns the member names assigned to corresponding enum elements.
+        """
         return list(cls.__members__)
 
     def values(cls):
         # type: () -> List[AnyKey]
-        """Returns the literal values assigned to corresponding enum elements."""
+        """
+        Returns the literal values assigned to corresponding enum elements.
+        """
         return [m.value for m in cls.__members__.values()]
 
     def get(cls, key_or_value, default=None):
         # type: (AnyKey, Optional[Any]) -> Optional[_TC]
         """
         Finds an enum entry by defined name or its value.
+
         Returns the entry directly if it is already a valid enum.
         """
         if key_or_value in cls:

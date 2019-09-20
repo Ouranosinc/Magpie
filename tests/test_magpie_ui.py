@@ -24,6 +24,7 @@ import unittest
 class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.TestCase):
     """
     Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_GROUP`` & ``MAGPIE_ANONYMOUS_USER``).
+
     Use a local Magpie test application.
     """
 
@@ -46,6 +47,7 @@ class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.Test
 class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittest.TestCase):
     """
     Test any operation that require at least ``MAGPIE_ADMIN_GROUP`` AuthN/AuthZ.
+
     Use a local Magpie test application.
     """
 
@@ -118,6 +120,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
 class TestCase_MagpieUI_NoAuth_Remote(ti.Interface_MagpieUI_NoAuth, unittest.TestCase):
     """
     Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_GROUP`` & ``MAGPIE_ANONYMOUS_USER``).
+
     Use an already running remote bird server.
     """
 
@@ -139,6 +142,7 @@ class TestCase_MagpieUI_NoAuth_Remote(ti.Interface_MagpieUI_NoAuth, unittest.Tes
 class TestCase_MagpieUI_AdminAuth_Remote(ti.Interface_MagpieUI_AdminAuth, unittest.TestCase):
     """
     Test any operation that require at least ``MAGPIE_ADMIN_GROUP`` AuthN/AuthZ.
+
     Use an already running remote bird server.
     """
 

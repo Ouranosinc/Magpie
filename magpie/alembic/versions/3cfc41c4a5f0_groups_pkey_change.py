@@ -1,9 +1,9 @@
-"""groups pkey change
+"""
+groups pkey change.
 
 Revision ID: 3cfc41c4a5f0
 Revises: 53927300c277
 Create Date: 2012-06-27 02:15:58.776223
-
 """
 from __future__ import unicode_literals
 # noinspection PyUnresolvedReferences

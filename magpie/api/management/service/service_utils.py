@@ -24,7 +24,9 @@ LOGGER = get_logger(__name__)
 
 def create_service(service_name, service_type, service_url, service_push, db_session):
     # type: (Str, Str, Str, bool, Session) -> HTTPException
-    """Generates an instance to register a new service."""
+    """
+    Generates an instance to register a new service.
+    """
 
     def _add_service_magpie_and_phoenix(svc, svc_push, db):
         db.add(svc)

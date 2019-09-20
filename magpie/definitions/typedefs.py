@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-"""Magpie additional typing definitions."""
+"""
+Magpie additional typing definitions.
+"""
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:

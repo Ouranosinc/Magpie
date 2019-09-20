@@ -35,8 +35,7 @@ if TYPE_CHECKING:
 def create_user(user_name, password, email, group_name, db_session):
     # type: (Str, Optional[Str], Str, Str, Session) -> HTTPException
     """
-    Creates a user if it is permitted and not conflicting.
-    Password must be set to `None` if using external identity.
+    Creates a user if it is permitted and not conflicting. Password must be set to `None` if using external identity.
 
     Created user will be part of group matching ``group_name`` (can be ``MAGPIE_ANONYMOUS_GROUP`` for minimal access).
     Furthermore, the user will also *always* be associated with ``MAGPIE_ANONYMOUS_GROUP`` (if not already explicitly
@@ -144,7 +143,9 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
 
 def get_resource_root_service(resource, request):
     # type: (models.Resource, Request) -> ServiceInterface
-    """Retrieves the service class corresponding to the specified resource's root service-resource."""
+    """
+    Retrieves the service class corresponding to the specified resource's root service-resource.
+    """
     if resource.resource_type == models.Service.resource_type_name:
         res_root_svc = resource
     else:
@@ -154,7 +155,9 @@ def get_resource_root_service(resource, request):
 
 def filter_user_permission(resource_permission_list, user):
     # type: (List[ResourcePermissionType], models.User) -> Iterable[ResourcePermissionType]
-    """Retrieves only direct user permissions on resources amongst a list of user/group resource/service permissions."""
+    """
+    Retrieves only direct user permissions on resources amongst a list of user/group resource/service permissions.
+    """
     def is_user_perm(perm):
         return perm.group is None and perm.type == u"user" and perm.user.user_name == user.user_name
     # noinspection PyTypeChecker
@@ -165,8 +168,8 @@ def get_user_resource_permissions_response(user, resource, request,
                                            inherit_groups_permissions=True, effective_permissions=False):
     # type: (models.User, ServiceOrResourceType, Request, bool, bool) -> HTTPException
     """
-    Retrieves user resource permissions with or without inherited group permissions.
-    Alternatively retrieves the effective user resource permissions, where group permissions are implied as `True`.
+    Retrieves user resource permissions with or without inherited group permissions. Alternatively retrieves the
+    effective user resource permissions, where group permissions are implied as `True`.
 
     :returns: valid HTTP response on successful operations.
     :raises HTTPException: error HTTP response of corresponding situation.

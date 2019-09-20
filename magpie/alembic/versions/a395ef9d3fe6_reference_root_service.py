@@ -1,9 +1,9 @@
-"""reference root service
+"""
+reference root service.
 
 Revision ID: a395ef9d3fe6
 Revises: ae1a3c8c7860
 Create Date: 2018-06-04 11:38:31.296950
-
 """
 import os
 import sys
@@ -46,12 +46,14 @@ class BaseResource(declarative_base()):
         return sa.Column(
             sa.Integer(), primary_key=True, nullable=False, autoincrement=True
         )
+
     @declared_attr
     def parent_id(self):
         return sa.Column(
             sa.Integer(),
             sa.ForeignKey("resources.resource_id", onupdate="CASCADE", ondelete="SET NULL"),
         )
+
     @declared_attr
     def root_service_id(self):
         return sa.Column(

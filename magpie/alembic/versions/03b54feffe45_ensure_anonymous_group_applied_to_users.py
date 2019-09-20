@@ -1,9 +1,9 @@
-"""ensure anonymous group applied to users
+"""
+ensure anonymous group applied to users.
 
 Revision ID: 03b54feffe45
 Revises: 73b872478d87
 Create Date: 2019-08-23 18:08:07.507556
-
 """
 # noinspection PyUnresolvedReferences
 from alembic.context import get_context

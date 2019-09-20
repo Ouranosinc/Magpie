@@ -23,7 +23,9 @@ LOGGER = get_logger(__name__)
 
 def internal_server_error(request):
     # type: (Request) -> HTTPException
-    """Overrides default HTTP"""
+    """
+    Overrides default HTTP.
+    """
     content = get_request_info(request, exception_details=True,
                                default_message=s.InternalServerErrorResponseSchema.description)
     return raise_http(nothrow=True, httpError=HTTPInternalServerError, detail=content[u"detail"], content=content,
@@ -102,7 +104,9 @@ def validate_accept_header_tween(handler, registry):
 
 def get_request_info(request, default_message=u"undefined", exception_details=False):
     # type: (Request, Str, bool) -> JSON
-    """Obtains additional content details about the ``request`` according to available information."""
+    """
+    Obtains additional content details about the ``request`` according to available information.
+    """
     content = {
         u"route_name": str(request.upath_info),
         u"request_url": str(request.url),

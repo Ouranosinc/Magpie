@@ -23,6 +23,7 @@ import mock
 class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.TestCase):
     """
     Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_GROUP`` & ``MAGPIE_ANONYMOUS_USER``).
+
     Use a local Magpie test application.
     """
 
@@ -43,6 +44,7 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
 class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unittest.TestCase):
     """
     Test any operation that require at least ``MAGPIE_USERS_GROUP`` AuthN/AuthZ.
+
     Use a local Magpie test application.
     """
 
@@ -58,6 +60,7 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
 class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unittest.TestCase):
     """
     Test any operation that require at least ``MAGPIE_ADMIN_GROUP`` AuthN/AuthZ.
+
     Use a local Magpie test application.
     """
 
@@ -86,6 +89,7 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
 class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.TestCase):
     """
     Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_GROUP`` & ``MAGPIE_ANONYMOUS_USER``).
+
     Use an already running remote bird server.
     """
 
@@ -106,6 +110,7 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
 class TestCase_MagpieAPI_UsersAuth_Remote(ti.Interface_MagpieAPI_UsersAuth, unittest.TestCase):
     """
     Test any operation that require at least ``MAGPIE_USERS_GROUP`` AuthN/AuthZ.
+
     Use an already running remote bird server.
     """
 
@@ -121,6 +126,7 @@ class TestCase_MagpieAPI_UsersAuth_Remote(ti.Interface_MagpieAPI_UsersAuth, unit
 class TestCase_MagpieAPI_AdminAuth_Remote(ti.Interface_MagpieAPI_AdminAuth, unittest.TestCase):
     """
     Test any operation that require at least ``MAGPIE_ADMIN_GROUP`` AuthN/AuthZ.
+
     Use an already running remote bird server.
     """
 

@@ -21,8 +21,8 @@ def request_api(request,            # type: Request
                 cookies=None,       # type: Optional[CookiesType]
                 ):                  # type: (...) -> Response
     """
-    Use a pyramid sub-request to request Magpie API routes via the UI.
-    This avoids max retries and closed connections when using 1 worker (eg: during tests).
+    Use a pyramid sub-request to request Magpie API routes via the UI. This avoids max retries and closed connections
+    when using 1 worker (eg: during tests).
 
     Some information is retrieved from ``request`` to pass down to the sub-request (eg: cookies).
     If they are passed as argument, corresponding values will override the ones found in ``request``.
@@ -63,7 +63,9 @@ def request_api(request,            # type: Request
 
 
 def error_badrequest(func):
-    """Decorator that encapsulates the operation in a try/except block, and returns HTTP Bad Request on exception."""
+    """
+    Decorator that encapsulates the operation in a try/except block, and returns HTTP Bad Request on exception.
+    """
     def wrap(*args, **kwargs):
         try:
             return func(*args, **kwargs)

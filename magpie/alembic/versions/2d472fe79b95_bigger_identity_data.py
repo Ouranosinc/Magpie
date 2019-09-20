@@ -1,9 +1,9 @@
-"""bigger identity datatypes
+"""
+bigger identity datatypes.
 
 Revision ID: 2d472fe79b95
 Revises: 264049f80948
 Create Date: 2012-02-19 17:24:24.422312
-
 """
 from __future__ import unicode_literals
 from alembic import op

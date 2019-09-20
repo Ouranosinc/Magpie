@@ -34,7 +34,9 @@ class RunOption(object):
         self._enabled = self._default_run()
 
     def __call__(self, *args, **kwargs):
-        """Return (condition, reason) matching ``unittest.skipUnless`` decorator."""
+        """
+        Return (condition, reason) matching ``unittest.skipUnless`` decorator.
+        """
         return self._enabled, self.message
 
     def __str__(self):
@@ -71,8 +73,8 @@ class RunOption(object):
 def RunDecorator(run_option):
     # type: (RunOption) -> Callable
     """
-    Decorates the test/class with ``pytest.mark`` and ``unittest.skipUnless``
-    using the provided test condition represented by the given ``RunOption``.
+    Decorates the test/class with ``pytest.mark`` and ``unittest.skipUnless`` using the provided test condition
+    represented by the given ``RunOption``.
 
     Allows to decorate a function or class such that::
 
@@ -88,7 +90,6 @@ def RunDecorator(run_option):
         @unittest.skipUnless(runner.MAGPIE_TEST_CUSTOM_MARKER, reason="...")
         def test_func():
             <test>
-
     """
     # noinspection PyUnusedLocal
     def wrap(test_func, *args, **kwargs):
@@ -179,6 +180,7 @@ def warn_version(test, functionality, version, skip=True):
     # type: (Base_Magpie_TestCase, Str, Str, bool) -> None
     """
     Verifies that ``test.version`` value meets the minimal ``version`` requirement to execute a test.
+
     (ie: ``test.version >= version``).
     If version condition is not met, a warning is emitted and the test is skipped according to ``skip`` value.
     """
@@ -486,7 +488,10 @@ def check_ui_response_basic_info(response, expected_code=200, expected_type=CONT
 
 
 class null(object):
-    """ Represents a null value to differentiate from None. """
+    """
+    Represents a null value to differentiate from None.
+    """
+
     def __repr__(self):
         return "<null>"
 
@@ -614,8 +619,8 @@ class TestSetup(object):
     @staticmethod
     def check_UpStatus(test_class, method, path, timeout=20):
         """
-        Verifies that the Magpie UI page at very least returned an Ok response with the displayed title.
-        Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
+        Verifies that the Magpie UI page at very least returned an Ok response with the displayed title. Validates that
+        at the bare minimum, no underlying internal error occurred from the API or UI calls.
 
         :returns: response from the rendered page for further tests
         """
@@ -629,8 +634,8 @@ class TestSetup(object):
                          previous_response=None, path=None, method="GET", timeout=20,
                          expected_code=200, expected_type="text/html", expect_errors=False, max_redirect=5):
         """
-        Simulates the submission of a UI form to evaluate the status of the resulting page.
-        Follows any redirect if the submission results into a move to another page request.
+        Simulates the submission of a UI form to evaluate the status of the resulting page. Follows any redirect if the
+        submission results into a move to another page request.
 
         Parameter ``form_match`` can be a form name, an index (from all available forms on page) or an
         iterable of key/values of form fields to search for a match (first match is used if many are available).
@@ -685,6 +690,7 @@ class TestSetup(object):
     def check_Unauthorized(test_class, method, path, content_type=CONTENT_TYPE_JSON):
         """
         Verifies that Magpie returned an Unauthorized response.
+
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
         app_or_url = get_app_or_url(test_class)

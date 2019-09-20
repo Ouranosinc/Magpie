@@ -261,7 +261,7 @@ class ManagementViews(object):
         res_id = None
         removed_perms = None
         new_perms = None
-        
+
         if self.request.method == "POST":
             res_id = self.request.POST.get(u"resource_id")
             is_edit_group_membership = False
@@ -366,7 +366,7 @@ class ManagementViews(object):
 
         if res_id and (removed_perms or new_perms):
             self.update_user_or_group_resources_permissions_dict(res_perms, res_id, removed_perms, new_perms)
-            
+
         sync_types = [s["service_sync_type"] for s in services.values()]
         sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
 
@@ -801,7 +801,7 @@ class ManagementViews(object):
         if "edit" in self.request.POST:
             service_name = self.request.POST.get("service_name")
             return HTTPFound(self.request.route_url("edit_service",
-                             service_name=service_name, cur_svc_type=cur_svc_type))
+                                                    service_name=service_name, cur_svc_type=cur_svc_type))
 
         return add_template_data(self.request,
                                  {u"cur_svc_type": cur_svc_type,

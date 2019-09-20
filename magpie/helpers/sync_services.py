@@ -40,15 +40,16 @@ class SyncServiceInterface(with_metaclass(abc.ABCMeta)):
     @abc.abstractproperty
     def max_depth(self):
         """
-        The max depth at which remote resources are fetched
+        The max depth at which remote resources are fetched.
+
         :return: (int)
         """
 
     @abc.abstractmethod
     def get_resources(self):
         """
-        This is the function actually fetching the data from the remote service.
-        Implement this for every specific service.
+        This is the function actually fetching the data from the remote service. Implement this for every specific
+        service.
 
         :return: The returned dictionary must be validated by 'is_valid_resource_schema'
         """

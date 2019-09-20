@@ -1,9 +1,9 @@
-"""add lower() indexes to pg
+"""
+add lower() indexes to pg.
 
 Revision ID: 439766f6104d
 Revises: 20671b28c538
 Create Date: 2012-07-09 21:33:28.404627
-
 """
 from __future__ import unicode_literals
 

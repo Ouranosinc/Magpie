@@ -1,9 +1,9 @@
-"""change all linking keys from chars to id's
+"""
+change all linking keys from chars to id's.
 
 Revision ID: 20671b28c538
 Revises: 4c10d97c509
 Create Date: 2012-07-07 21:49:21.906150
-
 """
 from __future__ import unicode_literals
 

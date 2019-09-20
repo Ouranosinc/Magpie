@@ -12,7 +12,9 @@ LOGGER = get_logger(__name__)
 # noinspection PyUnusedLocal
 @s.HomepageAPI.get(tags=[s.APITag], api_security=s.SecurityEveryoneAPI, response_schemas=s.Homepage_GET_responses)
 def get_homepage(request):
-    """Magpie API homepage (only if Magpie UI is not enabled)."""
+    """
+    Magpie API homepage (only if Magpie UI is not enabled).
+    """
     body = deepcopy(s.InfoAPI)
     body.update({
         u"title": s.TitleAPI,

@@ -1,9 +1,9 @@
-"""project-api route resource
+"""
+project-api route resource.
 
 Revision ID: c352a98d570e
 Revises: a395ef9d3fe6
 Create Date: 2018-06-20 13:31:55.666240
-
 """
 import os
 import sys

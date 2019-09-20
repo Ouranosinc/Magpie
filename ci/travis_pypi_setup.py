@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Update encrypted deploy password in Travis config file
+"""
+Update encrypted deploy password in Travis config file.
 """
 
 
@@ -22,8 +23,8 @@ TRAVIS_CONFIG_FILE = os.path.join(
 
 
 def load_key(pubkey):
-    """Load public RSA key, with work-around for keys using
-    incorrect header/footer format.
+    """
+    Load public RSA key, with work-around for keys using incorrect header/footer format.
 
     Read more about RSA encryption with cryptography:
     https://cryptography.io/latest/hazmat/primitives/asymmetric/rsa/
@@ -37,10 +38,10 @@ def load_key(pubkey):
 
 
 def encrypt(pubkey, password):
-    """Encrypt password using given RSA public key and encode it with base64.
+    """
+    Encrypt password using given RSA public key and encode it with base64.
 
-    The encrypted password can only be decrypted by someone with the
-    private key (in this case, only Travis).
+    The encrypted password can only be decrypted by someone with the private key (in this case, only Travis).
     """
     key = load_key(pubkey)
     encrypted_password = key.encrypt(password, PKCS1v15())
@@ -48,7 +49,8 @@ def encrypt(pubkey, password):
 
 
 def fetch_public_key(repo):
-    """Download RSA public key Travis will use for this repo.
+    """
+    Download RSA public key Travis will use for this repo.
 
     Travis API docs: http://docs.travis-ci.com/api/#repository-keys
     """
@@ -62,7 +64,8 @@ def fetch_public_key(repo):
 
 
 def prepend_line(file_path, line):
-    """Rewrite a file adding a line to its beginning.
+    """
+    Rewrite a file adding a line to its beginning.
     """
     with open(file_path) as f:
         lines = f.readlines()
@@ -84,8 +87,8 @@ def save_yaml_config(file_path, config):
 
 
 def update_travis_deploy_password(encrypted_password):
-    """Update the deploy section of the .travis.yml file
-    to use the given encrypted password.
+    """
+    Update the deploy section of the .travis.yml file to use the given encrypted password.
     """
     config = load_yaml_config(TRAVIS_CONFIG_FILE)
 

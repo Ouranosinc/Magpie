@@ -38,8 +38,7 @@ class Base_Magpie_TestCase(object):
 @runner.MAGPIE_TEST_API
 class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
     """
-    Interface class for unittests of Magpie API.
-    Test any operation that do not require user AuthN/AuthZ.
+    Interface class for unittests of Magpie API. Test any operation that do not require user AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
@@ -91,8 +90,7 @@ class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
 @runner.MAGPIE_TEST_API
 class Interface_MagpieAPI_UsersAuth(Base_Magpie_TestCase):
     """
-    Interface class for unittests of Magpie API.
-    Test any operation that require at least 'Users' group AuthN/AuthZ.
+    Interface class for unittests of Magpie API. Test any operation that require at least 'Users' group AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
@@ -103,8 +101,8 @@ class Interface_MagpieAPI_UsersAuth(Base_Magpie_TestCase):
 @runner.MAGPIE_TEST_API
 class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     """
-    Interface class for unittests of Magpie API.
-    Test any operation that require at least 'administrator' group AuthN/AuthZ.
+    Interface class for unittests of Magpie API. Test any operation that require at least 'administrator' group
+    AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
@@ -185,6 +183,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def test_unauthorized_forbidden_responses(self):
         """
         Verify that unauthorized (401) and forbidden (403) are properly returned for corresponding operations.
+
         Both variations use the same forbidden view.
         """
         utils.warn_version(self, "check for response (401/403) statuses", "0.9.1", skip=True)
@@ -422,8 +421,8 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 
     def setup_UniquePermissionsForEach_UserGroupServiceResource(self):
         """
-        Setups a new user, a new group, a new service and a new child resource of this service.
-        The only member of the new group is the new user.
+        Setups a new user, a new group, a new service and a new child resource of this service. The only member of the
+        new group is the new user.
 
         For each variation of the created (user/group, service/resource), creates an unique permission.
         The user and group don't have any other permission than the ones above.
@@ -1490,7 +1489,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
         services_list_getcap = [svc for svc in services_list
                                 if "getcapabilities" in svc["permission_names"]
-                                and svc["service_name"] in self.test_services_info]
+                                and svc["service_name"] in self.test_services_info]  # noqa: W503
         path = "/users/{usr}/services".format(usr=anonymous)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
@@ -1589,8 +1588,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
 @runner.MAGPIE_TEST_UI
 class Interface_MagpieUI_NoAuth(Base_Magpie_TestCase):
     """
-    Interface class for unittests of Magpie UI.
-    Test any operation that do not require user AuthN/AuthZ.
+    Interface class for unittests of Magpie UI. Test any operation that do not require user AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
@@ -1658,8 +1656,8 @@ class Interface_MagpieUI_NoAuth(Base_Magpie_TestCase):
 @runner.MAGPIE_TEST_UI
 class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
     """
-    Interface class for unittests of Magpie UI.
-    Test any operation that require at least 'administrator' group AuthN/AuthZ.
+    Interface class for unittests of Magpie UI. Test any operation that require at least 'administrator' group
+    AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """

@@ -25,13 +25,17 @@ class ServiceMeta(type):
     @property
     def resource_types(cls):
         # type: (Type[ServiceInterface]) -> List[models.Resource]
-        """Allowed resources type classes under the service."""
+        """
+        Allowed resources type classes under the service.
+        """
         return list(cls.resource_types_permissions.keys())
 
     @property
     def resource_type_names(cls):
         # type: (Type[ServiceInterface]) -> List[Str]
-        """Allowed resources type names under the service."""
+        """
+        Allowed resources type names under the service.
+        """
         return [r.resource_type_name for r in cls.resource_types]
 
     @property
@@ -41,7 +45,9 @@ class ServiceMeta(type):
 
     def get_resource_permissions(cls, resource_type_name):
         # type: (Type[ServiceInterface], Str) -> List[Permission]
-        """Obtains the allowed permissions of the service's child resource fetched by resource type name."""
+        """
+        Obtains the allowed permissions of the service's child resource fetched by resource type name.
+        """
         for res in cls.resource_types_permissions:  # type: models.Resource
             if res.resource_type_name == resource_type_name:
                 return cls.resource_types_permissions[res]
@@ -68,7 +74,9 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
     @property
     def __acl__(self):
         # type: () -> AccessControlListType
-        """List of access control rules defining (outcome, user/group, permission) combinations."""
+        """
+        List of access control rules defining (outcome, user/group, permission) combinations.
+        """
         raise NotImplementedError
 
     def expand_acl(self, resource, user):
@@ -105,8 +113,8 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
     def effective_permissions(self, resource, user):
         # type: (models.Resource, models.User) -> List[ResourcePermissionType]
         """
-        Recursively rewind the resource tree from the specified resource up to the topmost parent service resource
-        and retrieve permissions along the way that should be applied to children when using resource inheritance.
+        Recursively rewind the resource tree from the specified resource up to the topmost parent service resource and
+        retrieve permissions along the way that should be applied to children when using resource inheritance.
         """
         resource_effective_perms = list()
         while resource is not None:
@@ -490,7 +498,9 @@ for svc in [ServiceAccess, ServiceAPI, ServiceGeoserverWMS, ServiceNCWMS2, Servi
 
 def service_factory(service, request):
     # type: (models.Service, Request) -> ServiceInterface
-    """Retrieve the specific service class from the provided database service entry."""
+    """
+    Retrieve the specific service class from the provided database service entry.
+    """
     ax.verify_param(service, paramCompare=models.Service, ofType=True,
                     httpError=HTTPBadRequest, content={u"service": repr(service)},
                     msgOnFail="Cannot process invalid service object")

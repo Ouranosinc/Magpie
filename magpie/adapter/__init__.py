@@ -18,6 +18,8 @@ LOGGER = get_logger("TWITCHER")
 # noinspection PyProtectedMember
 def debug_cookie_identify(request):
     """
+    Logs debug information about request cookie.
+
     .. WARNING::
 
         This function is intended for debugging purposes only. It reveals sensible configuration information.
@@ -98,7 +100,9 @@ def verify_user(request):
 # taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
 # works in Python 2 & 3
 class _Singleton(type):
-    """ A metaclass that creates a Singleton base class when called. """
+    """
+    A metaclass that creates a Singleton base class when called.
+    """
     _instances = {}
 
     def __call__(cls, *args, **kwargs):

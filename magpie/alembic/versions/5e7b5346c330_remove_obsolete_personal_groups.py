@@ -1,9 +1,9 @@
-"""remove obsolete personal groups
+"""
+remove obsolete personal groups.
 
 Revision ID: 5e7b5346c330
 Revises: 2a6c63397399
 Create Date: 2018-05-29 16:04:20.724597
-
 """
 
 import os

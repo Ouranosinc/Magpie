@@ -1,9 +1,9 @@
-"""initial table layout
+"""
+initial table layout.
 
 Revision ID: 2bb1ba973f0b
 Revises: None
 Create Date: 2011-11-10 22:32:14.464939
-
 """
 from __future__ import unicode_literals
 from alembic import op
