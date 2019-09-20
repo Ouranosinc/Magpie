@@ -1,5 +1,6 @@
 alembic==0.9.6
 bcrypt==3.1.6
+beaker
 colander
 cornice
 cornice_swagger>=0.7.0

@@ -82,6 +82,8 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
             cache_regions['acl'] = {'enabled': False}
         return self._get_acl_cached(self.service.resource_id, self.request.user)
 
+    # noinspection PyUnusedLocal
+    # parameters required to preserve caching of corresponding resource-id/user called
     @cache_region('acl')
     def _get_acl_cached(self, service_id, user):
         """Beaker will cache this method based on the service id and the user.
