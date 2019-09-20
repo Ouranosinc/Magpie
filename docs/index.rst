@@ -12,6 +12,7 @@ Package information
 
    usage
    installation
+   performance
    contributing
    authors
    history
