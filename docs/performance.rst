@@ -14,9 +14,9 @@ While not activated by default, it's possible to cache the access control lists 
 for all services, and give it an expiration timeout::
 
   # example Paste Deploy configuration
-  cache.regions = adapter
+  cache.regions = acl
   cache.type = memory
-  cache.adapter.expire = 5  # seconds
+  cache.acl.expire = 5  # seconds
 
 For a particular request that queries a user's ACL
 for a specific service, the response will be cached for 5 seconds. The consequence of this
