@@ -30,6 +30,7 @@ def includeme(config):
     config.include("cornice")
     config.include("cornice_swagger")
     config.include("pyramid_chameleon")
+    config.include("pyramid_beaker")
     config.include("pyramid_mako")
     config.include("magpie.definitions")
     config.include("magpie.api")

@@ -8,6 +8,7 @@ Features / Changes
 * add an utility script ``create_users`` for quickly creating multiple users from a list of email addresses (#219).
 * add PEP8 auto-fix make target ``lint-fix`` that will correct any PEP8 and docstring problem to expected format.
 * add auto-doc of make target ``help`` message
+* add ACL caching option and documentation (#218)
 
 Unreleased
 ---------------------

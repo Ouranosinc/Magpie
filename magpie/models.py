@@ -86,7 +86,8 @@ class UserResourcePermission(UserResourcePermissionMixin, Base):
 
 
 class User(UserMixin, Base):
-    pass
+    def __str__(self):
+        return "<User: %s, %s>" % (self.id, self.user_name)
 
 
 class ExternalIdentity(ExternalIdentityMixin, Base):
