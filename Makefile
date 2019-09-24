@@ -173,7 +173,7 @@ docs-show: $(DOC_LOCATION)	## display HTML webpage of generated documentation (b
 
 # Bumpversion 'dry' config
 # if 'dry' is specified as target, any bumpversion call using 'BUMP_XARGS' will not apply changes
-BUMP_XARGS ?= --verbose --allow-dirty --tag
+BUMP_XARGS ?= --verbose --allow-dirty
 ifeq ($(filter dry, $(MAKECMDGOALS)), dry)
 	BUMP_XARGS := $(BUMP_XARGS) --dry-run
 endif
