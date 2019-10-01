@@ -7,6 +7,9 @@ Create Date: 2018-06-20 13:31:55.666240
 """
 import os
 import sys
+
+import sqlalchemy as sa
+
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)    # version
 root_dir = os.path.dirname(root_dir)    # alembic
@@ -17,7 +20,6 @@ sys.path.insert(0, root_dir)
 # noinspection PyUnresolvedReferences
 from magpie.definitions.alembic_definitions import get_context, op              # noqa: F401
 from magpie.definitions.sqlalchemy_definitions import PGDialect, sessionmaker   # noqa: F401
-from magpie import models                                                       # noqa: F401
 
 # revision identifiers, used by Alembic.
 revision = 'c352a98d570e'
@@ -27,20 +29,36 @@ depends_on = None
 
 Session = sessionmaker()
 
+services = sa.table(
+    "services",
+    sa.column("resource_id", sa.Integer),
+    sa.column("type", sa.String),
+)
+
+resources = sa.table(
+    "resources",
+    sa.column("resource_id", sa.Integer),
+    sa.column("resource_type", sa.String),
+    sa.column("root_service_id", sa.Integer),
+)
+
 
 def change_project_api_resource_type(new_type_name):
     context = get_context()
     if isinstance(context.connection.engine.dialect, PGDialect):
         # obtain service 'project-api'
         session = Session(bind=op.get_bind())
-        project_api_svc_id = session.query(models.Service.resource_id).filter_by(resource_name='project-api').first()
+        query = sa.select([services.c.resource_id]).where(services.c.type == 'project-api')
+        project_api_svc = session.execute(query).fetchone()
 
         # nothing to edit if it doesn't exist, otherwise change resource types name
-        if project_api_svc_id:
-            columns = models.Resource.resource_type, models.Resource.root_service_id
-            session.query(columns)\
-                .filter(models.Resource.root_service_id == project_api_svc_id)\
-                .update({models.Resource.resource_type: new_type_name})
+        if project_api_svc is not None:
+            stmt = (
+                resources.update()
+                .where(resources.c.root_service_id == project_api_svc.resource_id)
+                .values({"resource_type": new_type_name})
+            )
+            session.execute(stmt)
             session.commit()
 
 
