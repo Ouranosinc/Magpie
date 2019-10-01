@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.6.1 (2019-10-01)
+---------------------
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix migration script for project-api service type
