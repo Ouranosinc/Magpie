@@ -6,6 +6,10 @@ History
 Unreleased
 ---------------------
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix migration script for project-api service type
+
 1.6.0 (2019-09-20)
 ---------------------
 
