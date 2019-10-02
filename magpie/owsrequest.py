@@ -34,7 +34,7 @@ def ows_parser_factory(request):
                 # raises if parsing fails
                 # noinspection PyUnresolvedReferences
                 json.loads(request.body)
-            content_type = CONTENT_TYPE_JSON
+                content_type = CONTENT_TYPE_JSON
         except ValueError:
             pass
 
