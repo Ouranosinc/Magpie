@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import json
+
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import (
     HTTPOk, HTTPClientError, HTTPException, ConfigurationError, Configurator, Registry, Request, Response, truthy
@@ -350,3 +352,13 @@ class ExtendedEnumMeta(EnumMeta):
             if key_or_value == m_key or key_or_value == m_val.value:
                 return m_val
         return default
+
+
+def is_json_body(body):
+    if not body:
+        return False
+    try:
+        json.loads(body)
+    except (ValueError, TypeError):
+        return False
+    return True

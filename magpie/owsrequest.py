@@ -5,52 +5,43 @@ The OWSRequest is based on pywps code:
 * https://github.com/geopython/pywps/blob/master/pywps/app/WPSRequest.py
 """
 
-from magpie.api.exception import raise_http
 from magpie.api.requests import get_multiformat_any
-from magpie.utils import get_logger, get_header, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, CONTENT_TYPE_FORM
-from pyramid.httpexceptions import HTTPMethodNotAllowed
+from magpie.utils import get_logger, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, CONTENT_TYPE_FORM, is_json_body, get_header
 from typing import TYPE_CHECKING
 # noinspection PyUnresolvedReferences
 import lxml.etree
-import json
+
 if TYPE_CHECKING:
-    from requests import Request  # noqa: F401
+    from pyramid.request import Request
 LOGGER = get_logger(__name__)
 
 
 def ows_parser_factory(request):
     # type: (Request) -> OWSParser
     """
-    Retrieve the appropriate ``OWSRequest`` parser using the ``Content-Type`` header.
+    Retrieve the appropriate ``OWSParser`` parser using the ``Content-Type`` header.
 
-    Default to JSON if no ``Content-Type`` is specified or if it is 'text/plain' but can be parsed as JSON. Otherwise,
-    use the GET/POST WPS parsers.
+    If the ``Content-Type`` header is missing or 'text/plain', and the request has a body,
+    try to parse the body as JSON and set the content-type to 'application/json'.
+
+    'application/x-www-form-urlencoded' ``Content-Type`` header is also handled correctly.
+
+    Otherwise, use the GET/POST WPS parsers.
     """
     content_type = get_header("Content-Type", request.headers, default=None, split=";,")
+
     if content_type is None or content_type == CONTENT_TYPE_PLAIN:
-        try:
-            # noinspection PyUnresolvedReferences
-            if request.body:
-                # raises if parsing fails
-                # noinspection PyUnresolvedReferences
-                json.loads(request.body)
-            content_type = CONTENT_TYPE_JSON
-        except ValueError:
-            pass
+        if is_json_body(request.body):
+            # default to json when can be parsed as json
+            request.headers["Content-Type"] = request.content_type = content_type = CONTENT_TYPE_JSON
 
-    if content_type == CONTENT_TYPE_JSON:
-        return JSONParser(request)
-    elif content_type == CONTENT_TYPE_FORM:
-        return FormParser(request)
-    else:
-        if request.method == "GET":
-            return WPSGet(request)
-        elif request.method == "POST":
-            return WPSPost(request)
+    if content_type in (CONTENT_TYPE_JSON, CONTENT_TYPE_FORM):
+        return MultiFormatParser(request)
 
-    # method not supported, raise using the specified content type header
-    raise_http(httpError=HTTPMethodNotAllowed, contentType=content_type,
-               detail="Method not implemented by Magpie OWSParser.")
+    if request.body:
+        return WPSPost(request)
+
+    return WPSGet(request)
 
 
 class OWSParser(object):
@@ -69,16 +60,17 @@ class OWSParser(object):
 
 
 class WPSGet(OWSParser):
+    """Basically a case-insensitive query string parser"""
+
+    def __init__(self, request):
+        super(WPSGet, self).__init__(request)
+        self.all_params = self._request_params()
 
     def _request_params(self):
         new_params = {}
         for param in self.request.params:
             new_params[param.lower()] = self.request.params[param].lower()
         return new_params
-
-    def __init__(self, request):
-        super(WPSGet, self).__init__(request)
-        self.all_params = self._request_params()
 
     def _get_param_value(self, param):
         if param in self.all_params:
@@ -114,11 +106,6 @@ class WPSPost(OWSParser):
             return None
 
 
-class JSONParser(OWSParser):
-    def _get_param_value(self, param):
-        return get_multiformat_any(self.request, param, None)
-
-
-class FormParser(OWSParser):
+class MultiFormatParser(OWSParser):
     def _get_param_value(self, param):
         return get_multiformat_any(self.request, param, None)
