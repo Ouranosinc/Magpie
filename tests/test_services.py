@@ -9,6 +9,7 @@ Tests for the services implementations magpie.
 """
 import json
 
+import six
 from pyramid.testing import DummyRequest
 
 from magpie import owsrequest
@@ -23,7 +24,7 @@ def make_ows_parser(method='GET', content_type=None, params=None, body=''):
     request.content_type = content_type
     if content_type:
         request.headers["Content-Type"] = content_type
-    request.body = bytes(body, encoding='utf8')
+    request.body = six.ensure_binary(body, encoding='utf8')
 
     try:
         if body:
