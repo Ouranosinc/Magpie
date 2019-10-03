@@ -30,7 +30,7 @@ def make_ows_parser(method='GET', content_type=None, params=None, body=''):
         if body:
             # set missing DummyRequest.json attribute
             request.json = json.loads(body)
-    except ValueError:
+    except (TypeError, ValueError):
         pass
 
     if params is None:
