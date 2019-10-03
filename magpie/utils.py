@@ -359,6 +359,6 @@ def is_json_body(body):
         return False
     try:
         json.loads(body)
-    except ValueError:
+    except (ValueError, TypeError):
         return False
     return True
