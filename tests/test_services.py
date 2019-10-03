@@ -24,7 +24,7 @@ def make_ows_parser(method='GET', content_type=None, params=None, body=''):
     request.content_type = content_type
     if content_type:
         request.headers["Content-Type"] = content_type
-    request.body = six.ensure_binary(body, encoding='utf8')
+    request.body = body
 
     try:
         if body:
@@ -54,7 +54,7 @@ class TestServices(unittest.TestCase):
         assert isinstance(parser, owsrequest.WPSGet)
         assert parser.params["test"] == "something"
 
-        body = '<?xml version="1.0" encoding="UTF-8"?><Execute/>'
+        body = six.ensure_binary('<?xml version="1.0" encoding="UTF-8"?><Execute/>')
         parser = make_ows_parser(method="POST", content_type=None, params=None, body=body)
         assert isinstance(parser, owsrequest.WPSPost)
 
