@@ -19,10 +19,14 @@ LOGGER = get_logger(__name__)
 def ows_parser_factory(request):
     # type: (Request) -> OWSParser
     """
-    Retrieve the appropriate ``OWSRequest`` parser using the ``Content-Type`` header.
+    Retrieve the appropriate ``OWSParser`` parser using the ``Content-Type`` header.
 
-    Default to JSON if no ``Content-Type`` is specified or if it is 'text/plain' but can be parsed as JSON. Otherwise,
-    use the GET/POST WPS parsers.
+    If the ``Content-Type`` header is missing or 'text/plain', and the request has a body,
+    try to parse the body as JSON and set the content-type to 'application/json'.
+
+    'application/x-www-form-urlencoded' ``Content-Type`` header is also handled correctly.
+
+    Otherwise, use the GET/POST WPS parsers.
     """
     content_type = request.headers.get("Content-Type", None)
 
