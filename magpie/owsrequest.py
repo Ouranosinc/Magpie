@@ -5,14 +5,12 @@ The OWSRequest is based on pywps code:
 * https://github.com/geopython/pywps/blob/master/pywps/app/WPSRequest.py
 """
 
-from magpie.api.exception import raise_http
 from magpie.api.requests import get_multiformat_any
-from magpie.utils import get_logger, get_header, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, CONTENT_TYPE_FORM
-from pyramid.httpexceptions import HTTPMethodNotAllowed
+from magpie.utils import get_logger, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, CONTENT_TYPE_FORM, is_json_body
 from typing import TYPE_CHECKING
 # noinspection PyUnresolvedReferences
 import lxml.etree
-import json
+
 if TYPE_CHECKING:
     from pyramid.request import Request
 LOGGER = get_logger(__name__)
@@ -27,15 +25,6 @@ def ows_parser_factory(request):
     use the GET/POST WPS parsers.
     """
     content_type = request.headers.get("Content-Type", None)
-
-    def is_json_body(body):
-        if not body:
-            return False
-        try:
-            json.loads(body)
-        except ValueError:
-            return False
-        return True
 
     if content_type is None or content_type == CONTENT_TYPE_PLAIN:
         if is_json_body(request.body):
