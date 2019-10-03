@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import lxml.etree
 import json
 if TYPE_CHECKING:
-    from requests import Request  # noqa: F401
+    from pyramid.request import Request
 LOGGER = get_logger(__name__)
 
 
@@ -26,31 +26,29 @@ def ows_parser_factory(request):
     Default to JSON if no ``Content-Type`` is specified or if it is 'text/plain' but can be parsed as JSON. Otherwise,
     use the GET/POST WPS parsers.
     """
-    content_type = get_header("Content-Type", request.headers, default=None, split=";,")
-    if content_type is None or content_type == CONTENT_TYPE_PLAIN:
+    content_type = request.headers.get("Content-Type", None)
+
+    def is_json_body(body):
+        if not body:
+            return False
         try:
-            # noinspection PyUnresolvedReferences
-            if request.body:
-                # raises if parsing fails
-                # noinspection PyUnresolvedReferences
-                json.loads(request.body)
-                content_type = CONTENT_TYPE_JSON
+            json.loads(body)
         except ValueError:
-            pass
+            return False
+        return True
 
-    if content_type == CONTENT_TYPE_JSON:
-        return JSONParser(request)
-    elif content_type == CONTENT_TYPE_FORM:
-        return FormParser(request)
-    else:
-        if request.method == "GET":
-            return WPSGet(request)
-        elif request.method == "POST":
-            return WPSPost(request)
+    if content_type is None or content_type == CONTENT_TYPE_PLAIN:
+        if is_json_body(request.body):
+            # default to json when can be parsed as json
+            request.content_type = content_type = CONTENT_TYPE_JSON
 
-    # method not supported, raise using the specified content type header
-    raise_http(httpError=HTTPMethodNotAllowed, contentType=content_type,
-               detail="Method not implemented by Magpie OWSParser.")
+    if content_type in (CONTENT_TYPE_JSON, CONTENT_TYPE_FORM):
+        return MultiFormatParser(request)
+
+    if request.body:
+        return WPSPost(request)
+
+    return WPSGet(request)
 
 
 class OWSParser(object):
@@ -69,16 +67,17 @@ class OWSParser(object):
 
 
 class WPSGet(OWSParser):
+    """Basically a case-insensitive query string parser"""
+
+    def __init__(self, request):
+        super(WPSGet, self).__init__(request)
+        self.all_params = self._request_params()
 
     def _request_params(self):
         new_params = {}
         for param in self.request.params:
             new_params[param.lower()] = self.request.params[param].lower()
         return new_params
-
-    def __init__(self, request):
-        super(WPSGet, self).__init__(request)
-        self.all_params = self._request_params()
 
     def _get_param_value(self, param):
         if param in self.all_params:
@@ -114,11 +113,6 @@ class WPSPost(OWSParser):
             return None
 
 
-class JSONParser(OWSParser):
-    def _get_param_value(self, param):
-        return get_multiformat_any(self.request, param, None)
-
-
-class FormParser(OWSParser):
+class MultiFormatParser(OWSParser):
     def _get_param_value(self, param):
         return get_multiformat_any(self.request, param, None)
