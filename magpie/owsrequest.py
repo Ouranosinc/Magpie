@@ -33,7 +33,7 @@ def ows_parser_factory(request):
     if content_type is None or content_type == CONTENT_TYPE_PLAIN:
         if is_json_body(request.body):
             # default to json when can be parsed as json
-            request.content_type = content_type = CONTENT_TYPE_JSON
+            request.headers["Content-Type"] = request.content_type = content_type = CONTENT_TYPE_JSON
 
     if content_type in (CONTENT_TYPE_JSON, CONTENT_TYPE_FORM):
         return MultiFormatParser(request)
