@@ -6,6 +6,13 @@ History
 Unreleased
 ---------------------
 
+1.6.2 (2019-10-04)
+---------------------
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix a bug in ows_parser_factory that caused query parameters for wps services to be case sensitive
+
 1.6.1 (2019-10-01)
 ---------------------
 
