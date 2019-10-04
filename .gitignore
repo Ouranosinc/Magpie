@@ -4,6 +4,7 @@ __pycache__/
 .idea/
 .eggs/
 .pytest_cache/
+docker-compose.yml
 coverage.xml
 build/
 coverage/
