@@ -8,7 +8,7 @@ Unreleased
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* fix the alembic database version number in the /version route
+* fix the alembic database version number in the /version route (#165)
 
 1.6.2 (2019-10-04)
 ---------------------
