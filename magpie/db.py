@@ -114,7 +114,7 @@ def run_database_migration(db_session=None):
 
 def get_database_revision(db_session):
     # type: (Session) -> Str
-    s = select(["version_num"], from_obj="alembic_version")
+    s = "SELECT version_num FROM alembic_version"
     result = db_session.execute(s).fetchone()
     return result["version_num"]
 
