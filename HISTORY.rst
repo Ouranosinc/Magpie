@@ -6,6 +6,10 @@ History
 Unreleased
 ---------------------
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix the alembic database version number in the /version route
+
 1.6.2 (2019-10-04)
 ---------------------
 
