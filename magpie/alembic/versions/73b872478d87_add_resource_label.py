@@ -1,5 +1,5 @@
 """
-empty message.
+add resource_display_name column
 
 Revision ID: 73b872478d87
 Revises: d01af1f2e445

@@ -16,8 +16,8 @@ sys.path.insert(0, root_dir)
 
 # noinspection PyUnresolvedReferences
 from alembic.context import get_context                                                 # noqa: F401
+import sqlalchemy as sa                                                                 # noqa: F401
 from alembic import op                                                                  # noqa: F401
-from magpie.api.management.resource.resource_utils import get_resource_root_service     # noqa: F401
 from magpie.definitions.sqlalchemy_definitions import (                                 # noqa: F401
     PGDialect, sessionmaker, sa, declarative_base, declared_attr
 )
@@ -30,35 +30,12 @@ depends_on = None
 
 Session = sessionmaker()
 
-
-class BaseResource(declarative_base()):
-    """
-    Minimal Resource type definition without other dependencies in order to update entries.
-
-    Using :class:`magpie.models.Resource` results in errors due to *future* fields in migration history.
-    """
-    @declared_attr
-    def __tablename__(self):
-        return "resources"
-
-    @declared_attr
-    def resource_id(self):
-        return sa.Column(
-            sa.Integer(), primary_key=True, nullable=False, autoincrement=True
-        )
-
-    @declared_attr
-    def parent_id(self):
-        return sa.Column(
-            sa.Integer(),
-            sa.ForeignKey("resources.resource_id", onupdate="CASCADE", ondelete="SET NULL"),
-        )
-
-    @declared_attr
-    def root_service_id(self):
-        return sa.Column(
-            sa.Integer,
-            sa.ForeignKey("services.resource_id", onupdate="CASCADE", ondelete="SET NULL"), index=True)
+resources = sa.table(
+    "resources", 
+    sa.column("root_service_id", sa.Integer), 
+    sa.column("resource_id", sa.Integer), 
+    sa.column("parent_id", sa.Integer)
+)
 
 
 def upgrade():
@@ -74,13 +51,22 @@ def upgrade():
         op.add_column('resources', sa.Column('root_service_id', sa.Integer(), nullable=True))
 
         # add existing resource references to their root service, loop through reference tree chain
-        all_resources = session.query(BaseResource)
-        for resource in all_resources:
-            # same resource is returned if it is directly the service
-            # otherwise, the resource chain is resolved to the top service
-            service_resource = get_resource_root_service(resource, session)
-            if service_resource.resource_id != resource.resource_id:
-                resource.root_service_id = service_resource.resource_id
+        query = session.execute(sa.select([resources.c.resource_id, resources.c.parent_id]))
+
+        for resource_id, parent_id in query:
+            root_resource_id = resource_id
+            while parent_id is not None:
+                parent_resource = session.execute(
+                    sa.select([resources.c.resource_id, resources.c.parent_id])
+                    .where(resources.c.resource_id == parent_id)
+                ).fetchone()
+                root_resource_id, parent_id = parent_resource
+
+            session.execute(
+                resources.update().where(resources.c.resource_id == resource_id).
+                values(root_service_id=root_resource_id)
+            )
+
         session.commit()
 
 

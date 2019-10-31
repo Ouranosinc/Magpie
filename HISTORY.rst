@@ -9,6 +9,7 @@ Unreleased
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix the alembic database version number in the /version route (#165)
+* fix failing migration step due to missing ``root_service_id`` column in database at that time and version.
 
 1.6.2 (2019-10-04)
 ---------------------
