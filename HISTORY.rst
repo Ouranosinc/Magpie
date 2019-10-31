@@ -6,6 +6,11 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+- add ``CONFIGURATION.rst`` file that details all configuration settings that are employed by ``Magpie``.
+- add specific exception classes for `register` sub-package operations.
+
 1.6.3 (2019-10-31)
 ---------------------
 

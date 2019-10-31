@@ -90,6 +90,25 @@ At the command line::
     pip install magpie
 
 
+Configuration
+=============
+
+| Multiple configuration options exist for ``Magpie`` application.
+| Please refer to `<CONFIGURATION.rst>`_ for details.
+
+Change History
+==============
+
+Addressed features, changes and bug fixes per version tag are available in `<HISTORY.rst>`_.
+
+Helpers
+==============
+
+Multiple CLI *helpers* are provided in `<magpie/helpers>`_. These consist mostly of setup operation scripts that are
+automatically executed during ``Magpie`` startup. Additional common functions are also provided such as registering
+service providers from a configuration file or creating basic user accounts. Please refer to their corresponding usage
+by calling them with ``--help`` argument for more details.
+
 Docker Images
 =============
 
