@@ -129,7 +129,7 @@ def phoenix_update_services(services_dict):
         print_log("Could not remove services, aborting register sync services to Phoenix", logger=LOGGER)
         return False
     if not phoenix_register_services(services_dict):
-        print_log("Failed services registration from Magpie to Phoenix\n" +
+        print_log("Failed services registration from Magpie to Phoenix\n"
                   "[warning: services could have been removed but could not be re-added]", logger=LOGGER)
         return False
     return True

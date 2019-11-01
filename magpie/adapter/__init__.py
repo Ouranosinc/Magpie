@@ -25,8 +25,8 @@ def debug_cookie_identify(request):
 
         This function is intended for debugging purposes only. It reveals sensible configuration information.
 
-    Re-implements basic functionality of :function:`pyramid.AuthTktAuthenticationPolicy.cookie.identify` called via
-    :function:`request.unauthenticated_userid` within :function:`get_user` to provide additional logging.
+    Re-implements basic functionality of :func:`pyramid.AuthTktAuthenticationPolicy.cookie.identify` called via
+    :func:`request.unauthenticated_userid` within :func:`get_user` to provide additional logging.
 
     .. seealso::
         - :class:`pyramid.authentication.AuthTktCookieHelper`

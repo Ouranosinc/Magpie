@@ -1,10 +1,16 @@
 """
-|openid| Providers
+ESGF OpenID Providers
 ----------------------------------
+
 Providers which implement the |openid|_ protocol based on the
 `python-openid`_ library.
+
 .. warning::
     This providers are dependent on the |python-openid|_ package.
+
+.. _openid: https://openid.net/
+.. _python-openid: https://github.com/openid/python-openid
+
 """
 
 from magpie.utils import get_logger
