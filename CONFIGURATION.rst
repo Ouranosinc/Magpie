@@ -168,3 +168,68 @@ MAGPIE_DEFAULT_PROVIDER = "ziggurat"
 # above this length is considered a token,
 # refuse longer username creation
 MAGPIE_USER_NAME_MAX_LENGTH = 64
+
+External Providers
+----------------------
+
+In order to perform authentication in ``Magpie``, multiple external providers are supported. By default, the 'local'
+provider is ``ziggurat`` which corresponds to the package used to manage users, groups, permissions, etc. internally.
+Supported external providers are presented in the table below, although more could be added later on. 
+
+Each as different configuration parameters as defined in `<magpie/security.py>`_ and use various protocols amongst
+``OpenID``, ``ESGF``-flavored ``OpenID`` and ``OAuth2``. Further external providers can be defined using this module's
+dictionary configuration style following parameter specification of `Authomatic`_ package used for managing this
+authentication procedure.
+
++----------------------------------------------------+-----------------------------------------------------------------------+
+| Category                                           | Provider                                                              |
++====================================================+=======================================================================+
+| Open Identity (``OpenID``)                         | `OpenID`_                                                             |
++----------------------------------------------------+-----------------------------------------------------------------------+
+| Earth System Grid Federation (`ESGF`_) :sup:`(1)`  | German Climate Computing Centre (`DKRZ`_)                             |
+|                                                    +-----------------------------------------------------------------------+
+|                                                    | French Research Institute for Environment Science (`IPSL`_)           |
+|                                                    +-----------------------------------------------------------------------+
+|                                                    | British Centre for Environmental Data Analysis (`CEDA`_) :sup:`(2)`   |
+|                                                    +-----------------------------------------------------------------------+
+|                                                    | US Lawrence Livermore National Laboratory (`LLNL`_) :sup:`(3)`        |
+|                                                    +-----------------------------------------------------------------------+
+|                                                    | Swedish Meteorological and Hydrological Institute (`SMHI`_)           |
++----------------------------------------------------+-----------------------------------------------------------------------+
+| ``OAuth2``                                         | `GitHub`_ Authentication                                              |
+|                                                    +-----------------------------------------------------------------------+
+|                                                    | `WSO2`_ Open Source Identity Server                                   |
++----------------------------------------------------+-----------------------------------------------------------------------+
+
+| :sup:`(1)` extended variant of ``OpenID``
+| :sup:`(2)` formerly identified as British Atmospheric Data Centre (`BADC`_)
+| :sup:`(3)` formerly identified as Program for Climate Model Diagnosis & Intercomparison (`PCMDI`_)
+
+| **Note:**
+| Please note that due to the constantly changing nature of multiple of these external providers (APIs and moved 
+  Websites), rarely used authentication bridges by the developers could break without prior notice. If this is the
+  case and you use one of the broken connectors, summit a new `issue <MagpieIssue>`_.
+
+.. _Authomatic: https://authomatic.github.io/authomatic/
+.. _OpenID: https://openid.net/
+.. _ESGF: https://esgf.llnl.gov/
+.. _DKRZ: https://esgf-data.dkrz.de
+.. _IPSL: https://www.ipsl.fr/
+.. _BADC: http://data.ceda.ac.uk/badc
+.. _CEDA: https://esgf-index1.ceda.ac.uk
+.. _LLNL: https://www.llnl.gov/
+.. _PCMDI: https://pcmdi.llnl.gov/?esgcet/home
+.. _SMHI: https://www.smhi.se
+.. _GitHub: https://developer.github.com/v3/#authentication
+.. _WSO2: https://wso2.com/
+.. _MagpieIssues: https://github.com/Ouranosinc/Magpie/issues/new
+
+GitHub Settings
+~~~~~~~~~~~~~~~~~
+
+
+
+WSO2 Settings
+~~~~~~~~~~~~~~~~~
+
+
