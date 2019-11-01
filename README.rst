@@ -71,23 +71,32 @@ Documentation
 
 The REST API documentation is auto-generated and served under ``{HOSTNAME}/api/`` using Swagger-UI with tag ``latest``.
 
-More ample details about installation, configuration and usage are provided in `<docs>`_.
+More ample details about installation, configuration and usage are provided in `docs`_.
+
+.. _docs: ./docs
 
 Configuration
 =============
 
 | Multiple configuration options exist for ``Magpie`` application.
-| Please refer to `configuration <docs/configuration.rst>`_ for details.
+| Please refer to `configuration`_ for details.
+
+.. _configuration: ./docs/configuration.rst
+
 
 Usage
 =====
 
-See `usage <docs/usage.rst>`_ for details.
+See `usage`_ for details.
+
+.. _usage: ./docs/usage.rst
 
 Change History
 ==============
 
-Addressed features, changes and bug fixes per version tag are available in `<HISTORY.rst>`_.
+Addressed features, changes and bug fixes per version tag are available in `HISTORY`_.
+
+.. _HISTORY: ./HISTORY.rst
 
 Docker Images
 =============

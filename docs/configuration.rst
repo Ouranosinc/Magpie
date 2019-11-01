@@ -4,12 +4,14 @@ Configuration
 At startup, `Magpie` application will load multiple configuration files to define various behaviours or setup
 operations. These are defined though the following configuration settings presented below.
 
-All generic `Magpie` configuration settings can be defined through either the `magpie.ini <MagpieCfgINI>`_ file
-or environment variables. Values defined in `magpie.ini <MagpieCfgINI>`_ are expected to follow the 
+All generic `Magpie` configuration settings can be defined through either the `magpie.ini`_ file
+or environment variables. Values defined in `magpie.ini`_ are expected to follow the 
 ``magpie.[variable_name]`` format, and corresponding ``MAGPIE_[VARIABLE_NAME]`` format is used for environment 
-variables. Both of these alternatives match the constants defined in `<../magpie/constants.py>`_ and can be used 
+variables. Both of these alternatives match the constants defined in `constants.py`_ and can be used
 interchangeably. Order of resolution will prioritize setting values over environment variables in case of matching
 duplicates values.
+
+.. _constants.py: ../magpie/constants.py
 
 Configuration Files
 -------------------
@@ -18,7 +20,7 @@ magpie.ini
 ~~~~~~~~~~~~~~~~~~~
 
 This is the base configuration file that defines most of `Magpie`'s lower level configuration. A basic example is
-provided in `magpie.ini <MagpieCfgINI>`_ which should allow any user to run the application locally. Furthermore, this file
+provided in `magpie.ini`_ which should allow any user to run the application locally. Furthermore, this file
 is used by default in each tagged Docker image. If you want to provide different configuration, the file should be
 overridden in the Docker image using a volume mount parameter, or by specifying an alternative path through the
 environment variable ``MAGPIE_INI_FILE_PATH``.
@@ -37,7 +39,7 @@ magpie.env
 
 By default, `Magpie` will try to load a ``magpie.env`` file which can define further environment variable definitions
 used to setup the application (see ``MAGPIE_ENV_FILE`` setting further below). An example of expected format and common
-variables for this file is presented in `<../env/magpie.env.example>`_.
+variables for this file is presented in `magpie.env.example`_.
 
 **Important Notes:**
 
@@ -49,19 +51,23 @@ This behaviour is intended to reduce initial configuration and preparation of  `
 When loading variables from the ``.env`` file, any conflicting environment variable will **NOT** be overridden.
 Therefore, only *missing but required* values will be added to the environment to ensure proper setup of `Magpie`.
 
+.. _magpie.env.example: ../env/magpie.env.example
+
 postgres.env
 ~~~~~~~~~~~~~~~~~~~
 
 This file behaves exactly in the same manner as for ``magpie.env`` above, but for specific variables definition
 employed to setup the `postgres` database connection (see ``MAGPIE_POSTGRES_ENV_FILE`` setting below).
-File `<../env/postgres.env.example>`_ and auto-resolution of missing ``postgres.env`` is identical to ``magpie.env``
+File `postgres.env.example`_ and auto-resolution of missing ``postgres.env`` is identical to ``magpie.env``
 case.
+
+.. _postgres.env.example: ../env/postgres.env.example
 
 Settings and Constants
 ----------------------
 
 Environment variables can be used to define all following settings (unless mentioned otherwise with 'constant').
-These values will be used by `Magpie` on startup unless prior definition is found within `magpie.ini <MagpieCfgINI>`_.
+These values will be used by `Magpie` on startup unless prior definition is found within `magpie.ini`_.
 
 Loading Settings
 ~~~~~~~~~~~~~~~~~
@@ -82,13 +88,13 @@ These settings can be used to specify where to find other settings through custo
 - | ``MAGPIE_PROVIDERS_CONFIG_PATH``
   | Path where to find ``providers.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
     be considered as `providers` files and will be loaded sequentially. \
-    Please refer to `providers.cfg <MagpieCfgProvs>`_ for specific format details.
+    Please refer to `providers.cfg`_ for specific format details.
   | (Default: ``${MAGPIE_CONFIG_DIR}/providers.cfg``)
 
 - | ``MAGPIE_PERMISSIONS_CONFIG_PATH``
   | Path where to find ``permissions.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
     be considered as `permissions` files and will be loaded sequentially. \
-    Please refer to `permissions.cfg <MagpieCfgPerms>`_ for specific format details.
+    Please refer to `permissions.cfg`_ for specific format details.
   | (default: ``${MAGPIE_CONFIG_DIR}/permissions.cfg``)
 
 - | ``MAGPIE_INI_FILE_PATH``
@@ -100,7 +106,7 @@ These settings can be used to specify where to find other settings through custo
 - | ``MAGPIE_ALEMBIC_INI_FILE_PATH``
   | Path to ``.ini`` file which defines an ``[alembic]`` section specifying details on how to execute database
     migration operations.
-  | (Default: ``${MAGPIE_INI_FILE_PATH}``) [section defined within `magpie.ini <MagpieCfgINI>`_]
+  | (Default: ``${MAGPIE_INI_FILE_PATH}``) [section defined within `magpie.ini`_]
 
 - | ``MAGPIE_ENV_DIR``
   | Directory path where to look for ``.env`` files. This variable can be useful to load specific test environment
@@ -117,9 +123,9 @@ These settings can be used to specify where to find other settings through custo
   | (Default: ``${MAGPIE_ENV_DIR}/postgres.env``)
 
 
-.. _MagpieCfgINI: ../config/magpie.ini
-.. _MagpieCfgPerms: ../config/permissions.cfg
-.. _MagpieCfgProvs: ../config/permissions.cfg
+.. _magpie.ini: ../config/magpie.ini
+.. _permissions.cfg: ../config/permissions.cfg
+.. _providers.cfg: ../config/permissions.cfg
 
 Application Settings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -166,13 +172,13 @@ Following settings are used to define values that are employed by `Magpie` after
 
 - | ``MAGPIE_LOG_LEVEL``
   | Logging level of operations. `Magpie` will first use the complete logging configuration found in
-    `magpie.ini <MagpieCfgINI>`_ in order to define logging formatters and handler referencing to the ``logger_magpie``
+    `magpie.ini`_ in order to define logging formatters and handler referencing to the ``logger_magpie``
     section. If this configuration fails, this variable is used instead to prepare a basic logger.
   | (Default: ``INFO``)
 
 - | ``MAGPIE_LOG_LEVEL``
   | Specifies whether `Magpie` logging should also enforce printing the details to the console when using *helpers*.
-    Otherwise, the configured logging methodology in `magpie.ini <MagpieCfgINI>`_ is used (which can also define a
+    Otherwise, the configured logging methodology in `magpie.ini`_ is used (which can also define a
     console handler).
   | (Default: ``False``)
 
@@ -348,7 +354,7 @@ In order to perform authentication in `Magpie`, multiple external providers are 
 provider is ``ziggurat`` which corresponds to the package used to manage users, groups, permissions, etc. internally.
 Supported external providers are presented in the table below, although more could be added later on. 
 
-Each as different configuration parameters as defined in `<../magpie/security.py>`_ and use various protocols amongst
+Each as different configuration parameters as defined in `MagpieSecurity`_ and use various protocols amongst
 ``OpenID``, ``ESGF``-flavored ``OpenID`` and ``OAuth2``. Further external providers can be defined using this module's
 dictionary configuration style following parameter specification of `Authomatic`_ package used for managing this
 authentication procedure.
@@ -380,7 +386,8 @@ authentication procedure.
 | **Note:**
 | Please note that due to the constantly changing nature of multiple of these external providers (APIs and moved 
   Websites), rarely used authentication bridges by the developers could break without prior notice. If this is the
-  case and you use one of the broken connectors, summit a new `issue <MagpieIssue>`_.
+  case and you use one of the broken connectors, summit a new
+  `issue <https://github.com/Ouranosinc/Magpie/issues/new>`_.
 
 .. _Authomatic: https://authomatic.github.io/authomatic/
 .. _OpenID: https://openid.net/
@@ -394,19 +401,19 @@ authentication procedure.
 .. _SMHI: https://www.smhi.se
 .. _GitHub: https://developer.github.com/v3/#authentication
 .. _WSO2: https://wso2.com/
-.. _MagpieIssues: https://github.com/Ouranosinc/Magpie/issues/new
+.. _MagpieSecurity: ../magpie/security.py
 
 GitHub Settings
 ~~~~~~~~~~~~~~~~~
 
 To use `GitHub`_ authentication provider, variables ``GITHUB_CLIENT_ID`` and ``GITHUB_CLIENT_SECRET`` must be
 configured. These settings correspond to the values retrieved from following steps described in
-`Creating an OAuth App <GithubOAuthApp>`_.
+`Creating an OAuth App`_.
 
 Furthermore, the callback URL used for configuring the OAuth application on Github must match the running `Magpie`
 instance URL. For this reason, the values of ``MAGPIE_URL``, ``MAGPIE_HOST`` and ``HOSTNAME`` must be considered.
 
-.. _GithubOAuthApp: https://developer.github.com/apps/building-oauth-apps/creating-an-oauth-app/
+.. _Creating an OAuth App: https://developer.github.com/apps/building-oauth-apps/creating-an-oauth-app/
 
 WSO2 Settings
 ~~~~~~~~~~~~~~~~~
@@ -420,7 +427,7 @@ To use `WSO2`_ authentication provider, following variables must be set:
 - ``WSO2_SSL_VERIFY``
 
 To configure your `Magpie` instance as a trusted application for ``WSO2`` (and therefore retrieve values of above
-parameters), please refer to `WSO2 Identity Server Documentation <WSO2IdentityServerDoc>`_.
+parameters), please refer to `WSO2 Identity Server Documentation`_.
 
 
-.. _WSO2IdentityServerDoc: https://docs.wso2.com/display/IS550/WSO2+Identity+Server+Documentation
+.. _WSO2 Identity Server Documentation: https://docs.wso2.com/display/IS550/WSO2+Identity+Server+Documentation
