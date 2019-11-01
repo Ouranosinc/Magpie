@@ -272,7 +272,9 @@ def get_magpie_url(container=None):
 def get_phoenix_url(container=None):
     # type: (Optional[AnySettingsContainer]) -> Str
     hostname = get_constant("PHOENIX_HOST", container, raise_missing=False, raise_not_set=False) or \
-               get_constant("HOSTNAME")
+               get_constant("HOSTNAME", raise_missing=False, raise_not_set=False)
+    if not hostname:
+        raise ConfigurationError("Missing or unset PHOENIX_HOST or HOSTNAME value.")
     phoenix_port = get_constant("PHOENIX_PORT", raise_not_set=False)
     return "https://{0}{1}".format(hostname, ":{}".format(phoenix_port) if phoenix_port else "")
 

@@ -63,8 +63,8 @@ Settings and Constants
 Environment variables can be used to define all following settings (unless mentioned otherwise with 'constant').
 These values will be used by `Magpie` on startup unless prior definition is found within `magpie.ini <MagpieCfgINI>`_.
 
-Base Settings
-~~~~~~~~~~~~~
+Loading Settings
+~~~~~~~~~~~~~~~~~
 
 These settings can be used to specify where to find other settings through custom configuration files.
 
@@ -124,45 +124,165 @@ These settings can be used to specify where to find other settings through custo
 Application Settings
 ~~~~~~~~~~~~~~~~~~~~~
 
-Following settings are used to define values that are employed by `Magpie` after loading the `Base Settings`_.
+Following settings are used to define values that are employed by `Magpie` after loading the `Loading Settings`_.
 
-- | ``
-MAGPIE_URL = os.getenv("MAGPIE_URL", None)
-MAGPIE_SECRET = os.getenv("MAGPIE_SECRET", "seekrit")
-MAGPIE_COOKIE_NAME = os.getenv("MAGPIE_COOKIE_NAME", "auth_tkt")
-MAGPIE_COOKIE_EXPIRE = os.getenv("MAGPIE_COOKIE_EXPIRE", None)
-MAGPIE_ADMIN_USER = os.getenv("MAGPIE_ADMIN_USER", "admin")
-MAGPIE_ADMIN_PASSWORD = os.getenv("MAGPIE_ADMIN_PASSWORD", "qwerty")
-MAGPIE_ADMIN_EMAIL = "{}@mail.com".format(MAGPIE_ADMIN_USER)
-MAGPIE_ADMIN_GROUP = os.getenv("MAGPIE_ADMIN_GROUP", "administrators")
-MAGPIE_ANONYMOUS_USER = os.getenv("MAGPIE_ANONYMOUS_USER", "anonymous")
-MAGPIE_ANONYMOUS_PASSWORD = MAGPIE_ANONYMOUS_USER
-MAGPIE_ANONYMOUS_EMAIL = "{}@mail.com".format(MAGPIE_ANONYMOUS_USER)
-MAGPIE_ANONYMOUS_GROUP = MAGPIE_ANONYMOUS_USER  # left for backward compatibility of migration scripts
-MAGPIE_EDITOR_GROUP = os.getenv("MAGPIE_EDITOR_GROUP", "editors")
-MAGPIE_USERS_GROUP = os.getenv("MAGPIE_USERS_GROUP", "users")
-MAGPIE_CRON_LOG = os.getenv("MAGPIE_CRON_LOG", "~/magpie-cron.log")
-MAGPIE_DB_MIGRATION = asbool(os.getenv("MAGPIE_DB_MIGRATION", True))            # run db migration on startup
-MAGPIE_DB_MIGRATION_ATTEMPTS = int(os.getenv("MAGPIE_DB_MIGRATION_ATTEMPTS", 5))
-MAGPIE_LOG_LEVEL = os.getenv("MAGPIE_LOG_LEVEL", _get_default_log_level())      # log level to apply to the loggers
-MAGPIE_LOG_PRINT = asbool(os.getenv("MAGPIE_LOG_PRINT", False))                 # log also forces print to the console
-MAGPIE_LOG_REQUEST = asbool(os.getenv("MAGPIE_LOG_REQUEST", True))              # log detail of every incoming request
-MAGPIE_LOG_EXCEPTION = asbool(os.getenv("MAGPIE_LOG_EXCEPTION", True))          # log detail of generated exceptions
-MAGPIE_UI_ENABLED = asbool(os.getenv("MAGPIE_UI_ENABLED", True))
+- | ``MAGPIE_URL``
+  | Full hostname URL to use so that `Magpie` can resolve his own running instance location.
+  | **Note:**
+  | If the value is not set, `Magpie` will attempt to retrieve this critical information through other variables such
+    as ``MAGPIE_HOST``, ``MAGPIE_PORT``, ``MAGPIE_SCHEME`` and ``HOSTNAME``. Modifying any of these variables
+    partially is permitted but will force `Magpie` to attempt building the full URL as best as possible from the
+    individual parts. The result of these parts (potential using corresponding defaults) will have the following format:
+    ``"${MAGPIE_SCHEME}//:${MAGPIE_HOST}:${MAGPIE_PORT}"``.
+  | (Default: ``"http://localhost:2001"``)
+
+- | ``MAGPIE_SCHEME``
+  | Protocol scheme URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
+  | (Default: ``"http"``)
+
+- | ``MAGPIE_HOST``
+  | Domain host URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
+  | (Default: ``"localhost"``)
+
+- | ``MAGPIE_PORT``
+  | Port URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
+  | (Default: ``2001``)
+
+- | ``MAGPIE_SECRET``
+  | Port URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
+  | (Default: ``2001``)
+
+- | ``MAGPIE_CRON_LOG``
+  | Path that the ``cron`` operation should use for logging.
+  | (Default: ``"~/magpie-cron.log"``)
+
+- | ``MAGPIE_DB_MIGRATION``
+  | Run database migration on startup in order to bring it up to date using ``alembic``.
+  | (Default: ``True``)
+
+- | ``MAGPIE_DB_MIGRATION_ATTEMPTS``
+  | Number of attempts to re-run database migration on startup in cased it failed (eg: due to connection error).
+  | (Default: ``5``)
+
+- | ``MAGPIE_LOG_LEVEL``
+  | Logging level of operations. `Magpie` will first use the complete logging configuration found in
+    `magpie.ini <MagpieCfgINI>`_ in order to define logging formatters and handler referencing to the ``logger_magpie``
+    section. If this configuration fails, this variable is used instead to prepare a basic logger.
+  | (Default: ``INFO``)
+
+- | ``MAGPIE_LOG_LEVEL``
+  | Specifies whether `Magpie` logging should also enforce printing the details to the console when using *helpers*.
+    Otherwise, the configured logging methodology in `magpie.ini <MagpieCfgINI>`_ is used (which can also define a
+    console handler).
+  | (Default: ``False``)
+
+- | ``MAGPIE_LOG_REQUEST``
+  | Specifies whether `Magpie` should log incoming request details.
+  | **Note:**
+  | This can make `Magpie` quite verbose if large quantity of requests are accomplished.
+  | (Default: ``True``)
+
+- | ``MAGPIE_LOG_EXCEPTION``
+  | Specifies whether `Magpie` should log a raised exception during a process execution.
+  | (Default: ``True``)
+
+- | ``MAGPIE_UI_ENABLED``
+  | Specifies whether `Magpie` graphical user interface should be available with the started instance. If disabled,
+    all routes that normally refer to the UI will return ``404``, except the frontpage that will return a simple JSON
+    description as it is normally the default entrypoint of the application.
+  | (Default: ``True``)
 
 
+Security Settings
+~~~~~~~~~~~~~~~~~~~~~
+
+- | ``MAGPIE_SECRET``
+  | Secret value employed to encrypt user authentication tokens.
+  | **Important Note:**
+  | Changing this value at a later time will cause previously created user tokens to be invalidated.
+    It is **strongly** recommended to change this value before proceeding to user accounts and permissions creation
+    in your `Magpie` instance.
+  | (Default: ``"seekrit"``)
+
+- | ``MAGPIE_COOKIE_NAME``
+  | Identifier of the cookie that will be used for reading and writing in the requests from login and for
+    user authentication operations.
+  | (Default: ``"auth_tkt"``)
+
+- | ``MAGPIE_COOKIE_EXPIRE``
+  | Lifetime duration of the cookies. Tokens become invalid after this duration is elapsed.
+  | (Default: ``None`` [infinite])
+
+- | ``MAGPIE_ADMIN_USER``
+  | Name of the default 'administrator' generated by the application.
+  | **Note:**
+  | This user is required for initial launch of the application to avoid being 'looked out' as routes for creating new
+    users require administrative permissions and access rights. It should be used as a first login method to setup other
+    accounts. It will also be used by other `Magpie` internal operations such as service synchronization and setup
+    during the application startup. If this user is missing, it is automatically re-created on following start.
+  | (Default: ``"admin"``)
+
+- | ``MAGPIE_ADMIN_PASSWORD``
+  | Password of the default 'administrator' generated by the application.
+  | (Default: ``"qwerty"``)
+
+- | ``MAGPIE_ADMIN_EMAIL``
+  | Email of the default 'administrator' generated by the application.
+  | (Default: ``"${MAGPIE_ADMIN_USER}@mail.com"``)
+
+- | ``MAGPIE_ADMIN_GROUP``
+  | Group name of the default 'administrator' generated by the application.
+  | **Note:**
+  | To simplify configuration of future administrators of the application, all their inherited permissions are shared
+    through this group instead of setting individual permissions on each user. It is recommended to keep defining such
+    higher level permissions on this group to ease the management process of granted access to all their members.
+  | (Default: ``"administrators"``)
+
+- | ``MAGPIE_ADMIN_PERMISSION``
+  | Name of the permission used to represent highest administration privilege in the application.
+  | Except for some public routes, most API and UI paths will require the user to have this permission (either with
+    direct permission or by inherited group permission) to be granted access to view and edit content.
+    The group defined by ``MAGPIE_ADMIN_GROUP`` automatically gets granted this permission.
+  | (Default: ``"admin"``)
+
+- | ``MAGPIE_ANONYMOUS_USER``
+  | Name of the default user that represents a non logged-in user (ie: invalid or no authentication token provided).
+  | This user is used to manage "public" access to service and resources.
+  | (Default: ``"anonymous"``)
+
+- | ``MAGPIE_ANONYMOUS_PASSWORD`` (constant)
+  | Password of the default unauthenticated user.
+  | This value is not modifiable directly and is available only for preparation of the default user on startup.
+  | (Default: ``${MAGPIE_ANONYMOUS_USER}``)
+
+- | ``MAGPIE_ANONYMOUS_EMAIL``
+  | Email of the default unauthenticated user.
+  | (Default: ``"${MAGPIE_ANONYMOUS_USER}@mail.com"``)
+
+- | ``MAGPIE_ANONYMOUS_GROUP`` (constant)
+  | This parameter is preserved for backward compatibility of migration scripts and external libraries.
+  | All users are automatically member of this group to inherit "public" permissions to services and resources.
+  | **Important Note:**
+  | To set "public" permissions, one should always set them on this group instead of directly on
+    ``MAGPIE_ANONYMOUS_USER`` as setting them directly on this user will cause only him to be granted access to the
+    targeted resource. In this situation, all *other* users would "lose" public permissions after they authenticate
+    themselves in `Magpie` as they would not be recognized as ``MAGPIE_ANONYMOUS_USER`` anymore.
+  | (Default: ``${MAGPIE_ANONYMOUS_USER}``)
+
+- | ``MAGPIE_EDITOR_GROUP``
+  | *Unused for the moment.*
+  | (Default: ``"editors"``)
+
+- | ``MAGPIE_USERS_GROUP``
+  | Name of the default group created to associate all users registered in the application.
+  | New users are created with this group.
+  | (Default: ``"users"``)
 
 - | ``MAGPIE_USER_NAME_MAX_LENGTH``
   | Maximum length to consider as a valid user name. User name specified during creation will be forbidden if longer.
   | **Note:**
   | This value should not be greater then the token length used to identify a user to preserve some utility behaviour.
   | (Default: ``64``)
-
-- | ``MAGPIE_ADMIN_PERMISSION``
-  | Name of the permission used to represent highest administration privilege in the application.
-  | Except for some public routes, most API and UI paths will require the user to have this permission (either with
-    direct permission or by inherited group permission) to be granted access to view and edit content.
-  | (Default: ``"admin"``)
 
 - | ``MAGPIE_LOGGED_USER``
   | Keyword used to define route resolution using the currently logged in user. This value allows, for example,
@@ -196,16 +316,16 @@ Following settings provide some integration support for `Phoenix`_ in order to s
   | Password of the user to use for authentication in `Phoenix`_.
   | (Default: ``"qwerty"``)
 
+- | ``PHOENIX_HOST``
+  | Hostname to use for `Phoenix`_ connection for authentication and service synchronization.
+  | (Default: ``${HOSTNAME}"``)
+
 - | ``PHOENIX_PORT``
-  | Password of the user to use for authentication in `Phoenix`_.
-  | (Default: ``"qwerty"``)
-
-- | ``PHOENIX_PASSWORD``
-  | Password of the user to use for authentication in `Phoenix`_.
-  | (Default: ``"qwerty"``)
+  | Port to use for `Phoenix`_ connection for authentication and service synchronization.
+  | (Default: ``8443``)
 
 
-PHOENIX_PORT = int(os.getenv("PHOENIX_PORT", 8443))
+
 PHOENIX_PUSH = asbool(os.getenv("PHOENIX_PUSH", True))
 TWITCHER_PROTECTED_PATH = os.getenv("TWITCHER_PROTECTED_PATH", "/ows/proxy")
 TWITCHER_PROTECTED_URL = os.getenv("TWITCHER_PROTECTED_URL", None)
@@ -282,6 +402,9 @@ GitHub Settings
 To use `GitHub`_ authentication provider, variables ``GITHUB_CLIENT_ID`` and ``GITHUB_CLIENT_SECRET`` must be
 configured. These settings correspond to the values retrieved from following steps described in
 `Creating an OAuth App <GithubOAuthApp>`_.
+
+Furthermore, the callback URL used for configuring the OAuth application on Github must match the running `Magpie`
+instance URL. For this reason, the values of ``MAGPIE_URL``, ``MAGPIE_HOST`` and ``HOSTNAME`` must be considered.
 
 .. _GithubOAuthApp: https://developer.github.com/apps/building-oauth-apps/creating-an-oauth-app/
 
