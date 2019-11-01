@@ -106,6 +106,7 @@ MAGPIE_LOG_EXCEPTION = asbool(os.getenv("MAGPIE_LOG_EXCEPTION", True))          
 MAGPIE_UI_ENABLED = asbool(os.getenv("MAGPIE_UI_ENABLED", True))
 PHOENIX_USER = os.getenv("PHOENIX_USER", "phoenix")
 PHOENIX_PASSWORD = os.getenv("PHOENIX_PASSWORD", "qwerty")
+PHOENIX_HOST = os.getenv("PHOENIX_HOST")  # default None to use HOSTNAME
 PHOENIX_PORT = int(os.getenv("PHOENIX_PORT", 8443))
 PHOENIX_PUSH = asbool(os.getenv("PHOENIX_PUSH", True))
 TWITCHER_PROTECTED_PATH = os.getenv("TWITCHER_PROTECTED_PATH", "/ows/proxy")

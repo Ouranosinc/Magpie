@@ -8,8 +8,11 @@ Unreleased
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-- add ``CONFIGURATION.rst`` file that details all configuration settings that are employed by ``Magpie``.
-- add specific exception classes for `register` sub-package operations.
+- add ``docs/configuration.rst`` file that details all configuration settings that are employed by ``Magpie`` (#180).
+- add more details about basic usage of `Magpie` in ``docs/usage.rst``.
+- add details about external provider setup in ``docs/configuration`` (#173).
+- add specific exception classes for ``register`` sub-package operations.
+- add ``PHOENIX_HOST`` variable to override default ``HOSTNAME``as needed.
 
 1.6.3 (2019-10-31)
 ---------------------

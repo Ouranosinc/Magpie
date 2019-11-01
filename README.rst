@@ -66,48 +66,28 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 .. end-badges
 
 
-REST API Documentation
-======================
-
-The documentation is auto-generated and served under ``{HOSTNAME}/api/`` using Swagger-UI with tag ``latest``.
-
-
-Build package
+Documentation
 =============
 
-At the command line::
+The REST API documentation is auto-generated and served under ``{HOSTNAME}/api/`` using Swagger-UI with tag ``latest``.
 
-    conda create -n magpie
-    source activate magpie
-    make install
-
-
-Installation
-============
-
-At the command line::
-
-    pip install magpie
-
+More ample details about installation, configuration and usage are provided in `<docs>`_.
 
 Configuration
 =============
 
 | Multiple configuration options exist for ``Magpie`` application.
-| Please refer to `<CONFIGURATION.rst>`_ for details.
+| Please refer to `configuration <docs/configuration.rst>`_ for details.
+
+Usage
+=====
+
+See `usage <docs/usage.rst>`_ for details.
 
 Change History
 ==============
 
 Addressed features, changes and bug fixes per version tag are available in `<HISTORY.rst>`_.
-
-Helpers
-==============
-
-Multiple CLI *helpers* are provided in `<magpie/helpers>`_. These consist mostly of setup operation scripts that are
-automatically executed during ``Magpie`` startup. Additional common functions are also provided such as registering
-service providers from a configuration file or creating basic user accounts. Please refer to their corresponding usage
-by calling them with ``--help`` argument for more details.
 
 Docker Images
 =============

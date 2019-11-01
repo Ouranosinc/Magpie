@@ -269,8 +269,10 @@ def get_magpie_url(container=None):
         raise ConfigurationError("MAGPIE_URL or magpie.url config cannot be found")
 
 
-def get_phoenix_url():
-    hostname = get_constant("HOSTNAME")
+def get_phoenix_url(container=None):
+    # type: (Optional[AnySettingsContainer]) -> Str
+    hostname = get_constant("PHOENIX_HOST", container, raise_missing=False, raise_not_set=False) or \
+               get_constant("HOSTNAME")
     phoenix_port = get_constant("PHOENIX_PORT", raise_not_set=False)
     return "https://{0}{1}".format(hostname, ":{}".format(phoenix_port) if phoenix_port else "")
 
