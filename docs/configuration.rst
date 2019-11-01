@@ -16,7 +16,7 @@ duplicates values.
 Configuration Files
 -------------------
 
-magpie.ini
+File: magpie.ini
 ~~~~~~~~~~~~~~~~~~~
 
 This is the base configuration file that defines most of `Magpie`'s lower level configuration. A basic example is
@@ -25,16 +25,27 @@ is used by default in each tagged Docker image. If you want to provide different
 overridden in the Docker image using a volume mount parameter, or by specifying an alternative path through the
 environment variable ``MAGPIE_INI_FILE_PATH``.
 
-providers.cfg
+File: providers.cfg
 ~~~~~~~~~~~~~~~~~~~
 
+This configuration file allows automatically registering service definitions in `Magpie` at startup. When the
+application starts, it will look for corresponding services and add them to the database as required. It will also
+look for mismatches between the service name and URL with the corresponding entry in the database to update it to
+the desired URL. See ``MAGPIE_PROVIDERS_CONFIG_PATH`` below to setup alternate references to this configuration file.
+Please refer to the heading of sample file `providers.cfg`_ for specific format and parameter details.
 
-permissions.cfg
-~~~~~~~~~~~~~~~~~~~
+File: permissions.cfg
+~~~~~~~~~~~~~~~~~~~~~~
 
+This configuration file allows automatically registering or cleaning permission definitions in `Magpie` at startup.
+Each specified permission update operation is applied for the corresponding user or group onto the specific service
+or resource. This file is processed after `providers.cfg`_ in order to allow permissions to be applied on freshly
+registered services. Furthermore, sub-resources are automatically created if they can be resolved with provided
+parameters of the corresponding permission entry. See ``MAGPIE_PERMISSIONS_CONFIG_PATH`` below to setup alternate
+references to this configuration file. Please refer to the heading of sample file `permissions.cfg`_ for specific
+format details as well as specific behaviour of each parameter according to encountered use cases.
 
-
-magpie.env
+File: magpie.env
 ~~~~~~~~~~~~~~~~~~~
 
 By default, `Magpie` will try to load a ``magpie.env`` file which can define further environment variable definitions
@@ -53,7 +64,7 @@ Therefore, only *missing but required* values will be added to the environment t
 
 .. _magpie.env.example: ../env/magpie.env.example
 
-postgres.env
+File: postgres.env
 ~~~~~~~~~~~~~~~~~~~
 
 This file behaves exactly in the same manner as for ``magpie.env`` above, but for specific variables definition
