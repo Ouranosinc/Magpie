@@ -69,7 +69,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 Documentation
 =============
 
-The REST API documentation is auto-generated and served under ``{HOSTNAME}/api/`` using Swagger-UI with tag ``latest``.
+The REST API documentation is auto-generated and served under ``{MAGPIE_URL}/api/`` using Swagger-UI with tag ``latest``.
 
 More ample details about installation, configuration and usage are provided in `docs`_.
 
