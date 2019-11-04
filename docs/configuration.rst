@@ -31,7 +31,7 @@ File: providers.cfg
 This configuration file allows automatically registering service definitions in `Magpie` at startup. When the
 application starts, it will look for corresponding services and add them to the database as required. It will also
 look for mismatches between the service name and URL with the corresponding entry in the database to update it to
-the desired URL. See ``MAGPIE_PROVIDERS_CONFIG_PATH`` below to setup alternate references to this configuration file.
+the desired URL. See ``MAGPIE_PROVIDERS_CONFIG_PATH`` below to setup alternate references to this type of configuration.
 Please refer to the heading of sample file `providers.cfg`_ for specific format and parameter details.
 
 File: permissions.cfg
@@ -42,7 +42,7 @@ Each specified permission update operation is applied for the corresponding user
 or resource. This file is processed after `providers.cfg`_ in order to allow permissions to be applied on freshly
 registered services. Furthermore, sub-resources are automatically created if they can be resolved with provided
 parameters of the corresponding permission entry. See ``MAGPIE_PERMISSIONS_CONFIG_PATH`` below to setup alternate
-references to this configuration file. Please refer to the heading of sample file `permissions.cfg`_ for specific
+references to this type of configuration. Please refer to the heading of sample file `permissions.cfg`_ for specific
 format details as well as specific behaviour of each parameter according to encountered use cases.
 
 File: magpie.env

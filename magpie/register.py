@@ -238,7 +238,7 @@ def _register_services(where,                           # type: Optional[Str]
         cfg = services_dict[service_name]
         cfg["public"] = bool2str(cfg.get("public"))
         cfg["c4i"] = bool2str(cfg.get("c4i"))
-        cfg["url"] = os.path.expandvars(cfg.get("url"))
+        cfg["url"] = cfg.get("url")
         if where == SERVICES_MAGPIE:
             svc_url = cfg["url"]
         elif where == SERVICES_PHOENIX:
@@ -425,7 +425,7 @@ def magpie_register_services_with_db_session(services_dict, db_session, push_to_
     anonymous_user = UserService.by_user_name(magpie_anonymous_user, db_session=db_session)
 
     for svc_name, svc_values in services_dict.items():
-        svc_new_url = os.path.expandvars(svc_values["url"])
+        svc_new_url = svc_values["url"]
         svc_type = svc_values["type"]
 
         svc_sync_type = svc_values.get("sync_type")
@@ -490,7 +490,7 @@ def _load_config(path_or_dict, section):
             cfg = yaml.safe_load(open(path_or_dict, 'r'))
         else:
             cfg = path_or_dict
-        return cfg[section]
+        return _expand_all(cfg[section])
     except KeyError:
         raise_log("Config file section [{!s}] not found.".format(section), exception=RegistrationError, logger=LOGGER)
     except Exception as ex:
@@ -509,6 +509,27 @@ def _get_all_configs(path_or_dict, section):
         dir_path = os.path.abspath(path_or_dict)
         return [_load_config(os.path.join(dir_path, f), section) for f in os.listdir(dir_path) if f.endswith(".cfg")]
     return [_load_config(path_or_dict, section)]
+
+
+def _expand_all(config):
+    # type: (ConfigDict) -> ConfigDict
+    """Applies environment variable expansion recursively to all applicable fields of a configuration definition."""
+    if isinstance(config, dict):
+        for cfg in config:
+            cfg_key = os.path.expandvars(cfg)
+            if cfg_key != cfg:
+                config[cfg_key] = config.pop(cfg)
+            config[cfg_key] = _expand_all(config[cfg_key])
+    elif isinstance(config, (list, set)):
+        for i, cfg in enumerate(config):
+            config[i] = _expand_all(cfg)
+    elif isinstance(config, six.string_types):
+        config = os.path.expandvars(config)
+    elif isinstance(config, (int, bool, float)):
+        pass
+    else:
+        raise NotImplementedError("unknown parsing of config of type: {}".format(type(config)))
+    return config
 
 
 def magpie_register_services_from_config(service_config_path, push_to_phoenix=False,

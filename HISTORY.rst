@@ -15,6 +15,7 @@ Features / Changes
 - add ``PHOENIX_HOST`` variable to override default ``HOSTNAME`` as needed.
 - add support of ``MAGPIE_PROVIDERS_CONFIG_PATH`` and ``MAGPIE_PERMISSIONS_CONFIG_PATH`` pointing to a directory to
   load multiple similar configuration files contained in it.
+- add environment variable expansion support for all fields within ``providers.cfg`` and ``permissions.cfg`` files.
 
 1.6.3 (2019-10-31)
 ---------------------
