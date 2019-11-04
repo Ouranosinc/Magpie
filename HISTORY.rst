@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.7.0 (2019-11-04)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 - add ``docs/configuration.rst`` file that details all configuration settings that are employed by ``Magpie`` (#180).
