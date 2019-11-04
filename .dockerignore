@@ -1,4 +1,5 @@
 Dockerfile
+Dockerfile.adapter
 .dockerignore
 
 **/custom.ini
@@ -34,6 +35,7 @@ magpie.egg-info
 src
 share
 downloads
+gunicorn.app.wsgiapp
 
 # Unit test / Coverage reports
 **/.cache

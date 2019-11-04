@@ -1,10 +1,10 @@
-Magpie documentation
+Magpie Documentation
 ======================================
 
 .. include:: ../README.rst
 
 
-Package information
+Package Information
 ===================
 
 .. toctree::
@@ -12,20 +12,21 @@ Package information
 
    usage
    installation
+   configuration
    performance
    contributing
    authors
    history
 
 
-Source code
+Source Code
 ===================
 
 .. toctree::
    :maxdepth: 2
 
 
-Indices and tables
+Indices and Tables
 ==================
 
 * :ref:`genindex`

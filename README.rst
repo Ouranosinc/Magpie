@@ -66,29 +66,37 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 .. end-badges
 
 
-REST API Documentation
-======================
-
-The documentation is auto-generated and served under ``{HOSTNAME}/api/`` using Swagger-UI with tag ``latest``.
-
-
-Build package
+Documentation
 =============
 
-At the command line::
+The REST API documentation is auto-generated and served under ``{MAGPIE_URL}/api/`` using Swagger-UI with tag ``latest``.
 
-    conda create -n magpie
-    source activate magpie
-    make install
+More ample details about installation, configuration and usage are provided in `docs`_.
+
+.. _docs: ./docs
+
+Configuration
+=============
+
+| Multiple configuration options exist for ``Magpie`` application.
+| Please refer to `configuration`_ for details.
+
+.. _configuration: ./docs/configuration.rst
 
 
-Installation
-============
+Usage
+=====
 
-At the command line::
+See `usage`_ for details.
 
-    pip install magpie
+.. _usage: ./docs/usage.rst
 
+Change History
+==============
+
+Addressed features, changes and bug fixes per version tag are available in `HISTORY`_.
+
+.. _HISTORY: ./HISTORY.rst
 
 Docker Images
 =============
