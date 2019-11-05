@@ -6,6 +6,7 @@ To implement a new service, see the _SyncServiceInterface class.
 from magpie import db, models, constants
 from magpie.helpers.sync_services import SYNC_SERVICES_TYPES, is_valid_resource_schema, SyncServiceDefault
 from magpie.utils import get_logger
+import transaction
 from collections import OrderedDict
 from typing import TYPE_CHECKING
 import copy
@@ -321,15 +322,15 @@ def fetch():
     """
     Main function to get all remote resources for each service and write to database.
     """
-    LOGGER.info("Getting database session")
-    session = db.get_db_session_from_settings(echo=False)
+    with transaction.manager:
+        LOGGER.info("Getting database session")
+        session = db.get_db_session_from_settings(echo=False)
 
-    for service_type in SYNC_SERVICES_TYPES:
-        LOGGER.info("Fetching data for service type: %s" % service_type)
-        fetch_all_services_by_type(service_type, session)
+        for service_type in SYNC_SERVICES_TYPES:
+            LOGGER.info("Fetching data for service type: %s" % service_type)
+            fetch_all_services_by_type(service_type, session)
 
-    session.commit()
-    session.close()
+        transaction.commit()
 
 
 def setup_cron_logger():

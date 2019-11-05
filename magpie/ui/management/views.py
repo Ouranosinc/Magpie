@@ -19,14 +19,15 @@ from magpie import register
 from collections import OrderedDict
 from datetime import datetime
 from typing import TYPE_CHECKING
+import transaction
 import humanize
 import json
 import six
 if TYPE_CHECKING:
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
     from magpie.definitions.typedefs import List, Optional  # noqa: F401
-
 LOGGER = get_logger(__name__)
+
 
 
 class ManagementViews(object):
@@ -313,6 +314,7 @@ class ManagementViews(object):
                     # noinspection PyBroadException
                     try:
                         sync_resources.fetch_single_service(service_info["resource_id"], session)
+                        transaction.commit()
                     except Exception:
                         errors.append(service_info["service_name"])
                 if errors:
@@ -619,6 +621,7 @@ class ManagementViews(object):
                     # noinspection PyBroadException
                     try:
                         sync_resources.fetch_single_service(service_info["resource_id"], session)
+                        transaction.commit()
                     except Exception:
                         errors.append(service_info["service_name"])
                 if errors:
