@@ -115,7 +115,7 @@ def get_resource_permissions(resource, db_session):
     ax.verify_param(resource, notNone=True, httpError=HTTPBadRequest, paramName=u"resource",
                     msgOnFail=s.UserResourcePermissions_GET_BadRequestResourceResponseSchema.description)
     # directly access the service resource
-    if resource.root_service_id is None:
+    if resource.root_service_id is None or resource.root_service_id == resource.resource_id:
         service = resource
         return SERVICE_TYPE_DICT[service.type].permissions
 
