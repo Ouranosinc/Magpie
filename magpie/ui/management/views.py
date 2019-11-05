@@ -682,7 +682,7 @@ class ManagementViews(object):
         now = datetime.now()
 
         service_ids = [s["resource_id"] for s in services.values()]
-        last_sync_datetimes = filter(bool, self.get_last_sync_datetimes(service_ids, session))
+        last_sync_datetimes = list(filter(bool, self.get_last_sync_datetimes(service_ids, session)))
 
         if any(last_sync_datetimes):
             # noinspection PyTypeChecker
