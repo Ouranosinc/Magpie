@@ -24,7 +24,7 @@ simplejson
 six
 sqlalchemy
 sqlalchemy_utils
-threddsclient==0.3.4
+threddsclient==0.3.5
 transaction
 typing
 wheel==0.33.0
