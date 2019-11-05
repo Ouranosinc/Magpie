@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .coverage
 .idea/
+.vscode
 .eggs/
 .pytest_cache/
 docker-compose.yml
@@ -35,3 +36,4 @@ share/
 tests/results.xml
 /gunicorn.app.wsgiapp
 /sys
+error_log.txt

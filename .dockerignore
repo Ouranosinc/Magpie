@@ -34,6 +34,7 @@ magpie.egg-info
 src
 share
 downloads
+error_log.txt
 
 # Unit test / Coverage reports
 **/.cache
@@ -42,6 +43,9 @@ downloads
 
 # PyCharm
 .idea
+
+# vscode
+.vscode
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__
