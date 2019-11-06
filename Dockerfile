@@ -22,17 +22,17 @@ COPY requirements* setup.py README.rst HISTORY.rst $MAGPIE_DIR/
 # this is a bug that should be fixed in threddsclient>0.3.5
 RUN apk update \
     && apk add \
-        bash \
-        postgresql-libs \
-        py-pip \
-        libxslt-dev \
+    bash \
+    postgresql-libs \
+    py-pip \
+    libxslt-dev \
     && apk add --virtual .build-deps \
-        supervisor \
-        gcc \
-        libffi-dev \
-        python-dev \
-        musl-dev \
-        postgresql-dev \
+    supervisor \
+    gcc \
+    libffi-dev \
+    python-dev \
+    musl-dev \
+    postgresql-dev \
     && pip install --no-cache-dir --upgrade pip setuptools requests \
     && pip install --no-cache-dir -e $MAGPIE_DIR \
     && apk --purge del .build-deps
@@ -42,4 +42,4 @@ COPY ./ $MAGPIE_DIR
 # equivalent of `make install` without conda env and pre-installed packages
 RUN pip install --no-dependencies -e $MAGPIE_DIR
 # equivalent of `make cron start` without conda env
-CMD crond -c $CRON_DIR && gunicorn -b 0.0.0.0:2001 --paste $MAGPIE_DIR/config/magpie.ini --workers 10 --preload
+CMD crond -c $CRON_DIR && gunicorn -b 0.0.0.0:2001 --paste $MAGPIE_CONFIG_DIR/config/magpie.ini --workers 10 --preload
