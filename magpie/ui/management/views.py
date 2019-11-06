@@ -29,7 +29,6 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
-
 class ManagementViews(object):
     def __init__(self, request):
         self.request = request

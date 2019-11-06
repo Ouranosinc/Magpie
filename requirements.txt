@@ -24,6 +24,9 @@ simplejson
 six
 sqlalchemy
 sqlalchemy_utils
+# FIXME: before pip-installing magpie, you need to pip install 
+# requests first (or you might get lucky and pip installs requests first)
+# This is a bug in threddsclient that will be fixed in >0.3.5
 threddsclient==0.3.5
 transaction
 typing
