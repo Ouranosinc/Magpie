@@ -59,10 +59,6 @@ def create_resource_view(request):
     resource_display_name = ar.get_multiformat_any(request, "resource_display_name", default=resource_name)
     resource_type = ar.get_value_multiformat_post_checked(request, "resource_type")
     parent_id = ar.get_value_multiformat_post_checked(request, "parent_id")
-    try:
-        parent_id = int(parent_id)
-    except ValueError:
-        pass
     return ru.create_resource(resource_name, resource_display_name, resource_type, parent_id, request.db)
 
 

@@ -787,7 +787,7 @@ class Resources_POST_RequestBodySchema(colander.MappingSchema):
         description="Type of the resource to create"
     )
     parent_id = colander.SchemaNode(
-        colander.String(),
+        colander.Int(),
         description="ID of parent resource under which the new resource should be created",
         missing=colander.drop
     )

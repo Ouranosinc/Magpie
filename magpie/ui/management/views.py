@@ -753,7 +753,7 @@ class ManagementViews(object):
         for remote_resource in parents:
             name = remote_resource.resource_name
             if name in current_resources:
-                parent_id = current_resources[name]["id"]
+                parent_id = int(current_resources[name]["id"])
                 current_resources = current_resources[name]["children"]
             else:
                 data = {
