@@ -13,7 +13,6 @@ ENV CRON_DIR=/etc/crontabs
 # magpie cron service
 COPY magpie-cron $CRON_DIR/magpie-cron
 RUN chmod 0644 $CRON_DIR/magpie-cron
-RUN touch /var/log/cron.log
 
 COPY magpie/__init__.py magpie/__meta__.py $MAGPIE_DIR/magpie/
 COPY requirements* setup.py README.rst HISTORY.rst $MAGPIE_DIR/

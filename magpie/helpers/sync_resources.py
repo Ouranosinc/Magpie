@@ -13,6 +13,7 @@ import copy
 import datetime
 import logging
 import os
+import sys
 if TYPE_CHECKING:
     from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
     from magpie.definitions.typedefs import Optional  # noqa: F401
@@ -334,15 +335,25 @@ def fetch():
 
 
 def setup_cron_logger():
+    log_level = logging.INFO
+
     log_path = constants.get_constant("MAGPIE_CRON_LOG")
     log_path = os.path.expandvars(log_path)
     log_path = os.path.expanduser(log_path)
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(log_level)
     file_handler = logging.FileHandler(log_path)
-    file_handler.setLevel(logging.INFO)
+    file_handler.setLevel(log_level)
+
     formatter = logging.Formatter("%(asctime)s %(levelname)8s %(message)s")
     file_handler.setFormatter(formatter)
+    stream_handler.setFormatter(formatter)
+
     LOGGER.addHandler(file_handler)
-    LOGGER.setLevel(logging.INFO)
+    LOGGER.addHandler(stream_handler)
+
+    LOGGER.setLevel(log_level)
 
 
 def main():
