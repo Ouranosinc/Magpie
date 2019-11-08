@@ -48,7 +48,7 @@ extensions = [
     'autoapi.extension',
 ]
 
-autoapi_dirs = [os.path.join(PROJECT_ROOT, 'magpie')]
+autoapi_dirs = [os.path.join(PROJECT_ROOT, __meta__.__package__)]
 autoapi_ignore = [os.path.join(PROJECT_ROOT, 'magpie/alembic/*')]
 autoapi_python_class_content = 'both'
 
@@ -67,7 +67,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Magpie'
+project = __meta__.__title__
 copyright = u'2017, {}'.format(__meta__.__author__)
 
 # The version info for the project you're documenting, acts as replacement
@@ -123,7 +123,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'alabaster'
+html_theme = 'nature'
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.  For a list of options available for each theme, see the
@@ -142,7 +142,8 @@ html_theme = 'alabaster'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = '_static/logo_crim_FR.png'
+# html_logo = '_static/logo_crim_FR.png'
+html_logo = '../magpie/ui/home/static/magpie-logo.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -217,13 +218,13 @@ latex_elements = {
     # 'preamble': '',
 }
 
+doc_title = "{} Documentation".format(__meta__.__title__)
+
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    ('index', 'magpie.tex',
-     u'Magpie Documentation',
-     __meta__.__author__, 'manual'),
+    ('index', '{}.tex'.format(__meta__.__package__), doc_title, __meta__.__author__, 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at
@@ -252,9 +253,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'magpie',
-     u'Magpie Documentation',
-     [u'Francois-Xavier'], 1)
+    ('index', __meta__.__package__, doc_title, [__meta__.__author__], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -267,11 +266,11 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    ('index', 'magpie',
-     u'Magpie Documentation',
-     u'Francois-Xavier',
-     'magpie',
-     'One line description of project.',
+    ('index', __meta__.__package__,
+     doc_title,
+     __meta__.__author__,
+     __meta__.__package__,
+     __meta__.__description__,
      'Miscellaneous'),
 ]
 
@@ -289,8 +288,11 @@ texinfo_documents = [
 
 intersphinx_mapping = {
     'celery': ('http://docs.celeryproject.org/en/latest/', None),
-    'refcom_gateway': ('http://www.crim.ca/perso/frederic.osterrath/refcom/gateway/latest/',
-          ('../../refcom_gateway/docs/_build/html/objects.inv', None)),
-    'sg': ('http://www.crim.ca/perso/frederic.osterrath/refcom/SG/latest/',
-          ('../../SG/docs/_build/html/objects.inv', None))
-    }
+    'refcom_gateway': (
+        'http://www.crim.ca/perso/frederic.osterrath/refcom/gateway/latest/',
+        ('../../refcom_gateway/docs/_build/html/objects.inv', None)
+    ),
+    'sg': (
+        'http://www.crim.ca/perso/frederic.osterrath/refcom/SG/latest/',
+        ('../../SG/docs/_build/html/objects.inv', None))
+}

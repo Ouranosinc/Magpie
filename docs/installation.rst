@@ -17,7 +17,7 @@ All above is done automatically with::
     make install
 
 
-If you want the full setup for development, use::
+If you want the full setup for development (including dependencies for test execution), use::
 
     make install-dev
 

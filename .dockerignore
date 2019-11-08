@@ -1,4 +1,5 @@
 Dockerfile
+Dockerfile.adapter
 .dockerignore
 
 **/custom.ini
@@ -35,6 +36,7 @@ src
 share
 downloads
 error_log.txt
+gunicorn.app.wsgiapp
 
 # Unit test / Coverage reports
 **/.cache

@@ -13,7 +13,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at francis.charette-migneault@crim.ca.
+Report bugs at https://github.com/Ouranosinc/Magpie/issues/new.
 
 If you are reporting a bug, please include:
 

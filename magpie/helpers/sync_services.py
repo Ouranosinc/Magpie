@@ -6,20 +6,24 @@ import abc
 import requests
 import threddsclient
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Dict, Str, Type  # noqa: F401
+    from magpie.definitions.typedefs import Dict, JSON, Str, Type  # noqa: F401
 
 
 def is_valid_resource_schema(resources):
+    # type: (JSON) -> bool
     """
-    Returns True if the structure of the input dictionary is a tree of the form:
+    Returns ``True`` if the structure of the input dictionary is a tree of the form::
 
-    {'resource_name_1': {'children': {'resource_name_3': {'children': {}},
-                                      'resource_name_4': {'children': {}}
-                                      },
-                         },
-     'resource_name_2': {'children': {}}
-     }
-    :return: bool
+        {
+            "resource_name_1": {
+                "children": {
+                    "resource_name_3": {"children": {}},
+                    "resource_name_4": {"children": {}}
+                }
+            }
+            "resource_name_2": {"children": {}}
+        }
+
     """
     for resource_name, values in resources.items():
         if "children" not in values:
@@ -37,12 +41,12 @@ class SyncServiceInterface(with_metaclass(abc.ABCMeta)):
         self.service_name = service_name
         self.url = url
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def max_depth(self):
+        # type: () -> int
         """
         The max depth at which remote resources are fetched.
-
-        :return: (int)
         """
 
     @abc.abstractmethod

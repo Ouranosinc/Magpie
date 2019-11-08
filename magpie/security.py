@@ -89,19 +89,21 @@ def authomatic_config(request=None):
         },
         'ipsl': {
             'class_': esgfopenid.ESGFOpenID,
-            'hostname': 'providers-node.ipsl.fr',
+            'hostname': 'esgf-node.ipsl.upmc.fr',
             'display_name': 'IPSL',
         },
-        'badc': {
+        # former 'badc'
+        'ceda': {
             'class_': esgfopenid.ESGFOpenID,
-            'hostname': 'ceda.ac.uk',
+            'hostname': 'esgf-index1.ceda.ac.uk',
             'provider_url': 'https://{hostname}/openid/{username}',
-            'display_name': 'BADC',
+            'display_name': 'CEDA',
         },
-        'pcmdi': {
+        # former 'pcmdi'
+        'llnl': {
             'class_': esgfopenid.ESGFOpenID,
-            'hostname': 'providers-node.llnl.gov',
-            'display_name': 'PCMDI',
+            'hostname': 'esgf-node.llnl.gov',
+            'display_name': 'LLNL',
         },
         'smhi': {
             'class_': esgfopenid.ESGFOpenID,

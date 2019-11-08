@@ -15,6 +15,7 @@ from magpie.utils import CONTENT_TYPE_JSON
 from magpie import register
 from tests import utils, runner
 import unittest
+import mock
 
 
 @runner.MAGPIE_TEST_LOCAL
@@ -261,3 +262,59 @@ class TestRegister(unittest.TestCase):
         resp = utils.test_request(self.app, "GET", path)
         body = utils.check_response_basic_info(resp)
         utils.check_all_equal(body["permission_names"], [res3_perm.value])
+
+    def test_variable_expansion_providers_config_style(self):
+        providers_config = {
+            "providers": {
+                "${PROVIDER1}": {
+                    "url": "http://${HOSTNAME}/wps"
+                },
+                "test-provider-2": {
+                    "url": "http://HOSTNAME/wps"  # literal must not be expanded
+                }
+            }
+        }
+        env_override = {
+            "PROVIDER1": "test-provider-1",
+            "HOSTNAME": "localhost-test"
+        }
+
+        with mock.patch.dict("os.environ", env_override):
+            config = register._expand_all(providers_config)
+        print(config)
+        assert all([k in ["test-provider-1", "test-provider-2"] for k in config["providers"]])
+        assert "${PROVIDER1}" not in config["providers"]
+        assert config["providers"]["test-provider-1"]["url"] == "http://localhost-test/wps"
+        assert config["providers"]["test-provider-2"]["url"] == "http://HOSTNAME/wps"
+
+    def test_variable_expansion_permissions_config_style(self):
+        permissions_config = {
+            "permissions": [
+                {
+                    "service": "$TEST_SERVICE",
+                    "resource": "/${TEST_RESOURCE}",
+                    "user": "${TEST_USER}"
+                },
+                {
+                    "service": "test-service-2",
+                    "permission": "getcapabilities",
+                    "group": "${MAGPIE_ADMIN_GROUP}"
+                }
+            ]
+        }
+        admins = get_constant("MAGPIE_ADMIN_GROUP")
+        env_override = {
+            "MAGPIE_ADMIN_GROUP": admins,
+            "TEST_SERVICE": "test-service-1",
+            "TEST_RESOURCE": "test-res",
+            "TEST_USER": "user-test"
+        }
+
+        with mock.patch.dict("os.environ", env_override):
+            config = register._expand_all(permissions_config)
+        assert config["permissions"][0]["service"] == "test-service-1"
+        assert config["permissions"][0]["resource"] == "/test-res"
+        assert config["permissions"][0]["user"] == "user-test"
+        assert config["permissions"][1]["service"] == "test-service-2"
+        assert config["permissions"][1]["permission"] == "getcapabilities"
+        assert config["permissions"][1]["group"] == admins

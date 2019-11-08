@@ -27,13 +27,13 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Requires Python 2.7, 3.5+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/1.6.3.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/1.7.0.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/Magpie/compare/1.6.3...master
+    :target: https://github.com/Ouranosinc/Magpie/compare/1.7.0...master
 
-.. |version| image:: https://img.shields.io/badge/tag-1.6.3-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-1.7.0-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/Magpie/tree/1.6.3
+    :target: https://github.com/Ouranosinc/Magpie/tree/1.7.0
 
 .. |requires| image:: https://requires.io/github/Ouranosinc/Magpie/requirements.svg?branch=master
     :alt: Requirements Status
@@ -43,9 +43,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Travis-CI Build Status (master branch)
     :target: https://travis-ci.com/Ouranosinc/Magpie
 
-.. |travis_tag| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/1.6.3.svg?label=1.6.3
+.. |travis_tag| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/1.7.0.svg?label=1.7.0
     :alt: Travis-CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/tree/1.6.3
+    :target: https://github.com/Ouranosinc/Magpie/tree/1.7.0
 
 .. |coverage| image:: https://img.shields.io/codecov/c/gh/Ouranosinc/Magpie.svg?label=coverage
     :alt: Travis-CI CodeCov Coverage
@@ -66,29 +66,37 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 .. end-badges
 
 
-REST API Documentation
-======================
-
-The documentation is auto-generated and served under ``{HOSTNAME}/api/`` using Swagger-UI with tag ``latest``.
-
-
-Build package
+Documentation
 =============
 
-At the command line::
+The REST API documentation is auto-generated and served under ``{MAGPIE_URL}/api/`` using Swagger-UI with tag ``latest``.
 
-    conda create -n magpie
-    source activate magpie
-    make install
+More ample details about installation, configuration and usage are provided in `docs`_.
+
+.. _docs: ./docs
+
+Configuration
+=============
+
+| Multiple configuration options exist for ``Magpie`` application.
+| Please refer to `configuration`_ for details.
+
+.. _configuration: ./docs/configuration.rst
 
 
-Installation
-============
+Usage
+=====
 
-At the command line::
+See `usage`_ for details.
 
-    pip install magpie
+.. _usage: ./docs/usage.rst
 
+Change History
+==============
+
+Addressed features, changes and bug fixes per version tag are available in `HISTORY`_.
+
+.. _HISTORY: ./HISTORY.rst
 
 Docker Images
 =============
@@ -105,8 +113,8 @@ Following most recent variants are available:
     * - Magpie
       - Twitcher |br|
         (with integrated ``MagpieAdapter``)
-    * - pavics/magpie:1.6.3
-      - pavics/twitcher:magpie-1.6.3
+    * - pavics/magpie:1.7.0
+      - pavics/twitcher:magpie-1.7.0
     * - pavics/magpie:latest
       - pavics/twitcher:magpie-latest
 

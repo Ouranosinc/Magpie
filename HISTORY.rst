@@ -6,6 +6,20 @@ History
 Unreleased
 ---------------------
 
+1.7.0 (2019-11-04)
+---------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+- add ``docs/configuration.rst`` file that details all configuration settings that are employed by ``Magpie`` (#180).
+- add more details about basic usage of `Magpie` in ``docs/usage.rst``.
+- add details about external provider setup in ``docs/configuration`` (#173).
+- add specific exception classes for ``register`` sub-package operations.
+- add ``PHOENIX_HOST`` variable to override default ``HOSTNAME`` as needed.
+- add support of ``MAGPIE_PROVIDERS_CONFIG_PATH`` and ``MAGPIE_PERMISSIONS_CONFIG_PATH`` pointing to a directory to
+  load multiple similar configuration files contained in it.
+- add environment variable expansion support for all fields within ``providers.cfg`` and ``permissions.cfg`` files.
+
 1.6.3 (2019-10-31)
 ---------------------
 
