@@ -212,7 +212,7 @@ install: install-sys	## install the package to the active Python's site-packages
 	@bash -c '$(CONDA_CMD) \
 		pip install --force-reinstall "https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic"'
 	# ---
-	@bash -c '$(CONDA_CMD) pip install install_egg_info'
+	@bash -c '$(CONDA_CMD) python setup.py install_egg_info'
 	@bash -c '$(CONDA_CMD) pip install --upgrade -e "$(MAGPIE_ROOT)" --no-cache'
 
 .PHONY: install-dev
