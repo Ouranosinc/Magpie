@@ -35,6 +35,7 @@ magpie.egg-info
 src
 share
 downloads
+error_log.txt
 gunicorn.app.wsgiapp
 
 # Unit test / Coverage reports
@@ -44,6 +45,9 @@ gunicorn.app.wsgiapp
 
 # PyCharm
 .idea
+
+# vscode
+.vscode
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__
