@@ -17,8 +17,6 @@ RUN chmod 0644 $CRON_DIR/magpie-cron
 COPY magpie/__init__.py magpie/__meta__.py $MAGPIE_DIR/magpie/
 COPY requirements* setup.py README.rst HISTORY.rst $MAGPIE_DIR/
 
-# Note: the requests package needs to be installed before threddsclient
-# this is a bug that should be fixed in threddsclient>0.3.5
 RUN apk update \
     && apk add \
     bash \
@@ -32,7 +30,7 @@ RUN apk update \
     python-dev \
     musl-dev \
     postgresql-dev \
-    && pip install --no-cache-dir --upgrade pip setuptools requests \
+    && pip install --no-cache-dir --upgrade pip setuptools \
     && pip install --no-cache-dir -e $MAGPIE_DIR \
     && apk --purge del .build-deps
 
