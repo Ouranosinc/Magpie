@@ -503,12 +503,18 @@ def _get_all_configs(path_or_dict, section):
     Loads all configuration files specified by the path (if a directory), a single configuration (if a file) or
     directly returns the specified dictionary section (if a configuration dictionary).
 
-    :returns: list of configurations loaded, list of single configuration if inputs wasn't a directory path.
+    :returns:
+        list of configurations loaded if input was a directory path
+        list of single configuration if input was a file path
+        list of single configuration if input was a JSON dict
+        empty list if none of the other cases where matched
     """
     if isinstance(path_or_dict, six.string_types) and os.path.isdir(path_or_dict):
         dir_path = os.path.abspath(path_or_dict)
         return [_load_config(os.path.join(dir_path, f), section) for f in os.listdir(dir_path) if f.endswith(".cfg")]
-    return [_load_config(path_or_dict, section)]
+    elif isinstance(path_or_dict, dict):
+        return [_load_config(path_or_dict, section)]
+    return []
 
 
 def _expand_all(config):
@@ -543,11 +549,13 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
     """
     LOGGER.info("Starting services processing.")
     services_configs = _get_all_configs(service_config_path, "providers")
-    LOGGER.debug("Found {} service configurations to process".format(len(services_configs)))
+    services_config_count = len(services_configs)
+    LOGGER.log(logging.INFO if services_config_count else logging.WARNING,
+               "Found {} service configurations to process".format(services_config_count))
     for services in services_configs:
         if not services:
             LOGGER.warning("Services configuration are empty.")
-            return
+            continue
 
         # register services using API POSTs
         if db_session is None:
@@ -856,7 +864,9 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
 
     LOGGER.debug("Loading configurations.")
     permissions = _get_all_configs(permissions_config, "permissions")
-    LOGGER.debug("Found {} permissions configurations.".format(len(permissions)))
+    perms_cfg_count = len(permissions)
+    LOGGER.log(logging.INFO if perms_cfg_count else logging.WARNING,
+               "Found {} permissions configurations.".format(perms_cfg_count))
     for perms in permissions:
         _process_permissions(perms, magpie_url, cookies_or_session)
     LOGGER.info("All permissions processed.")
@@ -869,7 +879,9 @@ def _process_permissions(permissions, magpie_url, cookies_or_session):
         LOGGER.warning("Permissions configuration are empty.")
         return
 
-    LOGGER.info("Found {} permissions to update.".format(len(permissions)))
+    perm_count = len(permissions)
+    LOGGER.log(logging.INFO if perm_count else logging.WARNING,
+               "Found {} permissions to update.".format(perm_count))
     for i, perm_cfg in enumerate(permissions):
         # parameter validation
         if not isinstance(perm_cfg, dict) or not all(f in perm_cfg for f in ["permission", "service"]):
