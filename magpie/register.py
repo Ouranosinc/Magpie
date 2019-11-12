@@ -508,6 +508,9 @@ def _get_all_configs(path_or_dict, section):
         list of single configuration if input was a file path
         list of single configuration if input was a JSON dict
         empty list if none of the other cases where matched
+
+    .. note::
+        Order of file loading is not guaranteed if specifying a directory path.
     """
     if isinstance(path_or_dict, six.string_types):
         if os.path.isdir(path_or_dict):

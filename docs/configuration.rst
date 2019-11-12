@@ -98,14 +98,23 @@ These settings can be used to specify where to find other settings through custo
 
 - | ``MAGPIE_PROVIDERS_CONFIG_PATH``
   | Path where to find ``providers.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
-    be considered as `providers` files and will be loaded sequentially. \
-    Please refer to `providers.cfg`_ for specific format details.
+    be considered as `providers` files and will be loaded sequentially.
+  | **Note**:
+  | If a directory path is specified, the order of loaded configuration files is not guaranteed
+    (depending on OS implementation).
+  | Please refer to `providers.cfg`_ for specific format details and loading methodology according to arguments.
   | (Default: ``${MAGPIE_CONFIG_DIR}/providers.cfg``)
 
 - | ``MAGPIE_PERMISSIONS_CONFIG_PATH``
   | Path where to find ``permissions.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
-    be considered as `permissions` files and will be loaded sequentially. \
-    Please refer to `permissions.cfg`_ for specific format details.
+    be considered as `permissions` files and will be loaded sequentially.
+  | **Note**:
+  | If a directory path is specified, the order of loaded configuration files is not guaranteed
+    (depending on OS implementation). Therefore, cross-file references to services or resources should be avoided
+    to ensure that, for example, any parent resource dependency won't be missing because it was specified in a second
+    file loaded after the first. Corresponding references can be duplicated across files and these conflicts will be
+    correctly handled according to configuration loading methodology.
+  | Please refer to `permissions.cfg`_ for specific format details and loading methodology according to arguments.
   | (default: ``${MAGPIE_CONFIG_DIR}/permissions.cfg``)
 
 - | ``MAGPIE_INI_FILE_PATH``

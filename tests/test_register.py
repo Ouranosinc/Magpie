@@ -333,8 +333,11 @@ class TestRegister(unittest.TestCase):
                 tmp2.seek(0)  # back to start since file still open (auto-delete if closed)
                 perms = register._get_all_configs(tmp_dir, "permissions")
         assert isinstance(perms, list) and len(perms) == 2 and all(isinstance(p, list) and len(p) == 2 for p in perms)
-        assert perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2" and \
-               perms[1][0]["perm"] == "permission3" and perms[1][1]["perm"] == "permission4"
+        # NOTE: order of file loading is not guaranteed
+        assert (perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2" and
+                perms[1][0]["perm"] == "permission3" and perms[1][1]["perm"] == "permission4") or \
+               (perms[0][0]["perm"] == "permission3" and perms[0][1]["perm"] == "permission4" and
+                perms[1][0]["perm"] == "permission1" and perms[1][1]["perm"] == "permission2")
 
     def test_get_all_config_from_file(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as tmp:
