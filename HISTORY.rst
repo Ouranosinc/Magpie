@@ -10,6 +10,8 @@ Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix resource sync process and update cron job running it (#226).
 * fix configuration files not loaded from directory by application due to more restrictive file check.
+* fix a test validating applicable user resources and permissions that could fail if `anonymous` permissions where
+  generated into the referenced database connection (eg: from loading a ``permissions.cfg`` or manually created ones).
 
 1.7.0 (2019-11-04)
 ---------------------
