@@ -14,6 +14,9 @@ from magpie.services import ServiceAPI
 from magpie.utils import CONTENT_TYPE_JSON
 from magpie import register
 from tests import utils, runner
+import tempfile
+import shutil
+import json
 import unittest
 import mock
 
@@ -318,3 +321,36 @@ class TestRegister(unittest.TestCase):
         assert config["permissions"][1]["service"] == "test-service-2"
         assert config["permissions"][1]["permission"] == "getcapabilities"
         assert config["permissions"][1]["group"] == admins
+
+    def test_get_all_config_from_dir(self):
+        tmp_dir = tempfile.mkdtemp()    # note: TemporaryDirectory doesn't exist until Python 3.2
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", dir=tmp_dir) as tmp1, \
+             tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", dir=tmp_dir) as tmp2:
+            # format doesn't matter
+            tmp1.write(json.dumps({"permissions": [{"perm": "permission1"}, {"perm": "permission2"}]}))
+            tmp1.seek(0)  # back to start since file still open (auto-delete if closed)
+            tmp2.write(json.dumps({"permissions": [{"perm": "permission3"}, {"perm": "permission4"}]}))
+            tmp2.seek(0)  # back to start since file still open (auto-delete if closed)
+            perms = register._get_all_configs(tmp_dir, "permissions")
+        assert isinstance(perms, list) and len(perms) == 2 and all(isinstance(p, list) and len(p) == 2 for p in perms)
+        # NOTE: order of file loading is not guaranteed
+        assert (perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2" and
+                perms[1][0]["perm"] == "permission3" and perms[1][1]["perm"] == "permission4") or \
+               (perms[0][0]["perm"] == "permission3" and perms[0][1]["perm"] == "permission4" and
+                perms[1][0]["perm"] == "permission1" and perms[1][1]["perm"] == "permission2")
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def test_get_all_config_from_file(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as tmp:
+            # format doesn't matter
+            tmp.write(json.dumps({"permissions": [{"perm": "permission1"}, {"perm": "permission2"}]}))
+            tmp.seek(0)  # back to start since file still open (auto-delete if closed)
+            perms = register._get_all_configs(tmp.name, "permissions")
+        assert isinstance(perms, list) and len(perms) == 1 and isinstance(perms[0], list) and len(perms[0]) == 2
+        assert perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2"
+
+    def test_get_all_config_from_dict(self):
+        cfg = {"permissions": [{"perm": "permission1"}, {"perm": "permission2"}]}
+        perms = register._get_all_configs(cfg, "permissions")
+        assert isinstance(perms, list) and len(perms) == 1 and isinstance(perms[0], list) and len(perms[0]) == 2
+        assert perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2"

@@ -55,19 +55,13 @@ def main(global_config=None, **settings):
                                        raise_missing=False, raise_not_set=False, print_missing=True))
     prov_cfg = get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", default_value="",
                             raise_missing=False, raise_not_set=False, print_missing=True)
-    if os.path.isfile(prov_cfg):
-        magpie_register_services_from_config(prov_cfg, push_to_phoenix=push_phoenix,
-                                             force_update=True, disable_getcapabilities=False, db_session=db_session)
-    else:
-        print_log("No configuration file found for providers registration, skipping...", LOGGER, logging.WARN)
+    magpie_register_services_from_config(prov_cfg, push_to_phoenix=push_phoenix,
+                                         force_update=True, disable_getcapabilities=False, db_session=db_session)
 
     print_log("Register configuration permissions...", LOGGER)
     perm_cfg = get_constant("MAGPIE_PERMISSIONS_CONFIG_PATH", default_value="",
                             raise_missing=False, raise_not_set=False, print_missing=True)
-    if os.path.isfile(perm_cfg):
-        magpie_register_permissions_from_config(get_constant("MAGPIE_PERMISSIONS_CONFIG_PATH"), db_session=db_session)
-    else:
-        print_log("No configuration file found for permissions registration, skipping...", LOGGER, logging.WARN)
+    magpie_register_permissions_from_config(perm_cfg, db_session=db_session)
 
     print_log("Running configurations setup...", LOGGER)
     patch_magpie_url(settings)

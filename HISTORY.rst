@@ -9,6 +9,7 @@ Unreleased
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix resource sync process and update cron job running it (#226).
+* fix configuration files not loaded from directory by application due to more restrictive file check.
 
 1.7.0 (2019-11-04)
 ---------------------
