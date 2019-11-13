@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.7.1 (2019-11-12)
+---------------------
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix resource sync process and update cron job running it (#226).
