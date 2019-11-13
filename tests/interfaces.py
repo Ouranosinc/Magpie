@@ -487,23 +487,30 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
             utils.check_val_is_in("resources", body)
             # Starting with 1.4.0, users are automatically members of anonymous group, and therefore
             # inherit their permissions. Find the number of anonymous-only permissions, there shouldn't be any other.
-            anonymous_services = {}
+            resources_anonymous_body = {}
             if LooseVersion(self.version) >= LooseVersion("1.4.0") and query:
                 path = "/groups/{grp}/resources".format(grp=get_constant("MAGPIE_ANONYMOUS_GROUP"))
                 resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-                anonymous_services = utils.check_response_basic_info(resp, 200, expected_method="GET")
+                resources_anonymous_body = utils.check_response_basic_info(resp, 200, expected_method="GET")
             # validation
             for svc_type_no_perm in service_type_no_perm:
                 svc_type_body = body["resources"][svc_type_no_perm]
+                svc_type_services_anonymous = resources_anonymous_body.get("resources", {}).get(svc_type_no_perm, {})
                 for svc_name_no_perm in svc_type_body:
-                    utils.check_val_equal(len(svc_type_body[svc_name_no_perm]["resources"]), 0)
-                    svc_type_res_anonymous = anonymous_services.get("resources", {}).get(svc_type_no_perm, {})
-                    svc_perms_anonymous = svc_type_res_anonymous.get(svc_name_no_perm, {}).get("permission_names", [])
+                    # remove inherited anonymous-only group resources and permissions (see above)
+                    svc_anonymous = svc_type_services_anonymous.get(svc_name_no_perm, {})
+                    svc_res_anonymous = svc_anonymous.get("resources", {})
+                    svc_res_test_user = svc_type_body[svc_name_no_perm]["resources"]
+                    svc_res_ids_only_user = set(svc_res_test_user) - set(svc_res_anonymous)
+                    utils.check_val_equal(len(svc_res_ids_only_user), 0,
+                                          msg="User should not have any permitted resource under the service")
+                    svc_perms_anonymous = svc_anonymous.get("permission_names", [])
                     svc_perms_test_user = svc_type_body[svc_name_no_perm]["permission_names"]
                     svc_perms_only_user = set(svc_perms_test_user) - set(svc_perms_anonymous)
-                    utils.check_val_equal(len(svc_perms_only_user), 0)
+                    utils.check_val_equal(len(svc_perms_only_user), 0,
+                                          msg="User should not have any service permissions")
 
-        # without inherit flag, only user permissions are visible on service and resource
+        # without inherit flag, only direct user permissions are visible on service and resource
         path = "/users/{usr}/resources".format(usr=usr_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies, timeout=20)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
