@@ -5,6 +5,7 @@ LABEL Vendor="CRIM"
 
 # the cron service depends on the $MAGPIE_DIR environment variable
 ENV MAGPIE_DIR=/opt/local/src/magpie
+ENV MAGPIE_CONFIG_DIR=$MAGPIE_DIR/config
 ENV MAGPIE_ENV_DIR=$MAGPIE_DIR/env
 WORKDIR $MAGPIE_DIR
 
@@ -39,4 +40,4 @@ COPY ./ $MAGPIE_DIR
 # equivalent of `make install` without conda env and pre-installed packages
 RUN pip install --no-dependencies -e $MAGPIE_DIR
 # equivalent of `make cron start` without conda env
-CMD crond -c $CRON_DIR && gunicorn -b 0.0.0.0:2001 --paste $MAGPIE_CONFIG_DIR/config/magpie.ini --workers 10 --preload
+CMD crond -c $CRON_DIR && gunicorn -b 0.0.0.0:2001 --paste $MAGPIE_CONFIG_DIR/magpie.ini --workers 10 --preload
