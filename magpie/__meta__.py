@@ -2,7 +2,7 @@
 General meta information on the magpie package.
 """
 
-__version__ = "1.7.1"
+__version__ = "1.7.2"
 __title__ = "Magpie"
 __package__ = "magpie"
 __author__ = "Francois-Xavier Derue, Francis Charette-Migneault"

@@ -5,6 +5,9 @@ History
 
 Unreleased
 ---------------------
+
+1.7.2 (2019-11-15)
+---------------------
 * fix gunicorn breaking change in 20.0.0 is not compatible with alpine: pin gunicorn==19.9.0
 
 1.7.1 (2019-11-12)
