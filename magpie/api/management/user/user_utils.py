@@ -1,4 +1,3 @@
-from magpie.utils import get_logger
 from magpie.api import exception as ax, schemas as s
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
