@@ -217,7 +217,7 @@ def get_user_services(user, request, cascade_resources=False,
     :return: only services which the user as *Direct* or *Inherited* permissions, according to `inherit_from_resources`
     :rtype:
         dict of services by type with corresponding services by name containing sub-dict information,
-        unless `format_as_dict` is `True`
+        unless `format_as_list` is `True`
     """
     db_session = request.db
     resource_type = None if cascade_resources else [models.Service.resource_type]
@@ -226,10 +226,19 @@ def get_user_services(user, request, cascade_resources=False,
 
     services = {}
     for resource_id, perms in res_perm_dict.items():
-        svc = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
-        if svc.resource_type != models.Service.resource_type and cascade_resources:
-            svc = get_resource_root_service(svc, request)
-            perms = svc.permissions
+        resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
+        service_id = resource.root_service_id or resource.resource_id
+
+        is_service = resource.resource_type == models.Service.resource_type_name
+
+        if not is_service:
+            if not cascade_resources:
+                continue
+            else:
+                perms = get_resource_root_service(resource, request).permissions
+
+        svc = db_session.query(models.Service).filter_by(resource_id=service_id).first()
+
         if svc.type not in services:
             services[svc.type] = {}
         if svc.resource_name not in services[svc.type]:
