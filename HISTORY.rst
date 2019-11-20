@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.7.3 (2019-11-20)
+---------------------
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix 500 error when getting user's services on /users/{user_name}/services
