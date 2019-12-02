@@ -6,6 +6,11 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* add sorting by name of configuration files (permissions/providers) when loaded from a containing directory path.
+
 1.7.3 (2019-11-20)
 ---------------------
 
