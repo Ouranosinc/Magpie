@@ -510,13 +510,13 @@ def _get_all_configs(path_or_dict, section):
         empty list if none of the other cases where matched
 
     .. note::
-        Order of file loading is not guaranteed if specifying a directory path.
+        Order of file loading will be resolved by alphabetically sorted filename if specifying a directory path.
     """
     if isinstance(path_or_dict, six.string_types):
         if os.path.isdir(path_or_dict):
             dir_path = os.path.abspath(path_or_dict)
-            return [_load_config(os.path.join(dir_path, f), section)
-                    for f in os.listdir(dir_path) if f.endswith(".cfg")]
+            cfg_names = list(sorted({fn for fn in os.listdir(dir_path) if fn.endswith(".cfg")}))
+            return [_load_config(os.path.join(dir_path, fn), section) for fn in cfg_names]
         elif os.path.isfile(path_or_dict):
             return [_load_config(path_or_dict, section)]
     elif isinstance(path_or_dict, dict):
