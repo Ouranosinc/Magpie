@@ -59,7 +59,7 @@ all: help
 # Auto documented help from target comments
 #	https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 .PHONY: help
-help:
+help:	## print this help message (default)
 	@echo "$(APP_NAME) help"
 	@echo "Please use 'make <target>' where <target> is one of:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2}'
