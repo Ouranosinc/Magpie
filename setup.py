@@ -34,6 +34,9 @@ def _parse_requirements(file_path, requirements, links):
     """
     with open(file_path, 'r') as requirements_file:
         for line in requirements_file:
+            # ignore empty line, comment line or reference to other requirements file (-r flag)
+            if not line or line.startswith('#') or line.startswith("-"):
+                continue
             if 'git+https' in line:
                 pkg = line.split('#')[-1]
                 links.add(line.strip())
@@ -52,11 +55,11 @@ def _extra_requirements(base_requirements, other_requirements):
     :param other_requirements: other set of requirements referring to additional dependencies.
     """
     raw_requirements = set()
-    for req in REQUIREMENTS:
+    for req in base_requirements:
         raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
         raw_requirements.add(raw_req)
     filtered_test_requirements = set()
-    for req in TEST_REQUIREMENTS:
+    for req in other_requirements:
         raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
         if raw_req not in raw_requirements:
             filtered_test_requirements.add(req)
@@ -77,6 +80,10 @@ LINKS = list(LINKS)
 REQUIREMENTS = list(REQUIREMENTS)
 DOCS_REQUIREMENTS = list(_extra_requirements(REQUIREMENTS, DOCS_REQUIREMENTS))
 TEST_REQUIREMENTS = list(_extra_requirements(REQUIREMENTS, TEST_REQUIREMENTS))
+
+print("base", REQUIREMENTS)
+print("docs", DOCS_REQUIREMENTS)
+print("test", TEST_REQUIREMENTS)
 
 setup(
     # -- meta information --------------------------------------------------
