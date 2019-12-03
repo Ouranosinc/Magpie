@@ -1,2 +1,3 @@
-sphinx>=1.6
+autoapi
 sphinx-autoapi
+sphinx>=1.6
