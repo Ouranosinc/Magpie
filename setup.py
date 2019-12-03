@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 import os
 import sys
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Iterable, Set
+
 MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, 'magpie')
 sys.path.insert(0, MAGPIE_MODULE_DIR)
@@ -21,6 +24,14 @@ with open('HISTORY.rst') as history_file:
 
 
 def _parse_requirements(file_path, requirements, links):
+    # type: (str, Set[str], Set[str]) -> None
+    """Parses a requirements file to extra packages and links.
+
+    :param file_path: file path to the requirements file.
+    :param requirements: pre-initialized set in which to store extracted package requirements.
+    :param links: pre-initialized set in which to store extracted link reference requirements.
+    :returns: None
+    """
     with open(file_path, 'r') as requirements_file:
         for line in requirements_file:
             if 'git+https' in line:
@@ -33,28 +44,39 @@ def _parse_requirements(file_path, requirements, links):
                 requirements.add(line.strip())
 
 
+def _extra_requirements(base_requirements, other_requirements):
+    # type: (Iterable[str], Iterable[str]) -> Set[str]
+    """Extracts only the extra requirements not already defined within the base requirements.
+
+    :param base_requirements: base package requirements.
+    :param other_requirements: other set of requirements referring to additional dependencies.
+    """
+    raw_requirements = set()
+    for req in REQUIREMENTS:
+        raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
+        raw_requirements.add(raw_req)
+    filtered_test_requirements = set()
+    for req in TEST_REQUIREMENTS:
+        raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
+        if raw_req not in raw_requirements:
+            filtered_test_requirements.add(req)
+    return filtered_test_requirements
+
+
 # See https://github.com/pypa/pip/issues/3610
 # use set to have unique packages by name
 LINKS = set()
 REQUIREMENTS = set()
+DOCS_REQUIREMENTS = set()
 TEST_REQUIREMENTS = set()
-_parse_requirements('requirements.txt', REQUIREMENTS, LINKS)
-_parse_requirements('requirements-py{}.txt'.format(sys.version[0]), REQUIREMENTS, LINKS)
-_parse_requirements('requirements-dev.txt', TEST_REQUIREMENTS, LINKS)
+_parse_requirements("requirements.txt", REQUIREMENTS, LINKS)
+_parse_requirements("requirements-py{}.txt".format(sys.version[0]), REQUIREMENTS, LINKS)
+_parse_requirements("requirements-docs.txt", DOCS_REQUIREMENTS, LINKS)
+_parse_requirements("requirements-dev.txt", TEST_REQUIREMENTS, LINKS)
 LINKS = list(LINKS)
 REQUIREMENTS = list(REQUIREMENTS)
-TEST_REQUIREMENTS = list(TEST_REQUIREMENTS)
-
-raw_requirements = set()
-for req in REQUIREMENTS:
-    raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
-    raw_requirements.add(raw_req)
-filtered_test_requirements = set()
-for req in TEST_REQUIREMENTS:
-    raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
-    if raw_req not in raw_requirements:
-        filtered_test_requirements.add(req)
-TEST_REQUIREMENTS = list(filtered_test_requirements)
+DOCS_REQUIREMENTS = list(_extra_requirements(REQUIREMENTS, DOCS_REQUIREMENTS))
+TEST_REQUIREMENTS = list(_extra_requirements(REQUIREMENTS, TEST_REQUIREMENTS))
 
 setup(
     # -- meta information --------------------------------------------------
@@ -87,6 +109,11 @@ setup(
     include_package_data=True,
     install_requires=REQUIREMENTS,
     dependency_links=LINKS,
+    extras_require={
+        "docs": DOCS_REQUIREMENTS,
+        "dev": TEST_REQUIREMENTS,
+        "test": TEST_REQUIREMENTS,
+    },
     zip_safe=False,
 
     # -- self - tests --------------------------------------------------------
