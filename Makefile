@@ -66,9 +66,10 @@ help:
 
 ## clean targets
 
-.PHONY: clean clean-build clean-pyc clean-test
+.PHONY: clean
 clean: clean-build clean-pyc clean-test clean-docs	## remove all build, test, coverage and Python artifacts
 
+.PHONY: clean-build
 clean-build:	## remove build artifacts
 	@echo "Cleaning build artifacts..."
 	rm -fr build/
@@ -78,10 +79,12 @@ clean-build:	## remove build artifacts
 	find . -type d -name '*.egg-info' -exec rm -fr {} +
 	find . -type f -name '*.egg' -exec rm -f {} +
 
+.PHONY: clean-docs
 clean-docs:		## remove doc artifacts
 	@echo "Cleaning doc artifacts..."
 	"$(MAKE)" -C "$(APP_ROOT)/docs" clean || true
 
+.PHONY: clean-pyc
 clean-pyc:		## remove Python file artifacts
 	@echo "Cleaning Python artifacts..."
 	find . -type f -name '*.pyc' -exec rm -f {} +
@@ -89,6 +92,7 @@ clean-pyc:		## remove Python file artifacts
 	find . -type f -name '*~' -exec rm -f {} +
 	find . -type f -name '__pycache__' -exec rm -fr {} +
 
+.PHONY: clean-test
 clean-test:		## remove test and coverage artifacts
 	@echo "Cleaning tests artifacts..."
 	rm -fr .tox/
