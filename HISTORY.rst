@@ -10,6 +10,7 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
 * add sorting by name of configuration files (permissions/providers) when loaded from a containing directory path.
+* add `readthedocs` references to README.
 
 1.7.3 (2019-11-20)
 ---------------------
