@@ -17,7 +17,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     * - dependencies
       - | |py_ver| |requires|
     * - build status
-      - | |travis_latest| |travis_tag| |coverage| |codacy|
+      - | |travis_latest| |travis_tagged| |readthedocs| |coverage| |codacy|
     * - docker status
       - | |docker_build_mode| |docker_build_status|
     * - releases
@@ -43,9 +43,13 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Travis-CI Build Status (master branch)
     :target: https://travis-ci.com/Ouranosinc/Magpie
 
-.. |travis_tag| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/1.7.3.svg?label=1.7.3
+.. |travis_tagged| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/1.7.3.svg?label=1.7.3
     :alt: Travis-CI Build Status (latest tag)
     :target: https://github.com/Ouranosinc/Magpie/tree/1.7.3
+
+.. |readthedocs| image:: https://img.shields.io/readthedocs/pavics-magpie
+    :alt: Readthedocs Build Status (master branch)
+    :target: `readthedocs`_
 
 .. |coverage| image:: https://img.shields.io/codecov/c/gh/Ouranosinc/Magpie.svg?label=coverage
     :alt: Travis-CI CodeCov Coverage
@@ -71,8 +75,10 @@ Documentation
 
 The REST API documentation is auto-generated and served under ``{MAGPIE_URL}/api/`` using Swagger-UI with tag ``latest``.
 
-More ample details about installation, configuration and usage are provided in `docs`_.
+More ample details about installation, configuration and usage are provided on `readthedocs`_.
+These are generated from corresponding information provided in `docs`_.
 
+.. _readthedocs: https://pavics-magpie.readthedocs.io
 .. _docs: ./docs
 
 Configuration
