@@ -13,7 +13,7 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_LIST))/..)
 APP_NAME    := $(shell basename $(APP_ROOT))
-APP_VERSION ?= 1.7.4
+APP_VERSION ?= 1.7.5
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
 # conda
