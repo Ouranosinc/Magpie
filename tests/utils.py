@@ -233,7 +233,6 @@ def test_request(test_item, method, path, timeout=5, allow_redirects=True, **kwa
             kwargs.update({"params": json.dumps(json_body, cls=json.JSONEncoder)})
         if status and status >= 300:
             kwargs.update({"expect_errors": True})
-        # noinspection PyProtectedMember
         resp = app_or_url._gen_request(method, path, **kwargs)
         # automatically follow the redirect if any and evaluate its response
         max_redirect = kwargs.get("max_redirects", 5)

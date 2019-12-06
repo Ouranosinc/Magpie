@@ -135,8 +135,7 @@ def _get_remote_resources(service):
     if service_url.endswith("/"):  # remove trailing slash
         service_url = service_url[:-1]
 
-    # noinspection PyProtectedMember
-    sync_svc_cls = SYNC_SERVICES_TYPES.get(service.sync_type.lower(), SyncServiceDefault)
+    sync_svc_cls = SYNC_SERVICES_TYPES.get(service.sync_type.lower(), SyncServiceDefault)  # noqa: W0212
     sync_service = sync_svc_cls(service.resource_name, service_url)
     return sync_service.get_resources()
 

@@ -16,7 +16,6 @@ import requests
 LOGGER = get_logger("TWITCHER")
 
 
-# noinspection PyProtectedMember
 def debug_cookie_identify(request):
     """
     Logs debug information about request cookie.
@@ -32,7 +31,7 @@ def debug_cookie_identify(request):
         - :class:`pyramid.authentication.AuthTktCookieHelper`
         - :class:`pyramid.authentication.AuthTktAuthenticationPolicy`
     """
-    cookie_inst = request._get_authentication_policy().cookie
+    cookie_inst = request._get_authentication_policy().cookie  # noqa: W0212
     cookie = request.cookies.get(cookie_inst.cookie_name)
 
     LOGGER.debug(
@@ -68,7 +67,7 @@ def debug_cookie_identify(request):
             LOGGER.debug("Cookie is expired")
 
         # Could raise useful exception explaining why unauthenticated_userid is None
-        request._get_authentication_policy().cookie.identify(request)
+        request._get_authentication_policy().cookie.identify(request)  # noqa: W0212
 
 
 def get_user(request):

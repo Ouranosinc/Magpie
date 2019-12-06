@@ -87,8 +87,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                                          .format(session_resp.reason))
 
             # use specific domain to differentiate between `.{hostname}` and `{hostname}` variations if applicable
-            # noinspection PyProtectedMember
-            request_cookies = session_resp.request._cookies
+            request_cookies = session_resp.request._cookies  # noqa: W0212
             magpie_cookies = list(filter(lambda cookie: cookie.name == token_name, request_cookies))
             magpie_domain = urlparse(self.magpie_url).hostname if len(magpie_cookies) > 1 else None
             session_cookies = RequestsCookieJar.get(request_cookies, token_name, domain=magpie_domain)

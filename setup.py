@@ -2,25 +2,32 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+import logging
 from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from typing import Iterable, Set
-
-MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
-MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, 'magpie')
-sys.path.insert(0, MAGPIE_MODULE_DIR)
-
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-from magpie import __meta__             # noqa: F401
+if TYPE_CHECKING:
+    from typing import Iterable, Set
 
-with open('README.rst') as readme_file:
+MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
+MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, "magpie")
+sys.path.insert(0, MAGPIE_MODULE_DIR)
+
+LOGGER = logging.getLogger("magpie.setup")
+if logging.StreamHandler not in LOGGER.handlers:
+    LOGGER.addHandler(logging.StreamHandler(sys.stdout))
+LOGGER.setLevel(logging.INFO)
+LOGGER.info("starting setup")
+
+from magpie import __meta__  # noqa: F401
+
+with open("README.rst") as readme_file:
     README = readme_file.read()
 
-with open('HISTORY.rst') as history_file:
-    HISTORY = history_file.read().replace('.. :changelog:', '')
+with open("HISTORY.rst") as history_file:
+    HISTORY = history_file.read().replace(".. :changelog:", "")
 
 
 def _parse_requirements(file_path, requirements, links):
@@ -37,11 +44,11 @@ def _parse_requirements(file_path, requirements, links):
             # ignore empty line, comment line or reference to other requirements file (-r flag)
             if not line or line.startswith('#') or line.startswith("-"):
                 continue
-            if 'git+https' in line:
-                pkg = line.split('#')[-1]
+            if "git+https" in line:
+                pkg = line.split("#")[-1]
                 links.add(line.strip())
-                requirements.add(pkg.replace('egg=', '').rstrip())
-            elif line.startswith('http'):
+                requirements.add(pkg.replace("egg=", "").rstrip())
+            elif line.startswith("http"):
                 links.add(line.strip())
             else:
                 requirements.add(line.strip())
@@ -66,6 +73,8 @@ def _extra_requirements(base_requirements, other_requirements):
     return filtered_test_requirements
 
 
+LOGGER.info("reading requirements")
+
 # See https://github.com/pypa/pip/issues/3610
 # use set to have unique packages by name
 LINKS = set()
@@ -81,9 +90,10 @@ REQUIREMENTS = list(REQUIREMENTS)
 DOCS_REQUIREMENTS = list(_extra_requirements(REQUIREMENTS, DOCS_REQUIREMENTS))
 TEST_REQUIREMENTS = list(_extra_requirements(REQUIREMENTS, TEST_REQUIREMENTS))
 
-print("base", REQUIREMENTS)
-print("docs", DOCS_REQUIREMENTS)
-print("test", TEST_REQUIREMENTS)
+LOGGER.info("base requirements: %s", REQUIREMENTS)
+LOGGER.info("docs requirements: %s", DOCS_REQUIREMENTS)
+LOGGER.info("test requirements: %s", TEST_REQUIREMENTS)
+LOGGER.info("link requirements: %s", LINKS)
 
 setup(
     # -- meta information --------------------------------------------------
@@ -137,3 +147,4 @@ setup(
           [console_scripts]
           """,
 )
+LOGGER.info("setup complete")

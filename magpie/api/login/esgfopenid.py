@@ -15,8 +15,7 @@ Providers which implement the |openid|_ protocol based on the
 
 from magpie.utils import get_logger
 from authomatic.providers.openid import OpenID
-# noinspection PyProtectedMember, PyUnresolvedReferences
-from openid.fetchers import Urllib2Fetcher  # , setDefaultFetcher
+from openid.fetchers import Urllib2Fetcher  # noqa: W0212
 from six.moves.urllib.request import urlopen
 import ssl
 LOGGER = get_logger(__name__)
@@ -27,8 +26,7 @@ __all__ = ["ESGFOpenID"]
 class MyFetcher(Urllib2Fetcher):
     @staticmethod
     def urlopen(req):
-        # noinspection PyProtectedMember
-        return urlopen(req, context=ssl._create_unverified_context())
+        return urlopen(req, context=ssl._create_unverified_context())  # noqa: W0212
 
 
 class ESGFOpenID(OpenID):

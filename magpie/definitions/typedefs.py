@@ -5,9 +5,8 @@ Magpie additional typing definitions.
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    # noinspection PyUnresolvedReferences
-    from typing import (  # noqa: F401
-        Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union
+    from typing import (
+        Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union  # noqa: F401,W0212
     )
     from magpie.definitions.sqlalchemy_definitions import Session
     from magpie import models
@@ -22,14 +21,12 @@ if TYPE_CHECKING:
     from pyramid.request import Request
     from pyramid.config import Configurator
     from requests.structures import CaseInsensitiveDict
-    # noinspection PyUnresolvedReferences, PyProtectedMember
-    from logging import _loggerClass as LoggerType  # noqa: F401
+    from logging import Logger as LoggerType  # noqa: F401
     from tests.interfaces import Base_Magpie_TestCase
     import six
 
     if six.PY2:
-        # noinspection PyUnresolvedReferences
-        Str = Union[_AnyStr, unicode]   # noqa: F821
+        Str = Union[_AnyStr, unicode]   # noqa: F405,F821
     else:
         Str = _AnyStr
     AnyStr = Str

@@ -1,10 +1,8 @@
 from __future__ import with_statement
-# noinspection PyUnresolvedReferences
-from alembic import context
+from alembic import context  # noqa: F403
 # from logging.config import fileConfig
 from sqlalchemy.schema import MetaData
-# noinspection PyProtectedMember
-from sqlalchemy.engine import create_engine, Connection, Connectable
+from sqlalchemy.engine import create_engine, Connection, Connectable  # noqa: W0212
 from sqlalchemy_utils import database_exists, create_database
 from magpie.db import get_db_url
 from magpie.constants import get_constant

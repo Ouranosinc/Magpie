@@ -7,8 +7,7 @@ from magpie.definitions.pyramid_definitions import (
     HTTPOk, HTTPClientError, HTTPException, ConfigurationError, Configurator, Registry, Request, Response, truthy
 )
 from six.moves.urllib.parse import urlparse
-# noinspection PyProtectedMember
-from enum import EnumMeta
+from enum import EnumMeta  # noqa: W0212
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
 from webob.headers import ResponseHeaders, EnvironHeaders
@@ -26,8 +25,7 @@ if TYPE_CHECKING:
         Any, AnyKey, Str, List, Optional, Type, Union,
         AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,
     )
-    # noinspection PyProtectedMember
-    from typing import _TC  # noqa: F401
+    from typing import _TC  # noqa: F401,W0212
 
 CONTENT_TYPE_ANY = "*/*"
 CONTENT_TYPE_JSON = "application/json"
@@ -40,7 +38,7 @@ SUPPORTED_CONTENT_TYPES = [CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PL
 def get_logger(name, level=None):
     """
     Immediately sets the logger level to avoid duplicate log outputs from the `root logger` and `this logger` when
-    `level` is `NOTSET`.
+    `level` is ``logging.NOTSET``.
     """
     logger = logging.getLogger(name)
     if logger.level == logging.NOTSET:
@@ -174,8 +172,7 @@ def convert_response(response):
         for cookie in response.cookies:
             pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
     if isinstance(response, HTTPException):
-        # noinspection PyProtectedMember
-        for header_name, header_value in response.headers._items:
+        for header_name, header_value in response.headers._items:  # noqa: W0212
             if header_name.lower() == "set-cookie":
                 pyramid_response.set_cookie(name=header_name, value=header_value, overwrite=True)
     return pyramid_response
@@ -196,7 +193,6 @@ def get_admin_cookies(container, verify=True, raise_message=None):
     token_name = get_constant("MAGPIE_COOKIE_NAME", container)
 
     # use specific domain to differentiate between `.{hostname}` and `{hostname}` variations if applicable
-    # noinspection PyProtectedMember
     request_cookies = resp.cookies
     magpie_cookies = list(filter(lambda cookie: cookie.name == token_name, request_cookies))
     magpie_domain = urlparse(magpie_url).hostname if len(magpie_cookies) > 1 else None
