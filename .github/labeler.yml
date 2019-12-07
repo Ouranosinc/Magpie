@@ -1,0 +1,34 @@
+# label rules used by .github/workflows/label.yml
+
+api:
+  - magpie/api/**/*
+
+# label 'ci' all automation-related steps and files
+ci:
+  - .*  # all '.<>' files
+  - ci/**/*
+  - hooks/**/*
+  - Makefile
+  - Dockerfile*
+  - setup.cfg
+
+doc:
+  - *.rst
+  - *.example
+  - doc/**/*
+
+db:
+  - magpie/db.py
+  - magpie/models.py
+
+plugin:
+  - magpie/adapter/**/*
+
+security:
+  - magpie/security.py
+
+tests:
+  - tests/**/*
+
+ui:
+  - magpie/ui/**/*

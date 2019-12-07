@@ -34,6 +34,6 @@ requirements-all.txt
 src/
 share/
 tests/results.xml
-/gunicorn.app.wsgiapp
-/sys
+gunicorn.app.wsgiapp
+sys
 error_log.txt
