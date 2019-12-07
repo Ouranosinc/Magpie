@@ -11,7 +11,6 @@ from __future__ import unicode_literals
 revision = '439766f6104d'
 down_revision = '20671b28c538'
 
-# noinspection PyUnresolvedReferences
 from alembic.context import get_context                             # noqa: F401
 from alembic import op                                              # noqa: F401
 from magpie.definitions.sqlalchemy_definitions import PGDialect     # noqa: F401

@@ -2,7 +2,7 @@
 Store adapters to read data from magpie.
 """
 from magpie.models import Service as MagpieService
-from magpie.definitions.twitcher_definitions import ServiceStoreInterface, Service, ServiceNotFound
+from magpie.definitions.twitcher_definitions import ServiceStoreInterface, Service, ServiceNotFound  # noqa
 from magpie.definitions.pyramid_definitions import HTTPOk, asbool
 from magpie.api.schemas import ServicesAPI
 from magpie.utils import get_admin_cookies, get_magpie_url, get_settings, get_logger, CONTENT_TYPE_JSON
@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 LOGGER = get_logger("TWITCHER")
 
 
-# noinspection PyUnusedLocal
 class MagpieServiceStore(ServiceStoreInterface):
     """
     Registry for OWS services.
@@ -42,7 +41,7 @@ class MagpieServiceStore(ServiceStoreInterface):
         """
         raise NotImplementedError
 
-    def list_services(self, request=None):
+    def list_services(self, request=None):  # noqa: F811
         """
         Lists all services registered in magpie.
         """
@@ -61,7 +60,7 @@ class MagpieServiceStore(ServiceStoreInterface):
                                         type=service["service_type"]))
         return services
 
-    def fetch_by_name(self, name, visibility=None, request=None):
+    def fetch_by_name(self, name, visibility=None, request=None):  # noqa: F811
         """
         Gets service for given ``name`` from magpie.
         """

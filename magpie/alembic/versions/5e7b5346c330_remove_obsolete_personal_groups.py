@@ -15,7 +15,6 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-# noinspection PyUnresolvedReferences
 from alembic.context import get_context                                         # noqa: F401
 from alembic import op                                                          # noqa: F401
 from sqlalchemy.orm import sessionmaker                                         # noqa: F401

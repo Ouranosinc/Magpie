@@ -9,6 +9,17 @@ Unreleased
 1.7.5 (2019-12-06)
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* update code with more linting checks.
+* prepare travis pipeline for *eventual* docker image smoke test.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix incorrectly installed ``authomatic`` library following update of reference branch
+  (https://github.com/fmigneault/authomatic/tree/httplib-port) with ``master`` branch merged update
+  (https://github.com/authomatic/authomatic/pull/195/commits/d7897c5c4c20486b55cb2c70724fa390c9aa7de6).
+
 1.7.4 (2019-12-03)
 ---------------------
 

@@ -8,7 +8,6 @@ The OWSRequest is based on pywps code:
 from magpie.api.requests import get_multiformat_any
 from magpie.utils import get_logger, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, CONTENT_TYPE_FORM, is_json_body, get_header
 from typing import TYPE_CHECKING
-# noinspection PyUnresolvedReferences
 import lxml.etree
 
 if TYPE_CHECKING:

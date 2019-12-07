@@ -6,8 +6,7 @@ Revises: 53927300c277
 Create Date: 2012-06-27 02:15:58.776223
 """
 from __future__ import unicode_literals
-# noinspection PyUnresolvedReferences
-from alembic.context import get_context
+from alembic.context import get_context  # noqa: F401
 from alembic import op
 from sqlalchemy.dialects.mysql.base import MySQLDialect
 from sqlalchemy.engine.reflection import Inspector

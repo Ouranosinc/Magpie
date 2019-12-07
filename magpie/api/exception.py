@@ -27,7 +27,7 @@ RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 
 
 # noinspection PyPep8Naming
-def verify_param(   # noqa: E126
+def verify_param(   # noqa: E126,N802
                  # --- verification values ---
                  param,                             # type: Any
                  paramCompare=None,                 # type: Optional[Union[Any, List[Any]]]
@@ -162,7 +162,6 @@ def verify_param(   # noqa: E126
         raise_http(httpError, httpKWArgs=httpKWArgs, detail=msgOnFail, content=content, contentType=contentType)
 
 
-# noinspection PyPep8Naming
 def evaluate_call(call,                                 # type: Callable[[], Any]
                   fallback=None,                        # type: Optional[Callable[[], None]]
                   httpError=HTTPInternalServerError,    # type: HTTPError

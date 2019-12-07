@@ -50,7 +50,6 @@ def get_users_groups(db_session):
     new_group_users = [group for group in all_groups if group.group_name == NEW_GROUP_USERS]
 
     # return found or None
-    # noinspection PyPep8
     return (
         old_user_admin[0] if len(old_user_admin) > 0 else None,
         old_user_users[0] if len(old_user_users) > 0 else None,

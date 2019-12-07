@@ -11,7 +11,6 @@ from __future__ import unicode_literals
 revision = '53927300c277'
 down_revision = '54d08f9adc8c'
 
-# noinspection PyUnresolvedReferences
 from alembic.context import get_context                     # noqa: F401
 from alembic import op                                      # noqa: F401
 import sqlalchemy as sa                                     # noqa: F401

@@ -4,7 +4,7 @@ from magpie.constants import get_constant
 from magpie.definitions.alembic_definitions import alembic
 from magpie.definitions.sqlalchemy_definitions import (
     register, sessionmaker, engine_from_config,
-    configure_mappers, select, Inspector, Session, sa_exc
+    configure_mappers, Inspector, Session, sa_exc
 )
 from magpie.definitions.pyramid_definitions import asbool
 from magpie.utils import get_settings_from_config_ini, get_settings, print_log, raise_log, get_logger
@@ -14,6 +14,7 @@ import inspect
 import warnings
 import logging
 import time
+import six
 
 # import or define all models here to ensure they are attached to the
 # Base.metadata prior to any initialization routines
@@ -186,15 +187,16 @@ def run_database_migration_when_ready(settings, db_session=None):
 def set_sqlalchemy_log_level(magpie_log_level):
     # type: (Union[Str, int]) -> SettingsType
     """
-    Suppresses sqlalchemy logging if not in debug for magpie.
+    Suppresses :py:mod:`sqlalchemy` verbose logging if not in ``logging.DEBUG`` for Magpie.
     """
-    log_lvl = logging.getLevelName(magpie_log_level) if isinstance(magpie_log_level, int) else magpie_log_level
+    if isinstance(magpie_log_level, six.string_types):
+        magpie_log_level = logging.getLevelName(magpie_log_level)
     sa_settings = {"sqlalchemy.echo": True}
-    if log_lvl.upper() != "DEBUG":
+    if magpie_log_level > logging.DEBUG:
         sa_settings["sqlalchemy.echo"] = False
         sa_loggers = "sqlalchemy.engine.base.Engine".split(".")
         sa_log = logging.getLogger(sa_loggers[0])
-        sa_log.setLevel(logging.WARN)   # WARN to avoid INFO logs
+        sa_log.setLevel(logging.WARN)   # WARN to avoid INFO logs which are too verbose
         for h in sa_log.handlers:
             sa_log.removeHandler(h)
         for sa_mod in sa_loggers[1:]:

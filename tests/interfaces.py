@@ -19,18 +19,17 @@ import six
 
 # don't use 'unittest.TestCase' base
 # some test runner raise (ERROR) the 'NotImplementedError' although overridden by other classes
-# noinspection PyPep8Naming
 class Base_Magpie_TestCase(object):
     version = None
 
     __test__ = False
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls):  # noqa: N802
         raise NotImplementedError
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls):  # noqa: N802
         pyramid.testing.tearDown()
 
 

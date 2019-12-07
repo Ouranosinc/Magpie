@@ -684,16 +684,13 @@ class ManagementViews(object):
         last_sync_datetimes = list(filter(bool, self.get_last_sync_datetimes(service_ids, session)))
 
         if any(last_sync_datetimes):
-            # noinspection PyTypeChecker
             last_sync_datetime = min(last_sync_datetimes)
-            # noinspection PyTypeChecker
             last_sync_humanized = humanize.naturaltime(now - last_sync_datetime)
             res_perms = self.merge_remote_resources(res_perms, services, session)
 
         for last_sync, service_name in zip(last_sync_datetimes, services):
             if last_sync:
                 ids_to_clean += self.get_ids_to_clean(res_perms[service_name]["children"])
-                # noinspection PyTypeChecker
                 if now - last_sync > OUT_OF_SYNC:
                     out_of_sync.append(service_name)
         return res_perms, ids_to_clean, last_sync_humanized, out_of_sync

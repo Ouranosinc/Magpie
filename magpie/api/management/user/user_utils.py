@@ -64,8 +64,7 @@ def create_user(user_name, password, email, group_name, db_session):
                     msgOnFail=s.User_Check_ConflictResponseSchema.description)
 
     # Create user with specified name and group to assign
-    # noinspection PyArgumentList
-    new_user = models.User(user_name=user_name, email=email)
+    new_user = models.User(user_name=user_name, email=email)  # noqa
     if password:
         UserService.set_password(new_user, password)
         UserService.regenerate_security_code(new_user)

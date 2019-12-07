@@ -1,2 +1,0 @@
-# authomatic doesn't properly install valid version of openid
-python3-openid

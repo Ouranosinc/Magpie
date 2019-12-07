@@ -140,6 +140,9 @@ test-remote: install-dev install	## run only remote tests with the default Pytho
 	@echo "Running remote tests..."
 	bash -c '$(CONDA_CMD) pytest tests -vv -m "not local" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+.PHONY: test-docker
+test-docker: docker-test			## synonym for target 'docker-test' - WARNING: could build image if missing
+
 COVERAGE_FILE := $(APP_ROOT)/.coverage
 COVERAGE_HTML := $(APP_ROOT)/coverage/index.html
 $(COVERAGE_FILE):
@@ -292,6 +295,13 @@ docker-push-magpie: docker-build-magpie		## push only built docker image for Mag
 
 .PHONY: docker-push
 docker-push: docker-push-magpie docker-push-adapter	 ## push built docker images for Magpie application and MagpieAdapter for Twitcher
+
+# FIXME:
+#	need to find a way to launch the app and kill it after the worker was successfully started
+#	need also to consider database probably not available
+.PHONY: docker-test
+docker-test: docker-build-magpie 			## execute a smoke test of the built image for Magpie application (validate that it boots)
+	echo "not yet implemented!"
 
 ## Conda targets
 
