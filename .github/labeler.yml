@@ -13,8 +13,8 @@ ci:
   - setup.cfg
 
 doc:
-  - *.rst
-  - *.example
+  - "*.rst"
+  - "*.example"
   - doc/**/*
 
 db:
