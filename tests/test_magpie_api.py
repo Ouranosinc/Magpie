@@ -147,6 +147,7 @@ class TestCase_MagpieAPI_AdminAuth_Remote(ti.Interface_MagpieAPI_AdminAuth, unit
 
 
 @runner.MAGPIE_TEST_API
+@runner.MAGPIE_TEST_LOCAL
 def test_magpie_homepage():
     from magpie.constants import get_constant as real_get_constant
 

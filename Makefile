@@ -12,7 +12,7 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_LIST))/..)
-APP_NAME    := $(shell basename $(APP_ROOT))
+APP_NAME    := magpie
 APP_VERSION ?= 1.7.5
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
@@ -130,6 +130,7 @@ test: install-dev install			## run tests quickly with the default Python
 	@echo "Running tests..."
 	bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+# Note: use 'not remote' instead of 'local' to capture other low-level tests like 'utils' unittests
 .PHONY: test-local
 test-local: install-dev install		## run only local tests with the default Python
 	@echo "Running local tests..."
@@ -138,7 +139,7 @@ test-local: install-dev install		## run only local tests with the default Python
 .PHONY: test-remote
 test-remote: install-dev install	## run only remote tests with the default Python
 	@echo "Running remote tests..."
-	bash -c '$(CONDA_CMD) pytest tests -vv -m "not local" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	bash -c '$(CONDA_CMD) pytest tests -vv -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-docker
 test-docker: docker-test			## synonym for target 'docker-test' - WARNING: could build image if missing
@@ -241,13 +242,17 @@ cron:
 	cron
 
 .PHONY: start
-start: install	## start instance with gunicorn
+start: install	## start application instance(s) with gunicorn
 	@echo "Starting $(APP_NAME)..."
 	@bash -c '$(CONDA_CMD) exec gunicorn -b 0.0.0.0:2001 --paste "$(APP_INI)" --preload &'
 
 .PHONY: stop
-stop: 		## kill instance(s) started with gunicorn
-	@lsof -t -i :2001 | xargs sh -c 'kill || echo "Nothing to stop"'
+stop: 		## kill application instance(s) started with gunicorn
+	@lsof -t -i :2001 | xargs kill
+
+.PHONY: stat
+stat: 		## display PID(s) of gunicorn application instance(s) running
+	@lsof -t -i :2001 || echo "No instance running"
 
 .PHONY: version
 version:	## display current version

@@ -44,6 +44,7 @@ def make_ows_parser(method='GET', content_type=None, params=None, body=''):
 
 
 @runner.MAGPIE_TEST_SERVICES
+@runner.MAGPIE_TEST_LOCAL
 class TestServices(unittest.TestCase):
     def test_ows_parser_factory(self):
         parser = make_ows_parser(method="GET", content_type=None, params=None, body='')
