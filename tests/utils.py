@@ -69,8 +69,7 @@ class RunOption(object):
         return self._marker
 
 
-# noinspection PyPep8Naming
-def RunDecorator(run_option):
+def RunDecorator(run_option):   # noqa: N802
     # type: (RunOption) -> Callable
     """
     Decorates the test/class with ``pytest.mark`` and ``unittest.skipUnless`` using the provided test condition
@@ -91,8 +90,7 @@ def RunDecorator(run_option):
         def test_func():
             <test>
     """
-    # noinspection PyUnusedLocal
-    def wrap(test_func, *args, **kwargs):
+    def wrap(test_func, *args, **kwargs):  # noqa: F811
         pytest_marker = pytest.mark.__getattr__(run_option.marker)
         unittest_skip = unittest.skipUnless(*run_option())
         test_func = pytest_marker(test_func)
@@ -189,8 +187,7 @@ def warn_version(test, functionality, version, skip=True):
               .format(functionality, test.version, version)
         warnings.warn(msg, FutureWarning)
         if skip:
-            # noinspection PyUnresolvedReferences
-            test.skipTest(reason=msg)
+            test.skipTest(reason=msg)   # noqa: F401
 
 
 def test_request(test_item, method, path, timeout=5, allow_redirects=True, **kwargs):

@@ -243,7 +243,11 @@ cron:
 .PHONY: start
 start: install	## start instance with gunicorn
 	@echo "Starting $(APP_NAME)..."
-	@bash -c '$(CONDA_CMD) exec gunicorn -b 0.0.0.0:2001 --paste "$(APP_INI)" --workers 10 --preload &'
+	@bash -c '$(CONDA_CMD) exec gunicorn -b 0.0.0.0:2001 --paste "$(APP_INI)" --preload &'
+
+.PHONY: stop
+stop: 		## kill instance(s) started with gunicorn
+	@lsof -t -i :2001 | xargs sh -c 'kill || echo "Nothing to stop"'
 
 .PHONY: version
 version:	## display current version
