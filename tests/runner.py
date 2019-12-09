@@ -21,7 +21,7 @@ test_files = os.listdir(test_root_path)
 test_modules = [os.path.splitext(f)[0] for f in filter(lambda i: filter_test_files(test_root_path, i), test_files)]
 
 
-# run test options
+# run test options, correspond to known pytest markers
 MAGPIE_TEST_DEFAULTS = RunOptionDecorator("MAGPIE_TEST_DEFAULTS")   # default users, providers and views
 MAGPIE_TEST_REGISTER = RunOptionDecorator("MAGPIE_TEST_REGISTER")   # methods employed in 'register' module
 MAGPIE_TEST_LOGIN = RunOptionDecorator("MAGPIE_TEST_LOGIN")

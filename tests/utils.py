@@ -89,6 +89,8 @@ def RunDecorator(run_option):   # noqa: N802
         @unittest.skipUnless(runner.MAGPIE_TEST_CUSTOM_MARKER, reason="...")
         def test_func():
             <test>
+
+    All ``<custom_marker>`` definitions should be added to ``setup.cfg``.
     """
     def wrap(test_func, *args, **kwargs):  # noqa: F811
         pytest_marker = pytest.mark.__getattr__(run_option.marker)

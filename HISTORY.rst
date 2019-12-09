@@ -13,6 +13,7 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * update code with more linting checks.
 * prepare travis pipeline for *eventual* docker image smoke test.
+* bump `alembic>=1.3.0` to remove old warnings and receive recent fixes.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
