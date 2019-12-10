@@ -20,12 +20,6 @@ LOGGER = get_logger(__name__)
 __all__ = ["ESGFOpenID"]
 
 
-class MyFetcher(Urllib2Fetcher):
-    @staticmethod
-    def urlopen(req):
-        return urlopen(req, context=ssl._create_unverified_context())  # noqa: W0212
-
-
 class ESGFOpenID(OpenID):
     """
     ESGF - Earth System Grid Federation
@@ -53,9 +47,6 @@ class ESGFOpenID(OpenID):
         if "username" in self.params:
             self.username = self.params.get("username")
             self.identifier = self.provider_url.format(hostname=self.hostname, username=self.username)
-
-        # use fetcher with disabled ssl verification
-        # setDefaultFetcher(MyFetcher())
 
 
 # Authomatic provider type ID is generated from this list's indexes!
