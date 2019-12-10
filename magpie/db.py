@@ -32,14 +32,28 @@ LOGGER = get_logger(__name__)
 configure_mappers()
 
 
-def get_db_url(username=None, password=None, db_host=None, db_port=None, db_name=None, settings=None):
-    return "postgresql://%s:%s@%s:%s/%s" % (
-        username if username is not None else get_constant("MAGPIE_POSTGRES_USER", settings, "postgres.user"),
-        password if password is not None else get_constant("MAGPIE_POSTGRES_PASSWORD", settings, "postgres.password"),
-        db_host if db_host is not None else get_constant("MAGPIE_POSTGRES_HOST", settings, "postgres.host"),
-        db_port if db_port is not None else get_constant("MAGPIE_POSTGRES_PORT", settings, "postgres.port"),
-        db_name if db_name is not None else get_constant("MAGPIE_POSTGRES_DB", settings, "postgres.db"),
-    )
+def get_db_url(username=None,   # type: Optional[Str]
+               password=None,   # type: Optional[Str]
+               db_host=None,    # type: Optional[Str]
+               db_port=None,    # type: Optional[Union[Str,int]]
+               db_name=None,    # type: Optional[Str]
+               settings=None,   # type: AnySettingsContainer
+               ):               # type: (...) -> Str
+    """Retrieve the database connection URL with provided settings."""
+    db_url = get_constant("MAGPIE_DB_URL", settings, raise_missing=False, print_missing=True, raise_not_set=False)
+    if db_url:
+        LOGGER.info("Using setting 'MAGPIE_DB_URL' for database connection.")
+    else:
+        db_url = "postgresql://%s:%s@%s:%s/%s" % (
+            username if username is not None else get_constant("MAGPIE_POSTGRES_USER", settings, "postgres.user"),
+            password if password is not None else get_constant("MAGPIE_POSTGRES_PASSWORD", settings, "postgres.password"),
+            db_host if db_host is not None else get_constant("MAGPIE_POSTGRES_HOST", settings, "postgres.host"),
+            db_port if db_port is not None else get_constant("MAGPIE_POSTGRES_PORT", settings, "postgres.port"),
+            db_name if db_name is not None else get_constant("MAGPIE_POSTGRES_DB", settings, "postgres.db"),
+        )
+        LOGGER.info("Using composed settings 'MAGPIE_POSTGRES_<>' for database connection.")
+    LOGGER.debug("Resolved database connection URL: [%s]", db_url)
+    return db_url
 
 
 def get_engine(container=None, prefix="sqlalchemy.", **kwargs):
@@ -130,14 +144,10 @@ def is_database_ready(db_session=None):
     table_names = inspector.get_table_names()
 
     for _, obj in inspect.getmembers(models):
-        if inspect.isclass(obj):
-            # noinspection PyBroadException
-            try:
-                curr_table_name = obj.__tablename__
-                if curr_table_name not in table_names:
-                    return False
-            except Exception:
-                continue
+        if inspect.isclass(obj) and hasattr(obj, "__tablename__"):
+            if obj.__tablename__ not in table_names:
+                LOGGER.error("Database table (or its associated parent) is missing for '{!s}' object".format(obj))
+                return False
     return True
 
 

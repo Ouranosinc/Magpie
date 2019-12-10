@@ -38,6 +38,6 @@ def downgrade():
     # pylint: disable=no-member
     op.execute(resources.
                update().
-               where(resources.c.root_service_id == None).
+               where(resources.c.root_service_id is None).
                values(root_service_id=resources.c.resource_id)
                )

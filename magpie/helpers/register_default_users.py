@@ -46,7 +46,6 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
     else:
         print_log("User '{}' already exist".format(user_name), level=logging.DEBUG)
 
-    # noinspection PyBroadException
     try:
         # ensure the reference between user/group exists (user joined the group)
         user_group_refs = BaseService.all(models.UserGroup, db_session=db_session)
@@ -55,7 +54,8 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
             # noinspection PyArgumentList
             group_entry = models.UserGroup(group_id=registered_group.id, user_id=registered_user.id)
             db_session.add(group_entry)
-    except Exception:  # in case reference already exists, avoid duplicate error
+    except Exception:  # noqa
+        # in case reference already exists, avoid duplicate error
         db_session.rollback()
 
 

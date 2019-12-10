@@ -12,9 +12,6 @@ Providers which implement the |openid|_ protocol based on the appropriate `pytho
 
 from magpie.utils import get_logger
 from authomatic.providers.openid import OpenID
-from openid.fetchers import Urllib2Fetcher  # noqa: W0212
-from six.moves.urllib.request import urlopen
-import ssl
 LOGGER = get_logger(__name__)
 
 __all__ = ["ESGFOpenID"]

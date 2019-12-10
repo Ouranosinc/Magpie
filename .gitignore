@@ -1,16 +1,31 @@
-__pycache__/
-*.pyc
-.coverage
-.idea/
+# Python & Build
+__pycache__
+*.py[cio]
+*.egg*
+build
+dist
+downloads
+magpieenv
+pip-selfcheck.json
+src
+share
+
+# IDE
+.idea
 .vscode
-.eggs/
-.pytest_cache/
-docker-compose.yml
+
+# Tests & CI
+.coverage
+.pytest_cache
+bandit.txt
 coverage.xml
-build/
-coverage/
-dist/
-docs/_build/
+coverage
+docker-compose.yml
+docker-compose.override.yml
+results.xml
+
+# Docs
+docs/_build
 docs/magpie.esgf.rst
 docs/magpie.home.rst
 docs/magpie.local.rst
@@ -18,22 +33,15 @@ docs/magpie.login.rst
 docs/magpie.management.rst
 docs/magpie.tests.rst
 docs/magpie.rst
-downloads/
-magpieenv/
-magpie/api_docs/
-magpie/api_test/
+
+# Repo
+magpie/api_docs
+magpie/api_test
+magpie/bin
+magpie/include
+magpie/lib
+magpie/local
 magpie/ui/swagger-ui/magpie-rest-api.json
-magpie/bin/
-magpie/include/
-magpie/lib/
-magpie/local/
-magpie/pip-selfcheck.json
-magpie/share/
-magpie.egg-info/
 requirements-all.txt
-src/
-share/
-tests/results.xml
 gunicorn.app.wsgiapp
-sys
 error_log.txt

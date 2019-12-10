@@ -347,8 +347,8 @@ QueryCascadeResourcesPermissions = colander.SchemaNode(
 class BaseResponseBodySchema(colander.MappingSchema):
     def __init__(self, code, description, **kw):
         super(BaseResponseBodySchema, self).__init__(**kw)
-        assert isinstance(code, int)
-        assert isinstance(description, six.string_types)
+        assert isinstance(code, int)                        # nosec: B101
+        assert isinstance(description, six.string_types)    # nosec: B101
         self.__code = code
         self.__desc = description
 
@@ -388,7 +388,7 @@ class ErrorVerifyParamBodySchema(colander.MappingSchema):
 class ErrorResponseBodySchema(BaseResponseBodySchema):
     def __init__(self, code, description, **kw):
         super(ErrorResponseBodySchema, self).__init__(code, description, **kw)
-        assert code >= 400
+        assert code >= 400  # nosec: B101
 
     route_name = colander.SchemaNode(
         colander.String(),

@@ -68,13 +68,12 @@ def _get_default_log_level():
     Get default configurations from ini file.
     """
     _default_log_lvl = "INFO"
-    # noinspection PyBroadException
     try:
         import magpie.utils
         _settings = magpie.utils.get_settings_from_config_ini(MAGPIE_INI_FILE_PATH,
                                                               ini_main_section_name="logger_magpie")
         _default_log_lvl = _settings.get("level", _default_log_lvl)
-    except Exception:
+    except Exception:  # noqa # nosec: B110
         pass
     return _default_log_lvl
 

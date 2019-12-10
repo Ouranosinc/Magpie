@@ -48,23 +48,63 @@ endif
 # docker
 MAGPIE_DOCKER_REPO   := pavics/magpie
 MAGPIE_DOCKER_TAG    := $(MAGPIE_DOCKER_REPO):$(APP_VERSION)
+MAGPIE_LATEST_TAG	 := $(MAGPIE_DOCKER_REPO):latest
 TWITCHER_DOCKER_REPO := pavics/twitcher
 TWITCHER_DOCKER_TAG  := $(TWITCHER_DOCKER_REPO):magpie-$(APP_VERSION)
 
 .DEFAULT_GOAL := help
 
+## --- Informative targets --- ##
+
 .PHONY: all
 all: help
 
-# Auto documented help from target comments
-#	https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
+# Auto documented help targets & sections from comments
+#	- detects lines marked by double octothorpe (#), then applies the corresponding target/section markup
+#   - target comments must be defined after their dependencies (if any)
+#	- section comments must have at least a double dash (-)
+#
+# 	Original Reference:
+#		https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
+# 	Formats:
+#		https://misc.flogisoft.com/bash/tip_colors_and_formatting
+_SECTION := \033[34m
+_TARGET  := \033[36m
+_NORMAL  := \033[0m
 .PHONY: help
+# note: use "\#\#" to escape results that would self-match in this target's search definition
 help:	## print this help message (default)
-	@echo "$(APP_NAME) help"
+	@echo "$(_SECTION)=== $(APP_NAME) help ===$(_NORMAL)"
 	@echo "Please use 'make <target>' where <target> is one of:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2}'
+#	@grep -E '^[a-zA-Z_-]+:.*?\#\# .*$$' $(MAKEFILE_LIST) \
+#		| awk 'BEGIN {FS = ":.*?\#\# "}; {printf "    $(_TARGET)%-24s$(_NORMAL) %s\n", $$1, $$2}'
+	@grep -E '\#\#.*$$' $(MAKEFILE_LIST) \
+		| awk ' BEGIN {FS = "(:|\-\-\-)+.*?\#\# "}; \
+			/\--/ {printf "$(_SECTION)%s$(_NORMAL)\n", $$1;} \
+			/:/   {printf "    $(_TARGET)%-24s$(_NORMAL) %s\n", $$1, $$2} \
+		'
 
-## clean targets
+.PHONY: version
+version:	## display current version
+	@-echo "$(APP_NAME) version: $(APP_VERSION)"
+
+.PHONY: info
+info:		## display make information
+	@echo "Informations about your make execution:"
+	@echo "  OS_NAME             $(OS_NAME)"
+	@echo "  CPU_ARCH            $(CPU_ARCH)"
+	@echo "  Conda Home          $(CONDA_HOME)"
+	@echo "  Conda Environment   $(CONDA_ENV)"
+	@echo "  Conda Prefix        $(CONDA_ENV_PATH)"
+	@echo "  Conda Binary        $(CONDA_BIN)"
+	@echo "  Conda Actication    $(CONDA_ENV_MODE)"
+	@echo "  Conda Command       $(CONDA_CMD)"
+	@echo "  APP_NAME            $(APP_NAME)"
+	@echo "  APP_ROOT            $(APP_ROOT)"
+	@echo "  DOWNLOAD_CACHE      $(DOWNLOAD_CACHE)"
+	@echo "  DOCKER_REPO         $(DOCKER_REPO)"
+
+## --- Cleanup targets --- ##
 
 .PHONY: clean
 clean: clean-build clean-pyc clean-test clean-docs	## remove all build, test, coverage and Python artifacts
@@ -101,72 +141,17 @@ clean-test:		## remove test and coverage artifacts
 	rm -f coverage.xml
 	rm -fr "$(APP_ROOT)/coverage/"
 
-.PHONY: lint
-lint: install-dev	## check PEP8 code style
-	@echo "Checking PEP8 code style problems..."
-	@bash -c '$(CONDA_CMD) \
-		flake8 && \
-		docformatter \
-			--pre-summary-newline \
-			--wrap-descriptions 120 \
-			--wrap-summaries 120 \
-			--make-summary-multi-line \
-			-c -r $(APP_ROOT)'
+.PHONY: clean-docker
+clean-docker: docker-clean	## alias for 'docker-clean' target
 
-.PHONY: lint-fix
-lint-fix: install-dev	## automatically fix PEP8 code style problems
-	@echo "Fixing PEP8 code style problems..."
-	@bash -c '$(CONDA_CMD) \
-		autopep8 -v -j 0 -i -r $(APP_ROOT) && \
-		docformatter \
-			--pre-summary-newline \
-			--wrap-descriptions 120 \
-			--wrap-summaries 120 \
-			--make-summary-multi-line \
-			-i -r $(APP_ROOT)'
-
-.PHONY: test
-test: install-dev install			## run tests quickly with the default Python
-	@echo "Running tests..."
-	bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
-
-# Note: use 'not remote' instead of 'local' to capture other low-level tests like 'utils' unittests
-.PHONY: test-local
-test-local: install-dev install		## run only local tests with the default Python
-	@echo "Running local tests..."
-	bash -c '$(CONDA_CMD) pytest tests -vv -m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
-
-.PHONY: test-remote
-test-remote: install-dev install	## run only remote tests with the default Python
-	@echo "Running remote tests..."
-	bash -c '$(CONDA_CMD) pytest tests -vv -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
-
-.PHONY: test-docker
-test-docker: docker-test			## synonym for target 'docker-test' - WARNING: could build image if missing
-
-COVERAGE_FILE := $(APP_ROOT)/.coverage
-COVERAGE_HTML := $(APP_ROOT)/coverage/index.html
-$(COVERAGE_FILE):
-	@echo "Running coverage analysis..."
-	@bash -c '$(CONDA_CMD) coverage run --source "$(APP_ROOT)/$(APP_NAME)" \
-		"$(CONDA_ENV_PATH)/bin/pytest" tests -m "not remote" || true'
-	@bash -c '$(CONDA_CMD) coverage xml -i'
-	@bash -c '$(CONDA_CMD) coverage report -m'
-	@bash -c '$(CONDA_CMD) coverage html -d "$(APP_ROOT)/coverage"'
-	@-echo "Coverage report available: file://$(COVERAGE_HTML)"
-
-.PHONY: coverage
-coverage: install-dev install $(COVERAGE_FILE)	## check code coverage and generate an analysis report
-
-.PHONY: coverage-show
-coverage-show: $(COVERAGE_HTML)		## display HTML webpage of generated coverage report (run coverage if missing)
-	@-test -f "$(COVERAGE_HTML)" || $(MAKE) -C "$(APP_ROOT)" coverage
-	$(BROWSER) "$(COVERAGE_HTML)"
+## --- Database targets --- ##
 
 .PHONY: migrate
 migrate: install conda-env	## run postgres database migration with alembic
 	@echo "Running database migration..."
 	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" upgrade head'
+
+## --- Documentation targets --- ##
 
 DOC_LOCATION := $(APP_ROOT)/docs/_build/html/index.html
 $(DOC_LOCATION):
@@ -187,6 +172,8 @@ docs-show: $(DOC_LOCATION)	## display HTML webpage of generated documentation (b
 	@-test -f "$(DOC_LOCATION)" || $(MAKE) -C "$(APP_ROOT)" docs
 	$(BROWSER) "$(DOC_LOCATION)"
 
+## --- Version control targets --- ##
+
 # Bumpversion 'dry' config
 # if 'dry' is specified as target, any bumpversion call using 'BUMP_XARGS' will not apply changes
 BUMP_XARGS ?= --verbose --allow-dirty
@@ -206,6 +193,8 @@ bump:	## bump version using VERSION specified as user input
 	@[ "${VERSION}" ] || ( echo ">> 'VERSION' is not set"; exit 1 )
 	@-bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/bump2version || pip install bump2version'
 	@-bash -c '$(CONDA_CMD) bump2version $(BUMP_XARGS) --new-version "${VERSION}" patch;'
+
+## --- Installation targets --- ##
 
 .PHONY: dist
 dist: clean conda-env	## package for distribution
@@ -236,6 +225,8 @@ install-dev: conda-env	## install package requirements for development and testi
 	@bash -c '$(CONDA_CMD) pip install -r "$(APP_ROOT)/requirements-dev.txt"'
 	@echo "Successfully installed dev requirements."
 
+## --- Launchers targets --- ##
+
 .PHONY: cron
 cron:
 	@echo "Starting Cron service..."
@@ -254,27 +245,7 @@ stop: 		## kill application instance(s) started with gunicorn
 stat: 		## display PID(s) of gunicorn application instance(s) running
 	@lsof -t -i :2001 || echo "No instance running"
 
-.PHONY: version
-version:	## display current version
-	@-echo "$(APP_NAME) version: $(APP_VERSION)"
-
-.PHONY: info
-info:		## display make information
-	@echo "Informations about your make execution:"
-	@echo "  OS_NAME             $(OS_NAME)"
-	@echo "  CPU_ARCH            $(CPU_ARCH)"
-	@echo "  Conda Home          $(CONDA_HOME)"
-	@echo "  Conda Environment   $(CONDA_ENV)"
-	@echo "  Conda Prefix        $(CONDA_ENV_PATH)"
-	@echo "  Conda Binary        $(CONDA_BIN)"
-	@echo "  Conda Actication    $(CONDA_ENV_MODE)"
-	@echo "  Conda Command       $(CONDA_CMD)"
-	@echo "  APP_NAME            $(APP_NAME)"
-	@echo "  APP_ROOT            $(APP_ROOT)"
-	@echo "  DOWNLOAD_CACHE      $(DOWNLOAD_CACHE)"
-	@echo "  DOCKER_REPO         $(DOCKER_REPO)"
-
-## Docker targets
+## --- Docker targets --- ##
 
 .PHONY: docker-info
 docker-info:	## tag version of docker image for build/push
@@ -289,7 +260,8 @@ docker-build-adapter:	## build only docker image for Magpie application
 
 .PHONY: docker-build-magpie
 docker-build-magpie:	## build only docker image of MagpieAdapter for Twitcher
-	docker build "$(APP_ROOT)" -t "$(MAGPIE_DOCKER_TAG)"
+	docker build "$(APP_ROOT)" -t "$(MAGPIE_LATEST_TAG)"
+	docker tag "$(MAGPIE_LATEST_TAG)" "$(MAGPIE_DOCKER_TAG)"
 
 .PHONY: docker-build
 docker-build: docker-build-magpie docker-build-adapter	## build docker images for Magpie application and MagpieAdapter for Twitcher
@@ -305,17 +277,94 @@ docker-push-magpie: docker-build-magpie		## push only built docker image for Mag
 .PHONY: docker-push
 docker-push: docker-push-magpie docker-push-adapter	 ## push built docker images for Magpie application and MagpieAdapter for Twitcher
 
-# FIXME:
-#	need to find a way to launch the app and kill it after the worker was successfully started
-#	need also to consider database probably not available
+DOCKER_TEST_COMPOSES := -f "$(APP_ROOT)/ci/docker-compose.smoke-test.yml"
 .PHONY: docker-test
-docker-test: docker-build-magpie 			## execute a smoke test of the built image for Magpie application (validate that it boots)
-	echo "not yet implemented!"
+docker-test: docker-build-magpie	## execute a smoke test of the built image for Magpie application (validate that it boots)
+	@echo "Smoke test of built application docker image"
+	docker-compose $(DOCKER_TEST_COMPOSES) up -d
+	sleep 5
+	curl localhost:2001 | grep "Magpie Administration"
+	docker-compose $(DOCKER_TEST_COMPOSES) stop
 
-## Conda targets
+.PHONY: docker-clean
+docker-clean: 	## remove any leftover images from docker target operations
+	docker rmi $(docker images -f "reference=$(MAGPIE_DOCKER_REPO)" -q)
+	docker-compose $(DOCKER_TEST_COMPOSES) down
+
+## --- Test targets --- ##
+
+.PHONY: lint
+lint: install-dev	## check PEP8 code style
+	@echo "Checking PEP8 code style problems..."
+	@bash -c '$(CONDA_CMD) \
+		flake8 && \
+		docformatter \
+			--pre-summary-newline \
+			--wrap-descriptions 120 \
+			--wrap-summaries 120 \
+			--make-summary-multi-line \
+			-c -r $(APP_ROOT)'
+
+.PHONY: lint-fix
+lint-fix: install-dev	## automatically fix PEP8 code style problems
+	@echo "Fixing PEP8 code style problems..."
+	@bash -c '$(CONDA_CMD) \
+		autopep8 -v -j 0 -i -r $(APP_ROOT) && \
+		docformatter \
+			--pre-summary-newline \
+			--wrap-descriptions 120 \
+			--wrap-summaries 120 \
+			--make-summary-multi-line \
+			-i -r $(APP_ROOT)'
+
+.PHONY: test
+test: install-dev install			## run tests quickly with the default Python
+	@echo "Running tests..."
+	bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
+
+# note: use 'not remote' instead of 'local' to capture other low-level tests like 'utils' unittests
+.PHONY: test-local
+test-local: install-dev install		## run only local tests with the default Python
+	@echo "Running local tests..."
+	bash -c '$(CONDA_CMD) pytest tests -vv -m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
+.PHONY: test-remote
+test-remote: install-dev install	## run only remote tests with the default Python
+	@echo "Running remote tests..."
+	bash -c '$(CONDA_CMD) pytest tests -vv -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
+.PHONY: test-security
+test-security:						## run security static code analysis
+	@echo "Running security tests..."
+	bash -c '$(CONDA_CMD) bandit "$(APP_ROOT)" --ini "$(APP_ROOT)/setup.cfg" -r \
+		| tee "$(APP_ROOT)/bandit.txt"'
+
+.PHONY: test-docker
+test-docker: docker-test			## alias for 'docker-test' target - WARNING: could build image if missing
+
+COVERAGE_FILE := $(APP_ROOT)/.coverage
+COVERAGE_HTML := $(APP_ROOT)/coverage/index.html
+$(COVERAGE_FILE):
+	@echo "Running coverage analysis..."
+	@bash -c '$(CONDA_CMD) coverage run --source "$(APP_ROOT)/$(APP_NAME)" \
+		"$(CONDA_ENV_PATH)/bin/pytest" tests -m "not remote" || true'
+	@bash -c '$(CONDA_CMD) coverage xml -i'
+	@bash -c '$(CONDA_CMD) coverage report -m'
+	@bash -c '$(CONDA_CMD) coverage html -d "$(APP_ROOT)/coverage"'
+	@-echo "Coverage report available: file://$(COVERAGE_HTML)"
+
+.PHONY: coverage
+coverage: install-dev install $(COVERAGE_FILE)	## check code coverage and generate an analysis report
+
+.PHONY: coverage-show
+coverage-show: $(COVERAGE_HTML)		## display HTML webpage of generated coverage report (run coverage if missing)
+	@-test -f "$(COVERAGE_HTML)" || $(MAKE) -C "$(APP_ROOT)" coverage
+	$(BROWSER) "$(COVERAGE_HTML)"
+
+## --- Conda setup targets --- ##
 
 .PHONY: conda-base
-conda-base:
+conda-base:	 ## obtain a base distribution of conda if missing and required
 	@test -f "$(CONDA_HOME)/bin/conda" || test -d "$(DOWNLOAD_CACHE)" || \
 		(echo "Creating download directory: $(DOWNLOAD_CACHE)" && mkdir -p "$(DOWNLOAD_CACHE)")
 	@test -f "$(CONDA_HOME)/bin/conda" || test -f "$(DOWNLOAD_CACHE)/$(FN)" || \
@@ -326,7 +375,7 @@ conda-base:
 		 echo "Make sure to add '$(CONDA_HOME)/bin' to your PATH variable in '~/.bashrc'.")
 
 .PHONY: conda-cfg
-conda_config: conda-base
+conda_config: conda-base	## update conda package configuration
 	@echo "Updating conda configuration..."
 	@"$(CONDA_HOME)/bin/conda" config --set ssl_verify true
 	@"$(CONDA_HOME)/bin/conda" config --set use_pip true
@@ -337,7 +386,7 @@ conda_config: conda-base
 # the conda-env target's dependency on conda-cfg above was removed, will add back later if needed
 
 .PHONY: conda-env
-conda-env: conda-base
+conda-env: conda-base	## create conda environment if missing and required
 	@test -d "$(CONDA_ENV_PATH)" || \
 		(echo "Creating conda environment at '$(CONDA_ENV_PATH)'..." && \
 		 "$(CONDA_HOME)/bin/conda" create -y -n "$(CONDA_ENV)" python=$(PYTHON_VERSION))

@@ -11,15 +11,21 @@ Unreleased
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
+* add ``MAGPIE_DB_URL`` configuration parameter to define a database connection with full URL instead of individual
+  parts (notably ``MAGPIE_POSTGRES_<>`` variables).
+* add ``bandit`` security code analysis and apply some detected issues (#168).
 * update code with more linting checks.
-* prepare travis pipeline for *eventual* docker image smoke test.
-* bump `alembic>=1.3.0` to remove old warnings and receive recent fixes.
+* add smoke test of built docker image to travis pipeline.
+* bump ``alembic>=1.3.0`` to remove old warnings and receive recent fixes.
+* improve ``make help`` targets descriptions.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix incorrectly installed ``authomatic`` library following update of reference branch
   (https://github.com/fmigneault/authomatic/tree/httplib-port) with ``master`` branch merged update
   (https://github.com/authomatic/authomatic/pull/195/commits/d7897c5c4c20486b55cb2c70724fa390c9aa7de6).
+* fix documentation links incorrectly generated for `readthedocs` pages.
+* fix missing or incomplete configuration documentation details.
 
 1.7.4 (2019-12-03)
 ---------------------
@@ -35,14 +41,14 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* fix 500 error when getting user's services on /users/{user_name}/services
+* fix 500 error when getting user's services on ``/users/{user_name}/services``.
 
 1.7.2 (2019-11-15)
 ---------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* fix gunicorn breaking change in 20.0.0 is not compatible with alpine: pin gunicorn==19.9.0
+* fix ``gunicorn>=20.0.0`` breaking change not compatible with alpine: pin ``gunicorn==19.9.0``.
 
 1.7.1 (2019-11-12)
 ---------------------

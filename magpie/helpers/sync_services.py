@@ -83,7 +83,8 @@ class SyncServiceGeoserver(SyncServiceInterface):
         resources = {"geoserver-api": {"children": workspace_tree,
                                        "resource_type": resource_type}}
 
-        assert is_valid_resource_schema(resources), "Error in Interface implementation"
+        if not is_valid_resource_schema(resources):
+            raise ValueError("Error in SyncServiceInterface implementation")
         return resources
 
 
@@ -107,7 +108,8 @@ class SyncServiceProjectAPI(SyncServiceInterface):
                     for p in resp.json()}
 
         resources = {self.service_name: {"children": projects, "resource_type": resource_type}}
-        assert is_valid_resource_schema(resources), "Error in Interface implementation"
+        if not is_valid_resource_schema(resources):
+            raise ValueError("Error in SyncServiceInterface implementation")
         return resources
 
 
@@ -144,7 +146,8 @@ class SyncServiceThredds(SyncServiceInterface):
             return tree_item
 
         resources = thredds_get_resources(self.url, self.max_depth)
-        assert is_valid_resource_schema(resources), 'Error in Interface implementation'
+        if not is_valid_resource_schema(resources):
+            raise ValueError("Error in SyncServiceInterface implementation")
         return resources
 
 

@@ -65,7 +65,6 @@ before_script:
   - echo $CONDA_PREFIX
   - echo $CONDA_ENV
 script:
-  - export MAGPIE_LOG_LEVEL=INFO
   # test linting and coverage
   - make $START_TARGET $TEST_TARGET
   - |
@@ -76,7 +75,7 @@ script:
   # smoke test the docker image
   - |
     if [ "${TRAVIS_PYTHON_VERSION}" -eq "3.6" ]; then
-      make docker-test
+      make test-docker
     fi
 after_success:
   - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"

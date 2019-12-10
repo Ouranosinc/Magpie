@@ -55,9 +55,10 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
     if not resources_remote:
         return resources_local
 
-    assert is_valid_resource_schema(resources_local)
-    assert is_valid_resource_schema(resources_remote)
-
+    if not is_valid_resource_schema(resources_local):
+        raise ValueError("Invalid 'local' resource schema.")
+    if not is_valid_resource_schema(resources_remote):
+        raise ValueError("Invalid 'remote' resource schema.")
     if not resources_local:
         raise ValueError("The resources must contain at least the service name.")
 
@@ -288,10 +289,9 @@ def fetch_all_services_by_type(service_type, session):
     :param session:
     """
     for service in session.query(models.Service).filter_by(type=service_type):
-        # noinspection PyBroadException
         try:
             fetch_single_service(service, session)
-        except Exception:
+        except Exception:  # noqa # nosec: B110
             if CRON_SERVICE:
                 LOGGER.exception("There was an error when fetching data from the url: %s" % service.url)
                 pass

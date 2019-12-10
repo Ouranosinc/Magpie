@@ -75,34 +75,28 @@ Documentation
 
 The REST API documentation is auto-generated and served under ``{MAGPIE_URL}/api/`` using Swagger-UI with tag ``latest``.
 
-More ample details about installation, configuration and usage are provided on `readthedocs`_.
-These are generated from corresponding information provided in `docs`_.
+| More ample details about installation, configuration and usage are provided on `readthedocs`_.
+| These are generated from corresponding information provided in `docs`_.
 
 .. _readthedocs: https://pavics-magpie.readthedocs.io
 .. _docs: ./docs
 
-Configuration
-=============
+Configuration and Usage
+=======================
 
 | Multiple configuration options exist for ``Magpie`` application.
-| Please refer to `configuration`_ for details.
+| Please refer to :doc:`configuration` for details.
+| See :doc:`usage` for details.
 
 .. _configuration: ./docs/configuration.rst
-
-
-Usage
-=====
-
-See `usage`_ for details.
-
 .. _usage: ./docs/usage.rst
 
 Change History
 ==============
 
-Addressed features, changes and bug fixes per version tag are available in `HISTORY`_.
+Addressed features, changes and bug fixes per version tag are available in :doc:`history`.
 
-.. _HISTORY: ./HISTORY.rst
+.. _HISTORY: HISTORY.rst
 
 Docker Images
 =============

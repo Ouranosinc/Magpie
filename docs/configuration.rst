@@ -182,14 +182,6 @@ Following settings are used to define values that are employed by `Magpie` after
   | Path that the ``cron`` operation should use for logging.
   | (Default: ``"~/magpie-cron.log"``)
 
-- | ``MAGPIE_DB_MIGRATION``
-  | Run database migration on startup in order to bring it up to date using ``alembic``.
-  | (Default: ``True``)
-
-- | ``MAGPIE_DB_MIGRATION_ATTEMPTS``
-  | Number of attempts to re-run database migration on startup in cased it failed (eg: due to connection error).
-  | (Default: ``5``)
-
 - | ``MAGPIE_LOG_LEVEL``
   | Logging level of operations. `Magpie` will first use the complete logging configuration found in
     `magpie.ini`_ in order to define logging formatters and handler referencing to the ``logger_magpie``
@@ -334,6 +326,10 @@ Phoenix Settings
 Following settings provide some integration support for `Phoenix`_ in order to synchronize its service definitions with
 `Magpie` services.
 
+| **Note:**
+| Support of `Phoenix`_ is fairly minimal.
+| Please submit an issue if you use it and some unexpected behaviour is encountered.
+
 - | ``PHOENIX_USER``
   | Name of the user to use for authentication in `Phoenix`_.
   | (Default: ``"phoenix"``)
@@ -350,22 +346,83 @@ Following settings provide some integration support for `Phoenix`_ in order to s
   | Port to use for `Phoenix`_ connection for authentication and service synchronization.
   | (Default: ``8443``)
 
-
-
-PHOENIX_PUSH = asbool(os.getenv("PHOENIX_PUSH", True))
-TWITCHER_PROTECTED_PATH = os.getenv("TWITCHER_PROTECTED_PATH", "/ows/proxy")
-TWITCHER_PROTECTED_URL = os.getenv("TWITCHER_PROTECTED_URL", None)
+- | ``PHOENIX_PUSH``
+  | Whether to push new service synchronization settings to the referenced `Phoenix`_ connection.
+  | (Default: ``True``)
 
 .. _Phoenix: https://github.com/bird-house/pyramid-phoenix
+
+
+Twitcher Settings
+~~~~~~~~~~~~~~~~~~~~~
+
+Following settings define parameters required by `Twitcher`_ (OWS Security Proxy) in order to interact with
+`Magpie` services.
+
+- | ``TWITCHER_PROTECTED_PATH``
+  | HTTP path used to define the protected (public) base path of services registered in `Magpie` that will be served by
+    an existing `Twitcher`_ proxy application after Access Control List (ACL) verification of the authenticated user.
+  | **Note:**
+  | Using this parameter to define `Twitcher`_'s path assumes that it resides under the same server domain as the
+    `Magpie` instance being configured (ie: hostname is inferred from resolved ``MAGPIE_URL`` or equivalent settings).
+  | (Default: ``"/ows/proxy"``)
+
+- | ``TWITCHER_PROTECTED_URL``
+  | Defines the protected (public) full base URL of services registered in `Magpie`. This setting is mainly to allow
+    specifying an alternative domain where a remote `Twitcher`_ instance could reside.
+  | **Note:**
+  | `Twitcher`_ instance will still need to have access to `Magpie`'s database in order to allow service resolution
+    with :py:class:`magpie.adapter.magpieservice.MagpieServiceStore`.
+  | (Default: ``None``, ie: uses ``TWITCHER_PROTECTED_PATH``)
+
+.. _Twitcher: https://github.com/bird-house/twitcher
+
 
 Postgres Settings
 ~~~~~~~~~~~~~~~~~~~~~
 
-MAGPIE_POSTGRES_USER = os.getenv("MAGPIE_POSTGRES_USER", "magpie")
-MAGPIE_POSTGRES_PASSWORD = os.getenv("MAGPIE_POSTGRES_PASSWORD", "qwerty")
-MAGPIE_POSTGRES_HOST = os.getenv("MAGPIE_POSTGRES_HOST", "postgres")
-MAGPIE_POSTGRES_PORT = int(os.getenv("MAGPIE_POSTGRES_PORT", 5432))
-MAGPIE_POSTGRES_DB = os.getenv("MAGPIE_POSTGRES_DB", "magpie")
+Following settings define parameters required to define the `Postgres`_ database connection employed by `Magpie` as
+well as some other database-related operation settings.
+
+- | ``MAGPIE_DB_MIGRATION``
+  | Run database migration on startup in order to bring it up to date using `Alembic`_.
+  | (Default: ``True``)
+
+- | ``MAGPIE_DB_MIGRATION_ATTEMPTS``
+  | Number of attempts to re-run database migration on startup in cased it failed (eg: due to connection error).
+  | (Default: ``5``)
+
+- | ``MAGPIE_DB_URL``
+  | Full database connection URL formatted as ``<db-type>://<user>:<password>@<host>:<port>/<db-name>``.
+  | Please refer to `SQLAlchemy Engine`_'s documentation for supported database implementations and their corresponding
+    configuration. Only `Postgres`_ has been extensively tested with `Magpie`, but other variants should be applicable.
+  | (Default: infer ``postgresql`` database connection URL formed using below ``MAGPIE_POSTGRES_<>`` parameters if the
+     value was not explicitly provided)
+
+- | ``MAGPIE_POSTGRES_USER``
+  | Database connection username to retrieve `Magpie` data stored in `Postgres`_.
+  | (Default: ``"magpie"``)
+
+- | ``MAGPIE_POSTGRES_PASSWORD``
+  | Database connection password to retrieve `Magpie` data stored in `Postgres`_.
+  | (Default: ``"qwerty"``)
+
+- | ``MAGPIE_POSTGRES_HOST``
+  | Database connection host location to retrieve `Magpie` data stored in `Postgres`_.
+  | (Default: ``"postgres"``)
+
+- | ``MAGPIE_POSTGRES_PORT``
+  | Database connection port to retrieve `Magpie` data stored in `Postgres`_.
+  | (Default: ``5432``)
+
+- | ``MAGPIE_POSTGRES_DB``
+  | Name of the database located at the specified connection to retrieve `Magpie` data stored in `Postgres`_.
+  | (Default: ``"magpie"``)
+
+.. _Postgres: https://www.postgresql.org/
+.. _Alembic: https://alembic.sqlalchemy.org/
+.. _SQLAlchemy Engine: https://docs.sqlalchemy.org/en/13/core/engines.html
+
 
 External Providers
 ----------------------
