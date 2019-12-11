@@ -43,8 +43,6 @@ before_install:
   - env
   - make conda-base
   - make install-sys
-  - echo $CONDA_PREFIX
-  - echo $CONDA_ENV
   #==== magpie env and constants ===
   - mkdir -p ./env
   - cp -f ./ci/magpie.env ./env/magpie.env
@@ -54,19 +52,17 @@ install:
   - ${CONDA_PREFIX}/bin/pip freeze
 before_script:
   - psql -c 'create database magpie;' -U postgres
-  - echo $CONDA_PREFIX
-  - echo $CONDA_ENV
+  - echo ${CONDA_PREFIX}
+  - echo ${CONDA_ENV}
   - export PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
   - export CONDA_ENV=magpie-${TRAVIS_PYTHON_VERSION}
-  - export CONDA_PREFIX=$HOME/conda/envs/magpie-${TRAVIS_PYTHON_VERSION}
-  - export PATH=${CONDA_HOME}/bin:$PATH
+  - export CONDA_PREFIX=${HOME}/conda/envs/magpie-${TRAVIS_PYTHON_VERSION}
+  - export PATH=${CONDA_HOME}/bin:${PATH}
   - hash -r
   - env
-  - echo $CONDA_PREFIX
-  - echo $CONDA_ENV
 script:
   # test linting and coverage
-  - make $START_TARGET $TEST_TARGET
+  - make ${START_TARGET} ${TEST_TARGET}
   - |
     if [ "${TRAVIS_PYTHON_VERSION}" -eq "3.6" ]; then
       make lint
@@ -79,4 +75,4 @@ script:
     fi
 after_success:
   - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
-  - source ${CONDA_PREFIX}/bin/activate ${CONDA_ENV} && python-codacy-coverage -r coverage.xml
+  - source ${CONDA_PREFIX}/bin/activate ${CONDA_ENV} && python-codacy-coverage -r reports/coverage.xml

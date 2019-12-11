@@ -31,8 +31,10 @@ else
 	CONDA_CMD := source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)";
 	CONDA_ENV_MODE := [will activate environment]
 endif
-DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
 PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
+
+DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
+REPORTS_DIR ?= $(APP_ROOT)/reports
 
 # choose conda installer depending on your OS
 CONDA_URL = https://repo.continuum.io/miniconda
@@ -135,11 +137,12 @@ clean-pyc:		## remove Python file artifacts
 .PHONY: clean-test
 clean-test:		## remove test and coverage artifacts
 	@echo "Cleaning tests artifacts..."
-	rm -fr .tox/
-	rm -fr .pytest_cache/
-	rm -f .coverage
-	rm -f coverage.xml
-	rm -fr "$(APP_ROOT)/coverage/"
+	@-rm -fr .tox/
+	@-rm -fr .pytest_cache/
+	@-rm -f .coverage*
+	@-rm -f coverage.*
+	@-rm -fr "$(APP_ROOT)/coverage/"
+	@-rm -fr "$(REPORTS_DIR)"
 
 .PHONY: clean-docker
 clean-docker: docker-clean	## alias for 'docker-clean' target
@@ -305,8 +308,13 @@ lint: install-dev	## check PEP8 code style
 			--make-summary-multi-line \
 			-c -r $(APP_ROOT)'
 
+.PHONY: lint-py
+lint-py:
+	@echo "Checking PEP8 code style problems..."
+	@bash -c '$(CONDA_CMD) pylint --rcfile "$(APP_ROOT)/.pylintrc" "$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/tests"'
+
 .PHONY: lint-fix
-lint-fix: install-dev	## automatically fix PEP8 code style problems
+lint-fix: install-dev	## automatically fix some PEP8 code style problems
 	@echo "Fixing PEP8 code style problems..."
 	@bash -c '$(CONDA_CMD) \
 		autopep8 -v -j 0 -i -r $(APP_ROOT) && \
@@ -316,6 +324,59 @@ lint-fix: install-dev	## automatically fix PEP8 code style problems
 			--wrap-summaries 120 \
 			--make-summary-multi-line \
 			-i -r $(APP_ROOT)'
+
+## Code linting check targets
+
+.PHONY: mkdir-reports
+mkdir-reports:
+	@mkdir -p "$(REPORTS_DIR)"
+
+.PHONY: checks
+checks: check-pep8 check-lint check-security check-doc8 check-links	## run every code style checks
+
+.PHONY: check-pep8
+check-pep8: mkdir-reports		## run PEP8 code style checks
+	@echo "Running pep8 code style checks..."
+	@bash -c '$(CONDA_CMD) \
+		flake8 --config="$(APP_ROOT)/setup.cfg" --output-file="$(REPORTS_DIR)/check-pep8.txt" --tee'
+
+.PHONY: check-lint
+check-lint: mkdir-reports		## run linting code style checks
+	@echo "Running linting code style checks..."
+	@bash -c '$(CONDA_CMD) \
+		pylint --rcfile="$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/weaver" "$(APP_ROOT)/tests" --reports y \
+		| tee "$(REPORTS_DIR)/check-lint.txt"'
+
+.PHONY: check-security
+check-security: mkdir-reports	## run security code checks
+	@echo "Running security code checks..."
+	@bash -c '$(CONDA_CMD) \
+		bandit -v --ini "$(APP_ROOT)/setup.cfg" -r \
+		| tee "$(REPORTS_DIR)/check-security.txt"'
+
+.PHONY: check-doc8
+check-doc8:	## run doc8 documentation style checks
+	@echo "Running doc8 doc style checks..."
+	@bash -c '$(CONDA_CMD) \
+		doc8 "$(APP_ROOT)/docs" \
+		| tee "$(REPORTS_DIR)/check-doc8.txt"'
+
+.PHONY: check-links
+check-links:		## check all external links in documentation for integrity
+	@echo "Running link checks on docs..."
+	@bash -c '$(CONDA_CMD) (MAKE) -C "$(APP_ROOT)/docs" linkcheck'
+
+.PHONY: check-imports
+check-imports:		## run imports code checks
+	@echo "Running import checks..."
+	@bash -c '$(CONDA_CMD) isort --check-only --diff --recursive $(APP_ROOT) | tee "$(REPORTS_DIR)/check-imports.txt"'
+
+.PHONY: fix-imports
+fix-imports:		## apply import code checks corrections
+	@echo "Fixing flagged import checks..."
+	@bash -c '$(CONDA_CMD) isort --recursive $(APP_ROOT) | tee "$(REPORTS_DIR)/fixed-imports.txt"'
+
+## --- Test targets --- ##
 
 .PHONY: test
 test: install-dev install			## run tests quickly with the default Python
@@ -342,24 +403,26 @@ test-security:						## run security static code analysis
 .PHONY: test-docker
 test-docker: docker-test			## alias for 'docker-test' target - WARNING: could build image if missing
 
-COVERAGE_FILE := $(APP_ROOT)/.coverage
-COVERAGE_HTML := $(APP_ROOT)/coverage/index.html
+# covereage file location cannot be changed
+COVERAGE_FILE     := $(APP_ROOT)/.coverage
+COVERAGE_HTML_DIR := $(REPORTS_DIR)/coverage
+COVERAGE_HTML_IDX := $(COVERAGE_HTML_DIR)/index.html
 $(COVERAGE_FILE):
 	@echo "Running coverage analysis..."
 	@bash -c '$(CONDA_CMD) coverage run --source "$(APP_ROOT)/$(APP_NAME)" \
 		"$(CONDA_ENV_PATH)/bin/pytest" tests -m "not remote" || true'
-	@bash -c '$(CONDA_CMD) coverage xml -i'
+	@bash -c '$(CONDA_CMD) coverage xml -i -o "$(REPORTS_DIR)/coverage.xml"'
 	@bash -c '$(CONDA_CMD) coverage report -m'
-	@bash -c '$(CONDA_CMD) coverage html -d "$(APP_ROOT)/coverage"'
-	@-echo "Coverage report available: file://$(COVERAGE_HTML)"
+	@bash -c '$(CONDA_CMD) coverage html -d "$(COVERAGE_HTML_DIR)"'
+	@-echo "Coverage report available: file://$(COVERAGE_HTML_IDX)"
 
 .PHONY: coverage
 coverage: install-dev install $(COVERAGE_FILE)	## check code coverage and generate an analysis report
 
 .PHONY: coverage-show
-coverage-show: $(COVERAGE_HTML)		## display HTML webpage of generated coverage report (run coverage if missing)
-	@-test -f "$(COVERAGE_HTML)" || $(MAKE) -C "$(APP_ROOT)" coverage
-	$(BROWSER) "$(COVERAGE_HTML)"
+coverage-show: $(COVERAGE_HTML_IDX)		## display HTML webpage of generated coverage report (run coverage if missing)
+	@-test -f "$(COVERAGE_HTML_IDX)" || $(MAKE) -C "$(APP_ROOT)" coverage
+	$(BROWSER) "$(COVERAGE_HTML_IDX)"
 
 ## --- Conda setup targets --- ##
 

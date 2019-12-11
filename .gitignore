@@ -15,14 +15,15 @@ share
 .vscode
 
 # Tests & CI
-.coverage
+.coverage*
 .pytest_cache
 bandit.txt
-coverage.xml
+coverage.*
 coverage
 docker-compose.yml
 docker-compose.override.yml
-results.xml
+reports
+results.*
 
 # Docs
 docs/_build
