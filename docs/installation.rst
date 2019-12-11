@@ -14,7 +14,7 @@ Or, if you have conda installed::
 
 All above is done automatically with::
 
-    make install
+    make install-pkg
 
 
 If you want the full setup for development (including dependencies for test execution), use::

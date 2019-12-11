@@ -206,14 +206,20 @@ dist: clean conda-env	## package for distribution
 	@bash -c '$(CONDA_CMD) python setup.py bdist_wheel'
 	ls -l dist
 
+.PHONY: install
+install: install-all	## alias for 'install-all' target
+
+.PHONY: install-all		## install every dependency and package definition
+install-all: install-sys install-pkg install-dev
+
 .PHONY: install-sys
 install-sys: clean conda-env	## install system dependencies and required installers/runners
 	@echo "Installing system dependencies..."
 	@bash -c '$(CONDA_CMD) pip install --upgrade pip setuptools'
 	@bash -c '$(CONDA_CMD) pip install gunicorn'
 
-.PHONY: install
-install: install-sys	## install the package to the active Python's site-packages
+.PHONY: install-pkg
+install-pkg: install-sys	## install the package to the active Python's site-packages
 	@echo "Installing Magpie..."
 	# TODO: remove when merged
 	# --- ensure fix is applied
@@ -294,72 +300,58 @@ docker-clean: 	## remove any leftover images from docker target operations
 	docker rmi $(docker images -f "reference=$(MAGPIE_DOCKER_REPO)" -q)
 	docker-compose $(DOCKER_TEST_COMPOSES) down
 
-## --- Test targets --- ##
+## --- Statoc code check targets ---
 
-.PHONY: lint
-lint: install-dev	## check PEP8 code style
-	@echo "Checking PEP8 code style problems..."
+.PHONY: mkdir-reports
+mkdir-reports:
+	@mkdir -p "$(REPORTS_DIR)"
+
+.PHONY: check
+check: check-all	## alias for 'check-all' target
+
+.PHONY: check-all
+check-all: check-pep8 check-lint check-security check-docs check-links		## run every code style checks
+
+.PHONY: check-pep8
+check-pep8: mkdir-reports install-dev		## run PEP8 code style checks
+	@echo "Running pep8 code style checks..."
 	@bash -c '$(CONDA_CMD) \
-		flake8 && \
+		flake8 --config="$(APP_ROOT)/setup.cfg" --output-file="$(REPORTS_DIR)/check-pep8.txt" --tee'
+
+.PHONY: check-lint
+check-lint: mkdir-reports install-dev		## run linting code style checks
+	@echo "Running linting code style checks..."
+	@bash -c '$(CONDA_CMD) \
+		pylint --rcfile="$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/tests" --reports y \
+		| tee "$(REPORTS_DIR)/check-lint.txt"'
+
+.PHONY: check-security
+check-security: mkdir-reports install-dev	## run security code checks
+	@echo "Running security code checks..."
+	@bash -c '$(CONDA_CMD) \
+		bandit -v --ini "$(APP_ROOT)/setup.cfg" -r \
+		| tee "$(REPORTS_DIR)/check-security.txt"'
+
+.PHONY: check-docs
+check-docs: check-doc8 check-docf	## run every code documentation checks
+
+.PHONY: check-doc8
+check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
+	@echo "Running PEP8 doc style checks..."
+	@bash -c '$(CONDA_CMD) \
+		doc8 "$(APP_ROOT)/docs" \
+		| tee "$(REPORTS_DIR)/check-doc8.txt"'
+
+.PHONY: check-docf
+check-docf: install-dev  install-dev	## run PEP8 code documentation format checks
+	@echo "Checking PEP8 doc formatting problems..."
+	@bash -c '$(CONDA_CMD) \
 		docformatter \
 			--pre-summary-newline \
 			--wrap-descriptions 120 \
 			--wrap-summaries 120 \
 			--make-summary-multi-line \
 			-c -r $(APP_ROOT)'
-
-.PHONY: lint-py
-lint-py:
-	@echo "Checking PEP8 code style problems..."
-	@bash -c '$(CONDA_CMD) pylint --rcfile "$(APP_ROOT)/.pylintrc" "$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/tests"'
-
-.PHONY: lint-fix
-lint-fix: install-dev	## automatically fix some PEP8 code style problems
-	@echo "Fixing PEP8 code style problems..."
-	@bash -c '$(CONDA_CMD) \
-		autopep8 -v -j 0 -i -r $(APP_ROOT) && \
-		docformatter \
-			--pre-summary-newline \
-			--wrap-descriptions 120 \
-			--wrap-summaries 120 \
-			--make-summary-multi-line \
-			-i -r $(APP_ROOT)'
-
-## Code linting check targets
-
-.PHONY: mkdir-reports
-mkdir-reports:
-	@mkdir -p "$(REPORTS_DIR)"
-
-.PHONY: checks
-checks: check-pep8 check-lint check-security check-doc8 check-links	## run every code style checks
-
-.PHONY: check-pep8
-check-pep8: mkdir-reports		## run PEP8 code style checks
-	@echo "Running pep8 code style checks..."
-	@bash -c '$(CONDA_CMD) \
-		flake8 --config="$(APP_ROOT)/setup.cfg" --output-file="$(REPORTS_DIR)/check-pep8.txt" --tee'
-
-.PHONY: check-lint
-check-lint: mkdir-reports		## run linting code style checks
-	@echo "Running linting code style checks..."
-	@bash -c '$(CONDA_CMD) \
-		pylint --rcfile="$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/weaver" "$(APP_ROOT)/tests" --reports y \
-		| tee "$(REPORTS_DIR)/check-lint.txt"'
-
-.PHONY: check-security
-check-security: mkdir-reports	## run security code checks
-	@echo "Running security code checks..."
-	@bash -c '$(CONDA_CMD) \
-		bandit -v --ini "$(APP_ROOT)/setup.cfg" -r \
-		| tee "$(REPORTS_DIR)/check-security.txt"'
-
-.PHONY: check-doc8
-check-doc8:	## run doc8 documentation style checks
-	@echo "Running doc8 doc style checks..."
-	@bash -c '$(CONDA_CMD) \
-		doc8 "$(APP_ROOT)/docs" \
-		| tee "$(REPORTS_DIR)/check-doc8.txt"'
 
 .PHONY: check-links
 check-links:		## check all external links in documentation for integrity
@@ -371,15 +363,41 @@ check-imports:		## run imports code checks
 	@echo "Running import checks..."
 	@bash -c '$(CONDA_CMD) isort --check-only --diff --recursive $(APP_ROOT) | tee "$(REPORTS_DIR)/check-imports.txt"'
 
+.PHONY: fix
+fix: fix-all	## alias for 'fix-all' target
+
+.PHONY: fix-all
+fix-all: fix-imports fix-lint fix-docf	## fix all applicable code check corrections automatically
+
 .PHONY: fix-imports
-fix-imports:		## apply import code checks corrections
+fix-imports: install-dev	## fix import code checks corrections automatically
 	@echo "Fixing flagged import checks..."
 	@bash -c '$(CONDA_CMD) isort --recursive $(APP_ROOT) | tee "$(REPORTS_DIR)/fixed-imports.txt"'
+
+.PHONY: fix-lint
+fix-lint: install-dev	## fix some PEP8 code style problems automatically
+	@echo "Fixing PEP8 code style problems..."
+	@bash -c '$(CONDA_CMD) \
+		autopep8 -v -j 0 -i -r $(APP_ROOT)
+
+.PHONY: fix-docf
+fix-docf: install-dev	## fix some PEP8 code documentation style problems automatically
+	@echo "Fixing PEP8 code documentation problems..."
+	@bash -c '$(CONDA_CMD) \
+		docformatter \
+			--pre-summary-newline \
+			--wrap-descriptions 120 \
+			--wrap-summaries 120 \
+			--make-summary-multi-line \
+			-i -r $(APP_ROOT)'
 
 ## --- Test targets --- ##
 
 .PHONY: test
-test: install-dev install			## run tests quickly with the default Python
+test: test-all	## alias for 'test-all' target
+
+.PHONY: test-all
+test-all: install-dev install		## run all tests combinations
 	@echo "Running tests..."
 	bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
 

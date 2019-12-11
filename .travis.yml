@@ -47,7 +47,7 @@ before_install:
   - mkdir -p ./env
   - cp -f ./ci/magpie.env ./env/magpie.env
 install:
-  - make install install-dev
+  - make install-pkg install-dev
   - make version
   - ${CONDA_PREFIX}/bin/pip freeze
 before_script:
