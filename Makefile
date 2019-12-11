@@ -322,15 +322,15 @@ check-pep8: mkdir-reports install-dev		## run PEP8 code style checks
 check-lint: mkdir-reports install-dev		## run linting code style checks
 	@echo "Running linting code style checks..."
 	@bash -c '$(CONDA_CMD) \
-		pylint --rcfile="$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/tests" --reports y \
-		| tee "$(REPORTS_DIR)/check-lint.txt"'
+		pylint --rcfile="$(APP_ROOT)/.pylintrc" "$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/tests" --reports y \
+		1> >(tee "$(REPORTS_DIR)/check-lint.txt")'
 
 .PHONY: check-security
 check-security: mkdir-reports install-dev	## run security code checks
 	@echo "Running security code checks..."
 	@bash -c '$(CONDA_CMD) \
 		bandit -v --ini "$(APP_ROOT)/setup.cfg" -r \
-		| tee "$(REPORTS_DIR)/check-security.txt"'
+		1> >(tee "$(REPORTS_DIR)/check-security.txt")'
 
 .PHONY: check-docs
 check-docs: check-doc8 check-docf	## run every code documentation checks
@@ -340,10 +340,11 @@ check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
 	@echo "Running PEP8 doc style checks..."
 	@bash -c '$(CONDA_CMD) \
 		doc8 --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/docs" \
-		| tee "$(REPORTS_DIR)/check-doc8.txt"'
+		1> >(tee "$(REPORTS_DIR)/check-doc8.txt")'
 
+# FIXME: move parameters to setup.cfg when implemented (https://github.com/myint/docformatter/issues/10)
 .PHONY: check-docf
-check-docf: install-dev  install-dev	## run PEP8 code documentation format checks
+check-docf: mkdir-reports install-dev	## run PEP8 code documentation format checks
 	@echo "Checking PEP8 doc formatting problems..."
 	@bash -c '$(CONDA_CMD) \
 		docformatter \
@@ -351,7 +352,8 @@ check-docf: install-dev  install-dev	## run PEP8 code documentation format check
 			--wrap-descriptions 120 \
 			--wrap-summaries 120 \
 			--make-summary-multi-line \
-			-c -r $(APP_ROOT)'
+			-c -r "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/check-docf.txt")'
 
 .PHONY: check-links
 check-links:		## check all external links in documentation for integrity
@@ -361,7 +363,9 @@ check-links:		## check all external links in documentation for integrity
 .PHONY: check-imports
 check-imports:		## run imports code checks
 	@echo "Running import checks..."
-	@bash -c '$(CONDA_CMD) isort --check-only --diff --recursive $(APP_ROOT) | tee "$(REPORTS_DIR)/check-imports.txt"'
+	@bash -c '$(CONDA_CMD) \
+	 	isort --check-only --diff --recursive $(APP_ROOT) \
+		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
 
 .PHONY: fix
 fix: fix-all	## alias for 'fix-all' target
@@ -372,14 +376,18 @@ fix-all: fix-imports fix-lint fix-docf	## fix all applicable code check correcti
 .PHONY: fix-imports
 fix-imports: install-dev	## fix import code checks corrections automatically
 	@echo "Fixing flagged import checks..."
-	@bash -c '$(CONDA_CMD) isort --recursive $(APP_ROOT) | tee "$(REPORTS_DIR)/fixed-imports.txt"'
+	@bash -c '$(CONDA_CMD) \
+		isort --recursive $(APP_ROOT) \
+		1> >(tee "$(REPORTS_DIR)/fixed-imports.txt")'
 
 .PHONY: fix-lint
 fix-lint: install-dev	## fix some PEP8 code style problems automatically
 	@echo "Fixing PEP8 code style problems..."
 	@bash -c '$(CONDA_CMD) \
-		autopep8 -v -j 0 -i -r $(APP_ROOT)
+		autopep8 -v -j 0 -i -r $(APP_ROOT) \
+		1> >(tee "$(REPORTS_DIR)/fixed-lint.txt")'
 
+# FIXME: move parameters to setup.cfg when implemented (https://github.com/myint/docformatter/issues/10)
 .PHONY: fix-docf
 fix-docf: install-dev	## fix some PEP8 code documentation style problems automatically
 	@echo "Fixing PEP8 code documentation problems..."
@@ -389,7 +397,8 @@ fix-docf: install-dev	## fix some PEP8 code documentation style problems automat
 			--wrap-descriptions 120 \
 			--wrap-summaries 120 \
 			--make-summary-multi-line \
-			-i -r $(APP_ROOT)'
+			-i -r $(APP_ROOT) \
+		1> >(tee "$(REPORTS_DIR)/fixed-docf.txt")'
 
 ## --- Test targets --- ##
 

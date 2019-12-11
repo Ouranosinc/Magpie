@@ -46,21 +46,20 @@ MAGPIE_POSTGRES_ENV_FILE = os.path.join(MAGPIE_ENV_DIR, "postgres.env")
 # create .env from .env.example if not present and load variables into environment
 # if files still cannot be found at 'MAGPIE_ENV_DIR' and variables are still not set,
 # default values in following sections will be used instead
-magpie_env_example = MAGPIE_ENV_FILE + ".example"
-postgres_env_example = MAGPIE_ENV_FILE + ".example"
-if not os.path.isfile(MAGPIE_ENV_FILE) and os.path.isfile(magpie_env_example):
-    shutil.copyfile(magpie_env_example, MAGPIE_ENV_FILE)
-if not os.path.isfile(MAGPIE_POSTGRES_ENV_FILE) and os.path.isfile(postgres_env_example):
-    shutil.copyfile(postgres_env_example, MAGPIE_POSTGRES_ENV_FILE)
-del magpie_env_example
-del postgres_env_example
+_MAGPIE_ENV_EXAMPLE = MAGPIE_ENV_FILE + ".example"
+_POSTGRES_ENV_EXAMPLE = MAGPIE_ENV_FILE + ".example"
+if not os.path.isfile(MAGPIE_ENV_FILE) and os.path.isfile(_MAGPIE_ENV_EXAMPLE):
+    shutil.copyfile(_MAGPIE_ENV_EXAMPLE, MAGPIE_ENV_FILE)
+if not os.path.isfile(MAGPIE_POSTGRES_ENV_FILE) and os.path.isfile(_POSTGRES_ENV_EXAMPLE):
+    shutil.copyfile(_POSTGRES_ENV_EXAMPLE, MAGPIE_POSTGRES_ENV_FILE)
+del _MAGPIE_ENV_EXAMPLE
+del _POSTGRES_ENV_EXAMPLE
 try:
     # if variables already exist, don't override them from defaults in env files
     dotenv.load_dotenv(MAGPIE_ENV_FILE, override=False)
     dotenv.load_dotenv(MAGPIE_POSTGRES_ENV_FILE, override=False)
 except IOError:
     warnings.warn("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR), RuntimeWarning)
-    pass
 
 
 def _get_default_log_level():
@@ -69,11 +68,11 @@ def _get_default_log_level():
     """
     _default_log_lvl = "INFO"
     try:
-        import magpie.utils
+        import magpie.utils  # noqa: C0415  # avoid circular import error
         _settings = magpie.utils.get_settings_from_config_ini(MAGPIE_INI_FILE_PATH,
                                                               ini_main_section_name="logger_magpie")
         _default_log_lvl = _settings.get("level", _default_log_lvl)
-    except Exception:  # noqa # nosec: B110
+    except Exception:  # noqa: W0703 # nosec: B110
         pass
     return _default_log_lvl
 
@@ -180,7 +179,7 @@ def get_constant(constant_name,             # type: Str
     :returns: found value or `default_value`
     :raises: according message based on options (by default raise missing/`None` value)
     """
-    from magpie.utils import get_settings, raise_log, print_log
+    from magpie.utils import get_settings, raise_log, print_log  # noqa: C0415  # avoid circular import error
 
     missing = True
     magpie_value = None

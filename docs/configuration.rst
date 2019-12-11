@@ -429,7 +429,7 @@ External Providers
 
 In order to perform authentication in `Magpie`, multiple external providers are supported. By default, the 'local'
 provider is ``ziggurat`` which corresponds to the package used to manage users, groups, permissions, etc. internally.
-Supported external providers are presented in the table below, although more could be added later on. 
+Supported external providers are presented in the table below, although more could be added later on.
 
 Each as different configuration parameters as defined in `MagpieSecurity`_ and use various protocols amongst
 ``OpenID``, ``ESGF``-flavored ``OpenID`` and ``OAuth2``. Further external providers can be defined using this module's
@@ -462,7 +462,7 @@ authentication procedure.
 | :sup:`(3)` formerly identified as *Program for Climate Model Diagnosis & Intercomparison* (`PCMDI`_)
 
 | **Note:**
-| Please note that due to the constantly changing nature of multiple of these external providers (APIs and moved 
+| Please note that due to the constantly changing nature of multiple of these external providers (APIs and moved
   Websites), rarely used authentication bridges by the developers could break without prior notice. If this is the
   case and you use one of the broken connectors, summit a new
   `issue <https://github.com/Ouranosinc/Magpie/issues/new>`_.
