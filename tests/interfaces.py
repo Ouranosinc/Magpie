@@ -1495,7 +1495,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
         services_list_getcap = [svc for svc in services_list
                                 if "getcapabilities" in svc["permission_names"]
-                                and svc["service_name"] in self.test_services_info]  # noqa: W503
+                                and svc["service_name"] in self.test_services_info]
         path = "/users/{usr}/services".format(usr=anonymous)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")

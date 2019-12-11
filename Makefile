@@ -339,7 +339,7 @@ check-docs: check-doc8 check-docf	## run every code documentation checks
 check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
 	@echo "Running PEP8 doc style checks..."
 	@bash -c '$(CONDA_CMD) \
-		doc8 "$(APP_ROOT)/docs" \
+		doc8 --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/docs" \
 		| tee "$(REPORTS_DIR)/check-doc8.txt"'
 
 .PHONY: check-docf

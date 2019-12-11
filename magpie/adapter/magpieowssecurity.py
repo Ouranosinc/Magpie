@@ -63,7 +63,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                     LOGGER.debug("  {}: {}".format(attr_name, getattr(authn_policy.cookie, attr_name)))
 
                 if not has_permission:
-                    raise OWSAccessForbidden("Not authorized to access this resource. " +
+                    raise OWSAccessForbidden("Not authorized to access this resource. "
                                              "User does not meet required permissions.")
 
     def update_request_cookies(self, request):
@@ -82,7 +82,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             headers.update({"Homepage-Route": "/session", "Accept": CONTENT_TYPE_JSON})
             session_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)
             if session_resp.status_code != HTTPOk.code:
-                raise OWSAccessForbidden("Not authorized to access this resource. " +
+                raise OWSAccessForbidden("Not authorized to access this resource. "
                                          "Provider login failed with following reason: [{}]."
                                          .format(session_resp.reason))
 
@@ -92,6 +92,6 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             magpie_domain = urlparse(self.magpie_url).hostname if len(magpie_cookies) > 1 else None
             session_cookies = RequestsCookieJar.get(request_cookies, token_name, domain=magpie_domain)
             if not session_resp.json().get("authenticated") or not session_cookies:
-                raise OWSAccessForbidden("Not authorized to access this resource. " +
+                raise OWSAccessForbidden("Not authorized to access this resource. "
                                          "Session authentication could not be verified.")
             request.cookies.update({token_name: session_cookies})

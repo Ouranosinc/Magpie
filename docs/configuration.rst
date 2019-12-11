@@ -5,8 +5,8 @@ At startup, `Magpie` application will load multiple configuration files to defin
 operations. These are defined though the following configuration settings presented below.
 
 All generic `Magpie` configuration settings can be defined through either the `magpie.ini`_ file
-or environment variables. Values defined in `magpie.ini`_ are expected to follow the 
-``magpie.[variable_name]`` format, and corresponding ``MAGPIE_[VARIABLE_NAME]`` format is used for environment 
+or environment variables. Values defined in `magpie.ini`_ are expected to follow the
+``magpie.[variable_name]`` format, and corresponding ``MAGPIE_[VARIABLE_NAME]`` format is used for environment
 variables. Both of these alternatives match the constants defined in `constants.py`_ and can be used
 interchangeably. Order of resolution will prioritize setting values over environment variables in case of matching
 duplicates values.
@@ -436,29 +436,30 @@ Each as different configuration parameters as defined in `MagpieSecurity`_ and u
 dictionary configuration style following parameter specification of `Authomatic`_ package used for managing this
 authentication procedure.
 
-+----------------------------------------------------+-----------------------------------------------------------------------+
-| Category                                           | Provider                                                              |
-+====================================================+=======================================================================+
-| Open Identity (``OpenID``)                         | `OpenID`_                                                             |
-+----------------------------------------------------+-----------------------------------------------------------------------+
-| Earth System Grid Federation (`ESGF`_) :sup:`(1)`  | German Climate Computing Centre (`DKRZ`_)                             |
-|                                                    +-----------------------------------------------------------------------+
-|                                                    | French Research Institute for Environment Science (`IPSL`_)           |
-|                                                    +-----------------------------------------------------------------------+
-|                                                    | British Centre for Environmental Data Analysis (`CEDA`_) :sup:`(2)`   |
-|                                                    +-----------------------------------------------------------------------+
-|                                                    | US Lawrence Livermore National Laboratory (`LLNL`_) :sup:`(3)`        |
-|                                                    +-----------------------------------------------------------------------+
-|                                                    | Swedish Meteorological and Hydrological Institute (`SMHI`_)           |
-+----------------------------------------------------+-----------------------------------------------------------------------+
-| ``OAuth2``                                         | `GitHub`_ Authentication                                              |
-|                                                    +-----------------------------------------------------------------------+
-|                                                    | `WSO2`_ Open Source Identity Server                                   |
-+----------------------------------------------------+-----------------------------------------------------------------------+
++--------------------------------+-----------------------------------------------------------------------+
+| Category                       | Provider                                                              |
++================================+=======================================================================+
+| Open Identity (``OpenID``)     | `OpenID`_                                                             |
++--------------------------------+-----------------------------------------------------------------------+
+| *Earth System Grid Federation* | *German Climate Computing Centre* (`DKRZ`_)                           |
+| (`ESGF`_) :sup:`(1)`           |                                                                       |
+|                                +-----------------------------------------------------------------------+
+|                                | *French Research Institute for Environment Science* (`IPSL`_)         |
+|                                +-----------------------------------------------------------------------+
+|                                | *British Centre for Environmental Data Analysis* (`CEDA`_) :sup:`(2)` |
+|                                +-----------------------------------------------------------------------+
+|                                | *US Lawrence Livermore National Laboratory* (`LLNL`_) :sup:`(3)`      |
+|                                +-----------------------------------------------------------------------+
+|                                | *Swedish Meteorological and Hydrological Institute* (`SMHI`_)         |
++--------------------------------+-----------------------------------------------------------------------+
+| ``OAuth2``                     | `GitHub`_ Authentication                                              |
+|                                +-----------------------------------------------------------------------+
+|                                | `WSO2`_ Open Source Identity Server                                   |
++--------------------------------+-----------------------------------------------------------------------+
 
 | :sup:`(1)` extended variant of ``OpenID``
-| :sup:`(2)` formerly identified as British Atmospheric Data Centre (`BADC`_)
-| :sup:`(3)` formerly identified as Program for Climate Model Diagnosis & Intercomparison (`PCMDI`_)
+| :sup:`(2)` formerly identified as *British Atmospheric Data Centre* (`BADC`_)
+| :sup:`(3)` formerly identified as *Program for Climate Model Diagnosis & Intercomparison* (`PCMDI`_)
 
 | **Note:**
 | Please note that due to the constantly changing nature of multiple of these external providers (APIs and moved 

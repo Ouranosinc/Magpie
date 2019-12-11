@@ -113,8 +113,8 @@ def verify_param(   # noqa: E126,N802
             raise TypeError("'paramCompare' cannot be 'None' with specified test flags")
         if isEqual or notEqual:
             # allow 'different' string literals for comparison, otherwise types must match exactly
-            if not (isinstance(param, six.string_types) and
-                    isinstance(paramCompare, six.string_types)) and type(param) != type(paramCompare):
+            if not ((isinstance(param, six.string_types) and isinstance(paramCompare, six.string_types))
+                    and type(param) != type(paramCompare)):
                 raise TypeError("'paramCompare' cannot be of incompatible type with specified test flags")
         if not hasattr(paramCompare, "__iter__") and (isIn or notIn):
             paramCompare = [paramCompare]

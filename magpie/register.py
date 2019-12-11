@@ -300,8 +300,8 @@ def magpie_add_register_services_perms(services, statuses, curl_cookies, request
 
             # enforce 'getcapabilities' permission if available for service just updated (200) or created (201)
             # update 'getcapabilities' permission when the service existed and it allowed
-            if (not disable_getcapabilities and statuses[service_name] == 409) \
-            or statuses[service_name] == 200 or statuses[service_name] == 201:  # noqa
+            if ((not disable_getcapabilities and statuses[service_name] == 409)
+                    or statuses[service_name] == 200 or statuses[service_name] == 201):
                 svc_anonym_add_perms_url = "{magpie}/users/{usr}/services/{svc}/permissions" \
                                            .format(magpie=magpie_url, usr=login_usr, svc=service_name)
                 svc_anonym_perm_data = {"permission_name": Permission.GET_CAPABILITIES.value}

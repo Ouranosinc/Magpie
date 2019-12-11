@@ -325,7 +325,7 @@ class TestRegister(unittest.TestCase):
     def test_get_all_config_from_dir(self):
         tmp_dir = tempfile.mkdtemp()    # note: TemporaryDirectory doesn't exist until Python 3.2
         with tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", dir=tmp_dir) as tmp1, \
-             tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", dir=tmp_dir) as tmp2:
+             tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", dir=tmp_dir) as tmp2:  # noqa: E127
             # format doesn't matter
             tmp1.write(json.dumps({"permissions": [{"perm": "permission1"}, {"perm": "permission2"}]}))
             tmp1.seek(0)  # back to start since file still open (auto-delete if closed)
@@ -334,10 +334,10 @@ class TestRegister(unittest.TestCase):
             perms = register._get_all_configs(tmp_dir, "permissions")
         assert isinstance(perms, list) and len(perms) == 2 and all(isinstance(p, list) and len(p) == 2 for p in perms)
         # NOTE: order of file loading is not guaranteed
-        assert (perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2" and
-                perms[1][0]["perm"] == "permission3" and perms[1][1]["perm"] == "permission4") or \
-               (perms[0][0]["perm"] == "permission3" and perms[0][1]["perm"] == "permission4" and
-                perms[1][0]["perm"] == "permission1" and perms[1][1]["perm"] == "permission2")
+        assert ((perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2" and
+                 perms[1][0]["perm"] == "permission3" and perms[1][1]["perm"] == "permission4") or
+                (perms[0][0]["perm"] == "permission3" and perms[0][1]["perm"] == "permission4" and
+                 perms[1][0]["perm"] == "permission1" and perms[1][1]["perm"] == "permission2"))
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
     def test_get_all_config_from_file(self):

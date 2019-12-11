@@ -5,8 +5,8 @@ Magpie additional typing definitions.
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import (
-        Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union  # noqa: F401,W0212
+    from typing import (                                                                        # noqa: F401,W0212
+        Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union    # noqa: F401,W0212
     )
     from magpie.definitions.sqlalchemy_definitions import Session
     from magpie import models

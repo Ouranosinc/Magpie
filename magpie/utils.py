@@ -60,7 +60,7 @@ def print_log(msg, logger=None, level=logging.INFO):
     if MAGPIE_LOG_PRINT:
         all_handlers = logging.root.handlers + logger.handlers
         if not any(isinstance(h, logging.StreamHandler) for h in all_handlers):
-            logger.addHandler(logging.StreamHandler(sys.stdout))
+            logger.addHandler(logging.StreamHandler(sys.stdout))  # noqa: type
     if logger.disabled:
         logger.disabled = False
     logger.log(level, msg)
@@ -241,8 +241,8 @@ def get_magpie_url(container=None):
         url = get_constant("MAGPIE_URL", raise_missing=False, raise_not_set=False, print_missing=False)
         if url:
             return url
-        hostname = get_constant("HOSTNAME", raise_not_set=False, raise_missing=False) or \
-                   get_constant("MAGPIE_HOST", raise_not_set=False, raise_missing=False)    # noqa
+        hostname = (get_constant("HOSTNAME", raise_not_set=False, raise_missing=False) or
+                    get_constant("MAGPIE_HOST", raise_not_set=False, raise_missing=False))
         if not hostname:
             raise ConfigurationError("Missing or unset MAGPIE_HOST or HOSTNAME value.")
         magpie_port = get_constant("MAGPIE_PORT", raise_not_set=False)
@@ -267,8 +267,8 @@ def get_magpie_url(container=None):
 
 def get_phoenix_url(container=None):
     # type: (Optional[AnySettingsContainer]) -> Str
-    hostname = get_constant("PHOENIX_HOST", container, raise_missing=False, raise_not_set=False) or \
-               get_constant("HOSTNAME", raise_missing=False, raise_not_set=False)
+    hostname = (get_constant("PHOENIX_HOST", container, raise_missing=False, raise_not_set=False) or
+                get_constant("HOSTNAME", raise_missing=False, raise_not_set=False))
     if not hostname:
         raise ConfigurationError("Missing or unset PHOENIX_HOST or HOSTNAME value.")
     phoenix_port = get_constant("PHOENIX_PORT", raise_not_set=False)

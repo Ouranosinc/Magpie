@@ -38,7 +38,7 @@ def make_ows_parser(method='GET', content_type=None, params=None, body=''):
     else:
         parse_params = params.keys()
 
-    parser = owsrequest.ows_parser_factory(request)
+    parser = owsrequest.ows_parser_factory(request)  # noqa: type
     parser.parse(parse_params)
     return parser
 
@@ -94,4 +94,3 @@ class TestServices(unittest.TestCase):
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.MultiFormatParser)
         assert parser.params["test"] == "something"
-
