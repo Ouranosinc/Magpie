@@ -99,9 +99,9 @@ def init_admin(db_session, settings=None):
         new_group_permission = models.GroupPermission(perm_name=admin_perm, group_id=magpie_admin_group.id)
         try:
             db_session.add(new_group_permission)
-        except Exception as e:
+        except Exception as exc:
             db_session.rollback()
-            raise_log("Failed to create admin user-group permission", exception=type(e))
+            raise_log("Failed to create admin user-group permission", exception=type(exc))
 
 
 def init_users_group(db_session, settings=None):

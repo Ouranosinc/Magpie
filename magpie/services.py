@@ -121,9 +121,9 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
             if perm is None:
                 raise NotImplementedError("Undefined 'Permission' from 'request' parameter: {!s}".format(req))
             return perm
-        except KeyError as ex:
+        except KeyError as exc:
             # if 'ServiceInterface', 'params_expected' is empty and will raise a KeyError
-            raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(ex, type(self)))
+            raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(exc, type(self)))
 
     def effective_permissions(self, resource, user):
         # type: (models.Resource, models.User) -> List[ResourcePermissionType]

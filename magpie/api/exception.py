@@ -121,9 +121,9 @@ def verify_param(  # noqa: C0103,C0330,E126,N802
         # error if none of the flags specified
         if not any([notNone, notEmpty, notIn, notEqual, isTrue, isFalse, isNone, isEmpty, isIn, isEqual, ofType]):
             raise ValueError("no comparison flag specified for verification")
-    except Exception as e:
+    except Exception as exc:
         content[u"traceback"] = repr(exc_info())
-        content[u"exception"] = repr(e)
+        content[u"exception"] = repr(exc)
         raise_http(httpError=HTTPInternalServerError, httpKWArgs=httpKWArgs,
                    content=content, contentType=contentType,
                    detail="Error occurred during parameter verification")
@@ -184,9 +184,9 @@ def evaluate_call(  # noqa: C0103,C0330,E126,N802
 
             try:
                 res = func(args)
-            except Exception as e:
+            except Exception as exc:
                 fb_func()
-                raise HTTPExcept(e.message)
+                raise HTTPExcept(exc.message)
 
         wrapped call::
 
@@ -220,20 +220,19 @@ def evaluate_call(  # noqa: C0103,C0330,E126,N802
                        contentType=contentType)
     try:
         return call()
-    except Exception as e:
-        ce = repr(e)
+    except Exception as exc:
+        exc_call = repr(exc)
     try:
         if fallback is not None:
             fallback()
-    except Exception as e:
-        fe = repr(e)
+    except Exception as exc:
         raise_http(httpError=HTTPInternalServerError, httpKWArgs=httpKWArgs,
                    detail="Exception occurred during 'fallback' called after failing 'call' exception.",
-                   content={u"call": {u"exception": ce, u"detail": msgOnFail, u"content": repr(content)},
-                            u"fallback": {u"exception": fe}},
+                   content={u"call": {u"exception": exc_call, u"detail": msgOnFail, u"content": repr(content)},
+                            u"fallback": {u"exception": repr(exc)}},
                    contentType=contentType)
     raise_http(httpError, detail=msgOnFail, httpKWArgs=httpKWArgs,
-               content={u"call": {u"exception": ce, u"content": repr(content)}},
+               content={u"call": {u"exception": exc_call, u"content": repr(content)}},
                contentType=contentType)
 
 
@@ -377,12 +376,12 @@ def format_content_json_str(httpCode, detail, content, contentType):
         content[u"detail"] = detail
         content[u"type"] = contentType
         json_body = json.dumps(content)
-    except Exception as e:
-        msg = "Dumping json content '{!s}' resulted in exception '{!r}'.".format(content, e)
+    except Exception as exc:
+        msg = "Dumping json content '{!s}' resulted in exception '{!r}'.".format(content, exc)
         raise_http(httpError=HTTPInternalServerError, detail=msg,
                    contentType=CONTENT_TYPE_JSON,
                    content={u"traceback": repr(exc_info()),
-                            u"exception": repr(e),
+                            u"exception": repr(exc),
                             u"caller": {u"content": repr(content),  # raw string to avoid recursive json.dumps error
                                         u"detail": detail,
                                         u"code": httpCode,
@@ -427,9 +426,9 @@ def generate_response_http_format(httpClass, httpKWArgs, jsonContent, outputType
             httpResponse = httpClass(body=jsonContent, content_type=CONTENT_TYPE_PLAIN, **httpKWArgs)
 
         return httpResponse
-    except Exception as e:
+    except Exception as exc:
         raise_http(httpError=HTTPInternalServerError, detail="Failed to build HTTP response",
-                   content={u"traceback": repr(exc_info()), u"exception": repr(e),
+                   content={u"traceback": repr(exc_info()), u"exception": repr(exc),
                             u"caller": {u"httpKWArgs": repr(httpKWArgs),
                                         u"httpClass": repr(httpClass),
                                         u"outputType": str(outputType)}})

@@ -38,6 +38,9 @@ if TYPE_CHECKING:
     from magpie.definitions.typedefs import (  # noqa: F401
         Str, Dict, List, JSON, Optional, Tuple, Union, CookiesOrSessionType
     )
+    ConfigItem = Dict[Str, Str]
+    ConfigList = List[ConfigItem]
+    ConfigDict = Dict[Str, Union[ConfigItem, ConfigList]]
 
 LOGGER = get_logger(__name__)
 
@@ -52,11 +55,6 @@ GETCAPABILITIES_ATTEMPTS = 12   # max attempts for 'GetCapabilities' validations
 SERVICES_MAGPIE = "MAGPIE"
 SERVICES_PHOENIX = "PHOENIX"
 SERVICES_PHOENIX_ALLOWED = [ServiceWPS.service_type]
-
-if TYPE_CHECKING:
-    ConfigItem = Dict[Str, Str]
-    ConfigList = List[ConfigItem]
-    ConfigDict = Dict[Str, Union[ConfigItem, ConfigList]]
 
 
 class RegistrationError(RuntimeError):
@@ -78,10 +76,10 @@ class RegistrationConfigurationError(RegistrationValueError):
 def _login_loop(login_url, cookies_file, data=None, message="Login response"):
     make_dirs(cookies_file)
     data_str = ""
-    if data is not None and type(data) is dict:
+    if data is not None and isinstance(data, dict):
         for key in data:
             data_str = data_str + "&" + str(key) + "=" + str(data[key])
-    if type(data) is str:
+    if isinstance(data, six.string_types):
         data_str = data
     attempt = 0
     while True:
@@ -175,8 +173,8 @@ def phoenix_remove_services():
         phoenix_url = get_phoenix_url()
         remove_services_url = phoenix_url + "/clear_services"
         error, http_code = _request_curl(remove_services_url, cookies=phoenix_cookies, msg="Phoenix remove services")
-    except Exception as e:
-        print_log("Exception during phoenix remove services: [{!r}]".format(e), logger=LOGGER)
+    except Exception as exc:
+        print_log("Exception during phoenix remove services: [{!r}]".format(exc), logger=LOGGER)
     finally:
         if os.path.isfile(phoenix_cookies):
             os.remove(phoenix_cookies)
@@ -204,8 +202,8 @@ def phoenix_register_services(services_dict, allowed_service_types=None):
         # Register services
         success, statuses = _register_services(SERVICES_PHOENIX, filtered_services_dict,
                                                phoenix_cookies, "Phoenix register service")
-    except Exception as e:
-        print_log("Exception during phoenix register services: [{!r}]".format(e), logger=LOGGER, level=logging.ERROR)
+    except Exception as exc:
+        print_log("Exception during phoenix register services: [{!r}]".format(exc), logger=LOGGER, level=logging.ERROR)
     finally:
         if os.path.isfile(phoenix_cookies):
             os.remove(phoenix_cookies)
@@ -408,8 +406,8 @@ def magpie_register_services_with_requests(services_dict, push_to_phoenix, usern
         if push_to_phoenix:
             success = phoenix_update_services(services_dict)
 
-    except Exception as e:
-        print_log("Exception during magpie register services: [{!r}]".format(e), logger=LOGGER, level=logging.ERROR)
+    except Exception as exc:
+        print_log("Exception during magpie register services: [{!r}]".format(exc), logger=LOGGER, level=logging.ERROR)
     finally:
         session.cookies.clear()
         if os.path.isfile(curl_cookies):
@@ -493,8 +491,8 @@ def _load_config(path_or_dict, section):
         return _expand_all(cfg[section])
     except KeyError:
         raise_log("Config file section [{!s}] not found.".format(section), exception=RegistrationError, logger=LOGGER)
-    except Exception as ex:
-        raise_log("Invalid config file [{!r}]".format(ex), exception=RegistrationError, logger=LOGGER)
+    except Exception as exc:
+        raise_log("Invalid config file [{!r}]".format(exc), exception=RegistrationError, logger=LOGGER)
 
 
 def _get_all_configs(path_or_dict, section):
@@ -704,11 +702,11 @@ def _parse_resource_path(permission_config_entry,   # type: ConfigItem
             resource = parent
             if not resource:
                 raise RegistrationConfigurationError("Could not extract child resource from resource path.")
-        except Exception as ex:
-            if isinstance(ex, HTTPException):
-                detail = "{} ({}), {}".format(type(ex).__name__, ex.status_code, str(ex))
+        except Exception as exc:
+            if isinstance(exc, HTTPException):
+                detail = "{} ({}), {}".format(type(exc).__name__, exc.status_code, str(exc))
             else:
-                detail = repr(ex)
+                detail = repr(exc)
             _log_permission("Failed resources parsing.", entry_index, detail=detail)
             return None, False
     return resource, True

@@ -424,9 +424,9 @@ def check_raises(func, exception_type):
     # noinspection PyBroadException
     try:
         func()
-    except Exception as ex:
-        assert isinstance(ex, exception_type)
-        return ex
+    except Exception as exc:
+        assert isinstance(exc, exception_type)
+        return exc
     raise AssertionError("Exception [{!s}] was not raised.".format(exception_type))
 
 
@@ -440,8 +440,8 @@ def check_no_raise(func):
     # noinspection PyBroadException
     try:
         func()
-    except Exception as ex:
-        raise AssertionError("Exception [{!r}] was raised when none is expected.".format(ex))
+    except Exception as exc:
+        raise AssertionError("Exception [{!r}] was raised when none is expected.".format(exc))
 
 
 def check_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_JSON, expected_method="GET"):

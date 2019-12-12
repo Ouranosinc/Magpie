@@ -69,6 +69,6 @@ def error_badrequest(func):
     def wrap(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except Exception as e:
-            raise HTTPBadRequest(detail=str(e))
+        except Exception as exc:
+            raise HTTPBadRequest(detail=str(exc))
     return wrap

@@ -69,13 +69,13 @@ class LoginViews(object):
                     return_data[u"invalid_credentials"] = True
                 else:
                     return_data[u"error"] = True
-        except HTTPException as e:
-            if e.status_code == HTTPUnauthorized.code:
+        except HTTPException as exc:
+            if exc.status_code == HTTPUnauthorized.code:
                 return_data[u"invalid_credentials"] = True
             else:
                 return_data[u"error"] = True
-        except Exception as e:
-            return HTTPInternalServerError(detail=repr(e))
+        except Exception as exc:
+            return HTTPInternalServerError(detail=repr(exc))
 
         return add_template_data(self.request, data=return_data)
 

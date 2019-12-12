@@ -242,8 +242,8 @@ class ManagementViews(object):
         try:
             # The service type is "default". This function replaces cur_svc_type with the first service type.
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-        except Exception as e:
-            raise HTTPBadRequest(detail=repr(e))
+        except Exception as exc:
+            raise HTTPBadRequest(detail=repr(exc))
 
         user_path = schemas.UserAPI.path.format(user_name=user_name)
         user_resp = request_api(self.request, user_path, "GET")
@@ -362,8 +362,8 @@ class ManagementViews(object):
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(
                 user_name, services, cur_svc_type, is_user=True, is_inherit_groups_permissions=inherit_grp_perms
             )
-        except Exception as e:
-            raise HTTPBadRequest(detail=repr(e))
+        except Exception as exc:
+            raise HTTPBadRequest(detail=repr(exc))
 
         if res_id and (removed_perms or new_perms):
             self.update_user_or_group_resources_permissions_dict(res_perms, res_id, removed_perms, new_perms)
@@ -481,8 +481,8 @@ class ManagementViews(object):
         try:
             resp = request_api(self.request, res_perms_path, "GET")
             res_perms = get_json(resp)["permission_names"]
-        except Exception as e:
-            raise HTTPBadRequest(detail=repr(e))
+        except Exception as exc:
+            raise HTTPBadRequest(detail=repr(exc))
 
         selected_perms = self.request.POST.getall("permission")
 
@@ -572,8 +572,8 @@ class ManagementViews(object):
         try:
             # The service type is 'default'. This function replaces cur_svc_type with the first service type.
             svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-        except Exception as e:
-            raise HTTPBadRequest(detail=repr(e))
+        except Exception as exc:
+            raise HTTPBadRequest(detail=repr(exc))
 
         # In case of update, changes are not reflected when calling
         # get_user_or_group_resources_permissions_dict so we must take care
@@ -638,8 +638,8 @@ class ManagementViews(object):
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(
                 group_name, services, cur_svc_type, is_user=False
             )
-        except Exception as e:
-            raise HTTPBadRequest(detail=repr(e))
+        except Exception as exc:
+            raise HTTPBadRequest(detail=repr(exc))
 
         if res_id and (removed_perms or new_perms):
             self.update_user_or_group_resources_permissions_dict(res_perms, res_id, removed_perms, new_perms)
@@ -734,8 +734,8 @@ class ManagementViews(object):
             res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(
                 user_or_group, services=services_names, service_type=service_type, is_user=is_user
             )
-        except Exception as e:
-            raise HTTPBadRequest(detail=repr(e))
+        except Exception as exc:
+            raise HTTPBadRequest(detail=repr(exc))
 
         # get the parent resources for this remote_id
         # TODO:

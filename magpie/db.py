@@ -175,16 +175,16 @@ def run_database_migration_when_ready(settings, db_session=None):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
                     run_database_migration(db_session)
-            except ImportError as ex:
-                print_log("Database migration produced [{!r}] (ignored).".format(ex), level=logging.WARNING)
+            except ImportError as exc:
+                print_log("Database migration produced [{!r}] (ignored).".format(exc), level=logging.WARNING)
                 pass
-            except Exception as ex:
+            except Exception as exc:
                 if i <= attempts:
-                    print_log("Database migration failed [{!r}]. Retrying... ({}/{})".format(ex, i, attempts))
+                    print_log("Database migration failed [{!r}]. Retrying... ({}/{})".format(exc, i, attempts))
                     time.sleep(2)
                     continue
                 else:
-                    raise_log("Database migration failed [{!r}]".format(ex), exception=RuntimeError)
+                    raise_log("Database migration failed [{!r}]".format(exc), exception=RuntimeError)
 
             db_ready = is_database_ready(db_session)
             if not db_ready:
