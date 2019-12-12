@@ -8,17 +8,23 @@ test_services
 Tests for the services implementations magpie.
 """
 import json
+import unittest
 
 import six
 from pyramid.testing import DummyRequest
 
 from magpie import owsrequest
-from magpie.utils import CONTENT_TYPE_PLAIN, CONTENT_TYPE_FORM, CONTENT_TYPE_JSON
+from magpie.definitions.typedefs import Dict, Optional, Str
+from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
 from tests import runner
-import unittest
 
 
 def make_ows_parser(method='GET', content_type=None, params=None, body=''):
+    # type: (Str, Optional[Str], Optional[Dict[Str, Str]], Optional[Str]) -> owsrequest.OWSParser
+    """
+    Makes an :class:`owsrequest.OWSParser` from a :class:`DummyRequest`
+    definition with provided parameters for testing.
+    """
     request = DummyRequest(params=params)
     request.method = method
     request.content_type = content_type
@@ -38,7 +44,7 @@ def make_ows_parser(method='GET', content_type=None, params=None, body=''):
     else:
         parse_params = params.keys()
 
-    parser = owsrequest.ows_parser_factory(request)  # noqa: type
+    parser = owsrequest.ows_parser_factory(request)  # type: ignore # noqa
     parser.parse(parse_params)
     return parser
 

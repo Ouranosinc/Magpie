@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import logging
 import os
 import sys
-import logging
 from typing import TYPE_CHECKING
+
 try:
     from setuptools import setup
 except ImportError:
@@ -15,13 +16,14 @@ MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, "magpie")
 sys.path.insert(0, MAGPIE_MODULE_DIR)
 
+from magpie import __meta__  # isort:skip
+
 LOGGER = logging.getLogger("magpie.setup")
 if logging.StreamHandler not in LOGGER.handlers:
-    LOGGER.addHandler(logging.StreamHandler(sys.stdout))
+    LOGGER.addHandler(logging.StreamHandler(sys.stdout))  # type: ignore # noqa
 LOGGER.setLevel(logging.INFO)
 LOGGER.info("starting setup")
 
-from magpie import __meta__  # noqa: F401
 
 with open("README.rst") as readme_file:
     README = readme_file.read()
