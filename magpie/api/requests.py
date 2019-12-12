@@ -81,14 +81,13 @@ def get_user(request, user_name_or_token=None):
         curr_user = request.user
         if curr_user:
             return curr_user
-        else:
-            anonymous_user = get_constant("MAGPIE_ANONYMOUS_USER")
-            anonymous = evaluate_call(lambda: zig.UserService.by_user_name(anonymous_user, db_session=request.db),
-                                      fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                                      msgOnFail=s.User_CheckAnonymous_ForbiddenResponseSchema.description)
-            verify_param(anonymous, notNone=True, httpError=HTTPNotFound,
-                         msgOnFail=s.User_CheckAnonymous_NotFoundResponseSchema.description)
-            return anonymous
+        anonymous_user = get_constant("MAGPIE_ANONYMOUS_USER")
+        anonymous = evaluate_call(lambda: zig.UserService.by_user_name(anonymous_user, db_session=request.db),
+                                  fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
+                                  msgOnFail=s.User_CheckAnonymous_ForbiddenResponseSchema.description)
+        verify_param(anonymous, notNone=True, httpError=HTTPNotFound,
+                     msgOnFail=s.User_CheckAnonymous_NotFoundResponseSchema.description)
+        return anonymous
     else:
         authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
         principals = authn_policy.effective_principals(request)

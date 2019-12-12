@@ -74,8 +74,7 @@ class WPSGet(OWSParser):
     def _get_param_value(self, param):
         if param in self.all_params:
             return self.all_params[param]
-        else:
-            return None
+        return None
 
 
 def lxml_strip_ns(tree):

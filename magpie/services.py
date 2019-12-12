@@ -78,17 +78,16 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
         """
         List of access control rules defining (outcome, user/group, permission) combinations.
         """
-        if 'acl' not in cache_regions:
-            cache_regions['acl'] = {'enabled': False}
+        if "acl" not in cache_regions:
+            cache_regions["acl"] = {"enabled": False}
         return self._get_acl_cached(self.service.resource_id, self.request.user)
 
-    # noinspection PyUnusedLocal
     # parameters required to preserve caching of corresponding resource-id/user called
-    @cache_region('acl')
-    def _get_acl_cached(self, service_id, user):
-        """Beaker will cache this method based on the service id and the user.
+    @cache_region("acl")
+    def _get_acl_cached(self, service_id, user):  # noqa: F811
+        """Cache this method with :py:mod:`beaker` based on the service id and the user.
 
-        If the cache is not hit, call the self.get_acl() method
+        If the cache is not hit, call :meth:`get_acl`.
         """
         return self.get_acl()
 
@@ -346,12 +345,12 @@ class ServiceAPI(ServiceInterface):
     def __init__(self, service, request):
         super(ServiceAPI, self).__init__(service, request)
 
-    def get_acl(self, sub_api_route=None):
+    def get_acl(self):
         self.expand_acl(self.service, self.request.user)
 
         match_index = 0
         route_parts = self.request.path.split("/")
-        route_api_base = self.service.resource_name if sub_api_route is None else sub_api_route
+        route_api_base = self.service.resource_name
 
         if self.service.resource_name in route_parts and route_api_base in route_parts:
             api_idx = route_parts.index(route_api_base)

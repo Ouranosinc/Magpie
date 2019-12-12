@@ -134,8 +134,8 @@ def run_database_migration(db_session=None):
 
 def get_database_revision(db_session):
     # type: (Session) -> Str
-    s = "SELECT version_num FROM alembic_version"
-    result = db_session.execute(s).fetchone()
+    query = "SELECT version_num FROM alembic_version"
+    result = db_session.execute(query).fetchone()
     return result["version_num"]
 
 
@@ -175,16 +175,16 @@ def run_database_migration_when_ready(settings, db_session=None):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
                     run_database_migration(db_session)
-            except ImportError as e:
-                print_log("Database migration produced [{!r}] (ignored).".format(e), level=logging.WARNING)
+            except ImportError as ex:
+                print_log("Database migration produced [{!r}] (ignored).".format(ex), level=logging.WARNING)
                 pass
-            except Exception as e:
+            except Exception as ex:
                 if i <= attempts:
-                    print_log("Database migration failed [{!r}]. Retrying... ({}/{})".format(e, i, attempts))
+                    print_log("Database migration failed [{!r}]. Retrying... ({}/{})".format(ex, i, attempts))
                     time.sleep(2)
                     continue
                 else:
-                    raise_log("Database migration failed [{!r}]".format(e), exception=RuntimeError)
+                    raise_log("Database migration failed [{!r}]".format(ex), exception=RuntimeError)
 
             db_ready = is_database_ready(db_session)
             if not db_ready:

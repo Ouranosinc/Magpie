@@ -25,7 +25,7 @@ if TYPE_CHECKING:
         Any, AnyKey, Str, List, Optional, Type, Union,
         AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,
     )
-    from typing import _TC  # noqa: F401,W0212
+    from typing import _TC  # noqa: E0611,F401,W0212
 
 CONTENT_TYPE_ANY = "*/*"
 CONTENT_TYPE_JSON = "application/json"

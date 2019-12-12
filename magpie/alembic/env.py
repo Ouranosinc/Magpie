@@ -1,6 +1,5 @@
 from __future__ import with_statement
 from alembic import context  # noqa: F403
-# from logging.config import fileConfig
 from sqlalchemy.schema import MetaData
 from sqlalchemy.engine import create_engine, Connection, Connectable  # noqa: W0212
 from sqlalchemy_utils import database_exists, create_database
@@ -19,10 +18,6 @@ config_connection = None
 if 'connection' in config.attributes and isinstance(config.attributes['connection'], Connection):
     config_connection = context.config.attributes['connection']
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-# fileConfig(config.config_file_name)
-
 # add your model's MetaData object here
 target_metadata = MetaData(naming_convention={
     "ix": 'ix_%(column_0_label)s',
@@ -31,11 +26,6 @@ target_metadata = MetaData(naming_convention={
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
     "pk": "pk_%(table_name)s"
 })
-
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
 
 
 def run_migrations_offline():

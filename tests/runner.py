@@ -52,8 +52,6 @@ def test_suite():
                 suite.addTest(unittest.defaultTestLoader.loadTestsFromName(t))
             except AttributeError:
                 # if still not found, try discovery from root directory
-                # tests = unittest.defaultTestLoader.loadTestsFromModule(t)
-                # suite.addTests(tests)
                 suite.addTest(unittest.defaultTestLoader.discover(test_root_path))
     return suite
 

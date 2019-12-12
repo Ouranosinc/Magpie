@@ -4,14 +4,18 @@ import sys
 
 def includeme(config):
     # import needs to be here, otherwise ImportError happens during setup.py install (modules not yet installed)
-    from magpie.api.generic import internal_server_error, unauthorized_or_forbidden, not_found_or_method_not_allowed
-    from magpie.constants import get_constant
-    from magpie.definitions.pyramid_definitions import NewRequest, EXCVIEW
-    from magpie.utils import get_logger
+    from magpie.api.generic import (    # noqa: C0415
+        internal_server_error,
+        not_found_or_method_not_allowed,
+        unauthorized_or_forbidden,
+    )
+    from magpie.constants import get_constant                                   # noqa: C0415
+    from magpie.definitions.pyramid_definitions import NewRequest, EXCVIEW      # noqa: C0415
+    from magpie.utils import get_logger                                         # noqa: C0415
 
     mod_dir = get_constant("MAGPIE_MODULE_DIR", config)
     logger = get_logger(__name__)
-    logger.info("Adding MAGPIE_MODULE_DIR='{}' to path.".format(mod_dir))
+    logger.info("Adding MAGPIE_MODULE_DIR='%s' to path.", mod_dir)
     sys.path.insert(0, mod_dir)
 
     config.add_exception_view(internal_server_error)

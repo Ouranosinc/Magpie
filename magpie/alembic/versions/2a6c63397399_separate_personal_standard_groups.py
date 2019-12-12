@@ -14,7 +14,6 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-# noinspection PyUnresolvedReferences
 from alembic.context import get_context                                                         # noqa: F401
 from alembic import op                                                                          # noqa: F401
 from magpie.definitions.sqlalchemy_definitions import sessionmaker, PGDialect                   # noqa: F401
@@ -39,7 +38,7 @@ OLD_USER_ADMIN = OLD_GROUP_ADMIN
 
 
 def get_users_groups(db_session):
-    # fetch current db users and groups
+    """Fetch current db users and groups"""
     all_users = db_session.query(models.User)
     all_groups = db_session.query(models.Group)
     old_user_admin = [user for user in all_users if user.user_name == OLD_USER_ADMIN]
@@ -48,8 +47,6 @@ def get_users_groups(db_session):
     old_group_users = [group for group in all_groups if group.group_name == OLD_GROUP_USERS]
     new_group_admin = [group for group in all_groups if group.group_name == NEW_GROUP_ADMIN]
     new_group_users = [group for group in all_groups if group.group_name == NEW_GROUP_USERS]
-
-    # return found or None
     return (
         old_user_admin[0] if len(old_user_admin) > 0 else None,
         old_user_users[0] if len(old_user_users) > 0 else None,
@@ -72,8 +69,7 @@ def upgrade_migrate(old_group, old_user, new_group, new_name, db_session):
         old_group.group_name = new_name
     elif new_group is None and old_group is None:
         # create missing group, no group reference to modify
-        # noinspection PyArgumentList
-        new_group = models.Group(group_name=new_name)
+        new_group = models.Group(group_name=new_name)   # noqa
         db_session.add(new_group)
     elif new_group is not None and old_group is not None:
         # both groups exist, must transfer references
@@ -105,8 +101,7 @@ def downgrade_migrate(old_group, old_user, new_group, old_name, db_session):
 
     if old_group is None:
         # create missing group
-        # noinspection PyArgumentList
-        old_group = models.Group(group_name=old_name)
+        old_group = models.Group(group_name=old_name)   # noqa
         db_session.add(old_group)
     if old_group is not None and new_group is not None:
         # transfer user-group references
@@ -125,12 +120,11 @@ def downgrade_migrate(old_group, old_user, new_group, old_name, db_session):
         db_session.delete(new_group)
 
     if old_user is None:
-        # noinspection PyArgumentList
-        old_user = models.User(user_name=old_name, email='{}@mail.com'.format(old_name))
+        email = "{}@mail.com".format(old_name)
+        old_user = models.User(user_name=old_name, email=email)  # noqa
         db_session.add(old_user)
         old_user = models.User.by_user_name(old_name, db_session)
-        # noinspection PyArgumentList
-        usr_grp = models.UserGroup(group_id=old_group.id, user_id=old_user.id)
+        usr_grp = models.UserGroup(group_id=old_group.id, user_id=old_user.id)  # noqa
         db_session.add(usr_grp)
 
 

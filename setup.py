@@ -16,7 +16,7 @@ MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, "magpie")
 sys.path.insert(0, MAGPIE_MODULE_DIR)
 
-from magpie import __meta__  # isort:skip
+from magpie import __meta__  # isort:skip # noqa: E402
 
 LOGGER = logging.getLogger("magpie.setup")
 if logging.StreamHandler not in LOGGER.handlers:
