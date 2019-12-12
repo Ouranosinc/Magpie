@@ -14,8 +14,8 @@ Features / Changes
 * add ``MAGPIE_DB_URL`` configuration parameter to define a database connection with full URL instead of individual
   parts (notably ``MAGPIE_POSTGRES_<>`` variables).
 * add ``bandit`` security code analysis and apply some detected issues (#168).
-* update code with more linting checks.
-* add smoke test of built docker image to travis pipeline.
+* add more code linting checks using various test tools.
+* add smoke test of built docker image to `Travis-CI` pipeline.
 * bump ``alembic>=1.3.0`` to remove old warnings and receive recent fixes.
 * improve ``make help`` targets descriptions.
 
@@ -26,6 +26,7 @@ Bug Fixes
   (https://github.com/authomatic/authomatic/pull/195/commits/d7897c5c4c20486b55cb2c70724fa390c9aa7de6).
 * fix documentation links incorrectly generated for `readthedocs` pages.
 * fix missing or incomplete configuration documentation details.
+* fix many linting issues detected by integrated tools.
 
 1.7.4 (2019-12-03)
 ---------------------
@@ -299,7 +300,7 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix UI add child button broken by introduced ``int`` resource id type checking
-* fix travis-ci test suite execution and enable PEP8 lint checks
+* fix `Travis-CI` test suite execution and enable PEP8 lint checks
 * fix yaml security issue using updated package distribution
 * fix invalid conflict service name check on service update request
 * fix many invalid or erroneous swagger specifications

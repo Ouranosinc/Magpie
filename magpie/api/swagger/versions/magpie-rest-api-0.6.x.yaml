@@ -2320,7 +2320,7 @@ components:
               type: string
             request_url:
               type: string
-            paramCompare:
+            param_compare:
               type: string
             param:
               type: string
@@ -4636,7 +4636,7 @@ components:
             type: application/json
             detail: "Invalid `service_type` does not exist to obtain its resource types"
             param: blah
-            paramCompare: "[u'thredds', u'geoserverwms', u'wfs', u'ncwms', u'wps']"
+            param_compare: "[u'thredds', u'geoserverwms', u'wfs', u'ncwms', u'wps']"
             request_url: https://outarde.crim.ca/magpie/services/types/blah/resources/types
             route_name: "/services/types/blah/resources/types"
     Session_GET_200:

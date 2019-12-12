@@ -256,8 +256,8 @@ class ServiceNCWMS2(ServiceBaseWMS):
             return [(ALLOW, EVERYONE, permission_requested.value,)]
 
         if netcdf_file:
-            ax.verify_param("outputs/", paramCompare=netcdf_file, httpError=HTTPNotFound,
-                            msgOnFail="'outputs/' is not in path", notIn=True)
+            ax.verify_param("outputs/", param_compare=netcdf_file, http_error=HTTPNotFound,
+                            msg_on_fail="'outputs/' is not in path", not_in=True)
             netcdf_file = netcdf_file.replace("outputs/", "birdhouse/")
 
             db_session = self.request.db
@@ -504,14 +504,14 @@ def service_factory(service, request):
     """
     Retrieve the specific service class from the provided database service entry.
     """
-    ax.verify_param(service, paramCompare=models.Service, ofType=True,
-                    httpError=HTTPBadRequest, content={u"service": repr(service)},
-                    msgOnFail="Cannot process invalid service object")
-    service_type = ax.evaluate_call(lambda: service.type, httpError=HTTPInternalServerError,
-                                    msgOnFail="Cannot retrieve service type from object")
-    ax.verify_param(service_type, isIn=True, paramCompare=SERVICE_TYPE_DICT.keys(),
-                    httpError=HTTPNotImplemented, content={u"service_type": service_type},
-                    msgOnFail="Undefined service type mapping to service object")
+    ax.verify_param(service, param_compare=models.Service, is_type=True,
+                    http_error=HTTPBadRequest, content={u"service": repr(service)},
+                    msg_on_fail="Cannot process invalid service object")
+    service_type = ax.evaluate_call(lambda: service.type, http_error=HTTPInternalServerError,
+                                    msg_on_fail="Cannot retrieve service type from object")
+    ax.verify_param(service_type, is_in=True, param_compare=SERVICE_TYPE_DICT.keys(),
+                    http_error=HTTPNotImplemented, content={u"service_type": service_type},
+                    msg_on_fail="Undefined service type mapping to service object")
     return ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service_type](service, request),
-                            httpError=HTTPInternalServerError,
-                            msgOnFail="Failed to find requested service type.")
+                            http_error=HTTPInternalServerError,
+                            msg_on_fail="Failed to find requested service type.")

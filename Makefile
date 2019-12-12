@@ -421,12 +421,6 @@ test-remote: install-dev install	## run only remote tests with the default Pytho
 	@echo "Running remote tests..."
 	bash -c '$(CONDA_CMD) pytest tests -vv -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
-.PHONY: test-security
-test-security:						## run security static code analysis
-	@echo "Running security tests..."
-	bash -c '$(CONDA_CMD) bandit "$(APP_ROOT)" --ini "$(APP_ROOT)/setup.cfg" -r \
-		| tee "$(APP_ROOT)/bandit.txt"'
-
 .PHONY: test-docker
 test-docker: docker-test			## alias for 'docker-test' target - WARNING: could build image if missing
 

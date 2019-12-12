@@ -19,7 +19,7 @@ def get_groups_view(request):
     Get list of group names.
     """
     group_names = gu.get_all_group_names(request.db)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Groups_GET_OkResponseSchema.description,
+    return ax.valid_http(http_success=HTTPOk, detail=s.Groups_GET_OkResponseSchema.description,
                          content={u"group_names": group_names})
 
 
@@ -40,7 +40,7 @@ def get_group_view(request):
     Get group information.
     """
     group = ar.get_group_matchdict_checked(request, group_name_key="group_name")
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Group_GET_OkResponseSchema.description,
+    return ax.valid_http(http_success=HTTPOk, detail=s.Group_GET_OkResponseSchema.description,
                          content={u"group": gf.format_group(group, db_session=request.db)})
 
 
@@ -52,18 +52,18 @@ def edit_group_view(request):
     """
     group = ar.get_group_matchdict_checked(request, group_name_key="group_name")
     new_group_name = ar.get_multiformat_post(request, "group_name")
-    ax.verify_param(new_group_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    msgOnFail=s.Group_PUT_Name_BadRequestResponseSchema.description)
-    ax.verify_param(len(new_group_name), isIn=True, httpError=HTTPBadRequest,
-                    paramCompare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
-                    msgOnFail=s.Group_PUT_Size_BadRequestResponseSchema.description)
-    ax.verify_param(new_group_name, notEqual=True, httpError=HTTPBadRequest,
-                    paramCompare=group.group_name, msgOnFail=s.Group_PUT_Same_BadRequestResponseSchema.description)
+    ax.verify_param(new_group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
+                    msg_on_fail=s.Group_PUT_Name_BadRequestResponseSchema.description)
+    ax.verify_param(len(new_group_name), is_in=True, http_error=HTTPBadRequest,
+                    param_compare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
+                    msg_on_fail=s.Group_PUT_Size_BadRequestResponseSchema.description)
+    ax.verify_param(new_group_name, not_equal=True, http_error=HTTPBadRequest,
+                    param_compare=group.group_name, msg_on_fail=s.Group_PUT_Same_BadRequestResponseSchema.description)
     ax.verify_param(GroupService.by_group_name(new_group_name, db_session=request.db),
-                    isNone=True, httpError=HTTPConflict,
-                    msgOnFail=s.Group_PUT_ConflictResponseSchema.description)
+                    is_none=True, http_error=HTTPConflict,
+                    msg_on_fail=s.Group_PUT_ConflictResponseSchema.description)
     group.group_name = new_group_name
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Group_PUT_OkResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.Group_PUT_OkResponseSchema.description)
 
 
 @s.GroupAPI.delete(schema=s.Group_DELETE_RequestSchema(), tags=[s.GroupsTag], response_schemas=s.Group_DELETE_responses)
@@ -74,9 +74,9 @@ def delete_group_view(request):
     """
     group = ar.get_group_matchdict_checked(request)
     ax.evaluate_call(lambda: request.db.delete(group),
-                     fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                     msgOnFail=s.Group_DELETE_ForbiddenResponseSchema.description)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Group_DELETE_OkResponseSchema.description)
+                     fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                     msg_on_fail=s.Group_DELETE_ForbiddenResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.Group_DELETE_OkResponseSchema.description)
 
 
 @s.GroupUsersAPI.get(tags=[s.GroupsTag], response_schemas=s.GroupUsers_GET_responses)
@@ -87,9 +87,9 @@ def get_group_users_view(request):
     """
     group = ar.get_group_matchdict_checked(request)
     user_names = ax.evaluate_call(lambda: [user.user_name for user in group.users],
-                                  httpError=HTTPForbidden,
-                                  msgOnFail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.GroupUsers_GET_OkResponseSchema.description,
+                                  http_error=HTTPForbidden,
+                                  msg_on_fail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.GroupUsers_GET_OkResponseSchema.description,
                          content={u"user_names": sorted(user_names)})
 
 
@@ -149,9 +149,9 @@ def get_group_resources_view(request):
     group = ar.get_group_matchdict_checked(request)
     grp_res_json = ax.evaluate_call(lambda: gu.get_group_resources(group, request.db),
                                     fallback=lambda: request.db.rollback(),
-                                    httpError=HTTPInternalServerError, content={u"group": repr(group)},
-                                    msgOnFail=s.GroupResources_GET_InternalServerErrorResponseSchema.description)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.GroupResources_GET_OkResponseSchema.description,
+                                    http_error=HTTPInternalServerError, content={u"group": repr(group)},
+                                    msg_on_fail=s.GroupResources_GET_InternalServerErrorResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.GroupResources_GET_OkResponseSchema.description,
                          content={u"resources": grp_res_json})
 
 

@@ -605,11 +605,9 @@ def _log_permission(message, permission_index, trail=", skipping...", detail=Non
     .. seealso::
         `magpie/config/permissions.cfg`
     """
-    if detail:
-        trail = "{}\nDetail: [{!s}]".format(trail, detail)
-    if permission:
-        permission = " [{!s}]"
-    LOGGER.log(level, "{!s} [permission #{}]{}{}".format(message, permission_index, permission or "", trail or ""))
+    trail = "{}\nDetail: [{!s}]".format(trail, detail) if detail else (trail or "")
+    permission = " [{!s}]".format(permission) if permission else ""
+    LOGGER.log(level, "{!s} [permission #{}]{}{}".format(message, permission_index, permission, trail))
 
 
 def _use_request(cookies_or_session):
@@ -860,7 +858,7 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
     if _use_request(db_session):
         magpie_url = magpie_url or get_magpie_url()
         settings = {'magpie.url': magpie_url}
-        LOGGER.debug("Editing permissions using requests to [{}]...".format(magpie_url))
+        LOGGER.debug("Editing permissions using requests to [%s]...", magpie_url)
         err_msg = "Invalid credentials to register Magpie permissions."
         cookies_or_session = get_admin_cookies(settings, raise_message=err_msg)
     else:
@@ -871,8 +869,9 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
     permissions = _get_all_configs(permissions_config, "permissions")
     perms_cfg_count = len(permissions)
     LOGGER.log(logging.INFO if perms_cfg_count else logging.WARNING,
-               "Found {} permissions configurations.".format(perms_cfg_count))
-    for perms in permissions:
+               "Found %s permissions configurations.", perms_cfg_count)
+    for i, perms in enumerate(permissions):
+        LOGGER.info("Processing permissions from configuration (%s/%s).", i + 1, perms_cfg_count)
         _process_permissions(perms, magpie_url, cookies_or_session)
     LOGGER.info("All permissions processed.")
 
@@ -886,7 +885,7 @@ def _process_permissions(permissions, magpie_url, cookies_or_session):
 
     perm_count = len(permissions)
     LOGGER.log(logging.INFO if perm_count else logging.WARNING,
-               "Found {} permissions to update.".format(perm_count))
+               "Found %s permissions to evaluate from configuration.", perm_count)
     for i, perm_cfg in enumerate(permissions):
         # parameter validation
         if not isinstance(perm_cfg, dict) or not all(f in perm_cfg for f in ["permission", "service"]):

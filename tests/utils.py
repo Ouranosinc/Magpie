@@ -509,9 +509,9 @@ def check_error_param_structure(json_body, param_value=Null, param_name=Null, pa
     :param json_body: json body of the response to validate.
     :param param_value: expected 'value' of param, not verified if <Null>
     :param param_name: expected 'name' of param, not verified if <Null> or non existing for Magpie version
-    :param param_compare: expected 'compare'/'paramCompare' value, not verified if <Null>
+    :param param_compare: expected 'compare'/'param_compare' value, not verified if <Null>
     :param is_param_value_literal_unicode: param value is represented as `u'{paramValue}'` for older Magpie version
-    :param param_compare_exists: verify that 'compare'/'paramCompare' is in the body, not validating its actual value
+    :param param_compare_exists: verify that 'compare'/'param_compare' is in the body, not validating its actual value
     :param version: version of application/remote server to use for format validation, use local Magpie version if None
     :raises AssertionError: failing condition
     """
@@ -533,8 +533,8 @@ def check_error_param_structure(json_body, param_value=Null, param_name=Null, pa
             param_value = u"u\'{}\'".format(param_value)
         check_val_equal(json_body["param"], param_value)
         if param_compare_exists:
-            check_val_is_in("paramCompare", json_body)
-            check_val_equal(json_body["paramCompare"], param_compare)
+            check_val_is_in("param_compare", json_body)
+            check_val_equal(json_body["param_compare"], param_compare)
 
 
 def check_post_resource_structure(json_body, resource_name, resource_type, resource_display_name, version=None):

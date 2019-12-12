@@ -48,10 +48,10 @@ def create_user(user_name, password, email, group_name, db_session):
     def _get_group(grp_name):
         # type: (Str) -> models.Group
         grp = ax.evaluate_call(lambda: GroupService.by_group_name(grp_name, db_session=db_session),
-                               httpError=HTTPForbidden,
-                               msgOnFail=s.UserGroup_GET_ForbiddenResponseSchema.description)
-        ax.verify_param(grp, notNone=True, httpError=HTTPBadRequest,
-                        msgOnFail=s.UserGroup_Check_BadRequestResponseSchema.description)
+                               http_error=HTTPForbidden,
+                               msg_on_fail=s.UserGroup_GET_ForbiddenResponseSchema.description)
+        ax.verify_param(grp, not_none=True, http_error=HTTPBadRequest,
+                        msg_on_fail=s.UserGroup_Check_BadRequestResponseSchema.description)
         return grp
 
     # Check that group already exists
@@ -59,9 +59,9 @@ def create_user(user_name, password, email, group_name, db_session):
 
     # Check if user already exists
     user_checked = ax.evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
-                                    httpError=HTTPForbidden, msgOnFail=s.User_Check_ForbiddenResponseSchema.description)
-    ax.verify_param(user_checked, isNone=True, httpError=HTTPConflict,
-                    msgOnFail=s.User_Check_ConflictResponseSchema.description)
+                                    http_error=HTTPForbidden, msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
+    ax.verify_param(user_checked, is_none=True, http_error=HTTPConflict,
+                    msg_on_fail=s.User_Check_ConflictResponseSchema.description)
 
     # Create user with specified name and group to assign
     new_user = models.User(user_name=user_name, email=email)  # noqa
@@ -69,17 +69,17 @@ def create_user(user_name, password, email, group_name, db_session):
         UserService.set_password(new_user, password)
         UserService.regenerate_security_code(new_user)
     ax.evaluate_call(lambda: db_session.add(new_user), fallback=lambda: db_session.rollback(),
-                     httpError=HTTPForbidden, msgOnFail=s.Users_POST_ForbiddenResponseSchema.description)
+                     http_error=HTTPForbidden, msg_on_fail=s.Users_POST_ForbiddenResponseSchema.description)
     # Fetch user to update fields
     new_user = ax.evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db_session),
-                                httpError=HTTPForbidden, msgOnFail=s.UserNew_POST_ForbiddenResponseSchema.description)
+                                http_error=HTTPForbidden, msg_on_fail=s.UserNew_POST_ForbiddenResponseSchema.description)
 
     def _add_to_group(usr, grp):
         # type: (models.User, models.Group) -> None
         # noinspection PyArgumentList
         group_entry = models.UserGroup(group_id=grp.id, user_id=usr.id)
         ax.evaluate_call(lambda: db_session.add(group_entry), fallback=lambda: db_session.rollback(),
-                         httpError=HTTPForbidden, msgOnFail=s.UserGroup_GET_ForbiddenResponseSchema.description)
+                         http_error=HTTPForbidden, msg_on_fail=s.UserGroup_GET_ForbiddenResponseSchema.description)
 
     # Assign user to group
     new_user_groups = [group_name]
@@ -90,7 +90,7 @@ def create_user(user_name, password, email, group_name, db_session):
         _add_to_group(new_user, _get_group(anonym_grp_name))
         new_user_groups.append(anonym_grp_name)
 
-    return ax.valid_http(httpSuccess=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
+    return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={u"user": uf.format_user(new_user, new_user_groups)})
 
 
@@ -105,20 +105,20 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     resource_id = resource.resource_id
     existing_perm = UserResourcePermissionService.by_resource_user_and_perm(
         user_id=user.id, resource_id=resource_id, perm_name=permission.value, db_session=db_session)
-    ax.verify_param(existing_perm, isNone=True, httpError=HTTPConflict,
+    ax.verify_param(existing_perm, is_none=True, http_error=HTTPConflict,
                     content={u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission.value},
-                    msgOnFail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
+                    msg_on_fail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
 
     # noinspection PyArgumentList
     new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user.id, perm_name=permission.value)
     usr_res_data = {u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission.value}
-    ax.verify_param(new_perm, notNone=True, httpError=HTTPForbidden,
+    ax.verify_param(new_perm, not_none=True, http_error=HTTPForbidden,
                     content={u"resource_id": resource_id, u"user_id": user.id},
-                    msgOnFail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
+                    msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
-                     httpError=HTTPForbidden, content=usr_res_data,
-                     msgOnFail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
-    return ax.valid_http(httpSuccess=HTTPCreated, content=usr_res_data,
+                     http_error=HTTPForbidden, content=usr_res_data,
+                     msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
+    return ax.valid_http(http_success=HTTPCreated, content=usr_res_data,
                          detail=s.UserResourcePermissions_POST_CreatedResponseSchema.description)
 
 
@@ -134,10 +134,10 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
     resource_id = resource.resource_id
     del_perm = UserResourcePermissionService.get(user.id, resource_id, permission.value, db_session)
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
-                     httpError=HTTPNotFound,
-                     msgOnFail=s.UserResourcePermissions_DELETE_NotFoundResponseSchema.description,
+                     http_error=HTTPNotFound,
+                     msg_on_fail=s.UserResourcePermissions_DELETE_NotFoundResponseSchema.description,
                      content={u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission.value})
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.UserResourcePermissions_DELETE_OkResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.UserResourcePermissions_DELETE_OkResponseSchema.description)
 
 
 def get_resource_root_service(resource, request):
@@ -190,10 +190,10 @@ def get_user_resource_permissions_response(user, resource, request,
 
     perm_names = ax.evaluate_call(
         lambda: get_usr_res_perms(),
-        fallback=lambda: db_session.rollback(), httpError=HTTPInternalServerError,
-        msgOnFail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
+        fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
+        msg_on_fail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
         content={u"resource_name": str(resource.resource_name), u"user_name": str(user.user_name)})
-    return ax.valid_http(httpSuccess=HTTPOk, content={u"permission_names": perm_names},
+    return ax.valid_http(http_success=HTTPOk, content={u"permission_names": perm_names},
                          detail=s.UserResourcePermissions_GET_OkResponseSchema.description)
 
 
@@ -279,8 +279,8 @@ def get_user_resources_permissions_dict(user, request, resource_types=None,
         Otherwise, resolve inherited permissions using all groups the user is member of.
     :return: only services which the user as *Direct* or *Inherited* permissions, according to `inherit_from_resources`
     """
-    ax.verify_param(user, notNone=True, httpError=HTTPNotFound,
-                    msgOnFail=s.UserResourcePermissions_GET_NotFoundResponseSchema.description)
+    ax.verify_param(user, not_none=True, http_error=HTTPNotFound,
+                    msg_on_fail=s.UserResourcePermissions_GET_NotFoundResponseSchema.description)
     res_perm_tuple_list = UserService.resources_with_possible_perms(
         user, resource_ids=resource_ids, resource_types=resource_types, db_session=request.db)
     if not inherit_groups_permissions:
@@ -310,27 +310,27 @@ def get_user_service_resources_permissions_dict(user, service, request, inherit_
 
 def check_user_info(user_name, email, password, group_name):
     # type: (Str, Str, Str, Str) -> None
-    ax.verify_param(user_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    paramName=u"user_name", msgOnFail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
-    ax.verify_param(len(user_name), isIn=True, httpError=HTTPBadRequest,
-                    paramName=u"user_name", paramCompare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
-                    msgOnFail=s.Users_CheckInfo_Size_BadRequestResponseSchema.description)
-    ax.verify_param(user_name, paramCompare=get_constant("MAGPIE_LOGGED_USER"), notEqual=True,
-                    paramName=u"user_name", httpError=HTTPBadRequest,
-                    msgOnFail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
-    ax.verify_param(email, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    paramName=u"email", msgOnFail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
-    ax.verify_param(password, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    paramName=u"password", msgOnFail=s.Users_CheckInfo_Password_BadRequestResponseSchema.description)
-    ax.verify_param(group_name, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    paramName=u"group_name", msgOnFail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
+    ax.verify_param(user_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
+                    param_name=u"user_name", msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
+    ax.verify_param(len(user_name), is_in=True, http_error=HTTPBadRequest,
+                    param_name=u"user_name", param_compare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
+                    msg_on_fail=s.Users_CheckInfo_Size_BadRequestResponseSchema.description)
+    ax.verify_param(user_name, param_compare=get_constant("MAGPIE_LOGGED_USER"), not_equal=True,
+                    param_name=u"user_name", http_error=HTTPBadRequest,
+                    msg_on_fail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
+    ax.verify_param(email, not_none=True, not_empty=True, http_error=HTTPBadRequest,
+                    param_name=u"email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
+    ax.verify_param(password, not_none=True, not_empty=True, http_error=HTTPBadRequest,
+                    param_name=u"password", msg_on_fail=s.Users_CheckInfo_Password_BadRequestResponseSchema.description)
+    ax.verify_param(group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
+                    param_name=u"group_name", msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
 
 
 def get_user_groups_checked(request, user):
     # type: (Request, models.User) -> List[Str]
-    ax.verify_param(user, notNone=True, httpError=HTTPNotFound,
-                    msgOnFail=s.Groups_CheckInfo_NotFoundResponseSchema.description)
+    ax.verify_param(user, not_none=True, http_error=HTTPNotFound,
+                    msg_on_fail=s.Groups_CheckInfo_NotFoundResponseSchema.description)
     group_names = ax.evaluate_call(lambda: [group.group_name for group in user.groups],
-                                   fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                                   msgOnFail=s.Groups_CheckInfo_ForbiddenResponseSchema.description)
+                                   fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                                   msg_on_fail=s.Groups_CheckInfo_ForbiddenResponseSchema.description)
     return sorted(group_names)

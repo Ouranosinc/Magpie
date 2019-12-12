@@ -21,7 +21,7 @@ def get_homepage(request):
         u"name": __meta__.__package__,
         u"documentation": get_magpie_url() + s.SwaggerAPI.path
     })
-    return ax.valid_http(httpSuccess=HTTPOk, content=body, contentType=CONTENT_TYPE_JSON,
+    return ax.valid_http(http_success=HTTPOk, content=body, content_type=CONTENT_TYPE_JSON,
                          detail=s.Version_GET_OkResponseSchema.description)
 
 
@@ -41,5 +41,5 @@ def get_version(request):
         u"version": __meta__.__version__,
         u"db_version": version_db
     }
-    return ax.valid_http(httpSuccess=HTTPOk, content=version, contentType=CONTENT_TYPE_JSON,
+    return ax.valid_http(http_success=HTTPOk, content=version, content_type=CONTENT_TYPE_JSON,
                          detail=s.Version_GET_OkResponseSchema.description)

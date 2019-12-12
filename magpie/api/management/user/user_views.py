@@ -28,9 +28,9 @@ def get_users_view(request):
     """
     user_name_list = ax.evaluate_call(lambda: [user.user_name for user in
                                                UserService.all(models.User, db_session=request.db)],
-                                      fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                                      msgOnFail=s.Users_GET_ForbiddenResponseSchema.description)
-    return ax.valid_http(httpSuccess=HTTPOk, content={u"user_names": sorted(user_name_list)},
+                                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                                      msg_on_fail=s.Users_GET_ForbiddenResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, content={u"user_names": sorted(user_name_list)},
                          detail=s.Users_GET_OkResponseSchema.description)
 
 
@@ -58,9 +58,9 @@ def update_user_view(request):
     """
 
     user_name = ar.get_value_matchdict_checked(request, key="user_name")
-    ax.verify_param(user_name, paramCompare=get_constant("MAGPIE_LOGGED_USER"), notEqual=True,
-                    httpError=HTTPBadRequest, paramName="user_name", content={u"user_name": user_name},
-                    msgOnFail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
+    ax.verify_param(user_name, param_compare=get_constant("MAGPIE_LOGGED_USER"), not_equal=True,
+                    http_error=HTTPBadRequest, param_name="user_name", content={u"user_name": user_name},
+                    msg_on_fail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
 
     user = ar.get_user_matchdict_checked(request, user_name_key="user_name")
     new_user_name = ar.get_multiformat_post(request, "user_name", default=user.user_name)
@@ -71,16 +71,16 @@ def update_user_view(request):
     update_username = user.user_name != new_user_name
     update_password = user.user_password != new_password
     update_email = user.email != new_email
-    ax.verify_param(any([update_username, update_password, update_email]), isTrue=True, httpError=HTTPBadRequest,
+    ax.verify_param(any([update_username, update_password, update_email]), is_true=True, http_error=HTTPBadRequest,
                     content={u"user_name": user.user_name},
-                    msgOnFail=s.User_PUT_BadRequestResponseSchema.description)
+                    msg_on_fail=s.User_PUT_BadRequestResponseSchema.description)
 
     if user.user_name != new_user_name:
         existing_user = ax.evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
-                                         fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                                         msgOnFail=s.User_PUT_ForbiddenResponseSchema.description)
-        ax.verify_param(existing_user, isNone=True, httpError=HTTPConflict,
-                        msgOnFail=s.User_PUT_ConflictResponseSchema.description)
+                                         fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                                         msg_on_fail=s.User_PUT_ForbiddenResponseSchema.description)
+        ax.verify_param(existing_user, is_none=True, http_error=HTTPConflict,
+                        msg_on_fail=s.User_PUT_ConflictResponseSchema.description)
         user.user_name = new_user_name
     if user.email != new_email:
         user.email = new_email
@@ -88,7 +88,7 @@ def update_user_view(request):
         UserService.set_password(user, new_password)
         UserService.regenerate_security_code(user)
 
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Users_PUT_OkResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.Users_PUT_OkResponseSchema.description)
 
 
 @s.UserAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI, response_schemas=s.User_GET_responses)
@@ -100,7 +100,7 @@ def get_user_view(request):
     Get user information by name.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
-    return ax.valid_http(httpSuccess=HTTPOk, content={u"user": uf.format_user(user)},
+    return ax.valid_http(http_success=HTTPOk, content={u"user": uf.format_user(user)},
                          detail=s.User_GET_OkResponseSchema.description)
 
 
@@ -114,8 +114,8 @@ def delete_user_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     ax.evaluate_call(lambda: request.db.delete(user), fallback=lambda: request.db.rollback(),
-                     httpError=HTTPForbidden, msgOnFail=s.User_DELETE_ForbiddenResponseSchema.description)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)
+                     http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)
 
 
 @s.UserGroupsAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI, response_schemas=s.UserGroups_GET_responses)
@@ -128,7 +128,7 @@ def get_user_groups_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     group_names = uu.get_user_groups_checked(request, user)
-    return ax.valid_http(httpSuccess=HTTPOk, content={u"group_names": group_names},
+    return ax.valid_http(http_success=HTTPOk, content={u"group_names": group_names},
                          detail=s.UserGroups_GET_OkResponseSchema.description)
 
 
@@ -146,18 +146,18 @@ def assign_user_group_view(request):
     group_name = ar.get_value_multiformat_post_checked(request, "group_name")
     group = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
                              fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail=s.UserGroups_POST_ForbiddenResponseSchema.description)
-    ax.verify_param(group, notNone=True, httpError=HTTPNotFound,
-                    msgOnFail=s.UserGroups_POST_GroupNotFoundResponseSchema.description)
-    ax.verify_param(user.id, paramCompare=[usr.id for usr in group.users], notIn=True, httpError=HTTPConflict,
+                             http_error=HTTPForbidden, msg_on_fail=s.UserGroups_POST_ForbiddenResponseSchema.description)
+    ax.verify_param(group, not_none=True, http_error=HTTPNotFound,
+                    msg_on_fail=s.UserGroups_POST_GroupNotFoundResponseSchema.description)
+    ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, http_error=HTTPConflict,
                     content={u"user_name": user.user_name, u"group_name": group.group_name},
-                    msgOnFail=s.UserGroups_POST_ConflictResponseSchema.description)
+                    msg_on_fail=s.UserGroups_POST_ConflictResponseSchema.description)
     # noinspection PyArgumentList
     ax.evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),
-                     fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                     msgOnFail=s.UserGroups_POST_RelationshipForbiddenResponseSchema.description,
+                     fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                     msg_on_fail=s.UserGroups_POST_RelationshipForbiddenResponseSchema.description,
                      content={u"user_name": user.user_name, u"group_name": group.group_name})
-    return ax.valid_http(httpSuccess=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
+    return ax.valid_http(http_success=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
                          content={u"user_name": user.user_name, u"group_name": group.group_name})
 
 
@@ -181,9 +181,9 @@ def delete_user_group_view(request):
             .delete()
 
     ax.evaluate_call(lambda: del_usr_grp(user, group), fallback=lambda: db.rollback(),
-                     httpError=HTTPNotFound, msgOnFail=s.UserGroup_DELETE_NotFoundResponseSchema.description,
+                     http_error=HTTPNotFound, msg_on_fail=s.UserGroup_DELETE_NotFoundResponseSchema.description,
                      content={u"user_name": user.user_name, u"group_name": group.group_name})
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.UserGroup_DELETE_OkResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.UserGroup_DELETE_OkResponseSchema.description)
 
 
 @s.UserResourcesAPI.get(schema=s.UserResources_GET_RequestSchema(),
@@ -222,11 +222,11 @@ def get_user_resources_view(request):
         return json_res
 
     usr_res_dict = ax.evaluate_call(lambda: build_json_user_resource_tree(user),
-                                    fallback=lambda: db.rollback(), httpError=HTTPNotFound,
-                                    msgOnFail=s.UserResources_GET_NotFoundResponseSchema.description,
+                                    fallback=lambda: db.rollback(), http_error=HTTPNotFound,
+                                    msg_on_fail=s.UserResources_GET_NotFoundResponseSchema.description,
                                     content={u"user_name": user.user_name,
                                              u"resource_types": [models.Service.resource_type_name]})
-    return ax.valid_http(httpSuccess=HTTPOk, content={u"resources": usr_res_dict},
+    return ax.valid_http(http_success=HTTPOk, content={u"resources": usr_res_dict},
                          detail=s.UserResources_GET_OkResponseSchema.description)
 
 
@@ -327,7 +327,7 @@ def get_user_services_view(request):
                                     cascade_resources=cascade_resources,
                                     inherit_groups_permissions=inherit_groups_perms,
                                     format_as_list=format_as_list)
-    return ax.valid_http(httpSuccess=HTTPOk, content={u"services": svc_json},
+    return ax.valid_http(http_success=HTTPOk, content={u"services": svc_json},
                          detail=s.UserServices_GET_OkResponseSchema.description)
 
 
@@ -377,10 +377,10 @@ def get_user_service_permissions_view(request):
     inherit_groups_perms = asbool(ar.get_query_param(request, "inherit"))
     perms = ax.evaluate_call(lambda: uu.get_user_service_permissions(service=service, user=user, request=request,
                                                                      inherit_groups_permissions=inherit_groups_perms),
-                             fallback=lambda: request.db.rollback(), httpError=HTTPNotFound,
-                             msgOnFail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
+                             fallback=lambda: request.db.rollback(), http_error=HTTPNotFound,
+                             msg_on_fail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
                              content={u"service_name": str(service.resource_name), u"user_name": str(user.user_name)})
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.UserServicePermissions_GET_OkResponseSchema.description,
+    return ax.valid_http(http_success=HTTPOk, detail=s.UserServicePermissions_GET_OkResponseSchema.description,
                          content={u"permission_names": sorted(p.value for p in perms)})
 
 
@@ -440,7 +440,7 @@ def get_user_service_resources_view(request):
         show_all_children=False,
         show_private_url=False,
     )
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.UserServiceResources_GET_OkResponseSchema.description,
+    return ax.valid_http(http_success=HTTPOk, detail=s.UserServiceResources_GET_OkResponseSchema.description,
                          content={u"service": user_svc_res_json})
 
 

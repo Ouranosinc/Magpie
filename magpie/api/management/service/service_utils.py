@@ -36,37 +36,37 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
         # sometimes, resource ID is not updated, fetch the service to obtain it
         if not svc.resource_id:
             svc = ax.evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=db_session),
-                                   fallback=lambda: db_session.rollback(), httpError=HTTPInternalServerError,
-                                   msgOnFail=s.Services_POST_InternalServerErrorResponseSchema.description,
+                                   fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
+                                   msg_on_fail=s.Services_POST_InternalServerErrorResponseSchema.description,
                                    content={u'service_name': str(service_name), u'resource_id': svc.resource_id})
-            ax.verify_param(svc.resource_id, notNone=True, paramCompare=int, ofType=True,
-                            httpError=HTTPInternalServerError,
-                            msgOnFail=s.Services_POST_InternalServerErrorResponseSchema.description,
+            ax.verify_param(svc.resource_id, not_none=True, param_compare=int, is_type=True,
+                            http_error=HTTPInternalServerError,
+                            msg_on_fail=s.Services_POST_InternalServerErrorResponseSchema.description,
                             content={u'service_name': str(service_name), u'resource_id': svc.resource_id},
-                            paramName=u'service_name')
+                            param_name=u'service_name')
         return svc
 
     # noinspection PyArgumentList
     service = ax.evaluate_call(lambda: models.Service(resource_name=str(service_name),
                                                       resource_type=models.Service.resource_type_name,
                                                       url=str(service_url), type=str(service_type)),
-                               fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
-                               msgOnFail=s.Services_POST_UnprocessableEntityResponseSchema.description,
+                               fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
+                               msg_on_fail=s.Services_POST_UnprocessableEntityResponseSchema.description,
                                content={u'service_name': str(service_name),
                                         u'resource_type': models.Service.resource_type_name,
                                         u'service_url': str(service_url), u'service_type': str(service_type)})
 
     service = ax.evaluate_call(lambda: _add_service_magpie_and_phoenix(service, service_push, db_session),
-                               fallback=lambda: db_session.rollback(), httpError=HTTPForbidden,
-                               msgOnFail=s.Services_POST_ForbiddenResponseSchema.description,
+                               fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
+                               msg_on_fail=s.Services_POST_ForbiddenResponseSchema.description,
                                content=format_service(service, show_private_url=True))
-    return ax.valid_http(httpSuccess=HTTPCreated, detail=s.Services_POST_CreatedResponseSchema.description,
+    return ax.valid_http(http_success=HTTPCreated, detail=s.Services_POST_CreatedResponseSchema.description,
                          content={u'service': format_service(service, show_private_url=True)})
 
 
 def get_services_by_type(service_type, db_session):
-    ax.verify_param(service_type, notNone=True, notEmpty=True, httpError=HTTPBadRequest,
-                    msgOnFail="Invalid 'service_type' value '" + str(service_type) + "' specified")
+    ax.verify_param(service_type, not_none=True, not_empty=True, http_error=HTTPBadRequest,
+                    msg_on_fail="Invalid 'service_type' value '" + str(service_type) + "' specified")
     services = db_session.query(models.Service).filter(models.Service.type == service_type)
     return sorted(services, key=lambda svc: svc.resource_name)
 

@@ -38,8 +38,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             service_name = parse_service_name(request.path, self.twitcher_protected_path)
             service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=request.db),
                                     fallback=lambda: request.db.rollback(),
-                                    httpError=HTTPForbidden, msgOnFail="Service query by name refused by db.")
-            verify_param(service, notNone=True, httpError=HTTPNotFound, msgOnFail="Service name not found in db.")
+                                    http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
+            verify_param(service, not_none=True, http_error=HTTPNotFound, msg_on_fail="Service name not found in db.")
 
             # return a specific type of service, ex: ServiceWPS with all the acl (loaded according to the service_type)
             service_specific = service_factory(service, request)

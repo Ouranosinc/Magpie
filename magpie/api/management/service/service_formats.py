@@ -45,8 +45,8 @@ def format_service(service, permissions=None, show_private_url=False, show_resou
 
     return evaluate_call(
         lambda: fmt_svc(service, permissions),
-        httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format service.",
+        http_error=HTTPInternalServerError,
+        msg_on_fail="Failed to format service.",
         content={u"service": repr(service), u"permissions": repr(permissions)}
     )
 
@@ -81,8 +81,8 @@ def format_service_resources(service,                       # type: Service
 
     return evaluate_call(
         lambda: fmt_svc_res(service, db_session, service_perms, resources_perms_dict or {}, show_all_children),
-        fallback=lambda: db_session.rollback(), httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format service resources tree",
+        fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
+        msg_on_fail="Failed to format service resources tree",
         content=format_service(service, service_perms, show_private_url=show_private_url)
     )
 

@@ -16,7 +16,7 @@ def format_user(user, group_names=None):
 
     return evaluate_call(
         lambda: fmt_usr(user, group_names),
-        httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format user.",
+        http_error=HTTPInternalServerError,
+        msg_on_fail="Failed to format user.",
         content={u'user': repr(user)}
     )

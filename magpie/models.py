@@ -291,11 +291,11 @@ for res in [Service, Directory, File, Workspace, Route]:
 
 
 def resource_factory(**kwargs):
-    resource_type = evaluate_call(lambda: kwargs["resource_type"], httpError=HTTPInternalServerError,
-                                  msgOnFail="kwargs do not contain required 'resource_type'",
+    resource_type = evaluate_call(lambda: kwargs["resource_type"], http_error=HTTPInternalServerError,
+                                  msg_on_fail="kwargs do not contain required 'resource_type'",
                                   content={u"kwargs": repr(kwargs)})
-    return evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs), httpError=HTTPInternalServerError,
-                         msgOnFail="kwargs unpacking failed from specified 'resource_type' and 'RESOURCE_TYPE_DICT'",
+    return evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs), http_error=HTTPInternalServerError,
+                         msg_on_fail="kwargs unpacking failed from specified 'resource_type' and 'RESOURCE_TYPE_DICT'",
                          content={u"kwargs": repr(kwargs), u"RESOURCE_TYPE_DICT": repr(RESOURCE_TYPE_DICT)})
 
 

@@ -14,9 +14,12 @@ import six
 from pyramid.testing import DummyRequest
 
 from magpie import owsrequest
-from magpie.definitions.typedefs import Dict, Optional, Str
+from magpie.definitions.typedefs import TYPE_CHECKING
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
 from tests import runner
+
+if TYPE_CHECKING:
+    from magpie.definitions.typedefs import Dict, Optional, Str  # noqa: F401
 
 
 def make_ows_parser(method='GET', content_type=None, params=None, body=''):

@@ -24,6 +24,6 @@ def format_group(group, basic_info=False, db_session=None):
         }
 
     return evaluate_call(
-        lambda: fmt_grp(group, basic_info), httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format group.", content={u"group": repr(group)}
+        lambda: fmt_grp(group, basic_info), http_error=HTTPInternalServerError,
+        msg_on_fail="Failed to format group.", content={u"group": repr(group)}
     )

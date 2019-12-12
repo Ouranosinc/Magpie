@@ -28,8 +28,8 @@ def internal_server_error(request):
     """
     content = get_request_info(request, exception_details=True,
                                default_message=s.InternalServerErrorResponseSchema.description)
-    return raise_http(nothrow=True, httpError=HTTPInternalServerError, detail=content[u"detail"], content=content,
-                      contentType=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
+    return raise_http(nothrow=True, http_error=HTTPInternalServerError, detail=content[u"detail"], content=content,
+                      content_type=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
 
 
 def not_found_or_method_not_allowed(request):
@@ -53,8 +53,8 @@ def not_found_or_method_not_allowed(request):
         http_err = HTTPNotFound
         http_msg = s.NotFoundResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
-    return raise_http(nothrow=True, httpError=http_err, detail=content[u"detail"], content=content,
-                      contentType=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
+    return raise_http(nothrow=True, http_error=http_err, detail=content[u"detail"], content=content,
+                      content_type=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
 
 
 def unauthorized_or_forbidden(request):
@@ -80,8 +80,8 @@ def unauthorized_or_forbidden(request):
             http_msg = s.UnauthorizedResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
 
-    return raise_http(nothrow=True, httpError=http_err, detail=content[u"detail"], content=content,
-                      contentType=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
+    return raise_http(nothrow=True, http_error=http_err, detail=content[u"detail"], content=content,
+                      content_type=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
 
 
 # noinspection PyUnusedLocal
@@ -97,8 +97,8 @@ def validate_accept_header_tween(handler, registry):
         if not any(path.startswith(p) for p in ("/ui", "/static")):
             any_supported_header = SUPPORTED_CONTENT_TYPES + [CONTENT_TYPE_ANY]
             accept = get_header("accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
-            verify_param(accept, isIn=True, paramCompare=any_supported_header, paramName="Accept Header",
-                         httpError=HTTPNotAcceptable, msgOnFail=s.NotAcceptableResponseSchema.description)
+            verify_param(accept, is_in=True, param_compare=any_supported_header, param_name="Accept Header",
+                         http_error=HTTPNotAcceptable, msg_on_fail=s.NotAcceptableResponseSchema.description)
         return handler(request)
     return validate_accept_header
 
