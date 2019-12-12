@@ -109,7 +109,10 @@ info:		## display make information
 ## --- Cleanup targets --- ##
 
 .PHONY: clean
-clean: clean-build clean-pyc clean-test clean-docs	## remove all build, test, coverage and Python artifacts
+clean: clean-all	## alias for 'clean-all' target
+
+.PHONY: clean-all
+clean-all: clean-build clean-pyc clean-test clean-docs	## remove all artifacts
 
 .PHONY: clean-build
 clean-build:	## remove build artifacts
@@ -175,7 +178,7 @@ docs-show: $(DOC_LOCATION)	## display HTML webpage of generated documentation (b
 	@-test -f "$(DOC_LOCATION)" || $(MAKE) -C "$(APP_ROOT)" docs
 	$(BROWSER) "$(DOC_LOCATION)"
 
-## --- Version control targets --- ##
+## --- Versionning targets --- ##
 
 # Bumpversion 'dry' config
 # if 'dry' is specified as target, any bumpversion call using 'BUMP_XARGS' will not apply changes
@@ -251,8 +254,8 @@ stop: 		## kill application instance(s) started with gunicorn
 	@lsof -t -i :2001 | xargs kill
 
 .PHONY: stat
-stat: 		## display PID(s) of gunicorn application instance(s) running
-	@lsof -t -i :2001 || echo "No instance running"
+stat: 		## display processes with PID(s) of gunicorn instance(s) running the application
+	@lsof -i :2001 || echo "No instance running"
 
 ## --- Docker targets --- ##
 
@@ -408,18 +411,18 @@ test: test-all	## alias for 'test-all' target
 .PHONY: test-all
 test-all: install-dev install		## run all tests combinations
 	@echo "Running tests..."
-	bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 # note: use 'not remote' instead of 'local' to capture other low-level tests like 'utils' unittests
 .PHONY: test-local
 test-local: install-dev install		## run only local tests with the default Python
 	@echo "Running local tests..."
-	bash -c '$(CONDA_CMD) pytest tests -vv -m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-remote
 test-remote: install-dev install	## run only remote tests with the default Python
 	@echo "Running remote tests..."
-	bash -c '$(CONDA_CMD) pytest tests -vv -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-docker
 test-docker: docker-test			## alias for 'docker-test' target - WARNING: could build image if missing
