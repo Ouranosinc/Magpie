@@ -10,8 +10,14 @@ endef
 export BROWSER_PYSCRIPT
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
+# Included custom configs change the value of MAKEFILE_LIST
+# Extract the required reference beforehand so we can use it for help target
+MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
+# Include custom config if it is available
+-include Makefile.config
+
 # Application
-APP_ROOT    := $(abspath $(lastword $(MAKEFILE_LIST))/..)
+APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := magpie
 APP_VERSION ?= 1.7.5
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
@@ -80,7 +86,7 @@ help:	## print this help message (default)
 	@echo "Please use 'make <target>' where <target> is one of:"
 #	@grep -E '^[a-zA-Z_-]+:.*?\#\# .*$$' $(MAKEFILE_LIST) \
 #		| awk 'BEGIN {FS = ":.*?\#\# "}; {printf "    $(_TARGET)%-24s$(_NORMAL) %s\n", $$1, $$2}'
-	@grep -E '\#\#.*$$' $(MAKEFILE_LIST) \
+	@grep -E '\#\#.*$$' "$(APP_ROOT)/$(MAKEFILE_NAME)" \
 		| awk ' BEGIN {FS = "(:|\-\-\-)+.*?\#\# "}; \
 			/\--/ {printf "$(_SECTION)%s$(_NORMAL)\n", $$1;} \
 			/:/   {printf "    $(_TARGET)%-24s$(_NORMAL) %s\n", $$1, $$2} \

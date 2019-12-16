@@ -1,26 +1,46 @@
+# Docker
 Dockerfile
 Dockerfile.adapter
 .dockerignore
 
-**/custom.ini
-**/config.yaml
-
+# Git
 .git
+.github
+
+# Environment
+env/*.env
+venv
+
+# Makefile
+downloads
+
+# Unit test / Coverage reports
+**/.cache
+**/.coverage
+**/.pytest_cache
 .coverage
-.eggs
+reports
+share
+
+# PyCharm
+.idea
+
+# vscode
+.vscode
+
+# Build artifacts
+**/__pycache__
+**/*.py[cod]
+*.egg-info
+*.egg[s]
 build
 dist
+pip-selfcheck.json
 
-env/*.env
-*.egg-info
-docs/_build
-docs/magpie.esgf.rst
-docs/magpie.home.rst
-docs/magpie.local.rst
-docs/magpie.login.rst
-docs/magpie.management.rst
-docs/magpie.tests.rst
-docs/magpie.rst
+# Project
+**/custom.ini
+**/config.yaml
+docs
 magpieenv
 magpie/api_docs
 magpie/api_test
@@ -29,26 +49,7 @@ magpie/bin
 magpie/include
 magpie/lib
 magpie/local
-magpie/pip-selfcheck.json
 magpie/share
-magpie.egg-info
 src
-share
-downloads
 error_log.txt
 gunicorn.app.wsgiapp
-
-# Unit test / Coverage reports
-**/.cache
-**/.coverage
-**/.pytest_cache
-
-# PyCharm
-.idea
-
-# vscode
-.vscode
-
-# Byte-compiled / optimized / DLL files
-**/__pycache__
-**/*.py[cod]
