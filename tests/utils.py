@@ -2,7 +2,9 @@ from magpie import __meta__, services, app
 from magpie.constants import get_constant
 from magpie.definitions.pyramid_definitions import asbool
 from magpie.services import ServiceAccess
-from magpie.utils import get_magpie_url, get_settings_from_config_ini, get_header, CONTENT_TYPE_JSON, CONTENT_TYPE_HTML
+from magpie.utils import (
+    get_magpie_url, get_settings_from_config_ini, get_header, SingletonMeta, CONTENT_TYPE_JSON, CONTENT_TYPE_HTML
+)
 from six.moves.urllib.parse import urlparse
 from distutils.version import LooseVersion
 from pyramid.testing import setUp as PyramidSetUp
@@ -232,7 +234,7 @@ def test_request(test_item, method, path, timeout=5, allow_redirects=True, **kwa
             kwargs.update({"params": json.dumps(json_body, cls=json.JSONEncoder)})
         if status and status >= 300:
             kwargs.update({"expect_errors": True})
-        resp = app_or_url._gen_request(method, path, **kwargs)
+        resp = app_or_url._gen_request(method, path, **kwargs)  # noqa: W0212
         # automatically follow the redirect if any and evaluate its response
         max_redirect = kwargs.get("max_redirects", 5)
         while 300 <= resp.status_code < 400 and max_redirect > 0:
@@ -485,7 +487,7 @@ def check_ui_response_basic_info(response, expected_code=200, expected_type=CONT
     check_val_is_in("Magpie Administration", response.text, msg=null)   # don't output big html if failing
 
 
-class null(object):
+class _NullType(six.with_metaclass(SingletonMeta)):
     """
     Represents a null value to differentiate from None.
     """
@@ -493,15 +495,22 @@ class null(object):
     def __repr__(self):
         return "<null>"
 
+    @staticmethod
+    def __nonzero__():
+        return False
 
-Null = null()
+    __bool__ = __nonzero__
+    __len__ = __nonzero__
+
+
+null = _NullType()
 
 
 def is_null(item):
-    return isinstance(item, null) or item is null
+    return isinstance(item, _NullType) or item is null
 
 
-def check_error_param_structure(json_body, param_value=Null, param_name=Null, param_compare=Null,
+def check_error_param_structure(json_body, param_value=null, param_name=null, param_compare=null,
                                 is_param_value_literal_unicode=False, param_compare_exists=False, version=None):
     """
     Validates error response 'param' information based on different Magpie version formats.

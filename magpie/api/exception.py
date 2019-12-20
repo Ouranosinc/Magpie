@@ -113,7 +113,7 @@ def verify_param(  # noqa: E126
         if is_equal or not_equal:
             # allow 'different' string literals for comparison, otherwise types must match exactly
             if (not (isinstance(param, six.string_types) and isinstance(param_compare, six.string_types))
-                     and type(param) != type(param_compare)):
+                     and type(param) != type(param_compare)):   # noqa: E127
                 raise TypeError("'param_compare' cannot be of incompatible type with specified test flags")
         if not hasattr(param_compare, "__iter__") and (is_in or not_in):
             param_compare = [param_compare]

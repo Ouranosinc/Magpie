@@ -303,8 +303,7 @@ def log_request(event):
     LOGGER.info("Request: [{}]".format(log_request_format(event.request)))
 
 
-# noinspection PyUnusedLocal
-def log_exception_tween(handler, registry):
+def log_exception_tween(handler, registry):  # noqa: F811
     """
     Tween factory that logs any exception before re-raising it.
 
@@ -322,6 +321,16 @@ def log_exception_tween(handler, registry):
             LOGGER.log(lvl, "Exception during request: [{}]".format(log_request_format(request)), exc_info=exc)
             raise err
     return log_exc
+
+
+def is_json_body(body):
+    if not body:
+        return False
+    try:
+        json.loads(body)
+    except (ValueError, TypeError):
+        return False
+    return True
 
 
 class ExtendedEnumMeta(EnumMeta):
@@ -354,11 +363,31 @@ class ExtendedEnumMeta(EnumMeta):
         return default
 
 
-def is_json_body(body):
-    if not body:
-        return False
-    try:
-        json.loads(body)
-    except (ValueError, TypeError):
-        return False
-    return True
+# taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
+# works in Python 2 & 3
+class SingletonMeta(type):
+    """
+    A metaclass that creates a Singleton base class when called.
+
+    Create a class such that::
+
+        class A(six.with_metaclass(SingletonMeta)):
+            pass
+
+        class B(six.with_metaclass(SingletonMeta)):
+            pass
+
+        a1 = A()
+        a2 = A()
+        b1 = B()
+        b2 = B()
+        a1 is a2    # True
+        b1 is b2    # True
+        a1 is b1    # False
+    """
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]

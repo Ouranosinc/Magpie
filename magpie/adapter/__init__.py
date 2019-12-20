@@ -7,9 +7,10 @@ from magpie.adapter.magpieowssecurity import MagpieOWSSecurity
 from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.security import get_auth_config
 from magpie.db import get_session_factory, get_tm_session, get_engine
-from magpie.utils import get_logger, get_settings, get_magpie_url, CONTENT_TYPE_JSON
+from magpie.utils import get_logger, get_settings, get_magpie_url, SingletonMeta, CONTENT_TYPE_JSON
 from magpie import __meta__
 from pyramid_beaker import set_cache_regions_from_settings
+import six
 import time
 import logging
 import requests
@@ -97,26 +98,7 @@ def verify_user(request):
     return valid_http(HTTPOk, detail="Twitcher login verified successfully with Magpie login.")
 
 
-# taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
-# works in Python 2 & 3
-class _Singleton(type):
-    """
-    A metaclass that creates a Singleton base class when called.
-    """
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(_Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-
-class Singleton(_Singleton('SingletonMeta', (object,), {})):
-    pass
-
-
-# noinspection PyMethodMayBeStatic
-class MagpieAdapter(AdapterInterface, Singleton):
+class MagpieAdapter(six.with_metaclass(SingletonMeta, AdapterInterface)):
     def __init__(self, container):
         self._servicestore = None
         self._owssecurity = None
@@ -125,7 +107,7 @@ class MagpieAdapter(AdapterInterface, Singleton):
     def describe_adapter(self):
         return {"name": self.name, "version": __meta__.__version__}
 
-    def servicestore_factory(self, request, headers=None):
+    def servicestore_factory(self, request, headers=None):  # noqa: F811
         if self._servicestore is None:
             self._servicestore = MagpieServiceStore(request)
         return self._servicestore
@@ -140,7 +122,7 @@ class MagpieAdapter(AdapterInterface, Singleton):
         config = self.configurator_factory(container)
         owsproxy_defaultconfig(config)  # let Twitcher configure the rest normally
 
-    def configurator_factory(self, container):
+    def configurator_factory(self, container):  # noqa: N805
         settings = get_settings(container)
         set_cache_regions_from_settings(settings)
 

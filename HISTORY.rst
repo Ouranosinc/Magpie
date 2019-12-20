@@ -17,6 +17,7 @@ Features / Changes
 * add more code linting checks using various test tools.
 * add smoke test of built docker image to `Travis-CI` pipeline.
 * bump ``alembic>=1.3.0`` to remove old warnings and receive recent fixes.
+* move ``magpie.utils.SingletonMeta`` functionality from adapter to reuse it in ``null`` test checks.
 * improve ``make help`` targets descriptions.
 
 Bug Fixes
