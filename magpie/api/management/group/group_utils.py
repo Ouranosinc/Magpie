@@ -4,8 +4,10 @@ from magpie.api.management.resource.resource_utils import check_valid_service_or
 from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.service.service_formats import format_service_resources, format_service
 from magpie.api.management.group.group_formats import format_group
-from magpie.definitions.ziggurat_definitions import GroupService, GroupResourcePermissionService, ResourceService
-from magpie.definitions.pyramid_definitions import (
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.group_resource_permission import GroupResourcePermissionService
+from ziggurat_foundations.models.services.resource import ResourceService
+from pyramid.httpexceptions import (
     HTTPOk,
     HTTPCreated,
     HTTPForbidden,
@@ -17,9 +19,9 @@ from magpie import models
 from magpie.permissions import format_permissions, convert_permission
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.definitions.pyramid_definitions import HTTPException  # noqa: F401
-    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.definitions.typedefs import Str, Iterable, List, Optional, JSON, ServiceOrResourceType  # noqa: F401
+    from pyramid.httpexceptions import HTTPException  # noqa: F401
+    from sqlalchemy.orm.session import Session
+    from magpie.typedefs import Str, Iterable, List, Optional, JSON, ServiceOrResourceType  # noqa: F401
     from magpie.permissions import Permission  # noqa: F401
 
 
@@ -267,7 +269,7 @@ def get_group_service_resources_permissions_dict(group, service, db_session):
     Get all permissions the group has on a specific service's children resources.
     """
     res_id = service.resource_id
-    res_under_svc = models.resource_tree_service.from_parent_deeper(parent_id=res_id, db_session=db_session)
+    res_under_svc = models.RESOURCE_TREE_SERVICE.from_parent_deeper(parent_id=res_id, db_session=db_session)
     res_ids = [resource.Resource.resource_id for resource in res_under_svc]
     return get_group_resources_permissions_dict(group, db_session, resource_types=None, resource_ids=res_ids)
 

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from typing import (                                                                        # noqa: F401,W0212
         Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union    # noqa: F401,W0212
     )
-    from magpie.definitions.sqlalchemy_definitions import Session
+    from sqlalchemy.orm.session import Session
     from magpie import models
     from magpie.permissions import Permission
     from webob.headers import ResponseHeaders, EnvironHeaders
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     import six
 
     if six.PY2:
-        Str = Union[_AnyStr, unicode]   # noqa: F405,F821
+        Str = Union[_AnyStr, unicode]   # noqa: E0602,F405,F821
     else:
         Str = _AnyStr
     AnyStr = Str

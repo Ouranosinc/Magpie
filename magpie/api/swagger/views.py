@@ -3,9 +3,8 @@ from magpie.constants import MAGPIE_MODULE_DIR
 import os
 
 
-# noinspection PyUnusedLocal
 @s.SwaggerAPI.get(tags=[s.APITag], response_schemas=s.SwaggerAPI_GET_responses)
-def api_swagger(request):
+def api_swagger(request):   # noqa: F811
     """
     Swagger UI route to display the Magpie REST API schemas.
     """

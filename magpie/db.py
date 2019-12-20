@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from magpie.constants import get_constant
-from magpie.definitions.alembic_definitions import alembic
-from magpie.definitions.sqlalchemy_definitions import (
-    register, sessionmaker, engine_from_config,
-    configure_mappers, Inspector, Session, sa_exc
-)
-from magpie.definitions.pyramid_definitions import asbool
+import alembic
+import alembic.command
+import alembic.config
+from sqlalchemy import exc as sa_exc
+from sqlalchemy.orm.session import sessionmaker, Session
+from sqlalchemy.orm import configure_mappers
+from sqlalchemy.engine.reflection import Inspector
+from sqlalchemy import engine_from_config
+from zope.sqlalchemy import register
+
+from pyramid.settings import asbool
 from magpie.utils import get_settings_from_config_ini, get_settings, print_log, raise_log, get_logger
 from typing import TYPE_CHECKING
 import transaction
@@ -18,11 +23,11 @@ import six
 
 # import or define all models here to ensure they are attached to the
 # Base.metadata prior to any initialization routines
-from magpie import models
+from magpie import models  # isort:skip # noqa: E402
 
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Any, AnySettingsContainer, SettingsType, Str, Optional, Union  # noqa: F401
-    from magpie.definitions.sqlalchemy_definitions import Engine  # noqa: F401
+    from magpie.typedefs import Any, AnySettingsContainer, SettingsType, Str, Optional, Union  # noqa: F401
+    from sqlalchemy.engine.base import Engine  # noqa: F401
 
 
 LOGGER = get_logger(__name__)
@@ -120,7 +125,7 @@ def run_database_migration(db_session=None):
     Runs db migration operations with alembic, using db session or a new engine connection.
     """
     ini_file = get_constant("MAGPIE_ALEMBIC_INI_FILE_PATH")
-    LOGGER.info("Using file '{}' for migration.".format(ini_file))
+    LOGGER.info("Using file '%s' for migration.", ini_file)
     alembic_args = ["-c", ini_file, "upgrade", "heads"]
     if not isinstance(db_session, Session):
         alembic.config.main(argv=alembic_args)
@@ -128,7 +133,7 @@ def run_database_migration(db_session=None):
         engine = db_session.bind
         with engine.begin() as connection:
             alembic_cfg = alembic.config.Config(file_=ini_file)
-            alembic_cfg.attributes['connection'] = connection
+            alembic_cfg.attributes["connection"] = connection   # noqa: E1137
             alembic.command.upgrade(alembic_cfg, "head")
 
 
@@ -151,7 +156,7 @@ def is_database_ready(db_session=None):
     for _, obj in inspect.getmembers(models):
         if inspect.isclass(obj) and hasattr(obj, "__tablename__"):
             if obj.__tablename__ not in table_names:
-                LOGGER.error("Database table (or its associated parent) is missing for '{!s}' object".format(obj))
+                LOGGER.error("Database table (or its associated parent) is missing for '%s' object", obj)
                 return False
     return True
 
@@ -177,14 +182,12 @@ def run_database_migration_when_ready(settings, db_session=None):
                     run_database_migration(db_session)
             except ImportError as exc:
                 print_log("Database migration produced [{!r}] (ignored).".format(exc), level=logging.WARNING)
-                pass
             except Exception as exc:
                 if i <= attempts:
                     print_log("Database migration failed [{!r}]. Retrying... ({}/{})".format(exc, i, attempts))
                     time.sleep(2)
                     continue
-                else:
-                    raise_log("Database migration failed [{!r}]".format(exc), exception=RuntimeError)
+                raise_log("Database migration failed [{!r}]".format(exc), exception=RuntimeError)
 
             db_ready = is_database_ready(db_session)
             if not db_ready:

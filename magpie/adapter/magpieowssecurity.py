@@ -1,19 +1,15 @@
+from pyramid.httpexceptions import HTTPOk, HTTPForbidden, HTTPNotFound
+from pyramid.authentication import IAuthenticationPolicy
+from pyramid.authorization import IAuthorizationPolicy
+from pyramid.settings import asbool
+
+from twitcher.owssecurity import OWSSecurityInterface
+from twitcher.owsexceptions import OWSAccessForbidden
+from twitcher.utils import parse_service_name
+
 from magpie.api.exception import evaluate_call, verify_param
 from magpie.api.schemas import ProviderSigninAPI
 from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import (
-    HTTPOk,
-    HTTPNotFound,
-    HTTPForbidden,
-    IAuthenticationPolicy,
-    IAuthorizationPolicy,
-    asbool,
-)
-from magpie.definitions.twitcher_definitions import (
-    OWSSecurityInterface,
-    OWSAccessForbidden,
-    parse_service_name,
-)
 from magpie.models import Service
 from magpie.permissions import Permission
 from magpie.services import service_factory
@@ -50,17 +46,17 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             permission_requested = Permission.get(permission_requested).value if permission_requested else None
 
             if permission_requested:
-                LOGGER.info('"{0}" request "{1}" permission on "{2}"'.format(request.user, permission_requested, request.path))
+                LOGGER.info("'%s' request '%s' permission on '%s'", request.user, permission_requested, request.path)
                 self.update_request_cookies(request)
                 authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
                 authz_policy = request.registry.queryUtility(IAuthorizationPolicy)
                 principals = authn_policy.effective_principals(request)
                 has_permission = authz_policy.permits(service_specific, principals, permission_requested)
 
-                LOGGER.debug("{} - AUTHN policy configurations:".format(type(self).__name__))
+                LOGGER.debug("%s - AUTHN policy configurations:", type(self).__name__)
                 base_attr = [attr for attr in dir(authn_policy.cookie) if not attr.startswith("_")]
                 for attr_name in base_attr:
-                    LOGGER.debug("  {}: {}".format(attr_name, getattr(authn_policy.cookie, attr_name)))
+                    LOGGER.debug("  %s: %s", attr_name, getattr(authn_policy.cookie, attr_name))
 
                 if not has_permission:
                     raise OWSAccessForbidden("Not authorized to access this resource. "

@@ -33,9 +33,8 @@ class Base_Magpie_TestCase(object):
         pyramid.testing.tearDown()
 
 
-# noinspection PyAbstractClass, PyPep8Naming
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
+class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):  # noqa: W0223
     """
     Interface class for unittests of Magpie API. Test any operation that do not require user AuthN/AuthZ.
 
@@ -83,22 +82,19 @@ class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
             utils.check_response_basic_info(resp, expected_code=406)
 
 
-# noinspection PyAbstractClass, PyPep8Naming
 @unittest.skip("Not implemented.")
 @pytest.mark.skip(reason="Not implemented.")
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_UsersAuth(Base_Magpie_TestCase):
+class Interface_MagpieAPI_UsersAuth(Base_Magpie_TestCase):  # noqa: W0223
     """
     Interface class for unittests of Magpie API. Test any operation that require at least 'Users' group AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
-    pass
 
 
-# noinspection PyAbstractClass, PyPep8Naming
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
+class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):  # noqa: W0223
     """
     Interface class for unittests of Magpie API. Test any operation that require at least 'administrator' group
     AuthN/AuthZ.

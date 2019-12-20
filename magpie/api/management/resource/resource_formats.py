@@ -1,6 +1,6 @@
-from magpie.definitions.pyramid_definitions import HTTPInternalServerError
-from magpie.definitions.ziggurat_definitions import ResourceService
-from magpie.models import resource_tree_service
+from pyramid.httpexceptions import HTTPInternalServerError
+from ziggurat_foundations.models.services.resource import ResourceService
+from magpie.models import RESOURCE_TREE_SERVICE
 from magpie.permissions import format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.api.exception import evaluate_call
@@ -87,8 +87,8 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, intern
 
 
 def get_resource_children(resource, db_session):
-    query = resource_tree_service.from_parent_deeper(resource.resource_id, db_session=db_session)
-    tree_struct_dict = resource_tree_service.build_subtree_strut(query)
+    query = RESOURCE_TREE_SERVICE.from_parent_deeper(resource.resource_id, db_session=db_session)
+    tree_struct_dict = RESOURCE_TREE_SERVICE.build_subtree_strut(query)
     return tree_struct_dict[u'children']
 
 

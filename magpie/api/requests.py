@@ -1,9 +1,11 @@
 from magpie.api.exception import evaluate_call, verify_param
 from magpie.api import schemas as s
 from magpie.constants import get_constant
-from magpie.definitions import ziggurat_definitions as zig
-from magpie.definitions.pyramid_definitions import (
-    IAuthenticationPolicy,
+from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.resource import ResourceService
+from pyramid.authentication import IAuthenticationPolicy
+from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPForbidden,
     HTTPNotFound,
@@ -14,8 +16,8 @@ from magpie.utils import CONTENT_TYPE_JSON
 from magpie import models
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.definitions.pyramid_definitions import Request  # noqa: F401
-    from magpie.definitions.typedefs import Any, Str, Optional, ServiceOrResourceType  # noqa: F401
+    from pyramid.request import Request
+    from magpie.typedefs import Any, Str, Optional, ServiceOrResourceType  # noqa: F401
     from magpie.permissions import Permission  # noqa: F401
 
 
@@ -82,7 +84,7 @@ def get_user(request, user_name_or_token=None):
         if curr_user:
             return curr_user
         anonymous_user = get_constant("MAGPIE_ANONYMOUS_USER")
-        anonymous = evaluate_call(lambda: zig.UserService.by_user_name(anonymous_user, db_session=request.db),
+        anonymous = evaluate_call(lambda: UserService.by_user_name(anonymous_user, db_session=request.db),
                                   fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                   msg_on_fail=s.User_CheckAnonymous_ForbiddenResponseSchema.description)
         verify_param(anonymous, not_none=True, http_error=HTTPNotFound,
@@ -91,11 +93,11 @@ def get_user(request, user_name_or_token=None):
     else:
         authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
         principals = authn_policy.effective_principals(request)
-        admin_group = zig.GroupService.by_group_name(get_constant("MAGPIE_ADMIN_GROUP"), db_session=request.db)
+        admin_group = GroupService.by_group_name(get_constant("MAGPIE_ADMIN_GROUP"), db_session=request.db)
         admin_principal = "group:{}".format(admin_group.id)
         if admin_principal not in principals:
             raise HTTPForbidden()
-        user = evaluate_call(lambda: zig.UserService.by_user_name(user_name_or_token, db_session=request.db),
+        user = evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
                              fallback=lambda: request.db.rollback(),
                              http_error=HTTPForbidden, msg_on_fail=s.User_GET_ForbiddenResponseSchema.description)
         verify_param(user, not_none=True, http_error=HTTPNotFound,
@@ -118,7 +120,7 @@ def get_user_matchdict_checked(request, user_name_key="user_name"):
 
 def get_group_matchdict_checked(request, group_name_key="group_name"):
     group_name = get_value_matchdict_checked(request, group_name_key)
-    group = evaluate_call(lambda: zig.GroupService.by_group_name(group_name, db_session=request.db),
+    group = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
                           fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                           msg_on_fail=s.Group_MatchDictCheck_ForbiddenResponseSchema.description)
     verify_param(group, not_none=True, http_error=HTTPNotFound,
@@ -131,7 +133,7 @@ def get_resource_matchdict_checked(request, resource_name_key="resource_id"):
     resource_id = get_value_matchdict_checked(request, resource_name_key)
     resource_id = evaluate_call(lambda: int(resource_id), http_error=HTTPBadRequest,
                                 msg_on_fail=s.Resource_MatchDictCheck_BadRequestResponseSchema.description)
-    resource = evaluate_call(lambda: zig.ResourceService.by_resource_id(resource_id, db_session=request.db),
+    resource = evaluate_call(lambda: ResourceService.by_resource_id(resource_id, db_session=request.db),
                              fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                              msg_on_fail=s.Resource_MatchDictCheck_ForbiddenResponseSchema.description)
     verify_param(resource, not_none=True, http_error=HTTPNotFound,

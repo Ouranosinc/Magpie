@@ -18,6 +18,8 @@ Features / Changes
 * add smoke test of built docker image to `Travis-CI` pipeline.
 * bump ``alembic>=1.3.0`` to remove old warnings and receive recent fixes.
 * move ``magpie.utils.SingletonMeta`` functionality from adapter to reuse it in ``null`` test checks.
+* rename ``resource_tree_service`` and ``remote_resource_tree_service`` to their uppercase equivalents.
+* removed module ``magpie.definitions`` in favor of directly importing appropriate references as needed.
 * improve ``make help`` targets descriptions.
 
 Bug Fixes

@@ -1,8 +1,9 @@
 from magpie.constants import get_constant
-from magpie.definitions.ziggurat_definitions import UserService, ResourceService, permission_to_pyramid_acls
-from magpie.definitions.pyramid_definitions import (
-    EVERYONE,
-    ALLOW,
+from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.models.services.resource import ResourceService
+from ziggurat_foundations.permissions import permission_to_pyramid_acls
+from pyramid.security import Everyone as EVERYONE, Allow as ALLOW   # noqa
+from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPBadRequest,
     HTTPNotImplemented,
@@ -16,10 +17,10 @@ from beaker.cache import cache_region, cache_regions
 from typing import TYPE_CHECKING
 from six import with_metaclass
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import (  # noqa: F401
+    from magpie.typedefs import (  # noqa: F401
         AccessControlListType, Str, List, Dict, Type, ResourcePermissionType
     )
-    from magpie.definitions.pyramid_definitions import Request  # noqa: F401
+    from pyramid.request import Request
 
 
 class ServiceMeta(type):
@@ -84,7 +85,7 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
 
     # parameters required to preserve caching of corresponding resource-id/user called
     @cache_region("acl")
-    def _get_acl_cached(self, service_id, user):  # noqa: F811
+    def _get_acl_cached(self, service_id, user):  # pylint: disable=W0613 # noqa: F811
         """Cache this method with :py:mod:`beaker` based on the service id and the user.
 
         If the cache is not hit, call :meth:`get_acl`.
@@ -108,10 +109,9 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
                 user = UserService.by_user_name(get_constant("MAGPIE_ANONYMOUS_USER"), db_session=self.request.db)
                 if user is None:
                     raise Exception("No Anonymous user in the database")
-                else:
-                    permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
-                    for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-                        self.acl.append((outcome, EVERYONE, perm_name,))
+                permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
+                for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
+                    self.acl.append((outcome, EVERYONE, perm_name,))
 
     def permission_requested(self):
         # type: () -> Permission

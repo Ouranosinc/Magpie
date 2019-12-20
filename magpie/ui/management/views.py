@@ -1,8 +1,8 @@
 from magpie.api import schemas as schemas
 from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import (
-    asbool,
-    view_config,
+from pyramid.settings import asbool
+from pyramid.view import view_config
+from pyramid.httpexceptions import (
     HTTPFound,
     HTTPMovedPermanently,
     HTTPBadRequest,
@@ -11,7 +11,7 @@ from magpie.definitions.pyramid_definitions import (
 )
 from magpie.helpers.sync_resources import OUT_OF_SYNC
 from magpie.helpers import sync_resources
-from magpie.models import RESOURCE_TYPE_DICT, remote_resource_tree_service  # TODO: remove, implement getters via API
+from magpie.models import RESOURCE_TYPE_DICT, REMOTE_RESOURCE_TREE_SERVICE  # TODO: remove, implement getters via API
 from magpie.ui.utils import check_response, request_api, error_badrequest
 from magpie.ui.home import add_template_data
 from magpie.utils import get_json, get_logger, CONTENT_TYPE_JSON
@@ -24,8 +24,8 @@ import humanize
 import json
 import six
 if TYPE_CHECKING:
-    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.definitions.typedefs import List, Optional  # noqa: F401
+    from sqlalchemy.orm.session import Session
+    from magpie.typedefs import List, Optional  # noqa: F401
 LOGGER = get_logger(__name__)
 
 
@@ -742,7 +742,7 @@ class ManagementViews(object):
         #   Until the api is modified to make it possible to request from the RemoteResource table,
         #   we have to access the database directly here
         session = self.request.db
-        parents = remote_resource_tree_service.path_upper(remote_id, db_session=session)
+        parents = REMOTE_RESOURCE_TREE_SERVICE.path_upper(remote_id, db_session=session)
         parents = list(reversed(list(parents)))
 
         parent_id = None

@@ -7,6 +7,12 @@ Create Date: 2018-05-23 17:17:51.205891
 """
 import os
 import sys
+
+from alembic.context import get_context  # noqa: F401
+from alembic import op
+from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy.dialects.postgresql.base import PGDialect
+
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)    # version
 root_dir = os.path.dirname(root_dir)    # alembic
@@ -14,11 +20,10 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-from alembic.context import get_context                                                         # noqa: F401
-from alembic import op                                                                          # noqa: F401
-from magpie.definitions.sqlalchemy_definitions import sessionmaker, PGDialect                   # noqa: F401
-from magpie.helpers.register_default_users import init_anonymous, init_admin, init_users_group  # noqa: F401
-from magpie import models                                                                       # noqa: F401
+from magpie.helpers.register_default_users import (  # isort:skip # noqa: E402
+    init_anonymous, init_admin, init_users_group
+)
+from magpie import models  # noqa: F401
 
 Session = sessionmaker()
 

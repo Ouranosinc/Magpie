@@ -15,8 +15,8 @@ import logging
 import os
 import sys
 if TYPE_CHECKING:
-    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.definitions.typedefs import Optional  # noqa: F401
+    from sqlalchemy.orm.session import Session
+    from magpie.typedefs import Optional  # noqa: F401
 
 LOGGER = get_logger(__name__)
 
@@ -214,7 +214,7 @@ def _get_resource_children(resource, db_session):
     :param db_session:
     :return:
     """
-    query = models.remote_resource_tree_service.from_parent_deeper(resource.resource_id, db_session=db_session)
+    query = models.REMOTE_RESOURCE_TREE_SERVICE.from_parent_deeper(resource.resource_id, db_session=db_session)
 
     def build_subtree_strut(result):
         """

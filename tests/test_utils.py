@@ -8,15 +8,11 @@ test_utils
 Tests for the various utility operations employed by magpie.
 """
 
+from pyramid.httpexceptions import HTTPOk, HTTPBadRequest, HTTPForbidden, HTTPInternalServerError
+from pyramid.request import Request
+from pyramid.settings import asbool
+
 from magpie.api import requests as ar, exception as ax
-from magpie.definitions.pyramid_definitions import (  # noqa: F401
-    asbool,
-    Request,
-    HTTPInternalServerError,
-    HTTPBadRequest,
-    HTTPForbidden,
-    HTTPOk,
-)
 from magpie import models, __meta__
 from magpie.permissions import format_permissions, Permission
 from magpie.utils import get_header, ExtendedEnumMeta, CONTENT_TYPE_JSON
@@ -29,7 +25,7 @@ import six
 import mock
 import unittest
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str  # noqa: F401
+    from magpie.typedefs import Str  # noqa: F401
 
 
 class DummyEnum(six.with_metaclass(ExtendedEnumMeta, Enum)):

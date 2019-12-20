@@ -331,7 +331,11 @@ check-pep8: mkdir-reports install-dev		## run PEP8 code style checks
 check-lint: mkdir-reports install-dev		## run linting code style checks
 	@echo "Running linting code style checks..."
 	@bash -c '$(CONDA_CMD) \
-		pylint --rcfile="$(APP_ROOT)/.pylintrc" "$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/tests" --reports y \
+		pylint \
+			--load-plugins pylint_quotes \
+			--rcfile="$(APP_ROOT)/.pylintrc" \
+			--reports y \
+			"$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/tests" \
 		1> >(tee "$(REPORTS_DIR)/check-lint.txt")'
 
 .PHONY: check-security

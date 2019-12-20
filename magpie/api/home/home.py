@@ -1,5 +1,8 @@
+from pyramid.security import NO_PERMISSION_REQUIRED
+from pyramid.view import view_config
+from pyramid.httpexceptions import HTTPOk
+
 from magpie.api import exception as ax, schemas as s
-from magpie.definitions.pyramid_definitions import NO_PERMISSION_REQUIRED, HTTPOk, view_config
 from magpie.db import get_database_revision
 from magpie.utils import print_log, get_logger, get_magpie_url, CONTENT_TYPE_JSON
 from magpie import __meta__

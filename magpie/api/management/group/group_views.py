@@ -1,9 +1,9 @@
 from magpie.api import requests as ar, exception as ax, schemas as s
 from magpie.api.management.group import group_utils as gu, group_formats as gf
 from magpie.constants import get_constant
-from magpie.definitions.ziggurat_definitions import GroupService
-from magpie.definitions.pyramid_definitions import (
-    view_config,
+from ziggurat_foundations.models.services.group import GroupService
+from pyramid.view import view_config
+from pyramid.httpexceptions import (
     HTTPOk,
     HTTPBadRequest,
     HTTPForbidden,

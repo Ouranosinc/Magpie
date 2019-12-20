@@ -2,9 +2,7 @@ from magpie.api import exception as ax, requests as ar, schemas as s
 from magpie.api.management.user import user_utils as uu, user_formats as uf
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import (
-    asbool,
-    view_config,
+from pyramid.httpexceptions import (
     HTTPOk,
     HTTPCreated,
     HTTPMovedPermanently,
@@ -12,9 +10,13 @@ from magpie.definitions.pyramid_definitions import (
     HTTPForbidden,
     HTTPNotFound,
     HTTPConflict,
-    NO_PERMISSION_REQUIRED,
 )
-from magpie.definitions.ziggurat_definitions import UserService, GroupService, ResourceService
+from pyramid.settings import asbool
+from pyramid.view import view_config
+from pyramid.security import NO_PERMISSION_REQUIRED
+from ziggurat_foundations.models.services.resource import ResourceService
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.user import UserService
 from magpie.utils import get_logger
 from magpie import models
 LOGGER = get_logger(__name__)
@@ -238,8 +240,8 @@ def get_user_resources_view(request):
 def get_user_inherited_resources_view(request):
     """[DEPRECATED: use '/users/{user_name}/resources?inherit=true']
     List all resources a user has permissions on with his inherited user and groups permissions."""
-    LOGGER.warning("Route deprecated: [{0}], Instead Use: [{1}]"
-                   .format(s.UserInheritedResourcesAPI.path, s.UserResourcesAPI.path + "?inherit=true"))
+    LOGGER.warning("Route deprecated: [%s], Instead Use: [%s]",
+                   s.UserInheritedResourcesAPI.path, s.UserResourcesAPI.path + "?inherit=true")
     return HTTPMovedPermanently(location=request.path.replace("/inherited_resources", "/resources?inherit=true"))
 
 
@@ -272,9 +274,8 @@ def get_user_resource_permissions_view(request):
 def get_user_resource_inherit_groups_permissions_view(request):
     """[DEPRECATED: use '/users/{user_name}/resources/{resource_id}/permissions?inherit=true']
     List all permissions a user has on a specific resource with his inherited user and groups permissions."""
-    LOGGER.warning("Route deprecated: [{0}], Instead Use: [{1}]"
-                   .format(s.UserResourceInheritedPermissionsAPI.path,
-                           s.UserResourcePermissionsAPI.path + "?inherit=true"))
+    LOGGER.warning("Route deprecated: [%s], Instead Use: [%s]",
+                   s.UserResourceInheritedPermissionsAPI.path, s.UserResourcePermissionsAPI.path + "?inherit=true")
     return HTTPMovedPermanently(location=request.path.replace("/inherited_permissions", "/permissions?inherit=true"))
 
 
@@ -339,8 +340,8 @@ def get_user_services_view(request):
 def get_user_inherited_services_view(request):
     """[DEPRECATED: use '/users/{user_name}/services?inherit=true']
     List all services a user has permissions on with his inherited user and groups permissions."""
-    LOGGER.warning("Route deprecated: [{0}], Instead Use: [{1}]"
-                   .format(s.LoggedUserInheritedServicesAPI.path, s.LoggedUserServicesAPI.path + "?inherit=true"))
+    LOGGER.warning("Route deprecated: [%s], Instead Use: [%s]",
+                   s.LoggedUserInheritedServicesAPI.path, s.LoggedUserServicesAPI.path + "?inherit=true")
     return HTTPMovedPermanently(location=request.path.replace("/inherited_services", "/services?inherit=true"))
 
 
@@ -355,9 +356,8 @@ def get_user_inherited_services_view(request):
 def get_user_service_inherited_permissions_view(request):
     """[DEPRECATED: use '/users/{user_name}/services/{service_name}/permissions?inherit=true']
     List all permissions a user has on a service using all his inherited user and groups permissions."""
-    LOGGER.warning("Route deprecated: [{0}], Instead Use: [{1}]"
-                   .format(s.UserServiceInheritedPermissionsAPI.path,
-                           s.UserServicePermissionsAPI.path + "?inherit=true"))
+    LOGGER.warning("Route deprecated: [%s], Instead Use: [%s]",
+                   s.UserServiceInheritedPermissionsAPI.path, s.UserServicePermissionsAPI.path + "?inherit=true")
     return HTTPMovedPermanently(location=request.path.replace("/inherited_permissions", "/permissions?inherit=true"))
 
 
@@ -453,6 +453,6 @@ def get_user_service_resources_view(request):
 def get_user_service_inherited_resources_view(request):
     """[DEPRECATED: use '/users/{user_name}/services/{service_name}/resources?inherit=true']
     List all resources under a service a user has permission on using all his inherited user and groups permissions."""
-    LOGGER.warning("Route deprecated: [{0}], Instead Use: [{1}]"
-                   .format(s.UserServiceInheritedResourcesAPI.path, s.UserServiceResourcesAPI.path + "?inherit=true"))
+    LOGGER.warning("Route deprecated: [%s], Instead Use: [%s]",
+                   s.UserServiceInheritedResourcesAPI.path, s.UserServiceResourcesAPI.path + "?inherit=true")
     return HTTPMovedPermanently(location=request.path.replace("/inherited_resources", "/resources?inherit=true"))

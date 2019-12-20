@@ -2,14 +2,14 @@ from magpie.api import requests as ar, exception as ax, schemas as s
 from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.api.management.resource import resource_utils as ru, resource_formats as rf
-from magpie.definitions.pyramid_definitions import (
-    asbool,
-    view_config,
+from pyramid.httpexceptions import (
     HTTPOk,
     HTTPBadRequest,
     HTTPForbidden,
     HTTPInternalServerError,
 )
+from pyramid.view import view_config
+from pyramid.settings import asbool
 from magpie.permissions import format_permissions
 from magpie.register import sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT

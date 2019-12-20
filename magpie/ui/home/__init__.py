@@ -1,4 +1,4 @@
-from magpie.definitions.pyramid_definitions import IAuthenticationPolicy, Authenticated
+from pyramid.authentication import IAuthenticationPolicy, Authenticated
 from magpie.utils import get_logger
 LOGGER = get_logger(__name__)
 

@@ -3,13 +3,11 @@ from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
 from magpie.api.management.user import user_formats as uf
 from magpie.constants import get_constant
-from magpie.definitions.ziggurat_definitions import (
-    GroupService,
-    UserService,
-    ResourceService,
-    UserResourcePermissionService,
-)
-from magpie.definitions.pyramid_definitions import (
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.models.services.resource import ResourceService
+from ziggurat_foundations.models.services.user_resource_permission import UserResourcePermissionService
+from pyramid.httpexceptions import (
     HTTPOk,
     HTTPCreated,
     HTTPBadRequest,
@@ -24,9 +22,10 @@ from magpie import models
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from magpie.services import ServiceInterface  # noqa: F401
-    from magpie.definitions.pyramid_definitions import Request, HTTPException  # noqa: F401
-    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.definitions.typedefs import (  # noqa: F401
+    from pyramid.httpexceptions import HTTPException
+    from pyramid.request import Request
+    from sqlalchemy.orm.session import Session
+    from magpie.typedefs import (  # noqa: F401
         Any, Str, Dict, Iterable, List, Optional, ResourcePermissionType, UserServicesType, ServiceOrResourceType
     )
     from magpie.permissions import Permission  # noqa: F401
@@ -233,8 +232,7 @@ def get_user_services(user, request, cascade_resources=False,
         if not is_service:
             if not cascade_resources:
                 continue
-            else:
-                perms = get_resource_root_service(resource, request).permissions
+            perms = get_resource_root_service(resource, request).permissions
 
         svc = db_session.query(models.Service).filter_by(resource_id=service_id).first()
 
@@ -301,7 +299,7 @@ def get_user_resources_permissions_dict(user, request, resource_types=None,
 
 def get_user_service_resources_permissions_dict(user, service, request, inherit_groups_permissions=True):
     # type: (models.User, models.Service, Request, bool) -> Dict[Str, Any]
-    resources_under_service = models.resource_tree_service.from_parent_deeper(parent_id=service.resource_id,
+    resources_under_service = models.RESOURCE_TREE_SERVICE.from_parent_deeper(parent_id=service.resource_id,
                                                                               db_session=request.db)
     resource_ids = [resource.Resource.resource_id for resource in resources_under_service]
     return get_user_resources_permissions_dict(user, request, resource_types=None, resource_ids=resource_ids,

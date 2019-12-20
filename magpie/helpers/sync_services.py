@@ -6,7 +6,7 @@ import abc
 import requests
 import threddsclient
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Dict, JSON, Str, Type  # noqa: F401
+    from magpie.typedefs import Dict, JSON, Str, Type  # noqa: F401
 
 
 def is_valid_resource_schema(resources):

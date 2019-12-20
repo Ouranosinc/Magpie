@@ -5,24 +5,15 @@ Revision ID: a395ef9d3fe6
 Revises: ae1a3c8c7860
 Create Date: 2018-06-04 11:38:31.296950
 """
-import os
-import sys
-cur_file = os.path.abspath(__file__)
-root_dir = os.path.dirname(cur_file)    # version
-root_dir = os.path.dirname(root_dir)    # alembic
-root_dir = os.path.dirname(root_dir)    # magpie
-root_dir = os.path.dirname(root_dir)    # root
-sys.path.insert(0, root_dir)
-
-from alembic.context import get_context                                                 # noqa: F401
-from alembic import op                                                                  # noqa: F401
-from magpie.definitions.sqlalchemy_definitions import (                                 # noqa: F401
-    PGDialect, sessionmaker, sa, declarative_base, declared_attr
-)
+from alembic.context import get_context  # noqa: F401
+from alembic import op  
+from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy.dialects.postgresql.base import PGDialect
+import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = 'a395ef9d3fe6'
-down_revision = 'ae1a3c8c7860'
+revision = "a395ef9d3fe6"
+down_revision = "ae1a3c8c7860"
 branch_labels = None
 depends_on = None
 
@@ -40,13 +31,13 @@ def upgrade():
     context = get_context()
     session = Session(bind=op.get_bind())
 
-    # two following lines avoids double 'DELETE' erroneous call when deleting group due to incorrect checks
+    # two following lines avoids double "DELETE" erroneous call when deleting group due to incorrect checks
     # https://stackoverflow.com/questions/28824401
     context.connection.engine.dialect.supports_sane_rowcount = False
     context.connection.engine.dialect.supports_sane_multi_rowcount = False
 
     if isinstance(context.connection.engine.dialect, PGDialect):
-        op.add_column('resources', sa.Column('root_service_id', sa.Integer(), nullable=True))
+        op.add_column("resources", sa.Column("root_service_id", sa.Integer(), nullable=True))
 
         # add existing resource references to their root service, loop through reference tree chain
         query = session.execute(sa.select([resources.c.resource_id, resources.c.parent_id]))
@@ -71,4 +62,4 @@ def upgrade():
 def downgrade():
     context = get_context()
     if isinstance(context.connection.engine.dialect, PGDialect):
-        op.drop_column('resources', 'root_service_id')
+        op.drop_column("resources", "root_service_id")

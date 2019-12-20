@@ -1,5 +1,8 @@
-from magpie.definitions.cornice_definitions import colander, Service, CorniceSwagger, get_services
-from magpie.definitions.pyramid_definitions import (
+import colander
+from cornice import Service
+from cornice.service import get_services
+from cornice_swagger.swagger import CorniceSwagger
+from pyramid.httpexceptions import (
     HTTPOk,
     HTTPCreated,
     HTTPFound,
@@ -12,8 +15,8 @@ from magpie.definitions.pyramid_definitions import (
     HTTPConflict,
     HTTPUnprocessableEntity,
     HTTPInternalServerError,
-    NO_PERMISSION_REQUIRED,
 )
+from pyramid.security import NO_PERMISSION_REQUIRED
 from magpie.constants import get_constant
 from magpie.permissions import Permission
 from magpie.utils import get_magpie_url, CONTENT_TYPE_JSON, CONTENT_TYPE_HTML

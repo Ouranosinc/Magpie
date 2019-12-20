@@ -3,9 +3,12 @@
 import json
 
 from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import (
-    HTTPOk, HTTPClientError, HTTPException, ConfigurationError, Configurator, Registry, Request, Response, truthy
-)
+from pyramid.request import Request
+from pyramid.registry import Registry
+from pyramid.response import Response
+from pyramid.settings import truthy
+from pyramid.config import ConfigurationError, Configurator
+from pyramid.httpexceptions import HTTPOk, HTTPClientError, HTTPException
 from six.moves.urllib.parse import urlparse
 from enum import EnumMeta  # noqa: W0212
 from requests.cookies import RequestsCookieJar
@@ -21,11 +24,11 @@ import six
 import sys
 import os
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import (  # noqa: F401
+    from magpie.typedefs import (  # noqa: F401
         Any, AnyKey, Str, List, Optional, Type, Union,
         AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,
     )
-    from typing import _TC  # noqa: E0611,F401,W0212
+    from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
 
 CONTENT_TYPE_ANY = "*/*"
 CONTENT_TYPE_JSON = "application/json"
@@ -300,7 +303,7 @@ def log_request(event):
     """
     Subscriber event that logs basic details about the incoming requests.
     """
-    LOGGER.info("Request: [{}]".format(log_request_format(event.request)))
+    LOGGER.info("Request: [%s]", log_request_format(event.request))
 
 
 def log_exception_tween(handler, registry):  # noqa: F811
@@ -318,7 +321,7 @@ def log_exception_tween(handler, registry):  # noqa: F811
             if isinstance(err, HTTPClientError):
                 lvl = logging.WARNING
                 exc = False
-            LOGGER.log(lvl, "Exception during request: [{}]".format(log_request_format(request)), exc_info=exc)
+            LOGGER.log(lvl, "Exception during request: [%s]", log_request_format(request), exc_info=exc)
             raise err
     return log_exc
 
@@ -346,7 +349,7 @@ class ExtendedEnumMeta(EnumMeta):
         """
         Returns the literal values assigned to corresponding enum elements.
         """
-        return [m.value for m in cls.__members__.values()]
+        return [m.value for m in cls.__members__.values()]                      # pylint: disable=E1101
 
     def get(cls, key_or_value, default=None):
         # type: (AnyKey, Optional[Any]) -> Optional[_TC]
@@ -357,8 +360,8 @@ class ExtendedEnumMeta(EnumMeta):
         """
         if key_or_value in cls:
             return key_or_value
-        for m_key, m_val in cls.__members__.items():
-            if key_or_value == m_key or key_or_value == m_val.value:
+        for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101
+            if key_or_value == m_key or key_or_value == m_val.value:            # pylint: disable=R1714
                 return m_val
         return default
 

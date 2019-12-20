@@ -1,4 +1,5 @@
-from magpie.definitions.pyramid_definitions import NO_PERMISSION_REQUIRED, view_config
+from pyramid.view import view_config
+from pyramid.security import NO_PERMISSION_REQUIRED
 from magpie.ui.home import add_template_data
 
 

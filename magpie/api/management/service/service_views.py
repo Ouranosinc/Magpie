@@ -1,15 +1,15 @@
 from magpie.api.management.resource.resource_utils import create_resource, delete_resource
 from magpie.api.management.service import service_formats as sf, service_utils as su
 from magpie.api import requests as ar, exception as ax, schemas as s
-from magpie.definitions.pyramid_definitions import (
-    asbool,
-    view_config,
+from pyramid.httpexceptions import (
     HTTPOk,
     HTTPBadRequest,
     HTTPForbidden,
     HTTPNotFound,
     HTTPConflict,
 )
+from pyramid.view import view_config
+from pyramid.settings import asbool
 from magpie.permissions import Permission, format_permissions
 from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
 from magpie.services import SERVICE_TYPE_DICT
@@ -17,10 +17,9 @@ from magpie.utils import CONTENT_TYPE_JSON
 from magpie import models
 
 
-# noinspection PyUnusedLocal
 @s.ServiceTypesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypes_GET_responses)
 @view_config(route_name=s.ServiceTypesAPI.name, request_method="GET")
-def get_service_types_view(request):
+def get_service_types_view(request):  # noqa: F811
     """
     List all available service types.
     """
@@ -160,7 +159,7 @@ def unregister_service_view(request):
     service_push = asbool(ar.get_multiformat_delete(request, "service_push", default=False))
     svc_content = sf.format_service(service, show_private_url=True)
     svc_res_id = service.resource_id
-    ax.evaluate_call(lambda: models.resource_tree_service.delete_branch(resource_id=svc_res_id, db_session=request.db),
+    ax.evaluate_call(lambda: models.RESOURCE_TREE_SERVICE.delete_branch(resource_id=svc_res_id, db_session=request.db),
                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                      msg_on_fail="Delete service from resource tree failed.", content=svc_content)
 

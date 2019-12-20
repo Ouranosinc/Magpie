@@ -10,14 +10,12 @@ from magpie.api.schemas import (
     UserResourcePermissionsAPI,
 )
 from magpie.constants import get_constant
-from magpie.definitions.ziggurat_definitions import (
-    ResourceService,
-    GroupService,
-    UserService,
-    UserResourcePermissionService,
-)
-from magpie.definitions.sqlalchemy_definitions import Session
-from magpie.definitions.pyramid_definitions import HTTPException
+from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.models.services.user_resource_permission import UserResourcePermissionService
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.resource import ResourceService
+from sqlalchemy.orm.session import Session
+from pyramid.httpexceptions import HTTPException
 from magpie.permissions import Permission
 from magpie.services import SERVICE_TYPE_DICT, ServiceWPS
 from magpie import models
@@ -35,7 +33,7 @@ import requests
 import transaction
 import logging
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import (  # noqa: F401
+    from magpie.typedefs import (  # noqa: F401
         Str, Dict, List, JSON, Optional, Tuple, Union, CookiesOrSessionType
     )
     ConfigItem = Dict[Str, Str]

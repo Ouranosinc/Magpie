@@ -1,6 +1,9 @@
-from magpie.definitions.twitcher_definitions import AdapterInterface, owsproxy_defaultconfig
-from magpie.definitions.pyramid_definitions import IAuthenticationPolicy, HTTPForbidden, HTTPOk
-from magpie.definitions.ziggurat_definitions import UserService
+from twitcher.adapter.base import AdapterInterface      # noqa
+from twitcher.owsproxy import owsproxy_defaultconfig    # noqa
+
+from pyramid.httpexceptions import HTTPOk, HTTPForbidden
+from pyramid.authentication import IAuthenticationPolicy
+from ziggurat_foundations.models.services.user import UserService
 from magpie.api.schemas import SigninAPI
 from magpie.api.exception import valid_http, raise_http
 from magpie.adapter.magpieowssecurity import MagpieOWSSecurity
@@ -43,13 +46,13 @@ def debug_cookie_identify(request):
             cookie))
 
     if not cookie:
-        LOGGER.debug('No Cookie!')
+        LOGGER.debug("No Cookie!")
     else:
         if cookie_inst.include_ip:
             environ = request.environ
-            remote_addr = environ['REMOTE_ADDR']
+            remote_addr = environ["REMOTE_ADDR"]
         else:
-            remote_addr = '0.0.0.0'
+            remote_addr = "0.0.0.0"
 
         LOGGER.debug(
             "Cookie remote addr (include_ip : {0}) : {1}".format(cookie_inst.include_ip, remote_addr))
@@ -73,12 +76,11 @@ def debug_cookie_identify(request):
 
 def get_user(request):
     user_id = request.unauthenticated_userid
-    LOGGER.debug('Current user id is {0}'.format(user_id))
+    LOGGER.debug("Current user id is '%s'", user_id)
 
     if user_id is not None:
         user = UserService.by_id(user_id, db_session=request.db)
-        LOGGER.debug(
-            'Current user has been resolved has {0}'.format(user))
+        LOGGER.debug("Current user has been resolved has '%s'", user)
         return user
     elif LOGGER.isEnabledFor(logging.DEBUG):
         debug_cookie_identify(request)

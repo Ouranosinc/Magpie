@@ -99,8 +99,7 @@ class WPSPost(OWSParser):
             return self.document.attrib[param].lower()
         elif param == "request":
             return self.document.tag.lower()
-        else:
-            return None
+        return None
 
 
 class MultiFormatParser(OWSParser):

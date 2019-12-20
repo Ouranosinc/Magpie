@@ -1,9 +1,8 @@
 from magpie.api import schemas as schemas
-from magpie.definitions.pyramid_definitions import (
-    NO_PERMISSION_REQUIRED,
-    view_config,
-    forget,
-    Response,
+from pyramid.security import NO_PERMISSION_REQUIRED, forget
+from pyramid.view import view_config
+from pyramid.response import Response
+from pyramid.httpexceptions import (
     HTTPOk,
     HTTPFound,
     HTTPUnauthorized,

@@ -8,16 +8,18 @@ Create Date: 2019-08-23 18:08:07.507556
 from alembic.context import get_context  # noqa: F401
 from alembic import op
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.dialects.postgresql.base import PGDialect
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services import BaseService
+
 from magpie import models, constants
-from magpie.definitions.ziggurat_definitions import GroupService, BaseService
-from magpie.definitions.sqlalchemy_definitions import PGDialect
 from magpie.helpers.register_default_users import init_anonymous
 Session = sessionmaker()
 
 
 # revision identifiers, used by Alembic.
-revision = '03b54feffe45'
-down_revision = '73b872478d87'
+revision = "03b54feffe45"
+down_revision = "73b872478d87"
 branch_labels = None
 depends_on = None
 

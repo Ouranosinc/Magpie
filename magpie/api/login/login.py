@@ -1,12 +1,7 @@
 from magpie.security import authomatic_setup, get_provider_names
-from magpie.definitions.pyramid_definitions import (
-    view_config,
-    forget,
-    remember,
-    Authenticated,
-    IAuthenticationPolicy,
-    Request,
-    Response,
+from pyramid.security import NO_PERMISSION_REQUIRED, remember, forget
+from pyramid.view import view_config
+from pyramid.httpexceptions import (
     HTTPOk,
     HTTPFound,
     HTTPTemporaryRedirect,
@@ -16,16 +11,14 @@ from magpie.definitions.pyramid_definitions import (
     HTTPNotFound,
     HTTPConflict,
     HTTPInternalServerError,
-    HTTPException,
-    NO_PERMISSION_REQUIRED,
+    HTTPException
 )
-from magpie.definitions.ziggurat_definitions import (
-    ExternalIdentityService,
-    UserService,
-    ZigguratSignInSuccess,
-    ZigguratSignInBadAuth,
-    ZigguratSignOut,
-)
+from pyramid.request import Request
+from pyramid.response import Response
+from pyramid.authentication import IAuthenticationPolicy, Authenticated
+from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInBadAuth, ZigguratSignInSuccess, ZigguratSignOut
+from ziggurat_foundations.models.services.external_identity import ExternalIdentityService
 from magpie.api import generic as ag, exception as ax, schemas as s
 from magpie.api.requests import get_multiformat_post, get_value_multiformat_post_checked
 from magpie.api.management.user.user_formats import format_user
@@ -224,7 +217,7 @@ def authomatic_login(request):
             if result.error:
                 # Login procedure finished with an error.
                 error = result.error.to_dict() if hasattr(result.error, "to_dict") else result.error
-                LOGGER.debug("Login failure with error. [{!r}]".format(error))
+                LOGGER.debug("Login failure with error. [%r]", error)
                 return login_failure(request, reason=result.error.message)
             elif result.user:
                 # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
@@ -253,7 +246,7 @@ def authomatic_login(request):
         LOGGER.exception(exc_msg, exc_info=True)
         ax.raise_http(http_error=HTTPInternalServerError, detail=exc_msg)
 
-    LOGGER.debug("Reached end of login function. Response: {!r}".format(response))
+    LOGGER.debug("Reached end of login function. Response: %r", response)
     return response
 
 
@@ -288,10 +281,9 @@ def get_session(request):
     return ax.valid_http(http_success=HTTPOk, detail=s.Session_GET_OkResponseSchema.description, content=session_json)
 
 
-# noinspection PyUnusedLocal
 @s.ProvidersAPI.get(tags=[s.LoginTag], response_schemas=s.Providers_GET_responses)
 @view_config(route_name=s.ProvidersAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
-def get_providers(request):
+def get_providers(request):     # noqa: F811
     """
     Get list of login providers.
     """

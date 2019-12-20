@@ -11,7 +11,7 @@ settings formatted as ``magpie.[variable_name]`` in the ``magpie.ini`` configura
     constant ``MAGPIE_INI_FILE_PATH`` (or any other `path variable` defined before it - see below) has to be defined
     by environment variable if the default location is not desired (ie: if you want to provide your own configuration).
 """
-from magpie.definitions.pyramid_definitions import asbool
+from pyramid.settings import asbool
 from typing import TYPE_CHECKING
 import re
 import os
@@ -20,7 +20,7 @@ import dotenv
 import logging
 import warnings
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, Optional, SettingValue, AnySettingsContainer  # noqa: F401
+    from magpie.typedefs import Str, Optional, SettingValue, AnySettingsContainer  # noqa: F401
 
 # ===========================
 # path variables
@@ -184,7 +184,7 @@ def get_constant(constant_name,             # type: Str
     missing = True
     magpie_value = None
     settings = get_settings(settings_container) if settings_container else None
-    if settings and constant_name in settings:
+    if settings and constant_name in settings:  # noqa: E1135
         missing = False
         magpie_value = settings.get(constant_name)
         if magpie_value is not None:
@@ -193,7 +193,7 @@ def get_constant(constant_name,             # type: Str
     if not settings_name and constant_name.startswith("MAGPIE_"):
         settings_name = get_constant_setting_name(constant_name)
         print_log("Constant alternate search: {}".format(settings_name), level=logging.DEBUG)
-    if settings and settings_name and settings_name in settings:
+    if settings and settings_name and settings_name in settings:  # noqa: E1135
         missing = False
         magpie_value = settings.get(settings_name)
         if magpie_value is not None:

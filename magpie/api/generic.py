@@ -1,9 +1,6 @@
 from magpie.api.exception import raise_http, verify_param
 from magpie.api import schemas as s
-from magpie.definitions.pyramid_definitions import (
-    IAuthenticationPolicy,
-    Authenticated,
-    PredicateMismatch,
+from pyramid.httpexceptions import (
     HTTPUnauthorized,
     HTTPForbidden,
     HTTPNotFound,
@@ -12,12 +9,16 @@ from magpie.definitions.pyramid_definitions import (
     HTTPInternalServerError,
     HTTPServerError,
 )
+from pyramid.authentication import IAuthenticationPolicy, Authenticated
+from pyramid.exceptions import PredicateMismatch
+
 from magpie.utils import get_header, get_logger, CONTENT_TYPE_ANY, CONTENT_TYPE_JSON, SUPPORTED_CONTENT_TYPES
 from simplejson import JSONDecodeError
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, JSON  # noqa: F401
-    from magpie.definitions.pyramid_definitions import Request, HTTPException  # noqa: F401
+    from magpie.typedefs import Str, JSON  # noqa: F401
+    from pyramid.request import Request
+    from pyramid.httpexceptions import HTTPException
 LOGGER = get_logger(__name__)
 
 
@@ -84,8 +85,7 @@ def unauthorized_or_forbidden(request):
                       content_type=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
 
 
-# noinspection PyUnusedLocal
-def validate_accept_header_tween(handler, registry):
+def validate_accept_header_tween(handler, registry):    # pylint: disable=W0613 # noqa: F811
     """
     Tween that validates that the specified request ``Accept`` header (if any), is a supported one by the application.
 

@@ -1,6 +1,6 @@
 from magpie import __meta__, services, app
 from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import asbool
+from pyramid.settings import asbool
 from magpie.services import ServiceAccess
 from magpie.utils import (
     get_magpie_url, get_settings_from_config_ini, get_header, SingletonMeta, CONTENT_TYPE_JSON, CONTENT_TYPE_HTML
@@ -19,7 +19,7 @@ import six
 import pytest
 if TYPE_CHECKING:
     from tests.interfaces import Base_Magpie_TestCase  # noqa: F401
-    from magpie.definitions.typedefs import (  # noqa: F401
+    from magpie.typedefs import (  # noqa: F401
         Str, Callable, Dict, HeadersType, OptionalHeaderCookiesType, Optional, Type,
         AnyMagpieTestType, AnyResponseType, TestAppOrUrlType
     )
@@ -503,7 +503,7 @@ class _NullType(six.with_metaclass(SingletonMeta)):
     __len__ = __nonzero__
 
 
-null = _NullType()
+null = _NullType()  # noqa: C0103
 
 
 def is_null(item):
@@ -808,7 +808,7 @@ class TestSetup(object):
     @staticmethod
     def check_NonExistingTestService(test_class, override_service_name=None):
         services_info = TestSetup.get_RegisteredServicesList(test_class)
-        services_names = [svc['service_name'] for svc in services_info]
+        services_names = [svc["service_name"] for svc in services_info]
         service_name = override_service_name or test_class.test_service_name
         check_val_not_in(service_name, services_names)
 

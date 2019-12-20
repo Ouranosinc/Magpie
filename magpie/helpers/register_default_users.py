@@ -1,14 +1,16 @@
 from magpie import db, models
 from magpie.constants import get_constant
-from magpie.definitions.sqlalchemy_definitions import Session
-from magpie.definitions.ziggurat_definitions import GroupService, UserService, BaseService
+from sqlalchemy.orm.session import Session
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.models.services import BaseService
 from magpie.utils import print_log, raise_log, get_logger
 from typing import TYPE_CHECKING
 import transaction
 import logging
 import time
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import AnySettingsContainer, Str, Optional  # noqa: F401
+    from magpie.typedefs import AnySettingsContainer, Str, Optional  # noqa: F401
 LOGGER = get_logger(__name__)
 
 

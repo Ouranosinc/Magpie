@@ -8,6 +8,14 @@ Create Date: 2018-05-29 16:04:20.724597
 
 import os
 import sys
+
+from alembic.context import get_context  # noqa: F401
+from alembic import op
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.dialects.postgresql.base import PGDialect
+from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.models.services import BaseService
+
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)    # version
 root_dir = os.path.dirname(root_dir)    # alembic
@@ -15,18 +23,13 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-from alembic.context import get_context                                         # noqa: F401
-from alembic import op                                                          # noqa: F401
-from sqlalchemy.orm import sessionmaker                                         # noqa: F401
-from magpie import models, constants                                            # noqa: F401
-from magpie.definitions.ziggurat_definitions import UserService, BaseService    # noqa: F401
-from magpie.definitions.sqlalchemy_definitions import PGDialect                 # noqa: F401
+from magpie import models, constants  # isort:skip # noqa: E402
 
 Session = sessionmaker()
 
 # revision identifiers, used by Alembic.
-revision = '5e7b5346c330'
-down_revision = '2a6c63397399'
+revision = "5e7b5346c330"
+down_revision = "2a6c63397399"
 branch_labels = None
 depends_on = None
 

@@ -2,13 +2,14 @@ from magpie.api import exception as ax, schemas as s
 from magpie.api.management.group.group_utils import create_group_resource_permission_response
 from magpie.api.management.service.service_formats import format_service
 from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import (
+from pyramid.httpexceptions import (
     HTTPCreated,
     HTTPBadRequest,
     HTTPForbidden,
     HTTPInternalServerError,
 )
-from magpie.definitions.ziggurat_definitions import GroupService, ResourceService
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.resource import ResourceService
 from magpie.register import sync_services_phoenix, SERVICES_PHOENIX_ALLOWED
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.permissions import Permission
@@ -16,9 +17,9 @@ from magpie.utils import get_logger
 from magpie import models
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str  # noqa: F401
-    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.definitions.pyramid_definitions import HTTPException  # noqa: F401
+    from magpie.typedefs import Str  # noqa: F401
+    from sqlalchemy.orm.session import Session
+    from pyramid.httpexceptions import HTTPException
 LOGGER = get_logger(__name__)
 
 

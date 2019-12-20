@@ -1,9 +1,15 @@
 """
 Store adapters to read data from magpie.
 """
+from pyramid.httpexceptions import HTTPOk
+from pyramid.settings import asbool
+
 from magpie.models import Service as MagpieService
-from magpie.definitions.twitcher_definitions import ServiceStoreInterface, Service, ServiceNotFound  # noqa
-from magpie.definitions.pyramid_definitions import HTTPOk, asbool
+
+from twitcher.datatype import Service
+from twitcher.store import ServiceStoreInterface
+from twitcher.exceptions import ServiceNotFound
+
 from magpie.api.schemas import ServicesAPI
 from magpie.utils import get_admin_cookies, get_magpie_url, get_settings, get_logger, CONTENT_TYPE_JSON
 from typing import TYPE_CHECKING
@@ -14,6 +20,7 @@ LOGGER = get_logger("TWITCHER")
 
 
 class MagpieServiceStore(ServiceStoreInterface):
+    # pylint: disable=W0613
     """
     Registry for OWS services.
 

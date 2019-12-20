@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import sys
 
+from pyramid.tweens import EXCVIEW
+from pyramid.events import NewRequest
+
 
 def includeme(config):
     # import needs to be here, otherwise ImportError happens during setup.py install (modules not yet installed)
@@ -9,9 +12,8 @@ def includeme(config):
         not_found_or_method_not_allowed,
         unauthorized_or_forbidden,
     )
-    from magpie.constants import get_constant                                   # noqa: C0415
-    from magpie.definitions.pyramid_definitions import NewRequest, EXCVIEW      # noqa: C0415
-    from magpie.utils import get_logger                                         # noqa: C0415
+    from magpie.constants import get_constant   # noqa: C0415
+    from magpie.utils import get_logger         # noqa: C0415
 
     mod_dir = get_constant("MAGPIE_MODULE_DIR", config)
     logger = get_logger(__name__)
@@ -36,7 +38,6 @@ def includeme(config):
     config.include("pyramid_chameleon")
     config.include("pyramid_beaker")
     config.include("pyramid_mako")
-    config.include("magpie.definitions")
     config.include("magpie.api")
     config.include("magpie.db")
     if get_constant("MAGPIE_UI_ENABLED", config):

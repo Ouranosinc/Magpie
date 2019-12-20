@@ -14,15 +14,15 @@ import six
 from pyramid.testing import DummyRequest
 
 from magpie import owsrequest
-from magpie.definitions.typedefs import TYPE_CHECKING
+from magpie.typedefs import TYPE_CHECKING
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
 from tests import runner
 
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Dict, Optional, Str  # noqa: F401
+    from magpie.typedefs import Dict, Optional, Str  # noqa: F401
 
 
-def make_ows_parser(method='GET', content_type=None, params=None, body=''):
+def make_ows_parser(method="GET", content_type=None, params=None, body=""):
     # type: (Str, Optional[Str], Optional[Dict[Str, Str]], Optional[Str]) -> owsrequest.OWSParser
     """
     Makes an :class:`owsrequest.OWSParser` from a :class:`DummyRequest`
@@ -55,7 +55,7 @@ def make_ows_parser(method='GET', content_type=None, params=None, body=''):
 @runner.MAGPIE_TEST_SERVICES
 @runner.MAGPIE_TEST_LOCAL
 class TestServices(unittest.TestCase):
-    def test_ows_parser_factory(self):
+    def test_ows_parser_factory(self):  # noqa: R0201
         parser = make_ows_parser(method="GET", content_type=None, params=None, body='')
         assert isinstance(parser, owsrequest.WPSGet)
 
@@ -68,13 +68,13 @@ class TestServices(unittest.TestCase):
         parser = make_ows_parser(method="POST", content_type=None, params=None, body=body)
         assert isinstance(parser, owsrequest.WPSPost)
 
-        body = '{"test": "something"}'
+        body = "{\"test\": \"something\"}"
         parser = make_ows_parser(method="POST", content_type=None, params=None, body=body)
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.MultiFormatParser)
         assert parser.params["test"] == "something"
 
-        body = '{"test": "something"}'
+        body = "{\"test\": \"something\"}"
         parser = make_ows_parser(method="POST", content_type=CONTENT_TYPE_PLAIN, params=None, body=body)
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.MultiFormatParser)
@@ -98,7 +98,7 @@ class TestServices(unittest.TestCase):
         assert isinstance(parser, owsrequest.WPSGet)
         assert parser.params["test"] == "something"
 
-        body = '{"test": "something"}'
+        body = "{\"test\": \"something\"}"
         parser = make_ows_parser(method="PUT", content_type=CONTENT_TYPE_JSON, params=None, body=body)
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.MultiFormatParser)
