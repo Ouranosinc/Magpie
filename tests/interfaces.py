@@ -1,20 +1,22 @@
+import unittest
+import warnings
+from copy import deepcopy
+from distutils.version import LooseVersion
+
+import mock
+import pyramid.testing
+import pytest
+import six
+import yaml
+from six.moves.urllib.parse import urlparse
+
 from magpie.api.schemas import SwaggerGenerator
 from magpie.constants import get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Route
 from magpie.permissions import Permission
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceTHREDDS
-from magpie.utils import get_twitcher_protected_service_url, CONTENT_TYPE_JSON
-from tests import utils, runner
-from copy import deepcopy
-from six.moves.urllib.parse import urlparse
-from distutils.version import LooseVersion
-import unittest
-import warnings
-import pytest
-import pyramid.testing
-import mock
-import yaml
-import six
+from magpie.utils import CONTENT_TYPE_JSON, get_twitcher_protected_service_url
+from tests import runner, utils
 
 
 # don't use 'unittest.TestCase' base
@@ -35,6 +37,7 @@ class Base_Magpie_TestCase(object):
 
 @runner.MAGPIE_TEST_API
 class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):  # noqa: W0223
+    # pylint: disable=C0103
     """
     Interface class for unittests of Magpie API. Test any operation that do not require user AuthN/AuthZ.
 

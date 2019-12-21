@@ -1,4 +1,5 @@
 from magpie.utils import get_logger
+
 LOGGER = get_logger(__name__)
 
 

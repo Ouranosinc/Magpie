@@ -3,6 +3,7 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 from magpie.api import schemas as s
 from magpie.api.swagger.views import api_swagger
 from magpie.utils import get_logger
+
 LOGGER = get_logger(__name__)
 
 

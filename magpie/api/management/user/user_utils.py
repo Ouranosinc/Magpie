@@ -1,25 +1,29 @@
-from magpie.api import exception as ax, schemas as s
-from magpie.api.management.service.service_formats import format_service
+from typing import TYPE_CHECKING
+
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPCreated,
+    HTTPForbidden,
+    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPOk
+)
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.resource import ResourceService
+from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.models.services.user_resource_permission import UserResourcePermissionService
+
+from magpie import models
+from magpie.api import exception as ax
+from magpie.api import schemas as s
 from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
+from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
 from magpie.constants import get_constant
-from ziggurat_foundations.models.services.group import GroupService
-from ziggurat_foundations.models.services.user import UserService
-from ziggurat_foundations.models.services.resource import ResourceService
-from ziggurat_foundations.models.services.user_resource_permission import UserResourcePermissionService
-from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPCreated,
-    HTTPBadRequest,
-    HTTPForbidden,
-    HTTPNotFound,
-    HTTPConflict,
-    HTTPInternalServerError,
-)
 from magpie.permissions import convert_permission, format_permissions
 from magpie.services import service_factory
-from magpie import models
-from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from magpie.services import ServiceInterface  # noqa: F401
     from pyramid.httpexceptions import HTTPException

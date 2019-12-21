@@ -5,10 +5,12 @@ The OWSRequest is based on pywps code:
 * https://github.com/geopython/pywps/blob/master/pywps/app/WPSRequest.py
 """
 
-from magpie.api.requests import get_multiformat_any
-from magpie.utils import get_logger, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, CONTENT_TYPE_FORM, is_json_body, get_header
 from typing import TYPE_CHECKING
+
 import lxml.etree  # nosec: B410 # module safe but bandit flags it : https://github.com/tiran/defusedxml/issues/38
+
+from magpie.api.requests import get_multiformat_any
+from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, get_header, get_logger, is_json_body
 
 if TYPE_CHECKING:
     from pyramid.request import Request

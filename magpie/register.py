@@ -1,37 +1,49 @@
-from magpie.api.schemas import (
-    SigninAPI,
-    SignoutAPI,
-    ServicesAPI,
-    ServiceAPI,
-    ServiceResourcesAPI,
-    GroupsAPI,
-    UsersAPI,
-    GroupResourcePermissionsAPI,
-    UserResourcePermissionsAPI,
-)
-from magpie.constants import get_constant
-from ziggurat_foundations.models.services.user import UserService
-from ziggurat_foundations.models.services.user_resource_permission import UserResourcePermissionService
+import logging
+import os
+import subprocess
+import time
+from typing import TYPE_CHECKING
+
+import requests
+import six
+import transaction
+import yaml
+from pyramid.httpexceptions import HTTPException
+from sqlalchemy.orm.session import Session
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
-from sqlalchemy.orm.session import Session
-from pyramid.httpexceptions import HTTPException
+from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.models.services.user_resource_permission import UserResourcePermissionService
+
+from magpie import models
+from magpie.api.schemas import (
+    GroupResourcePermissionsAPI,
+    GroupsAPI,
+    ServiceAPI,
+    ServiceResourcesAPI,
+    ServicesAPI,
+    SigninAPI,
+    SignoutAPI,
+    UserResourcePermissionsAPI,
+    UsersAPI
+)
+from magpie.constants import get_constant
 from magpie.permissions import Permission
 from magpie.services import SERVICE_TYPE_DICT, ServiceWPS
-from magpie import models
 from magpie.utils import (
-    get_twitcher_protected_service_url, get_phoenix_url, get_magpie_url, get_admin_cookies,
-    make_dirs, print_log, raise_log, bool2str, islambda, get_logger, get_json
+    bool2str,
+    get_admin_cookies,
+    get_json,
+    get_logger,
+    get_magpie_url,
+    get_phoenix_url,
+    get_twitcher_protected_service_url,
+    islambda,
+    make_dirs,
+    print_log,
+    raise_log
 )
-from typing import TYPE_CHECKING
-import os
-import six
-import time
-import yaml
-import subprocess
-import requests
-import transaction
-import logging
+
 if TYPE_CHECKING:
     from magpie.typedefs import (  # noqa: F401
         Str, Dict, List, JSON, Optional, Tuple, Union, CookiesOrSessionType
@@ -170,7 +182,7 @@ def phoenix_remove_services():
             return False
         phoenix_url = get_phoenix_url()
         remove_services_url = phoenix_url + "/clear_services"
-        error, http_code = _request_curl(remove_services_url, cookies=phoenix_cookies, msg="Phoenix remove services")
+        error, _ = _request_curl(remove_services_url, cookies=phoenix_cookies, msg="Phoenix remove services")
     except Exception as exc:
         print_log("Exception during phoenix remove services: [{!r}]".format(exc), logger=LOGGER)
     finally:
@@ -483,7 +495,7 @@ def _load_config(path_or_dict, section):
     """
     try:
         if isinstance(path_or_dict, six.string_types):
-            cfg = yaml.safe_load(open(path_or_dict, 'r'))
+            cfg = yaml.safe_load(open(path_or_dict, "r"))
         else:
             cfg = path_or_dict
         return _expand_all(cfg[section])
@@ -627,6 +639,8 @@ def _parse_resource_path(permission_config_entry,   # type: ConfigItem
 
     :returns: tuple of found id (if any, ``None`` otherwise), and success status of the parsing operation (error)
     """
+    # pylint: disable=C0415     # avoid circular imports
+
     if not magpie_url and _use_request(cookies_or_session):
         raise RegistrationValueError("cannot use cookies without corresponding request URL")
 
@@ -686,7 +700,6 @@ def _parse_resource_path(permission_config_entry,   # type: ConfigItem
                 res_type = resource_type or svc_res_types[0]
                 if _use_request(cookies_or_session):
                     body = {"resource_name": res, "resource_type": res_type, "parent_id": parent}
-                    # noinspection PyUnboundLocalVariable
                     resp = requests.post(res_path, json=body, cookies=cookies_or_session)
                 else:
                     from magpie.api.management.resource.resource_utils import create_resource
@@ -748,6 +761,8 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
         """
         Apply operation using db session.
         """
+        # pylint: disable=C0415     # avoid circular imports
+        # pylint: disable=R1705     # aligned methods are easier to read
         from magpie.api.management.user import user_utils as ut
         from magpie.api.management.group import group_utils as gt
 
@@ -782,7 +797,7 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
         else:
             if _usr_name:
                 from magpie.api.management.user.user_utils import create_user
-                usr_data['db_session'] = cookies_or_session  # back-compatibility python 2 cannot have kw after **unpack
+                usr_data["db_session"] = cookies_or_session  # back-compatibility python 2 cannot have kw after **unpack
                 return create_user(**usr_data)
             if _grp_name:
                 from magpie.api.management.group.group_utils import create_group
@@ -807,7 +822,7 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
         # validation according to status code returned
         if is_create:
             if _resp.status_code == 201:
-                _log_permission("{} successfully created.".format(item_type), entry_index, level=logging.INFO, trail='')
+                _log_permission("{} successfully created.".format(item_type), entry_index, level=logging.INFO, trail="")
             elif _resp.status_code == 409:
                 _log_permission("{} already exists.".format(item_type), entry_index, level=logging.INFO)
             else:
@@ -815,7 +830,7 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
                                 permission=permission_config_entry, level=logging.ERROR)
         else:
             if _resp.status_code == 200:
-                _log_permission("{} successfully removed.".format(item_type), entry_index, level=logging.INFO, trail='')
+                _log_permission("{} successfully removed.".format(item_type), entry_index, level=logging.INFO, trail="")
             elif _resp.status_code == 404:
                 _log_permission("{} already removed.".format(item_type), entry_index, level=logging.INFO)
             else:
@@ -890,7 +905,7 @@ def _process_permissions(permissions, magpie_url, cookies_or_session):
             _log_permission("Invalid permission format for [{!s}]".format(perm_cfg), i)
             continue
         if perm_cfg["permission"] not in Permission.values():
-            _log_permission("Unknown permission [{!s}]".format(perm_cfg['permission']), i)
+            _log_permission("Unknown permission [{!s}]".format(perm_cfg["permission"]), i)
             continue
         usr_name = perm_cfg.get("user")
         grp_name = perm_cfg.get("group")

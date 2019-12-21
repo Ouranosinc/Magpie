@@ -1,4 +1,5 @@
 from pyramid.httpexceptions import HTTPInternalServerError
+
 from magpie.api.exception import evaluate_call
 from magpie.constants import get_constant
 

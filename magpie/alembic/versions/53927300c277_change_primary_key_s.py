@@ -6,9 +6,10 @@ Revises: 54d08f9adc8c
 Create Date: 2012-06-05 23:33:17.943844
 """
 from __future__ import unicode_literals
-from alembic.context import get_context  # noqa: F401
-from alembic import op
+
 import sqlalchemy as sa
+from alembic import op
+from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.mysql.base import MySQLDialect
 from sqlalchemy.engine.reflection import Inspector
 

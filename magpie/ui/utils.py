@@ -1,8 +1,11 @@
+import json
+from typing import TYPE_CHECKING
+
 from pyramid.httpexceptions import HTTPBadRequest, exception_response
 from pyramid.request import Request
-from magpie.utils import get_header, CONTENT_TYPE_JSON
-from typing import TYPE_CHECKING
-import json
+
+from magpie.utils import CONTENT_TYPE_JSON, get_header
+
 if TYPE_CHECKING:
     from magpie.typedefs import Str, JSON, CookiesType, HeadersType, Optional  # noqa: F401
     from pyramid.response import Response

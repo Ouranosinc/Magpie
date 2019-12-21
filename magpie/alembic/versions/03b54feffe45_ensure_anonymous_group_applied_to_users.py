@@ -5,15 +5,16 @@ Revision ID: 03b54feffe45
 Revises: 73b872478d87
 Create Date: 2019-08-23 18:08:07.507556
 """
-from alembic.context import get_context  # noqa: F401
 from alembic import op
-from sqlalchemy.orm import sessionmaker
+from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
-from ziggurat_foundations.models.services.group import GroupService
+from sqlalchemy.orm import sessionmaker
 from ziggurat_foundations.models.services import BaseService
+from ziggurat_foundations.models.services.group import GroupService
 
-from magpie import models, constants
+from magpie import constants, models
 from magpie.helpers.register_default_users import init_anonymous
+
 Session = sessionmaker()
 
 

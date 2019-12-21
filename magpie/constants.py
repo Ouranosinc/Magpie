@@ -11,14 +11,16 @@ settings formatted as ``magpie.[variable_name]`` in the ``magpie.ini`` configura
     constant ``MAGPIE_INI_FILE_PATH`` (or any other `path variable` defined before it - see below) has to be defined
     by environment variable if the default location is not desired (ie: if you want to provide your own configuration).
 """
-from pyramid.settings import asbool
-from typing import TYPE_CHECKING
-import re
-import os
-import shutil
-import dotenv
 import logging
+import os
+import re
+import shutil
 import warnings
+from typing import TYPE_CHECKING
+
+import dotenv
+from pyramid.settings import asbool
+
 if TYPE_CHECKING:
     from magpie.typedefs import Str, Optional, SettingValue, AnySettingsContainer  # noqa: F401
 
@@ -68,7 +70,7 @@ def _get_default_log_level():
     """
     _default_log_lvl = "INFO"
     try:
-        import magpie.utils  # noqa: C0415  # avoid circular import error
+        import magpie.utils  # pylint: disable=C0415  # avoid circular import error
         _settings = magpie.utils.get_settings_from_config_ini(MAGPIE_INI_FILE_PATH,
                                                               ini_main_section_name="logger_magpie")
         _default_log_lvl = _settings.get("level", _default_log_lvl)
@@ -135,15 +137,15 @@ MAGPIE_USER_NAME_MAX_LENGTH = 64
 # utilities
 # ===========================
 
-_REGEX_ASCII_ONLY = re.compile(r'\W|^(?=\d)')
+_REGEX_ASCII_ONLY = re.compile(r"\W|^(?=\d)")
 
 
 def get_constant_setting_name(name):
     """
     Lower-case name and replace all non-ascii chars by `_`.
     """
-    name = re.sub(_REGEX_ASCII_ONLY, '_', name.strip().lower())
-    return name.replace('magpie_', 'magpie.', 1)
+    name = re.sub(_REGEX_ASCII_ONLY, "_", name.strip().lower())
+    return name.replace("magpie_", "magpie.", 1)
 
 
 def get_constant(constant_name,             # type: Str
@@ -179,12 +181,12 @@ def get_constant(constant_name,             # type: Str
     :returns: found value or `default_value`
     :raises: according message based on options (by default raise missing/`None` value)
     """
-    from magpie.utils import get_settings, raise_log, print_log  # noqa: C0415  # avoid circular import error
+    from magpie.utils import get_settings, raise_log, print_log  # pylint: disable=C0415  # avoid circular import error
 
     missing = True
     magpie_value = None
     settings = get_settings(settings_container) if settings_container else None
-    if settings and constant_name in settings:  # noqa: E1135
+    if settings and constant_name in settings:  # pylint: disable=E1135
         missing = False
         magpie_value = settings.get(constant_name)
         if magpie_value is not None:
@@ -193,7 +195,7 @@ def get_constant(constant_name,             # type: Str
     if not settings_name and constant_name.startswith("MAGPIE_"):
         settings_name = get_constant_setting_name(constant_name)
         print_log("Constant alternate search: {}".format(settings_name), level=logging.DEBUG)
-    if settings and settings_name and settings_name in settings:  # noqa: E1135
+    if settings and settings_name and settings_name in settings:  # pylint: disable=E1135
         missing = False
         magpie_value = settings.get(settings_name)
         if magpie_value is not None:

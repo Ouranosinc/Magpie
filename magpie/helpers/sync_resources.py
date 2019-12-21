@@ -3,17 +3,20 @@ Synchronize local and remote resources.
 
 To implement a new service, see the _SyncServiceInterface class.
 """
-from magpie import db, models, constants
-from magpie.helpers.sync_services import SYNC_SERVICES_TYPES, is_valid_resource_schema, SyncServiceDefault
-from magpie.utils import get_logger
-import transaction
-from collections import OrderedDict
-from typing import TYPE_CHECKING
 import copy
 import datetime
 import logging
 import os
 import sys
+from collections import OrderedDict
+from typing import TYPE_CHECKING
+
+import transaction
+
+from magpie import constants, db, models
+from magpie.helpers.sync_services import SYNC_SERVICES_TYPES, SyncServiceDefault, is_valid_resource_schema
+from magpie.utils import get_logger
+
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
     from magpie.typedefs import Optional  # noqa: F401

@@ -1,21 +1,28 @@
+import json
+from sys import exc_info
+from typing import TYPE_CHECKING
+
+import six
 from pyramid.httpexceptions import (
+    HTTPBadRequest,
     HTTPError,
     HTTPException,
     HTTPInternalServerError,
-    HTTPBadRequest,
-    HTTPSuccessful,
-    HTTPRedirection,
     HTTPOk,
+    HTTPRedirection,
+    HTTPSuccessful
 )
 
 from magpie.utils import (
-    islambda, isclass,
-    CONTENT_TYPE_ANY, CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PLAIN, SUPPORTED_CONTENT_TYPES
+    CONTENT_TYPE_ANY,
+    CONTENT_TYPE_HTML,
+    CONTENT_TYPE_JSON,
+    CONTENT_TYPE_PLAIN,
+    SUPPORTED_CONTENT_TYPES,
+    isclass,
+    islambda
 )
-from typing import TYPE_CHECKING
-from sys import exc_info
-import json
-import six
+
 if TYPE_CHECKING:
     from magpie.typedefs import (  # noqa: F401
         Any, Str, Callable, List, Iterable, Optional, Tuple, Union, JSON, ParamsType, PyramidResponse
@@ -115,7 +122,7 @@ def verify_param(  # noqa: E126
         if is_equal or not_equal:
             # allow 'different' string literals for comparison, otherwise types must match exactly
             if (not (isinstance(param, six.string_types) and isinstance(param_compare, six.string_types))
-                     and type(param) != type(param_compare)):   # noqa: E127
+                     and type(param) != type(param_compare)):   # noqa: E127 # pylint: disable=C0123
                 raise TypeError("'param_compare' cannot be of incompatible type with specified test flags")
         if not hasattr(param_compare, "__iter__") and (is_in or not_in):
             param_compare = [param_compare]
@@ -254,7 +261,7 @@ def valid_http(http_success=HTTPOk,             # type: Optional[HTTPSuccessful]
     :param content_type: format in which to return the exception (one of `magpie.common.SUPPORTED_CONTENT_TYPES`)
     :return `HTTPSuccessful`: formatted successful with additional details and HTTP code
     """
-    global RAISE_RECURSIVE_SAFEGUARD_COUNT
+    global RAISE_RECURSIVE_SAFEGUARD_COUNT  # pylint: disable=W0603
 
     content = dict() if content is None else content
     detail = repr(detail) if not isinstance(detail, six.string_types) else detail
@@ -295,8 +302,8 @@ def raise_http(http_error=HTTPInternalServerError,  # type: HTTPError
 
     # fail-fast if recursion generates too many calls
     # this would happen only if a major programming error occurred within this function
-    global RAISE_RECURSIVE_SAFEGUARD_MAX
-    global RAISE_RECURSIVE_SAFEGUARD_COUNT
+    global RAISE_RECURSIVE_SAFEGUARD_MAX    # pylint: disable=W0603
+    global RAISE_RECURSIVE_SAFEGUARD_COUNT  # pylint: disable=W0603
     RAISE_RECURSIVE_SAFEGUARD_COUNT = RAISE_RECURSIVE_SAFEGUARD_COUNT + 1
     if RAISE_RECURSIVE_SAFEGUARD_COUNT > RAISE_RECURSIVE_SAFEGUARD_MAX:
         raise HTTPInternalServerError(detail="Terminated. Too many recursions of `raise_http`")
@@ -304,7 +311,7 @@ def raise_http(http_error=HTTPInternalServerError,  # type: HTTPError
     # try dumping content with json format, `HTTPInternalServerError` with caller info if fails.
     # content is added manually to avoid auto-format and suppression of fields by `HTTPException`
     content_type = CONTENT_TYPE_JSON if content_type == CONTENT_TYPE_ANY else content_type
-    http_code, detail, content = validate_params(http_error, HTTPError, detail, content, content_type)
+    _, detail, content = validate_params(http_error, HTTPError, detail, content, content_type)
     json_body = format_content_json_str(http_error.code, detail, content, content_type)
     resp = generate_response_http_format(http_error, http_kwargs, json_body, output_type=content_type)
 

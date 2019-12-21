@@ -1,35 +1,39 @@
-from magpie.security import authomatic_setup, get_provider_names
-from pyramid.security import NO_PERMISSION_REQUIRED, remember, forget
-from pyramid.view import view_config
+from authomatic.adapters import WebObAdapter
+from authomatic.core import Credentials, LoginResult, resolve_provider_class
+from authomatic.exceptions import OAuth2Error
+from pyramid.authentication import Authenticated, IAuthenticationPolicy
 from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPFound,
-    HTTPTemporaryRedirect,
     HTTPBadRequest,
-    HTTPUnauthorized,
-    HTTPForbidden,
-    HTTPNotFound,
     HTTPConflict,
+    HTTPException,
+    HTTPForbidden,
+    HTTPFound,
     HTTPInternalServerError,
-    HTTPException
+    HTTPNotFound,
+    HTTPOk,
+    HTTPTemporaryRedirect,
+    HTTPUnauthorized
 )
 from pyramid.request import Request
 from pyramid.response import Response
-from pyramid.authentication import IAuthenticationPolicy, Authenticated
-from ziggurat_foundations.models.services.user import UserService
+from pyramid.security import NO_PERMISSION_REQUIRED, forget, remember
+from pyramid.view import view_config
+from six.moves.urllib.parse import urlparse
 from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInBadAuth, ZigguratSignInSuccess, ZigguratSignOut
 from ziggurat_foundations.models.services.external_identity import ExternalIdentityService
-from magpie.api import generic as ag, exception as ax, schemas as s
-from magpie.api.requests import get_multiformat_post, get_value_multiformat_post_checked
+from ziggurat_foundations.models.services.user import UserService
+
+from magpie import models
+from magpie.api import exception as ax
+from magpie.api import generic as ag
+from magpie.api import schemas as s
 from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
+from magpie.api.requests import get_multiformat_post, get_value_multiformat_post_checked
 from magpie.constants import get_constant
-from magpie import models
-from magpie.utils import get_magpie_url, convert_response, get_logger, CONTENT_TYPE_JSON
-from authomatic.adapters import WebObAdapter
-from authomatic.core import LoginResult, Credentials, resolve_provider_class
-from authomatic.exceptions import OAuth2Error
-from six.moves.urllib.parse import urlparse
+from magpie.security import authomatic_setup, get_provider_names
+from magpie.utils import CONTENT_TYPE_JSON, convert_response, get_logger, get_magpie_url
+
 LOGGER = get_logger(__name__)
 
 

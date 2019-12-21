@@ -6,11 +6,12 @@ Revises: 53927300c277
 Create Date: 2012-06-27 02:15:58.776223
 """
 from __future__ import unicode_literals
-from alembic.context import get_context  # noqa: F401
+
+import sqlalchemy as sa
 from alembic import op
+from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.mysql.base import MySQLDialect
 from sqlalchemy.engine.reflection import Inspector
-import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '3cfc41c4a5f0'

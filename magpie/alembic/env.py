@@ -1,11 +1,14 @@
 from __future__ import with_statement
+
 from alembic import context  # noqa: F403
+from sqlalchemy.engine import Connectable, Connection, create_engine  # noqa: W0212
 from sqlalchemy.schema import MetaData
-from sqlalchemy.engine import create_engine, Connection, Connectable  # noqa: W0212
-from sqlalchemy_utils import database_exists, create_database
-from magpie.db import get_db_url
+from sqlalchemy_utils import create_database, database_exists
+
 from magpie.constants import get_constant
+from magpie.db import get_db_url
 from magpie.utils import get_logger
+
 LOGGER = get_logger(__name__)
 
 

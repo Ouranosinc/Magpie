@@ -1,6 +1,7 @@
+import os
+
 from magpie.api import schemas as s
 from magpie.constants import MAGPIE_MODULE_DIR
-import os
 
 
 @s.SwaggerAPI.get(tags=[s.APITag], response_schemas=s.SwaggerAPI_GET_responses)

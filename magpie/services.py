@@ -1,21 +1,20 @@
-from magpie.constants import get_constant
-from ziggurat_foundations.models.services.user import UserService
+from typing import TYPE_CHECKING
+
+from beaker.cache import cache_region, cache_regions
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound, HTTPNotImplemented
+from pyramid.security import Allow as ALLOW
+from pyramid.security import Everyone as EVERYONE  # noqa
+from six import with_metaclass
 from ziggurat_foundations.models.services.resource import ResourceService
+from ziggurat_foundations.models.services.user import UserService
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
-from pyramid.security import Everyone as EVERYONE, Allow as ALLOW   # noqa
-from pyramid.httpexceptions import (
-    HTTPNotFound,
-    HTTPBadRequest,
-    HTTPNotImplemented,
-    HTTPInternalServerError,
-)
+
+from magpie import models
 from magpie.api import exception as ax
+from magpie.constants import get_constant
 from magpie.owsrequest import ows_parser_factory
 from magpie.permissions import Permission
-from magpie import models
-from beaker.cache import cache_region, cache_regions
-from typing import TYPE_CHECKING
-from six import with_metaclass
+
 if TYPE_CHECKING:
     from magpie.typedefs import (  # noqa: F401
         AccessControlListType, Str, List, Dict, Type, ResourcePermissionType
@@ -38,6 +37,7 @@ class ServiceMeta(type):
         """
         Allowed resources type names under the service.
         """
+        # pylint: disable=E1133     # is iterable but detected as not like one
         return [r.resource_type_name for r in cls.resource_types]
 
     @property
@@ -85,7 +85,7 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
 
     # parameters required to preserve caching of corresponding resource-id/user called
     @cache_region("acl")
-    def _get_acl_cached(self, service_id, user):  # pylint: disable=W0613 # noqa: F811
+    def _get_acl_cached(self, service_id, user):  # noqa: F811
         """Cache this method with :py:mod:`beaker` based on the service id and the user.
 
         If the cache is not hit, call :meth:`get_acl`.

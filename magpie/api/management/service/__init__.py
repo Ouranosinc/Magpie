@@ -1,5 +1,6 @@
 from magpie.api import schemas as s
 from magpie.utils import get_logger
+
 LOGGER = get_logger(__name__)
 
 

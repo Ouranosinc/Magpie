@@ -1,21 +1,26 @@
-from magpie.api import requests as ar, exception as ax, schemas as s
-from magpie.api.management.resource.resource_formats import format_resource
-from ziggurat_foundations.models.services.resource import ResourceService
+from typing import TYPE_CHECKING
+
 from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPCreated,
     HTTPBadRequest,
-    HTTPForbidden,
-    HTTPNotFound,
     HTTPConflict,
+    HTTPCreated,
+    HTTPForbidden,
     HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPOk
 )
 from pyramid.settings import asbool
+from ziggurat_foundations.models.services.resource import ResourceService
+
 from magpie import models
+from magpie.api import exception as ax
+from magpie.api import requests as ar
+from magpie.api import schemas as s
+from magpie.api.management.resource.resource_formats import format_resource
 from magpie.permissions import Permission
 from magpie.register import sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT
-from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session

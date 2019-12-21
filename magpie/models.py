@@ -1,31 +1,35 @@
-from magpie.api.exception import evaluate_call
-from pyramid.httpexceptions import HTTPInternalServerError
-from pyramid.security import Allow as ALLOW, ALL_PERMISSIONS    # noqa
-from sqlalchemy.ext.declarative import declared_attr, declarative_base
-from sqlalchemy.orm import relationship
+from typing import TYPE_CHECKING
+
 import sqlalchemy as sa
+from pyramid.httpexceptions import HTTPInternalServerError
+from pyramid.security import ALL_PERMISSIONS
+from pyramid.security import Allow as ALLOW  # noqa
+from sqlalchemy.ext.declarative import declarative_base, declared_attr
+from sqlalchemy.orm import relationship
+from ziggurat_foundations import ziggurat_model_init
+from ziggurat_foundations.models.base import BaseModel, get_db_session
+from ziggurat_foundations.models.external_identity import ExternalIdentityMixin
+from ziggurat_foundations.models.group import GroupMixin
+from ziggurat_foundations.models.group_permission import GroupPermissionMixin
+from ziggurat_foundations.models.group_resource_permission import GroupResourcePermissionMixin
+from ziggurat_foundations.models.resource import ResourceMixin
 from ziggurat_foundations.models.services import BaseService
-from ziggurat_foundations.models.services.user import UserService
 from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
 from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
-from ziggurat_foundations.models.base import BaseModel, get_db_session
+from ziggurat_foundations.models.services.user import UserService
 from ziggurat_foundations.models.user import UserMixin
 from ziggurat_foundations.models.user_group import UserGroupMixin
 from ziggurat_foundations.models.user_permission import UserPermissionMixin
 from ziggurat_foundations.models.user_resource_permission import UserResourcePermissionMixin
-from ziggurat_foundations.models.resource import ResourceMixin
-from ziggurat_foundations.models.group import GroupMixin
-from ziggurat_foundations.models.group_permission import GroupPermissionMixin
-from ziggurat_foundations.models.group_resource_permission import GroupResourcePermissionMixin
-from ziggurat_foundations.models.external_identity import ExternalIdentityMixin
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
-from ziggurat_foundations import ziggurat_model_init
+
+from magpie.api.exception import evaluate_call
 from magpie.permissions import Permission
-from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from magpie.typedefs import Str  # noqa: F401
 
-Base = declarative_base()
+Base = declarative_base()   # pylint: disable=C0103
 
 
 def get_session_callable(request):

@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 import sys
 
-from pyramid.tweens import EXCVIEW
 from pyramid.events import NewRequest
+from pyramid.tweens import EXCVIEW
 
 
 def includeme(config):
     # import needs to be here, otherwise ImportError happens during setup.py install (modules not yet installed)
-    from magpie.api.generic import (    # noqa: C0415
+    from magpie.api.generic import (    # pylint: disable=C0415
         internal_server_error,
         not_found_or_method_not_allowed,
         unauthorized_or_forbidden,
     )
-    from magpie.constants import get_constant   # noqa: C0415
-    from magpie.utils import get_logger         # noqa: C0415
+    from magpie.constants import get_constant   # pylint: disable=C0415
+    from magpie.utils import get_logger         # pylint: disable=C0415
 
     mod_dir = get_constant("MAGPIE_MODULE_DIR", config)
     logger = get_logger(__name__)

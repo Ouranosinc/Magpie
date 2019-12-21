@@ -7,23 +7,27 @@ test_register
 
 Tests for `magpie.register` operations.
 """
+import json
+import shutil
+import tempfile
+import unittest
+
+import mock
+
+from magpie import register
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_settings
 from magpie.permissions import Permission
 from magpie.services import ServiceAPI
 from magpie.utils import CONTENT_TYPE_JSON
-from magpie import register
-from tests import utils, runner
-import tempfile
-import shutil
-import json
-import unittest
-import mock
+from tests import runner, utils
 
 
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_REGISTER
 class TestRegister(unittest.TestCase):
+    # pylint: disable=R0914
+
     @classmethod
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
@@ -283,7 +287,7 @@ class TestRegister(unittest.TestCase):
         }
 
         with mock.patch.dict("os.environ", env_override):
-            config = register._expand_all(providers_config)  # noqa: W0212
+            config = register._expand_all(providers_config)  # pylint: disable=W0212
         print(config)
         assert all([k in ["test-provider-1", "test-provider-2"] for k in config["providers"]])
         assert "${PROVIDER1}" not in config["providers"]
@@ -314,7 +318,7 @@ class TestRegister(unittest.TestCase):
         }
 
         with mock.patch.dict("os.environ", env_override):
-            config = register._expand_all(permissions_config)  # noqa: W0212
+            config = register._expand_all(permissions_config)  # pylint: disable=W0212
         assert config["permissions"][0]["service"] == "test-service-1"
         assert config["permissions"][0]["resource"] == "/test-res"
         assert config["permissions"][0]["user"] == "user-test"
@@ -331,7 +335,7 @@ class TestRegister(unittest.TestCase):
             tmp1.seek(0)  # back to start since file still open (auto-delete if closed)
             tmp2.write(json.dumps({"permissions": [{"perm": "permission3"}, {"perm": "permission4"}]}))
             tmp2.seek(0)  # back to start since file still open (auto-delete if closed)
-            perms = register._get_all_configs(tmp_dir, "permissions")  # noqa: W0212
+            perms = register._get_all_configs(tmp_dir, "permissions")  # pylint: disable=W0212
         assert isinstance(perms, list) and len(perms) == 2 and all(isinstance(p, list) and len(p) == 2 for p in perms)
         # NOTE: order of file loading is not guaranteed
         assert ((perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2" and
@@ -345,12 +349,12 @@ class TestRegister(unittest.TestCase):
             # format doesn't matter
             tmp.write(json.dumps({"permissions": [{"perm": "permission1"}, {"perm": "permission2"}]}))
             tmp.seek(0)  # back to start since file still open (auto-delete if closed)
-            perms = register._get_all_configs(tmp.name, "permissions")  # noqa: W0212
+            perms = register._get_all_configs(tmp.name, "permissions")  # pylint: disable=W0212
         assert isinstance(perms, list) and len(perms) == 1 and isinstance(perms[0], list) and len(perms[0]) == 2
         assert perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2"
 
     def test_get_all_config_from_dict(self):
         cfg = {"permissions": [{"perm": "permission1"}, {"perm": "permission2"}]}
-        perms = register._get_all_configs(cfg, "permissions")  # noqa: W0212
+        perms = register._get_all_configs(cfg, "permissions")  # pylint: disable=W0212
         assert isinstance(perms, list) and len(perms) == 1 and isinstance(perms[0], list) and len(perms[0]) == 2
         assert perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2"

@@ -5,9 +5,8 @@ Revision ID: ddb788864221
 Revises: 0974132183ad
 Create Date: 2017-07-21 18:44:53.429481
 """
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'ddb788864221'

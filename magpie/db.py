@@ -1,25 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from magpie.constants import get_constant
+import inspect
+import logging
+import time
+import warnings
+from typing import TYPE_CHECKING
+
 import alembic
 import alembic.command
 import alembic.config
-from sqlalchemy import exc as sa_exc
-from sqlalchemy.orm.session import sessionmaker, Session
-from sqlalchemy.orm import configure_mappers
-from sqlalchemy.engine.reflection import Inspector
+import six
+import transaction
+from pyramid.settings import asbool
 from sqlalchemy import engine_from_config
+from sqlalchemy import exc as sa_exc
+from sqlalchemy.engine.reflection import Inspector
+from sqlalchemy.orm import configure_mappers
+from sqlalchemy.orm.session import Session, sessionmaker
 from zope.sqlalchemy import register
 
-from pyramid.settings import asbool
-from magpie.utils import get_settings_from_config_ini, get_settings, print_log, raise_log, get_logger
-from typing import TYPE_CHECKING
-import transaction
-import inspect
-import warnings
-import logging
-import time
-import six
+from magpie.constants import get_constant
+from magpie.utils import get_logger, get_settings, get_settings_from_config_ini, print_log, raise_log
 
 # import or define all models here to ensure they are attached to the
 # Base.metadata prior to any initialization routines
@@ -133,7 +134,7 @@ def run_database_migration(db_session=None):
         engine = db_session.bind
         with engine.begin() as connection:
             alembic_cfg = alembic.config.Config(file_=ini_file)
-            alembic_cfg.attributes["connection"] = connection   # noqa: E1137
+            alembic_cfg.attributes["connection"] = connection   # pylint: disable=E1137
             alembic.command.upgrade(alembic_cfg, "head")
 
 

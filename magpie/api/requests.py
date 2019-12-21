@@ -1,20 +1,23 @@
-from magpie.api.exception import evaluate_call, verify_param
-from magpie.api import schemas as s
-from magpie.constants import get_constant
-from ziggurat_foundations.models.services.user import UserService
-from ziggurat_foundations.models.services.group import GroupService
-from ziggurat_foundations.models.services.resource import ResourceService
+from typing import TYPE_CHECKING
+
 from pyramid.authentication import IAuthenticationPolicy
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPForbidden,
-    HTTPNotFound,
-    HTTPUnprocessableEntity,
     HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPUnprocessableEntity
 )
-from magpie.utils import CONTENT_TYPE_JSON
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.resource import ResourceService
+from ziggurat_foundations.models.services.user import UserService
+
 from magpie import models
-from typing import TYPE_CHECKING
+from magpie.api import schemas as s
+from magpie.api.exception import evaluate_call, verify_param
+from magpie.constants import get_constant
+from magpie.utils import CONTENT_TYPE_JSON
+
 if TYPE_CHECKING:
     from pyramid.request import Request
     from magpie.typedefs import Any, Str, Optional, ServiceOrResourceType  # noqa: F401
@@ -146,7 +149,7 @@ def get_service_matchdict_checked(request, service_name_key="service_name"):
     service = evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
                             fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                             msg_on_fail=s.Service_MatchDictCheck_ForbiddenResponseSchema.description)
-    verify_param(service, not_none=True, http_error=HTTPNotFound, content={u'service_name': service_name},
+    verify_param(service, not_none=True, http_error=HTTPNotFound, content={u"service_name": service_name},
                  msg_on_fail=s.Service_MatchDictCheck_NotFoundResponseSchema.description)
     return service
 
@@ -162,7 +165,7 @@ def get_permission_matchdict_checked(request, service_or_resource, permission_na
 
     :returns: found permission name if valid for the service/resource
     """
-    # import here to avoid circular import error with undefined functions between (api_request, resource_utils)
+    # pylint: disable=C0415     # avoid circular import
     from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
     perm_name = get_value_matchdict_checked(request, permission_name_key)
     return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)

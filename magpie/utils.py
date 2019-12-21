@@ -1,28 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import json
+import logging
+import os
+import sys
+import types
+from distutils.dir_util import mkpath
+from enum import EnumMeta  # noqa: W0212
+from typing import TYPE_CHECKING
 
-from magpie.constants import get_constant
-from pyramid.request import Request
+import requests
+import six
+from pyramid.config import ConfigurationError, Configurator
+from pyramid.httpexceptions import HTTPClientError, HTTPException, HTTPOk
 from pyramid.registry import Registry
+from pyramid.request import Request
 from pyramid.response import Response
 from pyramid.settings import truthy
-from pyramid.config import ConfigurationError, Configurator
-from pyramid.httpexceptions import HTTPOk, HTTPClientError, HTTPException
-from six.moves.urllib.parse import urlparse
-from enum import EnumMeta  # noqa: W0212
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
-from webob.headers import ResponseHeaders, EnvironHeaders
-from distutils.dir_util import mkpath
 from six.moves import configparser
-from typing import TYPE_CHECKING
-import requests
-import logging
-import types
-import six
-import sys
-import os
+from six.moves.urllib.parse import urlparse
+from webob.headers import EnvironHeaders, ResponseHeaders
+
+from magpie.constants import get_constant
+
 if TYPE_CHECKING:
     from magpie.typedefs import (  # noqa: F401
         Any, AnyKey, Str, List, Optional, Type, Union,
@@ -46,6 +48,7 @@ def get_logger(name, level=None):
     logger = logging.getLogger(name)
     if logger.level == logging.NOTSET:
         if level is None:
+            # pylint: disable=C0415     # avoid circular import
             from magpie.constants import MAGPIE_LOG_LEVEL
             level = MAGPIE_LOG_LEVEL
         logger.setLevel(level)
@@ -57,7 +60,9 @@ LOGGER = get_logger(__name__)
 
 def print_log(msg, logger=None, level=logging.INFO):
     # type: (Str, Optional[LoggerType], int) -> None
-    from magpie.constants import MAGPIE_LOG_PRINT  # cannot use 'get_constant', recursive call
+    # pylint: disable=C0415     # cannot use 'get_constant', recursive call
+    from magpie.constants import MAGPIE_LOG_PRINT
+
     if not logger:
         logger = get_logger(__name__)
     if MAGPIE_LOG_PRINT:
@@ -154,8 +159,8 @@ def get_header(header_name, header_container, default=None, split=None):
             if isinstance(split, six.string_types) and len(split) > 1:
                 split = [c for c in split]
             if hasattr(split, "__iter__") and not isinstance(split, six.string_types):
-                for s in split:
-                    v = v.replace(s, split[0])
+                for sep in split:
+                    v = v.replace(sep, split[0])
                 split = split[0]
             return (v.split(split)[0] if split else v).strip()
     return default
@@ -175,7 +180,7 @@ def convert_response(response):
         for cookie in response.cookies:
             pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
     if isinstance(response, HTTPException):
-        for header_name, header_value in response.headers._items:  # noqa: W0212
+        for header_name, header_value in response.headers._items:  # noqa # pylint: disable=W0212
             if header_name.lower() == "set-cookie":
                 pyramid_response.set_cookie(name=header_name, value=header_value, overwrite=True)
     return pyramid_response
@@ -183,7 +188,8 @@ def convert_response(response):
 
 def get_admin_cookies(container, verify=True, raise_message=None):
     # type: (AnySettingsContainer, bool, Optional[Str]) -> CookiesType
-    from magpie.api.schemas import SigninAPI
+    from magpie.api.schemas import SigninAPI    # pylint: disable=C0415
+
     magpie_url = get_magpie_url(container)
     magpie_login_url = "{}{}".format(magpie_url, SigninAPI.path)
     cred = {"user_name": get_constant("MAGPIE_ADMIN_USER", container),
@@ -259,10 +265,9 @@ def get_magpie_url(container=None):
         url_parsed = urlparse(get_constant("MAGPIE_URL", settings, "magpie.url").strip("/"))
         if url_parsed.scheme in ["http", "https"]:
             return url_parsed.geturl()
-        else:
-            magpie_url = "http://{}".format(url_parsed.geturl())
-            print_log("Missing scheme from settings URL, new value: '{}'".format(magpie_url), LOGGER, logging.WARNING)
-            return magpie_url
+        magpie_url = "http://{}".format(url_parsed.geturl())
+        print_log("Missing scheme from settings URL, new value: '{}'".format(magpie_url), LOGGER, logging.WARNING)
+        return magpie_url
     except AttributeError:
         # If magpie.url does not exist, calling strip fct over None will raise this issue
         raise ConfigurationError("MAGPIE_URL or magpie.url config cannot be found")
@@ -358,7 +363,7 @@ class ExtendedEnumMeta(EnumMeta):
 
         Returns the entry directly if it is already a valid enum.
         """
-        if key_or_value in cls:
+        if key_or_value in cls:                                                 # pylint: disable=E1135
             return key_or_value
         for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101
             if key_or_value == m_key or key_or_value == m_val.value:            # pylint: disable=R1714

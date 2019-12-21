@@ -8,14 +8,15 @@ test_magpie_api
 Tests for ``magpie.api`` module.
 """
 
-from magpie.constants import get_constant
-from magpie.utils import CONTENT_TYPE_JSON
-from tests import utils, runner
+import unittest
+
+import mock
 
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti  # noqa: F401
-import unittest
-import mock
+from magpie.constants import get_constant
+from magpie.utils import CONTENT_TYPE_JSON
+from tests import runner, utils
 
 
 @runner.MAGPIE_TEST_API

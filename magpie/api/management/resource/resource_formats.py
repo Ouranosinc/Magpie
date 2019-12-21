@@ -1,9 +1,10 @@
 from pyramid.httpexceptions import HTTPInternalServerError
 from ziggurat_foundations.models.services.resource import ResourceService
+
+from magpie.api.exception import evaluate_call
 from magpie.models import RESOURCE_TREE_SERVICE
 from magpie.permissions import format_permissions
 from magpie.services import SERVICE_TYPE_DICT
-from magpie.api.exception import evaluate_call
 
 
 def format_resource(resource, permissions=None, basic_info=False):

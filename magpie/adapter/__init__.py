@@ -1,22 +1,30 @@
+import logging
+import time
+from typing import TYPE_CHECKING
+
+import requests
+import six
+from pyramid.authentication import IAuthenticationPolicy
+from pyramid.httpexceptions import HTTPForbidden, HTTPOk
+from pyramid_beaker import set_cache_regions_from_settings
+from ziggurat_foundations.models.services.user import UserService
+
+from magpie import __meta__
+from magpie.adapter.magpieowssecurity import MagpieOWSSecurity
+from magpie.adapter.magpieservice import MagpieServiceStore
+from magpie.api.exception import raise_http, valid_http
+from magpie.api.schemas import SigninAPI
+from magpie.db import get_engine, get_session_factory, get_tm_session
+from magpie.security import get_auth_config
+from magpie.utils import CONTENT_TYPE_JSON, SingletonMeta, get_logger, get_magpie_url, get_settings
+# twitcher available only when this module is imported from it
 from twitcher.adapter.base import AdapterInterface      # noqa
 from twitcher.owsproxy import owsproxy_defaultconfig    # noqa
 
-from pyramid.httpexceptions import HTTPOk, HTTPForbidden
-from pyramid.authentication import IAuthenticationPolicy
-from ziggurat_foundations.models.services.user import UserService
-from magpie.api.schemas import SigninAPI
-from magpie.api.exception import valid_http, raise_http
-from magpie.adapter.magpieowssecurity import MagpieOWSSecurity
-from magpie.adapter.magpieservice import MagpieServiceStore
-from magpie.security import get_auth_config
-from magpie.db import get_session_factory, get_tm_session, get_engine
-from magpie.utils import get_logger, get_settings, get_magpie_url, SingletonMeta, CONTENT_TYPE_JSON
-from magpie import __meta__
-from pyramid_beaker import set_cache_regions_from_settings
-import six
-import time
-import logging
-import requests
+if TYPE_CHECKING:
+    from magpie.models import User  # noqa: F401
+    from pyramid.request import Request
+    from typing import Optional
 LOGGER = get_logger("TWITCHER")
 
 
@@ -38,12 +46,8 @@ def debug_cookie_identify(request):
     cookie_inst = request._get_authentication_policy().cookie  # noqa: W0212
     cookie = request.cookies.get(cookie_inst.cookie_name)
 
-    LOGGER.debug(
-        "Cookie (name : {0}, secret : {1}, hashalg : {2}) : {3}".format(
-            cookie_inst.cookie_name,
-            cookie_inst.secret,
-            cookie_inst.hashalg,
-            cookie))
+    LOGGER.debug("Cookie (name: %s, secret: %s, hash-alg: %s) : %s",
+                 cookie_inst.cookie_name, cookie_inst.secret, cookie_inst.hashalg, cookie)
 
     if not cookie:
         LOGGER.debug("No Cookie!")
@@ -54,19 +58,12 @@ def debug_cookie_identify(request):
         else:
             remote_addr = "0.0.0.0"
 
-        LOGGER.debug(
-            "Cookie remote addr (include_ip : {0}) : {1}".format(cookie_inst.include_ip, remote_addr))
-
+        LOGGER.debug("Cookie remote addr (include_ip: %s) : %s", cookie_inst.include_ip, remote_addr)
         now = time.time()
-        timestamp, userid, tokens, user_data = cookie_inst.parse_ticket(
-            cookie_inst.secret, cookie, remote_addr,
-            cookie_inst.hashalg)
+        timestamp, _, _, _ = cookie_inst.parse_ticket(cookie_inst.secret, cookie, remote_addr, cookie_inst.hashalg)
+        LOGGER.debug("Cookie timestamp: %s, timeout: %s, now: %s", timestamp, cookie_inst.timeout, now)
 
-        LOGGER.debug(
-            "Cookie timestamp : {0}, timeout : {1}, now : {2}".format(timestamp, cookie_inst.timeout, now))
-
-        if cookie_inst.timeout and (
-                (timestamp + cookie_inst.timeout) < now):
+        if cookie_inst.timeout and ((timestamp + cookie_inst.timeout) < now):
             # the auth_tkt data has expired
             LOGGER.debug("Cookie is expired")
 
@@ -75,6 +72,7 @@ def debug_cookie_identify(request):
 
 
 def get_user(request):
+    # type: (Request) -> Optional[User]
     user_id = request.unauthenticated_userid
     LOGGER.debug("Current user id is '%s'", user_id)
 
@@ -82,8 +80,9 @@ def get_user(request):
         user = UserService.by_id(user_id, db_session=request.db)
         LOGGER.debug("Current user has been resolved has '%s'", user)
         return user
-    elif LOGGER.isEnabledFor(logging.DEBUG):
+    if LOGGER.isEnabledFor(logging.DEBUG):
         debug_cookie_identify(request)
+    return None
 
 
 def verify_user(request):
@@ -101,6 +100,8 @@ def verify_user(request):
 
 
 class MagpieAdapter(six.with_metaclass(SingletonMeta, AdapterInterface)):
+    # pylint: disable: W0223,W0612
+
     def __init__(self, container):
         self._servicestore = None
         self._owssecurity = None

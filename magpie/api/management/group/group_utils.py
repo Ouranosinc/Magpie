@@ -1,23 +1,27 @@
-from magpie.services import SERVICE_TYPE_DICT
-from magpie.api import exception as ax, schemas as s
-from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
-from magpie.api.management.resource.resource_formats import format_resource
-from magpie.api.management.service.service_formats import format_service_resources, format_service
-from magpie.api.management.group.group_formats import format_group
+from typing import TYPE_CHECKING
+
+from pyramid.httpexceptions import (
+    HTTPConflict,
+    HTTPCreated,
+    HTTPForbidden,
+    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPOk
+)
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.group_resource_permission import GroupResourcePermissionService
 from ziggurat_foundations.models.services.resource import ResourceService
-from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPCreated,
-    HTTPForbidden,
-    HTTPNotFound,
-    HTTPConflict,
-    HTTPInternalServerError
-)
+
 from magpie import models
-from magpie.permissions import format_permissions, convert_permission
-from typing import TYPE_CHECKING
+from magpie.api import exception as ax
+from magpie.api import schemas as s
+from magpie.api.management.group.group_formats import format_group
+from magpie.api.management.resource.resource_formats import format_resource
+from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
+from magpie.api.management.service.service_formats import format_service, format_service_resources
+from magpie.permissions import convert_permission, format_permissions
+from magpie.services import SERVICE_TYPE_DICT
+
 if TYPE_CHECKING:
     from pyramid.httpexceptions import HTTPException  # noqa: F401
     from sqlalchemy.orm.session import Session
@@ -101,8 +105,8 @@ def create_group_resource_permission_response(group, resource, permission, db_se
         fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
         msg_on_fail=s.GroupResourcePermissions_POST_ForbiddenGetResponseSchema.description, content=perm_content
     )
-    ax.verify_param(existing_perm, is_none=True, http_error=HTTPConflict,
-                    msg_on_fail=s.GroupResourcePermissions_POST_ConflictResponseSchema.description, content=perm_content)
+    ax.verify_param(existing_perm, is_none=True, http_error=HTTPConflict, content=perm_content,
+                    msg_on_fail=s.GroupResourcePermissions_POST_ConflictResponseSchema.description)
     # noinspection PyArgumentList
     new_perm = ax.evaluate_call(
         lambda: models.GroupResourcePermission(resource_id=resource_id, group_id=group.id, perm_name=permission.value),

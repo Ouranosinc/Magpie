@@ -1,28 +1,25 @@
-from magpie.api import schemas as schemas
-from magpie.constants import get_constant
-from pyramid.settings import asbool
-from pyramid.view import view_config
-from pyramid.httpexceptions import (
-    HTTPFound,
-    HTTPMovedPermanently,
-    HTTPBadRequest,
-    HTTPNotFound,
-    HTTPConflict,
-)
-from magpie.helpers.sync_resources import OUT_OF_SYNC
-from magpie.helpers import sync_resources
-from magpie.models import RESOURCE_TYPE_DICT, REMOTE_RESOURCE_TREE_SERVICE  # TODO: remove, implement getters via API
-from magpie.ui.utils import check_response, request_api, error_badrequest
-from magpie.ui.home import add_template_data
-from magpie.utils import get_json, get_logger, CONTENT_TYPE_JSON
-from magpie import register
+import json
 from collections import OrderedDict
 from datetime import datetime
 from typing import TYPE_CHECKING
-import transaction
+
 import humanize
-import json
 import six
+import transaction
+from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPFound, HTTPMovedPermanently, HTTPNotFound
+from pyramid.settings import asbool
+from pyramid.view import view_config
+
+from magpie import register
+from magpie.api import schemas as schemas
+from magpie.constants import get_constant
+from magpie.helpers import sync_resources
+from magpie.helpers.sync_resources import OUT_OF_SYNC
+from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT  # TODO: remove, implement getters via API
+from magpie.ui.home import add_template_data
+from magpie.ui.utils import check_response, error_badrequest, request_api
+from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
+
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
     from magpie.typedefs import List, Optional  # noqa: F401
@@ -548,11 +545,11 @@ class ManagementViews(object):
 
     def update_user_or_group_resources_permissions_dict(self, res_perms, res_id, removed_perms, new_perms):
         for key, res in res_perms.items():
-            if int(res['id']) == int(res_id):
-                res['permission_names'] = sorted(res['permission_names'] + new_perms)
-                res['permission_names'] = [perm for perm in res['permission_names'] if perm not in removed_perms]
+            if int(res["id"]) == int(res_id):
+                res["permission_names"] = sorted(res["permission_names"] + new_perms)
+                res["permission_names"] = [perm for perm in res["permission_names"] if perm not in removed_perms]
                 return True
-            if self.update_user_or_group_resources_permissions_dict(res['children'], res_id, removed_perms, new_perms):
+            if self.update_user_or_group_resources_permissions_dict(res["children"], res_id, removed_perms, new_perms):
                 return True
         return False
 

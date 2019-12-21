@@ -1,36 +1,38 @@
 import colander
+import six
 from cornice import Service
 from cornice.service import get_services
 from cornice_swagger.swagger import CorniceSwagger
 from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPCreated,
-    HTTPFound,
     HTTPBadRequest,
-    HTTPUnauthorized,
+    HTTPConflict,
+    HTTPCreated,
     HTTPForbidden,
-    HTTPNotFound,
+    HTTPFound,
+    HTTPInternalServerError,
     HTTPMethodNotAllowed,
     HTTPNotAcceptable,
-    HTTPConflict,
-    HTTPUnprocessableEntity,
-    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPOk,
+    HTTPUnauthorized,
+    HTTPUnprocessableEntity
 )
 from pyramid.security import NO_PERMISSION_REQUIRED
-from magpie.constants import get_constant
-from magpie.permissions import Permission
-from magpie.utils import get_magpie_url, CONTENT_TYPE_JSON, CONTENT_TYPE_HTML
+
 # from magpie.security import get_provider_names
 from magpie import __meta__
-import six
+from magpie.constants import get_constant
+from magpie.permissions import Permission
+from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, get_magpie_url
 
+# ignore naming style
+# pylint: disable=C0103
 
 TitleAPI = "Magpie REST API"
 InfoAPI = {
     "description": __meta__.__description__,
     "contact": {"name": __meta__.__maintainer__, "email": __meta__.__email__, "url": __meta__.__url__}
 }
-
 
 # Tags
 APITag = "API"
@@ -1168,7 +1170,7 @@ ServiceResource_DELETE_OkResponseSchema = Resource_DELETE_OkResponseSchema
 
 class ServiceResources_GET_ResponseBodySchema(BaseResponseBodySchema):
     service_name = Resource_ServiceWithChildrenResourcesContainerBodySchema()
-    service_name.name = '{service_name}'
+    service_name.name = "{service_name}"
 
 
 class ServiceResources_GET_OkResponseSchema(colander.MappingSchema):
@@ -1272,7 +1274,7 @@ class Users_CheckInfo_Name_BadRequestResponseSchema(colander.MappingSchema):
 
 class Users_CheckInfo_Size_BadRequestResponseSchema(colander.MappingSchema):
     description = "Invalid 'user_name' length specified (>{length} characters)." \
-        .format(length=get_constant('MAGPIE_USER_NAME_MAX_LENGTH'))
+        .format(length=get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))
     header = HeaderResponseSchema()
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
@@ -1705,7 +1707,7 @@ class UserResourcePermissions_POST_CreatedResponseSchema(colander.MappingSchema)
 
 
 class UserResourcePermissions_POST_ParamResponseBodySchema(colander.MappingSchema):
-    name = colander.SchemaNode(colander.String(), description="Specified parameter.", example='permission_name')
+    name = colander.SchemaNode(colander.String(), description="Specified parameter.", example="permission_name")
     value = colander.SchemaNode(colander.String(), description="Specified parameter value.")
 
 
@@ -1804,7 +1806,7 @@ class UserServices_GET_QuerySchema(colander.MappingSchema):
     inherit = QueryInheritGroupsPermissions
     list = colander.SchemaNode(
         colander.Boolean(), default=False, missing=colander.drop,
-        description='Return services as a list of dicts. Default is a dict by service type, and by service name.')
+        description="Return services as a list of dicts. Default is a dict by service type, and by service name.")
 
 
 class UserServices_GET_RequestSchema(colander.MappingSchema):
@@ -1967,7 +1969,7 @@ class Group_PUT_Name_BadRequestResponseSchema(colander.MappingSchema):
 
 class Group_PUT_Size_BadRequestResponseSchema(colander.MappingSchema):
     description = "Invalid 'group_name' length specified (>{length} characters)." \
-        .format(length=get_constant('MAGPIE_USER_NAME_MAX_LENGTH'))
+        .format(length=get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
@@ -2278,7 +2280,7 @@ class ProviderSignin_GET_HeaderRequestSchema(HeaderRequestSchemaAPI):
                     "Access token must have been validated with the corresponding provider beforehand. "
                     "Supported format is 'Authorization: Bearer MyF4ncy4ccEsT0k3n'")
     HomepageRoute = colander.SchemaNode(
-        colander.String(), missing=colander.drop, example="/session", default='Magpie UI Homepage',
+        colander.String(), missing=colander.drop, example="/session", default="Magpie UI Homepage",
         description="Alternative redirection homepage after signin. "
                     "Must be a relative path to Magpie for security reasons.")
     HomepageRoute.name = "Homepage-Route"
@@ -2337,7 +2339,7 @@ class Signin_POST_RequestBodySchema(colander.MappingSchema):
     user_name = colander.SchemaNode(colander.String(), description="User name to use for sign in.")
     password = colander.SchemaNode(colander.String(), description="Password to use for sign in.")
     provider_name = colander.SchemaNode(colander.String(), description="Provider to use for sign in.",
-                                        default=get_constant('MAGPIE_DEFAULT_PROVIDER'), missing=colander.drop)
+                                        default=get_constant("MAGPIE_DEFAULT_PROVIDER"), missing=colander.drop)
 
 
 class Signin_POST_RequestSchema(colander.MappingSchema):

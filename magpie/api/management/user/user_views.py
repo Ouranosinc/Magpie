@@ -1,24 +1,29 @@
-from magpie.api import exception as ax, requests as ar, schemas as s
-from magpie.api.management.user import user_utils as uu, user_formats as uf
-from magpie.api.management.service.service_formats import format_service_resources
-from magpie.constants import get_constant
 from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPCreated,
-    HTTPMovedPermanently,
     HTTPBadRequest,
-    HTTPForbidden,
-    HTTPNotFound,
     HTTPConflict,
+    HTTPCreated,
+    HTTPForbidden,
+    HTTPMovedPermanently,
+    HTTPNotFound,
+    HTTPOk
 )
+from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.settings import asbool
 from pyramid.view import view_config
-from pyramid.security import NO_PERMISSION_REQUIRED
-from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
-from magpie.utils import get_logger
+
 from magpie import models
+from magpie.api import exception as ax
+from magpie.api import requests as ar
+from magpie.api import schemas as s
+from magpie.api.management.service.service_formats import format_service_resources
+from magpie.api.management.user import user_formats as uf
+from magpie.api.management.user import user_utils as uu
+from magpie.constants import get_constant
+from magpie.utils import get_logger
+
 LOGGER = get_logger(__name__)
 
 

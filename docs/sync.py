@@ -4,11 +4,11 @@
 Send contents to server.
 """
 
-from subprocess import check_call
-from six.moves.urllib.parse import urljoin
-from shlex import split
 import argparse
+from shlex import split
+from subprocess import check_call
 
+from six.moves.urllib.parse import urljoin
 
 from .conf import __meta__
 

@@ -1,15 +1,18 @@
-from magpie.api.login import esgfopenid, wso2
-from magpie.constants import get_constant
-from pyramid.config import Configurator
-from pyramid.settings import asbool
-from pyramid.authentication import AuthTktAuthenticationPolicy
-from pyramid.authorization import ACLAuthorizationPolicy
-from ziggurat_foundations.models import groupfinder
-from magpie.utils import get_logger, get_settings
+import logging
+from typing import TYPE_CHECKING
+
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid
-from typing import TYPE_CHECKING
-import logging
+from pyramid.authentication import AuthTktAuthenticationPolicy
+from pyramid.authorization import ACLAuthorizationPolicy
+from pyramid.config import Configurator
+from pyramid.settings import asbool
+from ziggurat_foundations.models import groupfinder
+
+from magpie.api.login import esgfopenid, wso2
+from magpie.constants import get_constant
+from magpie.utils import get_logger, get_settings
+
 if TYPE_CHECKING:
     from magpie.typedefs import JSON  # noqa: F401
 AUTHOMATIC_LOGGER = get_logger("magpie.authomatic", level=logging.DEBUG)
@@ -43,7 +46,7 @@ def get_auth_config(container):
     # create configurator or use one defined as input to preserve previous setup/include/etc.
     config = Configurator() if not isinstance(container, Configurator) else container
 
-    from magpie import models
+    from magpie import models   # pylint: disable=C0415     # avoid circular import
     config.setup_registry(
         settings=settings,
         root_factory=models.RootFactory,
@@ -150,7 +153,7 @@ def authomatic_config(request=None):
 def get_provider_names():
     provider_names = {}
     config = authomatic_config()
-    for provider in config.keys():
+    for provider in config:
         if provider != "__defaults__":
             provider_names[provider.lower()] = config[provider].get("display_name", provider)
     return provider_names

@@ -10,8 +10,10 @@ Providers which implement the |openid|_ protocol based on the appropriate `pytho
 
 """
 
-from magpie.utils import get_logger
 from authomatic.providers.openid import OpenID
+
+from magpie.utils import get_logger
+
 LOGGER = get_logger(__name__)
 
 __all__ = ["ESGFOpenID"]

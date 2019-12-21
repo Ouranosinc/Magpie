@@ -8,22 +8,25 @@ test_utils
 Tests for the various utility operations employed by magpie.
 """
 
-from pyramid.httpexceptions import HTTPOk, HTTPBadRequest, HTTPForbidden, HTTPInternalServerError
-from pyramid.request import Request
-from pyramid.settings import asbool
-
-from magpie.api import requests as ar, exception as ax
-from magpie import models, __meta__
-from magpie.permissions import format_permissions, Permission
-from magpie.utils import get_header, ExtendedEnumMeta, CONTENT_TYPE_JSON
+import unittest
 from distutils.version import LooseVersion
-from pyramid.testing import DummyRequest
-from tests import utils, runner
 from enum import Enum
 from typing import TYPE_CHECKING
-import six
+
 import mock
-import unittest
+import six
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPInternalServerError, HTTPOk
+from pyramid.request import Request
+from pyramid.settings import asbool
+from pyramid.testing import DummyRequest
+
+from magpie import __meta__, models
+from magpie.api import exception as ax
+from magpie.api import requests as ar
+from magpie.permissions import Permission, format_permissions
+from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnumMeta, get_header
+from tests import runner, utils
+
 if TYPE_CHECKING:
     from magpie.typedefs import Str  # noqa: F401
 

@@ -6,8 +6,9 @@ Revises: 20671b28c538
 Create Date: 2012-07-09 21:33:28.404627
 """
 from __future__ import unicode_literals
-from alembic.context import get_context  # noqa: F401
+
 from alembic import op
+from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
 
 # revision identifiers, used by Alembic.

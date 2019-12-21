@@ -1,18 +1,13 @@
-from magpie.api import schemas as schemas
+import requests
+from pyramid.httpexceptions import HTTPException, HTTPFound, HTTPInternalServerError, HTTPOk, HTTPUnauthorized
+from pyramid.response import Response
 from pyramid.security import NO_PERMISSION_REQUIRED, forget
 from pyramid.view import view_config
-from pyramid.response import Response
-from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPFound,
-    HTTPUnauthorized,
-    HTTPInternalServerError,
-    HTTPException,
-)
-from magpie.ui.utils import check_response, request_api
+
+from magpie.api import schemas as schemas
 from magpie.ui.home import add_template_data
-from magpie.utils import get_magpie_url, get_json
-import requests
+from magpie.ui.utils import check_response, request_api
+from magpie.utils import get_json, get_magpie_url
 
 
 class LoginViews(object):

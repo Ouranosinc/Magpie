@@ -1,19 +1,18 @@
-from magpie.api import requests as ar, exception as ax, schemas as s
-from magpie.api.management.service.service_utils import get_services_by_type
-from magpie.api.management.service.service_formats import format_service_resources
-from magpie.api.management.resource import resource_utils as ru, resource_formats as rf
-from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPBadRequest,
-    HTTPForbidden,
-    HTTPInternalServerError,
-)
-from pyramid.view import view_config
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPInternalServerError, HTTPOk
 from pyramid.settings import asbool
+from pyramid.view import view_config
+
+from magpie import models
+from magpie.api import exception as ax
+from magpie.api import requests as ar
+from magpie.api import schemas as s
+from magpie.api.management.resource import resource_formats as rf
+from magpie.api.management.resource import resource_utils as ru
+from magpie.api.management.service.service_formats import format_service_resources
+from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.permissions import format_permissions
 from magpie.register import sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT
-from magpie import models
 
 
 @s.ResourcesAPI.get(tags=[s.ResourcesTag], response_schemas=s.Resources_GET_responses)

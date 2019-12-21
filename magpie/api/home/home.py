@@ -1,14 +1,16 @@
-from pyramid.security import NO_PERMISSION_REQUIRED
-from pyramid.view import view_config
-from pyramid.httpexceptions import HTTPOk
-
-from magpie.api import exception as ax, schemas as s
-from magpie.db import get_database_revision
-from magpie.utils import print_log, get_logger, get_magpie_url, CONTENT_TYPE_JSON
-from magpie import __meta__
+import logging
 from copy import deepcopy
 
-import logging
+from pyramid.httpexceptions import HTTPOk
+from pyramid.security import NO_PERMISSION_REQUIRED
+from pyramid.view import view_config
+
+from magpie import __meta__
+from magpie.api import exception as ax
+from magpie.api import schemas as s
+from magpie.db import get_database_revision
+from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url, print_log
+
 LOGGER = get_logger(__name__)
 
 

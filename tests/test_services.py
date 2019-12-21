@@ -47,7 +47,7 @@ def make_ows_parser(method="GET", content_type=None, params=None, body=""):
     else:
         parse_params = params.keys()
 
-    parser = owsrequest.ows_parser_factory(request)  # type: ignore # noqa
+    parser = owsrequest.ows_parser_factory(request)  # noqa
     parser.parse(parse_params)
     return parser
 
@@ -64,17 +64,17 @@ class TestServices(unittest.TestCase):
         assert isinstance(parser, owsrequest.WPSGet)
         assert parser.params["test"] == "something"
 
-        body = six.ensure_binary('<?xml version="1.0" encoding="UTF-8"?><Execute/>')
+        body = six.ensure_binary('<?xml version="1.0" encoding="UTF-8"?><Execute/>')    # pylint: disable=C4001
         parser = make_ows_parser(method="POST", content_type=None, params=None, body=body)
         assert isinstance(parser, owsrequest.WPSPost)
 
-        body = "{\"test\": \"something\"}"
+        body = '{"test": "something"}'  # pylint: disable=C4001
         parser = make_ows_parser(method="POST", content_type=None, params=None, body=body)
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.MultiFormatParser)
         assert parser.params["test"] == "something"
 
-        body = "{\"test\": \"something\"}"
+        body = '{"test": "something"}'  # pylint: disable=C4001
         parser = make_ows_parser(method="POST", content_type=CONTENT_TYPE_PLAIN, params=None, body=body)
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.MultiFormatParser)
@@ -98,7 +98,7 @@ class TestServices(unittest.TestCase):
         assert isinstance(parser, owsrequest.WPSGet)
         assert parser.params["test"] == "something"
 
-        body = "{\"test\": \"something\"}"
+        body = '{"test": "something"}'  # pylint: disable=C4001
         parser = make_ows_parser(method="PUT", content_type=CONTENT_TYPE_JSON, params=None, body=body)
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.MultiFormatParser)

@@ -5,13 +5,13 @@ Revision ID: 73639c63c4fc
 Revises: d01af1f2e445
 Create Date: 2018-09-27 16:12:02.282830
 """
-from alembic.context import get_context  # noqa: F401
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.orm.session import sessionmaker
+from alembic import op
+from alembic.context import get_context  # noqa: F401
+from sqlalchemy import func
 from sqlalchemy.dialects.postgresql.base import PGDialect
+from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.sql import table
-from sqlalchemy import func  
 
 Session = sessionmaker()
 

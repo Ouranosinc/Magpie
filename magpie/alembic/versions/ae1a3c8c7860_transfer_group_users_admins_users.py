@@ -8,13 +8,13 @@ Create Date: 2018-05-30 15:15:33.008614
 import os
 import sys
 
-from alembic.context import get_context  # noqa: F401
 from alembic import op
-from sqlalchemy.orm.session import sessionmaker
+from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
+from sqlalchemy.orm.session import sessionmaker
+from ziggurat_foundations.models.services import BaseService
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.user import UserService
-from ziggurat_foundations.models.services import BaseService
 
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)    # version

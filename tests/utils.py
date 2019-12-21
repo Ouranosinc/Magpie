@@ -1,22 +1,30 @@
-from magpie import __meta__, services, app
-from magpie.constants import get_constant
-from pyramid.settings import asbool
-from magpie.services import ServiceAccess
-from magpie.utils import (
-    get_magpie_url, get_settings_from_config_ini, get_header, SingletonMeta, CONTENT_TYPE_JSON, CONTENT_TYPE_HTML
-)
-from six.moves.urllib.parse import urlparse
+import json
+import unittest
+import warnings
 from distutils.version import LooseVersion
+from typing import TYPE_CHECKING
+
+import pytest
+import requests
+import six
+from pyramid.settings import asbool
 from pyramid.testing import setUp as PyramidSetUp
+from six.moves.urllib.parse import urlparse
 from webtest import TestApp
 from webtest.response import TestResponse
-from typing import TYPE_CHECKING
-import unittest
-import requests
-import warnings
-import json
-import six
-import pytest
+
+from magpie import __meta__, app, services
+from magpie.constants import get_constant
+from magpie.services import ServiceAccess
+from magpie.utils import (
+    CONTENT_TYPE_HTML,
+    CONTENT_TYPE_JSON,
+    SingletonMeta,
+    get_header,
+    get_magpie_url,
+    get_settings_from_config_ini
+)
+
 if TYPE_CHECKING:
     from tests.interfaces import Base_Magpie_TestCase  # noqa: F401
     from magpie.typedefs import (  # noqa: F401
@@ -244,13 +252,13 @@ def test_request(test_item, method, path, timeout=5, allow_redirects=True, **kwa
         # test status accordingly if specified
         assert resp.status_code == status or status is None, "Response not matching the expected status code."
         return resp
-    else:
-        # remove keywords specific to TestApp
-        kwargs.pop("expect_errors", None)
 
-        kwargs["json"] = json_body
-        url = "{url}{path}".format(url=app_or_url, path=path)
-        return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
+    # remove keywords specific to TestApp
+    kwargs.pop("expect_errors", None)
+
+    kwargs["json"] = json_body
+    url = "{url}{path}".format(url=app_or_url, path=path)
+    return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
 
 
 def get_session_user(app_or_url, headers=None):
@@ -612,8 +620,9 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
 
 
 # Generic setup and validation methods across unittests
-# noinspection PyPep8Naming
 class TestSetup(object):
+    # pylint: disable=C0103,R0904
+
     @staticmethod
     def get_Version(test_class):
         app_or_url = get_app_or_url(test_class)
@@ -673,7 +682,7 @@ class TestSetup(object):
             resp = test_request(app_or_url, method, path, cookies=test_class.cookies, timeout=timeout)
         check_val_equal(resp.status_code, 200, msg="Cannot test form submission, initial page returned an error.")
         form = None
-        if isinstance(form_match, int) or isinstance(form_match, six.string_types):
+        if isinstance(form_match, (int, six.string_types)):
             form = resp.forms[form_match]
         else:
             # select form if all key/value pairs specified match the current one

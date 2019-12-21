@@ -1,24 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import sqlalchemy.exc as sa_exc
-import unittest
-import warnings
 import os
 import sys
+import unittest
+import warnings
+
+import sqlalchemy.exc as sa_exc
+
+from tests.utils import RunOptionDecorator  # noqa: F401
 
 # ensure that files under 'tests' dir can be found (since not installed)
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from tests.utils import RunOptionDecorator  # noqa: F401
 
 
 def filter_test_files(root, filename):
     return os.path.isfile(os.path.join(root, filename)) and filename.startswith("test") and filename.endswith(".py")
 
 
-test_root_path = os.path.abspath(os.path.dirname(__file__))
-test_root_name = os.path.split(test_root_path)[1]
-test_files = os.listdir(test_root_path)
-test_modules = [os.path.splitext(f)[0] for f in filter(lambda i: filter_test_files(test_root_path, i), test_files)]
+_TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
+_TEST_ROOT_NAME = os.path.split(_TEST_ROOT_PATH)[1]
+_TEST_FILES = os.listdir(_TEST_ROOT_PATH)
+_TEST_MODULES = [os.path.splitext(f)[0] for f in filter(lambda i: filter_test_files(_TEST_ROOT_PATH, i), _TEST_FILES)]
 
 
 # run test options, correspond to known pytest markers
@@ -40,26 +42,25 @@ MAGPIE_TEST_FUNCTIONAL = RunOptionDecorator("MAGPIE_TEST_FUNCTIONAL")   # operat
 
 def test_suite():
     suite = unittest.TestSuite()
-    for t in test_modules:
+    for test_mod in _TEST_MODULES:
         try:
             # If the module defines a suite() function, call it to get the suite.
-            mod = __import__(t, globals(), locals(), ["suite"])
+            mod = __import__(test_mod, globals(), locals(), ["suite"])
             suite_fn = getattr(mod, "suite")
             suite.addTest(suite_fn())
         except (ImportError, AttributeError):
             try:
                 # else, just load all the test cases from the module.
-                suite.addTest(unittest.defaultTestLoader.loadTestsFromName(t))
+                suite.addTest(unittest.defaultTestLoader.loadTestsFromName(test_mod))
             except AttributeError:
                 # if still not found, try discovery from root directory
-                suite.addTest(unittest.defaultTestLoader.discover(test_root_path))
+                suite.addTest(unittest.defaultTestLoader.discover(_TEST_ROOT_PATH))
     return suite
 
 
 def run_suite():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=sa_exc.SAWarning)
-        # noinspection PyUnresolvedReferences
         unittest.TextTestRunner().run(test_suite())
 
 

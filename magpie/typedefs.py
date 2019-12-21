@@ -4,6 +4,7 @@ Magpie additional typing definitions.
 """
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import (                                                                        # noqa: F401,W0212
         Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union    # noqa: F401,W0212
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
         Str = Union[_AnyStr, unicode]   # noqa: E0602,F405,F821
     else:
         Str = _AnyStr
-    AnyStr = Str
+    AnyStr = Str    # pylint: disable=C0103
 
     Number = Union[int, float]
     SettingValue = Union[Str, Number, bool, None]

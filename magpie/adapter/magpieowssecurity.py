@@ -1,11 +1,10 @@
-from pyramid.httpexceptions import HTTPOk, HTTPForbidden, HTTPNotFound
+import requests
 from pyramid.authentication import IAuthenticationPolicy
 from pyramid.authorization import IAuthorizationPolicy
+from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
-
-from twitcher.owssecurity import OWSSecurityInterface
-from twitcher.owsexceptions import OWSAccessForbidden
-from twitcher.utils import parse_service_name
+from requests.cookies import RequestsCookieJar
+from six.moves.urllib.parse import urlparse
 
 from magpie.api.exception import evaluate_call, verify_param
 from magpie.api.schemas import ProviderSigninAPI
@@ -13,10 +12,12 @@ from magpie.constants import get_constant
 from magpie.models import Service
 from magpie.permissions import Permission
 from magpie.services import service_factory
-from magpie.utils import get_magpie_url, get_settings, get_logger, CONTENT_TYPE_JSON
-from requests.cookies import RequestsCookieJar
-from six.moves.urllib.parse import urlparse
-import requests
+from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url, get_settings
+# twitcher available only when this module is imported from it
+from twitcher.owsexceptions import OWSAccessForbidden   # noqa
+from twitcher.owssecurity import OWSSecurityInterface   # noqa
+from twitcher.utils import parse_service_name           # noqa
+
 LOGGER = get_logger("TWITCHER")
 
 
@@ -83,7 +84,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                                          .format(session_resp.reason))
 
             # use specific domain to differentiate between `.{hostname}` and `{hostname}` variations if applicable
-            request_cookies = session_resp.request._cookies  # noqa: W0212
+            request_cookies = session_resp.request._cookies  # noqa  # pylint: disable=W0212
             magpie_cookies = list(filter(lambda cookie: cookie.name == token_name, request_cookies))
             magpie_domain = urlparse(self.magpie_url).hostname if len(magpie_cookies) > 1 else None
             session_cookies = RequestsCookieJar.get(request_cookies, token_name, domain=magpie_domain)

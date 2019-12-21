@@ -1,10 +1,13 @@
-from magpie.utils import CONTENT_TYPE_JSON
-from collections import OrderedDict, defaultdict
-from six import with_metaclass
-from typing import TYPE_CHECKING
 import abc
+from collections import OrderedDict, defaultdict
+from typing import TYPE_CHECKING
+
 import requests
 import threddsclient
+from six import with_metaclass
+
+from magpie.utils import CONTENT_TYPE_JSON
+
 if TYPE_CHECKING:
     from magpie.typedefs import Dict, JSON, Str, Type  # noqa: F401
 
@@ -133,15 +136,15 @@ class SyncServiceThredds(SyncServiceInterface):
             name = self._resource_id(cat)
             if depth == self.max_depth:
                 name = self.service_name
-            resource_type = 'directory'
+            resource_type = "directory"
             if cat.datasets and cat.datasets[0].content_type != "application/directory":
-                resource_type = 'file'
+                resource_type = "file"
 
-            tree_item = {name: {'children': {}, 'resource_type': resource_type}}
+            tree_item = {name: {"children": {}, "resource_type": resource_type}}
 
             if depth > 0:
                 for reference in cat.flat_references():
-                    tree_item[name]['children'].update(thredds_get_resources(reference.url, depth - 1))
+                    tree_item[name]["children"].update(thredds_get_resources(reference.url, depth - 1))
 
             return tree_item
 

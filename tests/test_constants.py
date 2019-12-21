@@ -1,7 +1,8 @@
+import mock
+import pytest
+
 from magpie import constants as c
 from tests import runner
-import pytest
-import mock
 
 
 @runner.MAGPIE_TEST_UTILS
@@ -65,7 +66,7 @@ def test_constant_prioritize_setting_before_env_when_specified():
     settings = {"magpie.some_existing_var": "FROM_SETTING"}
     override = {"MAGPIE_SOME_EXISTING_VAR": "FROM_ENV"}
     with mock.patch.dict("os.environ", override):
-        v = c.get_constant("MAGPIE_SOME_EXISTING_VAR", settings)
-        assert v == settings["magpie.some_existing_var"]
-        v = c.get_constant("MAGPIE_SOME_EXISTING_VAR")
-        assert v == override["MAGPIE_SOME_EXISTING_VAR"]
+        var = c.get_constant("MAGPIE_SOME_EXISTING_VAR", settings)
+        assert var == settings["magpie.some_existing_var"]
+        var = c.get_constant("MAGPIE_SOME_EXISTING_VAR")
+        assert var == override["MAGPIE_SOME_EXISTING_VAR"]

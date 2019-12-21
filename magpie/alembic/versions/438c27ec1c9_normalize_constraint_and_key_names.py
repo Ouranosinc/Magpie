@@ -6,6 +6,7 @@ Revises: 439766f6104d
 Create Date: 2015-06-13 21:16:32.358778
 """
 from __future__ import unicode_literals
+
 from alembic import op
 from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect

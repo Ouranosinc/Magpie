@@ -5,21 +5,20 @@
 Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 """
 
-from magpie.constants import get_constant
-from magpie.db import set_sqlalchemy_log_level, get_db_session_from_config_ini, run_database_migration_when_ready
 from pyramid.settings import asbool
-from magpie.helpers.register_default_users import register_default_users
-from magpie.register import (
-    magpie_register_services_from_config,
-    magpie_register_permissions_from_config,
-)
-from magpie.security import get_auth_config
-from magpie.utils import patch_magpie_url, print_log, get_logger
 from pyramid_beaker import set_cache_regions_from_settings
+
+from magpie.constants import get_constant
+from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
+from magpie.helpers.register_default_users import register_default_users
+from magpie.register import magpie_register_permissions_from_config, magpie_register_services_from_config
+from magpie.security import get_auth_config
+from magpie.utils import get_logger, patch_magpie_url, print_log
+
 LOGGER = get_logger(__name__)
 
 
-def main(global_config=None, **settings):  # pylint: disable=W0613 # noqa: F811
+def main(global_config=None, **settings):  # noqa: F811
     """
     This function returns a Pyramid WSGI application.
     """

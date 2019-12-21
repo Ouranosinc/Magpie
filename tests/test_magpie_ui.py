@@ -8,15 +8,15 @@ test_magpie_ui
 Tests for `magpie.ui` module.
 """
 
+import unittest
+
+# NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
+import tests.interfaces as ti
 from magpie.constants import get_constant
 from magpie.models import Route
 from magpie.services import ServiceAPI, ServiceWPS
 from magpie.utils import CONTENT_TYPE_JSON
-from tests import utils, runner
-
-# NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
-import tests.interfaces as ti
-import unittest
+from tests import runner, utils
 
 
 @runner.MAGPIE_TEST_UI

@@ -1,15 +1,13 @@
-from magpie.api import requests as ar, exception as ax, schemas as s
-from magpie.api.management.group import group_utils as gu, group_formats as gf
-from magpie.constants import get_constant
-from ziggurat_foundations.models.services.group import GroupService
+from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPInternalServerError, HTTPOk
 from pyramid.view import view_config
-from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPBadRequest,
-    HTTPForbidden,
-    HTTPConflict,
-    HTTPInternalServerError,
-)
+from ziggurat_foundations.models.services.group import GroupService
+
+from magpie.api import exception as ax
+from magpie.api import requests as ar
+from magpie.api import schemas as s
+from magpie.api.management.group import group_formats as gf
+from magpie.api.management.group import group_utils as gu
+from magpie.constants import get_constant
 
 
 @s.GroupsAPI.get(tags=[s.GroupsTag], response_schemas=s.Groups_GET_responses)
