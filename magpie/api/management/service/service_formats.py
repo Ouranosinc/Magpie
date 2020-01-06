@@ -75,7 +75,7 @@ def format_service_resources(service,                       # type: Service
     def fmt_svc_res(svc, db, svc_perms, res_perms, show_all):
         tree = get_resource_children(svc, db)
         if not show_all:
-            tree, resource_id_list_remain = crop_tree_with_permission(tree, list(res_perms.keys()))
+            tree, _ = crop_tree_with_permission(tree, list(res_perms.keys()))
 
         svc_perms = SERVICE_TYPE_DICT[svc.type].permissions if svc_perms is None else svc_perms
         svc_res = format_service(svc, svc_perms, show_private_url=show_private_url)

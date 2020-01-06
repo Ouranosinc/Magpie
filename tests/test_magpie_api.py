@@ -22,6 +22,7 @@ from tests import runner, utils
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_LOCAL
 class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
     """
     Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_GROUP`` & ``MAGPIE_ANONYMOUS_USER``).
 
@@ -43,6 +44,7 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_LOCAL
 class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
     """
     Test any operation that require at least ``MAGPIE_USERS_GROUP`` AuthN/AuthZ.
 
@@ -59,6 +61,7 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_LOCAL
 class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
     """
     Test any operation that require at least ``MAGPIE_ADMIN_GROUP`` AuthN/AuthZ.
 
@@ -88,6 +91,7 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_REMOTE
 class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
     """
     Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_GROUP`` & ``MAGPIE_ANONYMOUS_USER``).
 
@@ -109,6 +113,7 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_REMOTE
 class TestCase_MagpieAPI_UsersAuth_Remote(ti.Interface_MagpieAPI_UsersAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
     """
     Test any operation that require at least ``MAGPIE_USERS_GROUP`` AuthN/AuthZ.
 
@@ -119,12 +124,13 @@ class TestCase_MagpieAPI_UsersAuth_Remote(ti.Interface_MagpieAPI_UsersAuth, unit
 
     @classmethod
     def setUpClass(cls):
-        cls.url = get_constant('MAGPIE_TEST_REMOTE_SERVER_URL')
+        cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
 
 
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_REMOTE
 class TestCase_MagpieAPI_AdminAuth_Remote(ti.Interface_MagpieAPI_AdminAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
     """
     Test any operation that require at least ``MAGPIE_ADMIN_GROUP`` AuthN/AuthZ.
 
@@ -150,7 +156,7 @@ class TestCase_MagpieAPI_AdminAuth_Remote(ti.Interface_MagpieAPI_AdminAuth, unit
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_LOCAL
 def test_magpie_homepage():
-    from magpie.constants import get_constant as real_get_constant
+    from magpie.constants import get_constant as real_get_constant  # pylint: disable=W0404,reimported
 
     def mock_get_constant(*args, **kwargs):
         if args[0] == "MAGPIE_UI_ENABLED":

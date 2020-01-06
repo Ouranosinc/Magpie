@@ -54,8 +54,8 @@ def request_api(request,            # type: Request
         cookies = list(cookies.items())
     if cookies and isinstance(headers, dict):
         headers = list(cookies.items())
-        for c, v in cookies:
-            headers.append(("Set-Cookie", "{}={}".format(c, v)))
+        for cookie_name, cookie_value in cookies:
+            headers.append(("Set-Cookie", "{}={}".format(cookie_name, cookie_value)))
     if not cookies:
         cookies = request.cookies
     # cookies must be added to kw only if populated, iterable error otherwise

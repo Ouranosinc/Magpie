@@ -99,7 +99,7 @@ class WPSPost(OWSParser):
     def _get_param_value(self, param):
         if param in self.document.attrib:
             return self.document.attrib[param].lower()
-        elif param == "request":
+        if param == "request":
             return self.document.tag.lower()
         return None
 

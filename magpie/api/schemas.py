@@ -25,8 +25,8 @@ from magpie.constants import get_constant
 from magpie.permissions import Permission
 from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, get_magpie_url
 
-# ignore naming style
-# pylint: disable=C0103
+# ignore naming style of tags
+# pylint: disable=C0103,invalid-name
 
 TitleAPI = "Magpie REST API"
 InfoAPI = {
@@ -55,14 +55,14 @@ def get_security(service, method):
     definitions = service.definitions
     args = {}
     for definition in definitions:
-        met, view, args = definition
+        met, _, args = definition
         if met == method:
             break
     # automatically retrieve permission if specified within the view definition
     permission = args.get("permission")
     if permission == NO_PERMISSION_REQUIRED:
         return SecurityEveryoneAPI
-    elif permission == get_constant("MAGPIE_ADMIN_PERMISSION"):
+    if permission == get_constant("MAGPIE_ADMIN_PERMISSION"):
         return SecurityAdministratorAPI
     # return default admin permission otherwise unless specified form cornice decorator
     return SecurityAdministratorAPI if "security" not in args else args["security"]

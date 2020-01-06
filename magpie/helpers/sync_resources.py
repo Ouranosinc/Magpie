@@ -107,7 +107,7 @@ def _sort_resources(resources):
 
     :return: None
     """
-    for resource_name, values in resources.items():
+    for values in resources.values():
         values["children"] = OrderedDict(sorted(values["children"].items()))
         return _sort_resources(values["children"])
 
@@ -229,7 +229,7 @@ def _get_resource_children(resource, db_session):
         root_elem = {"node": None, "children": OrderedDict()}
         if len(items) == 0:
             return root_elem
-        for i, node in enumerate(items):
+        for node in items:
             new_elem = {"node": node.RemoteResource, "children": OrderedDict()}
             path = list(map(int, node.path.split("/")))
             parent_node = root_elem
@@ -245,7 +245,7 @@ def _get_resource_children(resource, db_session):
 
 def _format_resource_tree(children):
     fmt_res_tree = {}
-    for child_id, child_dict in children.items():
+    for child_dict in children.values():
         resource = child_dict[u"node"]
         new_children = child_dict[u"children"]
         resource_display_name = resource.resource_display_name or resource.resource_name
@@ -296,8 +296,7 @@ def fetch_all_services_by_type(service_type, session):
             fetch_single_service(service, session)
         except Exception:  # noqa # nosec: B110
             if CRON_SERVICE:
-                LOGGER.exception("There was an error when fetching data from the url: %s" % service.url)
-                pass
+                LOGGER.exception("There was an error when fetching data from the url: %s", service.url)
             else:
                 raise
 
@@ -314,7 +313,7 @@ def fetch_single_service(service, session):
     LOGGER.info("Requesting remote resources")
     remote_resources = _get_remote_resources(service)
     service_id = service.resource_id
-    LOGGER.info("Deleting RemoteResource records for service: %s" % service.resource_name)
+    LOGGER.info("Deleting RemoteResource records for service: %s", service.resource_name)
     _delete_records(service_id, session)
     _ensure_sync_info_exists(service.resource_id, session)
     LOGGER.info("Writing RemoteResource records to database")
@@ -330,7 +329,7 @@ def fetch():
         session = db.get_db_session_from_settings(echo=False)
 
         for service_type in SYNC_SERVICES_TYPES:
-            LOGGER.info("Fetching data for service type: %s" % service_type)
+            LOGGER.info("Fetching data for service type: %s", service_type)
             fetch_all_services_by_type(service_type, session)
 
         transaction.commit()
@@ -362,7 +361,7 @@ def main():
     """
     Main entry point for cron service.
     """
-    global CRON_SERVICE
+    global CRON_SERVICE  # pylint: disable=W0603,global-statement
     CRON_SERVICE = True
 
     setup_cron_logger()

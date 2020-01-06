@@ -27,10 +27,11 @@ if TYPE_CHECKING:
     import six
 
     if six.PY2:
-        Str = Union[_AnyStr, unicode]   # noqa: E0602,F405,F821
+        # pylint: disable=E0602,undefined-variable  # unicode not recognized by python 3
+        Str = Union[_AnyStr, unicode]  # noqa: E0602,F405,F821
     else:
         Str = _AnyStr
-    AnyStr = Str    # pylint: disable=C0103
+    AnyStr = Str    # pylint: disable=C0103,invalid-name
 
     Number = Union[int, float]
     SettingValue = Union[Str, Number, bool, None]

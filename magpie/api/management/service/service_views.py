@@ -119,7 +119,7 @@ def update_service_view(request):
         _svc.resource_name = new_name
         _svc.url = new_url
         has_getcap = Permission.GET_CAPABILITIES in SERVICE_TYPE_DICT[_svc.type].permissions
-        if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED and has_getcap:
+        if svc_push and _svc.type in SERVICES_PHOENIX_ALLOWED and has_getcap:
             # (re)apply getcapabilities to updated service to ensure updated push
             su.add_service_getcapabilities_perms(_svc, db_session)
             sync_services_phoenix(db_session.query(models.Service))  # push all services
@@ -143,7 +143,7 @@ def get_service_view(request):
     service = ar.get_service_matchdict_checked(request)
     service_info = sf.format_service(service, show_private_url=True, show_resources_allowed=True)
     return ax.valid_http(http_success=HTTPOk, detail=s.Service_GET_OkResponseSchema.description,
-                         content={u'service': service_info})
+                         content={u"service": service_info})
 
 
 @s.ServiceAPI.delete(schema=s.Service_DELETE_RequestSchema(), tags=[s.ServicesTag],
@@ -173,7 +173,7 @@ def unregister_service_view(request):
 
 
 @s.ServicePermissionsAPI.get(tags=[s.ServicesTag], response_schemas=s.ServicePermissions_GET_responses)
-@view_config(route_name=s.ServicePermissionsAPI.name, request_method='GET')
+@view_config(route_name=s.ServicePermissionsAPI.name, request_method="GET")
 def get_service_permissions_view(request):
     """
     List all applicable permissions for a service.
@@ -184,7 +184,7 @@ def get_service_permissions_view(request):
                                  fallback=request.db.rollback(), http_error=HTTPBadRequest, content=svc_content,
                                  msg_on_fail=s.ServicePermissions_GET_BadRequestResponseSchema.description)
     return ax.valid_http(http_success=HTTPOk, detail=s.ServicePermissions_GET_OkResponseSchema.description,
-                         content={u'permission_names': format_permissions(svc_perms)})
+                         content={u"permission_names": format_permissions(svc_perms)})
 
 
 @s.ServiceResourceAPI.delete(schema=s.ServiceResource_DELETE_RequestSchema(), tags=[s.ServicesTag],

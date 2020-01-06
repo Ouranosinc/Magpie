@@ -319,17 +319,19 @@ mkdir-reports:
 check: check-all	## alias for 'check-all' target
 
 .PHONY: check-all
-check-all: check-pep8 check-lint check-security check-docs check-links		## run every code style checks
+check-all: clean-test check-pep8 check-lint check-security check-docs check-links	## run every code style checks
 
 .PHONY: check-pep8
 check-pep8: mkdir-reports install-dev		## run PEP8 code style checks
 	@echo "Running pep8 code style checks..."
+	@-rm -fr "$(REPORTS_DIR)/check-pep8.txt"
 	@bash -c '$(CONDA_CMD) \
 		flake8 --config="$(APP_ROOT)/setup.cfg" --output-file="$(REPORTS_DIR)/check-pep8.txt" --tee'
 
 .PHONY: check-lint
 check-lint: mkdir-reports install-dev		## run linting code style checks
 	@echo "Running linting code style checks..."
+	@-rm -fr "$(REPORTS_DIR)/check-lint.txt"
 	@bash -c '$(CONDA_CMD) \
 		pylint \
 			--load-plugins pylint_quotes \
@@ -341,6 +343,7 @@ check-lint: mkdir-reports install-dev		## run linting code style checks
 .PHONY: check-security
 check-security: mkdir-reports install-dev	## run security code checks
 	@echo "Running security code checks..."
+	@-rm -fr "$(REPORTS_DIR)/check-security.txt"
 	@bash -c '$(CONDA_CMD) \
 		bandit -v --ini "$(APP_ROOT)/setup.cfg" -r \
 		1> >(tee "$(REPORTS_DIR)/check-security.txt")'
@@ -351,6 +354,7 @@ check-docs: check-doc8 check-docf	## run every code documentation checks
 .PHONY: check-doc8
 check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
 	@echo "Running PEP8 doc style checks..."
+	@-rm -fr "$(REPORTS_DIR)/check-doc8.txt"
 	@bash -c '$(CONDA_CMD) \
 		doc8 --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/docs" \
 		1> >(tee "$(REPORTS_DIR)/check-doc8.txt")'
@@ -359,6 +363,7 @@ check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
 .PHONY: check-docf
 check-docf: mkdir-reports install-dev	## run PEP8 code documentation format checks
 	@echo "Checking PEP8 doc formatting problems..."
+	@-rm -fr "$(REPORTS_DIR)/check-docf.txt"
 	@bash -c '$(CONDA_CMD) \
 		docformatter \
 			--pre-summary-newline \
@@ -376,6 +381,7 @@ check-links:		## check all external links in documentation for integrity
 .PHONY: check-imports
 check-imports:		## run imports code checks
 	@echo "Running import checks..."
+	@-rm -fr "$(REPORTS_DIR)/check-imports.txt"
 	@bash -c '$(CONDA_CMD) \
 	 	isort --check-only --diff --recursive $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
@@ -389,6 +395,7 @@ fix-all: fix-imports fix-lint fix-docf	## fix all applicable code check correcti
 .PHONY: fix-imports
 fix-imports: install-dev	## fix import code checks corrections automatically
 	@echo "Fixing flagged import checks..."
+	@-rm -fr "$(REPORTS_DIR)/fixed-imports.txt"
 	@bash -c '$(CONDA_CMD) \
 		isort --recursive $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-imports.txt")'
@@ -396,6 +403,7 @@ fix-imports: install-dev	## fix import code checks corrections automatically
 .PHONY: fix-lint
 fix-lint: install-dev	## fix some PEP8 code style problems automatically
 	@echo "Fixing PEP8 code style problems..."
+	@-rm -fr "$(REPORTS_DIR)/fixed-lint.txt"
 	@bash -c '$(CONDA_CMD) \
 		autopep8 -v -j 0 -i -r $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-lint.txt")'
@@ -404,6 +412,7 @@ fix-lint: install-dev	## fix some PEP8 code style problems automatically
 .PHONY: fix-docf
 fix-docf: install-dev	## fix some PEP8 code documentation style problems automatically
 	@echo "Fixing PEP8 code documentation problems..."
+	@-rm -fr "$(REPORTS_DIR)/fixed-docf.txt"
 	@bash -c '$(CONDA_CMD) \
 		docformatter \
 			--pre-summary-newline \

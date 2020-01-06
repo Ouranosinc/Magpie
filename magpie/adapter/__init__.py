@@ -22,7 +22,10 @@ from twitcher.adapter.base import AdapterInterface      # noqa
 from twitcher.owsproxy import owsproxy_defaultconfig    # noqa
 
 if TYPE_CHECKING:
-    from magpie.models import User  # noqa: F401
+    from magpie.models import User
+    from magpie.typedefs import AnySettingsContainer, JSON
+    from twitcher.store import AccessTokenStoreInterface  # noqa
+    from pyramid.config import Configurator
     from pyramid.request import Request
     from typing import Optional
 LOGGER = get_logger("TWITCHER")
@@ -43,6 +46,7 @@ def debug_cookie_identify(request):
         - :class:`pyramid.authentication.AuthTktCookieHelper`
         - :class:`pyramid.authentication.AuthTktAuthenticationPolicy`
     """
+    # pylint: disable=W0212
     cookie_inst = request._get_authentication_policy().cookie  # noqa: W0212
     cookie = request.cookies.get(cookie_inst.cookie_name)
 
@@ -108,24 +112,33 @@ class MagpieAdapter(six.with_metaclass(SingletonMeta, AdapterInterface)):
         super(MagpieAdapter, self).__init__(container)
 
     def describe_adapter(self):
+        # type: () -> JSON
         return {"name": self.name, "version": __meta__.__version__}
 
-    def servicestore_factory(self, request, headers=None):  # noqa: F811
+    def servicestore_factory(self, request):
+        # type: (Request) -> MagpieServiceStore
         if self._servicestore is None:
             self._servicestore = MagpieServiceStore(request)
         return self._servicestore
 
+    def tokenstore_factory(self, request):
+        # type: (Request) -> AccessTokenStoreInterface
+        raise NotImplementedError
+
     def owssecurity_factory(self, request):
+        # type: (Request) -> MagpieOWSSecurity
         if self._owssecurity is None:
             self._owssecurity = MagpieOWSSecurity(request)
         return self._owssecurity
 
     def owsproxy_config(self, container):
+        # type: (AnySettingsContainer) -> None
         LOGGER.info("Loading MagpieAdapter owsproxy config")
         config = self.configurator_factory(container)
         owsproxy_defaultconfig(config)  # let Twitcher configure the rest normally
 
     def configurator_factory(self, container):  # noqa: N805
+        # type: (AnySettingsContainer) -> Configurator
         settings = get_settings(container)
         set_cache_regions_from_settings(settings)
 

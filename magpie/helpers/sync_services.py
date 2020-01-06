@@ -28,7 +28,7 @@ def is_valid_resource_schema(resources):
         }
 
     """
-    for resource_name, values in resources.items():
+    for values in resources.values():
         if "children" not in values:
             return False
         if not isinstance(values["children"], (OrderedDict, dict)):
@@ -60,7 +60,6 @@ class SyncServiceInterface(with_metaclass(abc.ABCMeta)):
 
         :return: The returned dictionary must be validated by 'is_valid_resource_schema'
         """
-        pass
 
 
 class SyncServiceGeoserver(SyncServiceInterface):

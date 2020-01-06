@@ -152,15 +152,14 @@ def assign_user_group_view(request):
 
     group_name = ar.get_value_multiformat_post_checked(request, "group_name")
     group = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
-                             fallback=lambda: request.db.rollback(),
-                             http_error=HTTPForbidden, msg_on_fail=s.UserGroups_POST_ForbiddenResponseSchema.description)
+                             fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                             msg_on_fail=s.UserGroups_POST_ForbiddenResponseSchema.description)
     ax.verify_param(group, not_none=True, http_error=HTTPNotFound,
                     msg_on_fail=s.UserGroups_POST_GroupNotFoundResponseSchema.description)
     ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, http_error=HTTPConflict,
                     content={u"user_name": user.user_name, u"group_name": group.group_name},
                     msg_on_fail=s.UserGroups_POST_ConflictResponseSchema.description)
-    # noinspection PyArgumentList
-    ax.evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),
+    ax.evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),  # noqa
                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                      msg_on_fail=s.UserGroups_POST_RelationshipForbiddenResponseSchema.description,
                      content={u"user_name": user.user_name, u"group_name": group.group_name})

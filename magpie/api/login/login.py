@@ -207,6 +207,7 @@ def authomatic_login(request):
             cred = Credentials(authomatic_handler.config, token=access_token, token_type=token_type, provider=provider)
             provider.credentials = cred
             result = LoginResult(provider)
+            # pylint: disable=W0212
             result.provider.user = result.provider._update_or_create_user(data, credentials=cred)  # noqa: W0212
 
         # otherwise, use the standard login procedure
@@ -223,7 +224,7 @@ def authomatic_login(request):
                 error = result.error.to_dict() if hasattr(result.error, "to_dict") else result.error
                 LOGGER.debug("Login failure with error. [%r]", error)
                 return login_failure(request, reason=result.error.message)
-            elif result.user:
+            if result.user:
                 # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
                 # update the user to get more info.
                 if not (result.user.name and result.user.id):

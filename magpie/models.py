@@ -29,7 +29,7 @@ from magpie.permissions import Permission
 if TYPE_CHECKING:
     from magpie.typedefs import Str  # noqa: F401
 
-Base = declarative_base()   # pylint: disable=C0103
+Base = declarative_base()   # pylint: disable=C0103,invalid-name
 
 
 def get_session_callable(request):

@@ -233,10 +233,9 @@ def _register_services(where,                           # type: Optional[Str]
     success = True
     svc_url = None
     statuses = dict()
-    register_service_url = None
     if where == SERVICES_MAGPIE:
         svc_url_tag = "service_url"
-        get_magpie_url() + ServicesAPI.path
+        register_service_url = get_magpie_url() + ServicesAPI.path
     elif where == SERVICES_PHOENIX:
         svc_url_tag = "url"
         register_service_url = get_phoenix_url() + "/services/register"
@@ -525,7 +524,7 @@ def _get_all_configs(path_or_dict, section):
             dir_path = os.path.abspath(path_or_dict)
             cfg_names = list(sorted({fn for fn in os.listdir(dir_path) if fn.endswith(".cfg")}))
             return [_load_config(os.path.join(dir_path, fn), section) for fn in cfg_names]
-        elif os.path.isfile(path_or_dict):
+        if os.path.isfile(path_or_dict):
             return [_load_config(path_or_dict, section)]
     elif isinstance(path_or_dict, dict):
         return [_load_config(path_or_dict, section)]
@@ -566,7 +565,7 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
     services_configs = _get_all_configs(service_config_path, "providers")
     services_config_count = len(services_configs)
     LOGGER.log(logging.INFO if services_config_count else logging.WARNING,
-               "Found {} service configurations to process".format(services_config_count))
+               "Found %s service configurations to process", services_config_count)
     for services in services_configs:
         if not services:
             LOGGER.warning("Services configuration are empty.")
@@ -617,7 +616,7 @@ def _log_permission(message, permission_index, trail=", skipping...", detail=Non
     """
     trail = "{}\nDetail: [{!s}]".format(trail, detail) if detail else (trail or "")
     permission = " [{!s}]".format(permission) if permission else ""
-    LOGGER.log(level, "{!s} [permission #{}]{}{}".format(message, permission_index, permission, trail))
+    LOGGER.log(level, "%s [permission #%d]%s%s", message, permission_index, permission, trail)
 
 
 def _use_request(cookies_or_session):
@@ -683,14 +682,14 @@ def _parse_resource_path(permission_config_entry,   # type: ConfigItem
                                     detail="Service [{!s}] of type [{!s}] doesn't allows any sub-resource types. "
                                            .format(svc_name, svc_type))
                     raise RegistrationConfigurationError("Invalid resource not allowed to apply permission.")
-                elif type_count != 1 and not (isinstance(resource_type, six.string_types) and resource_type):
+                if type_count != 1 and not (isinstance(resource_type, six.string_types) and resource_type):
                     _log_permission("Cannot automatically generate resource", entry_index,
                                     detail="Service [{!s}] of type [{!s}] allows more than 1 sub-resource types ({}). "
                                            "Type must be explicitly specified for auto-creation. "
                                            "Available choices are: {}"
                                            .format(svc_name, svc_type, type_count, svc_res_types))
                     raise RegistrationConfigurationError("Missing resource 'type' to apply permission.")
-                elif type_count != 1 and resource_type not in svc_res_types:
+                if type_count != 1 and resource_type not in svc_res_types:
                     _log_permission("Cannot generate resource", entry_index,
                                     detail="Service [{!s}] of type [{!s}] allows more than 1 sub-resource types ({}). "
                                            "Specified type [{!s}] doesn't match any of the allowed resource types. "
@@ -711,12 +710,12 @@ def _parse_resource_path(permission_config_entry,   # type: ConfigItem
             resource = parent
             if not resource:
                 raise RegistrationConfigurationError("Could not extract child resource from resource path.")
-        except Exception as exc:
-            if isinstance(exc, HTTPException):
-                detail = "{} ({}), {}".format(type(exc).__name__, exc.status_code, str(exc))
-            else:
-                detail = repr(exc)
+        except HTTPException as exc:
+            detail = "{} ({}), {!s}".format(type(exc).__name__, exc.code, exc)
             _log_permission("Failed resources parsing.", entry_index, detail=detail)
+            return None, False
+        except Exception as exc:
+            _log_permission("Failed resources parsing.", entry_index, detail=repr(exc))
             return None, False
     return resource, True
 
@@ -870,7 +869,7 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
 
     if _use_request(db_session):
         magpie_url = magpie_url or get_magpie_url()
-        settings = {'magpie.url': magpie_url}
+        settings = {"magpie.url": magpie_url}
         LOGGER.debug("Editing permissions using requests to [%s]...", magpie_url)
         err_msg = "Invalid credentials to register Magpie permissions."
         cookies_or_session = get_admin_cookies(settings, raise_message=err_msg)

@@ -93,19 +93,19 @@ def get_user(request, user_name_or_token=None):
         verify_param(anonymous, not_none=True, http_error=HTTPNotFound,
                      msg_on_fail=s.User_CheckAnonymous_NotFoundResponseSchema.description)
         return anonymous
-    else:
-        authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
-        principals = authn_policy.effective_principals(request)
-        admin_group = GroupService.by_group_name(get_constant("MAGPIE_ADMIN_GROUP"), db_session=request.db)
-        admin_principal = "group:{}".format(admin_group.id)
-        if admin_principal not in principals:
-            raise HTTPForbidden()
-        user = evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
-                             fallback=lambda: request.db.rollback(),
-                             http_error=HTTPForbidden, msg_on_fail=s.User_GET_ForbiddenResponseSchema.description)
-        verify_param(user, not_none=True, http_error=HTTPNotFound,
-                     msg_on_fail=s.User_GET_NotFoundResponseSchema.description)
-        return user
+
+    authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
+    principals = authn_policy.effective_principals(request)
+    admin_group = GroupService.by_group_name(get_constant("MAGPIE_ADMIN_GROUP"), db_session=request.db)
+    admin_principal = "group:{}".format(admin_group.id)
+    if admin_principal not in principals:
+        raise HTTPForbidden()
+    user = evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
+                         fallback=lambda: request.db.rollback(),
+                         http_error=HTTPForbidden, msg_on_fail=s.User_GET_ForbiddenResponseSchema.description)
+    verify_param(user, not_none=True, http_error=HTTPNotFound,
+                 msg_on_fail=s.User_GET_NotFoundResponseSchema.description)
+    return user
 
 
 def get_user_matchdict_checked_or_logged(request, user_name_key="user_name"):
@@ -165,7 +165,7 @@ def get_permission_matchdict_checked(request, service_or_resource, permission_na
 
     :returns: found permission name if valid for the service/resource
     """
-    # pylint: disable=C0415     # avoid circular import
+    # pylint: disable=C0415  # avoid circular import
     from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
     perm_name = get_value_matchdict_checked(request, permission_name_key)
     return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
@@ -183,7 +183,7 @@ def get_query_param(request, case_insensitive_key, default=None):
     """
     Retrieves a query string value by name (case insensitive), or returns the default if not present.
     """
-    for p in request.params:
-        if p.lower() == case_insensitive_key:
-            return request.params.get(p)
+    for param in request.params:
+        if param.lower() == case_insensitive_key:
+            return request.params.get(param)
     return default

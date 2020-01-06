@@ -56,11 +56,11 @@ def make_ows_parser(method="GET", content_type=None, params=None, body=""):
 @runner.MAGPIE_TEST_LOCAL
 class TestServices(unittest.TestCase):
     def test_ows_parser_factory(self):  # noqa: R0201
-        parser = make_ows_parser(method="GET", content_type=None, params=None, body='')
+        parser = make_ows_parser(method="GET", content_type=None, params=None, body="")
         assert isinstance(parser, owsrequest.WPSGet)
 
         params = {"test": "something"}
-        parser = make_ows_parser(method="GET", content_type=None, params=params, body='')
+        parser = make_ows_parser(method="GET", content_type=None, params=params, body="")
         assert isinstance(parser, owsrequest.WPSGet)
         assert parser.params["test"] == "something"
 
@@ -81,19 +81,19 @@ class TestServices(unittest.TestCase):
         assert parser.params["test"] == "something"
 
         params = {"test": "something"}
-        parser = make_ows_parser(method="POST", content_type=CONTENT_TYPE_FORM, params=params, body='')
+        parser = make_ows_parser(method="POST", content_type=CONTENT_TYPE_FORM, params=params, body="")
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.MultiFormatParser)
         assert parser.params["test"] == "something"
 
         params = {"test": "something"}
-        parser = make_ows_parser(method="DELETE", content_type=None, params=params, body='')
+        parser = make_ows_parser(method="DELETE", content_type=None, params=params, body="")
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.WPSGet)
         assert parser.params["test"] == "something"
 
         params = {"test": "something"}
-        parser = make_ows_parser(method="PUT", content_type=None, params=params, body='')
+        parser = make_ows_parser(method="PUT", content_type=None, params=params, body="")
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.WPSGet)
         assert parser.params["test"] == "something"

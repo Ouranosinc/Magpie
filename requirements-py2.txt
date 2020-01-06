@@ -1,2 +1,0 @@
-# futures is required for gunicorn threads in python 2.7
-futures

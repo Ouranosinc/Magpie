@@ -22,7 +22,7 @@ def get_resources_view(request):
     List all registered resources.
     """
     res_json = {}
-    for svc_type in SERVICE_TYPE_DICT.keys():
+    for svc_type in SERVICE_TYPE_DICT:
         services = get_services_by_type(svc_type, db_session=request.db)
         res_json[svc_type] = {}
         for svc in services:

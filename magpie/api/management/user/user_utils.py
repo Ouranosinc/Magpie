@@ -62,7 +62,8 @@ def create_user(user_name, password, email, group_name, db_session):
 
     # Check if user already exists
     user_checked = ax.evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
-                                    http_error=HTTPForbidden, msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
+                                    http_error=HTTPForbidden,
+                                    msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
     ax.verify_param(user_checked, is_none=True, http_error=HTTPConflict,
                     msg_on_fail=s.User_Check_ConflictResponseSchema.description)
 
@@ -75,7 +76,8 @@ def create_user(user_name, password, email, group_name, db_session):
                      http_error=HTTPForbidden, msg_on_fail=s.Users_POST_ForbiddenResponseSchema.description)
     # Fetch user to update fields
     new_user = ax.evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db_session),
-                                http_error=HTTPForbidden, msg_on_fail=s.UserNew_POST_ForbiddenResponseSchema.description)
+                                http_error=HTTPForbidden,
+                                msg_on_fail=s.UserNew_POST_ForbiddenResponseSchema.description)
 
     def _add_to_group(usr, grp):
         # type: (models.User, models.Group) -> None
@@ -313,7 +315,8 @@ def get_user_service_resources_permissions_dict(user, service, request, inherit_
 def check_user_info(user_name, email, password, group_name):
     # type: (Str, Str, Str, Str) -> None
     ax.verify_param(user_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    param_name=u"user_name", msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
+                    param_name=u"user_name",
+                    msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
     ax.verify_param(len(user_name), is_in=True, http_error=HTTPBadRequest,
                     param_name=u"user_name", param_compare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
                     msg_on_fail=s.Users_CheckInfo_Size_BadRequestResponseSchema.description)
@@ -323,9 +326,11 @@ def check_user_info(user_name, email, password, group_name):
     ax.verify_param(email, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                     param_name=u"email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
     ax.verify_param(password, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    param_name=u"password", msg_on_fail=s.Users_CheckInfo_Password_BadRequestResponseSchema.description)
+                    param_name=u"password",
+                    msg_on_fail=s.Users_CheckInfo_Password_BadRequestResponseSchema.description)
     ax.verify_param(group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    param_name=u"group_name", msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
+                    param_name=u"group_name",
+                    msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
 
 
 def get_user_groups_checked(request, user):

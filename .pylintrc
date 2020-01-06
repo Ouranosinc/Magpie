@@ -61,18 +61,27 @@ confidence=
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
 disable=C0111,missing-docstring,
+        C0302,too-many-lines,
         C0330,bad-continuation,
         C0412,ungrouped-imports,
+        C0415,import-outside-toplevel,
         C1801,len-as-condition,
         E0401,import-error,
         R0201,no-self-use
         R0205,useless-object-inheritance,
+        R0904,too-many-public-methods,
+        R0912,too-many-branches,
+        R0914,too-many-locals,
+        R0915,too-many-statements,
+        R1710,inconsistent-return-statements,
         R1721,unnecessary-comprehension,
         W0108,unnecessary-lambda,
         W0232,no-init,
         W0235,useless-super-delegation,
         W0613,unused-argument,
+        W0640,cell-var-from-loop,
         W0703,broad-except,
+        W0706,try-except-raise,
         W1508,invalid-envvar-default
 
 # note: (C0412, ungrouped-imports) is managed via isort tool, ignore false positives
@@ -160,7 +169,7 @@ ignore-on-opaque-inference=yes
 # List of class names for which member attributes should not be checked (useful
 # for classes with dynamically set attributes). This supports the use of
 # qualified names.
-ignored-classes=optparse.Values,thread._local,_thread._local,str,cornice.Service
+ignored-classes=optparse.Values,thread._local,_thread._local,str,cornice.Service,cornice.service.Service
 
 # List of module names for which member attributes should not be checked
 # (useful for modules/projects where namespaces are manipulated during runtime

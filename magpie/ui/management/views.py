@@ -11,7 +11,7 @@ from pyramid.settings import asbool
 from pyramid.view import view_config
 
 from magpie import register
-from magpie.api import schemas as schemas
+from magpie.api import schemas
 from magpie.constants import get_constant
 from magpie.helpers import sync_resources
 from magpie.helpers.sync_resources import OUT_OF_SYNC
@@ -153,7 +153,8 @@ class ManagementViews(object):
             return
         if not len(resource_node) > 0:
             return
-        [ManagementViews.flatten_tree_resource(r, resource_dict) for r in resource_node.values()]
+        for res in resource_node.values():
+            ManagementViews.flatten_tree_resource(res, resource_dict)
         if "resource_id" in resource_node.keys() and "resource_type" in resource_node.keys():
             resource_dict[resource_node["resource_id"]] = resource_node["resource_type"]
 
@@ -273,9 +274,10 @@ class ManagementViews(object):
                 resp = request_api(self.request, user_path, "DELETE")
                 check_response(resp)
                 return HTTPFound(self.request.route_url("view_users"))
-            elif u"goto_service" in self.request.POST:
+            if u"goto_service" in self.request.POST:
                 return self.goto_service(res_id)
-            elif u"clean_resource" in self.request.POST:
+
+            if u"clean_resource" in self.request.POST:
                 # "clean_resource" must be above "edit_permissions" because they"re in the same form.
                 self.delete_resource(res_id)
             elif u"edit_permissions" in self.request.POST:
@@ -544,7 +546,7 @@ class ManagementViews(object):
         return resources_permission_names, resources
 
     def update_user_or_group_resources_permissions_dict(self, res_perms, res_id, removed_perms, new_perms):
-        for key, res in res_perms.items():
+        for res in res_perms.values():
             if int(res["id"]) == int(res_id):
                 res["permission_names"] = sorted(res["permission_names"] + new_perms)
                 res["permission_names"] = [perm for perm in res["permission_names"] if perm not in removed_perms]
@@ -588,7 +590,8 @@ class ManagementViews(object):
                 resp = request_api(self.request, group_path, "DELETE")
                 check_response(resp)
                 return HTTPFound(self.request.route_url("view_groups"))
-            elif u"edit_group_name" in self.request.POST:
+
+            if u"edit_group_name" in self.request.POST:
                 group_info[u"edit_mode"] = u"edit_group_name"
             elif u"save_group_name" in self.request.POST:
                 group_info[u"group_name"] = self.request.POST.get(u"new_group_name")
@@ -596,9 +599,11 @@ class ManagementViews(object):
                 check_response(resp)
                 # return immediately with updated URL to group with new name
                 return HTTPFound(self.request.route_url("edit_group", **group_info))
-            elif u"goto_service" in self.request.POST:
+
+            if u"goto_service" in self.request.POST:
                 return self.goto_service(res_id)
-            elif u"clean_resource" in self.request.POST:
+
+            if u"clean_resource" in self.request.POST:
                 # "clean_resource" must be above "edit_permissions" because they"re in the same form.
                 self.delete_resource(res_id)
             elif u"edit_permissions" in self.request.POST:
@@ -614,11 +619,10 @@ class ManagementViews(object):
             elif u"force_sync" in self.request.POST:
                 errors = []
                 for service_info in services.values():
-                    # noinspection PyBroadException
                     try:
                         sync_resources.fetch_single_service(service_info["resource_id"], session)
                         transaction.commit()
-                    except Exception:
+                    except Exception:  # noqa: W0703 # nosec: B110
                         errors.append(service_info["service_name"])
                 if errors:
                     error_message += self.make_sync_error_message(errors)
@@ -728,7 +732,7 @@ class ManagementViews(object):
 
     def add_remote_resource(self, service_type, services_names, user_or_group, remote_id, is_user=False):
         try:
-            res_perm_names, res_perms = self.get_user_or_group_resources_permissions_dict(
+            _, res_perms = self.get_user_or_group_resources_permissions_dict(
                 user_or_group, services=services_names, service_type=service_type, is_user=is_user
             )
         except Exception as exc:
@@ -809,7 +813,7 @@ class ManagementViews(object):
     @view_config(route_name="add_service", renderer="templates/add_service.mako")
     def add_service(self):
         cur_svc_type = self.request.matchdict["cur_svc_type"]
-        svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
+        svc_types, cur_svc_type, _ = self.get_services(cur_svc_type)
 
         if "register" in self.request.POST:
             service_name = self.request.POST.get("service_name")
@@ -856,10 +860,10 @@ class ManagementViews(object):
 
         if "save_name" in self.request.POST:
             new_svc_name = self.request.POST.get("new_svc_name")
-            if service_name != new_svc_name and new_svc_name != "":
+            if service_name not in (new_svc_name, ""):
                 self.update_service_name(service_name, new_svc_name, service_push)
                 service_info["service_name"] = new_svc_name
-                service_info["public_url"] = register.get_twitcher_protected_service_url(new_svc_name),
+                service_info["public_url"] = register.get_twitcher_protected_service_url(new_svc_name)
             service_info["edit_mode"] = u"no_edit"
             # return directly to "regenerate" the URL with the modified name
             return HTTPFound(self.request.route_url("edit_service", **service_info))
@@ -869,7 +873,7 @@ class ManagementViews(object):
 
         if "save_url" in self.request.POST:
             new_svc_url = self.request.POST.get("new_svc_url")
-            if service_url != new_svc_url and new_svc_url != "":
+            if service_url not in (new_svc_url, ""):
                 self.update_service_url(service_name, new_svc_url, service_push)
                 service_info["service_url"] = new_svc_url
             service_info["edit_mode"] = u"no_edit"

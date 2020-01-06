@@ -32,7 +32,7 @@ if TYPE_CHECKING:
         AnyMagpieTestType, AnyResponseType, TestAppOrUrlType
     )
 
-OptionalStringType = six.string_types + tuple([type(None)])
+OptionalStringType = six.string_types + tuple([type(None)])  # pylint: disable=C0103,invalid-name   # noqa: 802
 
 
 class RunOption(object):
@@ -79,7 +79,7 @@ class RunOption(object):
         return self._marker
 
 
-def RunDecorator(run_option):   # noqa: N802
+def make_run_option_decorator(run_option):
     # type: (RunOption) -> Callable
     """
     Decorates the test/class with ``pytest.mark`` and ``unittest.skipUnless`` using the provided test condition
@@ -87,7 +87,7 @@ def RunDecorator(run_option):   # noqa: N802
 
     Allows to decorate a function or class such that::
 
-        option = RunDecorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
+        option = make_run_option_decorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
 
         @option
         def test_func():
@@ -116,14 +116,14 @@ class RunOptionDecorator(object):
     """
     Simplifies the call to::
 
-        RunDecorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
+        make_run_option_decorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
 
     by::
 
         RunOptionDecorator("MAGPIE_TEST_CUSTOM_MARKER")
     """
     def __new__(cls, name):
-        return RunDecorator(RunOption(name))
+        return make_run_option_decorator(RunOption(name))
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -147,7 +147,7 @@ def get_test_magpie_app(settings=None):
 
 def get_app_or_url(test_item):
     # type: (AnyMagpieTestType) -> TestAppOrUrlType
-    if isinstance(test_item, TestApp) or isinstance(test_item, six.string_types):
+    if isinstance(test_item, (TestApp, six.string_types)):
         return test_item
     app_or_url = getattr(test_item, "app", None) or getattr(test_item, "url", None)
     if not app_or_url:
@@ -242,7 +242,7 @@ def test_request(test_item, method, path, timeout=5, allow_redirects=True, **kwa
             kwargs.update({"params": json.dumps(json_body, cls=json.JSONEncoder)})
         if status and status >= 300:
             kwargs.update({"expect_errors": True})
-        resp = app_or_url._gen_request(method, path, **kwargs)  # noqa: W0212
+        resp = app_or_url._gen_request(method, path, **kwargs)  # pylint: disable=W0212  # noqa: W0212
         # automatically follow the redirect if any and evaluate its response
         max_redirect = kwargs.get("max_redirects", 5)
         while 300 <= resp.status_code < 400 and max_redirect > 0:
@@ -511,7 +511,7 @@ class _NullType(six.with_metaclass(SingletonMeta)):
     __len__ = __nonzero__
 
 
-null = _NullType()  # noqa: C0103
+null = _NullType()  # pylint: disable=C0103,invalid-name
 
 
 def is_null(item):
@@ -621,7 +621,7 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
 
 # Generic setup and validation methods across unittests
 class TestSetup(object):
-    # pylint: disable=C0103,R0904
+    # pylint: disable=C0103,invalid-name
 
     @staticmethod
     def get_Version(test_class):
