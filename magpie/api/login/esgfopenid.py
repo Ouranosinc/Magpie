@@ -2,7 +2,7 @@
 ESGF OpenID Providers
 ----------------------------------
 
-Providers which implement the |openid|_ protocol based on the appropriate `python-openid`_/`python3-openid`_ library.
+Providers which implement the `openid`_ protocol based on the appropriate `python-openid`_/`python3-openid`_ library.
 
 .. _openid: https://openid.net/
 .. _python-openid: https://github.com/openid/python-openid

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
+from pyramid.httpexceptions import HTTPInternalServerError
 
 from magpie.api.exception import evaluate_call
-from magpie.api.requests import HTTPInternalServerError
 
 if TYPE_CHECKING:
     from magpie.typedefs import JSON, Optional  # noqa: F401

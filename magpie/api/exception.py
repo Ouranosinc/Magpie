@@ -251,7 +251,7 @@ def valid_http(http_success=HTTPOk,             # type: Optional[HTTPSuccessful]
                content_type=CONTENT_TYPE_JSON,  # type: Optional[Str]
                ):                               # type: (...) -> HTTPException
     """
-    Returns successful HTTP with standardized information formatted with content type. (see :function:`raise_http` for
+    Returns successful HTTP with standardized information formatted with content type. (see :func:`raise_http` for
     HTTP error calls)
 
     :param http_success: any derived class from base `HTTPSuccessful` (default: `HTTPOk`)
@@ -330,7 +330,7 @@ def validate_params(http_class,     # type: HTTPException
                     content_type,   # type: Str
                     ):              # type: (...) -> Tuple[int, Str, JSON]
     """
-    Validates parameter types and formats required by :function:`valid_http` and :function:`raise_http`.
+    Validates parameter types and formats required by :func:`valid_http` and :func:`raise_http`.
 
     :param http_class: any derived class from base `HTTPException` to verify
     :param http_base: any derived sub-class(es) from base `HTTPException` as minimum requirement for `http_class`

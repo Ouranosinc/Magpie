@@ -37,7 +37,7 @@ def format_resource(resource, permissions=None, basic_info=False):
 
 def format_resource_tree(children, db_session, resources_perms_dict=None, internal_svc_res_perm_dict=None):
     """
-    Generates the formatted service/resource tree with all its children resources by calling :function:`format_resource`
+    Generates the formatted service/resource tree with all its children resources by calling :func:`format_resource`
     recursively.
 
     Filters resource permissions with ``resources_perms_dict`` if provided.

@@ -15,7 +15,9 @@ if TYPE_CHECKING:
 def is_valid_resource_schema(resources):
     # type: (JSON) -> bool
     """
-    Returns ``True`` if the structure of the input dictionary is a tree of the form::
+    Returns ``True`` if the structure of the input dictionary is a tree of the following form:
+
+    .. code-block:: json
 
         {
             "resource_name_1": {
