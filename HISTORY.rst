@@ -6,9 +6,6 @@ History
 Unreleased
 ---------------------
 
-1.7.5 (2019-12-06)
----------------------
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * add ``MAGPIE_DB_URL`` configuration parameter to define a database connection with full URL instead of individual
