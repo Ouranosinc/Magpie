@@ -319,8 +319,6 @@ Features / Changes
 0.7.x
 ---------------------
 
-`Magpie REST API latest documentation`_
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * add service resource auto-sync feature
@@ -342,8 +340,6 @@ Bug Fixes
 0.6.x
 ---------------------
 
-`Magpie REST API 0.6.x documentation`_
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * add ``/magpie/api/`` route to locally display the Magpie REST API documentation
@@ -359,8 +355,6 @@ Features / Changes
 0.5.x
 ---------------------
 
-`Magpie REST API 0.5.x documentation`_
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * independent user/group permissions, no more 'personal' group to reflect user permissions
@@ -373,8 +367,6 @@ Features / Changes
 0.4.x
 ---------------------
 
-`Magpie REST API 0.4.x documentation`_
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * default admin permissions
@@ -385,8 +377,6 @@ Features / Changes
 0.3.x
 ---------------------
 
-`Magpie REST API 0.3.x documentation`_
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * `ncWMS` support for `getmap`, `getcapabilities`, `getmetadata` on ``thredds`` resource
@@ -394,7 +384,7 @@ Features / Changes
 * add `geoserverwms` service
 * remove load balanced `Malleefowl` and `Catalog`
 * push service provider updates to `Phoenix` on service edit or initial setup with `getcapabilities` for `anonymous`
-* major update of `Magpie REST API 0.2.x documentation`_ to match returned codes/messages from 0.2.0 changes
+* major update of `Magpie REST API 0.2.x documentation` to match returned codes/messages from 0.2.0 changes
 * normalise additional HTTP request responses omitted from 0.2.0 (404, 500, and other missed responses)
 * remove internal api call, separate login external from local, direct access to `ziggurat` login
 
@@ -407,17 +397,13 @@ Bug Fixes
 0.2.0
 ---------------------
 
-`Magpie REST API 0.2.0 documentation`_
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Revamp HTTP standard error output format, messages, values and general error/exception handling.
-* Update `Magpie REST API 0.2.0 documentation`_
+* Update `Magpie REST API 0.2.0 documentation`.
 
 0.1.1
 ---------------------
-
-`Magpie REST API 0.1.1 documentation`_
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -426,26 +412,4 @@ Features / Changes
 0.1.0
 ---------------------
 
-`Magpie REST API 0.1.0 documentation`_
-
 * First structured release.
-
-
-.. _magpie_api_latest: https://colibri.crim.ca/magpie/api/?urls.primaryName=latest
-.. _magpie_api_0.1.0: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.1.0
-.. _magpie_api_0.1.1: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.1.1
-.. _magpie_api_0.2.0: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.2.0
-.. _magpie_api_0.2.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.2.x
-.. _magpie_api_0.3.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.3.x
-.. _magpie_api_0.4.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.4.x
-.. _magpie_api_0.5.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.5.x
-.. _magpie_api_0.6.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.6.x
-.. _Magpie REST API 0.1.0 documentation: magpie_api_0.1.0_
-.. _Magpie REST API 0.1.1 documentation: magpie_api_0.1.1_
-.. _Magpie REST API 0.2.0 documentation: magpie_api_0.2.0_
-.. _Magpie REST API 0.2.x documentation: magpie_api_0.2.x_
-.. _Magpie REST API 0.3.x documentation: magpie_api_0.3.x_
-.. _Magpie REST API 0.4.x documentation: magpie_api_0.4.x_
-.. _Magpie REST API 0.5.x documentation: magpie_api_0.5.x_
-.. _Magpie REST API 0.6.x documentation: magpie_api_0.6.x_
-.. _Magpie REST API latest documentation: _magpie_api_latest

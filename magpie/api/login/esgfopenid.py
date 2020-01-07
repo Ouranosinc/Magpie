@@ -35,7 +35,7 @@ class ESGFOpenID(OpenID):
             The hostname of the ESGF OpenID provider. Default: localhost
 
         :param provider_url:
-            The provider identifier url template. Default: https://{hostname}/{provider}-idp/idp/{username}
+            The provider identifier url template. Default: ``https://{hostname}/{provider}-idp/idp/{username}``
         """
         super(ESGFOpenID, self).__init__(*args, **kwargs)
 

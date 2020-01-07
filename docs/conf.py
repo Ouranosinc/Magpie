@@ -53,6 +53,11 @@ autoapi_dirs = [os.path.join(PROJECT_ROOT, __meta__.__package__)]
 autoapi_ignore = [os.path.join(PROJECT_ROOT, 'magpie/alembic/*')]
 autoapi_python_class_content = 'both'
 
+# cases to ignore during link checking
+linkcheck_ignore = [
+
+]
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

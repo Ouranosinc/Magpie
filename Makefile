@@ -378,7 +378,7 @@ check-docf: mkdir-reports install-dev	## run PEP8 code documentation format chec
 .PHONY: check-links
 check-links: install-dev	## check all external links in documentation for integrity
 	@echo "Running link checks on docs..."
-	@bash -c '$(CONDA_CMD) (MAKE) -C "$(APP_ROOT)/docs" linkcheck'
+	@bash -c '$(CONDA_CMD) $(MAKE) -C "$(APP_ROOT)/docs" linkcheck'
 
 .PHONY: check-imports
 check-imports: mkdir-reports install-dev	## run imports code checks
