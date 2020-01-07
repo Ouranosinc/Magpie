@@ -421,7 +421,9 @@ fix-docf: install-dev	## fix some PEP8 code documentation style problems automat
 			--wrap-descriptions 120 \
 			--wrap-summaries 120 \
 			--make-summary-multi-line \
-			-i -r $(APP_ROOT) \
+			--in-place \
+			--recursive \
+			$(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-docf.txt")'
 
 ## --- Test targets --- ##

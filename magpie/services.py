@@ -86,7 +86,8 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
     # parameters required to preserve caching of corresponding resource-id/user called
     @cache_region("acl")
     def _get_acl_cached(self, service_id, user):  # noqa: F811
-        """Cache this method with :py:mod:`beaker` based on the service id and the user.
+        """
+        Cache this method with :py:mod:`beaker` based on the service id and the user.
 
         If the cache is not hit, call :meth:`get_acl`.
         """

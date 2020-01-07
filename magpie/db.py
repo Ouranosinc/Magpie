@@ -45,7 +45,9 @@ def get_db_url(username=None,   # type: Optional[Str]
                db_name=None,    # type: Optional[Str]
                settings=None,   # type: AnySettingsContainer
                ):               # type: (...) -> Str
-    """Retrieve the database connection URL with provided settings."""
+    """
+    Retrieve the database connection URL with provided settings.
+    """
     db_url = get_constant("MAGPIE_DB_URL", settings, raise_missing=False, print_missing=True, raise_not_set=False)
     if db_url:
         LOGGER.info("Using setting 'MAGPIE_DB_URL' for database connection.")

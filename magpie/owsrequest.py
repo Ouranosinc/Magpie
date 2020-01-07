@@ -61,7 +61,9 @@ class OWSParser(object):
 
 
 class WPSGet(OWSParser):
-    """Basically a case-insensitive query string parser"""
+    """
+    Basically a case-insensitive query string parser.
+    """
 
     def __init__(self, request):
         super(WPSGet, self).__init__(request)

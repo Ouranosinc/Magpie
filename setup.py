@@ -34,7 +34,8 @@ with open("HISTORY.rst") as history_file:
 
 def _parse_requirements(file_path, requirements, links):
     # type: (str, Set[str], Set[str]) -> None
-    """Parses a requirements file to extra packages and links.
+    """
+    Parses a requirements file to extra packages and links.
 
     :param file_path: file path to the requirements file.
     :param requirements: pre-initialized set in which to store extracted package requirements.
@@ -58,7 +59,8 @@ def _parse_requirements(file_path, requirements, links):
 
 def _extra_requirements(base_requirements, other_requirements):
     # type: (Iterable[str], Iterable[str]) -> Set[str]
-    """Extracts only the extra requirements not already defined within the base requirements.
+    """
+    Extracts only the extra requirements not already defined within the base requirements.
 
     :param base_requirements: base package requirements.
     :param other_requirements: other set of requirements referring to additional dependencies.

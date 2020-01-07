@@ -44,7 +44,9 @@ OLD_USER_ADMIN = OLD_GROUP_ADMIN
 
 
 def get_users_groups(db_session):
-    """Fetch current db users and groups"""
+    """
+    Fetch current db users and groups.
+    """
     all_users = db_session.query(models.User)
     all_groups = db_session.query(models.Group)
     old_user_admin = [user for user in all_users if user.user_name == OLD_USER_ADMIN]

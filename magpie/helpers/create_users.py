@@ -18,7 +18,9 @@ def format_response(response):
 
 
 def pseudo_random_pwd(length=8):
-    """Generate a password made of random alphanumeric characters."""
+    """
+    Generate a password made of random alphanumeric characters.
+    """
     rnd = random.SystemRandom()
     return "".join(rnd.choice(string.ascii_letters + string.digits) for _ in range(length))
 

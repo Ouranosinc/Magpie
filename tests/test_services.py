@@ -25,8 +25,7 @@ if TYPE_CHECKING:
 def make_ows_parser(method="GET", content_type=None, params=None, body=""):
     # type: (Str, Optional[Str], Optional[Dict[Str, Str]], Optional[Str]) -> owsrequest.OWSParser
     """
-    Makes an :class:`owsrequest.OWSParser` from a :class:`DummyRequest`
-    definition with provided parameters for testing.
+    Makes an :class:`owsrequest.OWSParser` from a :class:`DummyRequest` definition with provided parameters for testing.
     """
     request = DummyRequest(params=params)
     request.method = method

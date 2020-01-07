@@ -68,19 +68,27 @@ SERVICES_PHOENIX_ALLOWED = [ServiceWPS.service_type]
 
 
 class RegistrationError(RuntimeError):
-    """Generic error during registration operation."""
+    """
+    Generic error during registration operation.
+    """
 
 
 class RegistrationValueError(RegistrationError, ValueError):
-    """Registration error caused by an invalid value precondition."""
+    """
+    Registration error caused by an invalid value precondition.
+    """
 
 
 class RegistrationLoginError(RegistrationError):
-    """Registration error caused by a failure to complete required login operation."""
+    """
+    Registration error caused by a failure to complete required login operation.
+    """
 
 
 class RegistrationConfigurationError(RegistrationValueError):
-    """Registration error caused by an invalid configuration entry or definition."""
+    """
+    Registration error caused by an invalid configuration entry or definition.
+    """
 
 
 def _login_loop(login_url, cookies_file, data=None, message="Login response"):
@@ -502,8 +510,8 @@ def _load_config(path_or_dict, section):
 def _get_all_configs(path_or_dict, section):
     # type: (Union[Str, ConfigDict], Str) -> List[ConfigDict]
     """
-    Loads all configuration files specified by the path (if a directory), a single configuration (if a file) or
-    directly returns the specified dictionary section (if a configuration dictionary).
+    Loads all configuration files specified by the path (if a directory), a single configuration (if a file) or directly
+    returns the specified dictionary section (if a configuration dictionary).
 
     :returns:
         list of configurations loaded if input was a directory path
@@ -528,7 +536,9 @@ def _get_all_configs(path_or_dict, section):
 
 def _expand_all(config):
     # type: (ConfigDict) -> ConfigDict
-    """Applies environment variable expansion recursively to all applicable fields of a configuration definition."""
+    """
+    Applies environment variable expansion recursively to all applicable fields of a configuration definition.
+    """
     if isinstance(config, dict):
         for cfg in config:
             cfg_key = os.path.expandvars(cfg)
@@ -886,7 +896,9 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
 
 def _process_permissions(permissions, magpie_url, cookies_or_session):
     # type: (ConfigDict, Str, Session) -> None
-    """Processes a single `permissions` configuration."""
+    """
+    Processes a single `permissions` configuration.
+    """
     if not permissions:
         LOGGER.warning("Permissions configuration are empty.")
         return

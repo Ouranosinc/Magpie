@@ -1,9 +1,9 @@
-"""ensure_service_root_is_none
+"""
+ensure_service_root_is_none.
 
 Revision ID: 24da162a54f1
 Revises: 03b54feffe45
 Create Date: 2019-11-06 16:26:56.898075
-
 """
 import sqlalchemy as sa
 from alembic import op
