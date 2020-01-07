@@ -17,6 +17,12 @@ def format_response(response):
     return str(response_json.get("code")) + " : " + response_json.get("detail")
 
 
+def pseudo_random_pwd(length=8):
+    """Generate a password made of random alphanumeric characters."""
+    rnd = random.SystemRandom()
+    return "".join(rnd.choice(string.ascii_letters + string.digits) for _ in range(length))
+
+
 def create_users(email_list, magpie_url, magpie_admin_user_name, magpie_admin_password):
     session = requests.Session()
     response = session.post(magpie_url + "/signin", data={"user_name": magpie_admin_user_name,
@@ -30,8 +36,7 @@ def create_users(email_list, magpie_url, magpie_admin_user_name, magpie_admin_pa
     for email in email_list:
         user = {"email": email,
                 "user_name": email,
-                # generate a password made of 8 random alphanumeric characters
-                "password": "".join(random.choice(string.ascii_letters + string.digits) for _ in range(8)),
+                "password": pseudo_random_pwd(),
                 "result": ""}
         users.append(user)
         response = session.post(magpie_url + "/users", data={"user_name": user["user_name"],

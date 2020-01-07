@@ -206,7 +206,7 @@ class ManagementViews(object):
                 return_data[u"conflict_user_name"] = True
             if user_name == "":
                 return_data[u"invalid_user_name"] = True
-            if password == "":
+            if password is None or isinstance(password, six.string_types) and len(password) < 1:
                 return_data[u"invalid_password"] = True
 
             for check_fail in check_data:

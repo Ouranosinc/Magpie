@@ -8,7 +8,7 @@ from magpie.utils import get_logger
 
 
 class WSO2(OAuth2):
-    access_token_url = ""
+    access_token_url = ""           # nosec
     user_authorization_url = ""
     user_info_url = ""
     url = ""

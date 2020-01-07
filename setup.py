@@ -143,10 +143,17 @@ setup(
     tests_require=TEST_REQUIREMENTS,
 
     # -- script entry points -----------------------------------------------
-    entry_points="""\
-          [paste.app_factory]
-          main = magpie.app:main
-          [console_scripts]
-          """,
+    entry_points={
+        "paste.app_factory": [
+            "main = magpie.app:main"
+        ],
+        "console_scripts": [
+            "create_users = magpie.helpers.create_users:main",
+            "register_default_users = magpie.helpers.register_default_users:register_default_users",
+            "register_providers = magpie.helpers.register_providers:main",
+            "run_database_migration = magpie.helpers.run_database_migration:run_database_migration",
+            "sync_resources = magpie.helpers.sync_resources:main",
+        ],
+    }
 )
 LOGGER.info("setup complete")

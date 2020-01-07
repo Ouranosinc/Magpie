@@ -95,7 +95,8 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
 
     recurse(merged_resources, resources_remote)
 
-    assert is_valid_resource_schema(merged_resources)
+    if not is_valid_resource_schema(merged_resources):
+        raise ValueError("Invalid resulting 'merged' resource schema from 'local' and 'remote' resources syncing.")
 
     return merged_resources
 
@@ -383,4 +384,4 @@ def main():
 
 
 if __name__ == "__main__":
-    fetch()
+    main()

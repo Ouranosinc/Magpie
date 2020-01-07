@@ -65,7 +65,7 @@ script:
   - make ${START_TARGET} ${TEST_TARGET}
   - |
     if [ "${TRAVIS_PYTHON_VERSION}" -eq "3.6" ]; then
-      make lint
+      make check
       make coverage
     fi
   # smoke test the docker image

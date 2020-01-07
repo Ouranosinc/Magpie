@@ -60,7 +60,7 @@ def debug_cookie_identify(request):
             environ = request.environ
             remote_addr = environ["REMOTE_ADDR"]
         else:
-            remote_addr = "0.0.0.0"
+            remote_addr = "0.0.0.0"  # nosec # only for log debugging
 
         LOGGER.debug("Cookie remote addr (include_ip: %s) : %s", cookie_inst.include_ip, remote_addr)
         now = time.time()

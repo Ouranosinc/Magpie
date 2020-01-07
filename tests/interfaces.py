@@ -147,8 +147,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def check_requirements(cls):
         headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd,
                                                          use_ui_form_submit=True, version=cls.version)
-        assert headers and cookies, cls.require
-        assert cls.headers and cls.cookies, cls.require
+        assert headers and cookies, cls.require             # nosec
+        assert cls.headers and cls.cookies, cls.require     # nosec
 
     @classmethod
     def setup_test_values(cls):
@@ -836,7 +836,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def test_PutUsers_password(self):
         utils.TestSetup.create_TestUser(self)
         old_password = self.test_user_name
-        new_password = "n0t-SO-ez-2-Cr4cK"
+        new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
         data = {"password": new_password}
         path = "/users/{usr}".format(usr=self.test_user_name)
         resp = utils.test_request(self, "PUT", path, headers=self.json_headers, cookies=self.cookies, data=data)
@@ -1709,8 +1709,8 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     @classmethod
     def check_requirements(cls):
         headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
-        assert headers and cookies, cls.require
-        assert cls.headers and cls.cookies, cls.require
+        assert headers and cookies, cls.require             # nosec
+        assert cls.headers and cls.cookies, cls.require     # nosec
 
     @runner.MAGPIE_TEST_STATUS
     def test_Home(self):
