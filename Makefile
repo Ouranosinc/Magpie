@@ -370,16 +370,18 @@ check-docf: mkdir-reports install-dev	## run PEP8 code documentation format chec
 			--wrap-descriptions 120 \
 			--wrap-summaries 120 \
 			--make-summary-multi-line \
-			-c -r "$(APP_ROOT)" \
+			--check \
+			--recursive \
+			"$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/check-docf.txt")'
 
 .PHONY: check-links
-check-links:		## check all external links in documentation for integrity
+check-links: install-dev	## check all external links in documentation for integrity
 	@echo "Running link checks on docs..."
 	@bash -c '$(CONDA_CMD) (MAKE) -C "$(APP_ROOT)/docs" linkcheck'
 
 .PHONY: check-imports
-check-imports:		## run imports code checks
+check-imports: mkdir-reports install-dev	## run imports code checks
 	@echo "Running import checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-imports.txt"
 	@bash -c '$(CONDA_CMD) \
