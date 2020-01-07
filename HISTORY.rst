@@ -18,6 +18,7 @@ Features / Changes
 * rename ``resource_tree_service`` and ``remote_resource_tree_service`` to their uppercase equivalents.
 * removed module ``magpie.definitions`` in favor of directly importing appropriate references as needed.
 * improve ``make help`` targets descriptions.
+* change to Apache license.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
