@@ -62,7 +62,8 @@ before_script:
   - env
 script:
   # test linting and coverage
-  - make ${START_TARGET} ${TEST_TARGET}
+  - make stop ${START_TARGET}
+  - make ${TEST_TARGET}
   - |
     if [ "${TRAVIS_PYTHON_VERSION}" -eq "3.6" ]; then
       make check

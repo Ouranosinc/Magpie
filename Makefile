@@ -257,7 +257,7 @@ start: install	## start application instance(s) with gunicorn
 
 .PHONY: stop
 stop: 		## kill application instance(s) started with gunicorn
-	@lsof -t -i :2001 | xargs kill
+	@(lsof -t -i :2001 | xargs kill) 2>/dev/null || echo "No $(APP_NAME) process to stop"
 
 .PHONY: stat
 stat: 		## display processes with PID(s) of gunicorn instance(s) running the application
