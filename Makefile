@@ -337,7 +337,7 @@ check-lint: mkdir-reports install-dev		## run linting code style checks
 			--load-plugins pylint_quotes \
 			--rcfile="$(APP_ROOT)/.pylintrc" \
 			--reports y \
-			"$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/tests" \
+			"$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/docs" "$(APP_ROOT)/tests" \
 		1> >(tee "$(REPORTS_DIR)/check-lint.txt")'
 
 .PHONY: check-security
