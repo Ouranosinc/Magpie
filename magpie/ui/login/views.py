@@ -1,19 +1,13 @@
-from magpie.api import schemas as schemas
-from magpie.definitions.pyramid_definitions import (
-    NO_PERMISSION_REQUIRED,
-    view_config,
-    forget,
-    Response,
-    HTTPOk,
-    HTTPFound,
-    HTTPUnauthorized,
-    HTTPInternalServerError,
-    HTTPException,
-)
-from magpie.ui.utils import check_response, request_api
-from magpie.ui.home import add_template_data
-from magpie.utils import get_magpie_url, get_json
 import requests
+from pyramid.httpexceptions import HTTPException, HTTPFound, HTTPInternalServerError, HTTPOk, HTTPUnauthorized
+from pyramid.response import Response
+from pyramid.security import NO_PERMISSION_REQUIRED, forget
+from pyramid.view import view_config
+
+from magpie.api import schemas
+from magpie.ui.home import add_template_data
+from magpie.ui.utils import check_response, request_api
+from magpie.utils import get_json, get_magpie_url
 
 
 class LoginViews(object):
@@ -65,17 +59,18 @@ class LoginViews(object):
                             pyr_res.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
                         return HTTPFound(response.url, headers=pyr_res.headers)
                     return HTTPFound(location=self.request.route_url("home"), headers=response.headers)
-                elif response.status_code == HTTPUnauthorized.code:
+
+                if response.status_code == HTTPUnauthorized.code:
                     return_data[u"invalid_credentials"] = True
                 else:
                     return_data[u"error"] = True
-        except HTTPException as e:
-            if e.status_code == HTTPUnauthorized.code:
+        except HTTPException as exc:
+            if exc.status_code == HTTPUnauthorized.code:
                 return_data[u"invalid_credentials"] = True
             else:
                 return_data[u"error"] = True
-        except Exception as e:
-            return HTTPInternalServerError(detail=repr(e))
+        except Exception as exc:
+            return HTTPInternalServerError(detail=repr(exc))
 
         return add_template_data(self.request, data=return_data)
 

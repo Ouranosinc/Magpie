@@ -15,29 +15,29 @@ ENV CRON_DIR=/etc/crontabs
 COPY magpie-cron $CRON_DIR/magpie-cron
 RUN chmod 0644 $CRON_DIR/magpie-cron
 
+# install dependencies
 COPY magpie/__init__.py magpie/__meta__.py $MAGPIE_DIR/magpie/
 COPY requirements* setup.py README.rst HISTORY.rst $MAGPIE_DIR/
-
 RUN apk update \
     && apk add \
     bash \
     postgresql-libs \
-    py-pip \
     libxslt-dev \
     && apk add --virtual .build-deps \
-    supervisor \
     gcc \
     libffi-dev \
     python-dev \
+    py-pip \
     musl-dev \
     postgresql-dev \
     && pip install --no-cache-dir --upgrade pip setuptools \
     && pip install --no-cache-dir -e $MAGPIE_DIR \
     && apk --purge del .build-deps
 
+# install app package source
 COPY ./ $MAGPIE_DIR
-
 # equivalent of `make install` without conda env and pre-installed packages
 RUN pip install --no-dependencies -e $MAGPIE_DIR
+
 # equivalent of `make cron start` without conda env
 CMD crond -c $CRON_DIR && gunicorn -b 0.0.0.0:2001 --paste $MAGPIE_CONFIG_DIR/magpie.ini --workers 10 --preload

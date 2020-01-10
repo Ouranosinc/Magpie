@@ -1,10 +1,14 @@
-from magpie.definitions.pyramid_definitions import exception_response, Request, HTTPBadRequest
-from magpie.utils import get_header, CONTENT_TYPE_JSON
-from typing import TYPE_CHECKING
 import json
+from typing import TYPE_CHECKING
+
+from pyramid.httpexceptions import HTTPBadRequest, exception_response
+from pyramid.request import Request
+
+from magpie.utils import CONTENT_TYPE_JSON, get_header
+
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, JSON, CookiesType, HeadersType, Optional  # noqa: F401
-    from magpie.definitions.pyramid_definitions import Response  # noqa: F401
+    from magpie.typedefs import Str, JSON, CookiesType, HeadersType, Optional  # noqa: F401
+    from pyramid.response import Response
 
 
 def check_response(response):
@@ -50,8 +54,8 @@ def request_api(request,            # type: Request
         cookies = list(cookies.items())
     if cookies and isinstance(headers, dict):
         headers = list(cookies.items())
-        for c, v in cookies:
-            headers.append(("Set-Cookie", "{}={}".format(c, v)))
+        for cookie_name, cookie_value in cookies:
+            headers.append(("Set-Cookie", "{}={}".format(cookie_name, cookie_value)))
     if not cookies:
         cookies = request.cookies
     # cookies must be added to kw only if populated, iterable error otherwise
@@ -69,6 +73,6 @@ def error_badrequest(func):
     def wrap(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except Exception as e:
-            raise HTTPBadRequest(detail=str(e))
+        except Exception as exc:
+            raise HTTPBadRequest(detail=str(exc))
     return wrap

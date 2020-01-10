@@ -7,6 +7,15 @@ Create Date: 2018-05-30 15:15:33.008614
 """
 import os
 import sys
+
+from alembic import op
+from alembic.context import get_context  # noqa: F401
+from sqlalchemy.dialects.postgresql.base import PGDialect
+from sqlalchemy.orm.session import sessionmaker
+from ziggurat_foundations.models.services import BaseService
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.user import UserService
+
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)    # version
 root_dir = os.path.dirname(root_dir)    # alembic
@@ -14,24 +23,19 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-# noinspection PyUnresolvedReferences
-from alembic.context import get_context                                                     # noqa: F401
-from alembic import op                                                                      # noqa: F401
-from magpie import models, constants                                                        # noqa: F401
-from magpie.definitions.sqlalchemy_definitions import PGDialect, sessionmaker               # noqa: F401
-from magpie.definitions.ziggurat_definitions import GroupService, UserService, BaseService  # noqa: F401
+from magpie import models  # isort:skip # noqa: E402
 
 Session = sessionmaker()
 
 # OLD/NEW values must be different
-OLD_GROUP_USERS = 'user'
-NEW_GROUP_USERS = 'users'
-OLD_GROUP_ADMIN = 'admin'
-NEW_GROUP_ADMIN = 'administrators'
+OLD_GROUP_USERS = "user"
+NEW_GROUP_USERS = "users"
+OLD_GROUP_ADMIN = "admin"
+NEW_GROUP_ADMIN = "administrators"
 
 # revision identifiers, used by Alembic.
-revision = 'ae1a3c8c7860'
-down_revision = '5e7b5346c330'
+revision = "ae1a3c8c7860"
+down_revision = "5e7b5346c330"
 branch_labels = None
 depends_on = None
 
@@ -57,8 +61,7 @@ def upgrade():
 
                 # create new group if missing
                 if not new_group:
-                    # noinspection PyArgumentList
-                    new_group = models.Group(group_name=new_group_name)
+                    new_group = models.Group(group_name=new_group_name)  # noqa
                     session.add(new_group)
                     new_group = GroupService.by_group_name(new_group_name, db_session=session)
 
@@ -79,8 +82,7 @@ def upgrade():
 
                 for user_name in diff_group_users:
                     user = UserService.by_user_name(user_name=user_name, db_session=session)
-                    # noinspection PyArgumentList
-                    user_group = models.UserGroup(group_id=new_group.id, user_id=user.id)
+                    user_group = models.UserGroup(group_id=new_group.id, user_id=user.id)  # noqa
                     session.add(user_group)
 
                 session.delete(group)

@@ -5,25 +5,20 @@
 Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 """
 
-from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import asbool
-from magpie.helpers.register_default_users import register_default_users
-from magpie.register import (
-    magpie_register_services_from_config,
-    magpie_register_permissions_from_config,
-)
-from magpie.security import get_auth_config
-from magpie.utils import patch_magpie_url, print_log, get_logger
-from magpie import db
+from pyramid.settings import asbool
 from pyramid_beaker import set_cache_regions_from_settings
-import os
-# noinspection PyUnresolvedReferences
-import logging
+
+from magpie.constants import get_constant
+from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
+from magpie.helpers.register_default_users import register_default_users
+from magpie.register import magpie_register_permissions_from_config, magpie_register_services_from_config
+from magpie.security import get_auth_config
+from magpie.utils import get_logger, patch_magpie_url, print_log
+
 LOGGER = get_logger(__name__)
 
 
-# noinspection PyUnusedLocal
-def main(global_config=None, **settings):
+def main(global_config=None, **settings):  # noqa: F811
     """
     This function returns a Pyramid WSGI application.
     """
@@ -33,19 +28,19 @@ def main(global_config=None, **settings):
     log_lvl = get_constant("MAGPIE_LOG_LEVEL", settings, "magpie.log_level", default_value="INFO",
                            raise_missing=False, raise_not_set=False, print_missing=True)
     LOGGER.setLevel(log_lvl)
-    sa_settings = db.set_sqlalchemy_log_level(log_lvl)
+    sa_settings = set_sqlalchemy_log_level(log_lvl)
 
     print_log("Looking for db migration requirement...", LOGGER)
-    db.run_database_migration_when_ready(settings)  # cannot pass db session as it might not even exist yet!
+    run_database_migration_when_ready(settings)  # cannot pass db session as it might not even exist yet!
 
-    # HACK:
+    # NOTE:
     #   migration can cause sqlalchemy engine to reset its internal logger level, although it is properly set
     #   to 'echo=False' because engines are re-created as needed... (ie: missing db)
     #   apply configs to re-enforce the logging level of `sqlalchemy.engine.base.Engine`"""
-    db.set_sqlalchemy_log_level(log_lvl)
+    set_sqlalchemy_log_level(log_lvl)
     # fetch db session here, otherwise, any following db engine connection will re-initialize
     # with a new engine class and logging settings don't get re-evaluated/applied
-    db_session = db.get_db_session_from_config_ini(config_ini, settings_override=sa_settings)
+    db_session = get_db_session_from_config_ini(config_ini, settings_override=sa_settings)
 
     print_log("Register default users...", LOGGER)
     register_default_users(db_session=db_session, settings=settings)
@@ -72,7 +67,7 @@ def main(global_config=None, **settings):
     config = get_auth_config(settings)
     set_cache_regions_from_settings(settings)
 
-    # Don't use scan otherwise modules like 'magpie.adapter' are
+    # don't use scan otherwise modules like 'magpie.adapter' are
     # automatically found and cause import errors on missing packages
     config.include("magpie")
     # config.scan("magpie")

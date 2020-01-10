@@ -1,27 +1,34 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from magpie.constants import get_constant
-from magpie.definitions.alembic_definitions import alembic
-from magpie.definitions.sqlalchemy_definitions import (
-    register, sessionmaker, engine_from_config,
-    configure_mappers, select, Inspector, Session, sa_exc
-)
-from magpie.definitions.pyramid_definitions import asbool
-from magpie.utils import get_settings_from_config_ini, get_settings, print_log, raise_log, get_logger
-from typing import TYPE_CHECKING
-import transaction
 import inspect
-import warnings
 import logging
 import time
+import warnings
+from typing import TYPE_CHECKING
+
+import alembic
+import alembic.command
+import alembic.config
+import six
+import transaction
+from pyramid.settings import asbool
+from sqlalchemy import engine_from_config
+from sqlalchemy import exc as sa_exc
+from sqlalchemy.engine.reflection import Inspector
+from sqlalchemy.orm import configure_mappers
+from sqlalchemy.orm.session import Session, sessionmaker
+from zope.sqlalchemy import register
+
+from magpie.constants import get_constant
+from magpie.utils import get_logger, get_settings, get_settings_from_config_ini, print_log, raise_log
 
 # import or define all models here to ensure they are attached to the
 # Base.metadata prior to any initialization routines
-from magpie import models
+from magpie import models  # isort:skip # noqa: E402
 
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Any, AnySettingsContainer, SettingsType, Str, Optional, Union  # noqa: F401
-    from magpie.definitions.sqlalchemy_definitions import Engine  # noqa: F401
+    from magpie.typedefs import Any, AnySettingsContainer, SettingsType, Str, Optional, Union  # noqa: F401
+    from sqlalchemy.engine.base import Engine  # noqa: F401
 
 
 LOGGER = get_logger(__name__)
@@ -31,14 +38,35 @@ LOGGER = get_logger(__name__)
 configure_mappers()
 
 
-def get_db_url(username=None, password=None, db_host=None, db_port=None, db_name=None, settings=None):
-    return "postgresql://%s:%s@%s:%s/%s" % (
-        username if username is not None else get_constant("MAGPIE_POSTGRES_USER", settings, "postgres.user"),
-        password if password is not None else get_constant("MAGPIE_POSTGRES_PASSWORD", settings, "postgres.password"),
-        db_host if db_host is not None else get_constant("MAGPIE_POSTGRES_HOST", settings, "postgres.host"),
-        db_port if db_port is not None else get_constant("MAGPIE_POSTGRES_PORT", settings, "postgres.port"),
-        db_name if db_name is not None else get_constant("MAGPIE_POSTGRES_DB", settings, "postgres.db"),
-    )
+def get_db_url(username=None,   # type: Optional[Str]
+               password=None,   # type: Optional[Str]
+               db_host=None,    # type: Optional[Str]
+               db_port=None,    # type: Optional[Union[Str,int]]
+               db_name=None,    # type: Optional[Str]
+               settings=None,   # type: AnySettingsContainer
+               ):               # type: (...) -> Str
+    """
+    Retrieve the database connection URL with provided settings.
+    """
+    db_url = get_constant("MAGPIE_DB_URL", settings, raise_missing=False, print_missing=True, raise_not_set=False)
+    if db_url:
+        LOGGER.info("Using setting 'MAGPIE_DB_URL' for database connection.")
+    else:
+        def _get(param, kw):
+            kw_envvar = "MAGPIE_POSTGRES_{}".format(kw.upper())
+            kw_setting = "postgres.{}".format(kw.lower())
+            return param if param is not None else get_constant(kw_envvar, settings, kw_setting)
+
+        db_url = "postgresql://%s:%s@%s:%s/%s" % (
+            _get(username, "user"),
+            _get(password, "password"),
+            _get(db_host, "host"),
+            _get(db_port, "port"),
+            _get(db_name, "db"),
+        )
+        LOGGER.info("Using composed settings 'MAGPIE_POSTGRES_<>' for database connection.")
+    LOGGER.debug("Resolved database connection URL: [%s]", db_url)
+    return db_url
 
 
 def get_engine(container=None, prefix="sqlalchemy.", **kwargs):
@@ -100,7 +128,7 @@ def run_database_migration(db_session=None):
     Runs db migration operations with alembic, using db session or a new engine connection.
     """
     ini_file = get_constant("MAGPIE_ALEMBIC_INI_FILE_PATH")
-    LOGGER.info("Using file '{}' for migration.".format(ini_file))
+    LOGGER.info("Using file '%s' for migration.", ini_file)
     alembic_args = ["-c", ini_file, "upgrade", "heads"]
     if not isinstance(db_session, Session):
         alembic.config.main(argv=alembic_args)
@@ -108,14 +136,14 @@ def run_database_migration(db_session=None):
         engine = db_session.bind
         with engine.begin() as connection:
             alembic_cfg = alembic.config.Config(file_=ini_file)
-            alembic_cfg.attributes['connection'] = connection
+            alembic_cfg.attributes["connection"] = connection   # pylint: disable=E1137
             alembic.command.upgrade(alembic_cfg, "head")
 
 
 def get_database_revision(db_session):
     # type: (Session) -> Str
-    s = "SELECT version_num FROM alembic_version"
-    result = db_session.execute(s).fetchone()
+    query = "SELECT version_num FROM alembic_version"
+    result = db_session.execute(query).fetchone()
     return result["version_num"]
 
 
@@ -129,14 +157,10 @@ def is_database_ready(db_session=None):
     table_names = inspector.get_table_names()
 
     for _, obj in inspect.getmembers(models):
-        if inspect.isclass(obj):
-            # noinspection PyBroadException
-            try:
-                curr_table_name = obj.__tablename__
-                if curr_table_name not in table_names:
-                    return False
-            except Exception:
-                continue
+        if inspect.isclass(obj) and hasattr(obj, "__tablename__"):
+            if obj.__tablename__ not in table_names:
+                LOGGER.error("Database table (or its associated parent) is missing for '%s' object", obj)
+                return False
     return True
 
 
@@ -159,16 +183,14 @@ def run_database_migration_when_ready(settings, db_session=None):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
                     run_database_migration(db_session)
-            except ImportError as e:
-                print_log("Database migration produced [{!r}] (ignored).".format(e), level=logging.WARNING)
-                pass
-            except Exception as e:
+            except ImportError as exc:
+                print_log("Database migration produced [{!r}] (ignored).".format(exc), level=logging.WARNING)
+            except Exception as exc:
                 if i <= attempts:
-                    print_log("Database migration failed [{!r}]. Retrying... ({}/{})".format(e, i, attempts))
+                    print_log("Database migration failed [{!r}]. Retrying... ({}/{})".format(exc, i, attempts))
                     time.sleep(2)
                     continue
-                else:
-                    raise_log("Database migration failed [{!r}]".format(e), exception=RuntimeError)
+                raise_log("Database migration failed [{!r}]".format(exc), exception=RuntimeError)
 
             db_ready = is_database_ready(db_session)
             if not db_ready:
@@ -186,15 +208,16 @@ def run_database_migration_when_ready(settings, db_session=None):
 def set_sqlalchemy_log_level(magpie_log_level):
     # type: (Union[Str, int]) -> SettingsType
     """
-    Suppresses sqlalchemy logging if not in debug for magpie.
+    Suppresses :py:mod:`sqlalchemy` verbose logging if not in ``logging.DEBUG`` for Magpie.
     """
-    log_lvl = logging.getLevelName(magpie_log_level) if isinstance(magpie_log_level, int) else magpie_log_level
+    if isinstance(magpie_log_level, six.string_types):
+        magpie_log_level = logging.getLevelName(magpie_log_level)
     sa_settings = {"sqlalchemy.echo": True}
-    if log_lvl.upper() != "DEBUG":
+    if magpie_log_level > logging.DEBUG:
         sa_settings["sqlalchemy.echo"] = False
         sa_loggers = "sqlalchemy.engine.base.Engine".split(".")
         sa_log = logging.getLogger(sa_loggers[0])
-        sa_log.setLevel(logging.WARN)   # WARN to avoid INFO logs
+        sa_log.setLevel(logging.WARN)   # WARN to avoid INFO logs which are too verbose
         for h in sa_log.handlers:
             sa_log.removeHandler(h)
         for sa_mod in sa_loggers[1:]:

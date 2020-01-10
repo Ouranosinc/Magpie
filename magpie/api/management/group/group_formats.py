@@ -1,10 +1,12 @@
-from magpie.api.requests import HTTPInternalServerError
-from magpie.api.exception import evaluate_call
 from typing import TYPE_CHECKING
+from pyramid.httpexceptions import HTTPInternalServerError
+
+from magpie.api.exception import evaluate_call
+
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import JSON, Optional  # noqa: F401
-    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.models import Group  # noqa: F401
+    from magpie.typedefs import JSON, Optional  # noqa: F401
+    from sqlalchemy.orm.session import Session
+    from magpie.models import Group
 
 
 def format_group(group, basic_info=False, db_session=None):
@@ -24,6 +26,6 @@ def format_group(group, basic_info=False, db_session=None):
         }
 
     return evaluate_call(
-        lambda: fmt_grp(group, basic_info), httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format group.", content={u"group": repr(group)}
+        lambda: fmt_grp(group, basic_info), http_error=HTTPInternalServerError,
+        msg_on_fail="Failed to format group.", content={u"group": repr(group)}
     )

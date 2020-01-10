@@ -8,20 +8,21 @@ test_magpie_ui
 Tests for `magpie.ui` module.
 """
 
+import unittest
+
+# NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
+import tests.interfaces as ti
 from magpie.constants import get_constant
 from magpie.models import Route
 from magpie.services import ServiceAPI, ServiceWPS
 from magpie.utils import CONTENT_TYPE_JSON
-from tests import utils, runner
-
-# NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
-import tests.interfaces as ti
-import unittest
+from tests import runner, utils
 
 
 @runner.MAGPIE_TEST_UI
 @runner.MAGPIE_TEST_LOCAL
 class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
     """
     Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_GROUP`` & ``MAGPIE_ANONYMOUS_USER``).
 
@@ -45,6 +46,7 @@ class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.Test
 @runner.MAGPIE_TEST_UI
 @runner.MAGPIE_TEST_LOCAL
 class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
     """
     Test any operation that require at least ``MAGPIE_ADMIN_GROUP`` AuthN/AuthZ.
 
@@ -118,6 +120,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
 @runner.MAGPIE_TEST_UI
 @runner.MAGPIE_TEST_REMOTE
 class TestCase_MagpieUI_NoAuth_Remote(ti.Interface_MagpieUI_NoAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
     """
     Test any operation that do not require any AuthN/AuthZ (``MAGPIE_ANONYMOUS_GROUP`` & ``MAGPIE_ANONYMOUS_USER``).
 
@@ -140,6 +143,7 @@ class TestCase_MagpieUI_NoAuth_Remote(ti.Interface_MagpieUI_NoAuth, unittest.Tes
 @runner.MAGPIE_TEST_UI
 @runner.MAGPIE_TEST_REMOTE
 class TestCase_MagpieUI_AdminAuth_Remote(ti.Interface_MagpieUI_AdminAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
     """
     Test any operation that require at least ``MAGPIE_ADMIN_GROUP`` AuthN/AuthZ.
 

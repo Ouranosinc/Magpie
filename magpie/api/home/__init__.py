@@ -1,8 +1,10 @@
+from pyramid.security import NO_PERMISSION_REQUIRED
+
 from magpie.api import schemas as s
 from magpie.api.home.home import get_homepage
 from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import NO_PERMISSION_REQUIRED
 from magpie.utils import get_logger
+
 LOGGER = get_logger(__name__)
 
 

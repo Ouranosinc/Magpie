@@ -1,17 +1,20 @@
-from magpie.api.exception import evaluate_call
-from magpie.api.management.resource.resource_utils import crop_tree_with_permission
-from magpie.api.management.resource.resource_formats import get_resource_children, format_resource_tree
-from magpie.definitions.pyramid_definitions import HTTPInternalServerError
-from magpie.permissions import format_permissions
-from magpie.utils import get_twitcher_protected_service_url
-from magpie.services import SERVICE_TYPE_DICT
 from typing import TYPE_CHECKING
+
+from pyramid.httpexceptions import HTTPInternalServerError
+
+from magpie.api.exception import evaluate_call
+from magpie.api.management.resource.resource_formats import format_resource_tree, get_resource_children
+from magpie.api.management.resource.resource_utils import crop_tree_with_permission
+from magpie.permissions import format_permissions
+from magpie.services import SERVICE_TYPE_DICT
+from magpie.utils import get_twitcher_protected_service_url
+
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Optional, JSON, Str, Dict, List, Type  # noqa: F401
-    from magpie.definitions.sqlalchemy_definitions import Session  # noqa: F401
-    from magpie.models import Resource, Service  # noqa: F401
-    from magpie.permissions import Permission  # noqa: F401
-    from magpie.services import ServiceInterface  # noqa: F401
+    from magpie.typedefs import Optional, JSON, Str, Dict, List, Type  # noqa: F401
+    from sqlalchemy.orm.session import Session
+    from magpie.models import Resource, Service
+    from magpie.permissions import Permission
+    from magpie.services import ServiceInterface
 
 
 def format_service(service, permissions=None, show_private_url=False, show_resources_allowed=False):
@@ -45,8 +48,8 @@ def format_service(service, permissions=None, show_private_url=False, show_resou
 
     return evaluate_call(
         lambda: fmt_svc(service, permissions),
-        httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format service.",
+        http_error=HTTPInternalServerError,
+        msg_on_fail="Failed to format service.",
         content={u"service": repr(service), u"permissions": repr(permissions)}
     )
 
@@ -72,7 +75,7 @@ def format_service_resources(service,                       # type: Service
     def fmt_svc_res(svc, db, svc_perms, res_perms, show_all):
         tree = get_resource_children(svc, db)
         if not show_all:
-            tree, resource_id_list_remain = crop_tree_with_permission(tree, list(res_perms.keys()))
+            tree, _ = crop_tree_with_permission(tree, list(res_perms.keys()))
 
         svc_perms = SERVICE_TYPE_DICT[svc.type].permissions if svc_perms is None else svc_perms
         svc_res = format_service(svc, svc_perms, show_private_url=show_private_url)
@@ -81,8 +84,8 @@ def format_service_resources(service,                       # type: Service
 
     return evaluate_call(
         lambda: fmt_svc_res(service, db_session, service_perms, resources_perms_dict or {}, show_all_children),
-        fallback=lambda: db_session.rollback(), httpError=HTTPInternalServerError,
-        msgOnFail="Failed to format service resources tree",
+        fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
+        msg_on_fail="Failed to format service resources tree",
         content=format_service(service, service_perms, show_private_url=show_private_url)
     )
 

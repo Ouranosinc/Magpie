@@ -1,4 +1,4 @@
-from magpie.definitions.sqlalchemy_definitions import Inspector
+from sqlalchemy.engine.reflection import Inspector
 
 
 def has_column(context, table_name, column_name):

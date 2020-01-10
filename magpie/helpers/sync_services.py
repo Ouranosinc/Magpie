@@ -1,18 +1,23 @@
-from magpie.utils import CONTENT_TYPE_JSON
-from collections import OrderedDict, defaultdict
-from six import with_metaclass
-from typing import TYPE_CHECKING
 import abc
+from collections import OrderedDict, defaultdict
+from typing import TYPE_CHECKING
+
 import requests
 import threddsclient
+from six import with_metaclass
+
+from magpie.utils import CONTENT_TYPE_JSON
+
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Dict, JSON, Str, Type  # noqa: F401
+    from magpie.typedefs import Dict, JSON, Str, Type  # noqa: F401
 
 
 def is_valid_resource_schema(resources):
     # type: (JSON) -> bool
     """
-    Returns ``True`` if the structure of the input dictionary is a tree of the form::
+    Returns ``True`` if the structure of the input dictionary is a tree of the following form:
+
+    .. code-block:: json
 
         {
             "resource_name_1": {
@@ -23,9 +28,8 @@ def is_valid_resource_schema(resources):
             }
             "resource_name_2": {"children": {}}
         }
-
     """
-    for resource_name, values in resources.items():
+    for values in resources.values():
         if "children" not in values:
             return False
         if not isinstance(values["children"], (OrderedDict, dict)):
@@ -57,7 +61,6 @@ class SyncServiceInterface(with_metaclass(abc.ABCMeta)):
 
         :return: The returned dictionary must be validated by 'is_valid_resource_schema'
         """
-        pass
 
 
 class SyncServiceGeoserver(SyncServiceInterface):
@@ -83,7 +86,8 @@ class SyncServiceGeoserver(SyncServiceInterface):
         resources = {"geoserver-api": {"children": workspace_tree,
                                        "resource_type": resource_type}}
 
-        assert is_valid_resource_schema(resources), "Error in Interface implementation"
+        if not is_valid_resource_schema(resources):
+            raise ValueError("Error in SyncServiceInterface implementation")
         return resources
 
 
@@ -107,7 +111,8 @@ class SyncServiceProjectAPI(SyncServiceInterface):
                     for p in resp.json()}
 
         resources = {self.service_name: {"children": projects, "resource_type": resource_type}}
-        assert is_valid_resource_schema(resources), "Error in Interface implementation"
+        if not is_valid_resource_schema(resources):
+            raise ValueError("Error in SyncServiceInterface implementation")
         return resources
 
 
@@ -131,20 +136,21 @@ class SyncServiceThredds(SyncServiceInterface):
             name = self._resource_id(cat)
             if depth == self.max_depth:
                 name = self.service_name
-            resource_type = 'directory'
+            resource_type = "directory"
             if cat.datasets and cat.datasets[0].content_type != "application/directory":
-                resource_type = 'file'
+                resource_type = "file"
 
-            tree_item = {name: {'children': {}, 'resource_type': resource_type}}
+            tree_item = {name: {"children": {}, "resource_type": resource_type}}
 
             if depth > 0:
                 for reference in cat.flat_references():
-                    tree_item[name]['children'].update(thredds_get_resources(reference.url, depth - 1))
+                    tree_item[name]["children"].update(thredds_get_resources(reference.url, depth - 1))
 
             return tree_item
 
         resources = thredds_get_resources(self.url, self.max_depth)
-        assert is_valid_resource_schema(resources), 'Error in Interface implementation'
+        if not is_valid_resource_schema(resources):
+            raise ValueError("Error in SyncServiceInterface implementation")
         return resources
 
 

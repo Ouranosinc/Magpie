@@ -8,28 +8,27 @@ test_utils
 Tests for the various utility operations employed by magpie.
 """
 
-from magpie.api import requests as ar, exception as ax
-from magpie.definitions.pyramid_definitions import (  # noqa: F401
-    asbool,
-    Request,
-    HTTPInternalServerError,
-    HTTPBadRequest,
-    HTTPForbidden,
-    HTTPOk,
-)
-from magpie import models, __meta__
-from magpie.permissions import format_permissions, Permission
-from magpie.utils import get_header, ExtendedEnumMeta, CONTENT_TYPE_JSON
+import unittest
 from distutils.version import LooseVersion
-from pyramid.testing import DummyRequest
-from tests import utils, runner
 from enum import Enum
 from typing import TYPE_CHECKING
-import six
+
 import mock
-import unittest
+import six
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPInternalServerError, HTTPOk
+from pyramid.request import Request
+from pyramid.settings import asbool
+from pyramid.testing import DummyRequest
+
+from magpie import __meta__, models
+from magpie.api import exception as ax
+from magpie.api import requests as ar
+from magpie.permissions import Permission, format_permissions
+from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnumMeta, get_header
+from tests import runner, utils
+
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str  # noqa: F401
+    from magpie.typedefs import Str  # noqa: F401
 
 
 class DummyEnum(six.with_metaclass(ExtendedEnumMeta, Enum)):
@@ -50,8 +49,7 @@ class TestUtils(unittest.TestCase):
             for q in parts[1:]:
                 k, v = q.split("=")
                 query[k] = v
-        # noinspection PyTypeChecker
-        return DummyRequest(path=path, params=query)
+        return DummyRequest(path=path, params=query)  # noqa
 
     @classmethod
     def setUpClass(cls):
@@ -142,61 +140,56 @@ class TestUtils(unittest.TestCase):
 
     def test_verify_param_proper_verifications(self):
         # with default error
-        utils.check_raises(lambda: ax.verify_param("b", paramCompare=["a", "b"], notIn=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param("x", paramCompare=["a", "b"], isIn=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param("1", paramCompare=int, ofType=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param("x", paramCompare="x", notEqual=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param("x", paramCompare="y", isEqual=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param(False, isTrue=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param(True, isFalse=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param(None, notNone=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param(1, isNone=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param("", notEmpty=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param("abc", isEmpty=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("x", param_compare=["a", "b"], is_in=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=int, is_type=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("x", param_compare="x", not_equal=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("x", param_compare="y", is_equal=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(False, is_true=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(True, is_false=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(None, not_none=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(1, is_none=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("", not_empty=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("abc", is_empty=True), HTTPBadRequest)
 
         # with requested error
-        utils.check_raises(lambda: ax.verify_param("b", paramCompare=["a", "b"], notIn=True,
-                                                   httpError=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("x", paramCompare=["a", "b"], isIn=True,
-                                                   httpError=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("1", paramCompare=int, ofType=True,
-                                                   httpError=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("x", paramCompare="x", notEqual=True,
-                                                   httpError=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("x", paramCompare="y", isEqual=True,
-                                                   httpError=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param(False, isTrue=True,
-                                                   httpError=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param(True, isFalse=True,
-                                                   httpError=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param(None, notNone=True,
-                                                   httpError=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param(1, isNone=True,
-                                                   httpError=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("", notEmpty=True,
-                                                   httpError=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("abc", isEmpty=True,
-                                                   httpError=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda:
+                           ax.verify_param("b", param_compare=["a", "b"], not_in=True, http_error=HTTPForbidden),
+                           HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("x", param_compare=["a", "b"], is_in=True, http_error=HTTPForbidden),
+                           HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=int, is_type=True, http_error=HTTPForbidden),
+                           HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("x", param_compare="x", not_equal=True, http_error=HTTPForbidden),
+                           HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("x", param_compare="y", is_equal=True, http_error=HTTPForbidden),
+                           HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param(False, is_true=True, http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param(True, is_false=True, http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param(None, not_none=True, http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param(1, is_none=True, http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("", not_empty=True, http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("abc", is_empty=True, http_error=HTTPForbidden), HTTPForbidden)
 
-    # noinspection PyTypeChecker
     def test_verify_param_incorrect_usage(self):
-        utils.check_raises(lambda: ax.verify_param("b", paramCompare=["a", "b"]), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param("b", paramCompare=["a", "b"], notIn=None), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param("b", notIn=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param("b", paramCompare=["a", "b"], notIn=True,
-                                                   httpError=HTTPOk), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"]), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=None),  # noqa
+                           HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("b", not_in=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=True, http_error=HTTPOk),
+                           HTTPInternalServerError)
 
     def test_verify_param_compare_types(self):
         """
-        param and paramCompare must be of same type.
+        param and param_compare must be of same type.
         """
-        utils.check_raises(lambda: ax.verify_param("1", paramCompare=1, isEqual=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param("1", paramCompare=True, isEqual=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param(1, paramCompare="1", isEqual=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param(1, paramCompare=True, isEqual=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=1, is_equal=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=True, is_equal=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare="1", is_equal=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_equal=True), HTTPInternalServerError)
 
         # strings cases handled correctly (no raise)
-        utils.check_no_raise(lambda: ax.verify_param("1", paramCompare=u"1", isEqual=True))
+        utils.check_no_raise(lambda: ax.verify_param("1", param_compare=u"1", is_equal=True))
 
     def test_enum_values_listing(self):
         utils.check_all_equal(DummyEnum.values(), ["value-1", "value-2"], any_order=True)

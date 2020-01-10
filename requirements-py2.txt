@@ -1,4 +1,0 @@
-# authomatic doesn't properly install valid version of openid
-python-openid
-# futures is required for gunicorn threads in python 2.7
-futures

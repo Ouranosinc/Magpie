@@ -1,19 +1,18 @@
-from magpie.api import requests as ar, exception as ax, schemas as s
-from magpie.api.management.service.service_utils import get_services_by_type
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPInternalServerError, HTTPOk
+from pyramid.settings import asbool
+from pyramid.view import view_config
+
+from magpie import models
+from magpie.api import exception as ax
+from magpie.api import requests as ar
+from magpie.api import schemas as s
+from magpie.api.management.resource import resource_formats as rf
+from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service_resources
-from magpie.api.management.resource import resource_utils as ru, resource_formats as rf
-from magpie.definitions.pyramid_definitions import (
-    asbool,
-    view_config,
-    HTTPOk,
-    HTTPBadRequest,
-    HTTPForbidden,
-    HTTPInternalServerError,
-)
+from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.permissions import format_permissions
 from magpie.register import sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT
-from magpie import models
 
 
 @s.ResourcesAPI.get(tags=[s.ResourcesTag], response_schemas=s.Resources_GET_responses)
@@ -23,14 +22,14 @@ def get_resources_view(request):
     List all registered resources.
     """
     res_json = {}
-    for svc_type in SERVICE_TYPE_DICT.keys():
+    for svc_type in SERVICE_TYPE_DICT:
         services = get_services_by_type(svc_type, db_session=request.db)
         res_json[svc_type] = {}
         for svc in services:
             res_json[svc_type][svc.resource_name] = format_service_resources(
                 svc, request.db, show_all_children=True, show_private_url=False)
     res_json = {u"resources": res_json}
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Resources_GET_OkResponseSchema.description, content=res_json)
+    return ax.valid_http(http_success=HTTPOk, detail=s.Resources_GET_OkResponseSchema.description, content=res_json)
 
 
 @s.ResourceAPI.get(tags=[s.ResourcesTag], response_schemas=s.Resource_GET_responses)
@@ -41,10 +40,10 @@ def get_resource_view(request):
     """
     resource = ar.get_resource_matchdict_checked(request)
     res_json = ax.evaluate_call(lambda: rf.format_resource_with_children(resource, db_session=request.db),
-                                fallback=lambda: request.db.rollback(), httpError=HTTPInternalServerError,
-                                msgOnFail=s.Resource_GET_InternalServerErrorResponseSchema.description,
+                                fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                                msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
                                 content={u"resource": rf.format_resource(resource, basic_info=True)})
-    return ax.valid_http(httpSuccess=HTTPOk, content={"resource": res_json},
+    return ax.valid_http(http_success=HTTPOk, content={"resource": res_json},
                          detail=s.Resource_GET_OkResponseSchema.description)
 
 
@@ -92,11 +91,11 @@ def update_resource(request):
             sync_services_phoenix(db.query(models.Service))
 
     ax.evaluate_call(lambda: rename_service_magpie_and_phoenix(resource, res_new_name, service_push, request.db),
-                     fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                     msgOnFail=s.Resource_PUT_ForbiddenResponseSchema.description,
+                     fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                     msg_on_fail=s.Resource_PUT_ForbiddenResponseSchema.description,
                      content={u"resource_id": resource.resource_id, u"resource_name": resource.resource_name,
                               u"old_resource_name": res_old_name, u"new_resource_name": res_new_name})
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Resource_PUT_OkResponseSchema.description,
+    return ax.valid_http(http_success=HTTPOk, detail=s.Resource_PUT_OkResponseSchema.description,
                          content={u"resource_id": resource.resource_id, u"resource_name": resource.resource_name,
                                   u"old_resource_name": res_old_name, u"new_resource_name": res_new_name})
 
@@ -109,8 +108,8 @@ def get_resource_permissions_view(request):
     """
     resource = ar.get_resource_matchdict_checked(request, "resource_id")
     res_perm = ax.evaluate_call(lambda: ru.get_resource_permissions(resource, db_session=request.db),
-                                fallback=lambda: request.db.rollback(), httpError=HTTPBadRequest,
-                                msgOnFail=s.ResourcePermissions_GET_BadRequestResponseSchema.description,
+                                fallback=lambda: request.db.rollback(), http_error=HTTPBadRequest,
+                                msg_on_fail=s.ResourcePermissions_GET_BadRequestResponseSchema.description,
                                 content={u"resource": rf.format_resource(resource, basic_info=True)})
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.ResourcePermissions_GET_OkResponseSchema.description,
+    return ax.valid_http(http_success=HTTPOk, detail=s.ResourcePermissions_GET_OkResponseSchema.description,
                          content={u"permission_names": format_permissions(res_perm)})

@@ -1,28 +1,38 @@
-from magpie import __meta__, services, app
-from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import asbool
-from magpie.services import ServiceAccess
-from magpie.utils import get_magpie_url, get_settings_from_config_ini, get_header, CONTENT_TYPE_JSON, CONTENT_TYPE_HTML
-from six.moves.urllib.parse import urlparse
+import json
+import unittest
+import warnings
 from distutils.version import LooseVersion
+from typing import TYPE_CHECKING
+
+import pytest
+import requests
+import six
+from pyramid.settings import asbool
 from pyramid.testing import setUp as PyramidSetUp
+from six.moves.urllib.parse import urlparse
 from webtest import TestApp
 from webtest.response import TestResponse
-from typing import TYPE_CHECKING
-import unittest
-import requests
-import warnings
-import json
-import six
-import pytest
+
+from magpie import __meta__, app, services
+from magpie.constants import get_constant
+from magpie.services import ServiceAccess
+from magpie.utils import (
+    CONTENT_TYPE_HTML,
+    CONTENT_TYPE_JSON,
+    SingletonMeta,
+    get_header,
+    get_magpie_url,
+    get_settings_from_config_ini
+)
+
 if TYPE_CHECKING:
     from tests.interfaces import Base_Magpie_TestCase  # noqa: F401
-    from magpie.definitions.typedefs import (  # noqa: F401
+    from magpie.typedefs import (  # noqa: F401
         Str, Callable, Dict, HeadersType, OptionalHeaderCookiesType, Optional, Type,
         AnyMagpieTestType, AnyResponseType, TestAppOrUrlType
     )
 
-OptionalStringType = six.string_types + tuple([type(None)])
+OptionalStringType = six.string_types + tuple([type(None)])  # pylint: disable=C0103,invalid-name   # noqa: 802
 
 
 class RunOption(object):
@@ -69,8 +79,7 @@ class RunOption(object):
         return self._marker
 
 
-# noinspection PyPep8Naming
-def RunDecorator(run_option):
+def make_run_option_decorator(run_option):
     # type: (RunOption) -> Callable
     """
     Decorates the test/class with ``pytest.mark`` and ``unittest.skipUnless`` using the provided test condition
@@ -78,7 +87,7 @@ def RunDecorator(run_option):
 
     Allows to decorate a function or class such that::
 
-        option = RunDecorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
+        option = make_run_option_decorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
 
         @option
         def test_func():
@@ -90,9 +99,10 @@ def RunDecorator(run_option):
         @unittest.skipUnless(runner.MAGPIE_TEST_CUSTOM_MARKER, reason="...")
         def test_func():
             <test>
+
+    All ``<custom_marker>`` definitions should be added to ``setup.cfg``.
     """
-    # noinspection PyUnusedLocal
-    def wrap(test_func, *args, **kwargs):
+    def wrap(test_func, *args, **kwargs):  # noqa: F811
         pytest_marker = pytest.mark.__getattr__(run_option.marker)
         unittest_skip = unittest.skipUnless(*run_option())
         test_func = pytest_marker(test_func)
@@ -106,14 +116,14 @@ class RunOptionDecorator(object):
     """
     Simplifies the call to::
 
-        RunDecorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
+        make_run_option_decorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
 
     by::
 
         RunOptionDecorator("MAGPIE_TEST_CUSTOM_MARKER")
     """
     def __new__(cls, name):
-        return RunDecorator(RunOption(name))
+        return make_run_option_decorator(RunOption(name))
 
 
 def config_setup_from_ini(config_ini_file_path):
@@ -137,7 +147,7 @@ def get_test_magpie_app(settings=None):
 
 def get_app_or_url(test_item):
     # type: (AnyMagpieTestType) -> TestAppOrUrlType
-    if isinstance(test_item, TestApp) or isinstance(test_item, six.string_types):
+    if isinstance(test_item, (TestApp, six.string_types)):
         return test_item
     app_or_url = getattr(test_item, "app", None) or getattr(test_item, "url", None)
     if not app_or_url:
@@ -189,8 +199,7 @@ def warn_version(test, functionality, version, skip=True):
               .format(functionality, test.version, version)
         warnings.warn(msg, FutureWarning)
         if skip:
-            # noinspection PyUnresolvedReferences
-            test.skipTest(reason=msg)
+            test.skipTest(reason=msg)   # noqa: F401
 
 
 def test_request(test_item, method, path, timeout=5, allow_redirects=True, **kwargs):
@@ -233,8 +242,7 @@ def test_request(test_item, method, path, timeout=5, allow_redirects=True, **kwa
             kwargs.update({"params": json.dumps(json_body, cls=json.JSONEncoder)})
         if status and status >= 300:
             kwargs.update({"expect_errors": True})
-        # noinspection PyProtectedMember
-        resp = app_or_url._gen_request(method, path, **kwargs)
+        resp = app_or_url._gen_request(method, path, **kwargs)  # pylint: disable=W0212  # noqa: W0212
         # automatically follow the redirect if any and evaluate its response
         max_redirect = kwargs.get("max_redirects", 5)
         while 300 <= resp.status_code < 400 and max_redirect > 0:
@@ -244,13 +252,13 @@ def test_request(test_item, method, path, timeout=5, allow_redirects=True, **kwa
         # test status accordingly if specified
         assert resp.status_code == status or status is None, "Response not matching the expected status code."
         return resp
-    else:
-        # remove keywords specific to TestApp
-        kwargs.pop("expect_errors", None)
 
-        kwargs["json"] = json_body
-        url = "{url}{path}".format(url=app_or_url, path=path)
-        return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
+    # remove keywords specific to TestApp
+    kwargs.pop("expect_errors", None)
+
+    kwargs["json"] = json_body
+    url = "{url}{path}".format(url=app_or_url, path=path)
+    return requests.request(method, url, timeout=timeout, allow_redirects=allow_redirects, **kwargs)
 
 
 def get_session_user(app_or_url, headers=None):
@@ -423,12 +431,11 @@ def check_raises(func, exception_type):
     :raise AssertionError: on failing exception check or missing raised exception.
     :returns: raised exception of expected type if it was raised.
     """
-    # noinspection PyBroadException
     try:
         func()
-    except Exception as ex:
-        assert isinstance(ex, exception_type)
-        return ex
+    except Exception as exc:  # pylint: disable=W0703
+        assert isinstance(exc, exception_type)
+        return exc
     raise AssertionError("Exception [{!s}] was not raised.".format(exception_type))
 
 
@@ -439,11 +446,10 @@ def check_no_raise(func):
 
     :raise AssertionError: on any raised exception.
     """
-    # noinspection PyBroadException
     try:
         func()
-    except Exception as ex:
-        raise AssertionError("Exception [{!r}] was raised when none is expected.".format(ex))
+    except Exception as exc:  # pylint: disable=W0703
+        raise AssertionError("Exception [{!r}] was raised when none is expected.".format(exc))
 
 
 def check_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_JSON, expected_method="GET"):
@@ -487,7 +493,7 @@ def check_ui_response_basic_info(response, expected_code=200, expected_type=CONT
     check_val_is_in("Magpie Administration", response.text, msg=null)   # don't output big html if failing
 
 
-class null(object):
+class _NullType(six.with_metaclass(SingletonMeta)):
     """
     Represents a null value to differentiate from None.
     """
@@ -495,15 +501,22 @@ class null(object):
     def __repr__(self):
         return "<null>"
 
+    @staticmethod
+    def __nonzero__():
+        return False
 
-Null = null()
+    __bool__ = __nonzero__
+    __len__ = __nonzero__
+
+
+null = _NullType()  # pylint: disable=C0103,invalid-name
 
 
 def is_null(item):
-    return isinstance(item, null) or item is null
+    return isinstance(item, _NullType) or item is null
 
 
-def check_error_param_structure(json_body, param_value=Null, param_name=Null, param_compare=Null,
+def check_error_param_structure(json_body, param_value=null, param_name=null, param_compare=null,
                                 is_param_value_literal_unicode=False, param_compare_exists=False, version=None):
     """
     Validates error response 'param' information based on different Magpie version formats.
@@ -511,9 +524,9 @@ def check_error_param_structure(json_body, param_value=Null, param_name=Null, pa
     :param json_body: json body of the response to validate.
     :param param_value: expected 'value' of param, not verified if <Null>
     :param param_name: expected 'name' of param, not verified if <Null> or non existing for Magpie version
-    :param param_compare: expected 'compare'/'paramCompare' value, not verified if <Null>
+    :param param_compare: expected 'compare'/'param_compare' value, not verified if <Null>
     :param is_param_value_literal_unicode: param value is represented as `u'{paramValue}'` for older Magpie version
-    :param param_compare_exists: verify that 'compare'/'paramCompare' is in the body, not validating its actual value
+    :param param_compare_exists: verify that 'compare'/'param_compare' is in the body, not validating its actual value
     :param version: version of application/remote server to use for format validation, use local Magpie version if None
     :raises AssertionError: failing condition
     """
@@ -535,8 +548,8 @@ def check_error_param_structure(json_body, param_value=Null, param_name=Null, pa
             param_value = u"u\'{}\'".format(param_value)
         check_val_equal(json_body["param"], param_value)
         if param_compare_exists:
-            check_val_is_in("paramCompare", json_body)
-            check_val_equal(json_body["paramCompare"], param_compare)
+            check_val_is_in("param_compare", json_body)
+            check_val_equal(json_body["param_compare"], param_compare)
 
 
 def check_post_resource_structure(json_body, resource_name, resource_type, resource_display_name, version=None):
@@ -605,8 +618,9 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
 
 
 # Generic setup and validation methods across unittests
-# noinspection PyPep8Naming
 class TestSetup(object):
+    # pylint: disable=C0103,invalid-name
+
     @staticmethod
     def get_Version(test_class):
         app_or_url = get_app_or_url(test_class)
@@ -666,7 +680,7 @@ class TestSetup(object):
             resp = test_request(app_or_url, method, path, cookies=test_class.cookies, timeout=timeout)
         check_val_equal(resp.status_code, 200, msg="Cannot test form submission, initial page returned an error.")
         form = None
-        if isinstance(form_match, int) or isinstance(form_match, six.string_types):
+        if isinstance(form_match, (int, six.string_types)):
             form = resp.forms[form_match]
         else:
             # select form if all key/value pairs specified match the current one
@@ -801,7 +815,7 @@ class TestSetup(object):
     @staticmethod
     def check_NonExistingTestService(test_class, override_service_name=None):
         services_info = TestSetup.get_RegisteredServicesList(test_class)
-        services_names = [svc['service_name'] for svc in services_info]
+        services_names = [svc["service_name"] for svc in services_info]
         service_name = override_service_name or test_class.test_service_name
         check_val_not_in(service_name, services_names)
 

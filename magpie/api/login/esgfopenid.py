@@ -2,33 +2,21 @@
 ESGF OpenID Providers
 ----------------------------------
 
-Providers which implement the |openid|_ protocol based on the
-`python-openid`_ library.
-
-.. warning::
-    This providers are dependent on the |python-openid|_ package.
+Providers which implement the `openid`_ protocol based on the appropriate `python-openid`_/`python3-openid`_ library.
 
 .. _openid: https://openid.net/
 .. _python-openid: https://github.com/openid/python-openid
+.. _python3-openid: https://github.com/necaris/python3-openid
 
 """
 
-from magpie.utils import get_logger
 from authomatic.providers.openid import OpenID
-# noinspection PyProtectedMember, PyUnresolvedReferences
-from openid.fetchers import Urllib2Fetcher  # , setDefaultFetcher
-from six.moves.urllib.request import urlopen
-import ssl
+
+from magpie.utils import get_logger
+
 LOGGER = get_logger(__name__)
 
 __all__ = ["ESGFOpenID"]
-
-
-class MyFetcher(Urllib2Fetcher):
-    @staticmethod
-    def urlopen(req):
-        # noinspection PyProtectedMember
-        return urlopen(req, context=ssl._create_unverified_context())
 
 
 class ESGFOpenID(OpenID):
@@ -47,7 +35,7 @@ class ESGFOpenID(OpenID):
             The hostname of the ESGF OpenID provider. Default: localhost
 
         :param provider_url:
-            The provider identifier url template. Default: https://{hostname}/{provider}-idp/idp/{username}
+            The provider identifier url template. Default: ``https://{hostname}/{provider}-idp/idp/{username}``
         """
         super(ESGFOpenID, self).__init__(*args, **kwargs)
 
@@ -58,9 +46,6 @@ class ESGFOpenID(OpenID):
         if "username" in self.params:
             self.username = self.params.get("username")
             self.identifier = self.provider_url.format(hostname=self.hostname, username=self.username)
-
-        # use fetcher with disabled ssl verification
-        # setDefaultFetcher(MyFetcher())
 
 
 # Authomatic provider type ID is generated from this list's indexes!

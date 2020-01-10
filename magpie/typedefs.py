@@ -4,12 +4,12 @@ Magpie additional typing definitions.
 """
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    # noinspection PyUnresolvedReferences
-    from typing import (  # noqa: F401
-        Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union
+    from typing import (                                                                        # noqa: F401,W0212
+        Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union    # noqa: F401,W0212
     )
-    from magpie.definitions.sqlalchemy_definitions import Session
+    from sqlalchemy.orm.session import Session
     from magpie import models
     from magpie.permissions import Permission
     from webob.headers import ResponseHeaders, EnvironHeaders
@@ -22,17 +22,16 @@ if TYPE_CHECKING:
     from pyramid.request import Request
     from pyramid.config import Configurator
     from requests.structures import CaseInsensitiveDict
-    # noinspection PyUnresolvedReferences, PyProtectedMember
-    from logging import _loggerClass as LoggerType  # noqa: F401
+    from logging import Logger as LoggerType  # noqa: F401
     from tests.interfaces import Base_Magpie_TestCase
     import six
 
     if six.PY2:
-        # noinspection PyUnresolvedReferences
-        Str = Union[_AnyStr, unicode]   # noqa: F821
+        # pylint: disable=E0602,undefined-variable  # unicode not recognized by python 3
+        Str = Union[_AnyStr, unicode]  # noqa: E0602,F405,F821
     else:
         Str = _AnyStr
-    AnyStr = Str
+    AnyStr = Str    # pylint: disable=C0103,invalid-name
 
     Number = Union[int, float]
     SettingValue = Union[Str, Number, bool, None]

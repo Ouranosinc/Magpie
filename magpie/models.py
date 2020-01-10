@@ -1,31 +1,35 @@
-from magpie.api.exception import evaluate_call
-from magpie.definitions.pyramid_definitions import ALLOW, ALL_PERMISSIONS, HTTPInternalServerError
-from magpie.definitions.sqlalchemy_definitions import sa, declared_attr, relationship, declarative_base
-from magpie.definitions.ziggurat_definitions import (
-    get_db_session,
-    permission_to_pyramid_acls,
-    ziggurat_model_init,
-    BaseModel,
-    ExternalIdentityMixin,
-    GroupMixin,
-    GroupPermissionMixin,
-    GroupResourcePermissionMixin,
-    ResourceMixin,
-    ResourceTreeService,
-    ResourceTreeServicePostgreSQL,
-    UserGroupMixin,
-    UserMixin,
-    UserPermissionMixin,
-    UserResourcePermissionMixin,
-    UserService,
-    BaseService,
-)
-from magpie.permissions import Permission
 from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str  # noqa: F401
 
-Base = declarative_base()
+import sqlalchemy as sa
+from pyramid.httpexceptions import HTTPInternalServerError
+from pyramid.security import ALL_PERMISSIONS
+from pyramid.security import Allow as ALLOW  # noqa
+from sqlalchemy.ext.declarative import declarative_base, declared_attr
+from sqlalchemy.orm import relationship
+from ziggurat_foundations import ziggurat_model_init
+from ziggurat_foundations.models.base import BaseModel, get_db_session
+from ziggurat_foundations.models.external_identity import ExternalIdentityMixin
+from ziggurat_foundations.models.group import GroupMixin
+from ziggurat_foundations.models.group_permission import GroupPermissionMixin
+from ziggurat_foundations.models.group_resource_permission import GroupResourcePermissionMixin
+from ziggurat_foundations.models.resource import ResourceMixin
+from ziggurat_foundations.models.services import BaseService
+from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
+from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
+from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.models.user import UserMixin
+from ziggurat_foundations.models.user_group import UserGroupMixin
+from ziggurat_foundations.models.user_permission import UserPermissionMixin
+from ziggurat_foundations.models.user_resource_permission import UserResourcePermissionMixin
+from ziggurat_foundations.permissions import permission_to_pyramid_acls
+
+from magpie.api.exception import evaluate_call
+from magpie.permissions import Permission
+
+if TYPE_CHECKING:
+    from magpie.typedefs import Str  # noqa: F401
+
+Base = declarative_base()   # pylint: disable=C0103,invalid-name
 
 
 def get_session_callable(request):
@@ -273,15 +277,14 @@ class RemoteResourceTreeServicePostgresSQL(ResourceTreeServicePostgreSQL):
 
     The ResourceTreeService.__init__ call sets the model.
     """
-    pass
 
 
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
                     UserResourcePermission, GroupResourcePermission, Resource,
                     ExternalIdentity, passwordmanager=None)
 
-resource_tree_service = ResourceTreeService(ResourceTreeServicePostgreSQL)
-remote_resource_tree_service = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
+RESOURCE_TREE_SERVICE = ResourceTreeService(ResourceTreeServicePostgreSQL)
+REMOTE_RESOURCE_TREE_SERVICE = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
 RESOURCE_TYPE_DICT = dict()
 for res in [Service, Directory, File, Workspace, Route]:
@@ -291,17 +294,16 @@ for res in [Service, Directory, File, Workspace, Route]:
 
 
 def resource_factory(**kwargs):
-    resource_type = evaluate_call(lambda: kwargs["resource_type"], httpError=HTTPInternalServerError,
-                                  msgOnFail="kwargs do not contain required 'resource_type'",
+    resource_type = evaluate_call(lambda: kwargs["resource_type"], http_error=HTTPInternalServerError,
+                                  msg_on_fail="kwargs do not contain required 'resource_type'",
                                   content={u"kwargs": repr(kwargs)})
-    return evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs), httpError=HTTPInternalServerError,
-                         msgOnFail="kwargs unpacking failed from specified 'resource_type' and 'RESOURCE_TYPE_DICT'",
+    return evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs), http_error=HTTPInternalServerError,
+                         msg_on_fail="kwargs unpacking failed from specified 'resource_type' and 'RESOURCE_TYPE_DICT'",
                          content={u"kwargs": repr(kwargs), u"RESOURCE_TYPE_DICT": repr(RESOURCE_TYPE_DICT)})
 
 
 def find_children_by_name(child_name, parent_id, db_session):
-    tree_struct = resource_tree_service.from_parent_deeper(parent_id=parent_id, limit_depth=1, db_session=db_session)
-    tree_level_entries = [node for node in tree_struct]
-    tree_level_filtered = [node.Resource for node in tree_level_entries if
+    tree_struct = RESOURCE_TREE_SERVICE.from_parent_deeper(parent_id=parent_id, limit_depth=1, db_session=db_session)
+    tree_level_filtered = [node.Resource for node in list(tree_struct) if
                            node.Resource.resource_name.lower() == child_name.lower()]
     return tree_level_filtered.pop() if len(tree_level_filtered) else None

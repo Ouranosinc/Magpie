@@ -6,10 +6,10 @@ Revises: 2d472fe79b95
 Create Date: 2012-03-10 11:12:39.353857
 """
 from __future__ import unicode_literals
-# noinspection PyUnresolvedReferences
-from alembic.context import get_context
-from alembic import op
+
 import sqlalchemy as sa
+from alembic import op
+from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
 
 # revision identifiers, used by Alembic.

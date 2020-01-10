@@ -5,11 +5,12 @@ The OWSRequest is based on pywps code:
 * https://github.com/geopython/pywps/blob/master/pywps/app/WPSRequest.py
 """
 
-from magpie.api.requests import get_multiformat_any
-from magpie.utils import get_logger, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, CONTENT_TYPE_FORM, is_json_body, get_header
 from typing import TYPE_CHECKING
-# noinspection PyUnresolvedReferences
-import lxml.etree
+
+import lxml.etree  # nosec: B410 # module safe but bandit flags it : https://github.com/tiran/defusedxml/issues/38
+
+from magpie.api.requests import get_multiformat_any
+from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, get_header, get_logger, is_json_body
 
 if TYPE_CHECKING:
     from pyramid.request import Request
@@ -60,7 +61,9 @@ class OWSParser(object):
 
 
 class WPSGet(OWSParser):
-    """Basically a case-insensitive query string parser"""
+    """
+    Basically a case-insensitive query string parser.
+    """
 
     def __init__(self, request):
         super(WPSGet, self).__init__(request)
@@ -75,8 +78,7 @@ class WPSGet(OWSParser):
     def _get_param_value(self, param):
         if param in self.all_params:
             return self.all_params[param]
-        else:
-            return None
+        return None
 
 
 def lxml_strip_ns(tree):
@@ -93,17 +95,15 @@ class WPSPost(OWSParser):
 
     def __init__(self, request):
         super(WPSPost, self).__init__(request)
-        # noinspection PyUnresolvedReferences
-        self.document = lxml.etree.fromstring(self.request.body)
+        self.document = lxml.etree.fromstring(self.request.body)  # nosec: B410
         lxml_strip_ns(self.document)
 
     def _get_param_value(self, param):
         if param in self.document.attrib:
             return self.document.attrib[param].lower()
-        elif param == "request":
+        if param == "request":
             return self.document.tag.lower()
-        else:
-            return None
+        return None
 
 
 class MultiFormatParser(OWSParser):

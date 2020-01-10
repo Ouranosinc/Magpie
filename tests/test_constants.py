@@ -1,8 +1,11 @@
-from magpie import constants as c
-import pytest
 import mock
+import pytest
+
+from magpie import constants as c
+from tests import runner
 
 
+@runner.MAGPIE_TEST_UTILS
 def test_get_constant_with_same_name():
     test_value = "test-constant"
     c.MAGPIE_CRON_LOG = test_value
@@ -10,6 +13,7 @@ def test_get_constant_with_same_name():
     assert value == test_value
 
 
+@runner.MAGPIE_TEST_UTILS
 def test_get_constant_with_settings():
     settings = {
         "magpie.test_some_value": "some-value",
@@ -19,11 +23,13 @@ def test_get_constant_with_settings():
     assert c.get_constant("magpie.test_some_value", settings) == settings["magpie.test_some_value"]
 
 
+@runner.MAGPIE_TEST_UTILS
 def test_get_constant_alternative_name():
     settings = {"magpie.test_some_value": "some-value"}
     assert c.get_constant("MAGPIE_TEST_SOME_VALUE", settings) == settings["magpie.test_some_value"]
 
 
+@runner.MAGPIE_TEST_UTILS
 def test_get_constant_raise_missing_when_requested():
     with pytest.raises(LookupError):
         c.get_constant("MAGPIE_DOESNT_EXIST", raise_missing=True)
@@ -35,6 +41,7 @@ def test_get_constant_raise_missing_when_requested():
         pytest.fail(msg="Should not have raised although constant is missing.")
 
 
+@runner.MAGPIE_TEST_UTILS
 def test_get_constant_raise_not_set_when_requested():
     settings = {"magpie.not_set_but_exists": None}
     with pytest.raises(ValueError):
@@ -54,11 +61,12 @@ def test_get_constant_raise_not_set_when_requested():
         pytest.fail(msg="Should not have raised although constant is not set.")
 
 
+@runner.MAGPIE_TEST_UTILS
 def test_constant_prioritize_setting_before_env_when_specified():
     settings = {"magpie.some_existing_var": "FROM_SETTING"}
     override = {"MAGPIE_SOME_EXISTING_VAR": "FROM_ENV"}
     with mock.patch.dict("os.environ", override):
-        v = c.get_constant("MAGPIE_SOME_EXISTING_VAR", settings)
-        assert v == settings["magpie.some_existing_var"]
-        v = c.get_constant("MAGPIE_SOME_EXISTING_VAR")
-        assert v == override["MAGPIE_SOME_EXISTING_VAR"]
+        var = c.get_constant("MAGPIE_SOME_EXISTING_VAR", settings)
+        assert var == settings["magpie.some_existing_var"]
+        var = c.get_constant("MAGPIE_SOME_EXISTING_VAR")
+        assert var == override["MAGPIE_SOME_EXISTING_VAR"]

@@ -1,25 +1,25 @@
-from magpie.constants import get_constant
-from magpie.definitions.ziggurat_definitions import UserService, ResourceService, permission_to_pyramid_acls
-from magpie.definitions.pyramid_definitions import (
-    EVERYONE,
-    ALLOW,
-    HTTPNotFound,
-    HTTPBadRequest,
-    HTTPNotImplemented,
-    HTTPInternalServerError,
-)
+from typing import TYPE_CHECKING
+
+from beaker.cache import cache_region, cache_regions
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound, HTTPNotImplemented
+from pyramid.security import Allow as ALLOW
+from pyramid.security import Everyone as EVERYONE  # noqa
+from six import with_metaclass
+from ziggurat_foundations.models.services.resource import ResourceService
+from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.permissions import permission_to_pyramid_acls
+
+from magpie import models
 from magpie.api import exception as ax
+from magpie.constants import get_constant
 from magpie.owsrequest import ows_parser_factory
 from magpie.permissions import Permission
-from magpie import models
-from beaker.cache import cache_region, cache_regions
-from typing import TYPE_CHECKING
-from six import with_metaclass
+
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import (  # noqa: F401
+    from magpie.typedefs import (  # noqa: F401
         AccessControlListType, Str, List, Dict, Type, ResourcePermissionType
     )
-    from magpie.definitions.pyramid_definitions import Request  # noqa: F401
+    from pyramid.request import Request
 
 
 class ServiceMeta(type):
@@ -37,6 +37,7 @@ class ServiceMeta(type):
         """
         Allowed resources type names under the service.
         """
+        # pylint: disable=E1133     # is iterable but detected as not like one
         return [r.resource_type_name for r in cls.resource_types]
 
     @property
@@ -78,17 +79,17 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
         """
         List of access control rules defining (outcome, user/group, permission) combinations.
         """
-        if 'acl' not in cache_regions:
-            cache_regions['acl'] = {'enabled': False}
+        if "acl" not in cache_regions:
+            cache_regions["acl"] = {"enabled": False}
         return self._get_acl_cached(self.service.resource_id, self.request.user)
 
-    # noinspection PyUnusedLocal
     # parameters required to preserve caching of corresponding resource-id/user called
-    @cache_region('acl')
-    def _get_acl_cached(self, service_id, user):
-        """Beaker will cache this method based on the service id and the user.
+    @cache_region("acl")
+    def _get_acl_cached(self, service_id, user):  # noqa: F811
+        """
+        Cache this method with :py:mod:`beaker` based on the service id and the user.
 
-        If the cache is not hit, call the self.get_acl() method
+        If the cache is not hit, call :meth:`get_acl`.
         """
         return self.get_acl()
 
@@ -109,10 +110,9 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
                 user = UserService.by_user_name(get_constant("MAGPIE_ANONYMOUS_USER"), db_session=self.request.db)
                 if user is None:
                     raise Exception("No Anonymous user in the database")
-                else:
-                    permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
-                    for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-                        self.acl.append((outcome, EVERYONE, perm_name,))
+                permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
+                for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
+                    self.acl.append((outcome, EVERYONE, perm_name,))
 
     def permission_requested(self):
         # type: () -> Permission
@@ -122,9 +122,9 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
             if perm is None:
                 raise NotImplementedError("Undefined 'Permission' from 'request' parameter: {!s}".format(req))
             return perm
-        except KeyError as ex:
+        except KeyError as exc:
             # if 'ServiceInterface', 'params_expected' is empty and will raise a KeyError
-            raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(ex, type(self)))
+            raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(exc, type(self)))
 
     def effective_permissions(self, resource, user):
         # type: (models.Resource, models.User) -> List[ResourcePermissionType]
@@ -257,8 +257,8 @@ class ServiceNCWMS2(ServiceBaseWMS):
             return [(ALLOW, EVERYONE, permission_requested.value,)]
 
         if netcdf_file:
-            ax.verify_param("outputs/", paramCompare=netcdf_file, httpError=HTTPNotFound,
-                            msgOnFail="'outputs/' is not in path", notIn=True)
+            ax.verify_param("outputs/", param_compare=netcdf_file, http_error=HTTPNotFound,
+                            msg_on_fail="'outputs/' is not in path", not_in=True)
             netcdf_file = netcdf_file.replace("outputs/", "birdhouse/")
 
             db_session = self.request.db
@@ -346,12 +346,12 @@ class ServiceAPI(ServiceInterface):
     def __init__(self, service, request):
         super(ServiceAPI, self).__init__(service, request)
 
-    def get_acl(self, sub_api_route=None):
+    def get_acl(self):
         self.expand_acl(self.service, self.request.user)
 
         match_index = 0
         route_parts = self.request.path.split("/")
-        route_api_base = self.service.resource_name if sub_api_route is None else sub_api_route
+        route_api_base = self.service.resource_name
 
         if self.service.resource_name in route_parts and route_api_base in route_parts:
             api_idx = route_parts.index(route_api_base)
@@ -505,14 +505,14 @@ def service_factory(service, request):
     """
     Retrieve the specific service class from the provided database service entry.
     """
-    ax.verify_param(service, paramCompare=models.Service, ofType=True,
-                    httpError=HTTPBadRequest, content={u"service": repr(service)},
-                    msgOnFail="Cannot process invalid service object")
-    service_type = ax.evaluate_call(lambda: service.type, httpError=HTTPInternalServerError,
-                                    msgOnFail="Cannot retrieve service type from object")
-    ax.verify_param(service_type, isIn=True, paramCompare=SERVICE_TYPE_DICT.keys(),
-                    httpError=HTTPNotImplemented, content={u"service_type": service_type},
-                    msgOnFail="Undefined service type mapping to service object")
+    ax.verify_param(service, param_compare=models.Service, is_type=True,
+                    http_error=HTTPBadRequest, content={u"service": repr(service)},
+                    msg_on_fail="Cannot process invalid service object")
+    service_type = ax.evaluate_call(lambda: service.type, http_error=HTTPInternalServerError,
+                                    msg_on_fail="Cannot retrieve service type from object")
+    ax.verify_param(service_type, is_in=True, param_compare=SERVICE_TYPE_DICT.keys(),
+                    http_error=HTTPNotImplemented, content={u"service_type": service_type},
+                    msg_on_fail="Undefined service type mapping to service object")
     return ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service_type](service, request),
-                            httpError=HTTPInternalServerError,
-                            msgOnFail="Failed to find requested service type.")
+                            http_error=HTTPInternalServerError,
+                            msg_on_fail="Failed to find requested service type.")

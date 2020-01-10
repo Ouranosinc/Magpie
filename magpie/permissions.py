@@ -1,9 +1,12 @@
-from magpie.utils import ExtendedEnumMeta
-from six import with_metaclass
 from enum import Enum
 from typing import TYPE_CHECKING
+
+from six import with_metaclass
+
+from magpie.utils import ExtendedEnumMeta
+
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Iterable, List, Optional, Str, AnyPermissionType  # noqa: F401
+    from magpie.typedefs import Iterable, List, Optional, Str, AnyPermissionType  # noqa: F401
 
 
 class Permission(with_metaclass(ExtendedEnumMeta, Enum)):

@@ -1,21 +1,26 @@
-from magpie.api.exception import evaluate_call, verify_param
-from magpie.api import schemas as s
-from magpie.constants import get_constant
-from magpie.definitions import ziggurat_definitions as zig
-from magpie.definitions.pyramid_definitions import (
-    IAuthenticationPolicy,
+from typing import TYPE_CHECKING
+
+from pyramid.authentication import IAuthenticationPolicy
+from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPForbidden,
-    HTTPNotFound,
-    HTTPUnprocessableEntity,
     HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPUnprocessableEntity
 )
-from magpie.utils import CONTENT_TYPE_JSON
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.resource import ResourceService
+from ziggurat_foundations.models.services.user import UserService
+
 from magpie import models
-from typing import TYPE_CHECKING
+from magpie.api import schemas as s
+from magpie.api.exception import evaluate_call, verify_param
+from magpie.constants import get_constant
+from magpie.utils import CONTENT_TYPE_JSON
+
 if TYPE_CHECKING:
-    from magpie.definitions.pyramid_definitions import Request  # noqa: F401
-    from magpie.definitions.typedefs import Any, Str, Optional, ServiceOrResourceType  # noqa: F401
+    from pyramid.request import Request
+    from magpie.typedefs import Any, Str, Optional, ServiceOrResourceType  # noqa: F401
     from magpie.permissions import Permission  # noqa: F401
 
 
@@ -37,9 +42,9 @@ def get_multiformat_any(request, key, default=None):
         if not len(request.body):
             return default
         return evaluate_call(lambda: request.json.get(key, default),
-                             httpError=HTTPInternalServerError, msgOnFail=msg)
+                             http_error=HTTPInternalServerError, msg_on_fail=msg)
     return evaluate_call(lambda: get_request_method_content(request).get(key, default),
-                         httpError=HTTPInternalServerError, msgOnFail=msg)
+                         http_error=HTTPInternalServerError, msg_on_fail=msg)
 
 
 def get_multiformat_post(request, key, default=None):
@@ -67,8 +72,8 @@ def get_permission_multiformat_post_checked(request, service_or_resource, permis
 
 def get_value_multiformat_post_checked(request, key, default=None):
     val = get_multiformat_any(request, key, default=default)
-    verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
-                 paramName=key, msgOnFail=s.UnprocessableEntityResponseSchema.description)
+    verify_param(val, not_none=True, not_empty=True, http_error=HTTPUnprocessableEntity,
+                 param_name=key, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
     return val
 
 
@@ -81,27 +86,26 @@ def get_user(request, user_name_or_token=None):
         curr_user = request.user
         if curr_user:
             return curr_user
-        else:
-            anonymous_user = get_constant("MAGPIE_ANONYMOUS_USER")
-            anonymous = evaluate_call(lambda: zig.UserService.by_user_name(anonymous_user, db_session=request.db),
-                                      fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                                      msgOnFail=s.User_CheckAnonymous_ForbiddenResponseSchema.description)
-            verify_param(anonymous, notNone=True, httpError=HTTPNotFound,
-                         msgOnFail=s.User_CheckAnonymous_NotFoundResponseSchema.description)
-            return anonymous
-    else:
-        authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
-        principals = authn_policy.effective_principals(request)
-        admin_group = zig.GroupService.by_group_name(get_constant("MAGPIE_ADMIN_GROUP"), db_session=request.db)
-        admin_principal = "group:{}".format(admin_group.id)
-        if admin_principal not in principals:
-            raise HTTPForbidden()
-        user = evaluate_call(lambda: zig.UserService.by_user_name(user_name_or_token, db_session=request.db),
-                             fallback=lambda: request.db.rollback(),
-                             httpError=HTTPForbidden, msgOnFail=s.User_GET_ForbiddenResponseSchema.description)
-        verify_param(user, notNone=True, httpError=HTTPNotFound,
-                     msgOnFail=s.User_GET_NotFoundResponseSchema.description)
-        return user
+        anonymous_user = get_constant("MAGPIE_ANONYMOUS_USER")
+        anonymous = evaluate_call(lambda: UserService.by_user_name(anonymous_user, db_session=request.db),
+                                  fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                                  msg_on_fail=s.User_CheckAnonymous_ForbiddenResponseSchema.description)
+        verify_param(anonymous, not_none=True, http_error=HTTPNotFound,
+                     msg_on_fail=s.User_CheckAnonymous_NotFoundResponseSchema.description)
+        return anonymous
+
+    authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
+    principals = authn_policy.effective_principals(request)
+    admin_group = GroupService.by_group_name(get_constant("MAGPIE_ADMIN_GROUP"), db_session=request.db)
+    admin_principal = "group:{}".format(admin_group.id)
+    if admin_principal not in principals:
+        raise HTTPForbidden()
+    user = evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
+                         fallback=lambda: request.db.rollback(),
+                         http_error=HTTPForbidden, msg_on_fail=s.User_GET_ForbiddenResponseSchema.description)
+    verify_param(user, not_none=True, http_error=HTTPNotFound,
+                 msg_on_fail=s.User_GET_NotFoundResponseSchema.description)
+    return user
 
 
 def get_user_matchdict_checked_or_logged(request, user_name_key="user_name"):
@@ -119,34 +123,34 @@ def get_user_matchdict_checked(request, user_name_key="user_name"):
 
 def get_group_matchdict_checked(request, group_name_key="group_name"):
     group_name = get_value_matchdict_checked(request, group_name_key)
-    group = evaluate_call(lambda: zig.GroupService.by_group_name(group_name, db_session=request.db),
-                          fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                          msgOnFail=s.Group_MatchDictCheck_ForbiddenResponseSchema.description)
-    verify_param(group, notNone=True, httpError=HTTPNotFound,
-                 msgOnFail=s.Group_MatchDictCheck_NotFoundResponseSchema.description)
+    group = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
+                          fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                          msg_on_fail=s.Group_MatchDictCheck_ForbiddenResponseSchema.description)
+    verify_param(group, not_none=True, http_error=HTTPNotFound,
+                 msg_on_fail=s.Group_MatchDictCheck_NotFoundResponseSchema.description)
     return group
 
 
 def get_resource_matchdict_checked(request, resource_name_key="resource_id"):
     # type: (Request, Str) -> models.Resource
     resource_id = get_value_matchdict_checked(request, resource_name_key)
-    resource_id = evaluate_call(lambda: int(resource_id), httpError=HTTPBadRequest,
-                                msgOnFail=s.Resource_MatchDictCheck_BadRequestResponseSchema.description)
-    resource = evaluate_call(lambda: zig.ResourceService.by_resource_id(resource_id, db_session=request.db),
-                             fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                             msgOnFail=s.Resource_MatchDictCheck_ForbiddenResponseSchema.description)
-    verify_param(resource, notNone=True, httpError=HTTPNotFound,
-                 msgOnFail=s.Resource_MatchDictCheck_NotFoundResponseSchema.description)
+    resource_id = evaluate_call(lambda: int(resource_id), http_error=HTTPBadRequest,
+                                msg_on_fail=s.Resource_MatchDictCheck_BadRequestResponseSchema.description)
+    resource = evaluate_call(lambda: ResourceService.by_resource_id(resource_id, db_session=request.db),
+                             fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                             msg_on_fail=s.Resource_MatchDictCheck_ForbiddenResponseSchema.description)
+    verify_param(resource, not_none=True, http_error=HTTPNotFound,
+                 msg_on_fail=s.Resource_MatchDictCheck_NotFoundResponseSchema.description)
     return resource
 
 
 def get_service_matchdict_checked(request, service_name_key="service_name"):
     service_name = get_value_matchdict_checked(request, service_name_key)
     service = evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
-                            fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                            msgOnFail=s.Service_MatchDictCheck_ForbiddenResponseSchema.description)
-    verify_param(service, notNone=True, httpError=HTTPNotFound, content={u'service_name': service_name},
-                 msgOnFail=s.Service_MatchDictCheck_NotFoundResponseSchema.description)
+                            fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                            msg_on_fail=s.Service_MatchDictCheck_ForbiddenResponseSchema.description)
+    verify_param(service, not_none=True, http_error=HTTPNotFound, content={u"service_name": service_name},
+                 msg_on_fail=s.Service_MatchDictCheck_NotFoundResponseSchema.description)
     return service
 
 
@@ -161,7 +165,7 @@ def get_permission_matchdict_checked(request, service_or_resource, permission_na
 
     :returns: found permission name if valid for the service/resource
     """
-    # import here to avoid circular import error with undefined functions between (api_request, resource_utils)
+    # pylint: disable=C0415  # avoid circular import
     from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
     perm_name = get_value_matchdict_checked(request, permission_name_key)
     return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
@@ -169,8 +173,8 @@ def get_permission_matchdict_checked(request, service_or_resource, permission_na
 
 def get_value_matchdict_checked(request, key):
     val = request.matchdict.get(key)
-    verify_param(val, notNone=True, notEmpty=True, httpError=HTTPUnprocessableEntity,
-                 paramName=key, msgOnFail=s.UnprocessableEntityResponseSchema.description)
+    verify_param(val, not_none=True, not_empty=True, http_error=HTTPUnprocessableEntity,
+                 param_name=key, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
     return val
 
 
@@ -179,7 +183,7 @@ def get_query_param(request, case_insensitive_key, default=None):
     """
     Retrieves a query string value by name (case insensitive), or returns the default if not present.
     """
-    for p in request.params:
-        if p.lower() == case_insensitive_key:
-            return request.params.get(p)
+    for param in request.params:
+        if param.lower() == case_insensitive_key:
+            return request.params.get(param)
     return default

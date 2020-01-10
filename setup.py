@@ -1,31 +1,41 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import logging
 import os
 import sys
 from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from typing import Iterable, Set
-
-MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
-MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, 'magpie')
-sys.path.insert(0, MAGPIE_MODULE_DIR)
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-from magpie import __meta__             # noqa: F401
+if TYPE_CHECKING:
+    from typing import Iterable, Set
 
-with open('README.rst') as readme_file:
+MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
+MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, "magpie")
+sys.path.insert(0, MAGPIE_MODULE_DIR)
+
+from magpie import __meta__  # isort:skip # noqa: E402
+
+LOGGER = logging.getLogger("magpie.setup")
+if logging.StreamHandler not in LOGGER.handlers:
+    LOGGER.addHandler(logging.StreamHandler(sys.stdout))  # type: ignore # noqa
+LOGGER.setLevel(logging.INFO)
+LOGGER.info("starting setup")
+
+
+with open("README.rst") as readme_file:
     README = readme_file.read()
 
-with open('HISTORY.rst') as history_file:
-    HISTORY = history_file.read().replace('.. :changelog:', '')
+with open("HISTORY.rst") as history_file:
+    HISTORY = history_file.read().replace(".. :changelog:", "")
 
 
 def _parse_requirements(file_path, requirements, links):
     # type: (str, Set[str], Set[str]) -> None
-    """Parses a requirements file to extra packages and links.
+    """
+    Parses a requirements file to extra packages and links.
 
     :param file_path: file path to the requirements file.
     :param requirements: pre-initialized set in which to store extracted package requirements.
@@ -37,11 +47,11 @@ def _parse_requirements(file_path, requirements, links):
             # ignore empty line, comment line or reference to other requirements file (-r flag)
             if not line or line.startswith('#') or line.startswith("-"):
                 continue
-            if 'git+https' in line:
-                pkg = line.split('#')[-1]
+            if "git+https" in line:
+                pkg = line.split("#")[-1]
                 links.add(line.strip())
-                requirements.add(pkg.replace('egg=', '').rstrip())
-            elif line.startswith('http'):
+                requirements.add(pkg.replace("egg=", "").rstrip())
+            elif line.startswith("http"):
                 links.add(line.strip())
             else:
                 requirements.add(line.strip())
@@ -49,7 +59,8 @@ def _parse_requirements(file_path, requirements, links):
 
 def _extra_requirements(base_requirements, other_requirements):
     # type: (Iterable[str], Iterable[str]) -> Set[str]
-    """Extracts only the extra requirements not already defined within the base requirements.
+    """
+    Extracts only the extra requirements not already defined within the base requirements.
 
     :param base_requirements: base package requirements.
     :param other_requirements: other set of requirements referring to additional dependencies.
@@ -66,6 +77,8 @@ def _extra_requirements(base_requirements, other_requirements):
     return filtered_test_requirements
 
 
+LOGGER.info("reading requirements")
+
 # See https://github.com/pypa/pip/issues/3610
 # use set to have unique packages by name
 LINKS = set()
@@ -81,9 +94,10 @@ REQUIREMENTS = list(REQUIREMENTS)
 DOCS_REQUIREMENTS = list(_extra_requirements(REQUIREMENTS, DOCS_REQUIREMENTS))
 TEST_REQUIREMENTS = list(_extra_requirements(REQUIREMENTS, TEST_REQUIREMENTS))
 
-print("base", REQUIREMENTS)
-print("docs", DOCS_REQUIREMENTS)
-print("test", TEST_REQUIREMENTS)
+LOGGER.info("base requirements: %s", REQUIREMENTS)
+LOGGER.info("docs requirements: %s", DOCS_REQUIREMENTS)
+LOGGER.info("test requirements: %s", TEST_REQUIREMENTS)
+LOGGER.info("link requirements: %s", LINKS)
 
 setup(
     # -- meta information --------------------------------------------------
@@ -131,9 +145,17 @@ setup(
     tests_require=TEST_REQUIREMENTS,
 
     # -- script entry points -----------------------------------------------
-    entry_points="""\
-          [paste.app_factory]
-          main = magpie.app:main
-          [console_scripts]
-          """,
+    entry_points={
+        "paste.app_factory": [
+            "main = magpie.app:main"
+        ],
+        "console_scripts": [
+            "create_users = magpie.helpers.create_users:main",
+            "register_default_users = magpie.helpers.register_default_users:register_default_users",
+            "register_providers = magpie.helpers.register_providers:main",
+            "run_database_migration = magpie.helpers.run_database_migration:run_database_migration",
+            "sync_resources = magpie.helpers.sync_resources:main",
+        ],
+    }
 )
+LOGGER.info("setup complete")

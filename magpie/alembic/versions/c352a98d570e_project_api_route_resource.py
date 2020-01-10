@@ -5,25 +5,15 @@ Revision ID: c352a98d570e
 Revises: a395ef9d3fe6
 Create Date: 2018-06-20 13:31:55.666240
 """
-import os
-import sys
-
 import sqlalchemy as sa
-
-cur_file = os.path.abspath(__file__)
-root_dir = os.path.dirname(cur_file)    # version
-root_dir = os.path.dirname(root_dir)    # alembic
-root_dir = os.path.dirname(root_dir)    # magpie
-root_dir = os.path.dirname(root_dir)    # root
-sys.path.insert(0, root_dir)
-
-# noinspection PyUnresolvedReferences
-from magpie.definitions.alembic_definitions import get_context, op              # noqa: F401
-from magpie.definitions.sqlalchemy_definitions import PGDialect, sessionmaker   # noqa: F401
+from alembic import op
+from alembic.context import get_context
+from sqlalchemy.dialects.postgresql.base import PGDialect
+from sqlalchemy.orm.session import sessionmaker
 
 # revision identifiers, used by Alembic.
-revision = 'c352a98d570e'
-down_revision = 'a395ef9d3fe6'
+revision = "c352a98d570e"
+down_revision = "a395ef9d3fe6"
 branch_labels = None
 depends_on = None
 
@@ -48,7 +38,7 @@ def change_project_api_resource_type(new_type_name):
     if isinstance(context.connection.engine.dialect, PGDialect):
         # obtain service 'project-api'
         session = Session(bind=op.get_bind())
-        query = sa.select([services.c.resource_id]).where(services.c.type == 'project-api')
+        query = sa.select([services.c.resource_id]).where(services.c.type == "project-api")
         project_api_svc = session.execute(query).fetchone()
 
         # nothing to edit if it doesn't exist, otherwise change resource types name
@@ -63,8 +53,8 @@ def change_project_api_resource_type(new_type_name):
 
 
 def upgrade():
-    change_project_api_resource_type('route')
+    change_project_api_resource_type("route")
 
 
 def downgrade():
-    change_project_api_resource_type('directory')
+    change_project_api_resource_type("directory")

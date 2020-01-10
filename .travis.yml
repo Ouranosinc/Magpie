@@ -1,3 +1,4 @@
+# === setup ===
 language: python
 python:
   - "2.7"
@@ -27,6 +28,9 @@ postgres:
   database: magpie
   username: postgres
   password: qwerty
+notifications:
+  email: false
+# === pipeline ===
 before_install:
   - python -V
   - uname -a
@@ -39,46 +43,37 @@ before_install:
   - env
   - make conda-base
   - make install-sys
-  - echo $CONDA_PREFIX
-  - echo $CONDA_ENV
   #==== magpie env and constants ===
   - mkdir -p ./env
   - cp -f ./ci/magpie.env ./env/magpie.env
 install:
-  # TODO: remove when fixed and merged (see requirements.txt and Makefile)
-  - |
-    if [ "${TRAVIS_PYTHON_VERSION}" -eq "2.7" ]; then
-      ${CONDA_PREFIX}/bin/pip install --upgrade --force-reinstall python-openid && \
-      ${CONDA_PREFIX}/bin/pip uninstall -y python3-openid;
-    else
-      ${CONDA_PREFIX}/bin/pip install --upgrade --force-reinstall python3-openid && \
-      ${CONDA_PREFIX}/bin/pip uninstall -y python-openid;
-    fi
-  - make install install-dev
+  - make install-pkg install-dev
   - make version
   - ${CONDA_PREFIX}/bin/pip freeze
 before_script:
   - psql -c 'create database magpie;' -U postgres
-  - echo $CONDA_PREFIX
-  - echo $CONDA_ENV
+  - echo ${CONDA_PREFIX}
+  - echo ${CONDA_ENV}
   - export PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
   - export CONDA_ENV=magpie-${TRAVIS_PYTHON_VERSION}
-  - export CONDA_PREFIX=$HOME/conda/envs/magpie-${TRAVIS_PYTHON_VERSION}
-  - export PATH=${CONDA_HOME}/bin:$PATH
+  - export CONDA_PREFIX=${HOME}/conda/envs/magpie-${TRAVIS_PYTHON_VERSION}
+  - export PATH=${CONDA_HOME}/bin:${PATH}
   - hash -r
   - env
-  - echo $CONDA_PREFIX
-  - echo $CONDA_ENV
 script:
-  - export MAGPIE_LOG_LEVEL=INFO
-  - make $START_TARGET $TEST_TARGET
+  # test linting and coverage
+  - make stop ${START_TARGET}
+  - make ${TEST_TARGET}
   - |
     if [ "${TRAVIS_PYTHON_VERSION}" -eq "3.6" ]; then
-      make lint
+      make check
       make coverage
     fi
-notifications:
-  email: false
+  # smoke test the docker image
+  - |
+    if [ "${TRAVIS_PYTHON_VERSION}" -eq "3.6" ]; then
+      make test-docker
+    fi
 after_success:
   - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
-  - source ${CONDA_PREFIX}/bin/activate ${CONDA_ENV} && python-codacy-coverage -r coverage.xml
+  - source ${CONDA_PREFIX}/bin/activate ${CONDA_ENV} && python-codacy-coverage -r reports/coverage.xml

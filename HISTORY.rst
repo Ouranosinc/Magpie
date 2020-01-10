@@ -6,6 +6,29 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* add ``MAGPIE_DB_URL`` configuration parameter to define a database connection with full URL instead of individual
+  parts (notably ``MAGPIE_POSTGRES_<>`` variables).
+* add ``bandit`` security code analysis and apply some detected issues (#168).
+* add more code linting checks using various test tools.
+* add smoke test of built docker image to `Travis-CI` pipeline.
+* bump ``alembic>=1.3.0`` to remove old warnings and receive recent fixes.
+* move ``magpie.utils.SingletonMeta`` functionality from adapter to reuse it in ``null`` test checks.
+* rename ``resource_tree_service`` and ``remote_resource_tree_service`` to their uppercase equivalents.
+* removed module ``magpie.definitions`` in favor of directly importing appropriate references as needed.
+* improve ``make help`` targets descriptions.
+* change to Apache license.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* fix incorrectly installed ``authomatic`` library following update of reference branch
+  (https://github.com/fmigneault/authomatic/tree/httplib-port) with ``master`` branch merged update
+  (https://github.com/authomatic/authomatic/pull/195/commits/d7897c5c4c20486b55cb2c70724fa390c9aa7de6).
+* fix documentation links incorrectly generated for `readthedocs` pages.
+* fix missing or incomplete configuration documentation details.
+* fix many linting issues detected by integrated tools.
+
 1.7.4 (2019-12-03)
 ---------------------
 
@@ -20,14 +43,14 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* fix 500 error when getting user's services on /users/{user_name}/services
+* fix 500 error when getting user's services on ``/users/{user_name}/services``.
 
 1.7.2 (2019-11-15)
 ---------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* fix gunicorn breaking change in 20.0.0 is not compatible with alpine: pin gunicorn==19.9.0
+* fix ``gunicorn>=20.0.0`` breaking change not compatible with alpine: pin ``gunicorn==19.9.0``.
 
 1.7.1 (2019-11-12)
 ---------------------
@@ -278,7 +301,7 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * fix UI add child button broken by introduced ``int`` resource id type checking
-* fix travis-ci test suite execution and enable PEP8 lint checks
+* fix `Travis-CI` test suite execution and enable PEP8 lint checks
 * fix yaml security issue using updated package distribution
 * fix invalid conflict service name check on service update request
 * fix many invalid or erroneous swagger specifications
@@ -293,8 +316,6 @@ Features / Changes
 
 0.7.x
 ---------------------
-
-`Magpie REST API latest documentation`_
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -317,8 +338,6 @@ Bug Fixes
 0.6.x
 ---------------------
 
-`Magpie REST API 0.6.x documentation`_
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * add ``/magpie/api/`` route to locally display the Magpie REST API documentation
@@ -334,8 +353,6 @@ Features / Changes
 0.5.x
 ---------------------
 
-`Magpie REST API 0.5.x documentation`_
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * independent user/group permissions, no more 'personal' group to reflect user permissions
@@ -348,8 +365,6 @@ Features / Changes
 0.4.x
 ---------------------
 
-`Magpie REST API 0.4.x documentation`_
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * default admin permissions
@@ -360,8 +375,6 @@ Features / Changes
 0.3.x
 ---------------------
 
-`Magpie REST API 0.3.x documentation`_
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * `ncWMS` support for `getmap`, `getcapabilities`, `getmetadata` on ``thredds`` resource
@@ -369,7 +382,7 @@ Features / Changes
 * add `geoserverwms` service
 * remove load balanced `Malleefowl` and `Catalog`
 * push service provider updates to `Phoenix` on service edit or initial setup with `getcapabilities` for `anonymous`
-* major update of `Magpie REST API 0.2.x documentation`_ to match returned codes/messages from 0.2.0 changes
+* major update of `Magpie REST API 0.2.x documentation` to match returned codes/messages from 0.2.0 changes
 * normalise additional HTTP request responses omitted from 0.2.0 (404, 500, and other missed responses)
 * remove internal api call, separate login external from local, direct access to `ziggurat` login
 
@@ -382,17 +395,13 @@ Bug Fixes
 0.2.0
 ---------------------
 
-`Magpie REST API 0.2.0 documentation`_
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Revamp HTTP standard error output format, messages, values and general error/exception handling.
-* Update `Magpie REST API 0.2.0 documentation`_
+* Update `Magpie REST API 0.2.0 documentation`.
 
 0.1.1
 ---------------------
-
-`Magpie REST API 0.1.1 documentation`_
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -401,26 +410,4 @@ Features / Changes
 0.1.0
 ---------------------
 
-`Magpie REST API 0.1.0 documentation`_
-
 * First structured release.
-
-
-.. _magpie_api_latest: https://colibri.crim.ca/magpie/api/?urls.primaryName=latest
-.. _magpie_api_0.1.0: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.1.0
-.. _magpie_api_0.1.1: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.1.1
-.. _magpie_api_0.2.0: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.2.0
-.. _magpie_api_0.2.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.2.x
-.. _magpie_api_0.3.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.3.x
-.. _magpie_api_0.4.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.4.x
-.. _magpie_api_0.5.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.5.x
-.. _magpie_api_0.6.x: https://colibri.crim.ca/magpie/api/?urls.primaryName=0.6.x
-.. _Magpie REST API 0.1.0 documentation: magpie_api_0.1.0_
-.. _Magpie REST API 0.1.1 documentation: magpie_api_0.1.1_
-.. _Magpie REST API 0.2.0 documentation: magpie_api_0.2.0_
-.. _Magpie REST API 0.2.x documentation: magpie_api_0.2.x_
-.. _Magpie REST API 0.3.x documentation: magpie_api_0.3.x_
-.. _Magpie REST API 0.4.x documentation: magpie_api_0.4.x_
-.. _Magpie REST API 0.5.x documentation: magpie_api_0.5.x_
-.. _Magpie REST API 0.6.x documentation: magpie_api_0.6.x_
-.. _Magpie REST API latest documentation: _magpie_api_latest

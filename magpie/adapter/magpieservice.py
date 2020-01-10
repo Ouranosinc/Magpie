@@ -1,25 +1,32 @@
 """
 Store adapters to read data from magpie.
 """
-from magpie.models import Service as MagpieService
-from magpie.definitions.twitcher_definitions import ServiceStoreInterface, Service, ServiceNotFound
-from magpie.definitions.pyramid_definitions import HTTPOk, asbool
-from magpie.api.schemas import ServicesAPI
-from magpie.utils import get_admin_cookies, get_magpie_url, get_settings, get_logger, CONTENT_TYPE_JSON
 from typing import TYPE_CHECKING
+
 import requests
+from pyramid.httpexceptions import HTTPOk
+from pyramid.settings import asbool
+
+from magpie.api.schemas import ServicesAPI
+from magpie.models import Service as MagpieService
+from magpie.utils import CONTENT_TYPE_JSON, get_admin_cookies, get_logger, get_magpie_url, get_settings
+# twitcher available only when this module is imported from it
+from twitcher.datatype import Service               # noqa
+from twitcher.exceptions import ServiceNotFound     # noqa
+from twitcher.store import ServiceStoreInterface    # noqa
+
 if TYPE_CHECKING:
     from pyramid.request import Request  # noqa: F401
 LOGGER = get_logger("TWITCHER")
 
 
-# noinspection PyUnusedLocal
 class MagpieServiceStore(ServiceStoreInterface):
     """
     Registry for OWS services.
 
     Uses magpie to fetch service url and attributes.
     """
+    # pylint: disable=W0221
 
     def __init__(self, request):
         # type: (Request) -> None
@@ -42,7 +49,7 @@ class MagpieServiceStore(ServiceStoreInterface):
         """
         raise NotImplementedError
 
-    def list_services(self, request=None):
+    def list_services(self, request=None):  # noqa: F811
         """
         Lists all services registered in magpie.
         """
@@ -55,13 +62,13 @@ class MagpieServiceStore(ServiceStoreInterface):
             raise resp.raise_for_status()
         json_body = resp.json()
         for service_type in json_body["services"]:
-            for key, service in json_body["services"][service_type].items():
+            for service in json_body["services"][service_type].values():
                 services.append(Service(url=service["service_url"],
                                         name=service["service_name"],
                                         type=service["service_type"]))
         return services
 
-    def fetch_by_name(self, name, visibility=None, request=None):
+    def fetch_by_name(self, name, visibility=None, request=None):  # noqa: F811
         """
         Gets service for given ``name`` from magpie.
         """

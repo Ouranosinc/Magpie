@@ -1,33 +1,36 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import json
+import logging
+import os
+import sys
+import types
+from distutils.dir_util import mkpath
+from enum import EnumMeta  # noqa: W0212
+from typing import TYPE_CHECKING
 
-from magpie.constants import get_constant
-from magpie.definitions.pyramid_definitions import (
-    HTTPOk, HTTPClientError, HTTPException, ConfigurationError, Configurator, Registry, Request, Response, truthy
-)
-from six.moves.urllib.parse import urlparse
-# noinspection PyProtectedMember
-from enum import EnumMeta
+import requests
+import six
+from pyramid.config import ConfigurationError, Configurator
+from pyramid.httpexceptions import HTTPClientError, HTTPException, HTTPOk
+from pyramid.registry import Registry
+from pyramid.request import Request
+from pyramid.response import Response
+from pyramid.settings import truthy
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
-from webob.headers import ResponseHeaders, EnvironHeaders
-from distutils.dir_util import mkpath
 from six.moves import configparser
-from typing import TYPE_CHECKING
-import requests
-import logging
-import types
-import six
-import sys
-import os
+from six.moves.urllib.parse import urlparse
+from webob.headers import EnvironHeaders, ResponseHeaders
+
+from magpie.constants import get_constant
+
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import (  # noqa: F401
+    from magpie.typedefs import (  # noqa: F401
         Any, AnyKey, Str, List, Optional, Type, Union,
         AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,
     )
-    # noinspection PyProtectedMember
-    from typing import _TC  # noqa: F401
+    from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
 
 CONTENT_TYPE_ANY = "*/*"
 CONTENT_TYPE_JSON = "application/json"
@@ -40,11 +43,12 @@ SUPPORTED_CONTENT_TYPES = [CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PL
 def get_logger(name, level=None):
     """
     Immediately sets the logger level to avoid duplicate log outputs from the `root logger` and `this logger` when
-    `level` is `NOTSET`.
+    `level` is ``logging.NOTSET``.
     """
     logger = logging.getLogger(name)
     if logger.level == logging.NOTSET:
         if level is None:
+            # pylint: disable=C0415     # avoid circular import
             from magpie.constants import MAGPIE_LOG_LEVEL
             level = MAGPIE_LOG_LEVEL
         logger.setLevel(level)
@@ -56,13 +60,15 @@ LOGGER = get_logger(__name__)
 
 def print_log(msg, logger=None, level=logging.INFO):
     # type: (Str, Optional[LoggerType], int) -> None
-    from magpie.constants import MAGPIE_LOG_PRINT  # cannot use 'get_constant', recursive call
+    # pylint: disable=C0415     # cannot use 'get_constant', recursive call
+    from magpie.constants import MAGPIE_LOG_PRINT
+
     if not logger:
         logger = get_logger(__name__)
     if MAGPIE_LOG_PRINT:
         all_handlers = logging.root.handlers + logger.handlers
         if not any(isinstance(h, logging.StreamHandler) for h in all_handlers):
-            logger.addHandler(logging.StreamHandler(sys.stdout))
+            logger.addHandler(logging.StreamHandler(sys.stdout))  # noqa: type
     if logger.disabled:
         logger.disabled = False
     logger.log(level, msg)
@@ -153,8 +159,8 @@ def get_header(header_name, header_container, default=None, split=None):
             if isinstance(split, six.string_types) and len(split) > 1:
                 split = [c for c in split]
             if hasattr(split, "__iter__") and not isinstance(split, six.string_types):
-                for s in split:
-                    v = v.replace(s, split[0])
+                for sep in split:
+                    v = v.replace(sep, split[0])
                 split = split[0]
             return (v.split(split)[0] if split else v).strip()
     return default
@@ -174,8 +180,7 @@ def convert_response(response):
         for cookie in response.cookies:
             pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
     if isinstance(response, HTTPException):
-        # noinspection PyProtectedMember
-        for header_name, header_value in response.headers._items:
+        for header_name, header_value in response.headers._items:  # noqa # pylint: disable=W0212
             if header_name.lower() == "set-cookie":
                 pyramid_response.set_cookie(name=header_name, value=header_value, overwrite=True)
     return pyramid_response
@@ -183,7 +188,8 @@ def convert_response(response):
 
 def get_admin_cookies(container, verify=True, raise_message=None):
     # type: (AnySettingsContainer, bool, Optional[Str]) -> CookiesType
-    from magpie.api.schemas import SigninAPI
+    from magpie.api.schemas import SigninAPI    # pylint: disable=C0415
+
     magpie_url = get_magpie_url(container)
     magpie_login_url = "{}{}".format(magpie_url, SigninAPI.path)
     cred = {"user_name": get_constant("MAGPIE_ADMIN_USER", container),
@@ -196,7 +202,6 @@ def get_admin_cookies(container, verify=True, raise_message=None):
     token_name = get_constant("MAGPIE_COOKIE_NAME", container)
 
     # use specific domain to differentiate between `.{hostname}` and `{hostname}` variations if applicable
-    # noinspection PyProtectedMember
     request_cookies = resp.cookies
     magpie_cookies = list(filter(lambda cookie: cookie.name == token_name, request_cookies))
     magpie_domain = urlparse(magpie_url).hostname if len(magpie_cookies) > 1 else None
@@ -245,8 +250,8 @@ def get_magpie_url(container=None):
         url = get_constant("MAGPIE_URL", raise_missing=False, raise_not_set=False, print_missing=False)
         if url:
             return url
-        hostname = get_constant("HOSTNAME", raise_not_set=False, raise_missing=False) or \
-                   get_constant("MAGPIE_HOST", raise_not_set=False, raise_missing=False)    # noqa
+        hostname = (get_constant("HOSTNAME", raise_not_set=False, raise_missing=False) or
+                    get_constant("MAGPIE_HOST", raise_not_set=False, raise_missing=False))
         if not hostname:
             raise ConfigurationError("Missing or unset MAGPIE_HOST or HOSTNAME value.")
         magpie_port = get_constant("MAGPIE_PORT", raise_not_set=False)
@@ -260,10 +265,9 @@ def get_magpie_url(container=None):
         url_parsed = urlparse(get_constant("MAGPIE_URL", settings, "magpie.url").strip("/"))
         if url_parsed.scheme in ["http", "https"]:
             return url_parsed.geturl()
-        else:
-            magpie_url = "http://{}".format(url_parsed.geturl())
-            print_log("Missing scheme from settings URL, new value: '{}'".format(magpie_url), LOGGER, logging.WARNING)
-            return magpie_url
+        magpie_url = "http://{}".format(url_parsed.geturl())
+        print_log("Missing scheme from settings URL, new value: '{}'".format(magpie_url), LOGGER, logging.WARNING)
+        return magpie_url
     except AttributeError:
         # If magpie.url does not exist, calling strip fct over None will raise this issue
         raise ConfigurationError("MAGPIE_URL or magpie.url config cannot be found")
@@ -271,8 +275,8 @@ def get_magpie_url(container=None):
 
 def get_phoenix_url(container=None):
     # type: (Optional[AnySettingsContainer]) -> Str
-    hostname = get_constant("PHOENIX_HOST", container, raise_missing=False, raise_not_set=False) or \
-               get_constant("HOSTNAME", raise_missing=False, raise_not_set=False)
+    hostname = (get_constant("PHOENIX_HOST", container, raise_missing=False, raise_not_set=False) or
+                get_constant("HOSTNAME", raise_missing=False, raise_not_set=False))
     if not hostname:
         raise ConfigurationError("Missing or unset PHOENIX_HOST or HOSTNAME value.")
     phoenix_port = get_constant("PHOENIX_PORT", raise_not_set=False)
@@ -304,11 +308,10 @@ def log_request(event):
     """
     Subscriber event that logs basic details about the incoming requests.
     """
-    LOGGER.info("Request: [{}]".format(log_request_format(event.request)))
+    LOGGER.info("Request: [%s]", log_request_format(event.request))
 
 
-# noinspection PyUnusedLocal
-def log_exception_tween(handler, registry):
+def log_exception_tween(handler, registry):  # noqa: F811
     """
     Tween factory that logs any exception before re-raising it.
 
@@ -323,9 +326,19 @@ def log_exception_tween(handler, registry):
             if isinstance(err, HTTPClientError):
                 lvl = logging.WARNING
                 exc = False
-            LOGGER.log(lvl, "Exception during request: [{}]".format(log_request_format(request)), exc_info=exc)
+            LOGGER.log(lvl, "Exception during request: [%s]", log_request_format(request), exc_info=exc)
             raise err
     return log_exc
+
+
+def is_json_body(body):
+    if not body:
+        return False
+    try:
+        json.loads(body)
+    except (ValueError, TypeError):
+        return False
+    return True
 
 
 class ExtendedEnumMeta(EnumMeta):
@@ -341,7 +354,7 @@ class ExtendedEnumMeta(EnumMeta):
         """
         Returns the literal values assigned to corresponding enum elements.
         """
-        return [m.value for m in cls.__members__.values()]
+        return [m.value for m in cls.__members__.values()]                      # pylint: disable=E1101
 
     def get(cls, key_or_value, default=None):
         # type: (AnyKey, Optional[Any]) -> Optional[_TC]
@@ -350,19 +363,39 @@ class ExtendedEnumMeta(EnumMeta):
 
         Returns the entry directly if it is already a valid enum.
         """
-        if key_or_value in cls:
+        if key_or_value in cls:                                                 # pylint: disable=E1135
             return key_or_value
-        for m_key, m_val in cls.__members__.items():
-            if key_or_value == m_key or key_or_value == m_val.value:
+        for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101
+            if key_or_value == m_key or key_or_value == m_val.value:            # pylint: disable=R1714
                 return m_val
         return default
 
 
-def is_json_body(body):
-    if not body:
-        return False
-    try:
-        json.loads(body)
-    except (ValueError, TypeError):
-        return False
-    return True
+# taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
+# works in Python 2 & 3
+class SingletonMeta(type):
+    """
+    A metaclass that creates a Singleton base class when called.
+
+    Create a class such that::
+
+        class A(six.with_metaclass(SingletonMeta)):
+            pass
+
+        class B(six.with_metaclass(SingletonMeta)):
+            pass
+
+        a1 = A()
+        a2 = A()
+        b1 = B()
+        b2 = B()
+        a1 is a2    # True
+        b1 is b2    # True
+        a1 is b1    # False
+    """
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]

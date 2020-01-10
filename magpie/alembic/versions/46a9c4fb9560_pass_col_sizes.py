@@ -6,8 +6,9 @@ Revises: 5c84d7260c5
 Create Date: 2011-12-20 17:59:16.961112
 """
 from __future__ import unicode_literals
-from alembic import op
+
 import sqlalchemy as sa
+from alembic import op
 
 # downgrade revision identifier, used by Alembic.
 revision = '46a9c4fb9560'

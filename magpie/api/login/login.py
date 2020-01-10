@@ -1,42 +1,39 @@
-from magpie.security import authomatic_setup, get_provider_names
-from magpie.definitions.pyramid_definitions import (
-    view_config,
-    forget,
-    remember,
-    Authenticated,
-    IAuthenticationPolicy,
-    Request,
-    Response,
-    HTTPOk,
-    HTTPFound,
-    HTTPTemporaryRedirect,
+from authomatic.adapters import WebObAdapter
+from authomatic.core import Credentials, LoginResult, resolve_provider_class
+from authomatic.exceptions import OAuth2Error
+from pyramid.authentication import Authenticated, IAuthenticationPolicy
+from pyramid.httpexceptions import (
     HTTPBadRequest,
-    HTTPUnauthorized,
-    HTTPForbidden,
-    HTTPNotFound,
     HTTPConflict,
-    HTTPInternalServerError,
     HTTPException,
-    NO_PERMISSION_REQUIRED,
+    HTTPForbidden,
+    HTTPFound,
+    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPOk,
+    HTTPTemporaryRedirect,
+    HTTPUnauthorized
 )
-from magpie.definitions.ziggurat_definitions import (
-    ExternalIdentityService,
-    UserService,
-    ZigguratSignInSuccess,
-    ZigguratSignInBadAuth,
-    ZigguratSignOut,
-)
-from magpie.api import generic as ag, exception as ax, schemas as s
-from magpie.api.requests import get_multiformat_post, get_value_multiformat_post_checked
+from pyramid.request import Request
+from pyramid.response import Response
+from pyramid.security import NO_PERMISSION_REQUIRED, forget, remember
+from pyramid.view import view_config
+from six.moves.urllib.parse import urlparse
+from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInBadAuth, ZigguratSignInSuccess, ZigguratSignOut
+from ziggurat_foundations.models.services.external_identity import ExternalIdentityService
+from ziggurat_foundations.models.services.user import UserService
+
+from magpie import models
+from magpie.api import exception as ax
+from magpie.api import generic as ag
+from magpie.api import schemas as s
 from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
+from magpie.api.requests import get_multiformat_post, get_value_multiformat_post_checked
 from magpie.constants import get_constant
-from magpie import models
-from magpie.utils import get_magpie_url, convert_response, get_logger, CONTENT_TYPE_JSON
-from authomatic.adapters import WebObAdapter
-from authomatic.core import LoginResult, Credentials, resolve_provider_class
-from authomatic.exceptions import OAuth2Error
-from six.moves.urllib.parse import urlparse
+from magpie.security import authomatic_setup, get_provider_names
+from magpie.utils import CONTENT_TYPE_JSON, convert_response, get_logger, get_magpie_url
+
 LOGGER = get_logger(__name__)
 
 
@@ -67,8 +64,8 @@ def process_sign_in_external(request, username, provider):
 
 
 def verify_provider(provider_name):
-    ax.verify_param(provider_name, paramName=u"provider_name", paramCompare=MAGPIE_PROVIDER_KEYS, isIn=True,
-                    httpError=HTTPNotFound, msgOnFail=s.ProviderSignin_GET_NotFoundResponseSchema.description)
+    ax.verify_param(provider_name, param_name=u"provider_name", param_compare=MAGPIE_PROVIDER_KEYS, is_in=True,
+                    http_error=HTTPNotFound, msg_on_fail=s.ProviderSignin_GET_NotFoundResponseSchema.description)
 
 
 @s.SigninAPI.post(schema=s.Signin_POST_RequestSchema(), tags=[s.LoginTag], response_schemas=s.Signin_POST_responses)
@@ -96,16 +93,16 @@ def sign_in(request):
 
     elif provider_name in MAGPIE_EXTERNAL_PROVIDERS.keys():
         return ax.evaluate_call(lambda: process_sign_in_external(request, user_name, provider_name),
-                                httpError=HTTPInternalServerError,
+                                http_error=HTTPInternalServerError,
                                 content={u"user_name": user_name, u"provider_name": provider_name},
-                                msgOnFail=s.Signin_POST_External_InternalServerErrorResponseSchema.description)
+                                msg_on_fail=s.Signin_POST_External_InternalServerErrorResponseSchema.description)
 
 
 # swagger responses referred in `sign_in`
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
 def login_success_ziggurat(request):
     # headers contains login authorization cookie
-    return ax.valid_http(httpSuccess=HTTPOk, httpKWArgs={"headers": request.context.headers},
+    return ax.valid_http(http_success=HTTPOk, http_kwargs={"headers": request.context.headers},
                          detail=s.Signin_POST_OkResponseSchema.description)
 
 
@@ -124,14 +121,14 @@ def login_failure(request, reason=None):
         else:
             user_name_list = ax.evaluate_call(
                 lambda: [user.user_name for user in UserService.all(models.User, db_session=request.db)],
-                fallback=lambda: request.db.rollback(), httpError=HTTPForbidden,
-                msgOnFail=s.Signin_POST_ForbiddenResponseSchema.description)
+                fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                msg_on_fail=s.Signin_POST_ForbiddenResponseSchema.description)
             if user_name in user_name_list:
                 http_err = HTTPInternalServerError
                 reason = s.Signin_POST_Internal_InternalServerErrorResponseSchema.description
     content = ag.get_request_info(request, default_message=s.Signin_POST_UnauthorizedResponseSchema.description)
     content.update({u"reason": str(reason)})
-    ax.raise_http(httpError=http_err, content=content, detail=s.Signin_POST_UnauthorizedResponseSchema.description)
+    ax.raise_http(http_error=http_err, content=content, detail=s.Signin_POST_UnauthorizedResponseSchema.description)
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):
@@ -144,11 +141,10 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
     create_user(internal_user_name, password=None, email=email, group_name=group_name, db_session=db_session)
 
     user = UserService.by_user_name(internal_user_name, db_session=db_session)
-    # noinspection PyArgumentList
     ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
-                                          local_user_id=user.id, provider_name=provider_name)
+                                          local_user_id=user.id, provider_name=provider_name)  # noqa
     ax.evaluate_call(lambda: db_session.add(ex_identity), fallback=lambda: db_session.rollback(),
-                     httpError=HTTPConflict, msgOnFail=s.Signin_POST_ConflictResponseSchema.description,
+                     http_error=HTTPConflict, msg_on_fail=s.Signin_POST_ConflictResponseSchema.description,
                      content={u"provider_name": str(provider_name),
                               u"internal_user_name": str(internal_user_name),
                               u"external_user_name": str(external_user_name),
@@ -177,12 +173,12 @@ def login_success_external(request, external_user_name, external_id, email, prov
     header_host = urlparse(homepage_route).hostname
     magpie_host = get_magpie_url(request)
     if header_host and header_host != magpie_host:
-        ax.raise_http(httpError=HTTPForbidden, detail=s.ProviderSignin_GET_ForbiddenResponseSchema.description)
+        ax.raise_http(http_error=HTTPForbidden, detail=s.ProviderSignin_GET_ForbiddenResponseSchema.description)
     if not header_host:
         homepage_route = magpie_host + ("/" if not homepage_route.startswith("/") else "") + homepage_route
-    return ax.valid_http(httpSuccess=HTTPFound, detail=s.ProviderSignin_GET_FoundResponseSchema.description,
+    return ax.valid_http(http_success=HTTPFound, detail=s.ProviderSignin_GET_FoundResponseSchema.description,
                          content={u"homepage_route": homepage_route},
-                         httpKWArgs={"location": homepage_route, "headers": headers})
+                         http_kwargs={"location": homepage_route, "headers": headers})
 
 
 @s.ProviderSigninAPI.get(schema=s.ProviderSignin_GET_RequestSchema, tags=[s.LoginTag],
@@ -210,8 +206,8 @@ def authomatic_login(request):
             cred = Credentials(authomatic_handler.config, token=access_token, token_type=token_type, provider=provider)
             provider.credentials = cred
             result = LoginResult(provider)
-            # noinspection PyProtectedMember
-            result.provider.user = result.provider._update_or_create_user(data, credentials=cred)
+            # pylint: disable=W0212
+            result.provider.user = result.provider._update_or_create_user(data, credentials=cred)  # noqa: W0212
 
         # otherwise, use the standard login procedure
         else:
@@ -225,9 +221,9 @@ def authomatic_login(request):
             if result.error:
                 # Login procedure finished with an error.
                 error = result.error.to_dict() if hasattr(result.error, "to_dict") else result.error
-                LOGGER.debug("Login failure with error. [{!r}]".format(error))
+                LOGGER.debug("Login failure with error. [%r]", error)
                 return login_failure(request, reason=result.error.message)
-            elif result.user:
+            if result.user:
                 # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
                 # update the user to get more info.
                 if not (result.user.name and result.user.id):
@@ -236,12 +232,12 @@ def authomatic_login(request):
                     # this error can happen if providing incorrectly formed authorization header
                     except OAuth2Error as exc:
                         LOGGER.debug("Login failure with Authorization header.")
-                        ax.raise_http(httpError=HTTPBadRequest, content={u"reason": str(exc.message)},
+                        ax.raise_http(http_error=HTTPBadRequest, content={u"reason": str(exc.message)},
                                       detail=s.ProviderSignin_GET_BadRequestResponseSchema.description)
                     # verify that the update procedure succeeded with provided token
                     if 400 <= response.status < 500:
                         LOGGER.debug("Login failure with invalid token.")
-                        ax.raise_http(httpError=HTTPUnauthorized,
+                        ax.raise_http(http_error=HTTPUnauthorized,
                                       detail=s.ProviderSignin_GET_UnauthorizedResponseSchema.description)
                 # create/retrieve the user using found details from login provider
                 return login_success_external(request,
@@ -252,9 +248,9 @@ def authomatic_login(request):
     except Exception as exc:
         exc_msg = "Unhandled error during external provider '{}' login. [{!s}]".format(provider_name, exc)
         LOGGER.exception(exc_msg, exc_info=True)
-        ax.raise_http(httpError=HTTPInternalServerError, detail=exc_msg)
+        ax.raise_http(http_error=HTTPInternalServerError, detail=exc_msg)
 
-    LOGGER.debug("Reached end of login function. Response: {!r}".format(response))
+    LOGGER.debug("Reached end of login function. Response: %r", response)
     return response
 
 
@@ -264,7 +260,7 @@ def sign_out(request):
     """
     Signs out the current user session.
     """
-    return ax.valid_http(httpSuccess=HTTPOk, httpKWArgs={"headers": forget(request)},
+    return ax.valid_http(http_success=HTTPOk, http_kwargs={"headers": forget(request)},
                          detail=s.Signout_GET_OkResponseSchema.description)
 
 
@@ -284,18 +280,17 @@ def get_session(request):
             json_resp = {u"authenticated": False}
         return json_resp
 
-    session_json = ax.evaluate_call(lambda: _get_session(request), httpError=HTTPInternalServerError,
-                                    msgOnFail=s.Session_GET_InternalServerErrorResponseSchema.description)
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Session_GET_OkResponseSchema.description, content=session_json)
+    session_json = ax.evaluate_call(lambda: _get_session(request), http_error=HTTPInternalServerError,
+                                    msg_on_fail=s.Session_GET_InternalServerErrorResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.Session_GET_OkResponseSchema.description, content=session_json)
 
 
-# noinspection PyUnusedLocal
 @s.ProvidersAPI.get(tags=[s.LoginTag], response_schemas=s.Providers_GET_responses)
 @view_config(route_name=s.ProvidersAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
-def get_providers(request):
+def get_providers(request):     # noqa: F811
     """
     Get list of login providers.
     """
-    return ax.valid_http(httpSuccess=HTTPOk, detail=s.Providers_GET_OkResponseSchema.description,
+    return ax.valid_http(http_success=HTTPOk, detail=s.Providers_GET_OkResponseSchema.description,
                          content={u"providers": {u"internal": sorted(MAGPIE_INTERNAL_PROVIDERS.values()),
                                                  u"external": sorted(MAGPIE_EXTERNAL_PROVIDERS.values()), }})

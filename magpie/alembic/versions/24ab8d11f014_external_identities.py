@@ -6,8 +6,9 @@ Revises: 2bb1ba973f0b
 Create Date: 2011-11-10 23:18:19.446844
 """
 from __future__ import unicode_literals
-from alembic import op      # noqa: F401
-import sqlalchemy as sa     # noqa: F401
+
+import sqlalchemy as sa  # noqa: F401
+from alembic import op  # noqa: F401
 
 # downgrade revision identifier, used by Alembic.
 revision = '24ab8d11f014'

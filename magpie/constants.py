@@ -11,16 +11,18 @@ settings formatted as ``magpie.[variable_name]`` in the ``magpie.ini`` configura
     constant ``MAGPIE_INI_FILE_PATH`` (or any other `path variable` defined before it - see below) has to be defined
     by environment variable if the default location is not desired (ie: if you want to provide your own configuration).
 """
-from magpie.definitions.pyramid_definitions import asbool
-from typing import TYPE_CHECKING
-import re
-import os
-import shutil
-import dotenv
 import logging
+import os
+import re
+import shutil
 import warnings
+from typing import TYPE_CHECKING
+
+import dotenv
+from pyramid.settings import asbool
+
 if TYPE_CHECKING:
-    from magpie.definitions.typedefs import Str, Optional, SettingValue, AnySettingsContainer  # noqa: F401
+    from magpie.typedefs import Str, Optional, SettingValue, AnySettingsContainer  # noqa: F401
 
 # ===========================
 # path variables
@@ -46,21 +48,20 @@ MAGPIE_POSTGRES_ENV_FILE = os.path.join(MAGPIE_ENV_DIR, "postgres.env")
 # create .env from .env.example if not present and load variables into environment
 # if files still cannot be found at 'MAGPIE_ENV_DIR' and variables are still not set,
 # default values in following sections will be used instead
-magpie_env_example = MAGPIE_ENV_FILE + ".example"
-postgres_env_example = MAGPIE_ENV_FILE + ".example"
-if not os.path.isfile(MAGPIE_ENV_FILE) and os.path.isfile(magpie_env_example):
-    shutil.copyfile(magpie_env_example, MAGPIE_ENV_FILE)
-if not os.path.isfile(MAGPIE_POSTGRES_ENV_FILE) and os.path.isfile(postgres_env_example):
-    shutil.copyfile(postgres_env_example, MAGPIE_POSTGRES_ENV_FILE)
-del magpie_env_example
-del postgres_env_example
+_MAGPIE_ENV_EXAMPLE = MAGPIE_ENV_FILE + ".example"
+_POSTGRES_ENV_EXAMPLE = MAGPIE_ENV_FILE + ".example"
+if not os.path.isfile(MAGPIE_ENV_FILE) and os.path.isfile(_MAGPIE_ENV_EXAMPLE):
+    shutil.copyfile(_MAGPIE_ENV_EXAMPLE, MAGPIE_ENV_FILE)
+if not os.path.isfile(MAGPIE_POSTGRES_ENV_FILE) and os.path.isfile(_POSTGRES_ENV_EXAMPLE):
+    shutil.copyfile(_POSTGRES_ENV_EXAMPLE, MAGPIE_POSTGRES_ENV_FILE)
+del _MAGPIE_ENV_EXAMPLE
+del _POSTGRES_ENV_EXAMPLE
 try:
     # if variables already exist, don't override them from defaults in env files
     dotenv.load_dotenv(MAGPIE_ENV_FILE, override=False)
     dotenv.load_dotenv(MAGPIE_POSTGRES_ENV_FILE, override=False)
 except IOError:
     warnings.warn("Failed to open environment files [MAGPIE_ENV_DIR={}].".format(MAGPIE_ENV_DIR), RuntimeWarning)
-    pass
 
 
 def _get_default_log_level():
@@ -68,13 +69,12 @@ def _get_default_log_level():
     Get default configurations from ini file.
     """
     _default_log_lvl = "INFO"
-    # noinspection PyBroadException
     try:
-        import magpie.utils
+        import magpie.utils  # pylint: disable=C0415  # avoid circular import error
         _settings = magpie.utils.get_settings_from_config_ini(MAGPIE_INI_FILE_PATH,
                                                               ini_main_section_name="logger_magpie")
         _default_log_lvl = _settings.get("level", _default_log_lvl)
-    except Exception:
+    except Exception:  # noqa: W0703 # nosec: B110
         pass
     return _default_log_lvl
 
@@ -137,15 +137,15 @@ MAGPIE_USER_NAME_MAX_LENGTH = 64
 # utilities
 # ===========================
 
-_REGEX_ASCII_ONLY = re.compile(r'\W|^(?=\d)')
+_REGEX_ASCII_ONLY = re.compile(r"\W|^(?=\d)")
 
 
 def get_constant_setting_name(name):
     """
     Lower-case name and replace all non-ascii chars by `_`.
     """
-    name = re.sub(_REGEX_ASCII_ONLY, '_', name.strip().lower())
-    return name.replace('magpie_', 'magpie.', 1)
+    name = re.sub(_REGEX_ASCII_ONLY, "_", name.strip().lower())
+    return name.replace("magpie_", "magpie.", 1)
 
 
 def get_constant(constant_name,             # type: Str
@@ -181,12 +181,12 @@ def get_constant(constant_name,             # type: Str
     :returns: found value or `default_value`
     :raises: according message based on options (by default raise missing/`None` value)
     """
-    from magpie.utils import get_settings, raise_log, print_log
+    from magpie.utils import get_settings, raise_log, print_log  # pylint: disable=C0415  # avoid circular import error
 
     missing = True
     magpie_value = None
     settings = get_settings(settings_container) if settings_container else None
-    if settings and constant_name in settings:
+    if settings and constant_name in settings:  # pylint: disable=E1135
         missing = False
         magpie_value = settings.get(constant_name)
         if magpie_value is not None:
@@ -195,7 +195,7 @@ def get_constant(constant_name,             # type: Str
     if not settings_name and constant_name.startswith("MAGPIE_"):
         settings_name = get_constant_setting_name(constant_name)
         print_log("Constant alternate search: {}".format(settings_name), level=logging.DEBUG)
-    if settings and settings_name and settings_name in settings:
+    if settings and settings_name and settings_name in settings:  # pylint: disable=E1135
         missing = False
         magpie_value = settings.get(settings_name)
         if magpie_value is not None:

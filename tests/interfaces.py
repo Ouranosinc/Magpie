@@ -1,47 +1,69 @@
+import unittest
+import warnings
+from abc import ABCMeta
+from copy import deepcopy
+from distutils.version import LooseVersion
+from typing import TYPE_CHECKING
+
+import mock
+import pyramid.testing
+import pytest
+import six
+import yaml
+from six.moves.urllib.parse import urlparse
+
 from magpie.api.schemas import SwaggerGenerator
 from magpie.constants import get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Route
 from magpie.permissions import Permission
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceTHREDDS
-from magpie.utils import get_twitcher_protected_service_url, CONTENT_TYPE_JSON
-from tests import utils, runner
-from copy import deepcopy
-from six.moves.urllib.parse import urlparse
-from distutils.version import LooseVersion
-import unittest
-import warnings
-import pytest
-import pyramid.testing
-import mock
-import yaml
-import six
+from magpie.utils import CONTENT_TYPE_JSON, get_twitcher_protected_service_url
+from tests import runner, utils
+
+if TYPE_CHECKING:
+    from magpie.typedefs import CookiesType, HeadersType, Optional, Str
 
 
 # don't use 'unittest.TestCase' base
 # some test runner raise (ERROR) the 'NotImplementedError' although overridden by other classes
-# noinspection PyPep8Naming
 class Base_Magpie_TestCase(object):
-    version = None
+    # pylint: disable=C0103,invalid-name
+    version = None              # type: Optional[Str]
+    grp = None                  # type: Optional[Str]
+    usr = None                  # type: Optional[Str]
+    pwd = None                  # type: Optional[Str]
+    require = None              # type: Optional[Str]
+    cookies = None              # type: Optional[CookiesType]
+    headers = None              # type: Optional[HeadersType]
+    json_headers = None         # type: Optional[HeadersType]
+    test_service_type = None    # type: Optional[Str]
+    test_service_name = None    # type: Optional[Str]
+    test_user = None            # type: Optional[Str]
+    test_group = None           # type: Optional[Str]
 
-    __test__ = False
+    __test__ = False    # won't run this as a test suite, only its derived classes that overrides to True
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls):  # noqa: N802
         raise NotImplementedError
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls):  # noqa: N802
         pyramid.testing.tearDown()
 
 
-# noinspection PyAbstractClass, PyPep8Naming
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
+class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+    # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that do not require user AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
+
+    @classmethod
+    def setUpClass(cls):
+        raise NotImplementedError
 
     @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Anonymous(self):
@@ -84,28 +106,35 @@ class Interface_MagpieAPI_NoAuth(Base_Magpie_TestCase):
             utils.check_response_basic_info(resp, expected_code=406)
 
 
-# noinspection PyAbstractClass, PyPep8Naming
 @unittest.skip("Not implemented.")
 @pytest.mark.skip(reason="Not implemented.")
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_UsersAuth(Base_Magpie_TestCase):
+class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+    # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that require at least 'Users' group AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
-    pass
+
+    @classmethod
+    def setUpClass(cls):
+        raise NotImplementedError
 
 
-# noinspection PyAbstractClass, PyPep8Naming
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
+class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+    # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that require at least 'administrator' group
     AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
+
+    @classmethod
+    def setUpClass(cls):
+        raise NotImplementedError
 
     def tearDown(self):
         self.check_requirements()   # re-login as required in case test logged out the user with permissions
@@ -118,12 +147,12 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def check_requirements(cls):
         headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd,
                                                          use_ui_form_submit=True, version=cls.version)
-        assert headers and cookies, cls.require
-        assert cls.headers and cls.cookies, cls.require
+        assert headers and cookies, cls.require             # nosec
+        assert cls.headers and cls.cookies, cls.require     # nosec
 
     @classmethod
     def setup_test_values(cls):
-        services_cfg = yaml.safe_load(open(get_constant("MAGPIE_PROVIDERS_CONFIG_PATH"), 'r'))
+        services_cfg = yaml.safe_load(open(get_constant("MAGPIE_PROVIDERS_CONFIG_PATH"), "r"))
         provider_services_info = services_cfg["providers"]
         # filter impossible providers from possible previous version of remote server
         possible_service_types = utils.get_service_types_for_version(cls.version)
@@ -473,7 +502,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     @runner.MAGPIE_TEST_USERS
     def test_GetUserResources_OnlyUserAndInheritedGroupPermissions_values(self):
         values = self.setup_UniquePermissionsForEach_UserGroupServiceResource()
-        perm_svc_usr, perm_svc_grp, perm_res_usr, perm_res_grp, usr_name, grp_name, svc_name, svc_type, res_id = values
+        perm_svc_usr, perm_svc_grp, perm_res_usr, perm_res_grp, usr_name, _, svc_name, svc_type, res_id = values
 
         # with or without inherit flag, "other" services and resources should all have no permission
         service_types = utils.get_service_types_for_version(self.version)
@@ -678,7 +707,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServiceResources_OnlyUserAndInheritedGroupPermissions_values(self):
         values = self.setup_UniquePermissionsForEach_UserGroupServiceResource()
-        perm_svc_usr, perm_svc_grp, perm_res_usr, perm_res_grp, usr_name, grp_name, svc_name, svc_type, res_id = values
+        perm_svc_usr, perm_svc_grp, perm_res_usr, perm_res_grp, usr_name, _, svc_name, svc_type, res_id = values
 
         # without inherit flag, only user permissions are visible on service and resource
         path = "/users/{usr}/services/{svc}/resources".format(usr=usr_name, svc=svc_name)
@@ -807,7 +836,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
     def test_PutUsers_password(self):
         utils.TestSetup.create_TestUser(self)
         old_password = self.test_user_name
-        new_password = "n0t-SO-ez-2-Cr4cK"
+        new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
         data = {"password": new_password}
         path = "/users/{usr}".format(usr=self.test_user_name)
         resp = utils.test_request(self, "PUT", path, headers=self.json_headers, cookies=self.cookies, data=data)
@@ -1496,7 +1525,7 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
         services_list_getcap = [svc for svc in services_list
                                 if "getcapabilities" in svc["permission_names"]
-                                and svc["service_name"] in self.test_services_info]  # noqa: W503
+                                and svc["service_name"] in self.test_services_info]
         path = "/users/{usr}/services".format(usr=anonymous)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
@@ -1591,14 +1620,18 @@ class Interface_MagpieAPI_AdminAuth(Base_Magpie_TestCase):
         utils.TestSetup.check_NonExistingTestServiceResource(self)
 
 
-# noinspection PyAbstractClass, PyPep8Naming
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_NoAuth(Base_Magpie_TestCase):
+class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+    # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that do not require user AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
+
+    @classmethod
+    def setUpClass(cls):
+        raise NotImplementedError
 
     @runner.MAGPIE_TEST_STATUS
     def test_Home(self):
@@ -1659,9 +1692,9 @@ class Interface_MagpieUI_NoAuth(Base_Magpie_TestCase):
         utils.TestSetup.check_Unauthorized(self, method="POST", path=path)
 
 
-# noinspection PyAbstractClass, PyPep8Naming
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
+class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+    # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that require at least 'administrator' group
     AuthN/AuthZ.
@@ -1670,10 +1703,14 @@ class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
     """
 
     @classmethod
+    def setUpClass(cls):
+        raise NotImplementedError
+
+    @classmethod
     def check_requirements(cls):
         headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
-        assert headers and cookies, cls.require
-        assert cls.headers and cls.cookies, cls.require
+        assert headers and cookies, cls.require             # nosec
+        assert cls.headers and cls.cookies, cls.require     # nosec
 
     @runner.MAGPIE_TEST_STATUS
     def test_Home(self):
@@ -1747,18 +1784,18 @@ class Interface_MagpieUI_AdminAuth(Base_Magpie_TestCase):
 
     @runner.MAGPIE_TEST_STATUS
     def test_AddUser(self):
-        path = '/ui/users/add'
+        path = "/ui/users/add"
         utils.TestSetup.check_UpStatus(self, method="GET", path=path)
         utils.TestSetup.check_UpStatus(self, method="POST", path=path)  # empty fields, same page but 'incorrect'
 
     @runner.MAGPIE_TEST_STATUS
     def test_AddGroup(self):
-        path = '/ui/groups/add'
+        path = "/ui/groups/add"
         utils.TestSetup.check_UpStatus(self, method="GET", path=path)
         utils.TestSetup.check_UpStatus(self, method="POST", path=path)  # empty fields, same page but 'incorrect'
 
     @runner.MAGPIE_TEST_STATUS
     def test_AddService(self):
-        path = '/ui/services/{}/add'.format(self.test_service_type)
+        path = "/ui/services/{}/add".format(self.test_service_type)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path)
         utils.TestSetup.check_UpStatus(self, method="POST", path=path)  # empty fields, same page but 'incorrect'
