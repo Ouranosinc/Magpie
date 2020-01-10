@@ -19,7 +19,7 @@ MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := magpie
-APP_VERSION ?= 1.7.4
+APP_VERSION ?= 1.8.0
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
 # conda
