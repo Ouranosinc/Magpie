@@ -141,9 +141,8 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
     create_user(internal_user_name, password=None, email=email, group_name=group_name, db_session=db_session)
 
     user = UserService.by_user_name(internal_user_name, db_session=db_session)
-    # noinspection PyArgumentList
     ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
-                                          local_user_id=user.id, provider_name=provider_name)
+                                          local_user_id=user.id, provider_name=provider_name)  # noqa
     ax.evaluate_call(lambda: db_session.add(ex_identity), fallback=lambda: db_session.rollback(),
                      http_error=HTTPConflict, msg_on_fail=s.Signin_POST_ConflictResponseSchema.description,
                      content={u"provider_name": str(provider_name),

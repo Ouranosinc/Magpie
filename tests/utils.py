@@ -431,10 +431,9 @@ def check_raises(func, exception_type):
     :raise AssertionError: on failing exception check or missing raised exception.
     :returns: raised exception of expected type if it was raised.
     """
-    # noinspection PyBroadException
     try:
         func()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=W0703
         assert isinstance(exc, exception_type)
         return exc
     raise AssertionError("Exception [{!s}] was not raised.".format(exception_type))
@@ -447,10 +446,9 @@ def check_no_raise(func):
 
     :raise AssertionError: on any raised exception.
     """
-    # noinspection PyBroadException
     try:
         func()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=W0703
         raise AssertionError("Exception [{!r}] was raised when none is expected.".format(exc))
 
 

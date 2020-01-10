@@ -122,8 +122,7 @@ def _ensure_sync_info_exists(service_resource_id, session):
     """
     service_sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_resource_id, session)
     if not service_sync_info:
-        # noinspection PyArgumentList
-        sync_info = models.RemoteResourcesSyncInfo(service_id=service_resource_id)
+        sync_info = models.RemoteResourcesSyncInfo(service_id=service_resource_id)  # noqa
         session.add(sync_info)
         session.flush()
         _create_main_resource(service_resource_id, session)
@@ -167,10 +166,9 @@ def _create_main_resource(service_id, session):
     :param session:
     """
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)
-    # noinspection PyArgumentList
     main_resource = models.RemoteResource(service_id=service_id,
                                           resource_name=str(sync_info.service.resource_name),
-                                          resource_type=u"directory")
+                                          resource_type=u"directory")  # noqa
     session.add(main_resource)
     session.flush()
     sync_info.remote_resource_id = main_resource.resource_id
@@ -190,13 +188,12 @@ def _update_db(remote_resources, service_id, session):
     def add_children(resources, parent_id, position=0):
         for resource_name, values in resources.items():
             resource_display_name = str(values.get("resource_display_name", resource_name))
-            # noinspection PyArgumentList
             new_resource = models.RemoteResource(service_id=sync_info.service_id,
                                                  resource_name=str(resource_name),
                                                  resource_display_name=resource_display_name,
                                                  resource_type=values["resource_type"],
                                                  parent_id=parent_id,
-                                                 ordering=position)
+                                                 ordering=position)  # noqa
             session.add(new_resource)
             session.flush()
             position += 1

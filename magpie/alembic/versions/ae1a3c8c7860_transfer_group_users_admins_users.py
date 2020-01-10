@@ -61,8 +61,7 @@ def upgrade():
 
                 # create new group if missing
                 if not new_group:
-                    # noinspection PyArgumentList
-                    new_group = models.Group(group_name=new_group_name)
+                    new_group = models.Group(group_name=new_group_name)  # noqa
                     session.add(new_group)
                     new_group = GroupService.by_group_name(new_group_name, db_session=session)
 
@@ -83,8 +82,7 @@ def upgrade():
 
                 for user_name in diff_group_users:
                     user = UserService.by_user_name(user_name=user_name, db_session=session)
-                    # noinspection PyArgumentList
-                    user_group = models.UserGroup(group_id=new_group.id, user_id=user.id)
+                    user_group = models.UserGroup(group_id=new_group.id, user_id=user.id)  # noqa
                     session.add(user_group)
 
                 session.delete(group)

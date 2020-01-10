@@ -14,9 +14,8 @@ from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url, print_lo
 LOGGER = get_logger(__name__)
 
 
-# noinspection PyUnusedLocal
 @s.HomepageAPI.get(tags=[s.APITag], api_security=s.SecurityEveryoneAPI, response_schemas=s.Homepage_GET_responses)
-def get_homepage(request):
+def get_homepage(request):  # noqa: W0212
     """
     Magpie API homepage (only if Magpie UI is not enabled).
     """
@@ -37,7 +36,6 @@ def get_version(request):
     Version information of the API.
     """
     version_db = None
-    # noinspection PyBroadException
     try:
         version_db = get_database_revision(request.db)
     except Exception as exc:

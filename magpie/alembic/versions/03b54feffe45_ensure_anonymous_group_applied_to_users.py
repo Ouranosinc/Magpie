@@ -44,8 +44,7 @@ def upgrade():
         all_user_group_tups = [(ugr.user_id, ugr.group_id) for ugr in all_user_group_refs]
         for user in all_users:
             if (user.id, anonym_group.id) not in all_user_group_tups:
-                # noinspection PyArgumentList
-                user_group = models.UserGroup(user_id=user.id, group_id=anonym_group.id)
+                user_group = models.UserGroup(user_id=user.id, group_id=anonym_group.id)  # noqa
                 session.add(user_group)
         session.commit()
 

@@ -24,9 +24,8 @@ from magpie.utils import (
 )
 
 if TYPE_CHECKING:
-    from magpie.typedefs import (  # noqa: F401
-        Any, Str, Callable, List, Iterable, Optional, Tuple, Union, JSON, ParamsType, PyramidResponse
-    )
+    from typing import Any, Callable, List, Iterable, NoReturn, Optional, Tuple, Type, Union
+    from magpie.typedefs import Str, JSON, ParamsType, PyramidResponse  # noqa: F401
 
 # control variables to avoid infinite recursion in case of
 # major programming error to avoid application hanging
@@ -280,7 +279,7 @@ def raise_http(http_error=HTTPInternalServerError,  # type: HTTPError
                content=None,                        # type: Optional[JSON]
                content_type=CONTENT_TYPE_JSON,      # type: Str
                nothrow=False                        # type: bool
-               ):                                   # type: (...) -> Optional[HTTPException]
+               ):                                   # type: (...) -> Union[HTTPException, NoReturn]
     """
     Raises error HTTP with standardized information formatted with content type.
 
@@ -324,7 +323,7 @@ def raise_http(http_error=HTTPInternalServerError,  # type: HTTPError
 
 
 def validate_params(http_class,     # type: HTTPException
-                    http_base,      # type: Union[HTTPException, Iterable[HTTPException]]
+                    http_base,      # type: Union[Type[HTTPException], Iterable[Type[HTTPException]]]
                     detail,         # type: Str
                     content,        # type: Optional[JSON]
                     content_type,   # type: Str
@@ -353,9 +352,12 @@ def validate_params(http_class,     # type: HTTPException
     # if it derives from `HTTPException`, it *could* be different than base (ex: 2xx instead of 4xx codes)
     # return 'unknown error' (520) if not of lowest level base `HTTPException`, otherwise use the available code
     http_base = tuple(http_base if hasattr(http_base, "__iter__") else [http_base])
-    # noinspection PyUnresolvedReferences
-    http_code = http_class.code if issubclass(http_class, http_base) else \
-               http_class.code if issubclass(http_class, HTTPException) else 520  # noqa: F401
+    if issubclass(http_class, http_base):
+        http_code = http_class.code  # noqa
+    elif issubclass(http_class, HTTPException):
+        http_code = http_class.code
+    else:
+        http_code = 520
     caller[u"code"] = http_code
     verify_param(issubclass(http_class, http_base), param_name="http_base", is_true=True,
                  http_error=HTTPInternalServerError, content_type=CONTENT_TYPE_JSON, content={u"caller": caller},
@@ -380,7 +382,7 @@ def format_content_json_str(http_code, detail, content, content_type):
         content[u"detail"] = detail
         content[u"type"] = content_type
         json_body = json.dumps(content)
-    except Exception as exc:    # pylint: disable=W0703
+    except Exception as exc:  # pylint: disable=W0703
         msg = "Dumping json content '{!s}' resulted in exception '{!r}'.".format(content, exc)
         raise_http(http_error=HTTPInternalServerError, detail=msg,
                    content_type=CONTENT_TYPE_JSON,

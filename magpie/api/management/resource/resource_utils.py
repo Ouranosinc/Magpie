@@ -111,8 +111,7 @@ def get_service_or_resource_types(service_or_resource):
     else:
         ax.raise_http(http_error=HTTPInternalServerError, detail="Invalid service/resource object",
                       content={u"service_resource": repr(type(service_or_resource))})
-    # noinspection PyUnboundLocalVariable
-    return svc_res_type_cls, svc_res_type_str
+    return svc_res_type_cls, svc_res_type_str   # noqa: W804
 
 
 def get_resource_permissions(resource, db_session):

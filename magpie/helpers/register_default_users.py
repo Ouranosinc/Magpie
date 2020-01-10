@@ -34,15 +34,13 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
     """
 
     if not GroupService.by_group_name(group_name, db_session=db_session):
-        # noinspection PyArgumentList
-        new_group = models.Group(group_name=group_name)
+        new_group = models.Group(group_name=group_name)  # noqa
         db_session.add(new_group)
     registered_group = GroupService.by_group_name(group_name=group_name, db_session=db_session)
 
     registered_user = UserService.by_user_name(user_name, db_session=db_session)
     if not registered_user:
-        # noinspection PyArgumentList
-        new_user = models.User(user_name=user_name, email=email)
+        new_user = models.User(user_name=user_name, email=email)  # noqa
         UserService.set_password(new_user, password)
         UserService.regenerate_security_code(new_user)
         db_session.add(new_user)
@@ -56,10 +54,9 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
         user_group_refs = BaseService.all(models.UserGroup, db_session=db_session)
         user_group_refs_tup = [(ref.group_id, ref.user_id) for ref in user_group_refs]
         if (registered_group.id, registered_user.id) not in user_group_refs_tup:
-            # noinspection PyArgumentList
-            group_entry = models.UserGroup(group_id=registered_group.id, user_id=registered_user.id)
+            group_entry = models.UserGroup(group_id=registered_group.id, user_id=registered_user.id)  # noqa
             db_session.add(group_entry)
-    except Exception:  # noqa
+    except Exception:  # noqa: W0703 # nosec: B110
         # in case reference already exists, avoid duplicate error
         db_session.rollback()
 
@@ -100,8 +97,7 @@ def init_admin(db_session, settings=None):
     permission_names = [permission.perm_name for permission in magpie_admin_group.permissions]
     admin_perm = get_constant("MAGPIE_ADMIN_PERMISSION", settings_container=settings)
     if admin_perm not in permission_names:
-        # noinspection PyArgumentList
-        new_group_permission = models.GroupPermission(perm_name=admin_perm, group_id=magpie_admin_group.id)
+        new_group_permission = models.GroupPermission(perm_name=admin_perm, group_id=magpie_admin_group.id)  # noqa
         try:
             db_session.add(new_group_permission)
         except Exception as exc:
@@ -116,8 +112,7 @@ def init_users_group(db_session, settings=None):
     """
     usr_grp_name = get_constant("MAGPIE_USERS_GROUP", settings_container=settings)
     if not GroupService.by_group_name(usr_grp_name, db_session=db_session):
-        # noinspection PyArgumentList
-        user_group = models.Group(group_name=usr_grp_name)
+        user_group = models.Group(group_name=usr_grp_name)  # noqa
         db_session.add(user_group)
     else:
         print_log("MAGPIE_USERS_GROUP already initialized", level=logging.DEBUG)

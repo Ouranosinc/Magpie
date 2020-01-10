@@ -57,9 +57,8 @@ def upgrade():
                 # transfer permissions from 'personal' group to user
                 user_group_res_perm = [urp for urp in all_grp_res_perms if urp.group_id == group.id]
                 for group_perm in user_group_res_perm:
-                    # noinspection PyArgumentList
                     user_perm = models.UserResourcePermission(resource_id=group_perm.resource_id,
-                                                              user_id=user.id, perm_name=group_perm.perm_name)
+                                                              user_id=user.id, perm_name=group_perm.perm_name)  # noqa
                     session.add(user_perm)
                     session.delete(group_perm)
 

@@ -46,10 +46,9 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
                             param_name=u"service_name")
         return svc
 
-    # noinspection PyArgumentList
     service = ax.evaluate_call(lambda: models.Service(resource_name=str(service_name),
                                                       resource_type=models.Service.resource_type_name,
-                                                      url=str(service_url), type=str(service_type)),
+                                                      url=str(service_url), type=str(service_type)),  # noqa
                                fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
                                msg_on_fail=s.Services_POST_UnprocessableEntityResponseSchema.description,
                                content={u"service_name": str(service_name),

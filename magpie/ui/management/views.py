@@ -309,11 +309,10 @@ class ManagementViews(object):
             elif u"force_sync" in self.request.POST:
                 errors = []
                 for service_info in services.values():
-                    # noinspection PyBroadException
                     try:
                         sync_resources.fetch_single_service(service_info["resource_id"], session)
                         transaction.commit()
-                    except Exception:
+                    except Exception:  # noqa
                         errors.append(service_info["service_name"])
                 if errors:
                     error_message += self.make_sync_error_message(errors)

@@ -81,8 +81,7 @@ def create_user(user_name, password, email, group_name, db_session):
 
     def _add_to_group(usr, grp):
         # type: (models.User, models.Group) -> None
-        # noinspection PyArgumentList
-        group_entry = models.UserGroup(group_id=grp.id, user_id=usr.id)
+        group_entry = models.UserGroup(group_id=grp.id, user_id=usr.id)  # noqa
         ax.evaluate_call(lambda: db_session.add(group_entry), fallback=lambda: db_session.rollback(),
                          http_error=HTTPForbidden, msg_on_fail=s.UserGroup_GET_ForbiddenResponseSchema.description)
 
@@ -114,8 +113,8 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
                     content={u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission.value},
                     msg_on_fail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
 
-    # noinspection PyArgumentList
-    new_perm = models.UserResourcePermission(resource_id=resource_id, user_id=user.id, perm_name=permission.value)
+    new_perm = models.UserResourcePermission(resource_id=resource_id,
+                                             user_id=user.id, perm_name=permission.value)  # noqa
     usr_res_data = {u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission.value}
     ax.verify_param(new_perm, not_none=True, http_error=HTTPForbidden,
                     content={u"resource_id": resource_id, u"user_id": user.id},
@@ -164,7 +163,6 @@ def filter_user_permission(resource_permission_list, user):
     """
     def is_user_perm(perm):
         return perm.group is None and perm.type == u"user" and perm.user.user_name == user.user_name
-    # noinspection PyTypeChecker
     return filter(is_user_perm, resource_permission_list)
 
 

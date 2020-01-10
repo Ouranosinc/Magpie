@@ -49,8 +49,7 @@ class TestUtils(unittest.TestCase):
             for q in parts[1:]:
                 k, v = q.split("=")
                 query[k] = v
-        # noinspection PyTypeChecker
-        return DummyRequest(path=path, params=query)
+        return DummyRequest(path=path, params=query)  # noqa
 
     @classmethod
     def setUpClass(cls):
@@ -154,36 +153,31 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param("abc", is_empty=True), HTTPBadRequest)
 
         # with requested error
-        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=True,
-                                                   http_error=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("x", param_compare=["a", "b"], is_in=True,
-                                                   http_error=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("1", param_compare=int, is_type=True,
-                                                   http_error=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("x", param_compare="x", not_equal=True,
-                                                   http_error=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("x", param_compare="y", is_equal=True,
-                                                   http_error=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param(False, is_true=True,
-                                                   http_error=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param(True, is_false=True,
-                                                   http_error=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param(None, not_none=True,
-                                                   http_error=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param(1, is_none=True,
-                                                   http_error=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("", not_empty=True,
-                                                   http_error=HTTPForbidden), HTTPForbidden)
-        utils.check_raises(lambda: ax.verify_param("abc", is_empty=True,
-                                                   http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda:
+                           ax.verify_param("b", param_compare=["a", "b"], not_in=True, http_error=HTTPForbidden),
+                           HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("x", param_compare=["a", "b"], is_in=True, http_error=HTTPForbidden),
+                           HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=int, is_type=True, http_error=HTTPForbidden),
+                           HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("x", param_compare="x", not_equal=True, http_error=HTTPForbidden),
+                           HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("x", param_compare="y", is_equal=True, http_error=HTTPForbidden),
+                           HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param(False, is_true=True, http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param(True, is_false=True, http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param(None, not_none=True, http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param(1, is_none=True, http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("", not_empty=True, http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda: ax.verify_param("abc", is_empty=True, http_error=HTTPForbidden), HTTPForbidden)
 
-    # noinspection PyTypeChecker
     def test_verify_param_incorrect_usage(self):
         utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"]), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=None), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=None),  # noqa
+                           HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param("b", not_in=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=True,
-                                                   http_error=HTTPOk), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=True, http_error=HTTPOk),
+                           HTTPInternalServerError)
 
     def test_verify_param_compare_types(self):
         """

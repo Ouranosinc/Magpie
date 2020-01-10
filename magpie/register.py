@@ -453,12 +453,11 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
             print_log("Skipping service [{svc}] (conflict)" .format(svc=svc_name), logger=LOGGER)
         else:
             print_log("Adding service [{svc}]".format(svc=svc_name), logger=LOGGER)
-            # noinspection PyArgumentList
             svc = models.Service(resource_name=svc_name,
                                  resource_type=models.Service.resource_type_name,
                                  url=svc_new_url,
                                  type=svc_type,
-                                 sync_type=svc_sync_type)
+                                 sync_type=svc_sync_type)  # noqa
             db_session.add(svc)
 
         getcap_perm = Permission.GET_CAPABILITIES
@@ -475,12 +474,11 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
             )
             if svc_perm_getcapabilities is None:
                 print_log("Adding '{}' permission to anonymous user.".format(getcap_perm.value), logger=LOGGER)
-                # noinspection PyArgumentList
                 svc_perm_getcapabilities = models.UserResourcePermission(
                     user_id=anonymous_user.id,
                     perm_name=getcap_perm.value,
                     resource_id=svc.resource_id
-                )
+                )  # noqa
                 db_session.add(svc_perm_getcapabilities)
 
     transaction.commit()
@@ -673,7 +671,6 @@ def _parse_resource_path(permission_config_entry,   # type: ConfigItem
             for res in resource_path.split("/"):
                 # search in existing children resources
                 if len(child_resources):
-                    # noinspection PyTypeChecker
                     res_id = list(filter(lambda r: res in [r, child_resources[r]["resource_name"]], child_resources))
                     if res_id:
                         res_info = child_resources[res_id[0]]   # type: Dict[Str, JSON]
