@@ -28,7 +28,6 @@ def is_valid_resource_schema(resources):
             }
             "resource_name_2": {"children": {}}
         }
-
     """
     for values in resources.values():
         if "children" not in values:

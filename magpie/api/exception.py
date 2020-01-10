@@ -250,8 +250,8 @@ def valid_http(http_success=HTTPOk,             # type: Optional[HTTPSuccessful]
                content_type=CONTENT_TYPE_JSON,  # type: Optional[Str]
                ):                               # type: (...) -> HTTPException
     """
-    Returns successful HTTP with standardized information formatted with content type. (see :func:`raise_http` for
-    HTTP error calls)
+    Returns successful HTTP with standardized information formatted with content type. (see :func:`raise_http` for HTTP
+    error calls)
 
     :param http_success: any derived class from base `HTTPSuccessful` (default: `HTTPOk`)
     :param http_kwargs: additional keyword arguments to pass to `http_success` when called

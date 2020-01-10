@@ -47,7 +47,7 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     from magpie.typedefs import (  # noqa: F401
-        Str, Dict, List, JSON, Optional, Tuple, Union, CookiesOrSessionType
+        Any, Str, Dict, List, JSON, Optional, Tuple, Union, CookiesOrSessionType
     )
     ConfigItem = Dict[Str, Str]
     ConfigList = List[ConfigItem]
@@ -141,10 +141,12 @@ def _request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg="Res
 
 
 def _phoenix_update_services(services_dict):
+    # type: (JSON) -> bool
     if not _phoenix_remove_services():
         print_log("Could not remove services, aborting register sync services to Phoenix", logger=LOGGER)
         return False
-    if not _phoenix_register_services(services_dict):
+    success, _ = _phoenix_register_services(services_dict)
+    if not success:
         print_log("Failed services registration from Magpie to Phoenix\n"
                   "[warning: services could have been removed but could not be re-added]", logger=LOGGER)
         return False
@@ -199,6 +201,7 @@ def _phoenix_remove_services():
 
 
 def _phoenix_register_services(services_dict, allowed_service_types=None):
+    # type: (Dict[Str, Dict[Str, Any]], Optional[List[Str]]) -> Tuple[bool, Dict[Str, int]]
 
     success = False
     statuses = dict()
@@ -208,7 +211,7 @@ def _phoenix_register_services(services_dict, allowed_service_types=None):
             allowed_service_types = [svc.upper() for svc in allowed_service_types]
             if not _phoenix_login(phoenix_cookies_file.name):
                 print_log("Login unsuccessful from post-login check, aborting...", logger=LOGGER, level=logging.WARN)
-                return False
+                return False, {}
 
             # Filter specific services to push
             filtered_services_dict = {}
@@ -273,13 +276,18 @@ def _register_services(where,                           # type: Optional[Str]
 
 
 def sync_services_phoenix(services_object_dict, services_as_dicts=False):
+    # type: (Dict[Str, models.Service], Optional[Union[bool, JSON]]) -> bool
     """
     Syncs Magpie services by pushing updates to Phoenix. Services must be one of types specified in
-    SERVICES_PHOENIX_ALLOWED.
+    :py:data:`magpie.register.SERVICES_PHOENIX_ALLOWED`.
 
-    :param services_object_dict: dictionary of {svc-name: models.Service} objects containing each service's information
-    :param services_as_dicts: alternatively specify `services_object_dict` as dict of {svc-name: {service-info}}
-    where {service-info} = {'public_url': <url>, 'service_name': <name>, 'service_type': <type>}
+    :param services_object_dict:
+        dictionary of ``{svc-name: models.Service}`` objects containing each service's information
+    :param services_as_dicts:
+        alternatively specify `services_object_dict` as dict of ``{svc-name: {service-info}}``
+        where ``{service-info}`` is defined as::
+
+            {"public_url": <url>, "service_name": <name>, "service_type": <type>}
     """
     services_dict = {}
     for svc in services_object_dict:
