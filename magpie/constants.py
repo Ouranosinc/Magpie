@@ -115,7 +115,7 @@ TWITCHER_PROTECTED_URL = os.getenv("TWITCHER_PROTECTED_URL", None)
 # ===========================
 # variables from postgres.env
 # ===========================
-MAGPIE_POSTGRES_USER = os.getenv("MAGPIE_POSTGRES_USER", "magpie")
+MAGPIE_POSTGRES_USERNAME = os.getenv("MAGPIE_POSTGRES_USERNAME", "magpie")
 MAGPIE_POSTGRES_PASSWORD = os.getenv("MAGPIE_POSTGRES_PASSWORD", "qwerty")
 MAGPIE_POSTGRES_HOST = os.getenv("MAGPIE_POSTGRES_HOST", "postgres")
 MAGPIE_POSTGRES_PORT = int(os.getenv("MAGPIE_POSTGRES_PORT", 5432))

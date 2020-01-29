@@ -52,17 +52,27 @@ def get_db_url(username=None,   # type: Optional[Str]
     if db_url:
         LOGGER.info("Using setting 'MAGPIE_DB_URL' for database connection.")
     else:
-        def _get(param, kw):
-            kw_envvar = "MAGPIE_POSTGRES_{}".format(kw.upper())
-            kw_setting = "postgres.{}".format(kw.lower())
-            return param if param is not None else get_constant(kw_envvar, settings, kw_setting)
+        def _get(param, names):
+            if param is not None:
+                return param
+            if isinstance(names, six.string_types):
+                names = [names]
+            default = get_constant("MAGPIE_POSTGRES_{}".format(names[0].upper()), {}, raise_not_set=False)
+            for prefixes in [("MAGPIE_POSTGRES_", "magpie.postgres_"), ("POSTGRES_", "postgres.")]:
+                for kw in names:
+                    kw_envvar = "{}{}".format(prefixes[0], kw.upper())
+                    kw_setting = "{}{}".format(prefixes[1], kw.lower())
+                    param = get_constant(kw_envvar, settings, kw_setting, raise_missing=False, raise_not_set=False)
+                    if param not in (None, default):
+                        return param
+            return default
 
         db_url = "postgresql://%s:%s@%s:%s/%s" % (
-            _get(username, "user"),
+            _get(username, ["username", "user"]),
             _get(password, "password"),
             _get(db_host, "host"),
             _get(db_port, "port"),
-            _get(db_name, "db"),
+            _get(db_name, ["db", "database"]),
         )
         LOGGER.info("Using composed settings 'MAGPIE_POSTGRES_<>' for database connection.")
     LOGGER.debug("Resolved database connection URL: [%s]", db_url)

@@ -36,7 +36,7 @@ services:
       POSTGRES_PORT : 5432
       POSTGRES_HOST : postgres
       POSTGRES_DB : magpie
-      MAGPIE_POSTGRES_USER : magpie
+      MAGPIE_POSTGRES_USERNAME : magpie
       MAGPIE_POSTGRES_PASSWORD : qwerty
       MAGPIE_POSTGRES_DB : magpie
       MAGPIE_POSTGRES_PORT : 5432
