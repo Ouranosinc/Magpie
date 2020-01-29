@@ -62,7 +62,7 @@ def get_db_url(username=None,   # type: Optional[Str]
                 for kw in names:
                     kw_envvar = "{}{}".format(prefixes[0], kw.upper())
                     kw_setting = "{}{}".format(prefixes[1], kw.lower())
-                    param = get_constant(kw_envvar, settings, kw_setting)
+                    param = get_constant(kw_envvar, settings, kw_setting, raise_missing=False, raise_not_set=False)
                     if param != default:
                         return param
             return default
