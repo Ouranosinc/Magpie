@@ -8,8 +8,8 @@ All generic `Magpie` configuration settings can be defined through either the `m
 or environment variables. Values defined in `magpie.ini`_ are expected to follow the
 ``magpie.[variable_name]`` format, and corresponding ``MAGPIE_[VARIABLE_NAME]`` format is used for environment
 variables. Both of these alternatives match the constants defined in `constants.py`_ and can be used
-interchangeably. Order of resolution will prioritize setting values over environment variables in case of matching
-duplicates values.
+interchangeably. Order of resolution will prioritize setting values over environment variables in case of duplicate
+configurations resulting into different values.
 
 .. _constants.py: ../magpie/constants.py
 
@@ -77,18 +77,21 @@ case.
 Settings and Constants
 ----------------------
 
-Environment variables can be used to define all following settings (unless mentioned otherwise with 'constant').
+Environment variables can be used to define all following configurations (unless mentioned otherwise with
+``[constant]`` keyword next to the parameter name).
 These values will be used by `Magpie` on startup unless prior definition is found within `magpie.ini`_.
+All variables (i.e.: non-``constant`` parameters) can also be specified by their ``magpie.[variable_name]``
+counterpart as described at the start of the `Configuration`_ section.
 
 Loading Settings
 ~~~~~~~~~~~~~~~~~
 
 These settings can be used to specify where to find other settings through custom configuration files.
 
-- | ``MAGPIE_MODULE_DIR`` (constant)
+- | ``MAGPIE_MODULE_DIR`` [constant]
   | Path to the top level `Magpie` module (ie: source code).
 
-- | ``MAGPIE_ROOT`` (constant)
+- | ``MAGPIE_ROOT`` [constant]
   | Path to the containing directory of `Magpie`. This corresponds to the directory where the repository was cloned
     or where the package was installed.
 
@@ -150,7 +153,9 @@ These settings can be used to specify where to find other settings through custo
 Application Settings
 ~~~~~~~~~~~~~~~~~~~~~
 
-Following settings are used to define values that are employed by `Magpie` after loading the `Loading Settings`_.
+Following configuration parameters are used to define values that are employed by `Magpie` after loading
+the `Loading Settings`_. All ``magpie.[variable_name]`` counterpart definitions are also available as described
+at the start of the `Configuration`_ section.
 
 - | ``MAGPIE_URL``
   | Full hostname URL to use so that `Magpie` can resolve his own running instance location.
@@ -214,6 +219,10 @@ Following settings are used to define values that are employed by `Magpie` after
 Security Settings
 ~~~~~~~~~~~~~~~~~~~~~
 
+Following configuration parameters are used to define specific values that are related to security configurations.
+Again, the `Loading Settings`_ will be processed beforehand and all ``magpie.[variable_name]`` setting definitions
+remain available as described at the start of the `Configuration`_ section.
+
 - | ``MAGPIE_SECRET``
   | Secret value employed to encrypt user authentication tokens.
   | **Important Note:**
@@ -268,7 +277,7 @@ Security Settings
   | This user is used to manage "public" access to service and resources.
   | (Default: ``"anonymous"``)
 
-- | ``MAGPIE_ANONYMOUS_PASSWORD`` (constant)
+- | ``MAGPIE_ANONYMOUS_PASSWORD`` [constant]
   | Password of the default unauthenticated user.
   | This value is not modifiable directly and is available only for preparation of the default user on startup.
   | (Default: ``${MAGPIE_ANONYMOUS_USER}``)
@@ -277,7 +286,7 @@ Security Settings
   | Email of the default unauthenticated user.
   | (Default: ``"${MAGPIE_ANONYMOUS_USER}@mail.com"``)
 
-- | ``MAGPIE_ANONYMOUS_GROUP`` (constant)
+- | ``MAGPIE_ANONYMOUS_GROUP`` [constant]
   | This parameter is preserved for backward compatibility of migration scripts and external libraries.
   | All users are automatically member of this group to inherit "public" permissions to services and resources.
   | **Important Note:**
@@ -372,7 +381,7 @@ Following settings define parameters required by `Twitcher`_ (OWS Security Proxy
     specifying an alternative domain where a remote `Twitcher`_ instance could reside.
   | **Note:**
   | `Twitcher`_ instance will still need to have access to `Magpie`'s database in order to allow service resolution
-    with :py:class:`magpie.adapter.magpieservice.MagpieServiceStore`.
+    with `magpie.adapter.magpieservice.MagpieServiceStore`.
   | (Default: ``None``, ie: uses ``TWITCHER_PROTECTED_PATH``)
 
 .. _Twitcher: https://github.com/bird-house/twitcher
@@ -382,7 +391,9 @@ Postgres Settings
 ~~~~~~~~~~~~~~~~~~~~~
 
 Following settings define parameters required to define the `Postgres`_ database connection employed by `Magpie` as
-well as some other database-related operation settings.
+well as some other database-related operation settings. Settings defined by ``magpie.[variable_name]`` definitions
+are available as described at the start of the `Configuration`_ section, as well as some special cases where additional
+configuration names are supported where mentioned.
 
 - | ``MAGPIE_DB_MIGRATION``
   | Run database migration on startup in order to bring it up to date using `Alembic`_.
@@ -399,24 +410,37 @@ well as some other database-related operation settings.
   | (Default: infer ``postgresql`` database connection URL formed using below ``MAGPIE_POSTGRES_<>`` parameters if the
      value was not explicitly provided)
 
-- | ``MAGPIE_POSTGRES_USER``
+- | ``MAGPIE_POSTGRES_USERNAME``
   | Database connection username to retrieve `Magpie` data stored in `Postgres`_.
+  | On top of ``MAGPIE_POSTGRES_USERNAME``, environment variable ``POSTGRES_USERNAME`` and setting ``postgres.username``
+    are also supported. For backward compatibility, all above variants with ``USER`` instead of ``USERNAME``
+    (with corresponding lower/upper case) are also verified for potential configuration if no prior parameter was
+    matched. The lookup order of each name variant is as they were presented, while also keeping the setting name
+    priority over an equivalent environment variable name.
   | (Default: ``"magpie"``)
 
 - | ``MAGPIE_POSTGRES_PASSWORD``
   | Database connection password to retrieve `Magpie` data stored in `Postgres`_.
+  | Environment variable ``POSTGRES_PASSWORD`` and setting ``postgres.password`` are also supported if not previously
+    identified by their `Magpie`-prefixed variants.
   | (Default: ``"qwerty"``)
 
 - | ``MAGPIE_POSTGRES_HOST``
   | Database connection host location to retrieve `Magpie` data stored in `Postgres`_.
+  | Environment variable ``POSTGRES_HOST`` and setting ``postgres.host`` are also supported if not previously
+    identified by their `Magpie`-prefixed variants.
   | (Default: ``"postgres"``)
 
 - | ``MAGPIE_POSTGRES_PORT``
   | Database connection port to retrieve `Magpie` data stored in `Postgres`_.
+  | Environment variable ``POSTGRES_PORT`` and setting ``postgres.port`` are also supported if not previously
+    identified by their `Magpie`-prefixed variants.
   | (Default: ``5432``)
 
 - | ``MAGPIE_POSTGRES_DB``
   | Name of the database located at the specified connection to retrieve `Magpie` data stored in `Postgres`_.
+  | Environment variable ``POSTGRES_DB`` and setting ``postgres.db`` are also supported if not previously
+    identified by their `Magpie`-prefixed variants.
   | (Default: ``"magpie"``)
 
 .. _Postgres: https://www.postgresql.org/
