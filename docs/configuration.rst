@@ -413,7 +413,7 @@ configuration names are supported where mentioned.
 - | ``MAGPIE_POSTGRES_USERNAME``
   | Database connection username to retrieve `Magpie` data stored in `Postgres`_.
   | On top of ``MAGPIE_POSTGRES_USERNAME``, environment variable ``POSTGRES_USERNAME`` and setting ``postgres.username``
-    are also supported. For backward compatibility, all above variants with ``USER`` instead of ``USERNAME``
+    are also supported. For backward compatibility, all above variants with ``user`` instead of ``username``
     (with corresponding lower/upper case) are also verified for potential configuration if no prior parameter was
     matched. The lookup order of each name variant is as they were presented, while also keeping the setting name
     priority over an equivalent environment variable name.
@@ -439,8 +439,8 @@ configuration names are supported where mentioned.
 
 - | ``MAGPIE_POSTGRES_DB``
   | Name of the database located at the specified connection to retrieve `Magpie` data stored in `Postgres`_.
-  | Environment variable ``POSTGRES_DB`` and setting ``postgres.db`` are also supported if not previously
-    identified by their `Magpie`-prefixed variants.
+  | Environment variable ``POSTGRES_DB`` and setting ``postgres.db``, as well as the same variants with ``database``
+    instead of ``db``, are also supported if not previously identified by their `Magpie`-prefixed variants.
   | (Default: ``"magpie"``)
 
 .. _Postgres: https://www.postgresql.org/

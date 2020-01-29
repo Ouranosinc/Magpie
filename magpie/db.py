@@ -57,13 +57,13 @@ def get_db_url(username=None,   # type: Optional[Str]
                 return param
             if isinstance(names, six.string_types):
                 names = [names]
-            default = get_constant("MAGPIE_POSTGRES_{}".format(names[0].upper()), {})
+            default = get_constant("MAGPIE_POSTGRES_{}".format(names[0].upper()), {}, raise_not_set=False)
             for prefixes in [("MAGPIE_POSTGRES_", "magpie.postgres_"), ("POSTGRES_", "postgres.")]:
                 for kw in names:
                     kw_envvar = "{}{}".format(prefixes[0], kw.upper())
                     kw_setting = "{}{}".format(prefixes[1], kw.lower())
                     param = get_constant(kw_envvar, settings, kw_setting, raise_missing=False, raise_not_set=False)
-                    if param != default:
+                    if param not in (None, default):
                         return param
             return default
 
@@ -72,7 +72,7 @@ def get_db_url(username=None,   # type: Optional[Str]
             _get(password, "password"),
             _get(db_host, "host"),
             _get(db_port, "port"),
-            _get(db_name, "db"),
+            _get(db_name, ["db", "database"]),
         )
         LOGGER.info("Using composed settings 'MAGPIE_POSTGRES_<>' for database connection.")
     LOGGER.debug("Resolved database connection URL: [%s]", db_url)
