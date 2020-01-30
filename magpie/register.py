@@ -278,8 +278,9 @@ def _register_services(where,                           # type: Optional[Str]
 def sync_services_phoenix(services_object_dict, services_as_dicts=False):
     # type: (Dict[Str, models.Service], Optional[Union[bool, JSON]]) -> bool
     """
-    Syncs Magpie services by pushing updates to Phoenix. Services must be one of types specified in
-    :py:data:`magpie.register.SERVICES_PHOENIX_ALLOWED`.
+    Syncs Magpie services by pushing updates to Phoenix.
+
+    Services must be one of types specified in :py:data:`magpie.register.SERVICES_PHOENIX_ALLOWED`.
 
     :param services_object_dict:
         dictionary of ``{svc-name: models.Service}`` objects containing each service's information
