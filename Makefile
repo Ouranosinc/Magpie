@@ -454,10 +454,10 @@ test-docker: docker-test			## alias for 'docker-test' target - WARNING: could bu
 COVERAGE_FILE     := $(APP_ROOT)/.coverage
 COVERAGE_HTML_DIR := $(REPORTS_DIR)/coverage
 COVERAGE_HTML_IDX := $(COVERAGE_HTML_DIR)/index.html
-$(COVERAGE_FILE):
+$(COVERAGE_FILE): install-dev
 	@echo "Running coverage analysis..."
 	@bash -c '$(CONDA_CMD) coverage run --source "$(APP_ROOT)/$(APP_NAME)" \
-		"$(CONDA_ENV_PATH)/bin/pytest" tests -m "not remote" || true'
+		`which pytest` tests -m "not remote" || true'
 	@bash -c '$(CONDA_CMD) coverage xml -i -o "$(REPORTS_DIR)/coverage.xml"'
 	@bash -c '$(CONDA_CMD) coverage report -m'
 	@bash -c '$(CONDA_CMD) coverage html -d "$(COVERAGE_HTML_DIR)"'

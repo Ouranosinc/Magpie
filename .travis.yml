@@ -68,13 +68,12 @@ script:
   # unit/functional tests
   - make stop ${START_TARGET}
   - make ${TEST_TARGET}
+  - make stop
   # smoke test the docker image
   - |
     if [ "${TRAVIS_PYTHON_VERSION}" == "3.6" ]; then
       make test-docker
     fi
-after_script:
-  - make stop
 after_success:
   - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
   - source ${CONDA_PREFIX}/bin/activate ${CONDA_ENV} && python-codacy-coverage -r reports/coverage.xml
