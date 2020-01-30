@@ -109,7 +109,11 @@ class MagpieAdapter(six.with_metaclass(SingletonMeta, AdapterInterface)):
     def __init__(self, container):
         self._servicestore = None
         self._owssecurity = None
-        super(MagpieAdapter, self).__init__(container)
+        super(MagpieAdapter, self).__init__(container)  # pylint: disable=E1101,no-member
+
+    @property
+    def name(self):
+        return AdapterInterface.name.fget(self)  # noqa
 
     def describe_adapter(self):
         # type: () -> JSON
