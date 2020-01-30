@@ -64,13 +64,13 @@ script:
   - make stop ${START_TARGET}
   - make ${TEST_TARGET}
   - |
-    if [ "${TRAVIS_PYTHON_VERSION}" -eq "3.6" ]; then
+    if [ "${TRAVIS_PYTHON_VERSION}" == "3.6" ]; then
       make check
       make coverage
     fi
   # smoke test the docker image
   - |
-    if [ "${TRAVIS_PYTHON_VERSION}" -eq "3.6" ]; then
+    if [ "${TRAVIS_PYTHON_VERSION}" == "3.6" ]; then
       make test-docker
     fi
 after_success:

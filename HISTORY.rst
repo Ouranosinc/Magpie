@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.9.0 (2020-01-29)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Change database user name setting to lookup for ``MAGPIE_POSTGRES_USERNAME`` (and corresponding INI file setting)
