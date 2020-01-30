@@ -21,7 +21,7 @@ env:
     - TEST_TARGET=test-remote   START_TARGET=start
     - TEST_TARGET=coverage      START_TARGET=
 addons:
-  postgresql: '9.6'
+  postgresql: "9.6"
 postgres:
   adapter: postgresql
   database: magpie
@@ -60,19 +60,21 @@ before_script:
   - hash -r
   - env
 script:
-  # test linting and coverage
-  - make stop ${START_TARGET}
-  - make ${TEST_TARGET}
+  # linting tests
   - |
     if [ "${TRAVIS_PYTHON_VERSION}" == "3.6" ]; then
       make check
-      make coverage
     fi
+  # unit/functional tests
+  - make stop ${START_TARGET}
+  - make ${TEST_TARGET}
   # smoke test the docker image
   - |
     if [ "${TRAVIS_PYTHON_VERSION}" == "3.6" ]; then
       make test-docker
     fi
+after_script:
+  - make stop
 after_success:
   - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
   - source ${CONDA_PREFIX}/bin/activate ${CONDA_ENV} && python-codacy-coverage -r reports/coverage.xml
