@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.9.1 (2020-02-20)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Update adapter docker image reference to ``birdhouse/twitcher:v0.5.3``.
