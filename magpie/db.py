@@ -132,12 +132,12 @@ def get_db_session_from_config_ini(config_ini_path, ini_main_section_name="app:m
     return get_db_session_from_settings(settings)
 
 
-def run_database_migration(db_session=None):
-    # type: (Optional[Session]) -> None
+def run_database_migration(settings=None, db_session=None):
+    # type: (Optional[SettingsType], Optional[Session]) -> None
     """
     Runs db migration operations with alembic, using db session or a new engine connection.
     """
-    ini_file = get_constant("MAGPIE_ALEMBIC_INI_FILE_PATH")
+    ini_file = get_constant("MAGPIE_INI_FILE_PATH", settings)
     LOGGER.info("Using file '%s' for migration.", ini_file)
     alembic_args = ["-c", ini_file, "upgrade", "heads"]
     if not isinstance(db_session, Session):
@@ -192,7 +192,7 @@ def run_database_migration_when_ready(settings, db_session=None):
             try:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
-                    run_database_migration(db_session)
+                    run_database_migration(db_session=db_session, settings=settings)
             except ImportError as exc:
                 print_log("Database migration produced [{!r}] (ignored).".format(exc), level=logging.WARNING)
             except Exception as exc:

@@ -532,7 +532,9 @@ def _get_all_configs(path_or_dict, section):
     if isinstance(path_or_dict, six.string_types):
         if os.path.isdir(path_or_dict):
             dir_path = os.path.abspath(path_or_dict)
-            cfg_names = list(sorted({fn for fn in os.listdir(dir_path) if fn.endswith(".cfg")}))
+            known_extensions = [".cfg", ".yml", ".yaml", ".json"]
+            cfg_names = list(sorted({fn for fn in os.listdir(dir_path)
+                                     if any([fn.endswith(ext) for ext in known_extensions])}))
             return [_load_config(os.path.join(dir_path, fn), section) for fn in cfg_names]
         if os.path.isfile(path_or_dict):
             return [_load_config(path_or_dict, section)]
