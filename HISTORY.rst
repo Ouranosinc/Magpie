@@ -6,6 +6,10 @@ History
 Unreleased
 ---------------------
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Handle trailing ``/`` of HTTP path that would fail an ACL lookup of the corresponding service or resource.
+
 1.9.1 (2020-02-20)
 ---------------------
 
