@@ -350,7 +350,7 @@ class ServiceAPI(ServiceInterface):
         self.expand_acl(self.service, self.request.user)
 
         match_index = 0
-        route_parts = self.request.path.split("/")
+        route_parts = self.request.path.rstrip("/").split("/")
         route_api_base = self.service.resource_name
 
         if self.service.resource_name in route_parts and route_api_base in route_parts:

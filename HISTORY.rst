@@ -16,6 +16,7 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Use forwarded input argument to ``MAGPIE_INI_FILE_PATH`` to execute database migration.
+* Handle trailing ``/`` of HTTP path that would fail an ACL lookup of the corresponding service or resource.
 
 1.9.1 (2020-02-20)
 ---------------------
