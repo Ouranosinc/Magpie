@@ -10,4 +10,4 @@ if __name__ == "__main__":
                         help="configuration file to employ for database connection settings "
                              "(default: MAGPIE_INI_FILE_PATH='%(default)s)'")
     args = parser.parse_args()
-    run_database_migration(settings={"magpie.alembic_ini_file_path": args.config_file})
+    run_database_migration(settings={"magpie.ini_file_path": args.config_file})
