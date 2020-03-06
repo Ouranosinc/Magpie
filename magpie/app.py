@@ -22,7 +22,13 @@ def main(global_config=None, **settings):  # noqa: F811
     """
     This function returns a Pyramid WSGI application.
     """
-    config_ini = get_constant("MAGPIE_INI_FILE_PATH", raise_missing=True)
+    # override magpie ini if provided with --paste to gunicorn, otherwise use environment variable
+    config_env = get_constant("MAGPIE_INI_FILE_PATH", raise_missing=True)
+    config_ini = (global_config or {}).get("__file__", config_env)
+    if config_ini != config_env:
+        import magpie.constants
+        magpie.constants.MAGPIE_INI_FILE_PATH = config_ini
+        settings["magpie.ini_file_path"] = config_ini
 
     print_log("Setting up loggers...", LOGGER)
     log_lvl = get_constant("MAGPIE_LOG_LEVEL", settings, "magpie.log_level", default_value="INFO",

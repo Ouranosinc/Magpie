@@ -126,11 +126,6 @@ These settings can be used to specify where to find other settings through custo
   | This variable ignores the setting/env-var resolution order since settings cannot be defined without
     firstly loading the file referenced by its value.
 
-- | ``MAGPIE_ALEMBIC_INI_FILE_PATH``
-  | Path to ``.ini`` file which defines an ``[alembic]`` section specifying details on how to execute database
-    migration operations.
-  | (Default: ``${MAGPIE_INI_FILE_PATH}``) [section defined within `magpie.ini`_]
-
 - | ``MAGPIE_ENV_DIR``
   | Directory path where to look for ``.env`` files. This variable can be useful to load specific test environment
     configurations or to specify a local path while the actual `Magpie` code is located in a Python `site-packages`

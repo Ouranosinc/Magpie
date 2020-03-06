@@ -37,8 +37,6 @@ MAGPIE_PERMISSIONS_CONFIG_PATH = os.getenv(
     "MAGPIE_PERMISSIONS_CONFIG_PATH", "{}/permissions.cfg".format(MAGPIE_CONFIG_DIR))
 MAGPIE_INI_FILE_PATH = os.getenv(
     "MAGPIE_INI_FILE_PATH", "{}/magpie.ini".format(MAGPIE_CONFIG_DIR))
-MAGPIE_ALEMBIC_INI_FILE_PATH = os.getenv(
-    "MAGPIE_ALEMBIC_INI_FILE_PATH", MAGPIE_INI_FILE_PATH)
 # allow custom location of env files directory to avoid
 # loading from installed magpie in python site-packages
 MAGPIE_ENV_DIR = os.getenv("MAGPIE_ENV_DIR", os.path.join(MAGPIE_ROOT, "env"))

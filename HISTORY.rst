@@ -6,8 +6,16 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Remove ``MAGPIE_ALEMBIC_INI_FILE_PATH`` configuration parameter in favor of ``MAGPIE_INI_FILE_PATH``.
+* Forward ``.ini`` file provided as argument to ``MAGPIE_INI_FILE_PATH`` (e.g.: when using ``gunicorn --paste <ini>``).
+* Load configuration file (previously only ``.cfg``) also using ``.yml``, ``.yaml`` and ``.json`` extensions.
+* Add argument parameter for ``run_db_migration`` helper to specify the configuration ``ini`` file to employ.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
+* Use forwarded input argument to ``MAGPIE_INI_FILE_PATH`` to execute database migration.
 * Handle trailing ``/`` of HTTP path that would fail an ACL lookup of the corresponding service or resource.
 
 1.9.1 (2020-02-20)
