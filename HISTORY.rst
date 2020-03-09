@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.9.2 (2020-03-09)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Remove ``MAGPIE_ALEMBIC_INI_FILE_PATH`` configuration parameter in favor of ``MAGPIE_INI_FILE_PATH``.
