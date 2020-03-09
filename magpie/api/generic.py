@@ -15,7 +15,14 @@ from simplejson import JSONDecodeError
 
 from magpie.api import schemas as s
 from magpie.api.exception import raise_http, verify_param
-from magpie.utils import CONTENT_TYPE_ANY, CONTENT_TYPE_JSON, SUPPORTED_CONTENT_TYPES, get_header, get_logger
+from magpie.utils import (
+    CONTENT_TYPE_ANY,
+    CONTENT_TYPE_JSON,
+    SUPPORTED_CONTENT_TYPES,
+    get_header,
+    get_logger,
+    get_magpie_url
+)
 
 if TYPE_CHECKING:
     from magpie.typedefs import Str, JSON  # noqa: F401
@@ -95,8 +102,10 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
     """
     def validate_accept_header(request):
         # ignore types defined under UI or static routes to allow rendering
-        path = request.path if not request.path.startswith("/magpie") else request.path.replace("/magpie", "", 1)
-        if not any(path.startswith(p) for p in ("/ui", "/static")):
+        magpie_url = get_magpie_url(request)
+        magpie_path = request.url.replace(magpie_url, "")   # server url could have more prefixes than simply /magpie
+        magpie_path = magpie_path if not magpie_path.startswith("/magpie") else magpie_path.replace("/magpie", "", 1)
+        if not any(magpie_path.startswith(p) for p in ("/ui", "/static")):
             any_supported_header = SUPPORTED_CONTENT_TYPES + [CONTENT_TYPE_ANY]
             accept = get_header("accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
             verify_param(accept, is_in=True, param_compare=any_supported_header, param_name="Accept Header",
