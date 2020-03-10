@@ -23,7 +23,7 @@ from twitcher.owsproxy import owsproxy_defaultconfig    # noqa
 
 if TYPE_CHECKING:
     from magpie.models import User
-    from magpie.typedefs import AnySettingsContainer, JSON
+    from magpie.typedefs import AnySettingsContainer, Str, JSON
     from twitcher.store import AccessTokenStoreInterface  # noqa
     from pyramid.config import Configurator
     from pyramid.request import Request
@@ -113,6 +113,8 @@ class MagpieAdapter(six.with_metaclass(SingletonMeta, AdapterInterface)):
 
     @property
     def name(self):
+        # type: () -> Str
+        # pylint: disable=E1101,no-member
         return AdapterInterface.name.fget(self)  # noqa
 
     def describe_adapter(self):

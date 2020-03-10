@@ -25,12 +25,13 @@ from magpie.utils import (
 )
 
 if TYPE_CHECKING:
-    from typing import Callable
+    # pylint: disable=W0611,unused-import
+    from typing import Callable  # noqa: F401
     from magpie.typedefs import Str, JSON  # noqa: F401
-    from pyramid.registry import Registry
-    from pyramid.request import Request
-    from pyramid.response import Response
-    from pyramid.httpexceptions import HTTPException
+    from pyramid.registry import Registry  # noqa: F401
+    from pyramid.request import Request  # noqa: F401
+    from pyramid.response import Response  # noqa: F401
+    from pyramid.httpexceptions import HTTPException  # noqa: F401
 LOGGER = get_logger(__name__)
 
 
@@ -107,8 +108,8 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
     def validate_accept_header(request):
         # type: (Request) -> Response
         """
-        Validates the specified request according to its ``Accept`` header, ignoring UI related routes that request
-        more content-types than the ones supported by the application for display purposes (styles, images etc.).
+        Validates the specified request according to its ``Accept`` header, ignoring UI related routes that request more
+        content-types than the ones supported by the application for display purposes (styles, images etc.).
         """
         # server URL could have more prefixes than only /magpie, so start by removing them using explicit URL setting
         # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
