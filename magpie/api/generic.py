@@ -25,8 +25,11 @@ from magpie.utils import (
 )
 
 if TYPE_CHECKING:
+    from typing import Callable
     from magpie.typedefs import Str, JSON  # noqa: F401
+    from pyramid.registry import Registry
     from pyramid.request import Request
+    from pyramid.response import Response
     from pyramid.httpexceptions import HTTPException
 LOGGER = get_logger(__name__)
 
@@ -95,16 +98,25 @@ def unauthorized_or_forbidden(request):
 
 
 def validate_accept_header_tween(handler, registry):    # noqa: F811
+    # type: (Callable[[Request], Response], Registry) -> Callable[[Request], Response]
     """
-    Tween that validates that the specified request ``Accept`` header (if any), is a supported one by the application.
+    Tween that validates that the specified request ``Accept`` header (if any) is a supported one by the application.
 
     :raises HTTPNotAcceptable: if `Accept` header was specified and is not supported.
     """
     def validate_accept_header(request):
-        # ignore types defined under UI or static routes to allow rendering
+        # type: (Request) -> Response
+        """
+        Validates the specified request according to its ``Accept`` header, ignoring UI related routes that request
+        more content-types than the ones supported by the application for display purposes (styles, images etc.).
+        """
+        # server URL could have more prefixes than only /magpie, so start by removing them using explicit URL setting
+        # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
         magpie_url = get_magpie_url(request)
-        magpie_path = request.url.replace(magpie_url, "")   # server url could have more prefixes than simply /magpie
-        magpie_path = magpie_path if not magpie_path.startswith("/magpie") else magpie_path.replace("/magpie", "", 1)
+        magpie_url = request.url.replace(magpie_url, "")
+        magpie_path = magpie_url.replace(request.host, "")
+        magpie_path = magpie_path.split("/magpie")[-1]
+        # ignore types defined under UI or static routes to allow rendering
         if not any(magpie_path.startswith(p) for p in ("/ui", "/static")):
             any_supported_header = SUPPORTED_CONTENT_TYPES + [CONTENT_TYPE_ANY]
             accept = get_header("accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")

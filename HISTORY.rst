@@ -6,6 +6,10 @@ History
 Unreleased
 ---------------------
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Add further handling of ``Accept`` header introduced in PR #259 (ie: ``1.9.3``) as more use cases where not handled.
+
 1.9.3 (2020-03-10)
 ---------------------
 
