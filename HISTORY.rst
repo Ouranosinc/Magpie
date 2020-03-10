@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.9.3 (2020-03-10)
+---------------------
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add handling of ``Accept`` header to allow additional content-type when requesting UI related routes while

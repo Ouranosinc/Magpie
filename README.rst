@@ -27,13 +27,13 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Requires Python 2.7, 3.5+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/1.9.2.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/1.9.3.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/Magpie/compare/1.9.2...master
+    :target: https://github.com/Ouranosinc/Magpie/compare/1.9.3...master
 
-.. |version| image:: https://img.shields.io/badge/tag-1.9.2-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-1.9.3-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/Magpie/tree/1.9.2
+    :target: https://github.com/Ouranosinc/Magpie/tree/1.9.3
 
 .. |requires| image:: https://requires.io/github/Ouranosinc/Magpie/requirements.svg?branch=master
     :alt: Requirements Status
@@ -43,9 +43,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Travis-CI Build Status (master branch)
     :target: https://travis-ci.com/Ouranosinc/Magpie
 
-.. |travis_tagged| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/1.9.2.svg?label=1.9.2
+.. |travis_tagged| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/1.9.3.svg?label=1.9.3
     :alt: Travis-CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/tree/1.9.2
+    :target: https://github.com/Ouranosinc/Magpie/tree/1.9.3
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/pavics-magpie
     :alt: Readthedocs Build Status (master branch)
@@ -113,8 +113,8 @@ Following most recent variants are available:
     * - Magpie
       - Twitcher |br|
         (with integrated ``MagpieAdapter``)
-    * - pavics/magpie:1.9.2
-      - pavics/twitcher:magpie-1.9.2
+    * - pavics/magpie:1.9.3
+      - pavics/twitcher:magpie-1.9.3
     * - pavics/magpie:latest
       - pavics/twitcher:magpie-latest
 
