@@ -30,7 +30,7 @@ RUN apk update \
     py-pip \
     musl-dev \
     postgresql-dev \
-    && pip install --no-cache-dir --upgrade pip setuptools \
+    && pip install --no-cache-dir --upgrade -r requirements-sys.txt \
     && pip install --no-cache-dir -e $MAGPIE_DIR \
     && apk --purge del .build-deps
 

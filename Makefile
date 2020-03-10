@@ -224,7 +224,7 @@ install-all: install-sys install-pkg install-dev
 .PHONY: install-sys
 install-sys: clean conda-env	## install system dependencies and required installers/runners
 	@echo "Installing system dependencies..."
-	@bash -c '$(CONDA_CMD) pip install --upgrade pip setuptools'
+	@bash -c '$(CONDA_CMD) pip install --upgrade -r "$(APP_ROOT)/requirements-sys.txt"'
 	@bash -c '$(CONDA_CMD) pip install gunicorn'
 
 .PHONY: install-pkg
