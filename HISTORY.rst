@@ -6,6 +6,12 @@ History
 Unreleased
 ---------------------
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Add handling of ``Accept`` header to allow additional content-type when requesting UI related routes while
+  `Magpie` application is being served under a route with additional prefix.
+* Fix requirements dependency issue related to ``zope.interface`` and ``setuptools`` version mismatch.
+
 1.9.2 (2020-03-09)
 ---------------------
 
