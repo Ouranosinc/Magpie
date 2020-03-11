@@ -116,7 +116,8 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
         magpie_url = get_magpie_url(request)
         magpie_url = request.url.replace(magpie_url, "")
         magpie_path = magpie_url.replace(request.host, "")
-        magpie_path = magpie_path.split("/magpie")[-1]
+        magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
+        magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
         # ignore types defined under UI or static routes to allow rendering
         if not any(magpie_path.startswith(p) for p in ("/ui", "/static")):
             any_supported_header = SUPPORTED_CONTENT_TYPES + [CONTENT_TYPE_ANY]
