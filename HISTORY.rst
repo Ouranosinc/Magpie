@@ -6,6 +6,11 @@ History
 Unreleased
 ---------------------
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix handling of ``Accept`` header introduced in PR #259 (ie: ``1.9.3`` and ``1.9.4``) specifically in the situation
+  where a resource has the value ``magpie`` within its name (ie: such as the logo ``magpie.png``).
+
 1.9.4 (2020-03-10)
 ---------------------
 
