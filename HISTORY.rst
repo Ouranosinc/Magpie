@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.10.0 (2020-03-18)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * When using logging level ``DEBUG``, `Magpie` requests will log additional details
