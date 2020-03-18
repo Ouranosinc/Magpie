@@ -9,6 +9,7 @@ from six import with_metaclass
 from magpie.utils import CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import Dict, JSON, Str, Type  # noqa: F401
 
 

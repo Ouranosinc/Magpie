@@ -19,6 +19,7 @@ from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from pyramid.request import Request
     from magpie.typedefs import Any, Str, Optional, ServiceOrResourceType  # noqa: F401
     from magpie.permissions import Permission  # noqa: F401

@@ -22,17 +22,21 @@ def main(global_config=None, **settings):  # noqa: F811
     """
     This function returns a Pyramid WSGI application.
     """
+    import magpie.constants  # pylint: disable=C0415  # avoid circular import
+
     # override magpie ini if provided with --paste to gunicorn, otherwise use environment variable
     config_env = get_constant("MAGPIE_INI_FILE_PATH", raise_missing=True)
     config_ini = (global_config or {}).get("__file__", config_env)
     if config_ini != config_env:
-        import magpie.constants
         magpie.constants.MAGPIE_INI_FILE_PATH = config_ini
         settings["magpie.ini_file_path"] = config_ini
 
     print_log("Setting up loggers...", LOGGER)
     log_lvl = get_constant("MAGPIE_LOG_LEVEL", settings, "magpie.log_level", default_value="INFO",
                            raise_missing=False, raise_not_set=False, print_missing=True)
+    # apply proper value in case it was in ini AND env since up until then, only env was check
+    # we want to prioritize the ini definition
+    magpie.constants.MAGPIE_LOG_LEVEL = log_lvl
     LOGGER.setLevel(log_lvl)
     sa_settings = set_sqlalchemy_log_level(log_lvl)
 

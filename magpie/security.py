@@ -14,6 +14,7 @@ from magpie.constants import get_constant
 from magpie.utils import get_logger, get_settings
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import JSON  # noqa: F401
 AUTHOMATIC_LOGGER = get_logger("magpie.authomatic", level=logging.DEBUG)
 LOGGER = get_logger("magpie.security")

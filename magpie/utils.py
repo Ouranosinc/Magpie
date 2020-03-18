@@ -26,10 +26,12 @@ from webob.headers import EnvironHeaders, ResponseHeaders
 from magpie.constants import get_constant
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import (  # noqa: F401
         Any, AnyKey, Str, List, Optional, Type, Union,
         AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,
     )
+    from pyramid.events import NewRequest   # noqa: F401
     from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
 
 CONTENT_TYPE_ANY = "*/*"
@@ -47,7 +49,9 @@ def get_logger(name, level=None):
     """
     logger = logging.getLogger(name)
     if logger.level == logging.NOTSET:
-        if level is None:
+        # use magpie log level if it was specified via ini config with logger sections
+        level = level or logging.getLogger("magpie").getEffectiveLevel()
+        if not level:
             # pylint: disable=C0415     # avoid circular import
             from magpie.constants import MAGPIE_LOG_LEVEL
             level = MAGPIE_LOG_LEVEL
@@ -305,10 +309,27 @@ def log_request_format(request):
 
 
 def log_request(event):
+    # type: (NewRequest) -> None
     """
     Subscriber event that logs basic details about the incoming requests.
     """
-    LOGGER.info("Request: [%s]", log_request_format(event.request))
+    request = event.request  # type: Request
+    LOGGER.info("Request: [%s]", log_request_format(request))
+    if LOGGER.isEnabledFor(logging.DEBUG):
+        def items_str(items):
+            return "\n  ".join(["{!s}: {!s}".format(h, items[h]) for h in items]) if len(items) else "-"
+
+        header_str = items_str(request.headers)
+        params_str = items_str(request.params)
+        body_str = str(request.body) or "-"
+        LOGGER.debug("Request details:\n"
+                     "Headers:\n"
+                     "  %s\n"
+                     "Parameters:\n"
+                     "  %s\n"
+                     "Body:\n"
+                     "  %s",
+                     header_str, params_str, body_str)
 
 
 def log_exception_tween(handler, registry):  # noqa: F811

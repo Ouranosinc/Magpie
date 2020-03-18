@@ -63,6 +63,7 @@ confidence=
 disable=C0111,missing-docstring,
         C0302,too-many-lines,
         C0330,bad-continuation,
+        C0411,wrong-import-order,
         C0412,ungrouped-imports,
         C0415,import-outside-toplevel,
         C1801,len-as-condition,
@@ -84,7 +85,9 @@ disable=C0111,missing-docstring,
         W0706,try-except-raise,
         W1508,invalid-envvar-default
 
-# note: (C0412, ungrouped-imports) is managed via isort tool, ignore false positives
+# note: following errors are managed via isort tool, ignore false positives
+#   C0411,wrong-import-order
+#   C0412,ungrouped-imports
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

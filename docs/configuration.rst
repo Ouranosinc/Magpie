@@ -185,7 +185,8 @@ at the start of the `Configuration`_ section.
 - | ``MAGPIE_LOG_LEVEL``
   | Logging level of operations. `Magpie` will first use the complete logging configuration found in
     `magpie.ini`_ in order to define logging formatters and handler referencing to the ``logger_magpie``
-    section. If this configuration fails, this variable is used instead to prepare a basic logger.
+    section. If this configuration fail to retrieve an explicit logging level, this variable is used instead to
+    prepare a basic logger, after checking if a corresponding ``magpie.log_level`` setting was instead specified.
   | (Default: ``INFO``)
 
 - | ``MAGPIE_LOG_LEVEL``

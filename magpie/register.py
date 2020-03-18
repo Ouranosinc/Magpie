@@ -46,6 +46,7 @@ from magpie.utils import (
 )
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import (  # noqa: F401
         Any, Str, Dict, List, JSON, Optional, Tuple, Union, CookiesOrSessionType
     )

@@ -6,6 +6,17 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* When using logging level ``DEBUG``, `Magpie` requests will log additional details
+  (**WARNING** these log entries will potentially also include sensible information such as authentication cookies)
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Adjust mismatching log levels across `Magpie` packages in case ``MAGPIE_LOG_LEVEL`` and corresponding
+  ``magpie.log_level`` setting or ``logger_magpie`` configuration section were defined simultaneously.
+  The values are back-propagated to ``magpie.constants`` for matching values and prioritize the `INI` file definitions.
+
 1.9.5 (2020-03-11)
 ---------------------
 

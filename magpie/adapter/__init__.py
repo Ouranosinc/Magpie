@@ -22,6 +22,7 @@ from twitcher.adapter.base import AdapterInterface      # noqa
 from twitcher.owsproxy import owsproxy_defaultconfig    # noqa
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.models import User
     from magpie.typedefs import AnySettingsContainer, Str, JSON
     from twitcher.store import AccessTokenStoreInterface  # noqa

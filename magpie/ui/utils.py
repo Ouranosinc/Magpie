@@ -7,6 +7,7 @@ from pyramid.request import Request
 from magpie.utils import CONTENT_TYPE_JSON, get_header
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import Str, JSON, CookiesType, HeadersType, Optional  # noqa: F401
     from pyramid.response import Response
 

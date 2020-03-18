@@ -16,6 +16,7 @@ from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import Str  # noqa: F401
     from sqlalchemy.orm.session import Session
     from pyramid.httpexceptions import HTTPException

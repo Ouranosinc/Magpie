@@ -27,6 +27,7 @@ from magpie.api.exception import evaluate_call
 from magpie.permissions import Permission
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import Str  # noqa: F401
 
 Base = declarative_base()   # pylint: disable=C0103,invalid-name

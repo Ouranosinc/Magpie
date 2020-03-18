@@ -22,6 +22,7 @@ import dotenv
 from pyramid.settings import asbool
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import Str, Optional, SettingValue, AnySettingsContainer  # noqa: F401
 
 # ===========================

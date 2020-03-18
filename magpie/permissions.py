@@ -6,6 +6,7 @@ from six import with_metaclass
 from magpie.utils import ExtendedEnumMeta
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import Iterable, List, Optional, Str, AnyPermissionType  # noqa: F401
 
 
