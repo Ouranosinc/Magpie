@@ -22,6 +22,7 @@ from magpie.register import sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session
     from magpie.typedefs import List, Str, Optional, Tuple, Type, ServiceOrResourceType  # noqa: F401

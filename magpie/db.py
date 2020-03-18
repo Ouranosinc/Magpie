@@ -27,6 +27,7 @@ from magpie.utils import get_logger, get_settings, get_settings_from_config_ini,
 from magpie import models  # isort:skip # noqa: E402
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import Any, AnySettingsContainer, SettingsType, Str, Optional, Union  # noqa: F401
     from sqlalchemy.engine.base import Engine  # noqa: F401
 

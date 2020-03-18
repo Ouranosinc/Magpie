@@ -21,6 +21,7 @@ from magpie.ui.utils import check_response, error_badrequest, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from sqlalchemy.orm.session import Session
     from magpie.typedefs import List, Optional  # noqa: F401
 LOGGER = get_logger(__name__)

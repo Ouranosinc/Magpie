@@ -28,6 +28,7 @@ from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnumMeta, get_header
 from tests import runner, utils
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import Str  # noqa: F401
 
 

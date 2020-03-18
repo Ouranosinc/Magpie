@@ -10,6 +10,7 @@ from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_twitcher_protected_service_url
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import Optional, JSON, Str, Dict, List, Type  # noqa: F401
     from sqlalchemy.orm.session import Session
     from magpie.models import Resource, Service

@@ -18,6 +18,7 @@ from magpie.helpers.sync_services import SYNC_SERVICES_TYPES, SyncServiceDefault
 from magpie.utils import get_logger
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from sqlalchemy.orm.session import Session
     from magpie.typedefs import Optional  # noqa: F401
 

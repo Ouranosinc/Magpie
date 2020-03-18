@@ -24,6 +24,7 @@ from magpie.utils import (
 )
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from typing import Any, Callable, List, Iterable, NoReturn, Optional, Tuple, Type, Union
     from magpie.typedefs import Str, JSON, ParamsType, PyramidResponse  # noqa: F401
 

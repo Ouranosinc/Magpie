@@ -26,6 +26,7 @@ from magpie.utils import (
 )
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from tests.interfaces import Base_Magpie_TestCase  # noqa: F401
     from magpie.typedefs import (  # noqa: F401
         Str, Callable, Dict, HeadersType, OptionalHeaderCookiesType, Optional, Type,

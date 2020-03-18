@@ -25,6 +25,7 @@ from magpie.permissions import convert_permission, format_permissions
 from magpie.services import service_factory
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.services import ServiceInterface  # noqa: F401
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request

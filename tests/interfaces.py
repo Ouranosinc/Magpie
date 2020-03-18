@@ -21,6 +21,7 @@ from magpie.utils import CONTENT_TYPE_JSON, get_twitcher_protected_service_url
 from tests import runner, utils
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import CookiesType, HeadersType, Optional, Str
 
 

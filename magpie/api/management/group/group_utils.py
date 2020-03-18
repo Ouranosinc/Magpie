@@ -23,6 +23,7 @@ from magpie.permissions import convert_permission, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from pyramid.httpexceptions import HTTPException  # noqa: F401
     from sqlalchemy.orm.session import Session
     from magpie.typedefs import Str, Iterable, List, Optional, JSON, ServiceOrResourceType  # noqa: F401

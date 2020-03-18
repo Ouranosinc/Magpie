@@ -26,6 +26,7 @@ from webob.headers import EnvironHeaders, ResponseHeaders
 from magpie.constants import get_constant
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import (  # noqa: F401
         Any, AnyKey, Str, List, Optional, Type, Union,
         AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,

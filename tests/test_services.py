@@ -9,16 +9,17 @@ Tests for the services implementations magpie.
 """
 import json
 import unittest
+from typing import TYPE_CHECKING
 
 import six
 from pyramid.testing import DummyRequest
 
 from magpie import owsrequest
-from magpie.typedefs import TYPE_CHECKING
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
 from tests import runner
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import Dict, Optional, Str  # noqa: F401
 
 

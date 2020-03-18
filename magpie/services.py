@@ -16,6 +16,7 @@ from magpie.owsrequest import ows_parser_factory
 from magpie.permissions import Permission
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from magpie.typedefs import (  # noqa: F401
         AccessControlListType, Str, List, Dict, Type, ResourcePermissionType
     )
