@@ -5,8 +5,12 @@ import datetime
 import logging
 import random
 import string
+from typing import TYPE_CHECKING
 
 import requests
+
+if TYPE_CHECKING:
+    from typing import Any, AnyStr, Optional, Sequence
 
 LOGGER = logging.getLogger(__name__)
 COLUMN_SIZE = 60
@@ -75,13 +79,21 @@ def delete_users(user_names, magpie_url, magpie_admin_user_name, magpie_admin_pa
     return users
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Create users on Magpie")
+def make_parser():
+    # type: () -> argparse.ArgumentParser
+    parser = argparse.ArgumentParser(description="Create users on a running Magpie instance")
     parser.add_argument("url", help="url used to access the magpie service")
     parser.add_argument("user_name", help="admin username for magpie login")
     parser.add_argument("password", help="admin password for magpie login")
     parser.add_argument("emails", nargs="*", help="list of emails for users to be created")
-    args = parser.parse_args()
+    return parser
+
+
+def main(args=None, parser=None, namespace=None):
+    # type: (Optional[Sequence[AnyStr]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> Any
+    if not parser:
+        parser = make_parser()
+    args = parser.parse_args(args=args, namespace=namespace)
 
     LOGGER.setLevel(logging.DEBUG)
     logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S")
