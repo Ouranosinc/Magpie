@@ -6,6 +6,12 @@ History
 Unreleased
 ---------------------
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix failing generation of children resource tree when calling routes ``/resources/{id}`` due to literal ``Resource``
+  class being used instead of the string representation. This also fixes UI Edit menu of a ``Service`` that add more
+  at least one child ``Resource``.
+
 1.10.0 (2020-03-18)
 ---------------------
 
