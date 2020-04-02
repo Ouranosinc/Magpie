@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.10.1 (2020-04-02)
+---------------------
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix failing generation of children resource tree when calling routes ``/resources/{id}`` due to literal ``Resource``
