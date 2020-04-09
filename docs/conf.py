@@ -297,11 +297,4 @@ texinfo_documents = [
 
 intersphinx_mapping = {
     "celery": ("http://docs.celeryproject.org/en/latest/", None),
-    "refcom_gateway": (
-        "http://www.crim.ca/perso/frederic.osterrath/refcom/gateway/latest/",
-        ("../../refcom_gateway/docs/_build/html/objects.inv", None)
-    ),
-    "sg": (
-        "http://www.crim.ca/perso/frederic.osterrath/refcom/SG/latest/",
-        ("../../SG/docs/_build/html/objects.inv", None))
 }
