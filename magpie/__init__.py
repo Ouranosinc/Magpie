@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 import sys
 
-from pyramid.events import NewRequest
-from pyramid.tweens import EXCVIEW
+# NOTE:
+#   Do not import anything here that is not part of the python standard library.
+#   Any external package could still not yet be installed when importing the package
+#   to access high-level information such as the metadata (__meta__.py).
 
 
 def includeme(config):
     # import needs to be here, otherwise ImportError happens during setup.py install (modules not yet installed)
+    from pyramid.events import NewRequest
+    from pyramid.tweens import EXCVIEW
     from magpie.api.generic import (    # pylint: disable=C0415
         internal_server_error,
         not_found_or_method_not_allowed,
