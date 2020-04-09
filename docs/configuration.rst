@@ -495,7 +495,7 @@ authentication procedure.
 .. _BADC: http://data.ceda.ac.uk/badc
 .. _CEDA: https://esgf-index1.ceda.ac.uk
 .. _LLNL: https://www.llnl.gov/
-.. _PCMDI: https://pcmdi.llnl.gov/?esgcet/home
+.. _PCMDI: http://pcmdi.llnl.gov
 .. _SMHI: https://www.smhi.se
 .. _GitHub: https://developer.github.com/v3/#authentication
 .. _WSO2: https://wso2.com/
