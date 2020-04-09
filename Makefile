@@ -177,7 +177,7 @@ $(DOC_LOCATION):
 	@-echo "Documentation available: file://$(DOC_LOCATION)"
 
 .PHONY: docs
-docs: install-dev clean-docs $(DOC_LOCATION)	## generate Sphinx HTML documentation, including API docs
+docs: install-docs clean-docs $(DOC_LOCATION)	## generate Sphinx HTML documentation, including API docs
 
 .PHONY: docs-show
 docs-show: $(DOC_LOCATION)	## display HTML webpage of generated documentation (build docs if missing)
@@ -219,7 +219,7 @@ dist: clean conda-env	## package for distribution
 install: install-all	## alias for 'install-all' target
 
 .PHONY: install-all		## install every dependency and package definition
-install-all: install-sys install-pkg install-dev
+install-all: install-sys install-pkg install-dev install-docs
 
 .PHONY: install-sys
 install-sys: clean conda-env	## install system dependencies and required installers/runners
@@ -237,6 +237,11 @@ install-pkg: install-sys	## install the package to the active Python's site-pack
 	# ---
 	@bash -c '$(CONDA_CMD) python setup.py install_egg_info'
 	@bash -c '$(CONDA_CMD) pip install --upgrade -e "$(APP_ROOT)" --no-cache'
+
+.PHONY: install-docs
+install-docs: conda-env  ## install package requirements for documentation generation
+	@bash -c '$(CONDA_CMD) pip install -r "$(APP_ROOT)/requirements-docs.txt"'
+	@echo "Successfully installed docs requirements."
 
 .PHONY: install-dev
 install-dev: conda-env	## install package requirements for development and testing

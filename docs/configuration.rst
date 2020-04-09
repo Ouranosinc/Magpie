@@ -11,7 +11,7 @@ variables. Both of these alternatives match the constants defined in `constants.
 interchangeably. Order of resolution will prioritize setting values over environment variables in case of duplicate
 configurations resulting into different values.
 
-.. _constants.py: ../magpie/constants.py
+.. _constants.py: https://github.com/Ouranosinc/Magpie/tree/master/magpie/constants.py
 
 Configuration Files
 -------------------
@@ -62,7 +62,7 @@ This behaviour is intended to reduce initial configuration and preparation of  `
 When loading variables from the ``.env`` file, any conflicting environment variable will **NOT** be overridden.
 Therefore, only *missing but required* values will be added to the environment to ensure proper setup of `Magpie`.
 
-.. _magpie.env.example: ../env/magpie.env.example
+.. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example
 
 File: postgres.env
 ~~~~~~~~~~~~~~~~~~~
@@ -72,7 +72,7 @@ employed to setup the `postgres` database connection (see ``MAGPIE_POSTGRES_ENV_
 File `postgres.env.example`_ and auto-resolution of missing ``postgres.env`` is identical to ``magpie.env``
 case.
 
-.. _postgres.env.example: ../env/postgres.env.example
+.. _postgres.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/postgres.env.example
 
 Settings and Constants
 ----------------------
@@ -141,9 +141,9 @@ These settings can be used to specify where to find other settings through custo
   | (Default: ``${MAGPIE_ENV_DIR}/postgres.env``)
 
 
-.. _magpie.ini: ../config/magpie.ini
-.. _permissions.cfg: ../config/permissions.cfg
-.. _providers.cfg: ../config/permissions.cfg
+.. _magpie.ini: https://github.com/Ouranosinc/Magpie/tree/master/config/magpie.ini
+.. _permissions.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
+.. _providers.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
 
 Application Settings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -499,7 +499,7 @@ authentication procedure.
 .. _SMHI: https://www.smhi.se
 .. _GitHub: https://developer.github.com/v3/#authentication
 .. _WSO2: https://wso2.com/
-.. _MagpieSecurity: ../magpie/security.py
+.. _MagpieSecurity: https://github.com/Ouranosinc/Magpie/tree/master/magpie/security.py
 
 GitHub Settings
 ~~~~~~~~~~~~~~~~~

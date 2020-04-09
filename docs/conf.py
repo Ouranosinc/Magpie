@@ -17,6 +17,7 @@
 
 import os
 import sys
+import json
 
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
@@ -34,7 +35,9 @@ sys.path.insert(0, PROJECT_ROOT)
 
 # pylint: disable=C0413,wrong-import-position
 from magpie import __meta__  # isort:skip # noqa: E402
-
+# for api generation
+from magpie.api.schemas import generate_api_schema  # isort:skip # noqa: E402
+from pyramid.config import Configurator  # isort:skip # noqa: E402
 
 # -- General configuration ---------------------------------------------
 
@@ -50,7 +53,27 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
     "autoapi.extension",
+    "sphinxcontrib.redoc",
 ]
+
+# generate openapi
+config = Configurator()
+config.include("magpie")  # actually need to include magpie to apply decorators and parse routes
+api_spec_file = os.path.join(PROJECT_ROOT, "docs", "api.json")
+api_spec_json = generate_api_schema({"host": "example", "schemes": ["https"]})
+with open(api_spec_file, "w") as f:
+    json.dump(api_spec_json, f)
+
+redoc = [{
+    "name": __meta__.__title__,
+    "page": "api",  # rendered under '{root}/api.html'
+    "spec": api_spec_file,
+    "embed": True,
+    "opts": {
+        "lazy": True,
+        "hide-hostname": True
+    }
+}]
 
 autoapi_dirs = [os.path.join(PROJECT_ROOT, __meta__.__package__)]
 autoapi_ignore = [os.path.join(PROJECT_ROOT, "magpie/alembic/*")]
@@ -58,7 +81,8 @@ autoapi_python_class_content = "both"
 
 # cases to ignore during link checking
 linkcheck_ignore = [
-
+    # might not exist yet (we are generating it!)
+    "https://pavics-magpie.readthedocs.io/en/latest/api.html"
 ]
 
 # Add any paths that contain templates here, relative to this directory.

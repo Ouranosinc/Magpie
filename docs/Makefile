@@ -49,6 +49,8 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 	rm -f magpie*.rst
+	rm -f modules.rst
+	rm -f api.json
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
