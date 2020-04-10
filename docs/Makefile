@@ -47,10 +47,7 @@ help:
 	@echo "  doctest    to run all doctests embedded in the documentation (if enabled)"
 
 clean:
-	rm -rf $(BUILDDIR)/*
-	rm -f magpie*.rst
-	rm -f modules.rst
-	rm -f api.json
+	@rm -rf $(BUILDDIR)/*
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html

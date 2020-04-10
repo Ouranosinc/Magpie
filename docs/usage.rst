@@ -38,5 +38,5 @@ service providers from a configuration file or creating basic user accounts. Ple
 by calling them with ``--help`` argument for more details.
 
 .. _helpers: https://github.com/Ouranosinc/Magpie/tree/master/magpie/helpers
-.. _configuration: ./configuration
-.. _installation: ./installation
+.. _configuration: configuration
+.. _installation: installation

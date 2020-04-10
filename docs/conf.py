@@ -57,7 +57,7 @@ extensions = [
 ]
 
 # generate openapi
-config = Configurator()
+config = Configurator(settings={"magpie.build_docs": True, "magpie.ui_enabled": False})
 config.include("magpie")  # actually need to include magpie to apply decorators and parse routes
 api_spec_file = os.path.join(PROJECT_ROOT, "docs", "api.json")
 api_spec_json = generate_api_schema({"host": "example", "schemes": ["https"]})
