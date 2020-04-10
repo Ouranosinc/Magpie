@@ -15,7 +15,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :stub-columns: 1
 
     * - dependencies
-      - | |py_ver| |requires|
+      - | |py_ver| |dependencies|
     * - build status
       - | |travis_latest| |travis_tagged| |readthedocs| |coverage| |codacy|
     * - docker status
@@ -35,9 +35,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Latest Tag
     :target: https://github.com/Ouranosinc/Magpie/tree/1.10.1
 
-.. |requires| image:: https://requires.io/github/Ouranosinc/Magpie/requirements.svg?branch=master
-    :alt: Requirements Status
-    :target: https://requires.io/github/Ouranosinc/Magpie/requirements/?branch=master
+.. |dependencies| image:: https://pyup.io/repos/github/Ouranosinc/Magpie/shield.svg
+    :alt: Dependencies Status
+    :target: https://pyup.io/account/repos/github/Ouranosinc/Magpie/
 
 .. |travis_latest| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/master.svg?label=master
     :alt: Travis-CI Build Status (master branch)
