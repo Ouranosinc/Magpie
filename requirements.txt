@@ -41,4 +41,4 @@ zope.sqlalchemy==1.1
 #       https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic-1.0.1
 #   new authomatic handles openid install correctly
 #   leave http port until merged:
-authomatic[OpenID] @ https://github.com/fmigneault/authomatic/archive/httplib-port.zip
+authomatic[OpenID]==0.1.0.post1
