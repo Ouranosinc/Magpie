@@ -11,7 +11,7 @@ humanize
 lxml>=3.7
 paste
 pastedeploy
-pluggy
+pluggy==0.13.1
 psycopg2-binary>=2.7.1
 pyramid==1.10.2
 pyramid_beaker==0.8
