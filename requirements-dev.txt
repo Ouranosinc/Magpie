@@ -14,4 +14,4 @@ pylint
 pylint-quotes
 pytest
 tox>=3.0
-webtest
+webtest==2.0.34
