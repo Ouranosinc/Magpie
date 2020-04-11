@@ -9,7 +9,7 @@ futures
 gunicorn==19.9.0
 humanize
 lxml>=3.7
-paste
+paste==3.4.0
 pastedeploy
 pluggy
 psycopg2-binary>=2.7.1
