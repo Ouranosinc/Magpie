@@ -28,7 +28,7 @@ sqlalchemy
 sqlalchemy_utils
 threddsclient==0.4.1
 transaction
-typing
+typing==3.7.4.1
 wheel==0.33.0
 webob
 ziggurat-foundations==0.8.3
