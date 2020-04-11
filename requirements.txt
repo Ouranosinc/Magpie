@@ -5,7 +5,7 @@ colander
 cornice
 cornice_swagger>=0.7.0
 # futures is required for gunicorn threads
-futures
+futures==3.3.0
 gunicorn==19.9.0
 humanize
 lxml>=3.7
