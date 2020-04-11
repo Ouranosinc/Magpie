@@ -7,7 +7,7 @@ cornice_swagger>=0.7.0
 # futures is required for gunicorn threads
 futures
 gunicorn==19.9.0
-humanize
+humanize==2.3.0
 lxml>=3.7
 paste
 pastedeploy
