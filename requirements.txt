@@ -21,7 +21,7 @@ pyramid_tm==2.2.1
 python-dotenv
 pyyaml>=5.1
 requests
-requests_file
+requests_file==1.4.3
 simplejson
 six
 sqlalchemy
