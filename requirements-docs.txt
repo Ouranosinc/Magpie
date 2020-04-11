@@ -1,4 +1,4 @@
 # FIXME: bug when using 1.2 (https://github.com/readthedocs/sphinx-autoapi/issues/186)
-sphinx-autoapi<1.2
+sphinx-autoapi==1.3.0
 sphinx>=1.6
 pycodestyle
