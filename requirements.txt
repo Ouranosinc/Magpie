@@ -1,5 +1,5 @@
 alembic>=1.3.0
-bcrypt==3.1.6
+bcrypt==3.1.7
 beaker
 colander
 cornice
