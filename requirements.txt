@@ -22,7 +22,7 @@ python-dotenv
 pyyaml>=5.1
 requests
 requests_file
-simplejson
+simplejson==3.17.0
 six
 sqlalchemy
 sqlalchemy_utils
