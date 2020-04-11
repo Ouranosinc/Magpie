@@ -30,7 +30,7 @@ threddsclient==0.4.1
 transaction
 typing
 wheel==0.33.0
-webob
+webob==1.8.6
 ziggurat-foundations==0.8.3
 zope.interface>=4.7.2,<5
 zope.sqlalchemy==1.1
