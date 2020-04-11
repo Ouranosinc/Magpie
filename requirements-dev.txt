@@ -4,7 +4,7 @@ bandit
 bump2version
 codacy-coverage
 coverage==4.0
-doc8
+doc8==0.8.0
 docformatter
 flake8
 isort
