@@ -1,6 +1,6 @@
 -r requirements-docs.txt
 autopep8
-bandit
+bandit==1.6.2
 bump2version
 codacy-coverage
 coverage==4.0
