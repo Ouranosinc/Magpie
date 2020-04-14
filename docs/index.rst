@@ -13,6 +13,7 @@ Package Information
    usage
    installation
    configuration
+   utilities
    performance
    contributing
    authors
