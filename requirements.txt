@@ -27,7 +27,7 @@ six
 sqlalchemy
 sqlalchemy_utils
 threddsclient==0.4.1
-transaction
+transaction==3.0.0
 typing
 wheel==0.33.0
 webob
