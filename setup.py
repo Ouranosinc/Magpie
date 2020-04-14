@@ -12,7 +12,8 @@ except ImportError:
     from distutils.core import setup
 
 if TYPE_CHECKING:
-    from typing import Iterable, Set, Tuple, Union
+    # pylint: disable=W0611,unused-import
+    from typing import Iterable, Set, Tuple, Union  # noqa: F401
 
 MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, "magpie")
@@ -82,16 +83,16 @@ def _parse_requirements(file_path, requirements, links):
             if not line or line.startswith("#") or line.startswith("-"):
                 continue
             if "python_version" in line:
-                op, py = _split_requirement(line, version=True, python=True)
+                operator, py_ver = _split_requirement(line, version=True, python=True)
                 op_map = {
-                    "==": LooseVersion(sys.version) == LooseVersion(py),
-                    ">=": LooseVersion(sys.version) >= LooseVersion(py),
-                    "<=": LooseVersion(sys.version) <= LooseVersion(py),
-                    "!=": LooseVersion(sys.version) != LooseVersion(py),
-                    ">": LooseVersion(sys.version) > LooseVersion(py),
-                    "<": LooseVersion(sys.version) < LooseVersion(py),
+                    "==": LooseVersion(sys.version) == LooseVersion(py_ver),
+                    ">=": LooseVersion(sys.version) >= LooseVersion(py_ver),
+                    "<=": LooseVersion(sys.version) <= LooseVersion(py_ver),
+                    "!=": LooseVersion(sys.version) != LooseVersion(py_ver),
+                    ">": LooseVersion(sys.version) > LooseVersion(py_ver),
+                    "<": LooseVersion(sys.version) < LooseVersion(py_ver),
                 }
-                if not op_map[op]:
+                if not op_map[operator]:
                     continue
                 line = _split_requirement(line)  # remove the python part
             if "git+https" in line:
