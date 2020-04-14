@@ -39,17 +39,20 @@ def _split_requirement(requirement, version=False, python=False):
     # type: (str, bool, bool) -> Union[str, Tuple[str, str]]
     """
     Splits a requirement package definition into it's name and version specification.
-    Returns the appropriate part according to `version`.
+
+    Returns the appropriate part(s) according to :paramref:`version`. If ``True``, returns the operator and version
+    string. The returned version in this case would be either the package's or the environment python's version string
+    according to the value of :paramref:`python`. Otherwise, only returns the 'other part' of the requirement, which
+    will be the plain package name without version or the complete ``package+version`` without ``python_version`` part.
 
     Package requirement format::
 
         package [<|<=|==|>|>=|!= x.y.z][; python_version <|<=|==|>|>=|!= "x.y.z"]
 
     :param requirement: full package string requirement.
-    :param version: if ``True``, return the operator and (package or python) version string,
-        otherwise only returns the 'other part' of the requirement (package name or package+version without python).
-    :param python: retrieve python operator and version instead of the package's version
-    :return: extracted requirement part(s)
+    :param version: retrieve version operator and version instead of package's name.
+    :param python: retrieve python operator and version instead of the package's version.
+    :return: extracted requirement part(s).
     """
     idx_pkg = -1 if version else 0
     idx_pyv = -1 if python else 0
@@ -57,10 +60,10 @@ def _split_requirement(requirement, version=False, python=False):
         return ("", "") if version else ""
     requirement = requirement.split("python_version")[idx_pyv].replace(";", "").replace("\"", "")
     op_str = ""
-    for op in [">=", ">", "<=", "<", "!=", "==", "="]:
-        if op in requirement:
-            op_str = op
-            requirement = requirement.split(op)[idx_pkg]
+    for operator in [">=", ">", "<=", "<", "!=", "==", "="]:
+        if operator in requirement:
+            op_str = operator
+            requirement = requirement.split(operator)[idx_pkg]
             break
     return requirement.strip() if not version else (op_str.strip(), requirement.strip())
 

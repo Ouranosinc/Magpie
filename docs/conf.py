@@ -54,6 +54,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "autoapi.extension",
     "sphinxcontrib.redoc",
+    "sphinx_paramlinks",
 ]
 
 # generate openapi

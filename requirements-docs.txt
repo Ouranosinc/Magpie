@@ -3,5 +3,6 @@
 # (see 'docs/conf.py')
 pycodestyle
 sphinx-autoapi
+sphinx-paramlinks
 sphinx>=1.6
 sphinxcontrib-redoc
