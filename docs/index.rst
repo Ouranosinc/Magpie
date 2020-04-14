@@ -18,6 +18,7 @@ Package Information
    contributing
    authors
    history
+   security
 
 
 Source Code
