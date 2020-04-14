@@ -18,12 +18,18 @@ from pyramid.httpexceptions import (
     HTTPUnprocessableEntity
 )
 from pyramid.security import NO_PERMISSION_REQUIRED
+from typing import TYPE_CHECKING
 
 # from magpie.security import get_provider_names
 from magpie import __meta__
 from magpie.constants import get_constant
 from magpie.permissions import Permission
 from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, get_magpie_url
+
+if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
+    from magpie.typedefs import Dict, List, JSON, Str, Union  # noqa: F401
+    from pyramid.request import Request  # noqa: F401
 
 # ignore naming style of tags
 # pylint: disable=C0103,invalid-name
@@ -2955,20 +2961,31 @@ SwaggerAPI_GET_responses = {
 }
 
 
-# use Cornice Services and Schemas to return swagger specifications
-def api_schema(request):
+def generate_api_schema(swagger_base_spec):
+    # type: (Dict[Str, Union[Str, List[Str]]]) -> JSON
     """
     Return JSON Swagger specifications of Magpie REST API.
+
+    :param swagger_base_spec: dictionary that specifies the 'host' and list of HTTP 'schemes' to employ.
     """
     generator = CorniceSwagger(get_services())
     # function docstrings are used to create the route's summary in Swagger-UI
     generator.summary_docstrings = True
     generator.default_security = get_security
-    swagger_base_spec = {
-        "host": get_magpie_url(request.registry),
-        "schemes": [request.scheme]
-    }
     swagger_base_spec.update(SecurityDefinitionsAPI)
     generator.swagger = swagger_base_spec
     json_api_spec = generator.generate(title=TitleAPI, version=__meta__.__version__, info=InfoAPI)
     return json_api_spec
+
+
+# use Cornice Services and Schemas to return swagger specifications
+def api_schema(request):
+    # type: (Request) -> JSON
+    """
+    Return JSON Swagger specifications of Magpie REST API.
+    """
+    swagger_base_spec = {
+        "host": get_magpie_url(request.registry),
+        "schemes": [request.scheme]
+    }
+    return generate_api_schema(swagger_base_spec)

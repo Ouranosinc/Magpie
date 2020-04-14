@@ -7,6 +7,8 @@ python:
   version: 3.7
   install:
     - requirements: requirements-docs.txt
+    # required for OpenAPI generation
+    - requirements: requirements.txt
 #    - method: pip
 #      path: .
 #      extra_requirements:

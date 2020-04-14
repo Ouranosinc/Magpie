@@ -1,4 +1,8 @@
-# FIXME: bug when using 1.2 (https://github.com/readthedocs/sphinx-autoapi/issues/186)
-sphinx-autoapi<1.2
-sphinx>=1.6
+# these are doc-only requirements
+# we actually need to install all requirements during docs build because of OpenAPI generation
+# (see 'docs/conf.py')
 pycodestyle
+sphinx-autoapi
+sphinx-paramlinks
+sphinx>=1.6
+sphinxcontrib-redoc

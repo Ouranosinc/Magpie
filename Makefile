@@ -30,7 +30,7 @@ CONDA_ENV_PATH := $(CONDA_ENVS_DIR)/$(CONDA_ENV)
 CONDA_BIN      := $(CONDA_HOME)/bin/conda
 CONDA_ENV_REAL_TARGET_PATH := $(realpath $(CONDA_ENV_PATH))
 CONDA_ENV_REAL_ACTIVE_PATH := $(realpath ${CONDA_PREFIX})
-ifeq "$(CONDA_ENV_REAL_ACTIVE_PATH)" "$(CONDA_ENV_REAL_TARGET_PATH)"
+ifeq ("$(CONDA_ENV_REAL_ACTIVE_PATH)","$(CONDA_ENV_REAL_TARGET_PATH)")
 	CONDA_CMD :=
 	CONDA_ENV_MODE := [using active environment]
 else
@@ -45,9 +45,9 @@ REPORTS_DIR ?= $(APP_ROOT)/reports
 # choose conda installer depending on your OS
 CONDA_URL = https://repo.continuum.io/miniconda
 OS_NAME := $(shell uname -s || echo "unknown")
-ifeq "$(OS_NAME)" "Linux"
+ifeq ("$(OS_NAME)","Linux")
 FN := Miniconda3-latest-Linux-x86_64.sh
-else ifeq "$(OS_NAME)" "Darwin"
+else ifeq ("$(OS_NAME)","Darwin")
 FN := Miniconda3-latest-MacOSX-x86_64.sh
 else
 FN := unknown
@@ -123,25 +123,31 @@ clean-all: clean-build clean-pyc clean-test clean-docs	## remove all artifacts
 .PHONY: clean-build
 clean-build:	## remove build artifacts
 	@echo "Cleaning build artifacts..."
-	rm -fr build/
-	rm -fr dist/
-	rm -fr downloads/
-	rm -fr .eggs/
-	find . -type d -name '*.egg-info' -exec rm -fr {} +
-	find . -type f -name '*.egg' -exec rm -f {} +
+	@-rm -fr build/
+	@-rm -fr dist/
+	@-rm -fr downloads/
+	@-rm -fr .eggs/
+	@find . -type d -name '*.egg-info' -exec rm -fr {} +
+	@find . -type f -name '*.egg' -exec rm -f {} +
 
+# rm without quotes important below to allow regex
 .PHONY: clean-docs
 clean-docs:		## remove doc artifacts
 	@echo "Cleaning doc artifacts..."
-	"$(MAKE)" -C "$(APP_ROOT)/docs" clean || true
+	@"$(MAKE)" -C "$(APP_ROOT)/docs" clean || true
+	@-find "$(APP_ROOT)/docs/" -type f -name "$(APP_NAME)*.rst" -delete
+	@-rm -f "$(APP_ROOT)/docs/modules.rst"
+	@-rm -f "$(APP_ROOT)/docs/api.json"
+	@-rm -rf "$(APP_ROOT)/docs/autoapi"
+	@-rm -rf "$(APP_ROOT)/docs/_build"
 
 .PHONY: clean-pyc
 clean-pyc:		## remove Python file artifacts
 	@echo "Cleaning Python artifacts..."
-	find . -type f -name '*.pyc' -exec rm -f {} +
-	find . -type f -name '*.pyo' -exec rm -f {} +
-	find . -type f -name '*~' -exec rm -f {} +
-	find . -type f -name '__pycache__' -exec rm -fr {} +
+	@find . -type f -name '*.pyc' -exec rm -f {} +
+	@find . -type f -name '*.pyo' -exec rm -f {} +
+	@find . -type f -name '*~' -exec rm -f {} +
+	@find . -type f -name '__pycache__' -exec rm -fr {} +
 
 .PHONY: clean-test
 clean-test:		## remove test and coverage artifacts
@@ -168,16 +174,14 @@ migrate: install conda-env	## run postgres database migration with alembic
 DOC_LOCATION := $(APP_ROOT)/docs/_build/html/index.html
 $(DOC_LOCATION):
 	@echo "Building docs..."
-	rm -f $(APP_ROOT)/docs/$(APP_NAME).rst
-	rm -f $(APP_ROOT)/docs/modules.rst
 	@bash -c '$(CONDA_CMD) \
 		sphinx-apidoc -o "$(APP_ROOT)/docs/" "$(APP_ROOT)/$(APP_NAME)"; \
-		"$(MAKE)" -C "$(APP_ROOT)/docs" clean; \
 		"$(MAKE)" -C "$(APP_ROOT)/docs" html;'
 	@-echo "Documentation available: file://$(DOC_LOCATION)"
 
+# NOTE: we need almost all base dependencies because magpie package needs to be parsed to generate OpenAPI
 .PHONY: docs
-docs: install-dev clean-docs $(DOC_LOCATION)	## generate Sphinx HTML documentation, including API docs
+docs: install-docs install-pkg clean-docs $(DOC_LOCATION)	## generate Sphinx HTML documentation, including API docs
 
 .PHONY: docs-show
 docs-show: $(DOC_LOCATION)	## display HTML webpage of generated documentation (build docs if missing)
@@ -219,7 +223,7 @@ dist: clean conda-env	## package for distribution
 install: install-all	## alias for 'install-all' target
 
 .PHONY: install-all		## install every dependency and package definition
-install-all: install-sys install-pkg install-dev
+install-all: install-sys install-pkg install-dev install-docs
 
 .PHONY: install-sys
 install-sys: clean conda-env	## install system dependencies and required installers/runners
@@ -237,6 +241,11 @@ install-pkg: install-sys	## install the package to the active Python's site-pack
 	# ---
 	@bash -c '$(CONDA_CMD) python setup.py install_egg_info'
 	@bash -c '$(CONDA_CMD) pip install --upgrade -e "$(APP_ROOT)" --no-cache'
+
+.PHONY: install-docs
+install-docs: conda-env  ## install package requirements for documentation generation
+	@bash -c '$(CONDA_CMD) pip install -r "$(APP_ROOT)/requirements-docs.txt"'
+	@echo "Successfully installed docs requirements."
 
 .PHONY: install-dev
 install-dev: conda-env	## install package requirements for development and testing

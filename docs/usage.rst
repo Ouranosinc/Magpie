@@ -37,6 +37,6 @@ automatically executed during `Magpie` startup. Additional common functions are 
 service providers from a configuration file or creating basic user accounts. Please refer to their corresponding usage
 by calling them with ``--help`` argument for more details.
 
-.. _helpers: ../magpie/helpers
-.. _configuration: ./configuration
-.. _installation: ./installation
+.. _helpers: https://github.com/Ouranosinc/Magpie/tree/master/magpie/helpers
+.. _configuration: configuration
+.. _installation: installation

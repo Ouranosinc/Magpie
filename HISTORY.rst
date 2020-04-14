@@ -6,6 +6,17 @@ History
 Unreleased
 ---------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``readthedocs`` API page auto-generated from latest schemas extracted from source (redoc rendering of OpenAPI).
+* Combine and update requirements for various python versions. Update setup parsing to support ``python_version``.
+* Slack some requirements to obtain patches and bug fixes. Limit only when needed.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix issue `#251 <https://github.com/Ouranosinc/Magpie/issues/251>`_ with related to ``sphinx-autoapi`` dependency.
+* Fix reference link problems for generated documentation.
+
 1.10.1 (2020-04-02)
 ---------------------
 
