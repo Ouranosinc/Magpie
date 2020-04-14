@@ -138,6 +138,7 @@ clean-docs:		## remove doc artifacts
 	@-find "$(APP_ROOT)/docs/" -type f -name "$(APP_NAME)*.rst" -delete
 	@-rm -f "$(APP_ROOT)/docs/modules.rst"
 	@-rm -f "$(APP_ROOT)/docs/api.json"
+	@-rm -rf "$(APP_ROOT)/docs/autoapi"
 	@-rm -rf "$(APP_ROOT)/docs/_build"
 
 .PHONY: clean-pyc

@@ -48,12 +48,12 @@ from pyramid.config import Configurator  # isort:skip # noqa: E402
 # extensions coming with Sphinx (named "sphinx.ext.*") or your custom
 # ones.
 extensions = [
+    "sphinxcontrib.redoc",
     "sphinx.ext.autodoc",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
     "autoapi.extension",
-    "sphinxcontrib.redoc",
     "sphinx_paramlinks",
 ]
 
@@ -83,8 +83,11 @@ autoapi_python_class_content = "both"
 # cases to ignore during link checking
 linkcheck_ignore = [
     # might not exist yet (we are generating it!)
-    "https://pavics-magpie.readthedocs.io/en/latest/api.html"
+    "https://pavics-magpie.readthedocs.io/en/latest/api.html",
 ]
+
+linkcheck_timeout = 10
+linkcheck_retries = 3
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
