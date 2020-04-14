@@ -29,14 +29,12 @@ allows quicker editing of elements accessible through the API by providing commo
 fields or adjusting specific user-resource permissions. To have access to this interface, the user must have
 administrator permissions.
 
-Helpers
-~~~~~~~
+Additional Utilities
+~~~~~~~~~~~~~~~~~~~~
 
-Multiple CLI `helpers`_ are provided. These consist mostly of setup operation scripts that are
-automatically executed during `Magpie` startup. Additional common functions are also provided such as registering
-service providers from a configuration file or creating basic user accounts. Please refer to their corresponding usage
-by calling them with ``--help`` argument for more details.
+Multiple `utilities`_ are provided either directly within `Magpie` or through external resources.
+Please refer to this section for more details.
 
-.. _helpers: https://github.com/Ouranosinc/Magpie/tree/master/magpie/helpers
-.. _configuration: configuration
-.. _installation: installation
+.. _configuration: configuration.rst
+.. _installation: installation.rst
+.. _utilities: utilities.rst

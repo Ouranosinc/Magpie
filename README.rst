@@ -79,7 +79,7 @@ The REST API documentation is auto-generated and served under ``{MAGPIE_URL}/api
 | These are generated from corresponding information provided in `docs`_.
 
 .. _readthedocs: https://pavics-magpie.readthedocs.io
-.. _docs: ./docs
+.. _docs: https://github.com/Ouranosinc/Magpie/tree/master/docs
 
 Configuration and Usage
 =======================
