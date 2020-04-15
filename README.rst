@@ -97,6 +97,8 @@ Configuration and Usage
 | See |usage_other|_
 |
 | asmfaksmfkasfm
+|
+| See the literal `usage`_.
 
 
 .. _usage: ./docs/usage.rst

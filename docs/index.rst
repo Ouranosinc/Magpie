@@ -3,7 +3,6 @@ Magpie Documentation
 
 .. include:: ../README.rst
 
-
 Package Information
 ===================
 

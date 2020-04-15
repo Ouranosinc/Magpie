@@ -26,7 +26,8 @@ import json
 # sys.path.insert(0, os.path.abspath("."))
 
 # Get the project root dir, which is the parent dir of this
-PROJECT_ROOT = os.path.dirname(os.getcwd())
+DOC_DIR_ROOT = os.path.abspath(os.path.dirname(__file__))
+PROJECT_ROOT = os.path.dirname(DOC_DIR_ROOT)
 
 # Insert the project root dir as the first element in the PYTHONPATH.
 # This lets us ensure that the source package is imported, and that its
@@ -47,7 +48,9 @@ from pyramid.config import Configurator  # isort:skip # noqa: E402
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named "sphinx.ext.*") or your custom
 # ones.
+sys.path.append(os.path.abspath(os.path.join(DOC_DIR_ROOT, "_ext")))
 extensions = [
+    "doc_redirect",
     "sphinxcontrib.redoc",
     "sphinx.ext.autodoc",
     "sphinx.ext.todo",
@@ -57,10 +60,16 @@ extensions = [
     "sphinx_paramlinks",
 ]
 
+# note: see custom extension documentation
+doc_redirect_map = {
+    "docs/configuration.rst": "configuration.rst",
+    "docs/usage.rst": "usage.rst",
+}
+
 # generate openapi
 config = Configurator(settings={"magpie.build_docs": True, "magpie.ui_enabled": False})
 config.include("magpie")  # actually need to include magpie to apply decorators and parse routes
-api_spec_file = os.path.join(PROJECT_ROOT, "docs", "api.json")
+api_spec_file = os.path.join(DOC_DIR_ROOT, "api.json")
 api_spec_json = generate_api_schema({"host": "example", "schemes": ["https"]})
 with open(api_spec_file, "w") as f:
     json.dump(api_spec_json, f)
