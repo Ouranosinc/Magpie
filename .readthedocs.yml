@@ -2,7 +2,14 @@
 version: 2
 sphinx:
   configuration: docs/conf.py
-formats: all
+# note:
+#   disable PDF and EPUB which break during LaTeX
+#   generation because of `redoc.js` script not found
+#formats: all
+formats:
+  - htmlzip
+  #- pdf
+  #- epub
 python:
   version: 3.7
   install:
