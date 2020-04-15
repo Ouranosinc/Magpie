@@ -64,15 +64,25 @@ extensions = [
 
 # note: see custom extension documentation
 doc_redirect_ignores = [
-    re.compile(r"magpie\..*"),
+    re.compile(r"magpie\..*"),  # autoapi generated files
     re.compile(r"index.*"),
 ]
+
+
+def doc_redirect_include(file_path):
+    return file_path.endswith(".rst") and not any(re.match(regex, file_path) for regex in doc_redirect_ignores)
+
+
 doc_redirect_map = {
     "docs/{}".format(file_name): file_name
     for file_name in os.listdir(DOC_DIR_ROOT)
-    if not any(re.match(regex, file_name) for regex in doc_redirect_ignores)
-    and file_name.endswith(".rst")
+    if doc_redirect_include(file_name)
 }
+doc_redirect_map.update({
+    file_name: file_name
+    for file_name in os.listdir(PROJECT_ROOT)
+    if doc_redirect_include(file_name)
+})
 
 # generate openapi
 config = Configurator(settings={"magpie.build_docs": True, "magpie.ui_enabled": False})

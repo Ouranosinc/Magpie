@@ -85,39 +85,12 @@ Configuration and Usage
 =======================
 
 | Multiple configuration options exist for ``Magpie`` application.
-| Please refer to `configuration <https://github.com/Ouranosinc/Magpie/blob/master/docs/configuration.rst>`_ for details.
-| See :doc:`usage` for details.
-|
-| asfasfas
-|
-| See :ref:`usage <usage_link>` for details.
-|
-| askjfaksjfksajf
-|
-| See |usage_other|_
-|
-| asmfaksmfkasfm
-|
-| See the literal `usage`_.
+| Please refer to `configuration`_ for details.
+| See `usage`_ for details.
 
-
+.. _configuration: ./docs/configuration.rst
 .. _usage: ./docs/usage.rst
 
-
-.. |usage_other| replace::
-_ :doc:`./docs/usage.rst`
-    https://github.com/Ouranosinc/Magpie/blob/master/docs/usage.rst
-
-
-asnfkasnfkasnfnsf
-
-| See |usage_again|_
-
-
-.. rst:role:: doc
-    :option: ./docs/usage.rst
-
-.. |usage_again|: https://github.com/Ouranosinc/Magpie/blob/master/docs/usage.rst
 
 Change History
 ==============

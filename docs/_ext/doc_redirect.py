@@ -103,12 +103,13 @@ def generate_redirects(app):
 
         # create unless it already exists (eg: same directory level, config map is redundant)
         if not os.path.exists(redirected_html_file):
-            # point to the .rst that would be reach by clicking the literal reference
-            # by faking an .html file redirect
-            os.symlink(redirected_html_file, redirected_rst_file)
             # if using a direct call with .html extension, it will still work as if calling the .rst
             with open(redirected_html_file, "w") as f:
                 f.write(TEMPLATE % to_path)
+        if not os.path.exists(redirected_rst_file):
+            # point to the .rst that would be reach by clicking the literal reference
+            # by faking an .html file redirect
+            os.symlink(redirected_html_file, redirected_rst_file)
 
 
 def setup(app):
