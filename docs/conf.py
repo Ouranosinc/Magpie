@@ -16,6 +16,7 @@
 # pylint: disable=C0103,invalid-name
 
 import os
+import re
 import sys
 import json
 
@@ -61,9 +62,15 @@ extensions = [
 ]
 
 # note: see custom extension documentation
+doc_redirect_ignores = [
+    re.compile(r"magpie\..*"),
+    re.compile(r"index.*"),
+]
 doc_redirect_map = {
-    "docs/configuration.rst": "configuration.rst",
-    "docs/usage.rst": "usage.rst",
+    "docs/{}".format(file_name): file_name
+    for file_name in os.listdir(DOC_DIR_ROOT)
+    if not any(re.match(regex, file_name) for regex in doc_redirect_ignores)
+    and file_name.endswith(".rst")
 }
 
 # generate openapi
