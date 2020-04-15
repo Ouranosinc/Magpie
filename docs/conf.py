@@ -71,7 +71,7 @@ redoc = [{
     "spec": api_spec_file,
     "embed": True,
     "opts": {
-        "lazy": True,
+        "lazy-rendering": True,
         "hide-hostname": True
     }
 }]
@@ -206,7 +206,10 @@ html_static_path = ["_static"]
 # html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-# html_sidebars = {}
+html_sidebars = {
+    # add full TOC of the doc
+    '**': ['globaltoc.html', 'relations.html', 'sourcelink.html', 'searchbox.html']
+}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
