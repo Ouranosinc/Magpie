@@ -4,5 +4,5 @@
 pycodestyle
 sphinx-autoapi
 sphinx-paramlinks
-sphinx>=1.6
+sphinx>=2.4
 sphinxcontrib-redoc
