@@ -85,11 +85,12 @@ Configuration and Usage
 =======================
 
 | Multiple configuration options exist for ``Magpie`` application.
-| Please refer to `configuration`_ for details.
-| See `usage`_ for details.
+| Please refer to |configuration <https://github.com/Ouranosinc/Magpie/blob/master/docs/configuration.rst>|__ for details.
+| See :doc:`usage` for details.
 
-.. _configuration: docs/configuration.rst
-.. _usage: docs/usage
+.. <https://github.com/Ouranosinc/Magpie/blob/master/docs/configuration.rst>: rewrite:: configuration_link
+__ configuration_link
+.. _usage: ./docs/usage.rst
 
 Change History
 ==============
