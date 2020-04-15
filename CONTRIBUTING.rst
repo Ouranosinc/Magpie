@@ -94,5 +94,5 @@ To run a subset of tests::
 .. References for this page
 .. _new issue: https://github.com/Ouranosinc/Magpie/issues/new
 .. _history: HISTORY.rst
-.. _installation: ./docs/installation.rst
-.. _utilities: ./docs/utilities.rst
+.. _installation: docs/installation.rst
+.. _utilities: docs/utilities.rst

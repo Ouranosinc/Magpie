@@ -88,8 +88,8 @@ Configuration and Usage
 | Please refer to `configuration`_ for details.
 | See `usage`_ for details.
 
-.. _configuration: ./docs/configuration.rst
-.. _usage: ./docs/usage.rst
+.. _configuration: docs/configuration.rst
+.. _usage: docs/usage
 
 Change History
 ==============
