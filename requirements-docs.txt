@@ -6,3 +6,4 @@ sphinx-autoapi
 sphinx-paramlinks
 sphinx>=2.4
 sphinxcontrib-redoc
+sphinx_autodoc_typehints[type_comments]

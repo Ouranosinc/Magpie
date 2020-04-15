@@ -58,6 +58,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
     "autoapi.extension",
+    "sphinx_autodoc_typehints",
     "sphinx_paramlinks",
 ]
 
