@@ -65,7 +65,7 @@ def generate_redirects(app):
 
     if not type(app.builder) == builders.StandaloneHTMLBuilder:
         ext = os.path.split(__file__)[-1].split(".")[0]
-        app.warn("Extension '{}' is only supported by the 'html' builder. Skipping...".format(ext))
+        logger.warning("Extension '{}' is only supported by the 'html' builder. Skipping...".format(ext))
         return
     if not isinstance(app.config.doc_redirect_map, dict) and len(app.config.doc_redirect_map):
         logger.info("Could not find doc redirect map")
