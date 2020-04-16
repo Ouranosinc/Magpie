@@ -32,8 +32,9 @@ Bug Fixes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* When using logging level ``DEBUG``, `Magpie` requests will log additional details
-  (**WARNING** these log entries will potentially also include sensible information such as authentication cookies)
+* When using logging level ``DEBUG``, `Magpie` requests will log additional details.
+
+  **WARNING**: these log entries will potentially also include sensible information such as authentication cookies.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

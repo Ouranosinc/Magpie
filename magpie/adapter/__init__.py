@@ -23,12 +23,14 @@ from twitcher.owsproxy import owsproxy_defaultconfig    # noqa
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.models import User
-    from magpie.typedefs import AnySettingsContainer, Str, JSON
+    from magpie.models import User  # noqa: F401
+    from magpie.typedefs import AnySettingsContainer, Str, JSON  # noqa: F401
     from twitcher.store import AccessTokenStoreInterface  # noqa
-    from pyramid.config import Configurator
-    from pyramid.request import Request
-    from typing import Optional
+    from pyramid.config import Configurator  # noqa: F401
+    from pyramid.httpexceptions import HTTPException  # noqa: F401
+    from pyramid.request import Request  # noqa: F401
+    from typing import Optional  # noqa: F401
+
 LOGGER = get_logger("TWITCHER")
 
 
@@ -78,6 +80,12 @@ def debug_cookie_identify(request):
 
 def get_user(request):
     # type: (Request) -> Optional[User]
+    """
+    Obtains the authenticated user from the request (if any).
+
+    :param request: incoming HTTP request potentially containing authentication definitions.
+    :return: the authenticated user if parameters were valid (good credentials, not expired, etc.) or ``None``.
+    """
     user_id = request.unauthenticated_userid
     LOGGER.debug("Current user id is '%s'", user_id)
 
@@ -91,6 +99,14 @@ def get_user(request):
 
 
 def verify_user(request):
+    # type: (Request) -> HTTPException
+    """
+    Verifies that a valid user authentication on the pointed ``Magpie`` instance (via configuration) also results into a
+    valid user authentication with the current ``Twitcher`` instance to ensure settings match between them.
+
+    :param request: an HTTP request with valid authentication token/cookie credentials.
+    :return: appropriate HTTP success or error response with details about the result.
+    """
     magpie_url = get_magpie_url(request)
     resp = requests.post(magpie_url + SigninAPI.path, json=request.json,
                          headers={"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON})
