@@ -332,7 +332,7 @@ check-all: clean-test check-pep8 check-lint check-security check-docs check-link
 
 .PHONY: check-pep8
 check-pep8: mkdir-reports install-dev		## run PEP8 code style checks
-	@echo "Running pep8 code style checks..."
+	@echo "Running PEP8 code style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-pep8.txt"
 	@bash -c '$(CONDA_CMD) \
 		flake8 --config="$(APP_ROOT)/setup.cfg" --output-file="$(REPORTS_DIR)/check-pep8.txt" --tee'
@@ -369,6 +369,7 @@ check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
 		1> >(tee "$(REPORTS_DIR)/check-doc8.txt")'
 
 # FIXME: move parameters to setup.cfg when implemented (https://github.com/myint/docformatter/issues/10)
+# NOTE: docformatter only reports files with errors on stderr, redirect trace stderr & stdout to file with tee
 .PHONY: check-docf
 check-docf: mkdir-reports install-dev	## run PEP8 code documentation format checks
 	@echo "Checking PEP8 doc formatting problems..."
@@ -382,7 +383,7 @@ check-docf: mkdir-reports install-dev	## run PEP8 code documentation format chec
 			--check \
 			--recursive \
 			"$(APP_ROOT)" \
-		1> >(tee "$(REPORTS_DIR)/check-docf.txt")'
+		1>&2 2> >(tee "$(REPORTS_DIR)/check-docf.txt")'
 
 .PHONY: check-links
 check-links: install-dev	## check all external links in documentation for integrity
