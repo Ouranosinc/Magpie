@@ -3,6 +3,7 @@
 # (see 'docs/conf.py')
 pycodestyle
 sphinx-autoapi
-sphinx-paramlinks
-sphinx>=1.6
-sphinxcontrib-redoc
+sphinx-paramlinks>=0.4.1
+sphinx>=2.4
+sphinxcontrib-redoc>=1.6.0
+sphinx_autodoc_typehints[type_comments]

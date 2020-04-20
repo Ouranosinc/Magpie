@@ -8,6 +8,7 @@ Unreleased
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
+* Add more documentation detail and references to existing `Magpie` utilities.
 * Add ``readthedocs`` API page auto-generated from latest schemas extracted from source (redoc rendering of OpenAPI).
 * Combine and update requirements for various python versions. Update setup parsing to support ``python_version``.
 * Slack some requirements to obtain patches and bug fixes. Limit only when needed.
@@ -31,8 +32,9 @@ Bug Fixes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* When using logging level ``DEBUG``, `Magpie` requests will log additional details
-  (**WARNING** these log entries will potentially also include sensible information such as authentication cookies)
+* When using logging level ``DEBUG``, `Magpie` requests will log additional details.
+
+  **WARNING**: these log entries will potentially also include sensible information such as authentication cookies.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

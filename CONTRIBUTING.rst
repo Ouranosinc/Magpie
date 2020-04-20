@@ -13,7 +13,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/Ouranosinc/Magpie/issues/new.
+Report bugs as a `new issue`_.
 
 If you are reporting a bug, please include:
 
@@ -32,7 +32,7 @@ articles, and such.
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue on https://github.com/Ouranosinc/Magpie.
+The best way to send feedback is to file a `new issue`_.
 
 If you are proposing a feature:
 
@@ -41,18 +41,24 @@ If you are proposing a feature:
 * Remember that this is a volunteer-driven project, and that contributions
   are welcome :)
 
+Provide utilities
+~~~~~~~~~~~~~~~~~
+
+If you made a convenient utility or tool that works conjointly with `Magpie` in other to provide useful features or
+simply provide ease-of-life, don't hesitate to open a PR referring to it in the documentation `utilities`_. We love
+sharing and avoiding to rewrite stuff.
 
 Get Started!
 ------------
 
 Ready to contribute? Here's how to set up `magpie` for local development.
 
-1. Clone the repository from https://github.com/Ouranosinc/Magpie ::
+1. Clone the repository ::
 
     git clone https://github.com/Ouranosinc/Magpie
 
 
-2. Install your local copy (see :doc:`installation`)
+2. Install your local copy (see `installation`_)
 
 3. When you're done making changes, check that your changes pass code formatting and tests::
 
@@ -72,7 +78,7 @@ Before you submit a pull request, check that it meets these guidelines:
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
-   feature to the list in :doc:`history` (under relevant category of section `Unreleased`).
+   feature to the list in `history`_ (under relevant category of section `Unreleased`).
 3. The tests should work for the specified version of Python for this project.
 
 
@@ -83,3 +89,10 @@ To run a subset of tests::
 
     python -m unittest tests.test_magpie
 
+
+
+.. References for this page
+.. _new issue: https://github.com/Ouranosinc/Magpie/issues/new
+.. _history: HISTORY.rst
+.. _installation: docs/installation.rst
+.. _utilities: docs/utilities.rst
