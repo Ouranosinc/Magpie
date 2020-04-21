@@ -6,6 +6,9 @@ History
 Unreleased
 ---------------------
 
+1.10.2 (2020-04-21)
+---------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add more documentation detail and references to existing `Magpie` utilities.
