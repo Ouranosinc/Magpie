@@ -3,11 +3,15 @@
 History
 =======
 
-Unreleased
----------------------
+`Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
+------------------------------------------------------------------------------------
 
-1.10.2 (2020-04-21)
----------------------
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Update this changelog to provide direct URL references to issues and tags from both `GitHub` and `Readthedocs`.
+
+`1.10.2 <https://github.com/Ouranosinc/Magpie/tree/1.10.2>`_ (2020-04-21)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -18,11 +22,11 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix issue `#251 <https://github.com/Ouranosinc/Magpie/issues/251>`_ with related to ``sphinx-autoapi`` dependency.
+* Fix issue related to ``sphinx-autoapi`` dependency (`#251 <https://github.com/Ouranosinc/Magpie/issues/251>`_).
 * Fix reference link problems for generated documentation.
 
-1.10.1 (2020-04-02)
----------------------
+`1.10.1 <https://github.com/Ouranosinc/Magpie/tree/1.10.1>`_ (2020-04-02)
+------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -30,8 +34,8 @@ Bug Fixes
   class being used instead of the string representation. This also fixes UI Edit menu of a ``Service`` that add more
   at least one child ``Resource``.
 
-1.10.0 (2020-03-18)
----------------------
+`1.10.0 <https://github.com/Ouranosinc/Magpie/tree/1.10.0>`_ (2020-03-18)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -45,23 +49,25 @@ Bug Fixes
   ``magpie.log_level`` setting or ``logger_magpie`` configuration section were defined simultaneously.
   The values are back-propagated to ``magpie.constants`` for matching values and prioritize the `INI` file definitions.
 
-1.9.5 (2020-03-11)
----------------------
+`1.9.5 <https://github.com/Ouranosinc/Magpie/tree/1.9.5>`_ (2020-03-11)
+------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix handling of ``Accept`` header introduced in PR #259 (ie: ``1.9.3`` and ``1.9.4``) specifically in the situation
-  where a resource has the value ``magpie`` within its name (ie: such as the logo ``magpie.png``).
+* Fix handling of ``Accept`` header introduced in PR `#259 <https://github.com/Ouranosinc/Magpie/issues/259>`_
+  (i.e.: ``1.9.3`` and ``1.9.4``) specifically in the situation where a resource has the value ``magpie`` within
+  its name (e.g.: such as the logo ``magpie.png``).
 
-1.9.4 (2020-03-10)
----------------------
+`1.9.4 <https://github.com/Ouranosinc/Magpie/tree/1.9.4>`_ (2020-03-10)
+------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add further handling of ``Accept`` header introduced in PR #259 (ie: ``1.9.3``) as more use cases where not handled.
+* Add further handling of ``Accept`` header introduced in PR
+  `#259 <https://github.com/Ouranosinc/Magpie/issues/259>`_ (ie: ``1.9.3``) as more use cases where not handled.
 
-1.9.3 (2020-03-10)
----------------------
+`1.9.3 <https://github.com/Ouranosinc/Magpie/tree/1.9.3>`_ (2020-03-10)
+------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -69,8 +75,8 @@ Bug Fixes
   `Magpie` application is being served under a route with additional prefix.
 * Fix requirements dependency issue related to ``zope.interface`` and ``setuptools`` version mismatch.
 
-1.9.2 (2020-03-09)
----------------------
+`1.9.2 <https://github.com/Ouranosinc/Magpie/tree/1.9.2>`_ (2020-03-09)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -84,15 +90,15 @@ Bug Fixes
 * Use forwarded input argument to ``MAGPIE_INI_FILE_PATH`` to execute database migration.
 * Handle trailing ``/`` of HTTP path that would fail an ACL lookup of the corresponding service or resource.
 
-1.9.1 (2020-02-20)
----------------------
+`1.9.1 <https://github.com/Ouranosinc/Magpie/tree/1.9.1>`_ (2020-02-20)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Update adapter docker image reference to ``birdhouse/twitcher:v0.5.3``.
 
-1.9.0 (2020-01-29)
----------------------
+`1.9.0 <https://github.com/Ouranosinc/Magpie/tree/1.9.0>`_ (2020-01-29)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -102,14 +108,15 @@ Features / Changes
 * Add support of variables not prefixed by ``MAGPIE_`` for ``postgres`` database connection parameters, as well as
   all their corresponding ``postgres.<param>`` definitions in the INI file.
 
-1.8.0 (2020-01-10)
----------------------
+`1.8.0 <https://github.com/Ouranosinc/Magpie/tree/1.8.0>`_ (2020-01-10)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``MAGPIE_DB_URL`` configuration parameter to define a database connection with full URL instead of individual
   parts (notably ``MAGPIE_POSTGRES_<>`` variables).
-* Add ``bandit`` security code analysis and apply some detected issues (#168).
+* Add ``bandit`` security code analysis and apply some detected issues
+  (`#168 <https://github.com/Ouranosinc/Magpie/issues/168>`_).
 * Add more code linting checks using various test tools.
 * Add smoke test of built docker image to `Travis-CI` pipeline.
 * Bump ``alembic>=1.3.0`` to remove old warnings and receive recent fixes.
@@ -128,8 +135,8 @@ Bug Fixes
 * Fix missing or incomplete configuration documentation details.
 * Fix many linting issues detected by integrated tools.
 
-1.7.4 (2019-12-03)
----------------------
+`1.7.4 <https://github.com/Ouranosinc/Magpie/tree/1.7.4>`_ (2019-12-03)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -137,78 +144,83 @@ Features / Changes
 * Add sorting by name of configuration files (permissions/providers) when loaded from a containing directory path.
 * Add `readthedocs` references to README.
 
-1.7.3 (2019-11-20)
----------------------
+`1.7.3 <https://github.com/Ouranosinc/Magpie/tree/1.7.3>`_ (2019-11-20)
+------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix 500 error when getting user's services on ``/users/{user_name}/services``.
 
-1.7.2 (2019-11-15)
----------------------
+`1.7.2 <https://github.com/Ouranosinc/Magpie/tree/1.7.2>`_ (2019-11-15)
+------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix ``gunicorn>=20.0.0`` breaking change not compatible with alpine: pin ``gunicorn==19.9.0``.
 
-1.7.1 (2019-11-12)
----------------------
+`1.7.1 <https://github.com/Ouranosinc/Magpie/tree/1.7.1>`_ (2019-11-12)
+------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix resource sync process and update cron job running it (#226).
+* Fix resource sync process and update cron job running it
+  (`#226 <https://github.com/Ouranosinc/Magpie/issues/226>`_).
 * Fix configuration files not loaded from directory by application due to more restrictive file check.
 * Fix a test validating applicable user resources and permissions that could fail if `anonymous` permissions where
   generated into the referenced database connection (eg: from loading a ``permissions.cfg`` or manually created ones).
 
-1.7.0 (2019-11-04)
----------------------
+`1.7.0 <https://github.com/Ouranosinc/Magpie/tree/1.7.0>`_ (2019-11-04)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add ``docs/configuration.rst`` file that details all configuration settings that are employed by ``Magpie`` (#180).
+* Add ``docs/configuration.rst`` file that details all configuration settings that are employed by ``Magpie``
+  (`#180 <https://github.com/Ouranosinc/Magpie/issues/180>`_).
 * Add more details about basic usage of `Magpie` in ``docs/usage.rst``.
-* Add details about external provider setup in ``docs/configuration`` (#173).
+* Add details about external provider setup in ``docs/configuration``
+  (`#173 <https://github.com/Ouranosinc/Magpie/issues/173>`_).
 * Add specific exception classes for ``register`` sub-package operations.
 * Add ``PHOENIX_HOST`` variable to override default ``HOSTNAME`` as needed.
 * Add support of ``MAGPIE_PROVIDERS_CONFIG_PATH`` and ``MAGPIE_PERMISSIONS_CONFIG_PATH`` pointing to a directory to
   load multiple similar configuration files contained in it.
 * Add environment variable expansion support for all fields within ``providers.cfg`` and ``permissions.cfg`` files.
 
-1.6.3 (2019-10-31)
----------------------
+`1.6.3 <https://github.com/Ouranosinc/Magpie/tree/1.6.3>`_ (2019-10-31)
+------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix the alembic database version number in the /version route (#165).
+* Fix the alembic database version number in the /version route
+  (`#165 <https://github.com/Ouranosinc/Magpie/issues/165>`_).
 * Fix failing migration step due to missing ``root_service_id`` column in database at that time and version.
 
-1.6.2 (2019-10-04)
----------------------
+`1.6.2 <https://github.com/Ouranosinc/Magpie/tree/1.6.2>`_ (2019-10-04)
+------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix a bug in ows_parser_factory that caused query parameters for wps services to be case sensitive.
 
-1.6.1 (2019-10-01)
----------------------
+`1.6.1 <https://github.com/Ouranosinc/Magpie/tree/1.6.1>`_ (2019-10-01)
+------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix migration script for project-api service type.
 
-1.6.0 (2019-09-20)
----------------------
+`1.6.0 <https://github.com/Ouranosinc/Magpie/tree/1.6.0>`_ (2019-09-20)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add an utility script ``create_users`` for quickly creating multiple users from a list of email addresses (#219).
+* Add an utility script ``create_users`` for quickly creating multiple users from a list of email addresses
+  (`#219 <https://github.com/Ouranosinc/Magpie/issues/219>`_).
 * Add PEP8 auto-fix make target ``lint-fix`` that will correct any PEP8 and docstring problem to expected format.
 * Add auto-doc of make target ``help`` message.
-* Add ACL caching option and documentation (#218).
+* Add ACL caching option and documentation (`#218 <https://github.com/Ouranosinc/Magpie/issues/218>`_).
 
-1.5.0 (2019-09-09)
----------------------
+`1.5.0 <https://github.com/Ouranosinc/Magpie/tree/1.5.0>`_ (2019-09-09)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -217,11 +229,12 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix issue of form submission not behaving as expected when pressing ``<ENTER>`` key (#209).
-* Fix 500 error when deleting a service resource from UI (#195).
+* Fix issue of form submission not behaving as expected when pressing ``<ENTER>`` key
+  (`#209 <https://github.com/Ouranosinc/Magpie/issues/209>`_).
+* Fix 500 error when deleting a service resource from UI (`#195 <https://github.com/Ouranosinc/Magpie/issues/195>`_).
 
-1.4.0 (2019-08-28)
----------------------
+`1.4.0 <https://github.com/Ouranosinc/Magpie/tree/1.4.0>`_ (2019-08-28)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -233,15 +246,16 @@ Bug Fixes
 * Fix migration script hastily removing anonymous group permissions without handling and transferring them accordingly.
 * Use settings during default user creation instead of relying only on environment variables, to reflect runtime usage.
 
-1.3.4 (2019-08-09)
----------------------
+`1.3.4 <https://github.com/Ouranosinc/Magpie/tree/1.3.4>`_ (2019-08-09)
+------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix migration script errors due to incorrect object fetching from db [Ouranosinc/PAVICS#149].
+* Fix migration script errors due to incorrect object fetching from db
+  (`#149 <https://github.com/Ouranosinc/PAVICS/issues/149>`_).
 
-1.3.3 (2019-07-11)
----------------------
+`1.3.3 <https://github.com/Ouranosinc/Magpie/tree/1.3.3>`_ (2019-07-11)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -250,25 +264,27 @@ Features / Changes
   - https://github.com/bird-house/twitcher/pull/79
   - https://github.com/bird-house/twitcher/pull/84
 
-1.3.2 (2019-07-09)
----------------------
+`1.3.2 <https://github.com/Ouranosinc/Magpie/tree/1.3.2>`_ (2019-07-09)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``use_tweens=True`` to ``request.invoke_subrequest`` calls in order to properly handle the nested database
-  transaction states with the manager (#203). Automatically provides ``pool_threadlocal`` functionality added in
-  ``1.3.1`` as per implementation of ``pyramid_tm`` (#201).
+  transaction states with the manager (`#203 <https://github.com/Ouranosinc/Magpie/issues/203>`_).
+  Automatically provides ``pool_threadlocal`` functionality added in ``1.3.1`` as per implementation of
+  ``pyramid_tm`` (`#201 <https://github.com/Ouranosinc/Magpie/issues/201>`_).
 
-1.3.1 (2019-07-05)
----------------------
+`1.3.1 <https://github.com/Ouranosinc/Magpie/tree/1.3.1>`_ (2019-07-05)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``pool_threadlocal=True`` setting for database session creation to allow further connections across workers
-  (see #201, #202 for further information).
+  (see `#201 <https://github.com/Ouranosinc/Magpie/issues/201>`_,
+  `#202 <https://github.com/Ouranosinc/Magpie/issues/202>`_ for further information).
 
-1.3.0 (2019-07-02)
----------------------
+`1.3.0 <https://github.com/Ouranosinc/Magpie/tree/1.3.0>`_ (2019-07-02)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -285,15 +301,15 @@ Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix ``MagpieAdapter`` name incorrectly called when displayed using route ``/info`` from `Twitcher`.
 
-1.2.1 (2019-06-28)
----------------------
+`1.2.1 <https://github.com/Ouranosinc/Magpie/tree/1.2.1>`_ (2019-06-28)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Log every permission requests.
 
-1.2.0 (2019-06-27)
----------------------
+`1.2.0 <https://github.com/Ouranosinc/Magpie/tree/1.2.0>`_ (2019-06-27)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -308,10 +324,11 @@ Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix ``Permission`` enum vs literal string usage during ACL resolution for some services and return enums when calling.
   ``ServiceInterface.permission_requested`` method.
-* Fix user/group permission checkboxes not immediately reflected in UI after clicking them (#160).
+* Fix user/group permission checkboxes not immediately reflected in UI after clicking them
+  (`#160 <https://github.com/Ouranosinc/Magpie/issues/160>`_).
 
-1.1.0 (2019-05-28)
----------------------
+`1.1.0 <https://github.com/Ouranosinc/Magpie/tree/1.1.0>`_ (2019-05-28)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -325,8 +342,8 @@ Bug Fixes
 * Fix erroneous ``Content-Type`` header retrieved from form submission getting forwarded to API requests.
 * Fix user name update failing because of incomplete db transaction.
 
-1.0.0 (2019-05-24)
----------------------
+`1.0.0 <https://github.com/Ouranosinc/Magpie/tree/1.0.0>`_ (2019-05-24)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -351,77 +368,182 @@ Bug Fixes
 * Convert ``Permission`` enum to string for proper ACL comparison in ``MagpieOWSSecurity``.
 * Fix ``raise_log`` function to allow proper evaluation against ``Exception`` type instead of ``message`` property.
 
-0.10.0 (2019-04-15)
----------------------
+`0.10.0 <https://github.com/Ouranosinc/Magpie/tree/0.10.0>`_ (2019-04-15)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Refactoring of literal strings to corresponding ``Permission`` enum (#167).
-* Change all incorrect usages of ``HTTPNotAcceptable [406]`` to ``HTTPBadRequest [400]`` (#163).
+* Refactoring of literal strings to corresponding ``Permission`` enum
+  (`#167 <https://github.com/Ouranosinc/Magpie/issues/167>`_).
+* Change all incorrect usages of ``HTTPNotAcceptable [406]`` to ``HTTPBadRequest [400]``
+  (`#163 <https://github.com/Ouranosinc/Magpie/issues/163>`_).
 * Add ``Accept`` header type checking before requests and return ``HTTPNotAcceptable [406]`` if invalid.
-* Code formatting changes for consistency and cleanup of redundant/misguiding names (#162).
+* Code formatting changes for consistency and cleanup of redundant/misguiding names
+  (`#162 <https://github.com/Ouranosinc/Magpie/issues/162>`_).
 * Add option ``MAGPIE_UI_ENABLED`` allowing to completely disable all ``/ui`` route (enabled by default).
-* Add more unittests (#74).
+* Add more unittests (`#74 <https://github.com/Ouranosinc/Magpie/issues/74>`_).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix swagger responses status code and description and fix erroneous body (#126).
+* Fix swagger responses status code and description and fix erroneous body
+  (`#126 <https://github.com/Ouranosinc/Magpie/issues/126>`_).
 * Fix invalid member count value returned on ``/groups/{id}`` request.
 * Fix invalid ``DELETE /users/{usr}/services/{svc}/permissions/{perm}`` request not working.
 
-0.9.x
----------------------
+`0.9.6 <https://github.com/Ouranosinc/Magpie/tree/0.9.6>`_ (2019-03-28)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Greatly reduce docker image size.
+* Update `Travis-CI` test suite execution by enabling directly running PEP8 lint checks.
+* Change some `PyCharm` specific inspection comment in favor of IDE independent ``noqa`` equivalents.
+
+`0.9.5 <https://github.com/Ouranosinc/Magpie/tree/0.9.5>`_ (2019-02-28)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Logging requests and exceptions according to `MAGPIE_LOG_REQUEST` and `MAGPIE_LOG_EXCEPTION` values.
+* Better handling of ``HTTPUnauthorized [401]`` and ``HTTPForbidden [403]`` according to unauthorized view
+  (invalid access token/headers or forbidden operation under view).
+* Better handling of ``HTTPNotFound [404]`` and ``HTTPMethodNotAllowed [405]`` on invalid routes and request methods.
+* Adjust ``Dockerfile`` copy order to save time if requirements did not change.
+
+`0.9.4 <https://github.com/Ouranosinc/Magpie/tree/0.9.4>`_ (2019-02-19)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Address YAML security issue using updated package distribution.
+* Improve permission warning details in case of error when parsing.
+* Add multiple tests for item registration via API.
+* Minor changes to some variable naming to respect convention across the source code.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Use sub-transaction when running service update as a session can already be in effect with a transaction due to
+  previous steps employed to fetch service details and/or UI display.
+
+`0.9.3 <https://github.com/Ouranosinc/Magpie/tree/0.9.3>`_ (2019-02-18)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Greatly reduce docker image size using ``Alpine`` base and redefining its creation steps.
+* Use ``get_constant`` function to allow better retrieval of database related configuration from all setting variations.
+* Simplify database creation using ``sqlalchemy_utils``.
+
+`0.9.2 <https://github.com/Ouranosinc/Magpie/tree/0.9.2>`_ (2019-02-15)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * Allow quick functional testing using sequences of local app form submissions.
 * Add test methods for UI redirects to other views from button click in displayed page.
 * Change resource response for generic ``resource: {<info>}`` instead of ``{resource-id}: {<info>}``.
+* Add more typing hints of headers and cookies parameters to functions.
+* Improve handling of invalid request input parameter causing parsing errors using ``error_badrequest`` decorator.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix UI add child button broken by introduced ``int`` resource id type checking.
+
+`0.9.1 <https://github.com/Ouranosinc/Magpie/tree/0.9.1>`_ (2019-02-14)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Reduce docker image build time by skipping irrelevant files causing long context loading using ``.dockerignore``.
+* Use sub-requests API call for UI operations (fixes issue `#114 <https://github.com/Ouranosinc/Magpie/issues/114>`_).
+* Add new route ``/services/types`` to obtain a list of available service types.
+* Add ``resource_child_allowed`` and ``resource_types_allowed`` fields in service response.
+* Change service response for generic ``service: {<info>}`` instead of ``{service-name}: {<info>}``.
+* Add new route ``/services/types/{svc_type}/resources`` for details about child service type resources.
+* Add error handling of reserved route keywords service ``types`` for ``/services/{svc}`` routes and current user
+  defined by ``MAGPIE_LOGGED_USER`` for ``/users/{usr}`` routes.
+* Additional tests for new routes and operations previously left unevaluated.
+
+`0.9.0 <https://github.com/Ouranosinc/Magpie/tree/0.9.0>`_ (2019-02-01)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * Add permissions config to auto-generate user/group rules on startup.
 * Attempt db creation on first migration if not existing.
 * Add continuous integration testing and deployment (with python 2/3 tests).
 * Ensure python compatibility for Python 2.7, 3.5, 3.6 (via `Travis-CI`).
 * Reduce excessive ``sqlalchemy`` logging using ``MAGPIE_LOG_LEVEL >= INFO``.
 * Use schema API route definitions for UI calls.
-* Use sub-requests API call for UI operations (fixes issue `#114 <https://github.com/Ouranosinc/Magpie/issues/114>`_).
-* Add new route ``/services/types`` to obtain a list of available service types.
-* Add ``resource_child_allowed`` and ``resource_types_allowed`` fields in service response.
-* Change service response for generic ``service: {<info>}`` instead of ``{service-name}: {<info>}``.
-* Add new route ``/services/types/{svc_type}/resources`` for details about child service type resources.
-* Error handling of reserved route keywords service `types` and current user ``MAGPIE_LOGGED_USER``.
-* Additional tests for new routes and operations previously left unevaluated.
-* Logging requests and exceptions according to `MAGPIE_LOG_REQUEST` and `MAGPIE_LOG_EXCEPTION` values.
-* Better handling of ``HTTPUnauthorized [401]`` and ``HTTPForbidden [403]`` according to unauthorized view
-  (invalid access token/headers or forbidden operation under view).
-* Better handling of ``HTTPNotFound [404]`` and ``HTTPMethodNotAllowed [405]`` on invalid routes and request methods.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix UI add child button broken by introduced ``int`` resource id type checking.
-* Fix `Travis-CI` test suite execution and enable PEP8 lint checks.
-* Fix yaml security issue using updated package distribution.
 * Fix invalid conflict service name check on service update request.
 * Fix many invalid or erroneous swagger specifications.
 
-0.8.x
----------------------
+`0.8.2 <https://github.com/Ouranosinc/Magpie/tree/0.8.2>`_ (2019-01-21)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Update `MagpieAdapter` to match process store changes.
 * Provide user ID on API routes returning user info.
 
-0.7.x
----------------------
+`0.8.1 <https://github.com/Ouranosinc/Magpie/tree/0.8.1>`_ (2018-12-20)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add service resource auto-sync feature.
-* Return user/group services if any sub-resource has permissions.
-* Add inherited resource permission with querystring (deprecate `inherited_<>` routes warnings).
+* Update ``MagpieAdapter`` to match process store changes.
+
+`0.8.0 <https://github.com/Ouranosinc/Magpie/tree/0.8.0>`_ (2018-12-18)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Adjust typing of ``MagpieAdapter``.
+* Reuse `store` objects in ``MagpieAdapter`` to avoid recreation on each request.
+* Add ``HTTPNotImplemented [501]`` error in case of incorrect adapter configuration.
+
+`0.7.12 <https://github.com/Ouranosinc/Magpie/tree/0.7.12>`_ (2018-12-06)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * Add flag to return `effective` permissions from user resource permissions requests.
-* hide service private URL on non administrator level requests.
+
+`0.7.11 <https://github.com/Ouranosinc/Magpie/tree/0.7.11>`_ (2018-12-03)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Allow more processes to be returned by an administrator user when parsing items in ``MagpieAdapter.MagpieProcess``.
+
+`0.7.10 <https://github.com/Ouranosinc/Magpie/tree/0.7.10>`_ (2018-11-30)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Updates to ``MagpieAdapter.MagpieProcess`` according to process visibility.
+
+`0.7.9 <https://github.com/Ouranosinc/Magpie/tree/0.7.9>`_ (2018-11-20)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``isTrue`` and ``isFalse`` options to ``api_except.verify_param`` utility function.
+* Add better detail and error code for login failure instead of generic failure.
+* Use ``UserService`` for some user operations that were still using the old method.
+* Add multiple tests for ``/users/[...]`` related routes.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fixes to JSON body to be returned by some ``MagpieAdapter.MagpieProcess`` operations.
+
+`0.7.8 <https://github.com/Ouranosinc/Magpie/tree/0.7.8>`_ (2018-11-16)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Hide service private URL on non administrator level requests.
 * Make cookies expire-able by setting ``MAGPIE_COOKIE_EXPIRE`` and provide cookie only on http
   (`JS CSRF` attack protection).
 * Update ``MagpieAdapter.MagpieOWSSecurity`` for `WSO2` seamless integration with Authentication header token.
@@ -431,25 +553,144 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fixes related to postgres DB entry conflicting inserts and validations.
-* Fix external providers login support (validated for `DKRZ`, `GitHub` and `WSO2`).
 
-0.6.x
----------------------
+`0.7.7 <https://github.com/Ouranosinc/Magpie/tree/0.7.7>`_ (2018-11-06)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add error handing during user permission creation in ``MagpieAdapter.MagpieProcess``.
+
+0.7.6 (n/a)
+------------------------------------------------------------------------------------
+
+* Invalid version skipped due to generation error.
+
+`0.7.5 <https://github.com/Ouranosinc/Magpie/tree/0.7.5>`_ (2018-11-05)
+------------------------------------------------------------------------------------
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix handling of resource type in case the resource ID refers to a ``service``.
+* Pin ``pyramid_tm==2.2.1``.
+
+`0.7.4 <https://github.com/Ouranosinc/Magpie/tree/0.7.4>`_ (2018-11-01)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add inherited resource permission with querystring (deprecate ``inherited_<>`` routes warnings).
+
+`0.7.3 <https://github.com/Ouranosinc/Magpie/tree/0.7.3>`_ (2018-10-26)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Improve ``MagpieAdapter`` logging.
+* Add ``MagpieAdapter`` initialization with parent object initialization and configuration.
+
+`0.7.2 <https://github.com/Ouranosinc/Magpie/tree/0.7.2>`_ (2018-10-19)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``MagpieAdapter.MagpieOWSSecurity.update_request_cookies`` method that handles conversion of ``Authorization``
+  header into the required authentication cookie employed by `Magpie` and `Twitcher` via integrated ``MagpieAdapter``.
+* Add multiple cosmetic improvements to UI (images, styles, etc.).
+* Improve login error reporting in UI.
+* Improve reporting of invalid parameters on creation UI pages.
+* Add better display of the logged user if any in the UI.
+* Add more Swagger API documentation details for returned resources per HTTP status codes.
+* Add external provider type ``WSO2`` and relevant setting variables to configure the referenced instance.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix external providers login support with ``authomatic`` using API/UI (validated for `DKRZ`, `GitHub` and `WSO2`).
+* Fix login/logout button in UI.
+
+`0.7.1 <https://github.com/Ouranosinc/Magpie/tree/0.7.1>`_ (2018-10-16)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Avoid displaying the private service URL when not permitted for the current user.
+* Add more test and documentation updates.
+
+`0.7.0 <https://github.com/Ouranosinc/Magpie/tree/0.7.0>`_ (2018-10-05)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add service resource auto-sync feature.
+* Return user/group services if any sub-resource has permissions.
+
+`0.6.5 <https://github.com/Ouranosinc/Magpie/tree/0.6.5>`_ (2018-09-13)
+------------------------------------------------------------------------------------
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix ``MagpieAdapter`` setup using ``TWITCHER_PROTECTED_URL`` setting.
+* Fix ``MagpieAdapter.MagpieService`` handling of returned list of services.
+* Fix Swagger JSON path retrieval for some edge case configuration values.
+
+`0.6.4 <https://github.com/Ouranosinc/Magpie/tree/0.6.4>`_ (2018-10-10)
+------------------------------------------------------------------------------------
+
+0.6.2 - 0.6.3 (n/a)
+------------------------------------------------------------------------------------
+
+* Invalid versions skipped due to generation error.
+
+`0.6.1 <https://github.com/Ouranosinc/Magpie/tree/0.6.1>`_ (2018-06-29)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Update ``Makefile`` targets.
+* Change how ``postgres`` configurations are retrieved using variables specific to `Magpie`.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Properly return values of field ``permission_names`` under ``/services/.*`` routes.
+
+`0.6.0 <https://github.com/Ouranosinc/Magpie/tree/0.6.0>`_ (2018-06-26)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``/magpie/api/`` route to locally display the Magpie REST API documentation.
 * Move many source files around to regroup by API/UI functionality.
-* Auto-generation of swagger REST API documentation.
-* Unit tests.
+* Auto-generation of swagger REST API documentation using ``cornice_swagger``.
+* Add more unit tests.
 * Validation of permitted resource types children under specific parent service or resource.
 * ``ServiceAPI`` to filter ``read``/``write`` of specific HTTP methods on route parts.
 * ``ServiceAccess`` to filter top-level route ``access`` permission of a generic service URL.
-* Properly return values of field ``permission_names`` under ``/services/.*`` routes.
-* Update make procedures and postgres variables specific to magpie.
 
-0.5.x
----------------------
+`0.5.4 <https://github.com/Ouranosinc/Magpie/tree/0.5.4>`_ (2018-06-08)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Improve some routes returned codes, inputs check, and requests formats (JSON).
+
+`0.5.3 <https://github.com/Ouranosinc/Magpie/tree/0.5.3>`_ (2018-06-07)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add utility functions like ``get_multiformat_any`` to help retrieving contents regardless of
+  request method and/or content-type.
+
+`0.5.2 <https://github.com/Ouranosinc/Magpie/tree/0.5.2>`_ (2018-06-06)
+------------------------------------------------------------------------------------
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix returned inherited group permissions of a user.
+* Fix clearing of cookies when logout is accomplished.
+
+`0.5.1 <https://github.com/Ouranosinc/Magpie/tree/0.5.1>`_ (2018-06-06)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -457,21 +698,70 @@ Features / Changes
 * Service specific resources with service*-typed* Resource permissions.
 * More verification of resources permissions under specific services.
 * Reference to root service from each sub-resource.
-* Inheritance of user and group permissions with different routes.
-* Improve some routes returned codes, inputs check, and requests formats (JSON).
 
-0.4.x
----------------------
+`0.5.0 <https://github.com/Ouranosinc/Magpie/tree/0.5.0>`_ (2018-06-06)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Change defaults for ``ADMIN_GROUP`` and ``USER_GROUP`` variables.
+* Major refactoring of ``Magpie`` application, both for API and UI.
+* Split utilities and view functions into corresponding files for each type of item.
+* Add more ``alembic`` database migration scripts steps for missing incremental versioning of schema and data.
+* Inheritance of user and group permissions with different routes.
+
+`0.4.5 <https://github.com/Ouranosinc/Magpie/tree/0.4.5>`_ (2018-05-14)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Handle login failure into different use cases in order to return appropriate HTTP status code and message.
+* Add login error reporting with a banner in UI.
+
+`0.4.4 <https://github.com/Ouranosinc/Magpie/tree/0.4.4>`_ (2018-05-11)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add UI view for user detail edition, including personal information and group membership.
+
+`0.4.3 <https://github.com/Ouranosinc/Magpie/tree/0.4.3>`_ (2018-05-09)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Loosen ``psycopg2`` version requirement.
+
+`0.4.2 <https://github.com/Ouranosinc/Magpie/tree/0.4.2>`_ (2018-05-09)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Loosen ``PyYAML`` version requirement.
+* Update documentation details.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix installation error (`#27 <https://github.com/Ouranosinc/Magpie/issues/27>`_).
+
+`0.4.1 <https://github.com/Ouranosinc/Magpie/tree/0.4.1>`_ (2018-05-08)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Improvement to UI element rendering with focus/hover/etc.
+* Push to Phoenix adjustments and new push button option and alert/confirmation banner.
+
+`0.4.0 <https://github.com/Ouranosinc/Magpie/tree/0.4.0>`_ (2018-03-23)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Default admin permissions.
 * Block UI view permissions of all pages if not logged in.
-* Signout clear header to forget user.
-* Push to Phoenix adjustments and new push button option.
 
 0.3.x
----------------------
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -491,7 +781,7 @@ Bug Fixes
 * Fix issues from `0.2.x` versions.
 
 0.2.0
----------------------
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -499,13 +789,13 @@ Features / Changes
 * Update `Magpie REST API 0.2.0 documentation`.
 
 0.1.1
----------------------
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add edition of service URL via ``PUT /{service_name}``.
 
 0.1.0
----------------------
+------------------------------------------------------------------------------------
 
 * First structured release.
