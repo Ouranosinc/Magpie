@@ -27,7 +27,8 @@ simplejson
 six
 sqlalchemy
 sqlalchemy_utils
-threddsclient>=0.4.1
+threddsclient==0.4.1; python_version < "3"
+threddsclient>=0.4.1; python_version >= "3"
 transaction
 typing
 wheel
