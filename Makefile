@@ -222,8 +222,8 @@ dist: clean conda-env	## package for distribution
 .PHONY: install
 install: install-all	## alias for 'install-all' target
 
-.PHONY: install-all		## install every dependency and package definition
-install-all: install-sys install-pkg install-dev install-docs
+.PHONY: install-all
+install-all: install-sys install-pkg install-dev install-docs	## install every dependency and package definition
 
 .PHONY: install-sys
 install-sys: clean conda-env	## install system dependencies and required installers/runners
@@ -460,7 +460,7 @@ test-remote: install-dev install	## run only remote tests with the default Pytho
 .PHONY: test-docker
 test-docker: docker-test			## alias for 'docker-test' target - WARNING: could build image if missing
 
-# covereage file location cannot be changed
+# coverage file location cannot be changed
 COVERAGE_FILE     := $(APP_ROOT)/.coverage
 COVERAGE_HTML_DIR := $(REPORTS_DIR)/coverage
 COVERAGE_HTML_IDX := $(COVERAGE_HTML_DIR)/index.html

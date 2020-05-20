@@ -113,8 +113,8 @@ linkcheck_ignore = [
     "https://pavics-magpie.readthedocs.io/en/latest/api.html",
 ]
 
-linkcheck_timeout = 10
-linkcheck_retries = 3
+linkcheck_timeout = 20
+linkcheck_retries = 5
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
