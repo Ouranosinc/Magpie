@@ -69,7 +69,6 @@ stages:
   - check       # run linting checks and don't bother with the rest if invalid
   - test        # use default stage to run job matrix variations
   - smoke-test  # try running the built/packaged docker image
-  - coverage    # only run once after everything else, will report analysis after if everything worked
 jobs:
   include:
     # use stages to quick fail faster tests
@@ -84,7 +83,7 @@ jobs:
       python: "3.6"
       os: linux
       script: make docs
-    - stage: coverage
+    - stage: test
       name: "Coverage"
       python: "3.6"
       os: linux
