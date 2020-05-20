@@ -1,9 +1,13 @@
+version: ~> 1.0
 # === setup ===
 language: python
+dist: xenial
+os:
+  - linux
 python:
-  - "2.7"
-  - "3.5"
   - "3.6"
+  - "3.5"
+  - "2.7"
 cache:
   - pip
   - directories:
@@ -16,12 +20,14 @@ env:
     - CONDA_HOME=$HOME/conda
     - DOWNLOAD_CACHE=$HOME/downloads
     - secure: lzPPXuRTlqLHl2MCAUuy7ROrewSwPFGGKqbADo7npQ4jqVMAb/TQ5PTzIi4IAIvsv817dNj5WSAd39hsp1zSlE1R2jLtbxGEVqwcjTqSv9VStGascRQnCW1hcoSKYqESweEhtdIcH+uXpV8qnDsUWB6YIIP2VjgWPMfSPZPynFKC0IqZm2sFsqDEJJHr3QM5iN3i3Z9GrEIrBEEpoaf0yak5u8LjqoGSaY8ISPGWipBJYn7i/r/+sZpirFXbZRJmI4ljsaHi0tysNWdANOIf7S2+Dy/oGNn/3Br0OMJ5snFe/n6Uf4GcmPGDc1c86oN0FpGcoNSA+lCUPMASghOGwVqBhMjX+qAZZfzEbCGtr2j/MhcpETMO3S9oqelw4CcbZRXxP2Y20L+KGNOCSt3SC4/HdKj5MWRQGUnIZbT9C2Tpn2wTffpVRoKvhik/6UU8/KT12LSwDhjjrfqLgCEFLqH1nBL2Mopkj/eOwQbZ66nZmthrAF7/c+vaB38LWoqBIZi/fOwo6+kt947d1bW6UX6Z1KnCNLN2KO064Hjn+SHb1gAes0JIXIZE7af1Gti2dKmUL4a5eoYyU5vCLlp2nq5yxEtTUdJKZ1UVnkDqRtSaT0F3FgLypbFqi+qZ6AtygxKqplMjeAGhvVSqZTPqRupP1ac/KBBCvMzG8pkfXWs=
-  matrix:
+  jobs:
     - TEST_TARGET=test-local    START_TARGET=
     - TEST_TARGET=test-remote   START_TARGET=start
     - TEST_TARGET=coverage      START_TARGET=
 addons:
   postgresql: "9.6"
+services:
+  - postgresql
 postgres:
   adapter: postgresql
   database: magpie
@@ -59,21 +65,40 @@ before_script:
   - export PATH=${CONDA_HOME}/bin:${PATH}
   - hash -r
   - env
+stages:
+  - check       # run linting checks and don't bother with the rest if invalid
+  - test        # use default stage to run job matrix variations
+  - smoke-test  # try running the built/packaged docker image
+jobs:
+  include:
+    # use stages to quick fail faster tests
+    # these are extra to default 'test' stage with auto-matrix/env extension
+    - stage: check
+      name: "Linter Checks"
+      python: "3.6"
+      os: linux
+      script: make check
+    - stage: check
+      name: "Documentation Check"   # verify that build works
+      python: "3.6"
+      os: linux
+      script: make docs
+    - stage: test
+      name: "Coverage"
+      python: "3.6"
+      os: linux
+      script: make coverage
+    - stage: smoke-test
+      name: "Smoke Test"
+      python: "3.6"
+      os: linux
+      script: make test-docker
 script:
-  # linting tests
-  - |
-    if [ "${TRAVIS_PYTHON_VERSION}" == "3.6" ]; then
-      make check
-    fi
-  # unit/functional tests
+  # unit/functional tests (start as needed)
   - make stop ${START_TARGET}
   - make ${TEST_TARGET}
   - make stop
-  # smoke test the docker image
-  - |
-    if [ "${TRAVIS_PYTHON_VERSION}" == "3.6" ]; then
-      make test-docker
-    fi
 after_success:
+  # coverage report
   - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
   - source ${CONDA_PREFIX}/bin/activate ${CONDA_ENV} && python-codacy-coverage -r reports/coverage.xml

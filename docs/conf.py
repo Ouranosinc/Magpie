@@ -111,10 +111,15 @@ autoapi_python_class_content = "both"
 linkcheck_ignore = [
     # might not exist yet (we are generating it!)
     "https://pavics-magpie.readthedocs.io/en/latest/api.html",
+    # FIXME: tmp disable due to Retry-After header for rate-limiting by Github not respected
+    #        (see: https://github.com/sphinx-doc/sphinx/issues/7388)
+    "https://github.com/Ouranosinc/Magpie/*",    # limit only Magpie so others are still checked
+    # ignore private links
+    "https://github.com/Ouranosinc/PAVICS/*",
 ]
 
-linkcheck_timeout = 10
-linkcheck_retries = 3
+linkcheck_timeout = 20
+linkcheck_retries = 5
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

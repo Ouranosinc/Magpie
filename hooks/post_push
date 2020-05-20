@@ -1,10 +1,10 @@
 #!/bin/bash
 
 echo "=> Information of Magpie Adapter image for Twitcher (docker tag: $DOCKER_TAG)"
-make MAGPIE_VERSION=${DOCKER_TAG} docker-info
+make APP_VERSION=${DOCKER_TAG} docker-info
 
 echo "=> Building Magpie Adapter image for Twitcher (docker tag: $DOCKER_TAG)"
-make MAGPIE_VERSION=${DOCKER_TAG} docker-build-adapter
+make APP_VERSION=${DOCKER_TAG} docker-build-adapter
 
 echo "=> Pushing Magpie Adapter image for Twitcher (docker tag: $DOCKER_TAG)"
-make MAGPIE_VERSION=${DOCKER_TAG} docker-push-adapter
+make APP_VERSION=${DOCKER_TAG} docker-push-adapter
