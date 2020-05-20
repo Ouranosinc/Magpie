@@ -114,6 +114,8 @@ linkcheck_ignore = [
     # FIXME: tmp disable due to Retry-After header for rate-limiting by Github not respected
     #        (see: https://github.com/sphinx-doc/sphinx/issues/7388)
     "https://github.com/Ouranosinc/Magpie/*",    # limit only Magpie so others are still checked
+    # ignore private links
+    "https://github.com/Ouranosinc/PAVICS/*",
 ]
 
 linkcheck_timeout = 20
