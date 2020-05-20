@@ -252,7 +252,7 @@ Bug Fixes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix migration script errors due to incorrect object fetching from db
-  (`#149 <https://github.com/Ouranosinc/PAVICS/issues/149>`_).
+  (`#149 <https://github.com/Ouranosinc/PAVICS/pull/149>`_).
 
 `1.3.3 <https://github.com/Ouranosinc/Magpie/tree/1.3.3>`_ (2019-07-11)
 ------------------------------------------------------------------------------------
