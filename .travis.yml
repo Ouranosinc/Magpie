@@ -1,6 +1,7 @@
 version: ~> 1.0
 # === setup ===
 language: python
+dist: xenial
 os:
   - linux
 python:
@@ -19,7 +20,7 @@ env:
     - CONDA_HOME=$HOME/conda
     - DOWNLOAD_CACHE=$HOME/downloads
     - secure: lzPPXuRTlqLHl2MCAUuy7ROrewSwPFGGKqbADo7npQ4jqVMAb/TQ5PTzIi4IAIvsv817dNj5WSAd39hsp1zSlE1R2jLtbxGEVqwcjTqSv9VStGascRQnCW1hcoSKYqESweEhtdIcH+uXpV8qnDsUWB6YIIP2VjgWPMfSPZPynFKC0IqZm2sFsqDEJJHr3QM5iN3i3Z9GrEIrBEEpoaf0yak5u8LjqoGSaY8ISPGWipBJYn7i/r/+sZpirFXbZRJmI4ljsaHi0tysNWdANOIf7S2+Dy/oGNn/3Br0OMJ5snFe/n6Uf4GcmPGDc1c86oN0FpGcoNSA+lCUPMASghOGwVqBhMjX+qAZZfzEbCGtr2j/MhcpETMO3S9oqelw4CcbZRXxP2Y20L+KGNOCSt3SC4/HdKj5MWRQGUnIZbT9C2Tpn2wTffpVRoKvhik/6UU8/KT12LSwDhjjrfqLgCEFLqH1nBL2Mopkj/eOwQbZ66nZmthrAF7/c+vaB38LWoqBIZi/fOwo6+kt947d1bW6UX6Z1KnCNLN2KO064Hjn+SHb1gAes0JIXIZE7af1Gti2dKmUL4a5eoYyU5vCLlp2nq5yxEtTUdJKZ1UVnkDqRtSaT0F3FgLypbFqi+qZ6AtygxKqplMjeAGhvVSqZTPqRupP1ac/KBBCvMzG8pkfXWs=
-  matrix:
+  jobs:
     - TEST_TARGET=test-local    START_TARGET=
     - TEST_TARGET=test-remote   START_TARGET=start
     - TEST_TARGET=coverage      START_TARGET=
