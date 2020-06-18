@@ -99,7 +99,8 @@ redoc = [{
     "embed": True,
     "opts": {
         "lazy-rendering": True,
-        "hide-hostname": True
+        "hide-hostname": True,
+        "path-in-middle-panel": True,
     }
 }]
 
