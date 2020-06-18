@@ -204,7 +204,7 @@ setup(
             "magpie_create_users = magpie.helpers.create_users:main",
             "magpie_register_default_users = magpie.helpers.register_default_users:main",
             "magpie_register_providers = magpie.helpers.register_providers:main",
-            "magpie_run_database_migration = magpie.helpers.run_database_migration:main",
+            "magpie_run_db_migration = magpie.helpers.run_db_migration:main",
             "magpie_sync_resources = magpie.helpers.sync_resources:main",
         ],
     }

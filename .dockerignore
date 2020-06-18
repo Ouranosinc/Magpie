@@ -37,6 +37,11 @@ build
 dist
 pip-selfcheck.json
 
+# CI/Test/Deploy
+ci
+hooks
+tests
+
 # Project
 **/custom.ini
 **/config.yaml

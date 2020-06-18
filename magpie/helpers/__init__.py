@@ -2,8 +2,12 @@ import argparse
 import importlib
 import os
 import sys
+from typing import TYPE_CHECKING
 
 from magpie.__meta__ import __version__
+
+if TYPE_CHECKING:
+    from typing import Callable
 
 
 def magpie_helper_cli():
@@ -26,12 +30,14 @@ def magpie_helper_cli():
             helper_name = module_item.replace(".py", "")
             helper_root = "magpie.helpers"
             helper_module = importlib.import_module("{}.{}".format(helper_root, helper_name), helper_root)
-            parser_maker = getattr(helper_module, "make_parser", None)
+            parser_maker = getattr(helper_module, "make_parser", None)  # type: Callable[[], argparse.ArgumentParser]
             helper_caller = getattr(helper_module, "main", None)
             if parser_maker and helper_caller:
                 # add help disabled otherwise conflicts with this main helper's help
                 helper_parser = parser_maker()
-                subparsers.add_parser(helper_name, parents=[helper_parser], add_help=False)
+                subparsers.add_parser(helper_name, parents=[helper_parser],
+                                      add_help=False, help=helper_parser.description,
+                                      description=helper_parser.description, usage=helper_parser.usage)
                 helpers[helper_name] = {"caller": helper_caller, "parser": helper_parser}
     args = sys.argv[1:]       # save as was parse args does, but we must provide them to subparser
     ns = parser.parse_args()  # if 'helper' is unknown, auto prints the help message with exit(2)

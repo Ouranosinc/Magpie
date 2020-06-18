@@ -5,7 +5,7 @@
 test_magpie_ui
 ----------------------------------
 
-Tests for `magpie.ui` module.
+Tests for :mod:`magpie.ui` module.
 """
 
 import unittest

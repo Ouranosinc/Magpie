@@ -363,7 +363,7 @@ def setup_cron_logger(log_level=logging.INFO):
 def make_parser():
     # type: () -> argparse.ArgumentParser
     parser = argparse.ArgumentParser(description="Synchronize local and remote resources based on "
-                                                 "Magpie Service synchronization type.")
+                                                 "Magpie Service sync-type.")
     parser.add_argument("--log-level", "-l", dest="log_level", default="INFO",
                         help="Log level to employ (default: %(default)s).")
     parser.add_argument("--db", metavar="CONNECTION_URL", dest="db",
