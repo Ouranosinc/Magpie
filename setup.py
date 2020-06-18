@@ -200,7 +200,7 @@ setup(
             "main = magpie.app:main"
         ],
         "console_scripts": [
-            "magpie_helper = magpie.helpers:magpie_helper_cli"  # redirect to others below
+            "magpie_helper = magpie.helpers:magpie_helper_cli",  # redirect to others below
             "magpie_create_users = magpie.helpers.create_users:main",
             "magpie_register_default_users = magpie.helpers.register_default_users:main",
             "magpie_register_providers = magpie.helpers.register_providers:main",

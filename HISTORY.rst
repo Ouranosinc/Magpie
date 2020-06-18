@@ -9,6 +9,7 @@ History
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Update this changelog to provide direct URL references to issues and tags from both `GitHub` and `Readthedocs`.
+* Add generic ``magpie_helper`` CLI and prefix others using ``magpie_`` to help finding them in environment.
 
 `1.10.2 <https://github.com/Ouranosinc/Magpie/tree/1.10.2>`_ (2020-04-21)
 ------------------------------------------------------------------------------------
