@@ -15,7 +15,7 @@ from magpie.utils import get_logger, print_log, raise_log
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import AnySettingsContainer, Str, Optional  # noqa: F401
+    from magpie.typedefs import AnySettingsContainer, Str  # noqa: F401
     from typing import Any, AnyStr, Optional, Sequence  # noqa: F401
 
 LOGGER = get_logger(__name__)
