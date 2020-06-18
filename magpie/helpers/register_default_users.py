@@ -163,4 +163,4 @@ def main(args=None, parser=None, namespace=None):
 
 
 if __name__ == "__main__":
-    register_default_users()
+    main()
