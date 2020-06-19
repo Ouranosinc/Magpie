@@ -5,7 +5,7 @@
 test_magpie_api
 ----------------------------------
 
-Tests for ``magpie.api`` module.
+Tests for :mod:`magpie.api` module.
 """
 
 import unittest

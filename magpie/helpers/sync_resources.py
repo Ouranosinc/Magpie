@@ -1,8 +1,9 @@
 """
 Synchronize local and remote resources.
 
-To implement a new service, see the _SyncServiceInterface class.
+To implement a new service, see :class:`magpie.helpers.sync_services.SyncServiceInterface`.
 """
+import argparse
 import copy
 import datetime
 import logging
@@ -20,7 +21,7 @@ from magpie.utils import get_logger
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from sqlalchemy.orm.session import Session
-    from magpie.typedefs import Optional  # noqa: F401
+    from typing import Any, AnyStr, Optional, Sequence, Union  # noqa: F401
 
 LOGGER = get_logger(__name__)
 
@@ -319,13 +320,13 @@ def fetch_single_service(service, session):
     _update_db(remote_resources, service_id, session)
 
 
-def fetch():
+def fetch(settings=None):
     """
     Main function to get all remote resources for each service and write to database.
     """
     with transaction.manager:
         LOGGER.info("Getting database session")
-        session = db.get_db_session_from_settings(echo=False)
+        session = db.get_db_session_from_settings(settings=settings, echo=False)
 
         for service_type in SYNC_SERVICES_TYPES:
             LOGGER.info("Fetching data for service type: %s", service_type)
@@ -334,8 +335,11 @@ def fetch():
         transaction.commit()
 
 
-def setup_cron_logger():
-    log_level = logging.INFO
+def setup_cron_logger(log_level=logging.INFO):
+    # type: (Union[AnyStr, int]) -> None
+
+    if not isinstance(log_level, int):
+        log_level = logging.getLevelName(log_level)
 
     log_path = constants.get_constant("MAGPIE_CRON_LOG")
     log_path = os.path.expandvars(log_path)
@@ -356,24 +360,40 @@ def setup_cron_logger():
     LOGGER.setLevel(log_level)
 
 
-def main():
+def make_parser():
+    # type: () -> argparse.ArgumentParser
+    parser = argparse.ArgumentParser(description="Synchronize local and remote resources based on "
+                                                 "Magpie Service sync-type.")
+    parser.add_argument("--log-level", "-l", dest="log_level", default="INFO",
+                        help="Log level to employ (default: %(default)s).")
+    parser.add_argument("--db", metavar="CONNECTION_URL", dest="db",
+                        help="Magpie database URL to connect to. Otherwise employ typical environment variables.")
+    return parser
+
+
+def main(args=None, parser=None, namespace=None):
+    # type: (Optional[Sequence[AnyStr]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> Any
     """
     Main entry point for cron service.
     """
     global CRON_SERVICE  # pylint: disable=W0603,global-statement
     CRON_SERVICE = True
 
-    setup_cron_logger()
+    if not parser:
+        parser = make_parser()
+    args = parser.parse_args(args=args, namespace=namespace)
+    settings = {"magpie.db_url": args.db} if args.db else None
 
+    setup_cron_logger(args.log_level)
     LOGGER.info("Magpie cron started.")
 
     try:
-        db_ready = db.is_database_ready()
+        db_ready = db.is_database_ready(container=settings)
         if not db_ready:
             LOGGER.info("Database isn't ready")
             return
         LOGGER.info("Starting to fetch data for all service types")
-        fetch()
+        fetch(settings=settings)
     except Exception:
         LOGGER.exception("An error occurred")
         raise

@@ -13,13 +13,38 @@ configuration file or creating basic user accounts. Please refer to their corres
 
 Available helpers:
 
-- ``create_users``
-- ``register_default_users``
-- ``register_providers``
-- ``run_database_migration``
-- ``sync_resources``
+- ``magpie_create_users``
+- ``magpie_register_default_users``
+- ``magpie_register_providers``
+- ``magpie_run_database_migration``
+- ``magpie_sync_resources``
+
+For convenience, a generic CLI ``magpie_helper`` is also provided which allows calling each of the other helper
+operations as *mode*. You can therefore do as follows.
+
+.. code-block:: console
+
+    # list of available 'helper'
+    magpie_helper --help
+    # arguments of the given helper
+    magpie_helper [helper] --help
+
+
+For example, the two statements below are equivalent.
+
+.. code-block:: console
+
+    magpie_helper create_users [...]
+    # OR
+    magpie_create_users [...]
+
+
+When using an ``conda`` environment, you should be able to directly call the ``magpie_helper`` CLI as above if you
+previously installed the package (see `installation`_).
 
 Source code of these helpers can be found `here <https://github.com/Ouranosinc/Magpie/tree/master/magpie/helpers>`_.
+
+.. _installation: installation.rst
 
 .. utilities_connection:
 

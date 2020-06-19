@@ -1,3 +1,4 @@
+import argparse
 import logging
 import time
 from typing import TYPE_CHECKING
@@ -14,7 +15,9 @@ from magpie.utils import get_logger, print_log, raise_log
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import AnySettingsContainer, Str, Optional  # noqa: F401
+    from magpie.typedefs import AnySettingsContainer, Str  # noqa: F401
+    from typing import Any, AnyStr, Optional, Sequence  # noqa: F401
+
 LOGGER = get_logger(__name__)
 
 
@@ -119,8 +122,8 @@ def init_users_group(db_session, settings=None):
         print_log("MAGPIE_USERS_GROUP already initialized", level=logging.DEBUG)
 
 
-def register_default_users(db_session=None, settings=None):
-    # type: (Optional[Session], Optional[AnySettingsContainer]) -> None
+def register_default_users(db_session=None, settings=None, ini_file_path=None):
+    # type: (Optional[Session], Optional[AnySettingsContainer], Optional[AnyStr]) -> None
     """
     Registers in db every undefined default users and groups matching following variables :
 
@@ -130,7 +133,8 @@ def register_default_users(db_session=None, settings=None):
     - ``MAGPIE_ADMIN_USER``
     """
     if not isinstance(db_session, Session):
-        ini_file_path = get_constant("MAGPIE_INI_FILE_PATH", settings_container=settings)
+        if not ini_file_path:
+            ini_file_path = get_constant("MAGPIE_INI_FILE_PATH", settings_container=settings)
         db_session = db.get_db_session_from_config_ini(ini_file_path)
     if not db.is_database_ready(db_session):
         time.sleep(2)
@@ -143,5 +147,20 @@ def register_default_users(db_session=None, settings=None):
     db_session.close()
 
 
+def make_parser():
+    # type: () -> argparse.ArgumentParser
+    parser = argparse.ArgumentParser(description="Registers default users in Magpie")
+    parser.add_argument("ini_file_path", help="Path of the configuration INI file to use to retrieve required settings")
+    return parser
+
+
+def main(args=None, parser=None, namespace=None):
+    # type: (Optional[Sequence[AnyStr]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> Any
+    if not parser:
+        parser = make_parser()
+    args = parser.parse_args(args=args, namespace=namespace)
+    return register_default_users(ini_file_path=args.ini_file_path)
+
+
 if __name__ == "__main__":
-    register_default_users()
+    main()

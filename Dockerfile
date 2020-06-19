@@ -26,7 +26,7 @@ RUN apk update \
     && apk add --virtual .build-deps \
     gcc \
     libffi-dev \
-    python-dev \
+    python3-dev \
     py-pip \
     musl-dev \
     postgresql-dev \
@@ -34,8 +34,11 @@ RUN apk update \
     && pip install --no-cache-dir -e $MAGPIE_DIR \
     && apk --purge del .build-deps
 
-# install app package source
-COPY ./ $MAGPIE_DIR
+# install app package source, avoid copying the rest
+COPY ./bin $MAGPIE_DIR/bin/
+COPY ./config/magpie.ini $MAGPIE_CONFIG_DIR/magpie.ini
+COPY ./env/*.env.example $MAGPIE_ENV_DIR/
+COPY ./magpie $MAGPIE_DIR/magpie/
 # equivalent of `make install` without conda env and pre-installed packages
 RUN pip install --no-dependencies -e $MAGPIE_DIR
 

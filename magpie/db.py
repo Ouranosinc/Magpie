@@ -83,7 +83,7 @@ def get_db_url(username=None,   # type: Optional[Str]
 def get_engine(container=None, prefix="sqlalchemy.", **kwargs):
     # type: (Optional[AnySettingsContainer], Str, Any) -> Engine
     settings = get_settings(container or {})
-    settings[prefix + "url"] = get_db_url()
+    settings[prefix + "url"] = get_db_url(settings=settings)
     settings.setdefault(prefix + "pool_pre_ping", True)
     kwargs = kwargs or {}
     kwargs["convert_unicode"] = True
@@ -158,12 +158,12 @@ def get_database_revision(db_session):
     return result["version_num"]
 
 
-def is_database_ready(db_session=None):
-    # type: (Optional[Session]) -> bool
+def is_database_ready(db_session=None, container=None):
+    # type: (Optional[Session], Optional[AnySettingsContainer]) -> bool
     if isinstance(db_session, Session):
         engine = db_session.bind
     else:
-        engine = get_engine(dict())
+        engine = get_engine(container=container)
     inspector = Inspector.from_engine(engine)
     table_names = inspector.get_table_names()
 

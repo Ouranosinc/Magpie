@@ -9,6 +9,15 @@ History
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Update this changelog to provide direct URL references to issues and tags from both `GitHub` and `Readthedocs`.
+* Add generic ``magpie_helper`` CLI and prefix others using ``magpie_`` to help finding them in environment.
+* Add minimal tests for CLI helpers to validate they can be found and called as intended
+  (`#74 <https://github.com/Ouranosinc/Magpie/issues/74>`_).
+* Add ``CLI`` tag for running specific tests related to helpers.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Remove some files from built docker image that shouldn't be there with more explicit ``COPY`` operations.
+* Fix ``Dockerfile`` dependency of ``python3-dev`` causing build to fail.
 
 `1.10.2 <https://github.com/Ouranosinc/Magpie/tree/1.10.2>`_ (2020-04-21)
 ------------------------------------------------------------------------------------
