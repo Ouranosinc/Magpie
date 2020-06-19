@@ -17,6 +17,7 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Remove some files from built docker image that shouldn't be there with more explicit ``COPY`` operations.
+* Fix ``Dockerfile`` dependency of ``python3-dev`` causing build to fail.
 
 `1.10.2 <https://github.com/Ouranosinc/Magpie/tree/1.10.2>`_ (2020-04-21)
 ------------------------------------------------------------------------------------

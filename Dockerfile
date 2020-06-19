@@ -26,7 +26,7 @@ RUN apk update \
     && apk add --virtual .build-deps \
     gcc \
     libffi-dev \
-    python-dev \
+    python3-dev \
     py-pip \
     musl-dev \
     postgresql-dev \
