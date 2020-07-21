@@ -7,14 +7,39 @@ Usage
 Package
 ~~~~~~~
 
-To use Magpie in a project, fist you need to install it. To do so, you can do a basic ``pip install``.
-For more details or other installation variants and preparation, see `installation`_ and
+To use `Magpie` in a project, first you need to install it. To do so, you can do a basic ``pip install``.
+For more details or other installation variants and environment preparation, see `installation`_ and
 `configuration`_ procedures.
 
-Then simply import the Python package::
+After this, you should be able to import the Python package to validate it is installed properly using::
 
     import magpie
 
+
+Web Application
+~~~~~~~~~~~~~~~~~~~~~
+
+In most situation, you will want to run `Magpie` as a Web Application in combination with some Web Proxy
+(e.g.: `Twitcher`_) that can interrogate `Magpie` about applicable user authentication and permission authorization
+from the HTTP request session. To start the application, you can simply run the following command::
+
+    make start
+
+This will first install any missing dependencies in the current environment (see `installation`_), and will after start
+a basic Web Application on ``localhost:2001`` with default configurations. Please note that you **MUST** have a
+`PostgreSQL`_ database connection configured prior to running `Magpie` for it to operate (refer to `Configuration`_
+for details).
+
+For running the application, multiple
+`WSGI HTTP Servers` can be employed (e.g.: `Gunicorn`_, `Waitress`_, etc.). They usually all support as input an INI
+configuration file for specific settings. `Magpie` also employs such INI file to customize its behaviour.
+See `Configuration`_ for further details, and please refer to the employed `WSGI` application documentation of your
+liking for their respective setup requirements.
+
+.. _Gunicorn: https://gunicorn.org/
+.. _PostgreSQL: https://www.postgresql.org/
+.. _Twitcher: https://github.com/bird-house/twitcher
+.. _Waitress: https://github.com/Pylons/waitress
 
 API
 ~~~~~~~
@@ -34,7 +59,7 @@ administrator permissions.
 Additional Utilities
 ~~~~~~~~~~~~~~~~~~~~
 
-Multiple `utilities`_ are provided either directly within `Magpie` or through external resources.
+Multiple `utilities`_ are provided either directly within `Magpie` as a package or through external resources.
 Please refer to this section for more details.
 
 .. _configuration: configuration.rst

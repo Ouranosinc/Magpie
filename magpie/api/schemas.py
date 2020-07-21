@@ -79,7 +79,8 @@ def service_api_route_info(service_api):
     return {"name": service_api.name, "pattern": service_api.path}
 
 
-LoggedUserBase = "/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
+_LOGGED_USER_VALUE = get_constant("MAGPIE_LOGGED_USER")
+LoggedUserBase = "/users/{}".format(_LOGGED_USER_VALUE)
 
 
 SwaggerGenerator = Service(
@@ -281,6 +282,25 @@ VersionAPI = Service(
 HomepageAPI = Service(
     path="/",
     name="homepage")
+
+
+TAG_DESCRIPTIONS = {
+    APITag: "General information about the API.",
+    LoginTag: "Session login management and available providers for authentification.",
+    UsersTag:
+        "Users information management and control of their applicable groups, services, resources and permissions.\n\n"
+        "Administrator-level permissions are required to access most paths. Depending on context, some paths are "
+        "permitted additional access if the logged session user corresponds to the path variable user.",
+    LoggedUserTag:
+        "Utility paths that correspond to their {} counterparts, but that automatically ".format(UserAPI.path) +
+        "determine the applicable user from the logged session. If there is no active session, the public anonymous "
+        "access is employed.\n\nNOTE: The value of '{}' depends on Magpie configuration.".format(_LOGGED_USER_VALUE),
+    GroupsTag:
+        "Groups management and control of their applicable users, services, resources and permissions.\n\n"
+        "Administrator-level permissions are required to access most paths. ",
+    ResourcesTag: "Management of resources that reside under a given service and their applicable permissions.",
+    ServicesTag: "Management of service definitions, children resources and their applicable permissions.",
+}
 
 
 # Common path parameters
@@ -2975,6 +2995,8 @@ def generate_api_schema(swagger_base_spec):
     swagger_base_spec.update(SecurityDefinitionsAPI)
     generator.swagger = swagger_base_spec
     json_api_spec = generator.generate(title=TitleAPI, version=__meta__.__version__, info=InfoAPI)
+    for tag in json_api_spec["tags"]:
+        tag["description"] = TAG_DESCRIPTIONS[tag["name"]]
     return json_api_spec
 
 

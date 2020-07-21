@@ -4,7 +4,7 @@ Configuration
 =============
 
 At startup, `Magpie` application will load multiple configuration files to define various behaviours or setup
-operations. These are defined though the following configuration settings presented below.
+operations. These are defined though the configuration settings presented below.
 
 All generic `Magpie` configuration settings can be defined through either the `magpie.ini`_ file
 or environment variables. Values defined in `magpie.ini`_ are expected to follow the
@@ -388,7 +388,7 @@ Following settings define parameters required by `Twitcher`_ (OWS Security Proxy
 Postgres Settings
 ~~~~~~~~~~~~~~~~~~~~~
 
-Following settings define parameters required to define the `Postgres`_ database connection employed by `Magpie` as
+Following settings define parameters required to define the `PostgreSQL`_ database connection employed by `Magpie` as
 well as some other database-related operation settings. Settings defined by ``magpie.[variable_name]`` definitions
 are available as described at the start of the `Configuration`_ section, as well as some special cases where additional
 configuration names are supported where mentioned.
@@ -404,12 +404,12 @@ configuration names are supported where mentioned.
 - | ``MAGPIE_DB_URL``
   | Full database connection URL formatted as ``<db-type>://<user>:<password>@<host>:<port>/<db-name>``.
   | Please refer to `SQLAlchemy Engine`_'s documentation for supported database implementations and their corresponding
-    configuration. Only `Postgres`_ has been extensively tested with `Magpie`, but other variants should be applicable.
+    configuration. Only `PostgreSQL`_ has been extensively tested with `Magpie`, but other variants should be applicable.
   | (Default: infer ``postgresql`` database connection URL formed using below ``MAGPIE_POSTGRES_<>`` parameters if the
      value was not explicitly provided)
 
 - | ``MAGPIE_POSTGRES_USERNAME``
-  | Database connection username to retrieve `Magpie` data stored in `Postgres`_.
+  | Database connection username to retrieve `Magpie` data stored in `PostgreSQL`_.
   | On top of ``MAGPIE_POSTGRES_USERNAME``, environment variable ``POSTGRES_USERNAME`` and setting ``postgres.username``
     are also supported. For backward compatibility, all above variants with ``user`` instead of ``username``
     (with corresponding lower/upper case) are also verified for potential configuration if no prior parameter was
@@ -418,30 +418,30 @@ configuration names are supported where mentioned.
   | (Default: ``"magpie"``)
 
 - | ``MAGPIE_POSTGRES_PASSWORD``
-  | Database connection password to retrieve `Magpie` data stored in `Postgres`_.
+  | Database connection password to retrieve `Magpie` data stored in `PostgreSQL`_.
   | Environment variable ``POSTGRES_PASSWORD`` and setting ``postgres.password`` are also supported if not previously
     identified by their `Magpie`-prefixed variants.
   | (Default: ``"qwerty"``)
 
 - | ``MAGPIE_POSTGRES_HOST``
-  | Database connection host location to retrieve `Magpie` data stored in `Postgres`_.
+  | Database connection host location to retrieve `Magpie` data stored in `PostgreSQL`_.
   | Environment variable ``POSTGRES_HOST`` and setting ``postgres.host`` are also supported if not previously
     identified by their `Magpie`-prefixed variants.
   | (Default: ``"postgres"``)
 
 - | ``MAGPIE_POSTGRES_PORT``
-  | Database connection port to retrieve `Magpie` data stored in `Postgres`_.
+  | Database connection port to retrieve `Magpie` data stored in `PostgreSQL`_.
   | Environment variable ``POSTGRES_PORT`` and setting ``postgres.port`` are also supported if not previously
     identified by their `Magpie`-prefixed variants.
   | (Default: ``5432``)
 
 - | ``MAGPIE_POSTGRES_DB``
-  | Name of the database located at the specified connection to retrieve `Magpie` data stored in `Postgres`_.
+  | Name of the database located at the specified connection to retrieve `Magpie` data stored in `PostgreSQL`_.
   | Environment variable ``POSTGRES_DB`` and setting ``postgres.db``, as well as the same variants with ``database``
     instead of ``db``, are also supported if not previously identified by their `Magpie`-prefixed variants.
   | (Default: ``"magpie"``)
 
-.. _Postgres: https://www.postgresql.org/
+.. _PostgreSQL: https://www.postgresql.org/
 .. _Alembic: https://alembic.sqlalchemy.org/
 .. _SQLAlchemy Engine: https://docs.sqlalchemy.org/en/13/core/engines.html
 
