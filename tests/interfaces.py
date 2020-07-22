@@ -90,6 +90,7 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         utils.check_val_equal(len(version_parts), 3)
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
     def test_GetCurrentUser(self):
         logged_user = get_constant("MAGPIE_LOGGED_USER")
         resp = utils.test_request(self, "GET", "/users/{}".format(logged_user), headers=self.json_headers)
@@ -107,8 +108,6 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
             utils.check_response_basic_info(resp, expected_code=406)
 
 
-@unittest.skip("Not implemented.")
-@pytest.mark.skip(reason="Not implemented.")
 @runner.MAGPIE_TEST_API
 class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
     # pylint: disable=C0103,invalid-name
@@ -121,6 +120,186 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
+
+    @classmethod
+    def login_test_user(cls):
+        """
+        Obtain headers and cookies with session credentials of the test user (non administrator).
+
+        .. warning::
+            Must ensure that administrator user (for setup operations) is logged out completely to avoid invalid tests.
+            This is particularly important in the case of local TestApp that can store the session for one active user.
+        """
+        raise NotImplementedError
+
+    def tearDown(self):
+        self.check_requirements()   # re-login as required in case test logged out the user with permissions
+        utils.TestSetup.delete_TestUser(self)
+        utils.TestSetup.delete_TestUser(self, override_user_name=self.other_user_name)
+        utils.TestSetup.delete_TestGroup(self)
+
+    def run_PutUsers_username_update_itself(self, user_path_variable):
+        """
+        Session user is allowed to update its own information via logged user path or corresponding user-name path.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_PutUser_ReservedKeyword_Current`
+        """
+        utils.TestSetup.create_TestUser(self)
+        new_name = self.other_user_name  # should be deleted by previous tear downs
+        test_headers, test_cookies = self.login_test_user()
+
+        # update existing user name
+        data = {"user_name": new_name}
+        path = "/users/{usr}".format(usr=user_path_variable)
+        resp = utils.test_request(self, "PUT", path, headers=test_headers, cookies=test_cookies, data=data)
+        utils.check_response_basic_info(resp, 200, expected_method="PUT")
+
+        # validate change of user name (itself)
+        path = "/users/{usr}".format(usr=new_name)
+        resp = utils.test_request(self, "GET", path, headers=test_headers, cookies=test_cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["user"]["user_name"], new_name)
+
+        # validate removed previous user name (need admin access because it's another users' information)
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies,
+                                  expect_errors=True)
+        utils.check_response_basic_info(resp, 404, expected_method="GET")
+
+        # validate effective new user name
+        utils.check_or_try_logout_user(self)
+        headers, cookies = utils.check_or_try_login_user(self, username=new_name, password=self.test_user_name,
+                                                         use_ui_form_submit=True, version=self.version)
+        resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["authenticated"], True)
+        utils.check_val_equal(body["user"]["user_name"], new_name)
+
+        # validate ineffective previous user name
+        utils.check_or_try_logout_user(self)
+        headers, cookies = utils.check_or_try_login_user(
+            self, username=self.test_user_name, password=self.test_user_name, version=self.version,
+            use_ui_form_submit=True, expect_errors=True)
+        utils.check_val_equal(cookies, {}, msg="CookiesType should be empty from login failure.")
+        resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["authenticated"], False)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    def test_PutUsers_email_ReservedKeyword_Current(self):
+        """
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_PutUser_ReservedKeyword_Current`
+        """
+        utils.warn_version(self, "user update own information ", "1.12.0", skip=True)
+        utils.TestSetup.create_TestUser(self)
+        test_headers, test_cookies = self.login_test_user()
+        new_email = "toto@new-email.lol"
+        data = {"email": new_email}
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "PUT", path, headers=self.json_headers, cookies=self.cookies, data=data)
+        utils.check_response_basic_info(resp, 200, expected_method="PUT")
+
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["user"]["email"], new_email)
+
+    def run_PutUsers_password_update_itself(self, user_path_variable):
+        """
+        Session user is allowed to update its own information via logged user path or corresponding user-name path.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_PutUser_ReservedKeyword_Current`
+        """
+        utils.TestSetup.create_TestUser(self)
+        old_password = self.test_user_name
+        new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
+        data = {"password": new_password}
+        path = "/users/{usr}".format(usr=user_path_variable)
+        resp = utils.test_request(self, "PUT", path, headers=self.json_headers, cookies=self.cookies, data=data)
+        utils.check_response_basic_info(resp, 200, expected_method="PUT")
+        utils.check_or_try_logout_user(self)
+
+        # validate that the new password is effective
+        headers, cookies = utils.check_or_try_login_user(
+            self, username=self.test_user_name, password=new_password,
+            use_ui_form_submit=True, version=self.version)
+        resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["authenticated"], True)
+        utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
+        utils.check_or_try_logout_user(self)
+
+        # validate that previous password is ineffective
+        headers, cookies = utils.check_or_try_login_user(
+            self, username=self.test_user_name, password=old_password, version=self.version,
+            use_ui_form_submit=True, expect_errors=True)
+        resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["authenticated"], False)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    def test_PutUsers_password_ReservedKeyword_Current(self):
+        utils.warn_version(self, "user update own information ", "1.12.0", skip=True)
+        self.run_PutUsers_password_update_itself(get_constant("MAGPIE_LOGGED_USER"))
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PutUsers_password_MatchingUserName_Current(self):
+        utils.warn_version(self, "user update own information ", "1.12.0", skip=True)
+        self.run_PutUsers_password_update_itself(self.test_user_name)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PutUsers_password_ForbiddenUpdateOthers(self):
+        """
+        Although session user is allowed to update its own information, insufficient permissions (not admin) forbids
+        that user to update other user's information.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_PutUser_ReservedKeyword_Current`
+        """
+        utils.warn_version(self, "user update own information ", "1.12.0", skip=True)
+        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, {"user_name": self.other_user_name, "password": self.other_user_name})
+        test_headers, test_cookies = self.login_test_user()
+        new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
+        data = {"password": new_password}
+        path = "/users/{usr}".format(usr=self.other_user_name)
+        resp = utils.test_request(self, "PUT", path, headers=test_headers, cookies=test_cookies, data=data)
+        utils.check_response_basic_info(resp, 403, expected_method="PUT")
+        utils.check_or_try_logout_user(self)
+
+        # validate that current user password was not randomly updated
+        # make sure we clear any potential leftover cookies by re-login
+        utils.check_or_try_logout_user(self)
+        headers, cookies = utils.check_or_try_login_user(
+            self, username=self.test_user_name, password=self.test_user_name,
+            use_ui_form_submit=True, version=self.version)
+        resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["authenticated"], True)
+        utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
+
+        # validate that the new password was not applied to other user
+        utils.check_or_try_logout_user(self)
+        headers, cookies = utils.check_or_try_login_user(
+            self, username=self.other_user_name, password=self.other_user_name,
+            use_ui_form_submit=True, version=self.version)
+        resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["authenticated"], True)
+        utils.check_val_equal(body["user"]["user_name"], self.other_user_name)
+        utils.check_or_try_logout_user(self)
+
+    @pytest.mark.skip(reason="Not implemented")
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_PostUserResourcesPermissions_Forbidden(self):
+        """Logged user without administrator access is not allowed to add resource permissions for itself."""
+        raise NotImplementedError  # TODO
 
 
 @runner.MAGPIE_TEST_API
@@ -282,6 +461,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         return body
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
     def test_GetCurrentUser(self):
         logged_user = get_constant("MAGPIE_LOGGED_USER")
         path = "/users/{}".format(logged_user)
@@ -293,6 +473,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             utils.check_val_equal(body["user_name"], self.usr)
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
     def test_GetCurrentUserResourcesPermissions(self):
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
@@ -747,6 +928,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_is_in(self.test_user_name, users)
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
     def test_PostUsers_ReservedKeyword_Current(self):
         data = {
             "user_name": get_constant("MAGPIE_LOGGED_USER"),
@@ -759,7 +941,9 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_response_basic_info(resp, 400, expected_method="POST")
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
     def test_PutUser_ReservedKeyword_Current(self):
+        utils.warn_version(self, "user update own information ", "1.12.0", older=True, skip=True)
         utils.TestSetup.create_TestUser(self)
         path = "/users/{usr}".format(usr=get_constant("MAGPIE_LOGGED_USER"))
         data = {"user_name": self.test_user_name + "-new-put-over-current"}

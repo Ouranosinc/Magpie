@@ -187,17 +187,25 @@ def get_service_types_for_version(version):
     return list(available_service_types)
 
 
-def warn_version(test, functionality, version, skip=True):
-    # type: (Base_Magpie_TestCase, Str, Str, bool) -> None
+def warn_version(test, functionality, version, skip=True, older=False):
+    # type: (Base_Magpie_TestCase, Str, Str, bool, bool) -> None
     """
-    Verifies that ``test.version`` value meets the minimal ``version`` requirement to execute a test.
-
+    Verifies that ``test.version`` value *minimally* has :paramref:`version` requirement to execute a test.
     (ie: ``test.version >= version``).
+
+    If :paramref:`older` is ``True``, instead verifies that the instance is older then :paramref:`version`.
+    (ie: ``test.version < version``).
+
     If version condition is not met, a warning is emitted and the test is skipped according to ``skip`` value.
     """
-    if LooseVersion(test.version) < LooseVersion(version):
-        msg = "Functionality [{}] not yet implemented in version [{}], upgrade to [>={}]." \
-              .format(functionality, test.version, version)
+    min_req = LooseVersion(test.version) < LooseVersion(version)
+    if min_req or (not min_req and older):
+        if min_req:
+            msg = "Functionality [{}] not yet implemented in version [{}], upgrade [>={}] required to test." \
+                  .format(functionality, test.version, version)
+        else:
+            msg = "Functionality [{}] was deprecated in version [{}], downgrade [<{}] required to test." \
+                  .format(functionality, test.version, version)
         warnings.warn(msg, FutureWarning)
         if skip:
             test.skipTest(reason=msg)   # noqa: F401
@@ -618,8 +626,8 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
         check_resource_children(resource_info["children"], resource_int_id, root_service_id)
 
 
-# Generic setup and validation methods across unittests
 class TestSetup(object):
+    """Generic setup and validation methods across unittests"""
     # pylint: disable=C0103,invalid-name
 
     @staticmethod

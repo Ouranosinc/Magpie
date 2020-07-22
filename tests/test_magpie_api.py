@@ -46,7 +46,7 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
 class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unittest.TestCase):
     # pylint: disable=C0103,invalid-name
     """
-    Test any operation that require at least ``MAGPIE_USERS_GROUP`` AuthN/AuthZ.
+    Test any operation that require at least ``MAGPIE_USERS_GROUP`` AuthN/AuthZ, but lower than ``MAGPIE_ADMIN_GROUP``.
 
     Use a local Magpie test application.
     """
@@ -56,6 +56,28 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
     @classmethod
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
+        # admin login credentials for setup operations, use 'test' parameters for testing actual feature
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+        cls.json_headers = utils.get_headers(cls.app, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
+        cls.cookies = None
+        cls.version = utils.TestSetup.get_Version(cls)
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd,
+                                                                 use_ui_form_submit=True, version=cls.version)
+        cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
+        cls.check_requirements()
+
+        cls.test_user_group = get_constant("MAGPIE_USERS_GROUP")
+        cls.test_user_name = "unittest-user_user-auth-username"
+        cls.other_user_name = "unittest-other_user-auth-username"
+
+    @classmethod
+    def login_test_user(cls):
+        utils.check_or_try_logout_user(cls)
+        return utils.check_or_try_login_user(
+            cls, username=cls.test_user_name, password=cls.test_user_name,
+            use_ui_form_submit=True, version=cls.version)
 
 
 @runner.MAGPIE_TEST_API
@@ -115,7 +137,7 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
 class TestCase_MagpieAPI_UsersAuth_Remote(ti.Interface_MagpieAPI_UsersAuth, unittest.TestCase):
     # pylint: disable=C0103,invalid-name
     """
-    Test any operation that require at least ``MAGPIE_USERS_GROUP`` AuthN/AuthZ.
+    Test any operation that require at least ``MAGPIE_USERS_GROUP`` AuthN/AuthZ, but lower than ``MAGPIE_ADMIN_GROUP``.
 
     Use an already running remote bird server.
     """

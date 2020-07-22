@@ -41,10 +41,11 @@ if TYPE_CHECKING:
     ParamsType = Dict[Str, Any]
     CookiesType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
     HeadersType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
-    OptionalHeaderCookiesType = Union[Tuple[None, None], Tuple[HeadersType, CookiesType]]
     AnyHeadersType = Union[HeadersType, ResponseHeaders, EnvironHeaders, CaseInsensitiveDict]
+    AnyCookiesType = Union[CookiesType, RequestsCookieJar]
     AnyResponseType = Union[WebobResponse, PyramidResponse, TestResponse]
     CookiesOrSessionType = Union[RequestsCookieJar, Session]
+    OptionalHeaderCookiesType = Tuple[Optional[AnyHeadersType], Optional[AnyCookiesType]]
 
     AnyKey = Union[Str, int]
     AnyValue = Union[Str, Number, bool, None]

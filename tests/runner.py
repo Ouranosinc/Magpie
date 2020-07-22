@@ -31,6 +31,7 @@ MAGPIE_TEST_SERVICES = RunOptionDecorator("MAGPIE_TEST_SERVICES")
 MAGPIE_TEST_RESOURCES = RunOptionDecorator("MAGPIE_TEST_RESOURCES")
 MAGPIE_TEST_GROUPS = RunOptionDecorator("MAGPIE_TEST_GROUPS")
 MAGPIE_TEST_USERS = RunOptionDecorator("MAGPIE_TEST_USERS")
+MAGPIE_TEST_LOGGED = RunOptionDecorator("MAGPIE_TEST_LOGGED")  # validate 'Logged User' views (i.e.: current)
 MAGPIE_TEST_STATUS = RunOptionDecorator("MAGPIE_TEST_STATUS")  # validate views found/displayed as per permissions
 MAGPIE_TEST_REMOTE = RunOptionDecorator("MAGPIE_TEST_REMOTE")
 MAGPIE_TEST_LOCAL = RunOptionDecorator("MAGPIE_TEST_LOCAL")
