@@ -46,7 +46,7 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
 class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unittest.TestCase):
     # pylint: disable=C0103,invalid-name
     """
-    Test any operation that require at least ``MAGPIE_USERS_GROUP`` AuthN/AuthZ, but lower than ``MAGPIE_ADMIN_GROUP``.
+    Test any operation that require logged AuthN/AuthZ, but lower than ``MAGPIE_ADMIN_GROUP``.
 
     Use a local Magpie test application.
     """
@@ -137,7 +137,7 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
 class TestCase_MagpieAPI_UsersAuth_Remote(ti.Interface_MagpieAPI_UsersAuth, unittest.TestCase):
     # pylint: disable=C0103,invalid-name
     """
-    Test any operation that require at least ``MAGPIE_USERS_GROUP`` AuthN/AuthZ, but lower than ``MAGPIE_ADMIN_GROUP``.
+    Test any operation that require logged user AuthN/AuthZ, but lower than ``MAGPIE_ADMIN_GROUP``.
 
     Use an already running remote bird server.
     """

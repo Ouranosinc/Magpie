@@ -16,8 +16,7 @@ from magpie.constants import get_constant
 from magpie.helpers import sync_resources
 from magpie.helpers.sync_resources import OUT_OF_SYNC
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT  # TODO: remove, implement getters via API
-from magpie.ui.home import add_template_data
-from magpie.ui.utils import check_response, error_badrequest, request_api
+from magpie.ui.utils import BaseViews, check_response, error_badrequest, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
 if TYPE_CHECKING:
@@ -27,10 +26,7 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
-class ManagementViews(object):
-    def __init__(self, request):
-        self.request = request
-
+class ManagementViews(BaseViews):
     @error_badrequest
     def get_all_groups(self, first_default_group=None):
         resp = request_api(self.request, schemas.GroupsAPI.path, "GET")
@@ -171,7 +167,7 @@ class ManagementViews(object):
             user_name = self.request.POST.get("user_name")
             return HTTPFound(self.request.route_url("edit_user", user_name=user_name, cur_svc_type="default"))
 
-        return add_template_data(self.request, {"users": self.get_user_names()})
+        return self.add_template_data({"users": self.get_user_names()})
 
     @view_config(route_name="add_user", renderer="templates/add_user.mako")
     def add_user(self):
@@ -212,7 +208,7 @@ class ManagementViews(object):
 
             for check_fail in check_data:
                 if return_data.get(check_fail, False):
-                    return add_template_data(self.request, return_data)
+                    return self.add_template_data(return_data)
 
             data = {u"user_name": user_name,
                     u"email": user_email,
@@ -222,7 +218,7 @@ class ManagementViews(object):
             check_response(resp)
             return HTTPFound(self.request.route_url("view_users"))
 
-        return add_template_data(self.request, return_data)
+        return self.add_template_data(return_data)
 
     @view_config(route_name="edit_user", renderer="templates/edit_user.mako")
     def edit_user(self):
@@ -385,7 +381,7 @@ class ManagementViews(object):
         user_info[u"svc_types"] = svc_types
         user_info[u"resources"] = res_perms
         user_info[u"permissions"] = res_perm_names
-        return add_template_data(self.request, data=user_info)
+        return self.add_template_data(data=user_info)
 
     @view_config(route_name="view_groups", renderer="templates/view_groups.mako")
     def view_groups(self):
@@ -404,7 +400,7 @@ class ManagementViews(object):
         for grp in groups:
             if grp != u"":
                 groups_info.setdefault(grp, {u"members": len(self.get_group_users(grp))})
-        return add_template_data(self.request, {u"group_names": groups_info})
+        return self.add_template_data({u"group_names": groups_info})
 
     @view_config(route_name="add_group", renderer="templates/add_group.mako")
     def add_group(self):
@@ -415,18 +411,18 @@ class ManagementViews(object):
             return_data[u"form_group_name"] = group_name
             if group_name == "":
                 return_data[u"invalid_group_name"] = True
-                return add_template_data(self.request, return_data)
+                return self.add_template_data(return_data)
 
             data = {u"group_name": group_name}
             resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
             if resp.status_code == HTTPConflict.code:
                 return_data[u"conflict_group_name"] = True
-                return add_template_data(self.request, return_data)
+                return self.add_template_data(return_data)
 
             check_response(resp)  # check for any other exception than conflict
             return HTTPFound(self.request.route_url("view_groups"))
 
-        return add_template_data(self.request, return_data)
+        return self.add_template_data(return_data)
 
     def resource_tree_parser(self, raw_resources_tree, permission):
         resources_tree = {}
@@ -667,7 +663,7 @@ class ManagementViews(object):
         group_info[u"cur_svc_type"] = cur_svc_type
         group_info[u"resources"] = res_perms
         group_info[u"permissions"] = res_perm_names
-        return add_template_data(self.request, data=group_info)
+        return self.add_template_data(data=group_info)
 
     @staticmethod
     def make_sync_error_message(service_names):
@@ -803,12 +799,14 @@ class ManagementViews(object):
             return HTTPFound(self.request.route_url("edit_service",
                                                     service_name=service_name, cur_svc_type=cur_svc_type))
 
-        return add_template_data(self.request,
-                                 {u"cur_svc_type": cur_svc_type,
-                                  u"svc_types": svc_types,
-                                  u"service_names": service_names,
-                                  u"service_push_show": cur_svc_type in register.SERVICES_PHOENIX_ALLOWED,
-                                  u"service_push_success": success_sync})
+        data = {
+            u"cur_svc_type": cur_svc_type,
+            u"svc_types": svc_types,
+            u"service_names": service_names,
+            u"service_push_show": cur_svc_type in register.SERVICES_PHOENIX_ALLOWED,
+            u"service_push_success": success_sync
+        }
+        return self.add_template_data(data)
 
     @view_config(route_name="add_service", renderer="templates/add_service.mako")
     def add_service(self):
@@ -831,11 +829,13 @@ class ManagementViews(object):
         services_keys_sorted = self.get_service_types()
         services_phoenix_indices = [(1 if services_keys_sorted[i] in register.SERVICES_PHOENIX_ALLOWED else 0)
                                     for i in range(len(services_keys_sorted))]
-        return add_template_data(self.request,
-                                 {u"cur_svc_type": cur_svc_type,
-                                  u"service_types": svc_types,
-                                  u"services_phoenix": register.SERVICES_PHOENIX_ALLOWED,
-                                  u"services_phoenix_indices": services_phoenix_indices})
+        data = {
+            u"cur_svc_type": cur_svc_type,
+            u"service_types": svc_types,
+            u"services_phoenix": register.SERVICES_PHOENIX_ALLOWED,
+            u"services_phoenix_indices": services_phoenix_indices
+        }
+        return self.add_template_data(data)
 
     @view_config(route_name="edit_service", renderer="templates/edit_service.mako")
     def edit_service(self):
@@ -907,7 +907,7 @@ class ManagementViews(object):
         service_info["resources_no_child"] = [res for res in RESOURCE_TYPE_DICT
                                               if not RESOURCE_TYPE_DICT[res].child_resource_allowed]
         service_info["service_no_child"] = not svc_body["resource_child_allowed"]
-        return add_template_data(self.request, service_info)
+        return self.add_template_data(service_info)
 
     @view_config(route_name="add_resource", renderer="templates/add_resource.mako")
     def add_resource(self):
@@ -940,4 +940,4 @@ class ManagementViews(object):
             u"resource_id": resource_id,
             u"cur_svc_res": svc_res_types,
         }
-        return add_template_data(self.request, data)
+        return self.add_template_data(data)

@@ -7,21 +7,26 @@
     %for perm in permissions:
         % if perm in value['permission_names']:
             <div class="perm_checkbox">
+                <label>
                 <input type="checkbox" value="${perm}" name="permission"
-                       onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()" checked
-                %if inherit_groups_permissions:
-                    disabled
-                %endif
+                       onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()"
+                       checked
+                    %if inherit_groups_permissions:
+                        disabled
+                    %endif
                 >
+                </label>
            </div>
         % else:
             <div class="perm_checkbox">
+                <label>
                 <input type="checkbox" value="${perm}" name="permission"
                        onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()"
-                %if inherit_groups_permissions:
-                    disabled
-                %endif
+                    %if inherit_groups_permissions:
+                        disabled
+                    %endif
                 >
+                </label>
             </div>
         % endif
     %endfor
@@ -31,7 +36,7 @@
         </div>
         <p class="tree_item_message">
             <img title="This resource is absent from the remote server."
-                 src="${request.static_url('magpie.ui.home:static/warning_exclamation_orange.png')}" />
+                 src="${request.static_url('magpie.ui.home:static/warning_exclamation_orange.png')}" alt="WARNING" />
         </p>
     % endif
     % if level == 0:
@@ -43,9 +48,12 @@
 
 
 <%block name="breadcrumb">
-<li><a href="${request.route_url('home')}">Home</a></li>
-<li><a href="${request.route_url('view_users')}">Users</a></li>
-<li><a href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=cur_svc_type)}">User ${user_name}</a></li>
+<li><a href="${request.route_url('home')}">
+    Home</a></li>
+<li><a href="${request.route_url('view_users')}">
+    Users</a></li>
+<li><a href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=cur_svc_type)}">
+    User [${user_name}]</a></li>
 </%block>
 
 <h1>Edit User: ${user_name}</h1>
@@ -73,13 +81,17 @@
                     <p class="panel_line">
                         <span class="panel_entry">Username: </span>
                         %if edit_mode == 'edit_username':
+                            <label>
                             <input type="text" value="${user_name}" name="new_user_name"
                                    id="input_username" onkeyup="adjustWidth('input_name')">
                             <input type="submit" value="Save" name="save_username">
                             <input type="submit" value="Cancel" name="no_edit">
+                            </label>
                         %else:
+                            <label>
                             <span class="panel_value">${user_name}</span>
                             <input type="submit" value="Edit" name="edit_username">
+                            </label>
                         %endif
                     </p>
                 </form>
@@ -87,13 +99,17 @@
                     <p class="panel_line">
                         <span class="panel_entry">Password: </span>
                         %if edit_mode == 'edit_password':
+                            <label>
                             <input type="text" value="" name="new_user_password"
                                    id="input_password" onkeyup="adjustWidth('input_name')">
                             <input type="submit" value="Save" name="save_password">
                             <input type="submit" value="Cancel" name="no_edit">
+                            </label>
                         %else:
+                            <label>
                             <span class="panel_value">***</span>
                             <input type="submit" value="Edit" name="edit_password">
+                            </label>
                         %endif
                     </p>
                 </form>
@@ -101,13 +117,17 @@
                     <p class="panel_line">
                         <span class="panel_entry">Email: </span>
                         %if edit_mode == 'edit_email':
+                            <label>
                             <input type="text" value="${email}" name="new_user_email"
                                    id="input_email" onkeyup="adjustWidth('input_url')">
                             <input type="submit" value="Save" name="save_email">
                             <input type="submit" value="Cancel" name="no_edit">
+                            </label>
                         %else:
+                            <label>
                             <span class="panel_value">${email}</span>
                             <input type="submit" value="Edit" name="edit_email">
+                            </label>
                         %endif
                     </p>
                 </form>
@@ -126,15 +146,19 @@
     <tr>
         % if group in own_groups:
             <td>
+                <label>
                 <input type="checkbox" value="${group}" name="member" checked
                        onchange="document.getElementById('edit_membership').submit()">
                 ${group}
+                </label>
             </td>
         % else:
             <td>
+                <label>
                 <input type="checkbox" value="${group}" name="member"
                        onchange="document.getElementById('edit_membership').submit()">
                 ${group}
+                </label>
             </td>
         % endif
     </tr>
@@ -145,6 +169,7 @@
 <h3>Permissions</h3>
 
 <form id="toggle_visible_perms" action="${request.path}" method="post">
+    <label>
     <input type="checkbox" value="${inherit_groups_permissions}" name="toggle_inherit_groups_permissions"
            onchange="document.getElementById('toggle_visible_perms').submit()"
     %if inherit_groups_permissions:
@@ -155,15 +180,18 @@
         <input type="hidden" value="True" name="inherit_groups_permissions"/>
     %endif
     View inherited group permissions
+    </label>
 </form>
 
 <div class="tabs_panel">
 
     %for svc_type in svc_types:
         % if cur_svc_type == svc_type:
-            <a class="current_tab" href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
+            <a class="current_tab"
+               href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % else:
-            <a class="tab" href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
+            <a class="tab"
+               href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % endif
     %endfor
 

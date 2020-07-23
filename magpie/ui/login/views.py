@@ -5,16 +5,11 @@ from pyramid.security import NO_PERMISSION_REQUIRED, forget
 from pyramid.view import view_config
 
 from magpie.api import schemas
-from magpie.ui.home import add_template_data
-from magpie.ui.utils import check_response, request_api
-from magpie.utils import get_json, get_magpie_url
+from magpie.ui.utils import BaseViews, check_response, request_api
+from magpie.utils import get_json
 
 
-class LoginViews(object):
-    def __init__(self, request):
-        self.request = request
-        self.magpie_url = get_magpie_url(request.registry)
-
+class LoginViews(BaseViews):
     def request_providers_json(self):
         resp = request_api(self.request, schemas.ProvidersAPI.path, "GET")
         check_response(resp)
@@ -72,7 +67,7 @@ class LoginViews(object):
         except Exception as exc:
             return HTTPInternalServerError(detail=repr(exc))
 
-        return add_template_data(self.request, data=return_data)
+        return self.add_template_data(data=return_data)
 
     @view_config(route_name="logout", renderer="templates/login.mako", permission=NO_PERMISSION_REQUIRED)
     def logout(self):

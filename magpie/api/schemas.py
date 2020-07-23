@@ -46,6 +46,7 @@ LoginTag = "Login"
 UsersTag = "User"
 LoggedUserTag = "Logged User"
 GroupsTag = "Group"
+RegisterTag = "Register"
 ResourcesTag = "Resource"
 ServicesTag = "Service"
 
@@ -225,6 +226,12 @@ GroupResourcePermissionAPI = Service(
 GroupResourceTypesAPI = Service(
     path="/groups/{group_name}/resources/types/{resource_type}",
     name="GroupResourceTypes")
+RegisterGroupsAPI = Service(
+    path="/register/groups",
+    name="RegisterGroups")
+RegisterGroupAPI = Service(
+    path="/register/groups/{group_name}",
+    name="RegisterGroup")
 ResourcesAPI = Service(
     path="/resources",
     name="Resources")
@@ -298,6 +305,7 @@ TAG_DESCRIPTIONS = {
     GroupsTag:
         "Groups management and control of their applicable users, services, resources and permissions.\n\n"
         "Administrator-level permissions are required to access most paths. ",
+    RegisterTag: "Registration paths for operations available to users (including non-administrators).",
     ResourcesTag: "Management of resources that reside under a given service and their applicable permissions.",
     ServicesTag: "Management of service definitions, children resources and their applicable permissions.",
 }
@@ -416,6 +424,13 @@ class ErrorVerifyParamBodySchema(colander.MappingSchema):
         missing=colander.drop)
 
 
+class ErrorResponseParamsSchema(colander.MappingSchema):
+    name = colander.SchemaNode(colander.String(), description="Name of the parameter that caused the error.")
+    value = colander.SchemaNode(colander.String(), description="Value that caused the error.", default=None)
+    compare = colander.SchemaNode(colander.String(), missing=colander.drop,
+                                  description="Comparison value(s) that caused the error due to invalid validation.")
+
+
 class ErrorResponseBodySchema(BaseResponseBodySchema):
     def __init__(self, code, description, **kw):
         super(ErrorResponseBodySchema, self).__init__(code, description, **kw)
@@ -433,6 +448,8 @@ class ErrorResponseBodySchema(BaseResponseBodySchema):
         colander.String(),
         description="Request method that generated the error.",
         example="GET")
+    param = ErrorResponseParamsSchema(missing=colander.drop,
+                                      description="Additional parameter details to explain the cause of error.")
 
 
 class InternalServerErrorResponseBodySchema(ErrorResponseBodySchema):
@@ -451,14 +468,13 @@ class UnauthorizedResponseBodySchema(BaseResponseBodySchema):
 
 
 class UnauthorizedResponseSchema(colander.MappingSchema):
-    description = "Unauthorized access to this resource. " + \
-                  "Insufficient user privileges or missing authentication headers."
+    description = "Unauthorized access to this resource. Missing authentication headers or cookies."
     header = HeaderResponseSchema()
     body = UnauthorizedResponseBodySchema(code=HTTPUnauthorized.code, description=description)
 
 
 class HTTPForbiddenResponseSchema(colander.MappingSchema):
-    description = "Forbidden operation under this resource."
+    description = "Forbidden operation for this resource or insufficient user privileges."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
@@ -476,7 +492,7 @@ class MethodNotAllowedResponseSchema(colander.MappingSchema):
 
 
 class NotAcceptableResponseSchema(colander.MappingSchema):
-    description = "Unsupported 'Accept Header' was specified."
+    description = "Unsupported Content-Type in 'Accept' header was specified."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPNotAcceptable.code, description=description)
 
@@ -562,6 +578,13 @@ class GroupDetailBodySchema(GroupBodySchema):
         example=["alice", "bob"],
         missing=colander.drop
     )
+    discoverable = colander.SchemaNode(
+        colander.Boolean(),
+        description="Indicates if this group is publicly accessible. "
+                    "Discoverable groups can be joined by any logged user.",
+        example=True,
+        default=False
+    )
 
 
 class ServiceBodySchema(colander.MappingSchema):
@@ -636,9 +659,12 @@ class ResourceBodySchema(colander.MappingSchema):
     permission_names.missing = colander.drop  # if not returned (basic_info = True)
 
 
-# TODO: improve by making recursive resources work (?)
+# FIXME: improve by making recursive resources work (?)
 class Resource_ChildrenContainerWithoutChildResourceBodySchema(ResourceBodySchema):
-    children = colander.MappingSchema(default={})
+    children = colander.MappingSchema(
+        default={},
+        description="Recursive '{}' schema for each applicable children resources.".format(ResourceBodySchema.__name__)
+    )
 
 
 class Resource_ChildResourceWithoutChildrenBodySchema(colander.MappingSchema):
@@ -1521,11 +1547,6 @@ class UserGroups_GET_OkResponseSchema(colander.MappingSchema):
 
 
 class UserGroups_POST_RequestBodySchema(colander.MappingSchema):
-    user_name = colander.SchemaNode(
-        colander.String(),
-        description="Name of the user in the user-group relationship",
-        example="toto",
-    )
     group_name = colander.SchemaNode(
         colander.String(),
         description="Name of the group in the user-group relationship",
@@ -1553,13 +1574,13 @@ class UserGroups_POST_ResponseBodySchema(BaseResponseBodySchema):
 
 
 class UserGroups_POST_CreatedResponseSchema(colander.MappingSchema):
-    description = "Create user-group assignation successful."
+    description = "Create user-group assignation successful. User is a member of the group."
     header = HeaderResponseSchema()
     body = UserGroups_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
 
 
 class UserGroups_POST_GroupNotFoundResponseSchema(colander.MappingSchema):
-    description = "Can't find the group to assign to."
+    description = "Cannot find the group to assign to."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
@@ -1602,13 +1623,13 @@ class UserGroup_DELETE_RequestSchema(colander.MappingSchema):
 
 
 class UserGroup_DELETE_OkResponseSchema(colander.MappingSchema):
-    description = "Delete user-group successful."
+    description = "Delete user-group successful. User is not a member of the group anymore."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class UserGroup_DELETE_NotFoundResponseSchema(colander.MappingSchema):
-    description = "Invalid user-group combination for delete."
+    description = "Could not remove user from group. Could not find any matching group membership for user."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
@@ -2253,16 +2274,101 @@ class GroupServicePermission_DELETE_ForbiddenResponseSchema(colander.MappingSche
     body = GroupServicePermission_DELETE_ResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class Signout_GET_OkResponseSchema(colander.MappingSchema):
-    description = "Sign out successful."
-    header = HeaderResponseSchema()
-    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
-
-
 class GroupServicePermission_DELETE_NotFoundResponseSchema(colander.MappingSchema):
     description = "Permission not found for corresponding group and resource."
     header = HeaderResponseSchema()
     body = GroupServicePermission_DELETE_ResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class RegisterGroup_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Could not find any discoverable group matching provided name."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class RegisterGroups_GET_ResponseBodySchema(BaseResponseBodySchema):
+    group_names = GroupNamesListSchema(description="List of discoverable group names.")
+
+
+class RegisterGroups_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get discoverable groups successful."
+    header = HeaderResponseSchema()
+    body = RegisterGroups_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class RegisterGroups_GET_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Obtain discoverable groups refused by db."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+class RegisterGroup_GET_ResponseBodySchema(BaseResponseBodySchema):
+    group = GroupBodySchema()  # not detailed because authenticated route has limited information
+
+
+class RegisterGroup_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Get discoverable group successful."
+    header = HeaderResponseSchema()
+    body = RegisterGroup_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class RegisterGroup_POST_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchemaAPI()
+    body = colander.MappingSchema(description="Nothing required.")
+    group_name = GroupNameParameter
+
+
+class RegisterGroup_POST_ResponseBodySchema(BaseResponseBodySchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the user in the user-group relationship.",
+        example="logged-user",
+    )
+    group_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the group in the user-group relationship.",
+        example="public-group",
+    )
+
+
+class RegisterGroup_POST_CreatedResponseSchema(colander.MappingSchema):
+    description = "Logged user successfully joined the discoverable group. User is now a member of the group."
+    header = HeaderResponseSchema()
+    body = RegisterGroup_POST_ResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class RegisterGroup_POST_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Group membership was not permitted for the logged user."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+class RegisterGroup_POST_ConflictResponseSchema(colander.MappingSchema):
+    description = "Logged user is already a member of the group."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
+class RegisterGroup_DELETE_RequestSchema(colander.MappingSchema):
+    header = HeaderRequestSchemaAPI()
+    body = colander.MappingSchema(description="Nothing required.")
+    group_name = GroupNameParameter
+
+
+class RegisterGroup_DELETE_OkResponseSchema(colander.MappingSchema):
+    description = "Logged user successfully removed from the group. User is not a member of the group anymore."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class RegisterGroup_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Remove logged used from discoverable group was refused by db."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+# check done using same util function
+RegisterGroup_DELETE_NotFoundResponseSchema = UserGroup_DELETE_NotFoundResponseSchema
 
 
 class Session_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -2427,6 +2533,12 @@ class Signin_POST_External_InternalServerErrorResponseSchema(colander.MappingSch
     body = Signin_POST_InternalServerErrorBodySchema(code=HTTPInternalServerError.code, description=description)
 
 
+class Signout_GET_OkResponseSchema(colander.MappingSchema):
+    description = "Sign out successful."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
 class Version_GET_ResponseBodySchema(BaseResponseBodySchema):
     version = colander.SchemaNode(
         colander.String(),
@@ -2474,12 +2586,13 @@ Resource_PUT_responses = {
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Resources_GET_responses = {
     "200": Resources_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "406": NotAcceptableResponseSchema(),
-    "500": Resource_GET_InternalServerErrorResponseSchema()
+    "500": Resource_GET_InternalServerErrorResponseSchema(),
 }
 Resources_POST_responses = {
     "201": Resources_POST_CreatedResponseSchema(),
@@ -2490,6 +2603,7 @@ Resources_POST_responses = {
     "406": NotAcceptableResponseSchema(),
     "409": Resources_POST_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Resources_DELETE_responses = {
     "200": Resource_DELETE_OkResponseSchema(),
@@ -2499,6 +2613,7 @@ Resources_DELETE_responses = {
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 ResourcePermissions_GET_responses = {
     "200": ResourcePermissions_GET_OkResponseSchema(),
@@ -2508,23 +2623,27 @@ ResourcePermissions_GET_responses = {
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 ServiceTypes_GET_responses = {
     "200": ServiceTypes_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 ServiceType_GET_responses = {
     "200": Services_GET_OkResponseSchema(),
     "400": Services_GET_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Services_GET_responses = {
     "200": Services_GET_OkResponseSchema(),
     "400": Services_GET_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Services_POST_responses = {
     "201": Services_POST_CreatedResponseSchema(),
@@ -2534,6 +2653,7 @@ Services_POST_responses = {
     "406": NotAcceptableResponseSchema(),
     "409": Services_POST_ConflictResponseSchema(),
     "422": Services_POST_UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Service_GET_responses = {
     "200": Service_GET_OkResponseSchema(),
@@ -2541,6 +2661,7 @@ Service_GET_responses = {
     "403": Service_MatchDictCheck_ForbiddenResponseSchema(),
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Service_PUT_responses = {
     "200": Service_PUT_OkResponseSchema(),
@@ -2549,6 +2670,7 @@ Service_PUT_responses = {
     "403": Service_PUT_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "409": Service_PUT_ConflictResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Service_DELETE_responses = {
     "200": Service_DELETE_OkResponseSchema(),
@@ -2556,6 +2678,7 @@ Service_DELETE_responses = {
     "403": Service_DELETE_ForbiddenResponseSchema(),
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 ServicePermissions_GET_responses = {
     "200": ServicePermissions_GET_OkResponseSchema(),
@@ -2565,6 +2688,7 @@ ServicePermissions_GET_responses = {
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 ServiceResources_GET_responses = {
     "200": ServiceResources_GET_OkResponseSchema(),
@@ -2573,6 +2697,7 @@ ServiceResources_GET_responses = {
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 ServiceResources_POST_responses = {
     "201": ServiceResources_POST_CreatedResponseSchema(),
@@ -2583,6 +2708,7 @@ ServiceResources_POST_responses = {
     "406": NotAcceptableResponseSchema(),
     "409": ServiceResources_POST_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 ServiceTypeResources_GET_responses = {
     "200": ServiceTypeResources_GET_OkResponseSchema(),
@@ -2591,6 +2717,7 @@ ServiceTypeResources_GET_responses = {
     "404": ServiceTypeResources_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 ServiceTypeResourceTypes_GET_responses = {
     "200": ServiceTypeResourceTypes_GET_OkResponseSchema(),
@@ -2599,6 +2726,7 @@ ServiceTypeResourceTypes_GET_responses = {
     "404": ServiceTypeResourceTypes_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 ServiceResource_DELETE_responses = {
     "200": ServiceResource_DELETE_OkResponseSchema(),
@@ -2608,12 +2736,14 @@ ServiceResource_DELETE_responses = {
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Users_GET_responses = {
     "200": Users_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": Users_GET_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Users_POST_responses = {
     "201": Users_POST_CreatedResponseSchema(),
@@ -2622,6 +2752,7 @@ Users_POST_responses = {
     "403": Users_POST_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "409": User_Check_ConflictResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 User_GET_responses = {
     "200": User_GET_OkResponseSchema(),
@@ -2629,6 +2760,7 @@ User_GET_responses = {
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 User_PUT_responses = {
     "200": Users_PUT_OkResponseSchema(),
@@ -2637,6 +2769,7 @@ User_PUT_responses = {
     "403": UserGroup_GET_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "409": User_Check_ConflictResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 User_DELETE_responses = {
     "200": User_DELETE_OkResponseSchema(),
@@ -2645,6 +2778,7 @@ User_DELETE_responses = {
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 UserResources_GET_responses = {
     "200": UserResources_GET_OkResponseSchema(),
@@ -2652,6 +2786,7 @@ UserResources_GET_responses = {
     "404": UserResources_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 UserGroups_GET_responses = {
     "200": UserGroups_GET_OkResponseSchema(),
@@ -2659,6 +2794,7 @@ UserGroups_GET_responses = {
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 UserGroups_POST_responses = {
     "201": UserGroups_POST_CreatedResponseSchema(),
@@ -2668,6 +2804,7 @@ UserGroups_POST_responses = {
     "406": NotAcceptableResponseSchema(),
     "409": UserGroups_POST_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 UserGroup_DELETE_responses = {
     "200": UserGroup_DELETE_OkResponseSchema(),
@@ -2676,6 +2813,7 @@ UserGroup_DELETE_responses = {
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 UserResourcePermissions_GET_responses = {
     "200": UserResourcePermissions_GET_OkResponseSchema(),
@@ -2684,6 +2822,7 @@ UserResourcePermissions_GET_responses = {
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 UserResourcePermissions_POST_responses = {
     "201": UserResourcePermissions_POST_CreatedResponseSchema(),
@@ -2693,6 +2832,7 @@ UserResourcePermissions_POST_responses = {
     "406": NotAcceptableResponseSchema(),
     "409": UserResourcePermissions_POST_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 UserResourcePermission_DELETE_responses = {
     "200": UserResourcePermissions_DELETE_OkResponseSchema(),
@@ -2701,6 +2841,7 @@ UserResourcePermission_DELETE_responses = {
     "404": UserResourcePermissions_DELETE_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 UserServices_GET_responses = {
     "200": UserServices_GET_OkResponseSchema(),
@@ -2708,6 +2849,7 @@ UserServices_GET_responses = {
     "404": User_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 UserServicePermissions_GET_responses = {
     "200": UserServicePermissions_GET_OkResponseSchema(),
@@ -2715,6 +2857,7 @@ UserServicePermissions_GET_responses = {
     "404": UserServicePermissions_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 UserServiceResources_GET_responses = {
     "200": UserServiceResources_GET_OkResponseSchema(),
@@ -2722,6 +2865,7 @@ UserServiceResources_GET_responses = {
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 UserServicePermissions_POST_responses = UserResourcePermissions_POST_responses
 UserServicePermission_DELETE_responses = UserResourcePermission_DELETE_responses
@@ -2731,6 +2875,7 @@ LoggedUser_GET_responses = {
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUser_PUT_responses = {
     "200": Users_PUT_OkResponseSchema(),
@@ -2739,6 +2884,7 @@ LoggedUser_PUT_responses = {
     "403": User_PUT_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "409": User_PUT_ConflictResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUser_DELETE_responses = {
     "200": User_DELETE_OkResponseSchema(),
@@ -2747,6 +2893,7 @@ LoggedUser_DELETE_responses = {
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserResources_GET_responses = {
     "200": UserResources_GET_OkResponseSchema(),
@@ -2754,6 +2901,7 @@ LoggedUserResources_GET_responses = {
     "404": UserResources_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserGroups_GET_responses = {
     "200": UserGroups_GET_OkResponseSchema(),
@@ -2761,6 +2909,7 @@ LoggedUserGroups_GET_responses = {
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserGroups_POST_responses = {
     "201": UserGroups_POST_CreatedResponseSchema(),
@@ -2770,6 +2919,7 @@ LoggedUserGroups_POST_responses = {
     "406": NotAcceptableResponseSchema(),
     "409": UserGroups_POST_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserGroup_DELETE_responses = {
     "200": UserGroup_DELETE_OkResponseSchema(),
@@ -2778,6 +2928,7 @@ LoggedUserGroup_DELETE_responses = {
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserResourcePermissions_GET_responses = {
     "200": UserResourcePermissions_GET_OkResponseSchema(),
@@ -2786,6 +2937,7 @@ LoggedUserResourcePermissions_GET_responses = {
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserResourcePermissions_POST_responses = {
     "201": UserResourcePermissions_POST_CreatedResponseSchema(),
@@ -2794,6 +2946,7 @@ LoggedUserResourcePermissions_POST_responses = {
     "406": NotAcceptableResponseSchema(),
     "409": UserResourcePermissions_POST_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserResourcePermission_DELETE_responses = {
     "200": UserResourcePermissions_DELETE_OkResponseSchema(),
@@ -2802,6 +2955,7 @@ LoggedUserResourcePermission_DELETE_responses = {
     "404": UserResourcePermissions_DELETE_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserServices_GET_responses = {
     "200": UserServices_GET_OkResponseSchema(),
@@ -2809,6 +2963,7 @@ LoggedUserServices_GET_responses = {
     "404": User_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserServicePermissions_GET_responses = {
     "200": UserServicePermissions_GET_OkResponseSchema(),
@@ -2816,6 +2971,7 @@ LoggedUserServicePermissions_GET_responses = {
     "404": UserServicePermissions_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserServiceResources_GET_responses = {
     "200": UserServiceResources_GET_OkResponseSchema(),
@@ -2823,6 +2979,7 @@ LoggedUserServiceResources_GET_responses = {
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserServicePermissions_POST_responses = LoggedUserResourcePermissions_POST_responses
 LoggedUserServicePermission_DELETE_responses = LoggedUserResourcePermission_DELETE_responses
@@ -2831,6 +2988,7 @@ Groups_GET_responses = {
     "401": UnauthorizedResponseSchema(),
     "403": Groups_GET_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Groups_POST_responses = {
     "201": Groups_POST_CreatedResponseSchema(),
@@ -2839,6 +2997,7 @@ Groups_POST_responses = {
     "406": NotAcceptableResponseSchema(),
     "409": Groups_POST_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Group_GET_responses = {
     "200": Group_GET_OkResponseSchema(),
@@ -2847,6 +3006,7 @@ Group_GET_responses = {
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Group_PUT_responses = {
     "200": Group_PUT_OkResponseSchema(),
@@ -2857,6 +3017,7 @@ Group_PUT_responses = {
     "406": NotAcceptableResponseSchema(),
     "409": Group_PUT_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Group_DELETE_responses = {
     "200": Group_DELETE_OkResponseSchema(),
@@ -2865,6 +3026,7 @@ Group_DELETE_responses = {
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 GroupUsers_GET_responses = {
     "200": GroupUsers_GET_OkResponseSchema(),
@@ -2873,6 +3035,7 @@ GroupUsers_GET_responses = {
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 GroupServices_GET_responses = {
     "200": GroupServices_GET_OkResponseSchema(),
@@ -2898,6 +3061,7 @@ GroupServiceResources_GET_responses = {
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 GroupResourcePermissions_POST_responses = {
     "201": GroupResourcePermissions_POST_CreatedResponseSchema(),
@@ -2907,6 +3071,7 @@ GroupResourcePermissions_POST_responses = {
     "406": NotAcceptableResponseSchema(),
     "409": GroupResourcePermissions_POST_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 GroupServicePermissions_POST_responses = GroupResourcePermissions_POST_responses
 GroupServicePermission_DELETE_responses = {
@@ -2916,6 +3081,7 @@ GroupServicePermission_DELETE_responses = {
     "404": GroupServicePermission_DELETE_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 GroupResources_GET_responses = {
     "200": GroupResources_GET_OkResponseSchema(),
@@ -2933,11 +3099,40 @@ GroupResourcePermissions_GET_responses = {
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 GroupResourcePermission_DELETE_responses = GroupServicePermission_DELETE_responses
+RegisterGroups_GET_responses = {
+    "200": RegisterGroups_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": RegisterGroups_GET_ForbiddenResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+RegisterGroup_GET_responses = {
+    "200": RegisterGroup_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "404": RegisterGroup_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+RegisterGroup_POST_responses = {
+    "201": RegisterGroup_POST_CreatedResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": RegisterGroup_POST_ForbiddenResponseSchema(),
+    "404": RegisterGroup_NotFoundResponseSchema(),
+    "409": RegisterGroup_POST_ConflictResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+RegisterGroup_DELETE_responses = {
+    "200": RegisterGroup_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": RegisterGroup_DELETE_ForbiddenResponseSchema(),
+    "404": RegisterGroup_DELETE_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
 Providers_GET_responses = {
     "200": Providers_GET_OkResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 ProviderSignin_GET_responses = {
     "302": ProviderSignin_GET_FoundResponseSchema(),
@@ -2946,7 +3141,7 @@ ProviderSignin_GET_responses = {
     "403": ProviderSignin_GET_ForbiddenResponseSchema(),
     "404": ProviderSignin_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
-    "500": InternalServerErrorResponseSchema()
+    "500": InternalServerErrorResponseSchema(),
 }
 Signin_POST_responses = {
     "200": Signin_POST_OkResponseSchema(),
@@ -2962,6 +3157,7 @@ Signin_POST_responses = {
 Signout_GET_responses = {
     "200": Signout_GET_OkResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Session_GET_responses = {
     "200": Session_GET_OkResponseSchema(),
@@ -2971,13 +3167,16 @@ Session_GET_responses = {
 Version_GET_responses = {
     "200": Version_GET_OkResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Homepage_GET_responses = {
     "200": Homepage_GET_OkResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 SwaggerAPI_GET_responses = {
     "200": SwaggerAPI_GET_OkResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 
 
@@ -2985,6 +3184,8 @@ def generate_api_schema(swagger_base_spec):
     # type: (Dict[Str, Union[Str, List[Str]]]) -> JSON
     """
     Return JSON Swagger specifications of Magpie REST API.
+
+    Uses Cornice Services and Schemas to return swagger specification.
 
     :param swagger_base_spec: dictionary that specifies the 'host' and list of HTTP 'schemes' to employ.
     """
@@ -2998,16 +3199,3 @@ def generate_api_schema(swagger_base_spec):
     for tag in json_api_spec["tags"]:
         tag["description"] = TAG_DESCRIPTIONS[tag["name"]]
     return json_api_spec
-
-
-# use Cornice Services and Schemas to return swagger specifications
-def api_schema(request):
-    # type: (Request) -> JSON
-    """
-    Return JSON Swagger specifications of Magpie REST API.
-    """
-    swagger_base_spec = {
-        "host": get_magpie_url(request.registry),
-        "schemes": [request.scheme]
-    }
-    return generate_api_schema(swagger_base_spec)

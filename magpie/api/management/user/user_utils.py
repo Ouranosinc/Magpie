@@ -127,6 +127,25 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
                          detail=s.UserResourcePermissions_POST_CreatedResponseSchema.description)
 
 
+def delete_user_group(user, group, db_session):
+    # type: (models.User, models.Group, Session) -> None
+    """
+    Deletes a user-group relationship (user membership to a group).
+
+    :returns: nothing - user-group is deleted.
+    :raises HTTPNotFound: if the combination cannot be found.
+    """
+    def del_usr_grp(usr, grp):
+        db_session.query(models.UserGroup) \
+            .filter(models.UserGroup.user_id == usr.id) \
+            .filter(models.UserGroup.group_id == grp.id) \
+            .delete()
+
+    ax.evaluate_call(lambda: del_usr_grp(user, group), fallback=lambda: db_session.rollback(),
+                     http_error=HTTPNotFound, msg_on_fail=s.UserGroup_DELETE_NotFoundResponseSchema.description,
+                     content={u"user_name": user.user_name, u"group_name": group.group_name})
+
+
 def delete_user_resource_permission_response(user, resource, permission, db_session):
     # type: (models.User, ServiceOrResourceType, Permission, Session) -> HTTPException
     """

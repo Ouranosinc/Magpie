@@ -1,4 +1,3 @@
-import unittest
 import warnings
 from abc import ABCMeta
 from copy import deepcopy
@@ -107,12 +106,30 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
                                       headers={"Accept": "application/pdf"})  # anything not supported
             utils.check_response_basic_info(resp, expected_code=406)
 
+    @runner.MAGPIE_TEST_USERS
+    def test_RegisterDiscoverableGroup_Unauthorized(self):
+        """Not logged-in user cannot update membership to group although group is discoverable."""
+        raise NotImplementedError  # TODO
+
+    @runner.MAGPIE_TEST_USERS
+    def test_UnregisterDiscoverableGroup_Unauthorized(self):
+        """Not logged-in user cannot remove membership to group although group is discoverable."""
+        raise NotImplementedError  # TODO
+
+    def test_ViewDiscoverableGroup_Unauthorized(self):
+        """Not logged-in user cannot view group although group is discoverable."""
+        raise NotImplementedError  # TODO
+
+    def test_ListDiscoverableGroup_Unauthorized(self):
+        """Not logged-in user cannot list group names although groups are discoverable."""
+        raise NotImplementedError  # TODO
+
 
 @runner.MAGPIE_TEST_API
 class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
     # pylint: disable=C0103,invalid-name
     """
-    Interface class for unittests of Magpie API. Test any operation that require at least 'Users' group AuthN/AuthZ.
+    Interface class for unittests of Magpie API. Test any operation that require at least logged user AuthN/AuthZ.
 
     Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
     """
@@ -138,7 +155,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.delete_TestUser(self, override_user_name=self.other_user_name)
         utils.TestSetup.delete_TestGroup(self)
 
-    def run_PutUsers_username_update_itself(self, user_path_variable):
+    def run_PutUsers_email_update_itself(self, user_path_variable):
         """
         Session user is allowed to update its own information via logged user path or corresponding user-name path.
 
@@ -146,65 +163,31 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             - :meth:`Interface_MagpieAPI_AdminAuth.test_PutUser_ReservedKeyword_Current`
         """
         utils.TestSetup.create_TestUser(self)
-        new_name = self.other_user_name  # should be deleted by previous tear downs
+        new_email = "some-random-email@unittest.com"
         test_headers, test_cookies = self.login_test_user()
 
         # update existing user name
-        data = {"user_name": new_name}
+        data = {"email": new_email}
         path = "/users/{usr}".format(usr=user_path_variable)
         resp = utils.test_request(self, "PUT", path, headers=test_headers, cookies=test_cookies, data=data)
         utils.check_response_basic_info(resp, 200, expected_method="PUT")
 
-        # validate change of user name (itself)
-        path = "/users/{usr}".format(usr=new_name)
+        # validate change
+        path = "/users/{usr}".format(usr=get_constant("MAGPIE_LOGGED_USER"))
         resp = utils.test_request(self, "GET", path, headers=test_headers, cookies=test_cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["user"]["user_name"], new_name)
-
-        # validate removed previous user name (need admin access because it's another users' information)
-        path = "/users/{usr}".format(usr=self.test_user_name)
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies,
-                                  expect_errors=True)
-        utils.check_response_basic_info(resp, 404, expected_method="GET")
-
-        # validate effective new user name
-        utils.check_or_try_logout_user(self)
-        headers, cookies = utils.check_or_try_login_user(self, username=new_name, password=self.test_user_name,
-                                                         use_ui_form_submit=True, version=self.version)
-        resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
-        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["authenticated"], True)
-        utils.check_val_equal(body["user"]["user_name"], new_name)
-
-        # validate ineffective previous user name
-        utils.check_or_try_logout_user(self)
-        headers, cookies = utils.check_or_try_login_user(
-            self, username=self.test_user_name, password=self.test_user_name, version=self.version,
-            use_ui_form_submit=True, expect_errors=True)
-        utils.check_val_equal(cookies, {}, msg="CookiesType should be empty from login failure.")
-        resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
-        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["authenticated"], False)
+        utils.check_val_equal(body["user"]["email"], new_email)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_PutUsers_email_ReservedKeyword_Current(self):
-        """
-        .. seealso::
-            - :meth:`Interface_MagpieAPI_AdminAuth.test_PutUser_ReservedKeyword_Current`
-        """
-        utils.warn_version(self, "user update own information ", "1.12.0", skip=True)
-        utils.TestSetup.create_TestUser(self)
-        test_headers, test_cookies = self.login_test_user()
-        new_email = "toto@new-email.lol"
-        data = {"email": new_email}
-        path = "/users/{usr}".format(usr=self.test_user_name)
-        resp = utils.test_request(self, "PUT", path, headers=self.json_headers, cookies=self.cookies, data=data)
-        utils.check_response_basic_info(resp, 200, expected_method="PUT")
+        utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
+        self.run_PutUsers_email_update_itself(get_constant("MAGPIE_LOGGED_USER"))
 
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["user"]["email"], new_email)
+    @runner.MAGPIE_TEST_USERS
+    def test_PutUsers_email_MatchingUserName_Current(self):
+        utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
+        self.run_PutUsers_email_update_itself(self.test_user_name)
 
     def run_PutUsers_password_update_itself(self, user_path_variable):
         """
@@ -243,16 +226,16 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_PutUsers_password_ReservedKeyword_Current(self):
-        utils.warn_version(self, "user update own information ", "1.12.0", skip=True)
+        utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
         self.run_PutUsers_password_update_itself(get_constant("MAGPIE_LOGGED_USER"))
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_password_MatchingUserName_Current(self):
-        utils.warn_version(self, "user update own information ", "1.12.0", skip=True)
+        utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
         self.run_PutUsers_password_update_itself(self.test_user_name)
 
     @runner.MAGPIE_TEST_USERS
-    def test_PutUsers_password_ForbiddenUpdateOthers(self):
+    def test_PutUsers_password_Forbidden_UpdateOthers(self):
         """
         Although session user is allowed to update its own information, insufficient permissions (not admin) forbids
         that user to update other user's information.
@@ -260,7 +243,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_PutUser_ReservedKeyword_Current`
         """
-        utils.warn_version(self, "user update own information ", "1.12.0", skip=True)
+        utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
         utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestUser(self, {"user_name": self.other_user_name, "password": self.other_user_name})
         test_headers, test_cookies = self.login_test_user()
@@ -293,12 +276,49 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_equal(body["user"]["user_name"], self.other_user_name)
         utils.check_or_try_logout_user(self)
 
+    @runner.MAGPIE_TEST_USERS
+    def test_PutUsers_username_Forbidden_ReservedKeyword_Current(self):
+        """Logged user is not allowed to update its user name to reserved keyword."""
+        raise NotImplementedError  # TODO
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PutUsers_username_Forbidden_AnyNonAdmin(self):
+        """Non-admin level user is not permitted to update its own user name."""
+        raise NotImplementedError  # TODO
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PutUsers_username_Forbidden_UpdateOthers(self):
+        """Logged user is not allowed to update any other user's name."""
+        raise NotImplementedError  # TODO
+
     @pytest.mark.skip(reason="Not implemented")
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     @runner.MAGPIE_TEST_RESOURCES
     def test_PostUserResourcesPermissions_Forbidden(self):
         """Logged user without administrator access is not allowed to add resource permissions for itself."""
+        raise NotImplementedError  # TODO
+
+    @runner.MAGPIE_TEST_USERS
+    def test_RegisterDiscoverableGroup(self):
+        """Non-admin logged user is allowed to update is membership to register to a discoverable group by himself."""
+        raise NotImplementedError  # TODO
+
+    @runner.MAGPIE_TEST_USERS
+    def test_UnregisterDiscoverableGroup(self):
+        """Non-admin logged user is allowed to revoke its membership to leave a discoverable group by himself."""
+        raise NotImplementedError  # TODO
+
+    def test_ViewDiscoverableGroup(self):
+        """Non-admin logged user can view discoverable group information. Critical details are not displayed."""
+        raise NotImplementedError  # TODO
+
+    def test_ListDiscoverableGroup(self):
+        """Non-admin logged user can view available discoverable group names."""
+        raise NotImplementedError  # TODO
+
+    def test_DeleteDiscoverableGroup_Forbidden(self):
+        """Non-admin logged user cannot delete a group although it is discoverable."""
         raise NotImplementedError  # TODO
 
 
@@ -943,7 +963,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_PutUser_ReservedKeyword_Current(self):
-        utils.warn_version(self, "user update own information ", "1.12.0", older=True, skip=True)
+        utils.warn_version(self, "user update own information ", "2.0.0", older=True, skip=True)
         utils.TestSetup.create_TestUser(self)
         path = "/users/{usr}".format(usr=get_constant("MAGPIE_LOGGED_USER"))
         data = {"user_name": self.test_user_name + "-new-put-over-current"}
@@ -1003,6 +1023,11 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], False)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PutUser_username(self):
+        """Even administrator level user is not allowed to update any user name to reserved keyword."""
+        raise NotImplementedError  # TODO
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_email(self):
@@ -1875,6 +1900,46 @@ class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase
         path = "/ui/services/{}/add".format(self.test_service_type)
         utils.TestSetup.check_Unauthorized(self, method="GET", path=path)
         utils.TestSetup.check_Unauthorized(self, method="POST", path=path)
+
+    @runner.MAGPIE_TEST_STATUS
+    def test_ViewUserAccount(self):
+        path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
+        utils.TestSetup.check_Unauthorized(self, method="GET", path=path)
+        utils.TestSetup.check_Unauthorized(self, method="POST", path=path)
+
+
+@runner.MAGPIE_TEST_UI
+class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+    # pylint: disable=C0103,invalid-name
+    """
+    Interface class for unittests of Magpie UI. Test any operation that require at least logged user AuthN/AuthZ.
+
+    Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
+    """
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    def test_UserAccount_ViewDetails(self):
+        """Logged user can view its own details on account page."""
+        raise NotImplementedError  # TODO
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    def test_UserAccount_ViewDiscoverableGroupsMembership(self):
+        """Logged user can view discoverable groups and which ones he has membership on."""
+        raise NotImplementedError  # TODO
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    def test_UserAccount_UpdateDetails_email(self):
+        """Logged user can update its own email on account page."""
+        raise NotImplementedError  # TODO
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    def test_UserAccount_UpdateDetails_password(self):
+        """Logged user can update its own password on account page."""
+        raise NotImplementedError  # TODO
 
 
 @runner.MAGPIE_TEST_UI

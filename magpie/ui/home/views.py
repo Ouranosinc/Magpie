@@ -1,9 +1,11 @@
 from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.view import view_config
 
-from magpie.ui.home import add_template_data
+from magpie.ui.utils import BaseViews
 
 
-@view_config(route_name="home", renderer="templates/home.mako", permission=NO_PERMISSION_REQUIRED)
-def home_view(request):
-    return add_template_data(request)
+class HomeViews(BaseViews):
+    @view_config(route_name="home", renderer="templates/home.mako", permission=NO_PERMISSION_REQUIRED)
+    @view_config(route_name="home_ui", renderer="templates/home.mako", permission=NO_PERMISSION_REQUIRED)
+    def home_view(self):
+        return self.add_template_data()

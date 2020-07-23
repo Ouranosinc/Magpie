@@ -4,12 +4,15 @@ from typing import TYPE_CHECKING
 from pyramid.httpexceptions import HTTPBadRequest, exception_response
 from pyramid.request import Request
 
-from magpie.utils import CONTENT_TYPE_JSON, get_header
+from magpie.api.requests import get_logged_user
+from magpie.utils import CONTENT_TYPE_JSON, get_header, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Str, JSON, CookiesType, HeadersType, Optional  # noqa: F401
+    from magpie.typedefs import Any, CookiesType, Dict, HeadersType, JSON, Optional, Str  # noqa: F401
     from pyramid.response import Response
+
+LOGGER = get_logger(__name__)
 
 
 def check_response(response):
@@ -54,7 +57,7 @@ def request_api(request,            # type: Request
     if isinstance(cookies, dict):
         cookies = list(cookies.items())
     if cookies and isinstance(headers, dict):
-        headers = list(cookies.items())
+        headers = list(headers.items())
         for cookie_name, cookie_value in cookies:
             headers.append(("Set-Cookie", "{}={}".format(cookie_name, cookie_value)))
     if not cookies:
@@ -77,3 +80,20 @@ def error_badrequest(func):
         except Exception as exc:
             raise HTTPBadRequest(detail=str(exc))
     return wrap
+
+
+class BaseViews(object):
+    def __init__(self, request):
+        self.request = request
+        self.magpie_url = get_magpie_url(request.registry)
+        self.logged_user = get_logged_user(request)
+
+    def add_template_data(self, data=None):
+        # type: (Optional[Dict[Str, Any]]) -> Dict[Str, Any]
+        """Adds required template data for the 'heading' mako template applied to every UI page."""
+        all_data = data or {}
+        all_data.setdefault("MAGPIE_SUB_TITLE", "Administration")
+        magpie_logged_user = get_logged_user(self.request)
+        if magpie_logged_user:
+            all_data.update({"MAGPIE_LOGGED_USER": magpie_logged_user.user_name})
+        return all_data

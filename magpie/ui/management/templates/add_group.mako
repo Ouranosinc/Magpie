@@ -13,14 +13,20 @@
     <table class="fields_table">
         <tr>
             <td>Group name:</td>
-            <td><input type="text" name="group_name" value="${form_group_name}"></td>
+            <td><label>
+                <input type="text" name="group_name" value="${form_group_name}" />
+                </label>
+            </td>
             %if conflict_group_name:
                 <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Conflict </p>
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" alt="WARNING"
+                    /> Conflict
+                    </p>
                 </td>
             %elif invalid_group_name:
                 <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" alt="WARNING"
+                    /> Invalid </p>
                 </td>
             %else:
                 <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->

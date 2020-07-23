@@ -12,20 +12,24 @@
     <table class="fields_table">
         <tr>
             <td>User name:</td>
-            <div class="input_container">
-                <td><input type="text" name="user_name" value="${form_user_name}" class="equal_width"></td>
-            </div>
+            <td><div class="input_container"><label>
+                <input type="text" name="user_name" value="${form_user_name}" class="equal_width">
+                </label></div>
+            </td>
             %if too_long_user_name:
                 <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Too long </p>
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" alt="WARNING" />
+                    Too long </p>
                 </td>
             %elif invalid_user_name:
                 <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" alt="WARNING" />
+                    Invalid </p>
                 </td>
             %elif conflict_user_name:
                 <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Conflict </p>
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" alt="WARNING" />
+                    Conflict </p>
                 </td>
             %else:
                 <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
@@ -33,16 +37,19 @@
         </tr>
         <tr>
             <td>Email:</td>
-            <div class="input_container">
-                <td><input type="text" name="email" value="${form_user_email}" class="equal_width"></td>
-            </div>
+            <td><div class="input_container"><label>
+                <input type="text" name="email" value="${form_user_email}" class="equal_width">
+                </label></div>
+            </td>
             %if invalid_user_email:
                 <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" alt="WARNING" />
+                    Invalid </p>
                 </td>
             %elif conflict_user_email:
                 <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Conflict </p>
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" alt="WARNING" />
+                    Conflict </p>
                 </td>
             %else:
                 <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
@@ -50,12 +57,15 @@
         </tr>
         <tr>
             <td>Password:</td>
-            <div class="input_container">
-                <td><input type="password" name="password" value="" class="equal_width"></td>
-            </div>
+            <td>
+                <div class="input_container"><label>
+                <input type="password" name="password" value="" class="equal_width">
+                </label></div>
+            </td>
             %if invalid_password:
                 <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </p>
+                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" alt="WARNING" />
+                    Invalid </p>
                 </td>
             %else:
                 <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
@@ -63,14 +73,17 @@
         </tr>
         <tr>
             <td>User group:</td>
-            <div class="input_container">
-                <td class="centered" colspan="2">
+            <td class="centered" colspan="2">
+                <div class="input_container">
+                <label>
                 <select name="group_name" class="equal_width">
                     %for group in user_groups:
                         <option value="${group}">${group}</option>
                     %endfor
-                </select></td>
-            </div>
+                </select>
+                </label>
+                </div>
+            </td>
         </tr>
         <tr><td class="centered" colspan="2"><input type="submit" value="Add User" name="create"></td></tr>
     </table>

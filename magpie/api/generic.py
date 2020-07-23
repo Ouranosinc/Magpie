@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from pyramid.authentication import Authenticated, IAuthenticationPolicy
+from pyramid.authentication import Authenticated
 from pyramid.exceptions import PredicateMismatch
 from pyramid.httpexceptions import (
     HTTPForbidden,
@@ -15,6 +15,7 @@ from simplejson import JSONDecodeError
 
 from magpie.api import schemas as s
 from magpie.api.exception import raise_http, verify_param
+from magpie.api.requests import get_principals
 from magpie.utils import (
     CONTENT_TYPE_ANY,
     CONTENT_TYPE_JSON,
@@ -84,14 +85,12 @@ def unauthorized_or_forbidden(request):
     .. seealso::
         http://www.restapitutorial.com/httpstatuscodes.html
     """
-    authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
     http_err = HTTPForbidden
     http_msg = s.HTTPForbiddenResponseSchema.description
-    if authn_policy:
-        principals = authn_policy.effective_principals(request)
-        if Authenticated not in principals:
-            http_err = HTTPUnauthorized
-            http_msg = s.UnauthorizedResponseSchema.description
+    principals = get_principals(request)
+    if Authenticated not in principals:
+        http_err = HTTPUnauthorized
+        http_msg = s.UnauthorizedResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
 
     return raise_http(nothrow=True, http_error=http_err, detail=content[u"detail"], content=content,

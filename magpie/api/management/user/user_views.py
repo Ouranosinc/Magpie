@@ -63,23 +63,23 @@ def update_user_view(request):
     """
     Update user information by user name.
     """
-
-    user_name = ar.get_value_matchdict_checked(request, key="user_name")
-    ax.verify_param(user_name, param_compare=get_constant("MAGPIE_LOGGED_USER"), not_equal=True,
-                    http_error=HTTPBadRequest, param_name="user_name", content={u"user_name": user_name},
-                    msg_on_fail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
-
-    user = ar.get_user_matchdict_checked(request, user_name_key="user_name")
+    user_key = "user_name"
+    user = ar.get_user_matchdict_checked_or_logged(request, user_name_key=user_key)
     new_user_name = ar.get_multiformat_post(request, "user_name", default=user.user_name)
     new_email = ar.get_multiformat_post(request, "email", default=user.email)
     new_password = ar.get_multiformat_post(request, "password", default=user.user_password)
     uu.check_user_info(new_user_name, new_email, new_password, group_name=new_user_name)
 
     update_username = user.user_name != new_user_name
+    if update_username:
+        logged_user_name = get_constant("MAGPIE_LOGGED_USER", request)
+        ax.verify_param(new_user_name, param_compare=logged_user_name, not_equal=True,
+                        http_error=HTTPBadRequest, param_name=user_key, content={user_key: logged_user_name},
+                        msg_on_fail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
     update_password = user.user_password != new_password
     update_email = user.email != new_email
     ax.verify_param(any([update_username, update_password, update_email]), is_true=True, http_error=HTTPBadRequest,
-                    content={u"user_name": user.user_name},
+                    content={user_key: user.user_name},
                     msg_on_fail=s.User_PUT_BadRequestResponseSchema.description)
 
     if user.user_name != new_user_name:
@@ -174,21 +174,11 @@ def assign_user_group_view(request):
 @view_config(route_name=s.UserGroupAPI.name, request_method="DELETE")
 def delete_user_group_view(request):
     """
-    Remove a user from a group.
+    Removes a user from a group.
     """
-    db = request.db
     user = ar.get_user_matchdict_checked_or_logged(request)
     group = ar.get_group_matchdict_checked(request)
-
-    def del_usr_grp(usr, grp):
-        db.query(models.UserGroup) \
-            .filter(models.UserGroup.user_id == usr.id) \
-            .filter(models.UserGroup.group_id == grp.id) \
-            .delete()
-
-    ax.evaluate_call(lambda: del_usr_grp(user, group), fallback=lambda: db.rollback(),
-                     http_error=HTTPNotFound, msg_on_fail=s.UserGroup_DELETE_NotFoundResponseSchema.description,
-                     content={u"user_name": user.user_name, u"group_name": group.group_name})
+    uu.delete_user_group(user, group, request.db)
     return ax.valid_http(http_success=HTTPOk, detail=s.UserGroup_DELETE_OkResponseSchema.description)
 
 

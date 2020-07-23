@@ -6,7 +6,19 @@ History
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``/ui`` route redirect to frontpage when UI is enabled.
+* Add ``/json`` route information into generated Swagger API documentation.
+* Add tag description into generated Swagger API documentation.
+* Add more usage details to start `Magpie` web application in documentation.
+* Allow logged user to update its own information.
+* Allow logged user to join *discoverable* groups.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix invalid API documentation of request body for ``POST /users/{user_name}/groups``.
+* Fix minor HTML issues in mako templates.
 
 `1.11.0 <https://github.com/Ouranosinc/Magpie/tree/1.11.0>`_ (2020-06-19)
 ------------------------------------------------------------------------------------

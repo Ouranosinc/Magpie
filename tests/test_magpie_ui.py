@@ -45,6 +45,34 @@ class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.Test
 
 @runner.MAGPIE_TEST_UI
 @runner.MAGPIE_TEST_LOCAL
+class TestCase_MagpieUI_UsersAuth_Local(ti.Interface_MagpieUI_UsersAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
+    """
+    Test any operation that require logged user AuthN/AuthZ, but lower than ``MAGPIE_ADMIN_GROUP``.
+
+    Use a local Magpie test application.
+    """
+
+    __test__ = True
+
+    @classmethod
+    def setUpClass(cls):
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+        cls.app = utils.get_test_magpie_app()
+        cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
+        cls.json_headers = utils.get_headers(cls.app, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd)
+        cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
+        cls.check_requirements()
+        cls.version = utils.TestSetup.get_Version(cls)
+        cls.test_user = get_constant("MAGPIE_TEST_USER", default_value="unittest-user_users-auth-local")
+        cls.test_group = get_constant("MAGPIE_USERS_GROUP")
+
+
+@runner.MAGPIE_TEST_UI
+@runner.MAGPIE_TEST_LOCAL
 class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittest.TestCase):
     # pylint: disable=C0103,invalid-name
     """
@@ -138,6 +166,29 @@ class TestCase_MagpieUI_NoAuth_Remote(ti.Interface_MagpieUI_NoAuth, unittest.Tes
         cls.test_group = get_constant("MAGPIE_ANONYMOUS_GROUP")
         cls.test_service_type = ServiceWPS.service_type
         cls.test_service_name = "flyingpigeon"
+
+
+@runner.MAGPIE_TEST_UI
+@runner.MAGPIE_TEST_REMOTE
+class TestCase_MagpieUI_UsersAuth_Remote(ti.Interface_MagpieUI_UsersAuth, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
+    """
+    Test any operation that require logged AuthN/AuthZ, but lower than ``MAGPIE_ADMIN_GROUP``.
+
+    Use an already running remote bird server.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
+        cls.json_headers = utils.get_headers(cls.url, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
+        cls.check_requirements()
+        cls.version = utils.TestSetup.get_Version(cls)
+        cls.test_user = get_constant("MAGPIE_TEST_USER", default_value="unittest-user_users-auth-remote")
+        cls.test_group = get_constant("MAGPIE_USERS_GROUP")
 
 
 @runner.MAGPIE_TEST_UI

@@ -6,11 +6,16 @@
     %for perm in permissions:
         <div class="perm_checkbox">
             % if perm in value['permission_names']:
+            <label>
             <input type="checkbox" value="${perm}" name="permission"
-                   onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()" checked>
+                   onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()"
+                   checked>
+            </label>
             % else:
+            <label>
             <input type="checkbox" value="${perm}" name="permission"
                    onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()">
+            </label>
             % endif
         </div>
     %endfor
@@ -20,7 +25,7 @@
         </div>
         <p class="tree_item_message">
             <img title="This resource is absent from the remote server."
-                 src="${request.static_url('magpie.ui.home:static/warning_exclamation_orange.png')}" />
+                 src="${request.static_url('magpie.ui.home:static/warning_exclamation_orange.png')}" alt="WARNING" />
         </p>
     % endif
     % if level == 0:
@@ -32,9 +37,12 @@
 
 
 <%block name="breadcrumb">
-<li><a href="${request.route_url('home')}">Home</a></li>
-<li><a href="${request.route_url('view_groups')}">Groups</a></li>
-<li><a href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=cur_svc_type)}">Group ${group_name}</a></li>
+<li><a href="${request.route_url('home')}">
+    Home</a></li>
+<li><a href="${request.route_url('view_groups')}">
+    Groups</a></li>
+<li><a href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=cur_svc_type)}">
+    Group [${group_name}]</a></li>
 </%block>
 
 <h1>Edit Group: ${group_name}</h1>
@@ -62,13 +70,17 @@
                     <p class="panel_line">
                         <span class="panel_entry">Name: </span>
                         %if edit_mode == 'edit_group_name':
+                            <label>
                             <input type="text" value="${group_name}" name="new_group_name"
                                    id="input_group_name" onkeyup="adjustWidth('input_name')">
                             <input type="submit" value="Save" name="save_group_name">
                             <input type="submit" value="Cancel" name="no_edit">
+                            </label>
                         %else:
+                            <label>
                             <span class="panel_value">${group_name}</span>
                             <input type="submit" value="Edit" name="edit_group_name">
+                            </label>
                         %endif
                     </p>
                 </div>
@@ -83,13 +95,15 @@
 <table>
 %for user in users:
 <tr>
+    <td><label>
     % if user in members:
-    <td><input type="checkbox" value="${user}" name="member"
-               onchange="document.getElementById('edit_members').submit()"checked>${user}</td>
+        <input type="checkbox" value="${user}" name="member"
+               onchange="document.getElementById('edit_members').submit()" checked>${user}
     % else:
-    <td><input type="checkbox" value="${user}" name="member"
-               onchange="document.getElementById('edit_members').submit()">${user}</td>
+        <input type="checkbox" value="${user}" name="member"
+               onchange="document.getElementById('edit_members').submit()">${user}
     % endif
+    </label></td>
 </tr>
 %endfor
 </table>
@@ -101,9 +115,11 @@
 
     %for svc_type in svc_types:
         % if cur_svc_type == svc_type:
-            <a class="current_tab" href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
+            <a class="current_tab"
+               href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % else:
-            <a class="tab" href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
+            <a class="tab"
+               href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % endif
     %endfor
 

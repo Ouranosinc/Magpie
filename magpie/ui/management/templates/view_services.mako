@@ -21,7 +21,7 @@
             %if service_push_show:
                 <div class="checkbox_align">
                     <label for="push_phoenix_checkbox_warning">
-                        <input type="checkbox" name="service_push" checked="true" id="push_phoenix_checkbox_warning"/>
+                        <input type="checkbox" name="service_push" checked id="push_phoenix_checkbox_warning"/>
                         <span>Push to Phoenix?</span>
                     </label>
                 </div>
@@ -100,8 +100,9 @@
         <input type="hidden" value="Submit">-->
     </form>
 %endif
-<button class="img_button" type="button" onclick="location.href='${request.route_url('add_service', cur_svc_type=cur_svc_type)}'">
-    <img src="${request.static_url('magpie.ui.home:static/add.png')}">
+<button class="img_button" type="button"
+        onclick="location.href='${request.route_url('add_service', cur_svc_type=cur_svc_type)}'">
+    <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="">
     Add Service
 </button>
 
@@ -130,7 +131,8 @@
                         </td>
                         <td style="white-space: nowrap">
                             <input type="submit" value="Edit" name="edit">
-                            <input type="button" value="Delete" onclick="display_DeleteAlert_${service}()" class="button delete">
+                            <input type="button" value="Delete" class="button delete"
+                                   onclick="display_DeleteAlert_${service}()" >
                         </td>
                     </tr>
                 </form>
@@ -138,6 +140,3 @@
         </table>
     </div>
 </div>
-
-
-

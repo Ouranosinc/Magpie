@@ -271,8 +271,7 @@ def get_session(request):
     Get information about current session.
     """
     def _get_session(req):
-        authn_policy = req.registry.queryUtility(IAuthenticationPolicy)
-        principals = authn_policy.effective_principals(req)
+        principals = get_principals(req)
         if Authenticated in principals:
             user = request.user
             json_resp = {u"authenticated": True, u"user": format_user(user)}

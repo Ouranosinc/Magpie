@@ -10,23 +10,23 @@ if TYPE_CHECKING:
     from magpie.models import Group
 
 
-def format_group(group, basic_info=False, db_session=None):
-    # type: (Group, bool, Optional[Session]) -> JSON
-    def fmt_grp(grp, info):
-        if info:
-            return {
-                u"group_name": str(grp.group_name),
-                u"group_id": grp.id,
-            }
-        return {
+def format_group(group, basic_info=False, public_info=False, db_session=None):
+    # type: (Group, bool, bool, Optional[Session]) -> JSON
+    def fmt_grp(grp, is_basic, is_public):
+        info = {
             u"group_name": str(grp.group_name),
-            u"description": str(grp.description),
-            u"member_count": grp.get_member_count(db_session),
             u"group_id": grp.id,
-            u"user_names": [usr.user_name for usr in grp.users]
         }
+        if is_basic:
+            return info
+        info[u"description"] = str(grp.description) if grp.description else None
+        if is_public:
+            return info
+        info[u"member_count"] = grp.get_member_count(db_session)
+        info[u"user_names"] = [usr.user_name for usr in grp.users]
+        return info
 
     return evaluate_call(
-        lambda: fmt_grp(group, basic_info), http_error=HTTPInternalServerError,
+        lambda: fmt_grp(group, basic_info, public_info), http_error=HTTPInternalServerError,
         msg_on_fail="Failed to format group.", content={u"group": repr(group)}
     )

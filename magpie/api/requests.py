@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from pyramid.authentication import IAuthenticationPolicy
+from pyramid.authentication import Authenticated, IAuthenticationPolicy
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPForbidden,
@@ -16,13 +16,15 @@ from magpie import models
 from magpie.api import schemas as s
 from magpie.api.exception import evaluate_call, verify_param
 from magpie.constants import get_constant
-from magpie.utils import CONTENT_TYPE_JSON
+from magpie.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from pyramid.request import Request
     from magpie.typedefs import Any, AnySettingsContainer, Str, Optional, ServiceOrResourceType  # noqa: F401
     from magpie.permissions import Permission  # noqa: F401
+
+LOGGER = get_logger(__name__)
 
 
 def get_request_method_content(request):
@@ -78,6 +80,25 @@ def get_value_multiformat_post_checked(request, key, default=None):
     return val
 
 
+def get_principals(request):
+    """Obtains the list of effective principals according to detected request session user."""
+    authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
+    principals = authn_policy.effective_principals(request)
+    return principals
+
+
+def get_logged_user(request):
+    # type: (Request) -> Optional[models.User]
+    try:
+        principals = get_principals(request)
+        if Authenticated in principals:
+            LOGGER.info("User '%s' is authenticated", request.user.user_name)
+            return request.user
+    except AttributeError:
+        pass
+    return None
+
+
 def get_user(request, user_name_or_token=None):
     # type: (Request, Optional[Str]) -> models.User
     """
@@ -104,8 +125,7 @@ def get_user(request, user_name_or_token=None):
                      msg_on_fail=s.User_CheckAnonymous_NotFoundResponseSchema.description)
         return anonymous
 
-    authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
-    principals = authn_policy.effective_principals(request)
+    principals = get_principals(request)
     admin_group_name = get_constant("MAGPIE_ADMIN_GROUP", settings_container=request)
     admin_group = GroupService.by_group_name(admin_group_name, db_session=request.db)
     admin_principal = "group:{}".format(admin_group.id)

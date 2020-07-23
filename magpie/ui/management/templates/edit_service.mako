@@ -3,29 +3,36 @@
 
 <%def name="render_item(key, value, level)">
     % if level > 0:
-        <div class="tree_button"><input type="submit" value="Delete" name="delete_child" class="button delete"></div>
+        <div class="tree_button"><input type="submit" value="Delete" name="delete_child"
+                                        class="button delete"></div>
     % else:
-        <div class="tree_button"><input type="submit" value="Delete" name="delete_child" class="button disabled" disabled></div>
+        <div class="tree_button"><input type="submit" value="Delete" name="delete_child"
+                                        class="button disabled" disabled></div>
     % endif
     % if "id" in value.keys():
         % if int(value["id"]) in resources_id_type.keys():
             % if not resources_id_type[int(value["id"])] in resources_no_child:
                 <div class="tree_button"><input type="submit" value="Add child" name="add_child"></div>
             % else:
-                <div class="tree_button"><input type="submit" value="Add child" name="add_child" class="button disabled" disabled></div>
+                <div class="tree_button"><input type="submit" value="Add child" name="add_child"
+                                                class="button disabled" disabled></div>
             % endif
         % elif not service_no_child:
             <div class="tree_button"><input type="submit" value="Add child" name="add_child"></div>
         % else:
-            <div class="tree_button"><input type="submit" value="Add child" name="add_child" class="button disabled" disabled></div>
+            <div class="tree_button"><input type="submit" value="Add child" name="add_child"
+                                            class="button disabled" disabled></div>
         % endif
     % endif
 </%def>
 
 <%block name="breadcrumb">
-<li><a href="${request.route_url('home')}">Home</a></li>
-<li><a href="${request.route_url('view_services', cur_svc_type=cur_svc_type)}">Services</a></li>
-<li><a href="${request.route_url('edit_service', service_name=service_name, service_url=service_url, cur_svc_type=cur_svc_type)}">${service_name}</a></li>
+<li><a href="${request.route_url('home')}">
+    Home</a></li>
+<li><a href="${request.route_url('view_services', cur_svc_type=cur_svc_type)}">
+    Services</a></li>
+<li><a href="${request.route_url('edit_service', service_name=service_name, service_url=service_url, cur_svc_type=cur_svc_type)}">
+    Service [${service_name}]</a></li>
 </%block>
 
 <div class="alert danger" id="EditService_DeleteAlert">
@@ -49,16 +56,16 @@
         %endif
         <div>
             <input type="submit" class="button delete" name="delete" value="Delete"
-                   onclick="this.parentElement.style.display="none";">
-            <input type="submit" class="button cancel"name="cancel" value="Cancel"
-                   onclick="this.parentElement.style.display="none";">
+                   onclick="this.parentElement.style.display='none';">
+            <input type="submit" class="button cancel" name="cancel" value="Cancel"
+                   onclick="this.parentElement.style.display='none';">
         </div>
     </form>
 </div>
 
 <script>
     function adjustWidth(id) {
-        var x = document.getElementById(id);
+        let x = document.getElementById(id);
         if (x.value.length > 20)
             x.size = x.value.length;
         else
@@ -97,13 +104,17 @@
                     <p class="panel_line">
                         <span class="panel_entry">Name: </span>
                         %if edit_mode == 'edit_name':
+                            <label>
                             <input type="text" value="${service_name}" name="new_svc_name"
                                    id="input_name" onkeyup="adjustWidth('input_name')">
                             <input type="submit" value="Save" name="save_name">
                             <input type="submit" value="Cancel" name="no_edit">
+                            </label>
                         %else:
+                            <label>
                             <span class="panel_value">${service_name}</span>
                             <input type="submit" value="Edit" name="edit_name">
+                            </label>
                         %endif
                     </p>
                 </form>
@@ -111,13 +122,17 @@
                     <p class="panel_line">
                         <span class="panel_entry">Protected URL: </span>
                         %if edit_mode == "edit_url":
+                            <label>
                             <input type="text" value="${service_url}" name="new_svc_url"
                                    id="input_url" onkeyup="adjustWidth('input_url')">
                             <input type="submit" value="Save" name="save_url">
                             <input type="submit" value="Cancel" name="no_edit">
+                            </label>
                         %else:
+                            <label>
                             <a href="${service_url}" class="panel_value">${service_url}</a>
                             <input type="submit" value="Edit" name="edit_url">
+                            </label>
                         %endif
                     </p>
                 </form>

@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
-<html>
+<html lang="en">
 <head>
-    <title>Magpie Administration</title>
+    <title>Magpie</title>
     <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans" />
     <link rel="shortcut icon" type="image/x-icon" href="${request.static_url('magpie.ui.home:static/settings.png')}" />
@@ -17,16 +17,24 @@
     <div>
         <a href="${request.route_url('home')}">
             <div id="image_container">
-                <div id="image_background"><img src="${request.static_url('magpie.ui.home:static/settings_white.png')}"></div>
-                <div id="image_overlay"><img src="${request.static_url('magpie.ui.home:static/magpie.png')}"></div>
+                <div id="image_background">
+                    <img src="${request.static_url('magpie.ui.home:static/settings_white.png')}" alt="">
+                </div>
+                <div id="image_overlay">
+                    <img src="${request.static_url('magpie.ui.home:static/magpie.png')}" alt="">
+                </div>
             </div>
-            <div id="title_header">Magpie Administration</div>
+            <div id="title_header">Magpie ${MAGPIE_SUB_TITLE}</div>
         </a>
         <div style="float: right;">
             %if MAGPIE_LOGGED_USER:
-            <button class="img_button" type="button" onclick="location.href='${request.route_url('logout')}'">Log Out</button>
+            <button class="img_button" type="button"
+                    onclick="location.href='${request.route_url('edit_current_user')}'">Account</button>
+            <button class="img_button" type="button"
+                    onclick="location.href='${request.route_url('logout')}'">Log Out</button>
             %else:
-            <button class="img_button" type="button" onclick="location.href='${request.route_url('login')}'">Log In</button>
+            <button class="img_button" type="button"
+                    onclick="location.href='${request.route_url('login')}'">Log In</button>
             %endif
         </div>
     </div>
@@ -36,7 +44,7 @@
             <%block name="breadcrumb"/>
         </ul>
         %if MAGPIE_LOGGED_USER:
-        <div style="float: right;">Logged in: ${MAGPIE_LOGGED_USER}</div>
+        <div style="float: right;">Logged in: <a href="${request.route_url('edit_current_user')}">${MAGPIE_LOGGED_USER}</a></div>
         %endif
     </div>
 </div>
