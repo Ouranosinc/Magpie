@@ -1,7 +1,7 @@
 import json
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPBadRequest, exception_response
+from pyramid.httpexceptions import HTTPBadRequest, HTTPUnauthorized, HTTPForbidden, exception_response
 from pyramid.request import Request
 
 from magpie.api.requests import get_logged_user

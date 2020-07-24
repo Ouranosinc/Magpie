@@ -12,8 +12,11 @@ Features / Changes
 * Add ``/json`` route information into generated Swagger API documentation.
 * Add tag description into generated Swagger API documentation.
 * Add more usage details to start `Magpie` web application in documentation.
+* Add database migration for new ``discoverable`` column of groups.
 * Allow logged user to update its own information.
 * Allow logged user to join *discoverable* groups.
+* Change some UI CSS for certain pages to improve table readability.
+* Add UI page to render unauthorized and forbidden views due to insufficient permissions.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

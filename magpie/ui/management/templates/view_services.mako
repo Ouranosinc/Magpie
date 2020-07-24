@@ -117,7 +117,7 @@
     %endfor
 
     <div class="current_tab_panel">
-        <table class="simple_list_table">
+        <table class="simple_list">
 
             <tr>
                 <th>Services</th>

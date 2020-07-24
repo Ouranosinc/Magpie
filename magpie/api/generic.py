@@ -11,11 +11,13 @@ from pyramid.httpexceptions import (
     HTTPServerError,
     HTTPUnauthorized
 )
+from pyramid.request import Request
 from simplejson import JSONDecodeError
 
 from magpie.api import schemas as s
 from magpie.api.exception import raise_http, verify_param
 from magpie.api.requests import get_principals
+from magpie.ui.utils import request_api
 from magpie.utils import (
     CONTENT_TYPE_ANY,
     CONTENT_TYPE_JSON,
@@ -30,7 +32,6 @@ if TYPE_CHECKING:
     from typing import Callable  # noqa: F401
     from magpie.typedefs import Str, JSON  # noqa: F401
     from pyramid.registry import Registry  # noqa: F401
-    from pyramid.request import Request  # noqa: F401
     from pyramid.response import Response  # noqa: F401
     from pyramid.httpexceptions import HTTPException  # noqa: F401
 LOGGER = get_logger(__name__)
@@ -77,13 +78,16 @@ def unauthorized_or_forbidden(request):
     """
     Overrides the default ``HTTPForbidden`` [403] by appropriate ``HTTPUnauthorized`` [401] when applicable.
 
-    Unauthorized response is for restricted user access according to credentials and/or authorization headers.
-    Forbidden response is for operation refused by the underlying process operations.
+    Unauthorized response is for restricted user access according to missing credentials and/or authorization headers.
+    Forbidden response is for operation refused by the underlying process operations or due to insufficient permissions.
 
     Without this fix, both situations return [403] regardless.
 
     .. seealso::
-        http://www.restapitutorial.com/httpstatuscodes.html
+        - http://www.restapitutorial.com/httpstatuscodes.html
+
+    In case the request references to `Magpie UI` route, it is redirected to
+    :meth:`magpie.ui.home.HomeViews.error_view` for it to handle and display the error accordingly.
     """
     http_err = HTTPForbidden
     http_msg = s.HTTPForbiddenResponseSchema.description
@@ -92,9 +96,15 @@ def unauthorized_or_forbidden(request):
         http_err = HTTPUnauthorized
         http_msg = s.UnauthorizedResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
-
-    return raise_http(nothrow=True, http_error=http_err, detail=content[u"detail"], content=content,
-                      content_type=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
+    accept = get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
+    if content["route_name"].startswith("/ui") and accept != CONTENT_TYPE_JSON:
+        path = request.route_path("error").replace("/magpie", "")
+        data = {"error_request": content, "error_code": http_err.code}
+        return request_api(request, path, "POST", data)
+        subreq = Request.blank(location, base_url=request.application_url, POST=data,
+                               headers={"Content-Type": CONTENT_TYPE_JSON})
+        return request.invoke_subrequest(subreq, use_tweens=True)
+    return raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content, content_type=accept)
 
 
 def validate_accept_header_tween(handler, registry):    # noqa: F811

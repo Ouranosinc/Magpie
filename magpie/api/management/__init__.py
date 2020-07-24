@@ -4,9 +4,10 @@ LOGGER = get_logger(__name__)
 
 
 def includeme(config):
-    LOGGER.info("Adding management routes...")
+    LOGGER.info("Adding API management routes...")
     config.include("magpie.api.management.group")
     config.include("magpie.api.management.user")
     config.include("magpie.api.management.service")
     config.include("magpie.api.management.resource")
+    config.include("magpie.api.management.register")
     config.scan()

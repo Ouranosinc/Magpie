@@ -21,9 +21,9 @@ if TYPE_CHECKING:
     from pyramid.request import Request
 
 
-@s.RegisterGroupAPI.get(tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
-                        response_schemas=s.RegisterGroups_GET_responses)
-@view_config(route_name=s.RegisterGroupsAPI.name, request_method="GET", permissions=Authenticated)
+@s.RegisterGroupsAPI.get(tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
+                         response_schemas=s.RegisterGroups_GET_responses)
+@view_config(route_name=s.RegisterGroupsAPI.name, request_method="GET", permission=Authenticated)
 def get_discoverable_groups_view(request):
     # type: (Request) -> HTTPException
     """
@@ -32,14 +32,14 @@ def get_discoverable_groups_view(request):
     public_groups = ru.get_discoverable_groups(request.db)
     public_group_names = ax.evaluate_call(lambda: [grp.group_name for grp in public_groups],
                                           http_error=HTTPInternalServerError,
-                                          msg_on_fail=s.HTTPInternalServerError.description)
+                                          msg_on_fail=s.InternalServerErrorResponseSchema.description)
     return ax.valid_http(http_success=HTTPOk, content={u"group_names": public_group_names},
                          detail=s.RegisterGroups_GET_OkResponseSchema.description)
 
 
 @s.RegisterGroupAPI.get(tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
                         response_schemas=s.RegisterGroup_GET_responses)
-@view_config(route_name=s.RegisterGroupAPI.name, request_method="GET", permissions=Authenticated)
+@view_config(route_name=s.RegisterGroupAPI.name, request_method="GET", permission=Authenticated)
 def get_discoverable_group_info_view(request):
     """
     Obtain the information of a discoverable group.
@@ -51,9 +51,9 @@ def get_discoverable_group_info_view(request):
                          detail=s.RegisterGroup_GET_OkResponseSchema.description)
 
 
-@s.RegisterGroupAPI.post(schema=s.RegisterGroup_POST_RequestSchema, tags=[s.GroupsTag, s.LoggedUserAPI, s.RegisterTag],
+@s.RegisterGroupAPI.post(schema=s.RegisterGroup_POST_RequestSchema, tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
                          response_schemas=s.RegisterGroup_POST_responses)
-@view_config(route_name=s.RegisterGroupAPI.name, request_method="POST", permissions=Authenticated)
+@view_config(route_name=s.RegisterGroupAPI.name, request_method="POST", permission=Authenticated)
 def join_discoverable_group_view(request):
     """
     Assigns membership of the logged user to a publicly discoverable group.
@@ -74,9 +74,9 @@ def join_discoverable_group_view(request):
 
 
 @s.RegisterGroupAPI.delete(schema=s.RegisterGroup_DELETE_RequestSchema,
-                           tags=[s.GroupsTag, s.LoggedUserAPI, s.RegisterTag],
+                           tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
                            response_schemas=s.RegisterGroup_DELETE_responses)
-@view_config(route_name=s.RegisterGroupAPI.name, request_method="DELETE", permissions=Authenticated)
+@view_config(route_name=s.RegisterGroupAPI.name, request_method="DELETE", permission=Authenticated)
 def leave_discoverable_group_view(request):
     """
     Removes membership of the logged user from a previously joined discoverable group.

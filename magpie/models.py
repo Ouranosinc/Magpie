@@ -2,8 +2,7 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from pyramid.httpexceptions import HTTPInternalServerError
-from pyramid.security import ALL_PERMISSIONS
-from pyramid.security import Allow as ALLOW  # noqa
+from pyramid.security import ALL_PERMISSIONS, Allow, Authenticated
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship
 from ziggurat_foundations import ziggurat_model_init
@@ -41,6 +40,11 @@ class Group(GroupMixin, Base):
     def get_member_count(self, db_session=None):
         return BaseService.all(UserGroup, db_session=db_session).filter(UserGroup.group_id == self.id).count()
 
+    @declared_attr
+    def discoverable(self):
+        """Indicates if the group is discoverable for users to self-register to it."""
+        return sa.Column(sa.Boolean(), default=False)
+
 
 class GroupPermission(GroupPermissionMixin, Base):
     pass
@@ -75,10 +79,10 @@ class Resource(ResourceMixin, Base):
         acl = []
 
         if self.owner_user_id:
-            acl.extend([(ALLOW, self.owner_user_id, ALL_PERMISSIONS,), ])
+            acl.extend([(Allow, self.owner_user_id, ALL_PERMISSIONS,), ])
 
         if self.owner_group_id:
-            acl.extend([(ALLOW, "group:%s" % self.owner_group_id, ALL_PERMISSIONS,), ])
+            acl.extend([(Allow, "group:%s" % self.owner_group_id, ALL_PERMISSIONS,), ])
         return acl
 
 
@@ -100,11 +104,26 @@ class ExternalIdentity(ExternalIdentityMixin, Base):
 
 
 class RootFactory(object):
+    """Used to build base Access Control List (ACL) of the request user.
+
+    All API and UI routes will employ this set of effective principals to determine if the user is authorized to access
+    the pyramid view according to the ``permission`` value it was configured with.
+
+    .. note::
+        Keep in mind that `Magpie` is configured with default permission as ``MAGPIE_ADMIN_PERMISSION``.
+        Views that require more permissive authorization must be overridden with ``permission`` argument.
+
+    .. seealso::
+        - :func:`magpie.magpie.includeme`
+    """
     def __init__(self, request):
         self.__acl__ = []
-        if request.user:
-            permissions = UserService.permissions(request.user, request.db)
-            self.__acl__.extend(permission_to_pyramid_acls(permissions))
+        user = request.user
+        if user:
+            permissions = UserService.permissions(user, request.db)
+            user_acl = permission_to_pyramid_acls(permissions)
+            auth_acl = [(Allow, user.id, Authenticated,)]
+            self.__acl__.extend(user_acl + auth_acl)
 
 
 class Service(Resource):

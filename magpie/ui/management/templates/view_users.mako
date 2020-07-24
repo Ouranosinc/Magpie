@@ -13,15 +13,21 @@
 </button>
 
 
-<table class="simple_list_table">
+<table class="simple_list">
+<thead>
 <tr>
     <th>User</th>
     <th>Action</th>
 </tr>
-
-%for user in users:
+</thead>
+<tbody>
+%for i, user in enumerate(users):
 <form action="${request.path}" method="post">
-<tr>
+%if i % 2:
+<tr class="list_row_even">
+%else:
+<tr class="list_row_odd">
+%endif
     <td><input type="hidden" value=${user} name="user_name">${user}</td>
     <td style="white-space: nowrap">
         <input type="submit" value="Edit" name="edit">
@@ -30,4 +36,5 @@
 </tr>
 </form>
 %endfor
+</tbody>
 </table>

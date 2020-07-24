@@ -13,15 +13,22 @@
     Add Group
 </button>
 
-<table class="simple_list_table">
+<table class="simple_list">
+<thead>
 <tr>
     <th>Group</th>
     <th>Members count</th>
     <th>Action</th>
 </tr>
-%for group in group_names:
+</thead>
+<tbody>
+%for i, group in enumerate(group_names):
 <form action="${request.path}" method="post">
-<tr>
+%if i % 2:
+<tr class="list_row_even">
+%else:
+<tr class="list_row_odd">
+%endif
     <td><input type="hidden" value=${group} name="group_name">${group}</td>
     <td>${group_names[group]['members']}</td>
     <td style="white-space: nowrap">
@@ -31,4 +38,5 @@
 </tr>
 </form>
 %endfor
+</tbody>
 </table>

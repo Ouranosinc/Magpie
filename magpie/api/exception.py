@@ -41,7 +41,7 @@ def verify_param(  # noqa: E126
                  # --- output options on failure ---
                  param_name=None,                   # type: Optional[Str]
                  with_param=True,                   # type: bool
-                 http_error=HTTPBadRequest,         # type: HTTPError
+                 http_error=HTTPBadRequest,         # type: Type[HTTPError]
                  http_kwargs=None,                  # type: Optional[ParamsType]
                  msg_on_fail="",                    # type: Str
                  content=None,                      # type: Optional[JSON]
@@ -173,7 +173,7 @@ def verify_param(  # noqa: E126
 
 def evaluate_call(call,                                 # type: Callable[[], Any]
                   fallback=None,                        # type: Optional[Callable[[], None]]
-                  http_error=HTTPInternalServerError,   # type: HTTPError
+                  http_error=HTTPInternalServerError,   # type: Type[HTTPError]
                   http_kwargs=None,                     # type: Optional[ParamsType]
                   msg_on_fail="",                       # type: Str
                   content=None,                         # type: Optional[JSON]
@@ -244,7 +244,7 @@ def evaluate_call(call,                                 # type: Callable[[], Any
                content_type=content_type)
 
 
-def valid_http(http_success=HTTPOk,             # type: Optional[HTTPSuccessful]
+def valid_http(http_success=HTTPOk,             # type: Optional[Type[HTTPSuccessful]]
                http_kwargs=None,                # type: Optional[ParamsType]
                detail="",                       # type: Optional[Str]
                content=None,                    # type: Optional[JSON]
@@ -274,7 +274,7 @@ def valid_http(http_success=HTTPOk,             # type: Optional[HTTPSuccessful]
     return resp
 
 
-def raise_http(http_error=HTTPInternalServerError,  # type: HTTPError
+def raise_http(http_error=HTTPInternalServerError,  # type: Type[HTTPError]
                http_kwargs=None,                    # type: Optional[ParamsType]
                detail="",                           # type: Str
                content=None,                        # type: Optional[JSON]
@@ -397,7 +397,7 @@ def format_content_json_str(http_code, detail, content, content_type):
 
 
 def generate_response_http_format(http_class, http_kwargs, json_content, output_type=CONTENT_TYPE_PLAIN):
-    # type: (Union[HTTPException, PyramidResponse], ParamsType, JSON, Optional[Str]) -> PyramidResponse
+    # type: (Union[Type[HTTPException], Type[PyramidResponse]], ParamsType, JSON, Optional[Str]) -> PyramidResponse
     """
     Formats the HTTP response output according to desired ``output_type`` using provided HTTP code and content.
 
