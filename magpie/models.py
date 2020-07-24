@@ -114,7 +114,7 @@ class RootFactory(object):
         Views that require more permissive authorization must be overridden with ``permission`` argument.
 
     .. seealso::
-        - :func:`magpie.magpie.includeme`
+        - :func:`magpie.includeme`
     """
     def __init__(self, request):
         self.__acl__ = []
