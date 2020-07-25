@@ -12,6 +12,7 @@ from alembic import op
 from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm.session import sessionmaker
+from ziggurat_foundations.models.services.user import UserService
 
 from magpie import models  # noqa: F401
 
@@ -131,7 +132,7 @@ def downgrade_migrate(old_group, old_user, new_group, old_name, db_session):
         email = "{}@mail.com".format(old_name)
         old_user = models.User(user_name=old_name, email=email)  # noqa
         db_session.add(old_user)
-        old_user = models.User.by_user_name(old_name, db_session)
+        old_user = UserService.by_user_name(old_name, db_session)
         usr_grp = models.UserGroup(group_id=old_group.id, user_id=old_user.id)  # noqa
         db_session.add(usr_grp)
 

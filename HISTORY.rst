@@ -17,6 +17,9 @@ Features / Changes
 * Allow logged user to join *discoverable* groups.
 * Change some UI CSS for certain pages to improve table readability.
 * Add UI page to render unauthorized and forbidden views due to insufficient permissions.
+* Add more validation and inputs to update group information.
+* Allow combined configuration files (providers, permissions, users, groups) with inter-references between them
+  specified with ``MAGPIE_CONFIG_PATH`` environment variable or ``magpie.config_path`` setting (example in ``configs``).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

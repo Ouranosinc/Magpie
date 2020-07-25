@@ -358,3 +358,15 @@ class TestRegister(unittest.TestCase):
         perms = register._get_all_configs(cfg, "permissions")  # pylint: disable=W0212
         assert isinstance(perms, list) and len(perms) == 1 and isinstance(perms[0], list) and len(perms[0]) == 2
         assert perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2"
+
+
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTER
+def test_register_make_config_registry():
+    assert register._make_config_registry(None, "whatever") == {}
+    assert register._make_config_registry([], "whatever") == {}
+    assert register._make_config_registry([{}], "whatever") == {}
+    assert register._make_config_registry([None], "whatever") == {}  # noqa
+    config = [{"key": "val1", "name": "name1"}, {"key": "val2"}]
+    mapped = {"val1": {"key": "val1", "name": "name1"}, "val2": {"key": "val2"}}
+    assert register._make_config_registry(config, "key") == mapped

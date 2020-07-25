@@ -22,6 +22,7 @@ def format_group(group, basic_info=False, public_info=False, db_session=None):
         info[u"description"] = str(grp.description) if grp.description else None
         if is_public:
             return info
+        info[u"discoverable"] = grp.discoverable
         info[u"member_count"] = grp.get_member_count(db_session)
         info[u"user_names"] = [usr.user_name for usr in grp.users]
         return info

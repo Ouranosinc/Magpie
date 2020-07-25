@@ -27,26 +27,6 @@ is used by default in each tagged Docker image. If you want to provide different
 overridden in the Docker image using a volume mount parameter, or by specifying an alternative path through the
 environment variable ``MAGPIE_INI_FILE_PATH``.
 
-File: providers.cfg
-~~~~~~~~~~~~~~~~~~~
-
-This configuration file allows automatically registering service definitions in `Magpie` at startup. When the
-application starts, it will look for corresponding services and add them to the database as required. It will also
-look for mismatches between the service name and URL with the corresponding entry in the database to update it to
-the desired URL. See ``MAGPIE_PROVIDERS_CONFIG_PATH`` below to setup alternate references to this type of configuration.
-Please refer to the heading of sample file `providers.cfg`_ for specific format and parameter details.
-
-File: permissions.cfg
-~~~~~~~~~~~~~~~~~~~~~~
-
-This configuration file allows automatically registering or cleaning permission definitions in `Magpie` at startup.
-Each specified permission update operation is applied for the corresponding user or group onto the specific service
-or resource. This file is processed after `providers.cfg`_ in order to allow permissions to be applied on freshly
-registered services. Furthermore, sub-resources are automatically created if they can be resolved with provided
-parameters of the corresponding permission entry. See ``MAGPIE_PERMISSIONS_CONFIG_PATH`` below to setup alternate
-references to this type of configuration. Please refer to the heading of sample file `permissions.cfg`_ for specific
-format details as well as specific behaviour of each parameter according to encountered use cases.
-
 File: magpie.env
 ~~~~~~~~~~~~~~~~~~~
 
@@ -75,6 +55,81 @@ File `postgres.env.example`_ and auto-resolution of missing ``postgres.env`` is 
 case.
 
 .. _postgres.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/postgres.env.example
+
+File: providers.cfg
+~~~~~~~~~~~~~~~~~~~
+
+This configuration file allows automatically registering service definitions in `Magpie` at startup. When the
+application starts, it will look for corresponding services and add them to the database as required. It will also
+look for mismatches between the service name and URL with the corresponding entry in the database to update it to
+the desired URL. See ``MAGPIE_PROVIDERS_CONFIG_PATH`` below to setup alternate references to this type of configuration.
+Please refer to the heading of sample file `providers.cfg`_ for specific format and parameter details.
+
+File: permissions.cfg
+~~~~~~~~~~~~~~~~~~~~~~
+
+This configuration file allows automatically registering or cleaning permission definitions in `Magpie` at startup.
+Each specified permission update operation is applied for the corresponding user or group onto the specific service
+or resource. This file is processed after `providers.cfg`_ in order to allow permissions to be applied on freshly
+registered services. Furthermore, sub-resources are automatically created if they can be resolved with provided
+parameters of the corresponding permission entry. See ``MAGPIE_PERMISSIONS_CONFIG_PATH`` below to setup alternate
+references to this type of configuration. Please refer to the heading of sample file `permissions.cfg`_ for specific
+format details as well as specific behaviour of each parameter according to encountered use cases.
+
+Combined Configuration File
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Since contents of all different configurations files (`providers.cfg`_, `permissions.cfg`_) reside under distinct
+top-level objects (of same name), it is actually possible to use an unique file to define everything. For example,
+one could define a combined configuration as follows.
+
+.. code-block:: YAML
+
+    # inside 'config.yml'
+
+    providers:
+      some-service:
+        url: http://${HOSTNAME}:8000
+        title: Some Service
+        public: true
+        c4i: false
+        type: api
+
+    groups:
+      - name: my-group
+        description: My Custom Group
+        discoverable: false
+
+    users:
+      - username: my-user
+        group: my-group  # will reference above group
+
+    permissions:
+      - service: api
+        resource: /resource/user-resource  # will create both resources respecting children relationship
+        permission: read
+        user: my-user    # will reference above user
+        action: create
+      - service: api
+        resource: /groups
+        permission: read
+        group: my-group  # will reference above group
+        action: create
+
+
+For backward compatibility reasons, `Magpie` will first look for separate files to load each section individually.
+To enforce using a combined file as above, either provide ``MAGPIE_CONFIG_PATH = <path>/config.yml`` or ensure that each
+specific environment variable ``MAGPIE_PROVIDERS_CONFIG_PATH`` and ``MAGPIE_PERMISSIONS_CONFIG_PATH`` point to the same
+actual file. For all of these variables, ``magpie.[variable_name]`` formatted settings are also supported through
+definitions within ``magpie.ini``.
+
+When loading configurations from a combined file, the order of resolution of each section is the same as when loading
+definitions from multiple files, meaning that ``providers`` are first registered, followed by individual
+``permissions``, with the dynamic creation of any missing ``user`` or ``group`` during this process. If an explicit
+``user`` or ``group`` definition can be found under the relevant sections, additional parameters are employed for their
+creation. Otherwise defaults are assumed and only the specified user or group name are employed. Please refer to files
+`providers.cfg`_ and `permissions.cfg`_ for further details about specific formatting and behaviour of each available
+field.
 
 Settings and Constants
 ----------------------
@@ -121,6 +176,14 @@ These settings can be used to specify where to find other settings through custo
     correctly handled according to configuration loading methodology.
   | Please refer to `permissions.cfg`_ for specific format details and loading methodology according to arguments.
   | (default: ``${MAGPIE_CONFIG_DIR}/permissions.cfg``)
+
+- | ``MAGPIE_CONFIG_PATH``
+  | Path where to find a combined YAML configuration file which can include ``providers``, ``permissions``, ``users``
+    and ``groups`` sections to sequentially process registration or removal of items at `Magpie` startup.
+  | **Note**:
+  | When provided, all other combinations of ``MAGPIE_CONFIG_DIR``, ``MAGPIE_PERMISSIONS_CONFIG_PATH`` and
+    ``MAGPIE_PROVIDERS_CONFIG_PATH`` are effectively ignored in favour of definitions in this file.
+    See `Combined Configuration File`_ for further details and example.
 
 - | ``MAGPIE_INI_FILE_PATH``
   | Specifies where to find the initialization file to run `Magpie` application.

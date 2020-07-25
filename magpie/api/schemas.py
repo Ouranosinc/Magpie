@@ -1941,6 +1941,10 @@ class Groups_GET_ForbiddenResponseSchema(colander.MappingSchema):
 
 class Groups_POST_RequestBodySchema(colander.MappingSchema):
     group_name = colander.SchemaNode(colander.String(), description="Name of the group to create.")
+    description = colander.SchemaNode(colander.String(), default="",
+                                      description="Description to apply to the created group.")
+    discoverable = colander.SchemaNode(colander.Boolean(), default=False,
+                                       description="Discoverability status of the created group.")
 
 
 class Groups_POST_RequestSchema(colander.MappingSchema):
@@ -1993,7 +1997,12 @@ class Group_GET_NotFoundResponseSchema(colander.MappingSchema):
 
 
 class Group_PUT_RequestBodySchema(colander.MappingSchema):
-    group_name = colander.SchemaNode(colander.String(), description="New name to apply to the group.")
+    group_name = colander.SchemaNode(colander.String(), missing=colander.drop,
+                                     description="New name to apply to the group.")
+    description = colander.SchemaNode(colander.String(), missing=colander.drop,
+                                      description="New description to apply to the group.")
+    discoverable = colander.SchemaNode(colander.Boolean(), missing=colander.drop,
+                                       description="New discoverable status to apply to the group.")
 
 
 class Group_PUT_RequestSchema(colander.MappingSchema):
@@ -2008,6 +2017,12 @@ class Group_PUT_OkResponseSchema(colander.MappingSchema):
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
+class Group_PUT_None_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Missing new group parameters to update."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
 class Group_PUT_Name_BadRequestResponseSchema(colander.MappingSchema):
     description = "Invalid 'group_name' value specified."
     header = HeaderResponseSchema()
@@ -2017,12 +2032,6 @@ class Group_PUT_Name_BadRequestResponseSchema(colander.MappingSchema):
 class Group_PUT_Size_BadRequestResponseSchema(colander.MappingSchema):
     description = "Invalid 'group_name' length specified (>{length} characters)." \
         .format(length=get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))
-    header = HeaderResponseSchema()
-    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
-
-
-class Group_PUT_Same_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Invalid 'group_name' must be different than current name."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 

@@ -70,14 +70,14 @@ def update_user_view(request):
     new_password = ar.get_multiformat_post(request, "password", default=user.user_password)
     uu.check_user_info(new_user_name, new_email, new_password, group_name=new_user_name)
 
-    update_username = user.user_name != new_user_name
+    update_username = user.user_name != new_user_name and new_user_name is not None
     if update_username:
         logged_user_name = get_constant("MAGPIE_LOGGED_USER", request)
         ax.verify_param(new_user_name, param_compare=logged_user_name, not_equal=True,
                         http_error=HTTPBadRequest, param_name=user_key, content={user_key: logged_user_name},
                         msg_on_fail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
-    update_password = user.user_password != new_password
-    update_email = user.email != new_email
+    update_password = user.user_password != new_password and new_password is not None
+    update_email = user.email != new_email and new_email is not None
     ax.verify_param(any([update_username, update_password, update_email]), is_true=True, http_error=HTTPBadRequest,
                     content={user_key: user.user_name},
                     msg_on_fail=s.User_PUT_BadRequestResponseSchema.description)
@@ -89,9 +89,9 @@ def update_user_view(request):
         ax.verify_param(existing_user, is_none=True, http_error=HTTPConflict,
                         msg_on_fail=s.User_PUT_ConflictResponseSchema.description)
         user.user_name = new_user_name
-    if user.email != new_email:
+    if update_email:
         user.email = new_email
-    if user.user_password != new_password and new_password is not None:
+    if update_password:
         UserService.set_password(user, new_password)
         UserService.regenerate_security_code(user)
 

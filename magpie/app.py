@@ -55,17 +55,20 @@ def main(global_config=None, **settings):  # noqa: F811
     print_log("Register default users...", LOGGER)
     register_default_users(db_session=db_session, settings=settings)
 
+    combined_config = get_constant("MAGPIE_CONFIG_PATH", default_value=None,
+                                   raise_missing=False, raise_not_set=False, print_missing=True)
     print_log("Register configuration providers...", logger=LOGGER)
     push_phoenix = asbool(get_constant("PHOENIX_PUSH", settings, settings_name="magpie.phoenix_push",
                                        raise_missing=False, raise_not_set=False, print_missing=True))
-    prov_cfg = get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", default_value="",
-                            raise_missing=False, raise_not_set=False, print_missing=True)
+
+    prov_cfg = combined_config or get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", default_value="",
+                                               raise_missing=False, raise_not_set=False, print_missing=True)
     magpie_register_services_from_config(prov_cfg, push_to_phoenix=push_phoenix,
                                          force_update=True, disable_getcapabilities=False, db_session=db_session)
 
     print_log("Register configuration permissions...", LOGGER)
-    perm_cfg = get_constant("MAGPIE_PERMISSIONS_CONFIG_PATH", default_value="",
-                            raise_missing=False, raise_not_set=False, print_missing=True)
+    perm_cfg = combined_config or get_constant("MAGPIE_PERMISSIONS_CONFIG_PATH", default_value="",
+                                               raise_missing=False, raise_not_set=False, print_missing=True)
     magpie_register_permissions_from_config(perm_cfg, db_session=db_session)
 
     print_log("Running configurations setup...", LOGGER)

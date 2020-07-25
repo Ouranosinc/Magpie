@@ -1,4 +1,5 @@
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPInternalServerError, HTTPOk
+from pyramid.settings import asbool
 from pyramid.view import view_config
 from ziggurat_foundations.models.services.group import GroupService
 
@@ -28,7 +29,9 @@ def create_group_view(request):
     Create a group.
     """
     group_name = ar.get_value_multiformat_post_checked(request, "group_name")
-    return gu.create_group(group_name, request.db)
+    group_desc = ar.get_multiformat_post(request, "description", default="")
+    group_disc = asbool(ar.get_multiformat_post(request, "discoverable", default=False))
+    return gu.create_group(group_name, group_desc, group_disc, request.db)
 
 
 @s.GroupAPI.get(tags=[s.GroupsTag], response_schemas=s.Group_GET_responses)
@@ -50,17 +53,30 @@ def edit_group_view(request):
     """
     group = ar.get_group_matchdict_checked(request, group_name_key="group_name")
     new_group_name = ar.get_multiformat_post(request, "group_name")
-    ax.verify_param(new_group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    msg_on_fail=s.Group_PUT_Name_BadRequestResponseSchema.description)
-    ax.verify_param(len(new_group_name), is_in=True, http_error=HTTPBadRequest,
-                    param_compare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
-                    msg_on_fail=s.Group_PUT_Size_BadRequestResponseSchema.description)
-    ax.verify_param(new_group_name, not_equal=True, http_error=HTTPBadRequest,
-                    param_compare=group.group_name, msg_on_fail=s.Group_PUT_Same_BadRequestResponseSchema.description)
-    ax.verify_param(GroupService.by_group_name(new_group_name, db_session=request.db),
-                    is_none=True, http_error=HTTPConflict,
-                    msg_on_fail=s.Group_PUT_ConflictResponseSchema.description)
-    group.group_name = new_group_name
+    new_description = ar.get_multiformat_post(request, "description")
+    new_discoverability = ar.get_multiformat_post(request, "discoverable")
+    if new_discoverability is not None:
+        new_discoverability = asbool(new_discoverability)
+    update_name = group.group_name != new_group_name and new_group_name is not None
+    update_desc = group.description != new_description and new_description is not None
+    update_disc = group.discoverable != new_discoverability and new_discoverability is not None
+    ax.verify_param(any([update_name, update_desc, update_disc]), is_true=True, http_error=HTTPBadRequest,
+                    content={"group_name": group.group_name},
+                    msg_on_fail=s.Group_PUT_None_BadRequestResponseSchema.description)
+    if new_group_name:
+        ax.verify_param(new_group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
+                        msg_on_fail=s.Group_PUT_Name_BadRequestResponseSchema.description)
+        ax.verify_param(len(new_group_name), is_in=True, http_error=HTTPBadRequest,
+                        param_compare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
+                        msg_on_fail=s.Group_PUT_Size_BadRequestResponseSchema.description)
+        ax.verify_param(GroupService.by_group_name(new_group_name, db_session=request.db),
+                        is_none=True, http_error=HTTPConflict,
+                        msg_on_fail=s.Group_PUT_ConflictResponseSchema.description)
+        group.group_name = new_group_name
+    if new_description:
+        group.description = new_description
+    if new_discoverability:
+        group.discoverable = new_discoverability
     return ax.valid_http(http_success=HTTPOk, detail=s.Group_PUT_OkResponseSchema.description)
 
 

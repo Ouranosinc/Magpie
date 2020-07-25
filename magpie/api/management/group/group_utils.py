@@ -65,8 +65,8 @@ def get_group_resources(group, db_session):
     return json_response
 
 
-def create_group(group_name, db_session):
-    # type: (Str, Session) -> HTTPException
+def create_group(group_name, description, discoverable, db_session):
+    # type: (Str, Str, bool, Session) -> HTTPException
     """
     Creates a group if it is permitted and not conflicting.
 
@@ -74,10 +74,15 @@ def create_group(group_name, db_session):
     :raises HTTPException: error HTTP response of corresponding situation.
     """
     group = GroupService.by_group_name(group_name, db_session=db_session)
-    group_content_error = {u"group_name": str(group_name)}
+    group_content_error = {
+        u"group_name": str(group_name),
+        u"description": str(description),
+        u"discoverable": discoverable
+    }
     ax.verify_param(group, is_none=True, http_error=HTTPConflict, with_param=False,
                     msg_on_fail=s.Groups_POST_ConflictResponseSchema.description, content=group_content_error)
-    new_group = ax.evaluate_call(lambda: models.Group(group_name=group_name),  # noqa
+    new_group = ax.evaluate_call(lambda: models.Group(group_name=group_name, description=description,  # noqa
+                                                      discoverable=discoverable),  # noqa
                                  fallback=lambda: db_session.rollback(),
                                  http_error=HTTPForbidden, content=group_content_error,
                                  msg_on_fail=s.Groups_POST_ForbiddenCreateResponseSchema.description)

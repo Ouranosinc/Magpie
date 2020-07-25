@@ -18,7 +18,7 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("groups", sa.Column("discoverable", sa.Boolean(), default=False))
+    op.add_column("groups", sa.Column("discoverable", sa.Boolean(), default=False, nullable=False))
 
 
 def downgrade():
