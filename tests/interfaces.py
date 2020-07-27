@@ -1,3 +1,4 @@
+import unittest
 import warnings
 from abc import ABCMeta
 from copy import deepcopy
@@ -21,12 +22,29 @@ from tests import runner, utils
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import CookiesType, HeadersType, Optional, Str
+    from magpie.typedefs import CookiesType, HeadersType, JSON, Optional, Str
 
 
-# don't use 'unittest.TestCase' base
-# some test runner raise (ERROR) the 'NotImplementedError' although overridden by other classes
-class Base_Magpie_TestCase(object):
+class Base_Magpie_TestCase(unittest.TestCase):
+    """
+    Base definition for all other Test Suite interfaces.
+
+    The implementers must provide :meth:`initClass` which prepares the various test parameters, session cookies and
+    the local application or remote Magpie URL configuration to evaluate test cases on.
+
+    The implementers Test Suites must also set :attr:`__test__` to ``True`` so that tests are picked up as executable.
+
+    .. note::
+        Attribute attr:`__test__` is employed to avoid duplicate runs of this base class or other derived classes that
+        must not be considered as the *final implementer* Test Suite.
+
+    .. warning::
+        Do not use :meth:`setUpClass` with :py:exception:`NotImplementedError` in this class or any derived *incomplete*
+        class as this method still gets called by some test runners although marked with ``__test__ = False``.
+        The tests would be interpreted as failing in this situation (due to raised error) instead of only indicating an
+        abstract class definition. You are free to use it if the method is non-raising, but remember that the code will
+        be executed during initialization of the Test Suite even if seemingly disabled for testing.
+    """
     # pylint: disable=C0103,invalid-name
     version = None              # type: Optional[Str]
     grp = None                  # type: Optional[Str]
@@ -44,7 +62,7 @@ class Base_Magpie_TestCase(object):
     __test__ = False    # won't run this as a test suite, only its derived classes that overrides to True
 
     @classmethod
-    def setUpClass(cls):  # noqa: N802
+    def initClass(cls):  # noqa: N802
         raise NotImplementedError
 
     @classmethod
@@ -58,12 +76,16 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
     """
     Interface class for unittests of Magpie API. Test any operation that do not require user AuthN/AuthZ.
 
-    Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
     """
 
     @classmethod
-    def setUpClass(cls):
+    def initClass(cls):
         raise NotImplementedError
+
+    @classmethod
+    def setUpClass(cls):
+        cls.initClass()
 
     @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Anonymous(self):
@@ -131,11 +153,11 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     """
     Interface class for unittests of Magpie API. Test any operation that require at least logged user AuthN/AuthZ.
 
-    Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
     """
 
     @classmethod
-    def setUpClass(cls):
+    def initClass(cls):
         raise NotImplementedError
 
     @classmethod
@@ -329,11 +351,11 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     Interface class for unittests of Magpie API. Test any operation that require at least 'administrator' group
     AuthN/AuthZ.
 
-    Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
     """
 
     @classmethod
-    def setUpClass(cls):
+    def initClass(cls):
         raise NotImplementedError
 
     def tearDown(self):
@@ -381,7 +403,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
         cls.test_group_name = u"magpie-unittest-dummy-group"
         cls.test_user_name = u"magpie-unittest-toto"
-        cls.test_user_group = u"users"
+        cls.test_user_group = get_constant("MAGPIE_USERS_GROUP")
 
     def setUp(self):
         self.check_requirements()
@@ -725,7 +747,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
                 resources_anonymous_body = utils.check_response_basic_info(resp, 200, expected_method="GET")
             # validation
             for svc_type_no_perm in service_type_no_perm:
-                svc_type_body = body["resources"][svc_type_no_perm]
+                svc_type_body = body["resources"][svc_type_no_perm]  # type: JSON
                 svc_type_services_anonymous = resources_anonymous_body.get("resources", {}).get(svc_type_no_perm, {})
                 for svc_name_no_perm in svc_type_body:
                     # remove inherited anonymous-only group resources and permissions (see above)
@@ -736,7 +758,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
                     utils.check_val_equal(len(svc_res_ids_only_user), 0,
                                           msg="User should not have any permitted resource under the service")
                     svc_perms_anonymous = svc_anonymous.get("permission_names", [])
-                    svc_perms_test_user = svc_type_body[svc_name_no_perm]["permission_names"]
+                    svc_perms_test_user = svc_type_body[svc_name_no_perm]["permission_names"]  # noqa
                     svc_perms_only_user = set(svc_perms_test_user) - set(svc_perms_anonymous)
                     utils.check_val_equal(len(svc_perms_only_user), 0,
                                           msg="User should not have any service permissions")
@@ -745,10 +767,11 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         path = "/users/{usr}/resources".format(usr=usr_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies, timeout=20)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        test_service = body["resources"][svc_type][svc_name]
+        test_service = body["resources"][svc_type][svc_name]  # type: JSON
         utils.check_val_equal(test_service["permission_names"], [perm_svc_usr])
         utils.check_val_is_in(str(res_id), test_service["resources"])
-        utils.check_val_equal(test_service["resources"][str(res_id)]["permission_names"], [perm_res_usr])
+        test_perms = test_service["resources"][str(res_id)]["permission_names"]  # noqa
+        utils.check_val_equal(test_perms, [perm_res_usr])
 
         # with inherit flag, both user and group permissions are visible on service and resource
         path = "/users/{usr}/resources?inherit=true".format(usr=usr_name)
@@ -757,7 +780,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         test_service = body["resources"][svc_type][svc_name]
         utils.check_all_equal(test_service["permission_names"], [perm_svc_usr, perm_svc_grp], any_order=True)
         utils.check_val_is_in(str(res_id), test_service["resources"])
-        utils.check_all_equal(test_service["resources"][str(res_id)]["permission_names"],
+        utils.check_all_equal(test_service["resources"][str(res_id)]["permission_names"],  # noqa
                               [perm_res_usr, perm_res_grp], any_order=True)
 
     @runner.MAGPIE_TEST_USERS
@@ -776,7 +799,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_all_equal(body["resources"].keys(), service_types, any_order=True)
         for svc_type in body["resources"]:
             for svc in body["resources"][svc_type]:
-                svc_dict = body["resources"][svc_type][svc]
+                svc_dict = body["resources"][svc_type][svc]  # type: JSON
                 utils.check_val_type(svc_dict, dict)
                 utils.check_val_is_in("resource_id", svc_dict)
                 utils.check_val_is_in("service_name", svc_dict)
@@ -855,7 +878,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         for svc_type in services:
             utils.check_val_is_in(svc_type, service_types)  # one of valid service types
             for svc in services[svc_type]:
-                svc_dict = services[svc_type][svc]
+                svc_dict = services[svc_type][svc]  # type: JSON
                 utils.check_val_type(svc_dict, dict)
                 utils.check_val_is_in("resource_id", svc_dict)
                 utils.check_val_is_in("service_name", svc_dict)
@@ -919,7 +942,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_equal(body["service"]["service_type"], svc_type)
         utils.check_val_equal(body["service"]["permission_names"], [perm_svc_usr])
         utils.check_val_is_in(str(res_id), body["service"]["resources"])
-        utils.check_val_equal(body["service"]["resources"][str(res_id)]["permission_names"], [perm_res_usr])
+        utils.check_val_equal(body["service"]["resources"][str(res_id)]["permission_names"], [perm_res_usr])  # noqa
 
         # with inherit flag, both user and group permissions are visible on service and resource
         path = "/users/{usr}/services/{svc}/resources?inherit=true".format(usr=usr_name, svc=svc_name)
@@ -929,7 +952,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_equal(body["service"]["service_type"], svc_type)
         utils.check_all_equal(body["service"]["permission_names"], [perm_svc_usr, perm_svc_grp], any_order=True)
         utils.check_val_is_in(str(res_id), body["service"]["resources"])
-        utils.check_all_equal(body["service"]["resources"][str(res_id)]["permission_names"],
+        utils.check_all_equal(body["service"]["resources"][str(res_id)]["permission_names"],  # noqa
                               [perm_res_usr, perm_res_grp], any_order=True)
 
     @runner.MAGPIE_TEST_USERS
@@ -948,13 +971,30 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_is_in(self.test_user_name, users)
 
     @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_AutoMemberships(self):
+        new_test_group = "test-group-{}".format(self._testMethodName)  # noqa
+        utils.TestSetup.delete_TestGroup(self, override_group_name=new_test_group)  # if previous run
+        utils.TestSetup.create_TestGroup(self, override_group_name=new_test_group)
+        data = {"group_name": new_test_group}
+        utils.TestSetup.create_TestUser(self, override_data=data)
+
+        resp = utils.test_request(self, "GET", "/users/{}/groups".format(self.test_user_name),
+                                  headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in(new_test_group, body["group_names"],
+                              msg="Specified group during user creation should have been applied.")
+        utils.check_val_is_in(get_constant("MAGPIE_ANONYMOUS_GROUP"), body["group_names"],
+                              msg="User should be automatically added to 'anonymous' group to access public resources.")
+        utils.TestSetup.delete_TestGroup(self, override_group_name=new_test_group)
+
+    @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_PostUsers_ReservedKeyword_Current(self):
         data = {
             "user_name": get_constant("MAGPIE_LOGGED_USER"),
             "password": "pwd",
             "email": "email@mail.com",
-            "group_name": "users",
+            "group_name": self.test_group_name,
         }
         resp = utils.test_request(self, "POST", "/users", data=data,
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
@@ -1025,9 +1065,15 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_equal(body["authenticated"], False)
 
     @runner.MAGPIE_TEST_USERS
-    def test_PutUser_username(self):
+    @runner.MAGPIE_TEST_LOGGED
+    def test_PutUser_username_ReservedKeyword_Current(self):
         """Even administrator level user is not allowed to update any user name to reserved keyword."""
-        raise NotImplementedError  # TODO
+        utils.TestSetup.create_TestUser(self)
+        data = {"user_name": get_constant("MAGPIE_LOGGED_USER")}
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "PUT", path, data=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 403, expected_method="PUT")
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_email(self):
@@ -1161,6 +1207,20 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.check_NonExistingTestUser(self)
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_DEFAULTS
+    def test_DeleteUser_forbidden_ReservedKeyword_Anonymous(self):
+        """Even administrator level user is not allowed to remove the special anonymous user."""
+        anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
+        users = utils.TestSetup.get_RegisteredUsersList(self)
+        utils.check_val_is_in(anonymous, users, msg="Anonymous user pre-requirement missing for test.")
+        path = "/users/{}".format(anonymous)
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+        users = utils.TestSetup.get_RegisteredUsersList(self)
+        utils.check_val_is_in(anonymous, users, msg="Anonymous special user should still exist.")
+
+    @runner.MAGPIE_TEST_USERS
     def test_DeleteUser_not_found(self):
         path = "/users/magpie-unittest-random-user"
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies,
@@ -1200,12 +1260,6 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             self.test_group_name,
         ]:
             utils.check_val_is_in(group, body["group_names"])
-
-    @runner.MAGPIE_TEST_GROUPS
-    def test_PostGroups(self):
-        utils.TestSetup.delete_TestGroup(self)  # setup as required
-        utils.TestSetup.create_TestGroup(self)  # actual test
-        utils.TestSetup.delete_TestGroup(self)  # cleanup
 
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroup_admin(self):
@@ -1271,6 +1325,35 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_response_basic_info(resp, 404, expected_method="GET")
 
     @runner.MAGPIE_TEST_GROUPS
+    def test_PostGroups(self):
+        utils.TestSetup.delete_TestGroup(self)  # setup as required
+        utils.TestSetup.create_TestGroup(self)  # actual test
+        utils.TestSetup.delete_TestGroup(self)  # cleanup
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_PostGroups_conflict(self):
+        utils.TestSetup.delete_TestGroup(self)
+        utils.TestSetup.create_TestGroup(self)
+        data = {"group_name": self.test_group_name}
+        resp = utils.test_request(self, "POST", "/groups", data=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 409, expected_method="POST")
+
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_DEFAULTS
+    def test_DeleteGroup_forbidden_ReservedKeyword_Anonymous(self):
+        """Even administrator level user is not allowed to remove the special anonymous group."""
+        anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        groups = utils.TestSetup.get_RegisteredGroupsList(self)
+        utils.check_val_is_in(anonymous, groups, msg="Anonymous group pre-requirement missing for test.")
+        path = "/groups/{}".format(anonymous)
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+        groups = utils.TestSetup.get_RegisteredGroupsList(self)
+        utils.check_val_is_in(anonymous, groups, msg="Anonymous special group should still exist.")
+
+    @runner.MAGPIE_TEST_GROUPS
     def test_GetGroupUsers(self):
         path = "/groups/{grp}/users".format(grp=get_constant("MAGPIE_ADMIN_GROUP"))
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
@@ -1303,7 +1386,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         for svc_type in services:
             utils.check_val_is_in(svc_type, service_types)  # one of valid service types
             for svc in services[svc_type]:
-                svc_dict = services[svc_type][svc]
+                svc_dict = services[svc_type][svc]  # type: JSON
                 utils.check_val_type(svc_dict, dict)
                 utils.check_val_is_in("resource_id", svc_dict)
                 utils.check_val_is_in("service_name", svc_dict)
@@ -1515,7 +1598,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_is_in("resource_types", body)
         utils.check_val_type(body["resource_types"], list)
         utils.check_val_equal(len(body["resource_types"]) > 0, True)
-        for rt in body["resource_types"]:
+        for rt in body["resource_types"]:  # type: JSON
             utils.check_val_type(rt, dict)
             utils.check_val_is_in("resource_type", rt)
             utils.check_val_is_in("resource_child_allowed", rt)
@@ -1556,7 +1639,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             body = utils.check_response_basic_info(resp, 200, expected_method="GET")
             utils.check_val_type(body["resource_types"], list)
             utils.check_val_equal(len(body["resource_types"]), len(svc_res_info))
-            for r in body["resource_types"]:
+            for r in body["resource_types"]:  # type: JSON
                 utils.check_val_is_in(r["resource_type"], svc_res_info)
                 r_type = svc_res_info[r["resource_type"]]
                 utils.check_val_equal(r["resource_child_allowed"], r_type["child"])
@@ -1739,14 +1822,14 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         path = "/users/{usr}/services".format(usr=anonymous)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        services_body = body["services"]
+        services_body = body["services"]  # type: JSON
         for svc in services_list_getcap:
             svc_name = svc["service_name"]
             svc_type = svc["service_type"]
             msg = "Service '{name}' of type '{type}' is expected to have '{perm}' permissions for user '{usr}'." \
                   .format(name=svc_name, type=svc_type, perm="getcapabilities", usr=anonymous)
             utils.check_val_is_in(svc_name, services_body[svc_type], msg=msg)
-            utils.check_val_is_in("getcapabilities", services_body[svc_type][svc_name]["permission_names"])
+            utils.check_val_is_in("getcapabilities", services_body[svc_type][svc_name]["permission_names"])  # noqa
 
     @runner.MAGPIE_TEST_RESOURCES
     def test_PostResources_DirectServiceResource(self):
@@ -1836,11 +1919,11 @@ class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase
     """
     Interface class for unittests of Magpie UI. Test any operation that do not require user AuthN/AuthZ.
 
-    Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
     """
 
     @classmethod
-    def setUpClass(cls):
+    def initClass(cls):
         raise NotImplementedError
 
     @runner.MAGPIE_TEST_STATUS
@@ -1914,7 +1997,7 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     """
     Interface class for unittests of Magpie UI. Test any operation that require at least logged user AuthN/AuthZ.
 
-    Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
     """
 
     @runner.MAGPIE_TEST_USERS
@@ -1949,11 +2032,11 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     Interface class for unittests of Magpie UI. Test any operation that require at least 'administrator' group
     AuthN/AuthZ.
 
-    Derived classes must implement ``setUpClass`` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
     """
 
     @classmethod
-    def setUpClass(cls):
+    def initClass(cls):
         raise NotImplementedError
 
     @classmethod

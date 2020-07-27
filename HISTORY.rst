@@ -13,17 +13,21 @@ Features / Changes
 * Add tag description into generated Swagger API documentation.
 * Add more usage details to start `Magpie` web application in documentation.
 * Add database migration for new ``discoverable`` column of groups.
-* Allow logged user to update its own information.
+* Allow logged user to update its own information
+  (relates to `#170 <https://github.com/Ouranosinc/Magpie/issues/170>`_).
 * Allow logged user to join *discoverable* groups.
 * Change some UI CSS for certain pages to improve table readability.
 * Add UI page to render unauthorized and forbidden views due to insufficient permissions.
 * Add more validation and inputs to update group information.
 * Allow combined configuration files (providers, permissions, users, groups) with inter-references between them
   specified with ``MAGPIE_CONFIG_PATH`` environment variable or ``magpie.config_path`` setting (example in ``configs``).
+* Add disabled checkboxes for UI rendering of non-editable items
+  (relates to `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix invalid API documentation of request body for ``POST /users/{user_name}/groups``.
+* Fix `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_ (forbid *special* users and groups update and delete).
 * Fix minor HTML issues in mako templates.
 
 `1.11.0 <https://github.com/Ouranosinc/Magpie/tree/1.11.0>`_ (2020-06-19)

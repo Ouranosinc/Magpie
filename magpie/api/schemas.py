@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 from magpie import __meta__
 from magpie.constants import get_constant
 from magpie.permissions import Permission
-from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, get_magpie_url
+from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import

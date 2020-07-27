@@ -60,11 +60,11 @@ class UserViews(BaseViews):
 
     @view_config(route_name="edit_current_user", renderer="templates/edit_current_user.mako", permission=Authenticated)
     def edit_current_user(self):
-        own_groups = self.get_current_user_groups()
+        joined_groups = self.get_current_user_groups()
         public_groups = self.get_discoverable_groups()
         user_info = self.get_current_user_info()
         user_info[u"edit_mode"] = u"no_edit"
-        user_info[u"own_groups"] = own_groups
+        user_info[u"joined_groups"] = joined_groups
         user_info[u"groups"] = public_groups
         error_message = ""
 
@@ -101,8 +101,8 @@ class UserViews(BaseViews):
             # edits to groups checkboxes
             if is_edit_group_membership:
                 selected_groups = self.request.POST.getall("member")
-                removed_groups = list(set(own_groups) - set(selected_groups))
-                new_groups = list(set(selected_groups) - set(own_groups))
+                removed_groups = list(set(joined_groups) - set(selected_groups))
+                new_groups = list(set(selected_groups) - set(joined_groups))
                 for group in removed_groups:
                     self.leave_discoverable_group(group)
                 for group in new_groups:

@@ -29,7 +29,7 @@ from magpie.api import generic as ag
 from magpie.api import schemas as s
 from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
-from magpie.api.requests import get_multiformat_post, get_value_multiformat_post_checked
+from magpie.api.requests import get_multiformat_post, get_principals, get_value_multiformat_post_checked
 from magpie.constants import get_constant
 from magpie.security import authomatic_setup, get_provider_names
 from magpie.utils import CONTENT_TYPE_JSON, convert_response, get_logger, get_magpie_url

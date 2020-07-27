@@ -29,8 +29,8 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from tests.interfaces import Base_Magpie_TestCase  # noqa: F401
     from magpie.typedefs import (  # noqa: F401
-        Str, Callable, Dict, HeadersType, OptionalHeaderCookiesType, Optional, Type,
-        AnyMagpieTestType, AnyResponseType, TestAppOrUrlType
+        Any, AnyMagpieTestType, AnyHeadersType, AnyResponseType, Callable, Dict, Iterable, HeadersType, JSON, List,
+        Optional, OptionalHeaderCookiesType, SettingsType, Str, TestAppOrUrlType, Type, Union
     )
 
 OptionalStringType = six.string_types + tuple([type(None)])  # pylint: disable=C0103,invalid-name   # noqa: 802
@@ -134,6 +134,8 @@ def config_setup_from_ini(config_ini_file_path):
 
 
 def get_test_magpie_app(settings=None):
+    # type: (Optional[SettingsType]) -> TestApp
+    """Instantiate a Magpie local test application."""
     # parse settings from ini file to pass them to the application
     config = config_setup_from_ini(get_constant("MAGPIE_INI_FILE_PATH"))
     config.include("ziggurat_foundations.ext.pyramid.sign_in")
@@ -148,6 +150,7 @@ def get_test_magpie_app(settings=None):
 
 def get_app_or_url(test_item):
     # type: (AnyMagpieTestType) -> TestAppOrUrlType
+    """Obtains the referenced Magpie local application or remote URL from Test Suite implementation."""
     if isinstance(test_item, (TestApp, six.string_types)):
         return test_item
     app_or_url = getattr(test_item, "app", None) or getattr(test_item, "url", None)
@@ -158,6 +161,7 @@ def get_app_or_url(test_item):
 
 def get_hostname(test_item):
     # type: (AnyMagpieTestType) -> Str
+    """Obtains stored hostname in the class implementation."""
     app_or_url = get_app_or_url(test_item)
     if isinstance(app_or_url, TestApp):
         app_or_url = get_magpie_url(app_or_url.app.registry)
@@ -165,16 +169,22 @@ def get_hostname(test_item):
 
 
 def get_headers(app_or_url, header_dict):
+    # type: (TestAppOrUrlType, AnyHeadersType) -> HeadersType
+    """Obtains stored headers in the class implementation."""
     if isinstance(app_or_url, TestApp):
         return header_dict.items()
     return header_dict
 
 
 def get_response_content_types_list(response):
+    # type: (AnyResponseType) -> List[Str]
+    """Obtains the specified response Content-Type header(s) without additional formatting parameters."""
     return [ct.strip() for ct in response.headers["Content-Type"].split(";")]
 
 
 def get_json_body(response):
+    # type: (AnyResponseType) -> JSON
+    """Obtains the JSON payload of the response regardless of its class implementation."""
     if isinstance(response, TestResponse):
         return response.json
     return response.json()
@@ -406,29 +416,49 @@ def all_equal(iter_val, iter_ref, any_order=False):
     return all(it == ir for it, ir in zip(iter_val, iter_ref))
 
 
-def check_all_equal(iter_val, iter_ref, any_order=False, msg=None):
+def check_all_equal(iter_val, iter_ref, msg=None, any_order=False):
+    # type: (Iterable[Any], Union[Iterable[Any], NullType], Optional[Str], bool) -> None
+    """
+    :param iter_val: tested values.
+    :param iter_ref: reference values.
+    :param msg: override message to display if failing test.
+    :param any_order: allow equal values to be provided in any order, otherwise order must match as well as values.
+    :raises AssertionError:
+        If all values in :paramref:`iter_val` are not equal to values within :paramref:`iter_ref`.
+        If :paramref:`any_order` is ``False``, also raises if equal items are not in the same order.
+    """
     r_it_val = repr(iter_val)
     r_it_ref = repr(iter_ref)
     assert all_equal(iter_val, iter_ref, any_order), format_test_val_ref(r_it_val, r_it_ref, pre="Equal Fail", msg=msg)
 
 
 def check_val_equal(val, ref, msg=None):
+    # type: (Any, Union[Any, NullType], Optional[Str]) -> None
+    """:raises AssertionError: if :paramref:`val` is not equal to :paramref:`ref`."""
     assert is_null(ref) or val == ref, format_test_val_ref(val, ref, pre="Equal Fail", msg=msg)
 
 
 def check_val_not_equal(val, ref, msg=None):
+    # type: (Any, Union[Any, NullType], Optional[Str]) -> None
+    """:raises AssertionError: if :paramref:`val` is equal to :paramref:`ref`."""
     assert is_null(ref) or val != ref, format_test_val_ref(val, ref, pre="Equal Fail", msg=msg)
 
 
 def check_val_is_in(val, ref, msg=None):
+    # type: (Any, Union[Any, NullType], Optional[Str]) -> None
+    """:raises AssertionError: if :paramref:`val` is not in to :paramref:`ref`."""
     assert is_null(ref) or val in ref, format_test_val_ref(val, ref, pre="Is In Fail", msg=msg)
 
 
 def check_val_not_in(val, ref, msg=None):
+    # type: (Any, Union[Any, NullType], Optional[Str]) -> None
+    """:raises AssertionError: if :paramref:`val` is in to :paramref:`ref`."""
     assert is_null(ref) or val not in ref, format_test_val_ref(val, ref, pre="Not In Fail", msg=msg)
 
 
 def check_val_type(val, ref, msg=None):
+    # type: (Any, Union[Any, NullType], Optional[Str]) -> None
+    """:raises AssertionError: if :paramref:`val` is not an instanced of :paramref:`ref`."""
     assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre="Type Fail", msg=msg)
 
 
@@ -462,6 +492,7 @@ def check_no_raise(func):
 
 
 def check_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_JSON, expected_method="GET"):
+    # type: (AnyResponseType, int, Str, Str) -> JSON
     """
     Validates basic Magpie API response metadata.
 
@@ -502,7 +533,7 @@ def check_ui_response_basic_info(response, expected_code=200, expected_type=CONT
     check_val_is_in("Magpie Administration", response.text, msg=null)   # don't output big html if failing
 
 
-class _NullType(six.with_metaclass(SingletonMeta)):
+class NullType(six.with_metaclass(SingletonMeta)):
     """
     Represents a null value to differentiate from None.
     """
@@ -518,11 +549,11 @@ class _NullType(six.with_metaclass(SingletonMeta)):
     __len__ = __nonzero__
 
 
-null = _NullType()  # pylint: disable=C0103,invalid-name
+null = NullType()  # pylint: disable=C0103,invalid-name
 
 
 def is_null(item):
-    return isinstance(item, _NullType) or item is null
+    return isinstance(item, NullType) or item is null
 
 
 def check_error_param_structure(json_body, param_value=null, param_name=null, param_compare=null,
@@ -763,6 +794,7 @@ class TestSetup(object):
 
     @staticmethod
     def get_TestServiceDirectResources(test_class, ignore_missing_service=False):
+        # type: (AnyMagpieTestType, bool) -> List[JSON]
         app_or_url = get_app_or_url(test_class)
         path = "/services/{svc}/resources".format(svc=test_class.test_service_name)
         resp = test_request(app_or_url, "GET", path,

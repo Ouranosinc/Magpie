@@ -95,15 +95,21 @@
 <table>
 %for user in users:
 <tr>
-    <td><label>
-    % if user in members:
+    <td>
+        <label>
         <input type="checkbox" value="${user}" name="member"
-               onchange="document.getElementById('edit_members').submit()" checked>${user}
-    % else:
-        <input type="checkbox" value="${user}" name="member"
-               onchange="document.getElementById('edit_members').submit()">${user}
-    % endif
-    </label></td>
+            %if user in members:
+               checked
+            %endif
+            %if group_name in MAGPIE_FIXED_GROUP_MEMBERSHIPS:
+               disabled
+            %else:
+               onchange="document.getElementById('edit_members').submit()"
+            %endif
+        >
+        ${user}
+        </label>
+    </td>
 </tr>
 %endfor
 </table>

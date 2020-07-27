@@ -101,9 +101,6 @@ def unauthorized_or_forbidden(request):
         path = request.route_path("error").replace("/magpie", "")
         data = {"error_request": content, "error_code": http_err.code}
         return request_api(request, path, "POST", data)
-        subreq = Request.blank(location, base_url=request.application_url, POST=data,
-                               headers={"Content-Type": CONTENT_TYPE_JSON})
-        return request.invoke_subrequest(subreq, use_tweens=True)
     return raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content, content_type=accept)
 
 

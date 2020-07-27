@@ -1,10 +1,11 @@
 import json
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPUnauthorized, HTTPForbidden, exception_response
+from pyramid.httpexceptions import HTTPBadRequest, exception_response
 from pyramid.request import Request
 
 from magpie.api.requests import get_logged_user
+from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON, get_header, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
@@ -83,16 +84,24 @@ def error_badrequest(func):
 
 
 class BaseViews(object):
+    """Base methods for Magpie UI pages."""
+
     def __init__(self, request):
         self.request = request
         self.magpie_url = get_magpie_url(request.registry)
         self.logged_user = get_logged_user(request)
+
+        self.MAGPIE_FIXED_GROUP_MEMBERSHIPS = [
+            get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=request),
+        ]
+        """Special groups membership that cannot be edited."""
 
     def add_template_data(self, data=None):
         # type: (Optional[Dict[Str, Any]]) -> Dict[Str, Any]
         """Adds required template data for the 'heading' mako template applied to every UI page."""
         all_data = data or {}
         all_data.setdefault("MAGPIE_SUB_TITLE", "Administration")
+        all_data.setdefault("MAGPIE_FIXED_GROUP_MEMBERSHIPS", self.MAGPIE_FIXED_GROUP_MEMBERSHIPS)
         magpie_logged_user = get_logged_user(self.request)
         if magpie_logged_user:
             all_data.update({"MAGPIE_LOGGED_USER": magpie_logged_user.user_name})

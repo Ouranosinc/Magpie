@@ -82,23 +82,21 @@
     <table>
     %for group in groups:
     <tr>
-        % if group in joined_groups:
-            <td>
-                <label>
-                <input type="checkbox" value="${group}" name="member" checked
-                       onchange="document.getElementById('edit_membership').submit()">
-                ${group}
-                </label>
-            </td>
-        % else:
-            <td>
-                <label>
-                <input type="checkbox" value="${group}" name="member"
-                       onchange="document.getElementById('edit_membership').submit()">
-                ${group}
-                </label>
-            </td>
-        % endif
+        <td>
+            <label>
+            <input type="checkbox" value="${group}" name="member"
+               % if group in joined_groups:
+                   checked
+               %endif
+               %if group in MAGPIE_FIXED_GROUP_MEMBERSHIPS:
+                   disabled
+               %else:
+                   onchange="document.getElementById('edit_membership').submit()"
+               %endif
+            >
+            ${group}
+            </label>
+        </td>
     </tr>
     %endfor
     </table>

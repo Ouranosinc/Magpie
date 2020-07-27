@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     AnyKey = Union[Str, int]
     AnyValue = Union[Str, Number, bool, None]
     BaseJSON = Union[AnyValue, List["BaseJSON"], Dict[AnyKey, "BaseJSON"]]
-    JSON = Dict[AnyKey, BaseJSON]
+    JSON = Union[Dict[AnyKey, Union[BaseJSON, "JSON"]], List[BaseJSON]]
 
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ServiceOrResourceType = Union[models.Service, models.Resource]
