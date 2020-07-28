@@ -8,13 +8,13 @@
 <h1>Groups</h1>
 
 
-<button class="img_button" type="button" onclick="location.href='${request.route_url('add_group')}'">
+<button class="img_button theme" type="button" onclick="location.href='${request.route_url('add_group')}'">
     <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="">
     Add Group
 </button>
 
 <table class="simple_list">
-<thead>
+<thead class="theme">
 <tr>
     <th>Group</th>
     <th>Members count</th>

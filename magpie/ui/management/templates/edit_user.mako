@@ -62,15 +62,15 @@
 
 
 <div class="panel_box">
-    <form id="delete_user" action="${request.path}" method="post">
-        <div class="panel_heading">
+    <div class="panel_heading theme">
+        <form id="delete_user" action="${request.path}" method="post">
             <span class="panel_title">User: </span>
             <span class="panel_value">${user_name}</span>
             <span class="panel_heading_button">
                 <input type="submit" value="Delete" name="delete" class="button delete">
             </span>
-        </div>
-    </form>
+        </form>
+    </div>
     <div class="panel_body">
         <div class="panel_box">
             <div class="panel_heading">
@@ -141,7 +141,7 @@
 
 <form id="edit_membership" action="${request.path}" method="post">
     <input type="hidden" value="True" name="edit_group_membership"/>
-    <table>
+    <table class="simple_list">
     %for group in groups:
     <tr>
         <td>

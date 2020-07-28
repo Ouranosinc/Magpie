@@ -100,7 +100,7 @@
         <input type="hidden" value="Submit">-->
     </form>
 %endif
-<button class="img_button" type="button"
+<button class="img_button theme" type="button"
         onclick="location.href='${request.route_url('add_service', cur_svc_type=cur_svc_type)}'">
     <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="">
     Add Service

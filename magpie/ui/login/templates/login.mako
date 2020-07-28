@@ -38,19 +38,31 @@
     <table class="fields_table">
         <tr>
             <td>Username:</td>
-            <div class="input_container">
-                <td><input type="text" name="user_name" value="${user_name_internal}" class="equal_width"></td>
-            </div>
+            <td>
+                <div class="input_container">
+                <label>
+                <input type="text" name="user_name" value="${user_name_internal}" class="equal_width">
+                </label>
+                </div>
+            </td>
             <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
         <tr>
             <td>Password:</td>
-            <div class="input_container">
-                <td><input type="password" name="password" value="" class="equal_width"></td>
-            </div>
+            <td>
+                <div class="input_container">
+                <label>
+                <input type="password" name="password" value="" class="equal_width">
+                </label>
+                </div>
+            </td>
             <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
-        <tr><td class="centered" colspan="2"><input type="submit" value="Sign In" name="submit" id="submit"></td></tr>
+        <tr>
+            <td class="centered" colspan="2">
+                <input class="button theme" type="submit" value="Sign In" name="submit" id="submit">
+            </td>
+        </tr>
     </table>
 </form>
 
@@ -61,26 +73,38 @@
     <table class="fields_table">
         <tr>
             <td>Username:</td>
-            <div class="input_container">
-                <td><input type="text" name="user_name" value="${user_name_external}" class="equal_width"></td>
-            </div>
+            <td>
+                <label>
+                <div class="input_container">
+                    <input type="text" name="user_name" value="${user_name_external}" class="equal_width">
+                </div>
+                </label>
+            </td>
             <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
         <tr>
             <td>Provider:</td>
-            <div class="input_container">
-                <td><select name="provider_name" class="equal_width">
+            <td>
+                <div class="input_container">
+                <label>
+                <select name="provider_name" class="equal_width">
                     %for provider in external_providers:
                         <option value="${provider}">${provider}</option>
                         %if provider == provider_name:
                         <option selected="selected">${provider}</option>
                         %endif
                     %endfor
-                </select></td>
-            </div>
+                </select>
+                </label>
+                </div>
+            </td>
             <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
-        <tr><td class="centered" colspan="2"><input type="submit" value="Sign In" name="submit"></td></tr>
+        <tr>
+            <td class="centered" colspan="2">
+                <input class="button theme" type="submit" value="Sign In" name="submit">
+            </td>
+        </tr>
     </table>
 </form>
 

@@ -7,14 +7,14 @@
 
 <h1>Users</h1>
 
-<button class="img_button" type="button" onclick="location.href='${request.route_url('add_user')}'">
+<button class="img_button theme" type="button" onclick="location.href='${request.route_url('add_user')}'">
     <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="">
     Add User
 </button>
 
 
 <table class="simple_list">
-<thead>
+<thead class="theme">
 <tr>
     <th>User</th>
     <th>Action</th>

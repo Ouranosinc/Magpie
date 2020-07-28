@@ -16,7 +16,7 @@
     -->
     <!--
     <form id="delete_user" action="${request.path}" method="post">
-        <div class="panel_heading">
+        <div class="panel_heading theme">
             <span class="panel_title">User: </span>
             <span class="panel_value">${user_name}</span>
             <span class="panel_heading_button">
@@ -27,7 +27,7 @@
     -->
     <div class="panel_body">
         <div class="panel_box">
-            <div class="panel_heading">
+            <div class="panel_heading theme">
                 <div class="panel_title">Details</div>
             </div>
             <div>
@@ -82,7 +82,7 @@
 
 <form id="edit_membership" action="${request.path}" method="post">
     <input type="hidden" value="True" name="edit_group_membership"/>
-    <table>
+    <table class="simple_list">
     %for group in groups:
     <tr>
         <td>

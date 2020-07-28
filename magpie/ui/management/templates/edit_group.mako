@@ -51,15 +51,15 @@
 <h3>Group Information</h3>
 
 <div class="panel_box">
-    <form id="delete_group" action="${request.path}" method="post">
-        <div class="panel_heading">
+    <div class="panel_heading theme">
+        <form id="delete_group" action="${request.path}" method="post">
             <span class="panel_title">Group: </span>
             <span class="panel_value">${group_name}</span>
             <span class="panel_heading_button">
                 <input type="submit" value="Delete" name="delete" class="button delete">
             </span>
-        </div>
-    </form>
+        </form>
+    </div>
     <form id="edit_info" action="${request.path}" method="post">
         <div class="panel_body">
             <div class="panel_box">
@@ -92,7 +92,7 @@
 <h3>Members</h3>
 
 <form id="edit_members" action="${request.path}" method="post">
-<table>
+<table class="simple_list">
 %for user in users:
 <tr>
     <td>

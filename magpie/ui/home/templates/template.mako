@@ -28,12 +28,12 @@
         </a>
         <div style="float: right;">
             %if MAGPIE_LOGGED_USER:
-            <button class="img_button" type="button"
+            <button class="img_button theme" type="button"
                     onclick="location.href='${request.route_url('edit_current_user')}'">Account</button>
-            <button class="img_button" type="button"
+            <button class="img_button theme" type="button"
                     onclick="location.href='${request.route_url('logout')}'">Log Out</button>
             %else:
-            <button class="img_button" type="button"
+            <button class="img_button theme" type="button"
                     onclick="location.href='${request.route_url('login')}'">Log In</button>
             %endif
         </div>

@@ -5,13 +5,19 @@ html,body {
     font-family: "Open Sans", sans-serif;
 }
 
+/* generic theme employed for buttons, headers, etc. unless using other variable for specific use-case */
+.theme {
+    border: 1px solid #2C8F30;
+    background-color: #4CAF50;
+}
+
 .content {
     margin: 5em;
 }
 
 .img_button {
     padding: 0.7em;
-    margin: 1em 0em 1em;
+    margin: 1em 0 1em;
 }
 
 a {
@@ -19,7 +25,8 @@ a {
     text-decoration: none;
 }
 
-a:focus, a:hover {
+a:focus,
+a:hover {
     color: #23527c;
     text-decoration: underline;
 }
@@ -102,8 +109,6 @@ a.tab:visited,
 .admin_button,
 input[type="submit"],
 input[type="submit"].button.normal {
-    border: 1px solid #2C8F30;
-    background-color: #4CAF50;
     vertical-align: center;
     cursor:pointer;
     text-decoration: none;
@@ -149,12 +154,7 @@ td, th {
 }
 
 table thead {
-    background-color: #4CAF50;
     color: white;
-}
-
-table tr:nth-child(even) {
-    background-color: #F2F2F2;
 }
 
 .checkbox_align label {
@@ -187,7 +187,6 @@ table tr:nth-child(even) {
     border-bottom: 1px solid transparent;
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
-    border-color: #ddd;
     color: #333;
     padding: 10px 15px;
 }
@@ -348,6 +347,7 @@ table tr:nth-child(even) {
 
 /*---View users & groups pages ---*/
 
+/* note: use explicit row classes instead of 'tr:nth-child(even)' because generated code doesn't handle it well */
 table.simple_list tr.list_row_odd {
     background-color: white;
 }
@@ -378,7 +378,7 @@ table.simple_list input[type="submit"] {
 }
 
 .tree_header {
-    padding: 5em 0em 2em;
+    padding: 5em 0 2em;
     font-weight: bold;
 }
 
@@ -482,14 +482,14 @@ ul.breadcrumb li a:hover {
     background: -moz-linear-gradient(bottom top, black, gray); /* Firefox 3.6 to 15 */
     background: -ms-linear-gradient(bottom top, black, gray); /* IE10+ */
     background: linear-gradient(to bottom top, black, gray); /* Standard syntax (must be last) */
-    padding: 1em 1em 0em 1em;
+    padding: 1em 1em 0 1em;
 }
 
 .header{
     vertical-align: center;
 }
 
-.header>div>a{
+.header>div>a {
     color: white;
     font-size: 3em;
     text-decoration: none;
@@ -497,7 +497,7 @@ ul.breadcrumb li a:hover {
     vertical-align: center;
 }
 
-.header>button{
+.header>button {
     height: 40px;
     width: 100px;
     float: right;
@@ -641,7 +641,8 @@ table.request_details thead tbody td th {
     min-height: 10em;
 }
 
-a.current_tab:link, a.current_tab:visited {
+a.current_tab:link,
+a.current_tab:visited {
     background-color: white;
     color: black;
     padding: 1em 1em 1.4em 1em;
@@ -651,7 +652,8 @@ a.current_tab:link, a.current_tab:visited {
     font-weight: bold;
 }
 
-a.tab:link, a.tab:visited {
+a.tab:link,
+a.tab:visited {
     padding: 1em;
     text-align: center;
     text-decoration: none;
@@ -672,7 +674,8 @@ table.service_details {
     min-width: 500px;
 }
 
-table.fields_table th, table.fields_table td {
+table.fields_table th,
+table.fields_table td {
     border: 0;
 }
 

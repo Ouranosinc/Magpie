@@ -2,28 +2,32 @@
 <%namespace name="tree" file="ui.management:templates/tree_scripts.mako"/>
 
 <%def name="render_item(key, value, level)">
-    % if level > 0:
-        <div class="tree_button"><input type="submit" value="Delete" name="delete_child"
-                                        class="button delete"></div>
-    % else:
-        <div class="tree_button"><input type="submit" value="Delete" name="delete_child"
-                                        class="button disabled" disabled></div>
-    % endif
-    % if "id" in value.keys():
-        % if int(value["id"]) in resources_id_type.keys():
-            % if not resources_id_type[int(value["id"])] in resources_no_child:
-                <div class="tree_button"><input type="submit" value="Add child" name="add_child"></div>
-            % else:
-                <div class="tree_button"><input type="submit" value="Add child" name="add_child"
-                                                class="button disabled" disabled></div>
+    <div class="tree_button">
+        <input type="submit" value="Delete" name="delete_child"
+        %if level > 0:
+               class="button delete"
+        %else:
+               class="button disabled" disabled
+        %endif
+        >
+    </div>
+    %if "id" in value.keys():
+        <div class="tree_button">
+            <input type="submit" value="Add child" name="add_child"
+            %if int(value["id"]) in resources_id_type.keys():
+                %if not resources_id_type[int(value["id"])] in resources_no_child:
+                    class="button disabled" disabled
+                %else:
+                    class="button theme"
+                %endif
+            %elif not service_no_child:
+                    class="button theme"
+            %else:
+                class="button disabled" disabled
             % endif
-        % elif not service_no_child:
-            <div class="tree_button"><input type="submit" value="Add child" name="add_child"></div>
-        % else:
-            <div class="tree_button"><input type="submit" value="Add child" name="add_child"
-                                            class="button disabled" disabled></div>
-        % endif
-    % endif
+            >
+        </div>
+    %endif
 </%def>
 
 <%block name="breadcrumb">
@@ -86,7 +90,7 @@
 </script>
 
 <div class="panel_box">
-    <div class="panel_heading">
+    <div class="panel_heading theme">
         <span class="panel_title">Service: </span>
         <span class="panel_value">${service_name}</span>
         <span class="panel_heading_button">

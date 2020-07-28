@@ -22,7 +22,7 @@
                     </button>)
                 </div>
                 <table id="request_details" class="request_details" style="visibility: hidden">
-                    <thead>
+                    <thead class="theme">
                         <tr><th>Field</th><th>Value</th></tr>
                     </thead>
                     <tbody>
