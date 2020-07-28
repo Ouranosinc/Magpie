@@ -17,22 +17,19 @@
                 <input type="text" name="group_name" value="${form_group_name}" />
                 </label>
             </td>
-            %if conflict_group_name:
-                <td><p class="alert-form-error">
+            <td>
+                <div class="alert-form-error">
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
-                         alt="ERROR" class="icon-error"
-                    /> Conflict
-                    </p>
-                </td>
-            %elif invalid_group_name:
-                <td><p class="alert-form-error">
-                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
-                         alt="ERROR" class="icon-error"
-                    /> Invalid </p>
-                </td>
-            %else:
-                <td><p class="alert-form-error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
-            %endif
+                             alt="ERROR" class="icon-error" />
+                    <div class="alert-form-text">
+                            %if conflict_group_name:
+                                Conflict
+                            %elif invalid_group_name:
+                                Invalid
+                            %endif
+                    </div>
+                </div>
+            </td>
         </tr>
         <tr>
             <td class="centered" colspan="2">

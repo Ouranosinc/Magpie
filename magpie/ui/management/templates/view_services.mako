@@ -5,8 +5,8 @@
 <li><a href="${request.route_url('view_services', cur_svc_type=cur_svc_type)}">Services</a></li>
 </%block>
 
-%for service in service_names:
-    <div class="alert alert-danger" id="ViewService_DeleteAlert_${service}">
+%for i, service in enumerate(service_names):
+    <div class="alert alert-danger" id="ViewService_DeleteAlert_Service_${i}">
         <h3 class="alert-title-danger">Danger!</h3>
         <p>
             Delete: [${service}]
@@ -16,6 +16,7 @@
             This operation is not reversible.
         </p>
         <p>Continue?</p>
+        <div>
         <form action="${request.path}" method="post">
             <input type="hidden" value=${service} name="service_name">
             %if service_push_show:
@@ -26,22 +27,27 @@
                     </label>
                 </div>
             %endif
-            <div>
+            <div class="alert-form-align">
                 <input type="submit" class="button delete" name="delete" value="Delete"
-                       onclick="this.parentElement.style.display='none';" >
-                <input type="submit" class="button cancel" name="cancel" value="Cancel"
-                       onclick="this.parentElement.style.display='none';" >
+                       onclick="document.getElementById('ViewService_DeleteAlert_Service_${i}').style.display='none';" >
             </div>
         </form>
+        <div>
+            <input type="submit" class="button cancel" name="cancel" value="Cancel"
+                   onclick="document.getElementById('ViewService_DeleteAlert_Service_${i}').style.display='none';" >
+        </div>
+        </div>
     </div>
 
     <script>
-        function display_DeleteAlert_${service}() {
-            %for sub_service in service_names:
+        function display_DeleteAlert_Service_${i}() {
+            %for j, sub_service in enumerate(service_names):
+                let alert_${j} = document.getElementById("ViewService_DeleteAlert_Service_${j}");
                 %if service == sub_service:
-                    document.getElementById("ViewService_DeleteAlert_${sub_service}").style.display = "block";
+                    alert_${j}.style.display = "block";
+                    alert_${j}.scrollIntoView();
                 %else:
-                    document.getElementById("ViewService_DeleteAlert_${sub_service}").style.display = "none";
+                    alert_${j}.style.display = "none";
                 %endif
             %endfor
         }
@@ -137,7 +143,7 @@
                         <td style="white-space: nowrap">
                             <input type="submit" value="Edit" name="edit" class="button theme">
                             <input type="button" value="Delete" class="button delete"
-                                   onclick="display_DeleteAlert_${service}()" >
+                                   onclick="display_DeleteAlert_Service_${i}()" >
                         </td>
                     </tr>
                     </form>

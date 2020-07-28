@@ -201,7 +201,7 @@ table thead {
 }
 
 .panel-heading-button {
-    float: right!important;
+    float: right;
     margin-top: -3px;
 }
 
@@ -328,10 +328,9 @@ table thead {
 }
 
 .alert-form-error>img {
-    width: 1.5em;
-    height: 1.5em;
-    margin: -0.25em 0 0 0;
-    mix-blend-mode: multiply;
+    width: 1.25em;
+    height: 1.25em;
+    margin: -0.1em 0.5em 0.15em 0;
 }
 
 .alert-form-error {
@@ -342,14 +341,19 @@ table thead {
     margin: 0.25em 0 0 0;
 }
 
+.alert-form-text {
+    color: #CD0000;
+}
+
+.alert-form-align {
+    float: left;
+    padding: 0 0.5em 0 0;
+}
+
 .icon-error {
-    background-color: #CD0000;
-    mix-blend-mode: multiply;
 }
 
 .icon-warning {
-    background-color: #FF9900;
-    mix-blend-mode: multiply;
 }
 
 /*---View users & groups pages ---*/
@@ -397,20 +401,20 @@ table.simple-list input[type="submit"] {
 }
 
 .Collapsable input {
-    float:left;
+    float: left;
     padding: 5px 100px;
     border: 1px solid #eee;
     cursor:pointer;
 }
 
 div.tree-item {
-    display:block;
-    float:left;
+    display: block;
+    float: left;
 }
 
 div.perm-title {
-    width:3em;
-    float:right;
+    width: 3em;
+    float: right;
     text-align: left;
 
     -webkit-transform: rotate(-70deg); /* Safari */
@@ -684,6 +688,7 @@ table.service-details {
 table.fields-table th,
 table.fields-table td {
     border: 0;
+    white-space: nowrap;
 }
 
 table.fields-table td.centered {

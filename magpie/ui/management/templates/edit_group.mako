@@ -69,12 +69,12 @@
                 <div>
                     <p class="panel-line">
                         <span class="panel-entry">Name: </span>
-                        %if edit_mode == 'edit_group_name':
+                        %if edit_mode == "edit_group_name":
                             <label>
                             <input type="text" value="${group_name}" name="new_group_name"
                                    id="input_group_name" onkeyup="adjustWidth('input_name')">
-                            <input type="submit" value="Save" name="save_group_name">
-                            <input type="submit" value="Cancel" name="no_edit">
+                            <input type="submit" value="Save" name="save_group_name" class="button theme">
+                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
                             </label>
                         %else:
                             <label>
