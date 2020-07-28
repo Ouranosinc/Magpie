@@ -83,11 +83,11 @@ def _get_default_log_level():
 # variables from magpie.env
 # ===========================
 MAGPIE_URL = os.getenv("MAGPIE_URL", None)
-MAGPIE_SECRET = os.getenv("MAGPIE_SECRET", "seekrit")
+MAGPIE_SECRET = os.getenv("MAGPIE_SECRET", "")
 MAGPIE_COOKIE_NAME = os.getenv("MAGPIE_COOKIE_NAME", "auth_tkt")
 MAGPIE_COOKIE_EXPIRE = os.getenv("MAGPIE_COOKIE_EXPIRE", None)
-MAGPIE_ADMIN_USER = os.getenv("MAGPIE_ADMIN_USER", "admin")
-MAGPIE_ADMIN_PASSWORD = os.getenv("MAGPIE_ADMIN_PASSWORD", "qwerty")
+MAGPIE_ADMIN_USER = os.getenv("MAGPIE_ADMIN_USER", "")
+MAGPIE_ADMIN_PASSWORD = os.getenv("MAGPIE_ADMIN_PASSWORD", "")
 MAGPIE_ADMIN_EMAIL = "{}@mail.com".format(MAGPIE_ADMIN_USER)
 MAGPIE_ADMIN_GROUP = os.getenv("MAGPIE_ADMIN_GROUP", "administrators")
 MAGPIE_ANONYMOUS_USER = os.getenv("MAGPIE_ANONYMOUS_USER", "anonymous")
@@ -176,10 +176,10 @@ def get_constant(constant_name,             # type: Str
     :param settings_name: alternative name for `settings` if specified
     :param default_value: default value to be returned if not found anywhere, and exception raises are disabled.
     :param raise_missing: raise exception if key is not found anywhere
-    :param print_missing: print message if key is not found anywhere, return `None`
-    :param raise_not_set: raise an exception if the found key is None, search until last case if previous are `None`
+    :param print_missing: print message if key is not found anywhere, return ``None``
+    :param raise_not_set: raise an exception if the found key is ``None``, search until last case if others are ``None``
     :returns: found value or `default_value`
-    :raises: according message based on options (by default raise missing/`None` value)
+    :raises: according message based on options (by default raise missing/``None`` value)
     """
     from magpie.utils import get_settings, raise_log, print_log  # pylint: disable=C0415  # avoid circular import error
 

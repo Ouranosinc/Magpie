@@ -1456,7 +1456,7 @@ class User_PUT_BadRequestResponseSchema(colander.MappingSchema):
 
 
 class User_PUT_ForbiddenResponseSchema(colander.MappingSchema):
-    description = "Failed user verification with db."
+    description = "User name update not allowed."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
 
@@ -1513,7 +1513,7 @@ class User_DELETE_OkResponseSchema(colander.MappingSchema):
 
 
 class User_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
-    description = "Delete user by name refused by db."
+    description = "User could not be deleted."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
 

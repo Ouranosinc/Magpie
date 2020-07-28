@@ -141,6 +141,13 @@ def get_user(request, user_name_or_token=None):
 
 def get_user_matchdict_checked_or_logged(request, user_name_key="user_name"):
     # type: (Request, Str) -> models.User
+    """
+    Obtains either the explicit or logged user user specified in the request path variable.
+
+    :returns found user.
+    :raises HTTPForbidden: if the requesting user does not have sufficient permission to execute this request.
+    :raises HTTPNotFound: if the specified user name or logged user keyword does not correspond to any existing user.
+    """
     logged_user_name = get_constant("MAGPIE_LOGGED_USER", settings_container=request)
     logged_user_path = s.UserAPI.path.replace("{" + user_name_key + "}", logged_user_name)
     if user_name_key not in request.matchdict and request.path_info.startswith(logged_user_path):
@@ -154,7 +161,7 @@ def get_user_matchdict_checked(request, user_name_key="user_name"):
 
     :returns: found user.
     :raises HTTPForbidden: if the requesting user does not have sufficient permission to execute this request.
-    :raises HTTPNotFound: if the specified user name or token does not correspond to any existing user.
+    :raises HTTPNotFound: if the specified user name does not correspond to any existing user.
     """
     user_name = get_value_matchdict_checked(request, user_name_key)
     return get_user(request, user_name)

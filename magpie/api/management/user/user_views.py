@@ -73,9 +73,18 @@ def update_user_view(request):
     update_username = user.user_name != new_user_name and new_user_name is not None
     if update_username:
         logged_user_name = get_constant("MAGPIE_LOGGED_USER", request)
-        ax.verify_param(new_user_name, param_compare=logged_user_name, not_equal=True,
-                        http_error=HTTPBadRequest, param_name=user_key, content={user_key: logged_user_name},
-                        msg_on_fail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
+        always_forbidden_user_names = [
+            get_constant("MAGPIE_ADMIN_USER", request),
+            get_constant("MAGPIE_ANONYMOUS_USER", request)
+        ]
+        ax.verify_param(user.user_name, not_in=True, with_param=False,  # avoid leaking username details
+                        param_compare=always_forbidden_user_names, param_name=user_key,
+                        http_error=HTTPBadRequest, content={user_key: logged_user_name},
+                        msg_on_fail=s.User_PUT_ForbiddenResponseSchema.description)
+        ax.verify_param(new_user_name, not_in=True, with_param=False,  # avoid leaking username details
+                        param_compare=[logged_user_name] + always_forbidden_user_names, param_name=user_key,
+                        http_error=HTTPBadRequest, content={user_key: logged_user_name},
+                        msg_on_fail=s.User_PUT_ForbiddenResponseSchema.description)
     update_password = user.user_password != new_password and new_password is not None
     update_email = user.email != new_email and new_email is not None
     ax.verify_param(any([update_username, update_password, update_email]), is_true=True, http_error=HTTPBadRequest,
@@ -120,6 +129,10 @@ def delete_user_view(request):
     Delete a user by name.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
+    ax.verify_param(user.user_name, not_in=True, with_param=False,  # avoid leaking username details
+                    param_compare=[get_constant("MAGPIE_ADMIN_USER", request),
+                                   get_constant("MAGPIE_ANONYMOUS_USER", request)],
+                    http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
     ax.evaluate_call(lambda: request.db.delete(user), fallback=lambda: request.db.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
     return ax.valid_http(http_success=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)

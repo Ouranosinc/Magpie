@@ -160,7 +160,7 @@ class MagpieAdapter(six.with_metaclass(SingletonMeta, AdapterInterface)):
         config = self.configurator_factory(container)
         owsproxy_defaultconfig(config)  # let Twitcher configure the rest normally
 
-    def configurator_factory(self, container):  # noqa: N805
+    def configurator_factory(self, container):  # noqa: N805, R0201
         # type: (AnySettingsContainer) -> Configurator
         settings = get_settings(container)
         set_cache_regions_from_settings(settings)

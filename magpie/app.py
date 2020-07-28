@@ -52,6 +52,10 @@ def main(global_config=None, **settings):  # noqa: F811
     # with a new engine class and logging settings don't get re-evaluated/applied
     db_session = get_db_session_from_config_ini(config_ini, settings_override=sa_settings)
 
+    print_log("Validate settings that require explicit definitions...", LOGGER)
+    for req_config in ["MAGPIE_SECRET", "MAGPIE_ADMIN_USER", "MAGPIE_ADMIN_PASSWORD"]:
+        get_constant(req_config, settings_container=settings, raise_missing=True, raise_not_set=True)
+
     print_log("Register default users...", LOGGER)
     register_default_users(db_session=db_session, settings=settings)
 

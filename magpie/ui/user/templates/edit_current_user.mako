@@ -11,13 +11,16 @@
 
 
 <div class="panel_box">
-    <!-- # FIXME: should we have a route that allows user to unregister itself?
+    <!-- # FIXME: implement with better warning (alert), API route supports operation
+        (admin is immediate delete, but we should confirm user self-delete beforehand just in case)
+    -->
+    <!--
     <form id="delete_user" action="${request.path}" method="post">
         <div class="panel_heading">
             <span class="panel_title">User: </span>
             <span class="panel_value">${user_name}</span>
             <span class="panel_heading_button">
-                <input type="submit" value="Delete" name="delete" class="button delete">
+                <input type="submit" value="Delete Account" name="delete" class="button delete">
             </span>
         </div>
     </form>

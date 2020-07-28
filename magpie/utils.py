@@ -27,6 +27,7 @@ from magpie.constants import get_constant
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
+    from typing import NoReturn  # noqa: F401
     from magpie.typedefs import (  # noqa: F401
         Any, AnyKey, Str, List, Optional, Type, Union,
         AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,
@@ -64,6 +65,10 @@ LOGGER = get_logger(__name__)
 
 def print_log(msg, logger=None, level=logging.INFO):
     # type: (Str, Optional[LoggerType], int) -> None
+    """
+    Logs the requested message to the logger and optionally enforce printing to the console according to configuration
+    value defined by ``MAGPIE_LOG_PRINT``.
+    """
     # pylint: disable=C0415     # cannot use 'get_constant', recursive call
     from magpie.constants import MAGPIE_LOG_PRINT
 
@@ -79,7 +84,8 @@ def print_log(msg, logger=None, level=logging.INFO):
 
 
 def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
-    # type: (Str, Optional[Type[Exception]], Optional[LoggerType], int) -> None
+    # type: (Str, Optional[Type[Exception]], Optional[LoggerType], int) -> NoReturn
+    """Logs the provided message to the logger and raises the corresponding exception afterwards."""
     if not logger:
         logger = get_logger(__name__)
     logger.log(level, msg)
@@ -173,8 +179,8 @@ def get_header(header_name, header_container, default=None, split=None):
 def convert_response(response):
     # type: (AnyResponseType) -> Response
     """
-    Converts a ``response`` implementation (e.g.: ``requests.Response``) to an equivalent ``pyramid.response.Response``
-    version.
+    Converts a ``response`` implementation (e.g.: :class:`requests.Response`) to an equivalent
+    :class:`pyramid.response.Response` object.
     """
     if isinstance(response, Response):
         return response
@@ -182,7 +188,7 @@ def convert_response(response):
     pyramid_response = Response(body=json_body, headers=response.headers)
     if hasattr(response, "cookies"):
         for cookie in response.cookies:
-            pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)
+            pyramid_response.set_cookie(name=cookie.name, value=cookie.value, overwrite=True)  # noqa
     if isinstance(response, HTTPException):
         for header_name, header_value in response.headers._items:  # noqa # pylint: disable=W0212
             if header_name.lower() == "set-cookie":
@@ -217,7 +223,7 @@ def get_admin_cookies(container, verify=True, raise_message=None):
 def get_settings(container):
     # type: (AnySettingsContainer) -> SettingsType
     if isinstance(container, (Configurator, Request)):
-        return container.registry.settings
+        return container.registry.settings  # noqa
     if isinstance(container, Registry):
         return container.settings
     if isinstance(container, dict):

@@ -23,6 +23,8 @@ Features / Changes
   specified with ``MAGPIE_CONFIG_PATH`` environment variable or ``magpie.config_path`` setting (example in ``configs``).
 * Add disabled checkboxes for UI rendering of non-editable items
   (relates to `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_).
+* Configuration parameters ``MAGPIE_SECRET``, ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` now require explicit
+  definitions (either by environment variable or INI settings) to avoid using defaults for security purposes.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
