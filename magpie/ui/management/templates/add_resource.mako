@@ -13,21 +13,21 @@
 
 <h1>New Resource</h1>
 
-<form class="new_item_form" id="add_resource_form" action="${request.path}" method="post">
-    <table class="fields_table">
+<form class="new-item-form" id="add_resource_form" action="${request.path}" method="post">
+    <table class="fields-table">
         <tr>
             <td>Resource name:</td>
             <td>
-                <div class="input_container"><label>
-                    <input type="text" value="" name="resource_name" class="equal_width">
+                <div class="input-container"><label>
+                    <input type="text" value="" name="resource_name" class="equal-width">
                 </label></div>
             </td>
         </tr>
         <tr>
             <td>Resource type:</td>
             <td><label>
-                <div class="input_container">
-                    <select name="resource_type" class="equal_width">
+                <div class="input-container">
+                    <select name="resource_type" class="equal-width">
                         %for res_type in cur_svc_res:
                             <option value="${res_type}">${res_type}</option>
                         %endfor

@@ -6,8 +6,8 @@
 </%block>
 
 %if invalid_credentials:
-<div class="alert danger visible" id="Login_CredentialsAlert">
-    <h3 class="alert_title danger">Invalid Credentials!</h3>
+<div class="alert alert-danger alert-visible" id="Login_CredentialsAlert">
+    <h3 class="alert-title-danger">Invalid Credentials!</h3>
     <p>
         Incorrect username or password.
     </p>
@@ -17,8 +17,8 @@
     </form>
 </div>
 %elif error:
-<div class="alert danger visible" id="Login_ErrorFailureAlert">
-    <h3 class="alert_title danger">Login Error!</h3>
+<div class="alert alert-danger alert-visible" id="Login_ErrorFailureAlert">
+    <h3 class="alert-title-danger">Login Error!</h3>
     <p>
         Login procedure generated an error.
     </p>
@@ -31,32 +31,32 @@
 
 <h1>Log in</h1>
 
-<form class="new_item_form" id="login_internal" action="${request.route_url('login')}" method="post">
+<form class="new-item-form" id="login_internal" action="${request.route_url('login')}" method="post">
     <h3>Magpie</h3>
     <input type="hidden" value="${request.route_url('home')}" name="came_from" id="came_from">
     <input type="hidden" value="ziggurat" name="provider_name">
-    <table class="fields_table">
+    <table class="fields-table">
         <tr>
             <td>Username:</td>
             <td>
-                <div class="input_container">
+                <div class="input-container">
                 <label>
-                <input type="text" name="user_name" value="${user_name_internal}" class="equal_width">
+                <input type="text" name="user_name" value="${user_name_internal}" class="equal-width">
                 </label>
                 </div>
             </td>
-            <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
+            <td><p class="alert-form-error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
         <tr>
             <td>Password:</td>
             <td>
-                <div class="input_container">
+                <div class="input-container">
                 <label>
-                <input type="password" name="password" value="" class="equal_width">
+                <input type="password" name="password" value="" class="equal-width">
                 </label>
                 </div>
             </td>
-            <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
+            <td><p class="alert-form-error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
         <tr>
             <td class="centered" colspan="2">
@@ -67,27 +67,27 @@
 </form>
 
 
-<form class="new_item_form" id="login_external" action="" method="post">
+<form class="new-item-form" id="login_external" action="" method="post">
     <h3>External SignIn</h3>
     <input type="hidden" value="${request.route_url('home')}" name="came_from">
-    <table class="fields_table">
+    <table class="fields-table">
         <tr>
             <td>Username:</td>
             <td>
                 <label>
-                <div class="input_container">
-                    <input type="text" name="user_name" value="${user_name_external}" class="equal_width">
+                <div class="input-container">
+                    <input type="text" name="user_name" value="${user_name_external}" class="equal-width">
                 </div>
                 </label>
             </td>
-            <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
+            <td><p class="alert-form-error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
         <tr>
             <td>Provider:</td>
             <td>
-                <div class="input_container">
+                <div class="input-container">
                 <label>
-                <select name="provider_name" class="equal_width">
+                <select name="provider_name" class="equal-width">
                     %for provider in external_providers:
                         <option value="${provider}">${provider}</option>
                         %if provider == provider_name:
@@ -98,7 +98,7 @@
                 </label>
                 </div>
             </td>
-            <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
+            <td><p class="alert-form-error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
         </tr>
         <tr>
             <td class="centered" colspan="2">

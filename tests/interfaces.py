@@ -2087,7 +2087,7 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         form = {"edit": None, "service_name": self.test_service_name}
         path = "/ui/services/{}".format(self.test_service_type)
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path=path)
-        find = "<span class=\"panel_value\">{}</span>".format(self.test_service_name)
+        find = "<span class=\"panel-value\">{}</span>".format(self.test_service_name)
         utils.check_val_is_in(find, resp.text, msg=utils.null)
 
     @runner.MAGPIE_TEST_STATUS

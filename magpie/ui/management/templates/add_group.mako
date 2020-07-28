@@ -8,9 +8,9 @@
 
 <h1>Add Group</h1>
 
-<form class="new_item_form" id="add_group_form" action="${request.path}" method="post">
+<form class="new-item-form" id="add_group_form" action="${request.path}" method="post">
     <input type="hidden" value="${request.route_url('home')}" name="came_from">
-    <table class="fields_table">
+    <table class="fields-table">
         <tr>
             <td>Group name:</td>
             <td><label>
@@ -18,20 +18,26 @@
                 </label>
             </td>
             %if conflict_group_name:
-                <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" alt="WARNING"
+                <td><p class="alert-form-error">
+                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                         alt="ERROR" class="icon-error"
                     /> Conflict
                     </p>
                 </td>
             %elif invalid_group_name:
-                <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" alt="WARNING"
+                <td><p class="alert-form-error">
+                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                         alt="ERROR" class="icon-error"
                     /> Invalid </p>
                 </td>
             %else:
-                <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
+                <td><p class="alert-form-error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
             %endif
         </tr>
-        <tr><td class="centered" colspan="2"><input type="submit" value="Add Group" name="create"></td></tr>
+        <tr>
+            <td class="centered" colspan="2">
+                <input type="submit" value="Add Group" name="create" class="button theme">
+            </td>
+        </tr>
     </table>
 </form>

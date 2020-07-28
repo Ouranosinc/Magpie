@@ -4,7 +4,7 @@
 <%def name="render_item(key, value, level)">
     <input type="hidden" value="" name="edit_permissions">
     %for perm in permissions:
-        <div class="perm_checkbox">
+        <div class="perm-checkbox">
             % if perm in value['permission_names']:
             <label>
             <input type="checkbox" value="${perm}" name="permission"
@@ -20,17 +20,17 @@
         </div>
     %endfor
     % if not value.get('matches_remote', True):
-        <div class="tree_button">
-            <input type="submit" class="button warning" value="Clean" name="clean_resource">
+        <div class="tree-button">
+            <input type="submit" class="button-warning" value="Clean" name="clean_resource">
         </div>
-        <p class="tree_item_message">
-            <img title="This resource is absent from the remote server."
-                 src="${request.static_url('magpie.ui.home:static/warning_exclamation_orange.png')}" alt="WARNING" />
+        <p class="tree-item-message">
+            <img title="This resource is absent from the remote server." class="icon-warning"
+                 src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}" alt="WARNING" />
         </p>
     % endif
     % if level == 0:
-        <div class="tree_button">
-            <input type="submit" class="tree_button goto_service" value="Edit Service" name="goto_service">
+        <div class="tree-button">
+            <input type="submit" class="tree-button goto-service theme" value="Edit Service" name="goto_service">
         </div>
     % endif
 </%def>
@@ -50,25 +50,25 @@
 
 <h3>Group Information</h3>
 
-<div class="panel_box">
-    <div class="panel_heading theme">
+<div class="panel-box">
+    <div class="panel-heading theme">
         <form id="delete_group" action="${request.path}" method="post">
-            <span class="panel_title">Group: </span>
-            <span class="panel_value">${group_name}</span>
-            <span class="panel_heading_button">
+            <span class="panel-title">Group: </span>
+            <span class="panel-value">${group_name}</span>
+            <span class="panel-heading-button">
                 <input type="submit" value="Delete" name="delete" class="button delete">
             </span>
         </form>
     </div>
     <form id="edit_info" action="${request.path}" method="post">
-        <div class="panel_body">
-            <div class="panel_box">
-                <div class="panel_heading">
-                    <div class="panel_title">Details</div>
+        <div class="panel-body">
+            <div class="panel-box">
+                <div class="panel-heading subsection">
+                    <div class="panel-title">Details</div>
                 </div>
                 <div>
-                    <p class="panel_line">
-                        <span class="panel_entry">Name: </span>
+                    <p class="panel-line">
+                        <span class="panel-entry">Name: </span>
                         %if edit_mode == 'edit_group_name':
                             <label>
                             <input type="text" value="${group_name}" name="new_group_name"
@@ -78,7 +78,7 @@
                             </label>
                         %else:
                             <label>
-                            <span class="panel_value">${group_name}</span>
+                            <span class="panel-value">${group_name}</span>
                             <input type="submit" value="Edit" name="edit_group_name">
                             </label>
                         %endif
@@ -92,7 +92,7 @@
 <h3>Members</h3>
 
 <form id="edit_members" action="${request.path}" method="post">
-<table class="simple_list">
+<table class="simple-list">
 %for user in users:
 <tr>
     <td>
@@ -117,11 +117,11 @@
 
 <h3>Permissions</h3>
 
-<div class="tabs_panel">
+<div class="tabs-panel">
 
     %for svc_type in svc_types:
         % if cur_svc_type == svc_type:
-            <a class="current_tab"
+            <a class="current-tab"
                href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % else:
             <a class="tab"
@@ -129,35 +129,35 @@
         % endif
     %endfor
 
-    <div class="current_tab_panel">
+    <div class="current-tab-panel">
         <div class="clear"></div>
         %if error_message:
-            <div class="alert danger visible">${error_message}</div>
+            <div class="alert alert-danger alert-visible">${error_message}</div>
         %endif
         <form id="sync_info" action="${request.path}" method="post">
-            <p class="panel_line">
-                <span class="panel_entry">Last synchronization with remote services: </span>
+            <p class="panel-line">
+                <span class="panel-entry">Last synchronization with remote services: </span>
                 %if sync_implemented:
-                    <span class="panel_value">${last_sync} </span>
-                    <input type="submit" value="Sync now" name="force_sync">
+                    <span class="panel-value">${last_sync} </span>
+                    <input type="submit" value="Sync now" name="force_sync" class="button theme">
                 %else:
-                    <span class="panel_value">Not implemented for this service type.</span>
+                    <span class="panel-value">Not implemented for this service type.</span>
                 %endif
             </p>
             %if ids_to_clean and not out_of_sync:
-                <p class="panel_line">
-                    <span class="panel_entry">Note: </span>
-                    <span class="panel_value">Some resources are absent from the remote server </span>
+                <p class="panel-line">
+                    <span class="panel-entry">Note: </span>
+                    <span class="panel-value">Some resources are absent from the remote server </span>
                     <input type="hidden" value="${ids_to_clean}" name="ids_to_clean">
-                    <input type="submit" class="button warning" value="Clean all" name="clean_all">
+                    <input type="submit" class="button-warning" value="Clean all" name="clean_all">
                 </p>
             %endif
         </form>
 
-        <div class="tree_header">
-            <div class="tree_item">Resources</div>
+        <div class="tree-header">
+            <div class="tree-item">Resources</div>
             %for perm in permissions:
-                <div class="perm_title">${perm}</div>
+                <div class="perm-title">${perm}</div>
             %endfor
         </div>
         <div class="tree">

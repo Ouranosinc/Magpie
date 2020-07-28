@@ -16,24 +16,24 @@
 <div class="header">
     <div>
         <a href="${request.route_url('home')}">
-            <div id="image_container">
-                <div id="image_background">
+            <div id="image-container">
+                <div id="image-background">
                     <img src="${request.static_url('magpie.ui.home:static/settings_white.png')}" alt="">
                 </div>
-                <div id="image_overlay">
+                <div id="image-overlay">
                     <img src="${request.static_url('magpie.ui.home:static/magpie.png')}" alt="">
                 </div>
             </div>
-            <div id="title_header">Magpie ${MAGPIE_SUB_TITLE}</div>
+            <div id="title-header">Magpie ${MAGPIE_SUB_TITLE}</div>
         </a>
         <div style="float: right;">
             %if MAGPIE_LOGGED_USER:
-            <button class="img_button theme" type="button"
+            <button class="img-button theme" type="button"
                     onclick="location.href='${request.route_url('edit_current_user')}'">Account</button>
-            <button class="img_button theme" type="button"
+            <button class="img-button theme" type="button"
                     onclick="location.href='${request.route_url('logout')}'">Log Out</button>
             %else:
-            <button class="img_button theme" type="button"
+            <button class="img-button theme" type="button"
                     onclick="location.href='${request.route_url('login')}'">Log In</button>
             %endif
         </div>

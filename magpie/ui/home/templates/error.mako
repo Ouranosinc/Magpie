@@ -6,7 +6,7 @@
 
 <div class="error">
     <div>
-        <img src="${request.static_url('magpie.ui.home:static/forbidden.png')}" alt="FORBIDDEN" class="img_forbidden">
+        <img src="${request.static_url('magpie.ui.home:static/forbidden.png')}" alt="FORBIDDEN" class="img-forbidden">
         <span style="">
             Forbidden Access.
             <br>
@@ -15,13 +15,13 @@
         %if error_request:
             <div id="error_details">
                 <div id="show_details">
-                    (<button type="button" class="button_link"
-                             onclick="document.getElementById('request_details').style.visibility='visible';
+                    (<button type="button" class="button-link"
+                             onclick="document.getElementById('request-details').style.visibility='visible';
                                       this.parentElement.style.visibility='hidden';">
                         view original error
                     </button>)
                 </div>
-                <table id="request_details" class="request_details" style="visibility: hidden">
+                <table id="request-details" class="request-details" style="visibility: hidden">
                     <thead class="theme">
                         <tr><th>Field</th><th>Value</th></tr>
                     </thead>
@@ -34,7 +34,7 @@
                 </table>
             <!--<form id="view_error" action="${request.route_url('error')}">
                 <input type="hidden" name="show_error" value="true">
-                (<button type="submit" class="button_link">view original error</button>)
+                (<button type="submit" class="button-link">view original error</button>)
             </form>
             -->
             </div>

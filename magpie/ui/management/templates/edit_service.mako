@@ -2,7 +2,7 @@
 <%namespace name="tree" file="ui.management:templates/tree_scripts.mako"/>
 
 <%def name="render_item(key, value, level)">
-    <div class="tree_button">
+    <div class="tree-button">
         <input type="submit" value="Delete" name="delete_child"
         %if level > 0:
                class="button delete"
@@ -12,8 +12,8 @@
         >
     </div>
     %if "id" in value.keys():
-        <div class="tree_button">
-            <input type="submit" value="Add child" name="add_child"
+        <div class="tree-button">
+            <input class="button theme" type="submit" value="Add child" name="add_child"
             %if int(value["id"]) in resources_id_type.keys():
                 %if not resources_id_type[int(value["id"])] in resources_no_child:
                     class="button disabled" disabled
@@ -39,9 +39,11 @@
     Service [${service_name}]</a></li>
 </%block>
 
-<div class="alert danger" id="EditService_DeleteAlert">
-    <h3 class="alert_title danger">Danger!</h3>
+<div class="alert alert-danger" id="EditService_DeleteAlert">
+    <h3 class="alert-title-danger">Danger!</h3>
     <p>
+        <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+             alt="" class="icon-error" />
         Delete: [${service_name}]
     </p>
     <p>
@@ -51,7 +53,7 @@
     <p>Continue?</p>
     <form action="${request.path}" method="post">
         %if service_push_show:
-            <div class="checkbox_align">
+            <div class="checkbox-align">
                 <label for="push_phoenix_checkbox_warning">
                     <input type="checkbox" name="service_push" id="push_phoenix_checkbox_warning" checked/>
                     <span>Push to Phoenix?</span>
@@ -89,77 +91,77 @@
     })
 </script>
 
-<div class="panel_box">
-    <div class="panel_heading theme">
-        <span class="panel_title">Service: </span>
-        <span class="panel_value">${service_name}</span>
-        <span class="panel_heading_button">
+<div class="panel-box">
+    <div class="panel-heading theme">
+        <span class="panel-title">Service: </span>
+        <span class="panel-value">${service_name}</span>
+        <span class="panel-heading-button">
             <input type="button" value="Remove Service" class="button delete"
                    onclick="$('#EditService_DeleteAlert').show();">
         </span>
     </div>
-    <div class="panel_body">
-        <div class="panel_box">
-            <div class="panel_heading">
-                <div class="panel_title">Details</div>
+    <div class="panel-body">
+        <div class="panel-box">
+            <div class="panel-heading subsection">
+                <div class="panel-title">Details</div>
             </div>
             <div>
                 <form action="${request.path}" method="post">
-                    <p class="panel_line">
-                        <span class="panel_entry">Name: </span>
-                        %if edit_mode == 'edit_name':
+                    <p class="panel-line">
+                        <span class="panel-entry">Name: </span>
+                        %if edit_mode == "edit_name":
                             <label>
                             <input type="text" value="${service_name}" name="new_svc_name"
                                    id="input_name" onkeyup="adjustWidth('input_name')">
-                            <input type="submit" value="Save" name="save_name">
-                            <input type="submit" value="Cancel" name="no_edit">
+                            <input class="button theme" type="submit" value="Save" name="save_name">
+                            <input class="button cancel" type="submit" value="Cancel" name="no_edit">
                             </label>
                         %else:
                             <label>
-                            <span class="panel_value">${service_name}</span>
-                            <input type="submit" value="Edit" name="edit_name">
+                            <span class="panel-value">${service_name}</span>
+                            <input class="button theme" type="submit" value="Edit" name="edit_name">
                             </label>
                         %endif
                     </p>
                 </form>
                 <form action="${request.path}" method="post">
-                    <p class="panel_line">
-                        <span class="panel_entry">Protected URL: </span>
+                    <p class="panel-line">
+                        <span class="panel-entry">Protected URL: </span>
                         %if edit_mode == "edit_url":
                             <label>
                             <input type="text" value="${service_url}" name="new_svc_url"
                                    id="input_url" onkeyup="adjustWidth('input_url')">
-                            <input type="submit" value="Save" name="save_url">
-                            <input type="submit" value="Cancel" name="no_edit">
+                            <input class="button theme" type="submit" value="Save" name="save_url">
+                            <input class="button cancel" type="submit" value="Cancel" name="no_edit">
                             </label>
                         %else:
                             <label>
-                            <a href="${service_url}" class="panel_value">${service_url}</a>
-                            <input type="submit" value="Edit" name="edit_url">
+                            <a href="${service_url}" class="panel-value">${service_url}</a>
+                            <input class="button theme" type="submit" value="Edit" name="edit_url">
                             </label>
                         %endif
                     </p>
                 </form>
-                <p class="panel_line">
-                    <span class="panel_entry">Public URL: </span>
-                    <a href="${public_url}" class="panel_value">${public_url}</a>
+                <p class="panel-line">
+                    <span class="panel-entry">Public URL: </span>
+                    <a href="${public_url}" class="panel-value">${public_url}</a>
                 </p>
-                <p class="panel_line">
-                    <span class="panel_entry">Type: </span>
-                    <span class="label info">${cur_svc_type}</span>
+                <p class="panel-line">
+                    <span class="panel-entry">Type: </span>
+                    <span class="label label-info">${cur_svc_type}</span>
                 </p>
-                <p class="panel_line">
-                    <span class="panel_entry">Permissions: </span>
+                <p class="panel-line">
+                    <span class="panel-entry">Permissions: </span>
                     %for perm in service_perm:
-                        <span class="label warning">${perm}</span>
+                        <span class="label label-warning">${perm}</span>
                     %endfor
                 </p>
-                <p class="panel_line">
-                    <span class="panel_entry">ID: </span>
-                    <span class="panel_value">${service_id}</span>
+                <p class="panel-line">
+                    <span class="panel-entry">ID: </span>
+                    <span class="panel-value">${service_id}</span>
                 </p>
                 %if service_push_show:
-                    <div class="checkbox_align">
+                    <div class="checkbox-align">
                         <label for="push_phoenix_checkbox_details">
                             <input type="hidden" name="service_push" value="off"/>
                             %if service_push:
@@ -176,9 +178,9 @@
             </div>
         </div>
 
-        <div class="panel_box">
-            <div class="panel_heading">
-                <div class="panel_title">Resources</div>
+        <div class="panel-box">
+            <div class="panel-heading subsection">
+                <div class="panel-title">Resources</div>
             </div>
             <div>
                 <div class="clear"></div>

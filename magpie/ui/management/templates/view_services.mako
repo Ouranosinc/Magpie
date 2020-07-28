@@ -6,8 +6,8 @@
 </%block>
 
 %for service in service_names:
-    <div class="alert danger" id="ViewService_DeleteAlert_${service}">
-        <h3 class="alert_title danger">Danger!</h3>
+    <div class="alert alert-danger" id="ViewService_DeleteAlert_${service}">
+        <h3 class="alert-title-danger">Danger!</h3>
         <p>
             Delete: [${service}]
         </p>
@@ -19,7 +19,7 @@
         <form action="${request.path}" method="post">
             <input type="hidden" value=${service} name="service_name">
             %if service_push_show:
-                <div class="checkbox_align">
+                <div class="checkbox-align">
                     <label for="push_phoenix_checkbox_warning">
                         <input type="checkbox" name="service_push" checked id="push_phoenix_checkbox_warning"/>
                         <span>Push to Phoenix?</span>
@@ -56,8 +56,8 @@
             document.getElementById("ViewService_PushFailedAlert").style.display = "none";
         }
     </script>
-    <div class="alert info" id="ViewService_PushProcessingAlert">
-        <h3 class="alert_title info">Processing...</h3>
+    <div class="alert alert-info" id="ViewService_PushProcessingAlert">
+        <h3 class="alert-title-info">Processing...</h3>
         <p>
             Syncing Phoenix services with Magpie services.
             This operation could take some time...
@@ -66,25 +66,24 @@
 
     %if service_push_success is not None:
         %if service_push_success:
-           <div class="alert success visible" id="ViewService_PushSuccessAlert">
-                <h3 class="alert_title success">Push to Phoenix successful</h3>
+           <div class="alert alert-success alert-visible" id="ViewService_PushSuccessAlert">
+                <h3 class="alert-title-success">Push to Phoenix successful</h3>
                 <!-- <p>
                     Success.
                 </p> -->
             </div>
         %else:
-            <div class="alert warning visible" id="ViewService_PushFailedAlert">
-                <h3 class="alert_title warning">Warning!</h3>
+            <div class="alert alert-warning alert-visible" id="ViewService_PushFailedAlert">
+                <h3 class="alert-title-warning">Warning!</h3>
                 <p>
                     Error occurred during Phoenix sync
                 </p>
-                <p> Common causes are:
-                    <ul>
+                <p> Common causes are: </p>
+                <ul>
                     <li>Invalid login credentials</li>
                     <li>Down service</li>
                     <li>Error returned by GetCapabilities</li>
-                    </ul>
-                </p>
+                </ul>
             </div>
         %endif
     %endif
@@ -95,48 +94,55 @@
 
 %if service_push_show:
     <form action="${request.path}" method="post" onsubmit="display_PushPhoenix()">
-        <input type="submit" class="button warning" name="phoenix_push" value="Push to Phoenix">
-        <!-- <input type="button" class="button warning" onclick="displayPushPhoenix()" value="Push to Phoenix">
+        <input type="submit" class="button-warning" name="phoenix_push" value="Push to Phoenix">
+        <!-- <input type="button" class="button-warning" onclick="displayPushPhoenix()" value="Push to Phoenix">
         <input type="hidden" value="Submit">-->
     </form>
 %endif
-<button class="img_button theme" type="button"
+<button class="img-button theme" type="button"
         onclick="location.href='${request.route_url('add_service', cur_svc_type=cur_svc_type)}'">
     <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="">
     Add Service
 </button>
 
-<div class="tabs_panel">
+<div class="tabs-panel">
 
     %for svc_type in svc_types:
         % if cur_svc_type == svc_type:
-            <a class="current_tab" href="${request.route_url('view_services', cur_svc_type=svc_type)}">${svc_type}</a>
+            <a class="current-tab" href="${request.route_url('view_services', cur_svc_type=svc_type)}">${svc_type}</a>
         % else:
-            <a class="tab" href="${request.route_url('view_services', cur_svc_type=svc_type)}">${svc_type}</a>
+            <a class="tab theme" href="${request.route_url('view_services', cur_svc_type=svc_type)}">${svc_type}</a>
         % endif
     %endfor
 
-    <div class="current_tab_panel">
-        <table class="simple_list">
-
+    <div class="current-tab-panel">
+        <table class="simple-list">
+            <thead class="theme">
             <tr>
                 <th>Services</th>
                 <th>Action</th>
             </tr>
-            %for service in service_names:
-                <form action="${request.path}" method="post">
-                    <tr>
+            </thead>
+            <tbody>
+                %for i, service in enumerate(service_names):
+                    <form action="${request.path}" method="post">
+                    %if i % 2:
+                    <tr class="list-row-even">
+                    %else:
+                    <tr class="list-row-odd">
+                    %endif
                         <td>
                             <input type="hidden" value=${service} name="service_name">${service}
                         </td>
                         <td style="white-space: nowrap">
-                            <input type="submit" value="Edit" name="edit">
+                            <input type="submit" value="Edit" name="edit" class="button theme">
                             <input type="button" value="Delete" class="button delete"
                                    onclick="display_DeleteAlert_${service}()" >
                         </td>
                     </tr>
-                </form>
-            %endfor
+                    </form>
+                %endfor
+            </tbody>
         </table>
     </div>
 </div>

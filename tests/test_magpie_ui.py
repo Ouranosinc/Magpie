@@ -139,7 +139,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
             resp = utils.TestSetup.check_FormSubmit(self, form_match="add_resource_form", form_submit="add_child",
                                                     form_data=data, previous_response=resp)
             for res_name in (self.test_service_parent_resource_name, self.test_service_child_resource_name):
-                find = "<div class=\"tree_item\">{}</div>".format(res_name)
+                find = "<div class=\"tree-item\">{}</div>".format(res_name)
                 utils.check_val_is_in(find, resp.text, msg=utils.null)
         finally:
             utils.TestSetup.delete_TestService(self, override_service_name=self.test_service_parent_resource_name)

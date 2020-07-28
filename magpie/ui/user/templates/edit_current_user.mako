@@ -10,35 +10,35 @@
 <h3>User Information</h3>
 
 
-<div class="panel_box">
+<div class="panel-box">
     <!-- # FIXME: implement with better warning (alert), API route supports operation
         (admin is immediate delete, but we should confirm user self-delete beforehand just in case)
     -->
     <!--
     <form id="delete_user" action="${request.path}" method="post">
-        <div class="panel_heading theme">
-            <span class="panel_title">User: </span>
-            <span class="panel_value">${user_name}</span>
-            <span class="panel_heading_button">
+        <div class="panel-heading theme">
+            <span class="panel-title">User: </span>
+            <span class="panel-value">${user_name}</span>
+            <span class="panel-heading-button">
                 <input type="submit" value="Delete Account" name="delete" class="button delete">
             </span>
         </div>
     </form>
     -->
-    <div class="panel_body">
-        <div class="panel_box">
-            <div class="panel_heading theme">
-                <div class="panel_title">Details</div>
+    <div class="panel-body">
+        <div class="panel-box">
+            <div class="panel-heading theme">
+                <div class="panel-title">Details</div>
             </div>
             <div>
                 <!-- username fixed -->
-                <p class="panel_line">
-                    <span class="panel_entry">Username: </span>
+                <p class="panel-line">
+                    <span class="panel-entry">Username: </span>
                     ${user_name}
                 </p>
                 <form id="edit_password" action="${request.path}" method="post">
-                    <p class="panel_line">
-                        <span class="panel_entry">Password: </span>
+                    <p class="panel-line">
+                        <span class="panel-entry">Password: </span>
                         %if edit_mode == 'edit_password':
                             <label>
                             <input type="text" value="" name="new_user_password"
@@ -48,15 +48,15 @@
                             </label>
                         %else:
                             <label>
-                            <span class="panel_value">***</span>
+                            <span class="panel-value">***</span>
                             <input type="submit" value="Edit" name="edit_password">
                             </label>
                         %endif
                     </p>
                 </form>
                 <form id="edit_email" action="${request.path}" method="post">
-                    <p class="panel_line">
-                        <span class="panel_entry">Email: </span>
+                    <p class="panel-line">
+                        <span class="panel-entry">Email: </span>
                         %if edit_mode == 'edit_email':
                             <label>
                             <input type="text" value="${email}" name="new_user_email"
@@ -66,7 +66,7 @@
                             </label>
                         %else:
                             <label>
-                            <span class="panel_value">${email}</span>
+                            <span class="panel-value">${email}</span>
                             <input type="submit" value="Edit" name="edit_email">
                             </label>
                         %endif
@@ -82,7 +82,7 @@
 
 <form id="edit_membership" action="${request.path}" method="post">
     <input type="hidden" value="True" name="edit_group_membership"/>
-    <table class="simple_list">
+    <table class="simple-list">
     %for group in groups:
     <tr>
         <td>
