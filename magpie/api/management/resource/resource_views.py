@@ -28,7 +28,7 @@ def get_resources_view(request):
         for svc in services:
             res_json[svc_type][svc.resource_name] = format_service_resources(
                 svc, request.db, show_all_children=True, show_private_url=False)
-    res_json = {u"resources": res_json}
+    res_json = {"resources": res_json}
     return ax.valid_http(http_success=HTTPOk, detail=s.Resources_GET_OkResponseSchema.description, content=res_json)
 
 
@@ -42,7 +42,7 @@ def get_resource_view(request):
     res_json = ax.evaluate_call(lambda: rf.format_resource_with_children(resource, db_session=request.db),
                                 fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                                 msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
-                                content={u"resource": rf.format_resource(resource, basic_info=True)})
+                                content={"resource": rf.format_resource(resource, basic_info=True)})
     return ax.valid_http(http_success=HTTPOk, content={"resource": res_json},
                          detail=s.Resource_GET_OkResponseSchema.description)
 
@@ -93,11 +93,11 @@ def update_resource(request):
     ax.evaluate_call(lambda: rename_service_magpie_and_phoenix(resource, res_new_name, service_push, request.db),
                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                      msg_on_fail=s.Resource_PUT_ForbiddenResponseSchema.description,
-                     content={u"resource_id": resource.resource_id, u"resource_name": resource.resource_name,
-                              u"old_resource_name": res_old_name, u"new_resource_name": res_new_name})
+                     content={"resource_id": resource.resource_id, "resource_name": resource.resource_name,
+                              "old_resource_name": res_old_name, "new_resource_name": res_new_name})
     return ax.valid_http(http_success=HTTPOk, detail=s.Resource_PUT_OkResponseSchema.description,
-                         content={u"resource_id": resource.resource_id, u"resource_name": resource.resource_name,
-                                  u"old_resource_name": res_old_name, u"new_resource_name": res_new_name})
+                         content={"resource_id": resource.resource_id, "resource_name": resource.resource_name,
+                                  "old_resource_name": res_old_name, "new_resource_name": res_new_name})
 
 
 @s.ResourcePermissionsAPI.get(tags=[s.ResourcesTag], response_schemas=s.ResourcePermissions_GET_responses)
@@ -110,6 +110,6 @@ def get_resource_permissions_view(request):
     res_perm = ax.evaluate_call(lambda: ru.get_resource_permissions(resource, db_session=request.db),
                                 fallback=lambda: request.db.rollback(), http_error=HTTPBadRequest,
                                 msg_on_fail=s.ResourcePermissions_GET_BadRequestResponseSchema.description,
-                                content={u"resource": rf.format_resource(resource, basic_info=True)})
+                                content={"resource": rf.format_resource(resource, basic_info=True)})
     return ax.valid_http(http_success=HTTPOk, detail=s.ResourcePermissions_GET_OkResponseSchema.description,
-                         content={u"permission_names": format_permissions(res_perm)})
+                         content={"permission_names": format_permissions(res_perm)})

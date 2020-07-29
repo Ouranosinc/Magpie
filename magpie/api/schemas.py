@@ -1075,6 +1075,12 @@ class Services_POST_BadRequestResponseSchema(colander.MappingSchema):
     body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
+class Services_POST_Params_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid parameter value for service creation."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
 class Services_POST_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Service registration forbidden by db."
     header = HeaderResponseSchema()

@@ -26,7 +26,7 @@
             <td>Service name (unique):</td>
             <td>
                 <div class="input-container"><label>
-                <input type="text" value="" name="service_name" class="equal-width" placeholder="emu">
+                <input type="text" value="" name="service_name" class="equal-width" placeholder="service">
                 </label></div>
             </td>
         </tr>
@@ -34,7 +34,7 @@
             <td>Service url:</td>
             <td>
                 <div class="input-container"><label>
-                    <input type="text" value="" name="service_url" class="equal-width"
+                    <input type="url" value="" name="service_url" class="equal-width"
                            placeholder="http://localhost:8093">
                 </label></div>
             </td>

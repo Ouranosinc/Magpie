@@ -138,7 +138,7 @@ master_doc = "index"
 
 # General information about the project.
 project = __meta__.__title__
-copyright = u"2017, {}".format(__meta__.__author__)  # pylint: disable=W0622,redefined-builtin
+copyright = "2017, {}".format(__meta__.__author__)  # pylint: disable=W0622,redefined-builtin
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout

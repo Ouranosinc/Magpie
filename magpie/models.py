@@ -131,7 +131,7 @@ class Service(Resource):
     Resource of `service` type.
     """
 
-    __tablename__ = u"services"
+    __tablename__ = "services"
 
     resource_id = sa.Column(sa.Integer(),
                             sa.ForeignKey("resources.resource_id",
@@ -139,9 +139,9 @@ class Service(Resource):
                                           ondelete="CASCADE", ),
                             primary_key=True, )
 
-    resource_type_name = u"service"
-    __mapper_args__ = {u"polymorphic_identity": resource_type_name,
-                       u"inherit_condition": resource_id == Resource.resource_id}
+    resource_type_name = "service"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name,
+                       "inherit_condition": resource_id == Resource.resource_id}
 
     @property
     def permissions(self):
@@ -190,18 +190,18 @@ class PathBase(object):
 
 class File(Resource, PathBase):
     child_resource_allowed = False
-    resource_type_name = u"file"
-    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
+    resource_type_name = "file"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
 
 class Directory(Resource, PathBase):
-    resource_type_name = u"directory"
-    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
+    resource_type_name = "directory"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
 
 class Workspace(Resource):
-    resource_type_name = u"workspace"
-    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
+    resource_type_name = "workspace"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
     permissions = [
         Permission.GET_CAPABILITIES,
@@ -217,8 +217,8 @@ class Workspace(Resource):
 
 
 class Route(Resource):
-    resource_type_name = u"route"
-    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
+    resource_type_name = "route"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
     permissions = [
         Permission.READ,            # access with inheritance (this route and all under it)
@@ -316,10 +316,10 @@ for res in [Service, Directory, File, Workspace, Route]:
 def resource_factory(**kwargs):
     resource_type = evaluate_call(lambda: kwargs["resource_type"], http_error=HTTPInternalServerError,
                                   msg_on_fail="kwargs do not contain required 'resource_type'",
-                                  content={u"kwargs": repr(kwargs)})
+                                  content={"kwargs": repr(kwargs)})
     return evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs), http_error=HTTPInternalServerError,
                          msg_on_fail="kwargs unpacking failed from specified 'resource_type' and 'RESOURCE_TYPE_DICT'",
-                         content={u"kwargs": repr(kwargs), u"RESOURCE_TYPE_DICT": repr(RESOURCE_TYPE_DICT)})
+                         content={"kwargs": repr(kwargs), "RESOURCE_TYPE_DICT": repr(RESOURCE_TYPE_DICT)})
 
 
 def find_children_by_name(child_name, parent_id, db_session):

@@ -52,7 +52,7 @@ def request_api(request,            # type: Request
     # we use a plain empty byte str because empty dict `{}` or `None` cause errors on each case
     # of local/remote testing with corresponding `webtest.TestApp`/`requests.Request`
     if not data:
-        data = u""
+        data = ""
     if isinstance(data, dict) and get_header("Content-Type", headers, split=[",", ";"]) == CONTENT_TYPE_JSON:
         data = json.dumps(data)
 

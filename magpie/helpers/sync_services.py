@@ -65,7 +65,7 @@ class SyncServiceInterface(with_metaclass(abc.ABCMeta)):
 
 
 class SyncServiceGeoserver(SyncServiceInterface):
-    sync_type = u"geoserver-api"
+    sync_type = "geoserver-api"
 
     @property
     def max_depth(self):
@@ -93,7 +93,7 @@ class SyncServiceGeoserver(SyncServiceInterface):
 
 
 class SyncServiceProjectAPI(SyncServiceInterface):
-    sync_type = u"project-api"
+    sync_type = "project-api"
 
     @property
     def max_depth(self):
@@ -118,7 +118,7 @@ class SyncServiceProjectAPI(SyncServiceInterface):
 
 
 class SyncServiceThredds(SyncServiceInterface):
-    sync_type = u"thredds"
+    sync_type = "thredds"
 
     @property
     def max_depth(self):

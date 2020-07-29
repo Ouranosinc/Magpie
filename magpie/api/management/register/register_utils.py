@@ -39,7 +39,7 @@ def get_discoverable_group_by_name(group_name, db_session):
     found_group = ax.evaluate_call(lambda: [grp for grp in public_groups if grp.group_name == group_name],
                                    http_error=HTTPNotFound,
                                    msg_on_fail=s.RegisterGroup_NotFoundResponseSchema.description,
-                                   content={u"group_name": group_name})
+                                   content={"group_name": group_name})
     ax.verify_param(found_group, param_name="group_name", not_empty=True,
                     http_error=HTTPNotFound, content_type=CONTENT_TYPE_JSON,
                     msg_on_fail=s.RegisterGroup_NotFoundResponseSchema.description)

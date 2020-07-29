@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import colander
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
@@ -96,7 +97,7 @@ def create_user(user_name, password, email, group_name, db_session):
         new_user_groups.append(anonym_grp_name)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
-                         content={u"user": uf.format_user(new_user, new_user_groups)})
+                         content={"user": uf.format_user(new_user, new_user_groups)})
 
 
 def create_user_resource_permission_response(user, resource, permission, db_session):
@@ -111,14 +112,14 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     existing_perm = UserResourcePermissionService.by_resource_user_and_perm(
         user_id=user.id, resource_id=resource_id, perm_name=permission.value, db_session=db_session)
     ax.verify_param(existing_perm, is_none=True, http_error=HTTPConflict,
-                    content={u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission.value},
+                    content={"resource_id": resource_id, "user_id": user.id, "permission_name": permission.value},
                     msg_on_fail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
 
     new_perm = models.UserResourcePermission(resource_id=resource_id,
                                              user_id=user.id, perm_name=permission.value)  # noqa
-    usr_res_data = {u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission.value}
+    usr_res_data = {"resource_id": resource_id, "user_id": user.id, "permission_name": permission.value}
     ax.verify_param(new_perm, not_none=True, http_error=HTTPForbidden,
-                    content={u"resource_id": resource_id, u"user_id": user.id},
+                    content={"resource_id": resource_id, "user_id": user.id},
                     msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=usr_res_data,
@@ -143,7 +144,7 @@ def delete_user_group(user, group, db_session):
 
     ax.evaluate_call(lambda: del_usr_grp(user, group), fallback=lambda: db_session.rollback(),
                      http_error=HTTPNotFound, msg_on_fail=s.UserGroup_DELETE_NotFoundResponseSchema.description,
-                     content={u"user_name": user.user_name, u"group_name": group.group_name})
+                     content={"user_name": user.user_name, "group_name": group.group_name})
 
 
 def delete_user_resource_permission_response(user, resource, permission, db_session):
@@ -160,7 +161,7 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPNotFound,
                      msg_on_fail=s.UserResourcePermissions_DELETE_NotFoundResponseSchema.description,
-                     content={u"resource_id": resource_id, u"user_id": user.id, u"permission_name": permission.value})
+                     content={"resource_id": resource_id, "user_id": user.id, "permission_name": permission.value})
     return ax.valid_http(http_success=HTTPOk, detail=s.UserResourcePermissions_DELETE_OkResponseSchema.description)
 
 
@@ -182,7 +183,7 @@ def filter_user_permission(resource_permission_list, user):
     Retrieves only direct user permissions on resources amongst a list of user/group resource/service permissions.
     """
     def is_user_perm(perm):
-        return perm.group is None and perm.type == u"user" and perm.user.user_name == user.user_name
+        return perm.group is None and perm.type == "user" and perm.user.user_name == user.user_name
     return filter(is_user_perm, resource_permission_list)
 
 
@@ -215,8 +216,8 @@ def get_user_resource_permissions_response(user, resource, request,
         lambda: get_usr_res_perms(),
         fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
         msg_on_fail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
-        content={u"resource_name": str(resource.resource_name), u"user_name": str(user.user_name)})
-    return ax.valid_http(http_success=HTTPOk, content={u"permission_names": perm_names},
+        content={"resource_name": str(resource.resource_name), "user_name": str(user.user_name)})
+    return ax.valid_http(http_success=HTTPOk, content={"permission_names": perm_names},
                          detail=s.UserResourcePermissions_GET_OkResponseSchema.description)
 
 
@@ -334,23 +335,23 @@ def check_user_info(user_name, email, password, group_name):
     # type: (Str, Str, Str, Str) -> None
     """Validates provided user information to ensure they are adequate for user creation."""
     ax.verify_param(user_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    param_name=u"user_name",
+                    param_name="user_name",
                     msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
     ax.verify_param(len(user_name), is_in=True, http_error=HTTPBadRequest,
-                    param_name=u"user_name", param_compare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
+                    param_name="user_name", param_compare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
                     msg_on_fail=s.Users_CheckInfo_Size_BadRequestResponseSchema.description)
     ax.verify_param(user_name, param_compare=get_constant("MAGPIE_LOGGED_USER"), not_equal=True,
-                    param_name=u"user_name", http_error=HTTPBadRequest,
+                    param_name="user_name", http_error=HTTPBadRequest,
                     msg_on_fail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
     ax.verify_param(email, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    param_name=u"email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
-    ax.verify_param(email, regex_match=True, param_compare=r"", http_error=HTTPBadRequest,
-                    param_name=u"email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
+                    param_name="email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
+    ax.verify_param(email, matches=True, param_compare=colander.EMAIL_RE, http_error=HTTPBadRequest,
+                    param_name="email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
     ax.verify_param(password, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    param_name=u"password",
+                    param_name="password",
                     msg_on_fail=s.Users_CheckInfo_Password_BadRequestResponseSchema.description)
     ax.verify_param(group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    param_name=u"group_name",
+                    param_name="group_name",
                     msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
 
 

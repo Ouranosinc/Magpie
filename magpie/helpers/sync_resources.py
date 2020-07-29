@@ -170,7 +170,7 @@ def _create_main_resource(service_id, session):
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)
     main_resource = models.RemoteResource(service_id=service_id,
                                           resource_name=str(sync_info.service.resource_name),
-                                          resource_type=u"directory")  # noqa
+                                          resource_type="directory")  # noqa
     session.add(main_resource)
     session.flush()
     sync_info.remote_resource_id = main_resource.resource_id
@@ -246,8 +246,8 @@ def _get_resource_children(resource, db_session):
 def _format_resource_tree(children):
     fmt_res_tree = {}
     for child_dict in children.values():
-        resource = child_dict[u"node"]
-        new_children = child_dict[u"children"]
+        resource = child_dict["node"]
+        new_children = child_dict["children"]
         resource_display_name = resource.resource_display_name or resource.resource_name
         resource_dict = {"children": _format_resource_tree(new_children),
                          "remote_id": resource.resource_id,

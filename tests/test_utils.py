@@ -139,7 +139,7 @@ class TestUtils(unittest.TestCase):
         v = asbool(ar.get_query_param(r, "query"))
         utils.check_val_equal(v, True)
 
-    def test_verify_param_proper_verifications(self):
+    def test_verify_param_proper_verifications_raised(self):
         # with default error
         utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("x", param_compare=["a", "b"], is_in=True), HTTPBadRequest)
@@ -152,6 +152,7 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param(1, is_none=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("", not_empty=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("abc", is_empty=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("abc", matches=True, param_compare=r"[A-Z]+"), HTTPBadRequest)
 
         # with requested error
         utils.check_raises(lambda:
@@ -171,13 +172,31 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param(1, is_none=True, http_error=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param("", not_empty=True, http_error=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param("abc", is_empty=True, http_error=HTTPForbidden), HTTPForbidden)
+        utils.check_raises(lambda:
+                           ax.verify_param("abc", matches=True, param_compare=r"[A-Z]+", http_error=HTTPForbidden),
+                           HTTPForbidden)
+
+    def test_verify_param_proper_verifications_passed(self):
+        ax.verify_param("x", param_compare=["a", "b"], not_in=True)
+        ax.verify_param("b", param_compare=["a", "b"], is_in=True)
+        ax.verify_param(1, param_compare=int, is_type=True)
+        ax.verify_param("x", param_compare="y", not_equal=True)
+        ax.verify_param("x", param_compare="x", is_equal=True)
+        ax.verify_param(True, is_true=True)
+        ax.verify_param(False, is_false=True)
+        ax.verify_param(1, not_none=True)
+        ax.verify_param(None, is_none=True)
+        ax.verify_param("abc", not_empty=True)
+        ax.verify_param("", is_empty=True)
+        ax.verify_param("abc", matches=True, param_compare=r"[a-z]+")
 
     def test_verify_param_incorrect_usage(self):
         utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"]), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=None),  # noqa
                            HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param("b", not_in=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=True, http_error=HTTPOk),
+        utils.check_raises(lambda:
+                           ax.verify_param("b", param_compare=["a", "b"], not_in=True, http_error=HTTPOk), # noqa
                            HTTPInternalServerError)
 
     def test_verify_param_compare_types(self):
@@ -190,7 +209,7 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_equal=True), HTTPInternalServerError)
 
         # strings cases handled correctly (no raise)
-        utils.check_no_raise(lambda: ax.verify_param("1", param_compare=u"1", is_equal=True))
+        utils.check_no_raise(lambda: ax.verify_param("1", param_compare="1", is_equal=True))
 
     def test_enum_values_listing(self):
         utils.check_all_equal(DummyEnum.values(), ["value-1", "value-2"], any_order=True)

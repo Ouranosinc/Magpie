@@ -217,7 +217,7 @@ def get_service_matchdict_checked(request, service_name_key="service_name"):
     service = evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
                             fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                             msg_on_fail=s.Service_MatchDictCheck_ForbiddenResponseSchema.description)
-    verify_param(service, not_none=True, http_error=HTTPNotFound, content={u"service_name": service_name},
+    verify_param(service, not_none=True, http_error=HTTPNotFound, content={"service_name": service_name},
                  msg_on_fail=s.Service_MatchDictCheck_NotFoundResponseSchema.description)
     return service
 

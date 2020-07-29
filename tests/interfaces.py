@@ -384,12 +384,12 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             if provider_services_info[svc_name]["type"] in possible_service_types:
                 cls.test_services_info[svc_name] = provider_services_info[svc_name]
 
-        cls.test_service_name = u"magpie-unittest-service-api"
+        cls.test_service_name = "magpie-unittest-service-api"
         cls.test_service_type = ServiceAPI.service_type
         cls.test_service_perm = SERVICE_TYPE_DICT[cls.test_service_type].permissions[0].value
         utils.TestSetup.create_TestService(cls)
 
-        cls.test_resource_name = u"magpie-unittest-resource"
+        cls.test_resource_name = "magpie-unittest-resource"
         test_service_res_perm_dict = SERVICE_TYPE_DICT[cls.test_service_type].resource_types_permissions
         test_service_resource_types = list(test_service_res_perm_dict.keys())
         utils.check_val_not_equal(len(test_service_resource_types), 0,
@@ -402,8 +402,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         cls.test_resource_perm_type = cls.test_service_resource_perms[0]
         cls.test_resource_perm_name = cls.test_resource_perm_type.value
 
-        cls.test_group_name = u"magpie-unittest-dummy-group"
-        cls.test_user_name = u"magpie-unittest-toto"
+        cls.test_group_name = "magpie-unittest-dummy-group"
+        cls.test_user_name = "magpie-unittest-toto"
         cls.test_user_group = get_constant("MAGPIE_USERS_GROUP")
 
     def setUp(self):
@@ -551,8 +551,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
         perm_recur = Permission.READ.value
         perm_match = Permission.READ_MATCH.value
-        data_recur = {u"permission_name": perm_recur}
-        data_match = {u"permission_name": perm_match}
+        data_recur = {"permission_name": perm_recur}
+        data_match = {"permission_name": perm_match}
         path = "/users/{usr}/resources/{res}/permissions".format(res=test_svc_res_id, usr=self.usr)
         utils.test_request(self, "POST", path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
         path = "/groups/{grp}/resources/{res}/permissions".format(res=test_svc_res_id, grp=self.grp)
@@ -622,7 +622,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
         # test permission creation
         path = "/users/{usr}/resources/{res}/permissions".format(res=test_res_id, usr=self.usr)
-        data = {u"permission_name": self.test_resource_perm_name}
+        data = {"permission_name": self.test_resource_perm_name}
         resp = utils.test_request(self, "POST", path, data=data, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 201, expected_method="POST")
         utils.check_val_is_in("permission_name", body)
@@ -645,7 +645,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         test_res_id = body["resource"]["resource_id"]
 
         path = "/users/{usr}/resources/{res}/permissions".format(res=test_res_id, usr=self.usr)
-        data = {u"permission_name": self.test_resource_perm_name}
+        data = {"permission_name": self.test_resource_perm_name}
         utils.test_request(self, "POST", path, data=data, headers=self.json_headers, cookies=self.cookies)
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_res_id)
         utils.check_val_is_in(self.test_resource_perm_name, body["permission_names"],
@@ -1784,7 +1784,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         body = utils.check_response_basic_info(resp, 409, expected_method="POST")
         utils.check_error_param_structure(body, version=self.version,
                                           is_param_value_literal_unicode=True, param_compare_exists=True,
-                                          param_value=self.test_resource_name, param_name=u"resource_name")
+                                          param_value=self.test_resource_name, param_name="resource_name")
 
     @runner.MAGPIE_TEST_SERVICES
     @runner.MAGPIE_TEST_DEFAULTS

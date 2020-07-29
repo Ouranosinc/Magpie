@@ -31,27 +31,27 @@ def format_service(service, permissions=None, show_private_url=False, show_resou
     def fmt_svc(svc, perms):
 
         svc_info = {
-            u"public_url": str(get_twitcher_protected_service_url(svc.resource_name)),
-            u"service_name": str(svc.resource_name),
-            u"service_type": str(svc.type),
-            u"service_sync_type": str(svc.sync_type) if svc.sync_type is not None else svc.sync_type,
-            u"resource_id": svc.resource_id,
+            "public_url": str(get_twitcher_protected_service_url(svc.resource_name)),
+            "service_name": str(svc.resource_name),
+            "service_type": str(svc.type),
+            "service_sync_type": str(svc.sync_type) if svc.sync_type is not None else svc.sync_type,
+            "resource_id": svc.resource_id,
         }
         if perms is None:  # user/group permission specify empty list
             perms = SERVICE_TYPE_DICT[svc.type].permissions
-        svc_info[u"permission_names"] = format_permissions(perms)
+        svc_info["permission_names"] = format_permissions(perms)
         if show_private_url:
-            svc_info[u"service_url"] = str(svc.url)
+            svc_info["service_url"] = str(svc.url)
         if show_resources_allowed:
-            svc_info[u"resource_types_allowed"] = sorted(SERVICE_TYPE_DICT[svc.type].resource_type_names)
-            svc_info[u"resource_child_allowed"] = SERVICE_TYPE_DICT[svc.type].child_resource_allowed
+            svc_info["resource_types_allowed"] = sorted(SERVICE_TYPE_DICT[svc.type].resource_type_names)
+            svc_info["resource_child_allowed"] = SERVICE_TYPE_DICT[svc.type].child_resource_allowed
         return svc_info
 
     return evaluate_call(
         lambda: fmt_svc(service, permissions),
         http_error=HTTPInternalServerError,
         msg_on_fail="Failed to format service.",
-        content={u"service": repr(service), u"permissions": repr(permissions)}
+        content={"service": repr(service), "permissions": repr(permissions)}
     )
 
 
@@ -80,7 +80,7 @@ def format_service_resources(service,                       # type: Service
 
         svc_perms = SERVICE_TYPE_DICT[svc.type].permissions if svc_perms is None else svc_perms
         svc_res = format_service(svc, svc_perms, show_private_url=show_private_url)
-        svc_res[u"resources"] = format_resource_tree(tree, resources_perms_dict=res_perms, db_session=db)
+        svc_res["resources"] = format_resource_tree(tree, resources_perms_dict=res_perms, db_session=db)
         return svc_res
 
     return evaluate_call(
@@ -94,9 +94,9 @@ def format_service_resources(service,                       # type: Service
 def format_service_resource_type(resource_class, service_class):
     # type: (Type[Resource], Type[ServiceInterface]) -> JSON
     return {
-        u"resource_type": resource_class.resource_type_name,
-        u"resource_child_allowed": resource_class.child_resource_allowed,
-        u"permission_names": format_permissions(
+        "resource_type": resource_class.resource_type_name,
+        "resource_child_allowed": resource_class.child_resource_allowed,
+        "permission_names": format_permissions(
             service_class.get_resource_permissions(resource_class.resource_type_name)
         ),
     }

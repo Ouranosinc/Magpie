@@ -19,7 +19,7 @@ def get_groups_view(request):
     """
     group_names = gu.get_all_group_names(request.db)
     return ax.valid_http(http_success=HTTPOk, detail=s.Groups_GET_OkResponseSchema.description,
-                         content={u"group_names": group_names})
+                         content={"group_names": group_names})
 
 
 @s.GroupsAPI.post(schema=s.Groups_POST_RequestSchema(), tags=[s.GroupsTag], response_schemas=s.Groups_POST_responses)
@@ -42,7 +42,7 @@ def get_group_view(request):
     """
     group = ar.get_group_matchdict_checked(request, group_name_key="group_name")
     return ax.valid_http(http_success=HTTPOk, detail=s.Group_GET_OkResponseSchema.description,
-                         content={u"group": gf.format_group(group, db_session=request.db)})
+                         content={"group": gf.format_group(group, db_session=request.db)})
 
 
 @s.GroupAPI.put(schema=s.Group_PUT_RequestSchema(), tags=[s.GroupsTag], response_schemas=s.Group_PUT_responses)
@@ -104,7 +104,7 @@ def get_group_users_view(request):
                                   http_error=HTTPForbidden,
                                   msg_on_fail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupUsers_GET_OkResponseSchema.description,
-                         content={u"user_names": sorted(user_names)})
+                         content={"user_names": sorted(user_names)})
 
 
 @s.GroupServicesAPI.get(tags=[s.GroupsTag], response_schemas=s.GroupServices_GET_responses)
@@ -163,10 +163,10 @@ def get_group_resources_view(request):
     group = ar.get_group_matchdict_checked(request)
     grp_res_json = ax.evaluate_call(lambda: gu.get_group_resources(group, request.db),
                                     fallback=lambda: request.db.rollback(),
-                                    http_error=HTTPInternalServerError, content={u"group": repr(group)},
+                                    http_error=HTTPInternalServerError, content={"group": repr(group)},
                                     msg_on_fail=s.GroupResources_GET_InternalServerErrorResponseSchema.description)
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupResources_GET_OkResponseSchema.description,
-                         content={u"resources": grp_res_json})
+                         content={"resources": grp_res_json})
 
 
 @s.GroupResourcePermissionsAPI.get(tags=[s.GroupsTag], response_schemas=s.GroupResourcePermissions_GET_responses)

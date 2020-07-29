@@ -118,7 +118,7 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
     def permission_requested(self):
         # type: () -> Permission
         try:
-            req = self.parser.params[u"request"]
+            req = self.parser.params["request"]
             perm = Permission.get(req)
             if perm is None:
                 raise NotImplementedError("Undefined 'Permission' from 'request' parameter: {!s}".format(req))
@@ -145,7 +145,7 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
 
 
 class ServiceWPS(ServiceInterface):
-    service_type = u"wps"
+    service_type = "wps"
 
     permissions = [
         Permission.GET_CAPABILITIES,
@@ -154,9 +154,9 @@ class ServiceWPS(ServiceInterface):
     ]
 
     params_expected = [
-        u"service",
-        u"request",
-        u"version"
+        "service",
+        "request",
+        "version"
     ]
 
     resource_types_permissions = {}
@@ -179,12 +179,12 @@ class ServiceBaseWMS(ServiceInterface):
     ]
 
     params_expected = [
-        u"service",
-        u"request",
-        u"version",
-        u"layers",
-        u"layername",
-        u"dataset"
+        "service",
+        "request",
+        "version",
+        "layers",
+        "layername",
+        "dataset"
     ]
 
     resource_types_permissions = {
@@ -205,7 +205,7 @@ class ServiceBaseWMS(ServiceInterface):
 
 
 class ServiceNCWMS2(ServiceBaseWMS):
-    service_type = u"ncwms"
+    service_type = "ncwms"
 
     resource_types_permissions = {
         models.File: [
@@ -276,7 +276,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
 
 
 class ServiceGeoserverWMS(ServiceBaseWMS):
-    service_type = u"geoserverwms"
+    service_type = "geoserverwms"
 
     def __init__(self, service, request):
         super(ServiceGeoserverWMS, self).__init__(service, request)
@@ -314,7 +314,7 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
 
 
 class ServiceAccess(ServiceInterface):
-    service_type = u"access"
+    service_type = "access"
 
     permissions = [Permission.ACCESS]
 
@@ -334,7 +334,7 @@ class ServiceAccess(ServiceInterface):
 
 
 class ServiceAPI(ServiceInterface):
-    service_type = u"api"
+    service_type = "api"
 
     permissions = models.Route.permissions
 
@@ -397,7 +397,7 @@ class ServiceAPI(ServiceInterface):
 
 
 class ServiceWFS(ServiceInterface):
-    service_type = u"wfs"
+    service_type = "wfs"
 
     permissions = [
         Permission.GET_CAPABILITIES,
@@ -408,10 +408,10 @@ class ServiceWFS(ServiceInterface):
     ]
 
     params_expected = [
-        u"service",
-        u"request",
-        u"version",
-        u"typenames"
+        "service",
+        "request",
+        "version",
+        "typenames"
     ]
 
     resource_types_permissions = {}
@@ -443,7 +443,7 @@ class ServiceWFS(ServiceInterface):
 
 
 class ServiceTHREDDS(ServiceInterface):
-    service_type = u"thredds"
+    service_type = "thredds"
 
     permissions = [
         Permission.READ,
@@ -451,7 +451,7 @@ class ServiceTHREDDS(ServiceInterface):
     ]
 
     params_expected = [
-        u"request"
+        "request"
     ]
 
     resource_types_permissions = {
@@ -507,12 +507,12 @@ def service_factory(service, request):
     Retrieve the specific service class from the provided database service entry.
     """
     ax.verify_param(service, param_compare=models.Service, is_type=True,
-                    http_error=HTTPBadRequest, content={u"service": repr(service)},
+                    http_error=HTTPBadRequest, content={"service": repr(service)},
                     msg_on_fail="Cannot process invalid service object")
     service_type = ax.evaluate_call(lambda: service.type, http_error=HTTPInternalServerError,
                                     msg_on_fail="Cannot retrieve service type from object")
     ax.verify_param(service_type, is_in=True, param_compare=SERVICE_TYPE_DICT.keys(),
-                    http_error=HTTPNotImplemented, content={u"service_type": service_type},
+                    http_error=HTTPNotImplemented, content={"service_type": service_type},
                     msg_on_fail="Undefined service type mapping to service object")
     return ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service_type](service, request),
                             http_error=HTTPInternalServerError,

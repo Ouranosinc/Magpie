@@ -12,23 +12,23 @@ if TYPE_CHECKING:
 
 class Permission(with_metaclass(ExtendedEnumMeta, Enum)):
     # file/dir permissions
-    READ = u"read"
-    READ_MATCH = u"read-match"
-    WRITE = u"write"
-    WRITE_MATCH = u"write-match"
-    ACCESS = u"access"
+    READ = "read"
+    READ_MATCH = "read-match"
+    WRITE = "write"
+    WRITE_MATCH = "write-match"
+    ACCESS = "access"
     # WPS permissions
-    GET_CAPABILITIES = u"getcapabilities"
-    GET_MAP = u"getmap"
-    GET_FEATURE_INFO = u"getfeatureinfo"
-    GET_LEGEND_GRAPHIC = u"getlegendgraphic"
-    GET_METADATA = u"getmetadata"
-    GET_FEATURE = u"getfeature"
-    DESCRIBE_FEATURE_TYPE = u"describefeaturetype"
-    DESCRIBE_PROCESS = u"describeprocess"
-    EXECUTE = u"execute"
-    LOCK_FEATURE = u"lockfeature"
-    TRANSACTION = u"transaction"
+    GET_CAPABILITIES = "getcapabilities"
+    GET_MAP = "getmap"
+    GET_FEATURE_INFO = "getfeatureinfo"
+    GET_LEGEND_GRAPHIC = "getlegendgraphic"
+    GET_METADATA = "getmetadata"
+    GET_FEATURE = "getfeature"
+    DESCRIBE_FEATURE_TYPE = "describefeaturetype"
+    DESCRIBE_PROCESS = "describeprocess"
+    EXECUTE = "execute"
+    LOCK_FEATURE = "lockfeature"
+    TRANSACTION = "transaction"
 
 
 def convert_permission(permission):

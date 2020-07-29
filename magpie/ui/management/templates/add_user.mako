@@ -13,11 +13,16 @@
         <tr>
             <td>User name:</td>
             <td><div class="input-container"><label>
-                <input type="text" name="user_name" value="${form_user_name}" class="equal-width">
+                <input type="text" name="user_name" placeholder="username"
+                       value="${form_user_name}" class="equal-width">
                 </label></div>
             </td>
             <td>
-                <div class="alert-form-error">
+                <div class="alert-form-error"
+                    %if not (too_long_user_name or invalid_user_name or conflict_user_name):
+                        hidden
+                    %endif
+                >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
                     <div class="alert-form-text">
@@ -35,11 +40,16 @@
         <tr>
             <td>Email:</td>
             <td><div class="input-container"><label>
-                <input type="email" name="email" value="${form_user_email}" class="equal-width">
+                <input type="email" name="email" placeholder="email"
+                       value="${form_user_email}" class="equal-width">
                 </label></div>
             </td>
             <td>
-                <div class="alert-form-error">
+                <div class="alert-form-error"
+                    %if not (invalid_user_email or conflict_user_email):
+                        hidden
+                    %endif
+                >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
                     <div class="alert-form-text">
@@ -56,15 +66,46 @@
             <td>Password:</td>
             <td>
                 <div class="input-container"><label>
-                <input type="password" name="password" value="" class="equal-width">
+                <input type="password" placeholder="password"
+                       name="password" value="" class="equal-width">
                 </label></div>
             </td>
             <td>
-                <div class="alert-form-error">
+                <div class="alert-form-error"
+                    %if not invalid_password:
+                        hidden
+                    %endif
+                >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
                     <div class="alert-form-text">
                         %if invalid_password:
+                            Invalid
+                        %endif
+                    </div>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>Confirm:</td>
+            <td>
+                <div class="input-container"><label>
+                <input type="password" placeholder="confirm"
+                       name="confirm" value="" class="equal-width">
+                </label></div>
+            </td>
+            <td>
+                <div class="alert-form-error"
+                    %if not (mismatch_password or invalid_password):
+                        hidden
+                    %endif
+                >
+                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                         alt="ERROR" class="icon-error" />
+                    <div class="alert-form-text">
+                        %if invalid_password:
+                            Mismatch
+                        %elif mismatch_password:
                             Invalid
                         %endif
                     </div>

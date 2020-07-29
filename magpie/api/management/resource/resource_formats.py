@@ -13,17 +13,17 @@ def format_resource(resource, permissions=None, basic_info=False):
     """
     def fmt_res(res, perms, info):
         result = {
-            u"resource_name": str(res.resource_name),
-            u"resource_display_name": str(res.resource_display_name or res.resource_name),
-            u"resource_type": str(res.resource_type),
-            u"resource_id": res.resource_id
+            "resource_name": str(res.resource_name),
+            "resource_display_name": str(res.resource_display_name or res.resource_name),
+            "resource_type": str(res.resource_type),
+            "resource_id": res.resource_id
         }
         if not info:
             result.update({
-                u"parent_id": res.parent_id,
-                u"root_service_id": res.root_service_id,
-                u"children": {},
-                u"permission_names": list() if perms is None else format_permissions(perms)
+                "parent_id": res.parent_id,
+                "root_service_id": res.root_service_id,
+                "children": {},
+                "permission_names": list() if perms is None else format_permissions(perms)
             })
         return result
 
@@ -31,7 +31,7 @@ def format_resource(resource, permissions=None, basic_info=False):
         lambda: fmt_res(resource, permissions, basic_info),
         http_error=HTTPInternalServerError,
         msg_on_fail="Failed to format resource.",
-        content={u"resource": repr(resource), u"permissions": repr(permissions), u"basic_info": str(basic_info)}
+        content={"resource": repr(resource), "permissions": repr(permissions), "basic_info": str(basic_info)}
     )
 
 
@@ -53,8 +53,8 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, _inter
 
     fmt_res_tree = {}
     for child_id, child_dict in children.items():
-        resource = child_dict[u"node"]
-        new_children = child_dict[u"children"]
+        resource = child_dict["node"]
+        new_children = child_dict["children"]
         perms = []
 
         # case of pre-specified user/group-specific permissions
@@ -83,7 +83,7 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, _inter
             perms = _internal_svc_res_perm_dict[service_id][resource.resource_type]  # 'resource_type' is str here
 
         fmt_res_tree[child_id] = format_resource(resource, perms)
-        fmt_res_tree[child_id][u"children"] = format_resource_tree(new_children, db_session,
+        fmt_res_tree[child_id]["children"] = format_resource_tree(new_children, db_session,
                                                                    resources_perms_dict, _internal_svc_res_perm_dict)
 
     return fmt_res_tree
@@ -92,13 +92,13 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, _inter
 def get_resource_children(resource, db_session):
     query = RESOURCE_TREE_SERVICE.from_parent_deeper(resource.resource_id, db_session=db_session)
     tree_struct_dict = RESOURCE_TREE_SERVICE.build_subtree_strut(query)
-    return tree_struct_dict[u"children"]
+    return tree_struct_dict["children"]
 
 
 def format_resource_with_children(resource, db_session):
     resource_formatted = format_resource(resource)
 
-    resource_formatted[u"children"] = format_resource_tree(
+    resource_formatted["children"] = format_resource_tree(
         get_resource_children(resource, db_session),
         db_session=db_session
     )

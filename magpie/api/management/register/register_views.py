@@ -34,7 +34,7 @@ def get_discoverable_groups_view(request):
     public_group_names = ax.evaluate_call(lambda: [grp.group_name for grp in public_groups],
                                           http_error=HTTPInternalServerError,
                                           msg_on_fail=s.InternalServerErrorResponseSchema.description)
-    return ax.valid_http(http_success=HTTPOk, content={u"group_names": public_group_names},
+    return ax.valid_http(http_success=HTTPOk, content={"group_names": public_group_names},
                          detail=s.RegisterGroups_GET_OkResponseSchema.description)
 
 
@@ -48,7 +48,7 @@ def get_discoverable_group_info_view(request):
     group_name = ar.get_group_matchdict_checked(request)
     public_group = ru.get_discoverable_group_by_name(group_name, db_session=request.db)
     group_fmt = gf.format_group(public_group, public_info=True)
-    return ax.valid_http(http_success=HTTPOk, content={u"group": group_fmt},
+    return ax.valid_http(http_success=HTTPOk, content={"group": group_fmt},
                          detail=s.RegisterGroup_GET_OkResponseSchema.description)
 
 
@@ -64,14 +64,14 @@ def join_discoverable_group_view(request):
     group = ru.get_discoverable_group_by_name(group_name, db_session=request.db)
 
     ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, http_error=HTTPConflict,
-                    content={u"user_name": user.user_name, u"group_name": group.group_name},
+                    content={"user_name": user.user_name, "group_name": group.group_name},
                     msg_on_fail=s.RegisterGroup_POST_ConflictResponseSchema.description)
     ax.evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),  # noqa
                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                      msg_on_fail=s.RegisterGroup_POST_ForbiddenResponseSchema.description,
-                     content={u"user_name": user.user_name, u"group_name": group.group_name})
+                     content={"user_name": user.user_name, "group_name": group.group_name})
     return ax.valid_http(http_success=HTTPCreated, detail=s.RegisterGroup_POST_CreatedResponseSchema.description,
-                         content={u"user_name": user.user_name, u"group_name": group.group_name})
+                         content={"user_name": user.user_name, "group_name": group.group_name})
 
 
 @s.RegisterGroupAPI.delete(schema=s.RegisterGroup_DELETE_RequestSchema,

@@ -1,4 +1,5 @@
 import json
+import re
 from sys import exc_info
 from typing import TYPE_CHECKING
 
@@ -58,6 +59,7 @@ def verify_param(  # noqa: E126
                  is_in=False,                       # type: bool
                  is_equal=False,                    # type: bool
                  is_type=False,                     # type: bool
+                 matches=False,                     # type: bool
                 ):                                  # type: (...) -> None
     # pylint: disable=R0912,R0914
     """
@@ -67,28 +69,33 @@ def verify_param(  # noqa: E126
 
     :param param: parameter value to evaluate
     :param param_compare:
-        other value(s) to test `param` against, can be an iterable (single value resolved as iterable unless `None`)
-        to test for `None` type, use `is_none`/`not_none` flags instead
+        Other value(s) to test :paramref:`param` against.
+        Can be an iterable (single value resolved as iterable unless ``None``).
+        To test for ``None`` type, use :paramref:`is_none`/:paramref:`not_none` flags instead.
     :param param_name: name of the tested parameter returned in response if specified for debugging purposes
-    :param http_error: derived exception to raise on test failure (default: `HTTPBadRequest`)
-    :param http_kwargs: additional keyword arguments to pass to `http_error` if called in case of HTTP exception
+    :param http_error: derived exception to raise on test failure (default: :class:`HTTPBadRequest`)
+    :param http_kwargs: additional keyword arguments to pass to :paramref:`http_error` called in case of HTTP exception
     :param msg_on_fail: message details to return in HTTP exception if flag condition failed
     :param content: json formatted additional content to provide in case of exception
-    :param content_type: format in which to return the exception (one of `magpie.common.SUPPORTED_CONTENT_TYPES`)
-    :param not_none: test that `param` is None type
-    :param not_empty: test that `param` is an empty string
-    :param not_in: test that `param` does not exist in `param_compare` values
-    :param not_equal: test that `param` is not equal to `param_compare` value
-    :param is_true: test that `param` is `True`
-    :param is_false: test that `param` is `False`
-    :param is_none: test that `param` is None type
-    :param is_empty: test `param` for an empty string
-    :param is_in: test that `param` exists in `param_compare` values
-    :param is_equal: test that `param` equals `param_compare` value
-    :param is_type: test that `param` is of same type as specified by `param_compare` type
-    :param with_param: on raise, adds values of `param`, `param_name` and `param_compare` to json response if specified
-    :raises `HTTPError`: if tests fail, specified exception is raised (default: `HTTPBadRequest`)
-    :raises `HTTPInternalServerError`: for evaluation error
+    :param content_type: format in which to return the exception
+        (one of :py:data:`magpie.common.SUPPORTED_CONTENT_TYPES`)
+    :param not_none: test that :paramref:`param` is None type
+    :param not_empty: test that :paramref:`param` is an empty string
+    :param not_in: test that :paramref:`param` does not exist in :paramref:`param_compare` values
+    :param not_equal: test that :paramref:`param` is not equal to :paramref:`param_compare` value
+    :param is_true: test that :paramref:`param` is ``True``
+    :param is_false: test that :paramref:`param` is ``False``
+    :param is_none: test that :paramref:`param` is ``None`` type
+    :param is_empty: test `param` for an empty :class:`str`
+    :param is_in: test that :paramref:`param` exists in :paramref:`param_compare` values
+    :param is_equal: test that :paramref:`param` equals :paramref:`param_compare` value
+    :param is_type: test that :paramref:`param` is of same type as specified by :paramref:`param_compare` type
+    :param matches: test that :paramref:`param` matches the regex specified by :paramref:`param_compare` value
+    :param with_param:
+        On raise, adds values of :paramref:`param`, :paramref:`param_name` and :paramref:`param_compare`
+        to the JSON response for each of the specified value.
+    :raises HTTPError: if tests fail, specified exception is raised (default: :class:`HTTPBadRequest`)
+    :raises HTTPInternalServerError: for evaluation error
     :return: nothing if all tests passed
     """
     content = {} if content is None else content
@@ -117,9 +124,11 @@ def verify_param(  # noqa: E126
             raise TypeError("'is_equal' is not a 'bool'")
         if not isinstance(is_type, bool):
             raise TypeError("'is_type' is not a 'bool'")
-        if param_compare is None and (is_in or not_in or is_equal or not_equal):
+        if not isinstance(matches, bool):
+            raise TypeError("'matches' is not a 'bool'")
+        if param_compare is None and (is_in or not_in or is_equal or not_equal or matches):
             raise TypeError("'param_compare' cannot be 'None' with specified test flags")
-        if is_equal or not_equal:
+        if is_equal or not_equal or matches:
             # allow 'different' string literals for comparison, otherwise types must match exactly
             if (not (isinstance(param, six.string_types) and isinstance(param_compare, six.string_types))
                      and type(param) != type(param_compare)):   # noqa: E127 # pylint: disable=C0123
@@ -128,11 +137,11 @@ def verify_param(  # noqa: E126
             param_compare = [param_compare]
         # error if none of the flags specified
         if not any([not_none, not_empty, not_in, not_equal,
-                    is_none, is_empty, is_in, is_equal, is_true, is_false, is_type]):
+                    is_none, is_empty, is_in, is_equal, is_true, is_false, is_type, matches]):
             raise ValueError("no comparison flag specified for verification")
     except Exception as exc:
-        content[u"traceback"] = repr(exc_info())
-        content[u"exception"] = repr(exc)
+        content["traceback"] = repr(exc_info())
+        content["exception"] = repr(exc)
         raise_http(http_error=HTTPInternalServerError, http_kwargs=http_kwargs,
                    content=content, content_type=content_type,
                    detail="Error occurred during parameter verification")
@@ -161,13 +170,15 @@ def verify_param(  # noqa: E126
         fail_verify = fail_verify or (param != param_compare)
     if is_type:
         fail_verify = fail_verify or (not isinstance(param, param_compare))
+    if matches:
+        fail_verify = fail_verify or (not re.match(param_compare, param))
     if fail_verify:
         if with_param:
-            content[u"param"] = {u"value": str(param)}
+            content["param"] = {"value": str(param)}
             if param_name is not None:
-                content[u"param"][u"name"] = str(param_name)
+                content["param"]["name"] = str(param_name)
             if param_compare is not None:
-                content[u"param"][u"compare"] = str(param_compare)
+                content["param"]["compare"] = str(param_compare)
         raise_http(http_error, http_kwargs=http_kwargs, detail=msg_on_fail, content=content, content_type=content_type)
 
 
@@ -216,7 +227,7 @@ def evaluate_call(call,                                 # type: Callable[[], Any
     if not islambda(call):
         raise_http(http_error=HTTPInternalServerError, http_kwargs=http_kwargs,
                    detail="Input 'call' is not a lambda expression.",
-                   content={u"call": {u"detail": msg_on_fail, u"content": repr(content)}},
+                   content={"call": {"detail": msg_on_fail, "content": repr(content)}},
                    content_type=content_type)
 
     # preemptively check fallback to avoid possible call exception without valid recovery
@@ -224,7 +235,7 @@ def evaluate_call(call,                                 # type: Callable[[], Any
         if not islambda(fallback):
             raise_http(http_error=HTTPInternalServerError, http_kwargs=http_kwargs,
                        detail="Input 'fallback'  is not a lambda expression, not attempting 'call'.",
-                       content={u"call": {u"detail": msg_on_fail, u"content": repr(content)}},
+                       content={"call": {"detail": msg_on_fail, "content": repr(content)}},
                        content_type=content_type)
     try:
         return call()
@@ -236,11 +247,11 @@ def evaluate_call(call,                                 # type: Callable[[], Any
     except Exception as exc:
         raise_http(http_error=HTTPInternalServerError, http_kwargs=http_kwargs,
                    detail="Exception occurred during 'fallback' called after failing 'call' exception.",
-                   content={u"call": {u"exception": exc_call, u"detail": msg_on_fail, u"content": repr(content)},
-                            u"fallback": {u"exception": repr(exc)}},
+                   content={"call": {"exception": exc_call, "detail": msg_on_fail, "content": repr(content)},
+                            "fallback": {"exception": repr(exc)}},
                    content_type=content_type)
     raise_http(http_error, detail=msg_on_fail, http_kwargs=http_kwargs,
-               content={u"call": {u"exception": exc_call, u"content": repr(content)}},
+               content={"call": {"exception": exc_call, "content": repr(content)}},
                content_type=content_type)
 
 
@@ -345,9 +356,9 @@ def validate_params(http_class,     # type: HTTPException
     # cannot be done within a try/except because it would always trigger with `raise_http`
     content = dict() if content is None else content
     detail = repr(detail) if not isinstance(detail, six.string_types) else detail
-    caller = {u"content": content, u"type": content_type, u"detail": detail, u"code": 520}  # "unknown" code error
+    caller = {"content": content, "type": content_type, "detail": detail, "code": 520}  # "unknown" code error
     verify_param(isclass(http_class), param_name="http_class", is_true=True,
-                 http_error=HTTPInternalServerError, content_type=CONTENT_TYPE_JSON, content={u"caller": caller},
+                 http_error=HTTPInternalServerError, content_type=CONTENT_TYPE_JSON, content={"caller": caller},
                  msg_on_fail="Object specified is not a class, class derived from `HTTPException` is expected.")
     # if `http_class` derives from `http_base` (ex: `HTTPSuccessful` or `HTTPError`) it is of proper requested type
     # if it derives from `HTTPException`, it *could* be different than base (ex: 2xx instead of 4xx codes)
@@ -359,12 +370,12 @@ def validate_params(http_class,     # type: HTTPException
         http_code = http_class.code
     else:
         http_code = 520
-    caller[u"code"] = http_code
+    caller["code"] = http_code
     verify_param(issubclass(http_class, http_base), param_name="http_base", is_true=True,
-                 http_error=HTTPInternalServerError, content_type=CONTENT_TYPE_JSON, content={u"caller": caller},
+                 http_error=HTTPInternalServerError, content_type=CONTENT_TYPE_JSON, content={"caller": caller},
                  msg_on_fail="Invalid 'http_base' derived class specified.")
     verify_param(content_type, param_name="content_type", param_compare=SUPPORTED_CONTENT_TYPES, is_in=True,
-                 http_error=HTTPInternalServerError, content_type=CONTENT_TYPE_JSON, content={u"caller": caller},
+                 http_error=HTTPInternalServerError, content_type=CONTENT_TYPE_JSON, content={"caller": caller},
                  msg_on_fail="Invalid 'content_type' specified for exception output.")
     return http_code, detail, content
 
@@ -379,20 +390,20 @@ def format_content_json_str(http_code, detail, content, content_type):
     """
     json_body = {}
     try:
-        content[u"code"] = http_code
-        content[u"detail"] = detail
-        content[u"type"] = content_type
+        content["code"] = http_code
+        content["detail"] = detail
+        content["type"] = content_type
         json_body = json.dumps(content)
     except Exception as exc:  # pylint: disable=W0703
         msg = "Dumping json content '{!s}' resulted in exception '{!r}'.".format(content, exc)
         raise_http(http_error=HTTPInternalServerError, detail=msg,
                    content_type=CONTENT_TYPE_JSON,
-                   content={u"traceback": repr(exc_info()),
-                            u"exception": repr(exc),
-                            u"caller": {u"content": repr(content),  # raw string to avoid recursive json.dumps error
-                                        u"detail": detail,
-                                        u"code": http_code,
-                                        u"type": content_type}})
+                   content={"traceback": repr(exc_info()),
+                            "exception": repr(exc),
+                            "caller": {"content": repr(content),  # raw string to avoid recursive json.dumps error
+                                       "detail": detail,
+                                       "code": http_code,
+                                       "type": content_type}})
     return json_body
 
 
@@ -434,7 +445,7 @@ def generate_response_http_format(http_class, http_kwargs, json_content, output_
         return http_response
     except Exception as exc:  # pylint: disable=W0703
         raise_http(http_error=HTTPInternalServerError, detail="Failed to build HTTP response",
-                   content={u"traceback": repr(exc_info()), u"exception": repr(exc),
-                            u"caller": {u"http_kwargs": repr(http_kwargs),
-                                        u"http_class": repr(http_class),
-                                        u"output_type": str(output_type)}})
+                   content={"traceback": repr(exc_info()), "exception": repr(exc),
+                            "caller": {"http_kwargs": repr(http_kwargs),
+                                       "http_class": repr(http_class),
+                                       "output_type": str(output_type)}})

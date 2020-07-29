@@ -64,7 +64,7 @@ def process_sign_in_external(request, username, provider):
 
 
 def verify_provider(provider_name):
-    ax.verify_param(provider_name, param_name=u"provider_name", param_compare=MAGPIE_PROVIDER_KEYS, is_in=True,
+    ax.verify_param(provider_name, param_name="provider_name", param_compare=MAGPIE_PROVIDER_KEYS, is_in=True,
                     http_error=HTTPNotFound, msg_on_fail=s.ProviderSignin_GET_NotFoundResponseSchema.description)
 
 
@@ -83,7 +83,7 @@ def sign_in(request):
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
         # obtain the raw path, without any '/magpie' prefix (if any), let 'application_url' handle it
         signin_internal_path = request.route_url("ziggurat.routes.sign_in", _app_url="")
-        signin_internal_data = {u"user_name": user_name, u"password": password, u"provider_name": provider_name}
+        signin_internal_data = {"user_name": user_name, "password": password, "provider_name": provider_name}
         signin_sub_request = Request.blank(signin_internal_path, base_url=request.application_url,
                                            headers={"Accept": CONTENT_TYPE_JSON}, POST=signin_internal_data)
         signin_response = request.invoke_subrequest(signin_sub_request, use_tweens=True)
@@ -94,7 +94,7 @@ def sign_in(request):
     elif provider_name in MAGPIE_EXTERNAL_PROVIDERS.keys():
         return ax.evaluate_call(lambda: process_sign_in_external(request, user_name, provider_name),
                                 http_error=HTTPInternalServerError,
-                                content={u"user_name": user_name, u"provider_name": provider_name},
+                                content={"user_name": user_name, "provider_name": provider_name},
                                 msg_on_fail=s.Signin_POST_External_InternalServerErrorResponseSchema.description)
 
 
@@ -127,7 +127,7 @@ def login_failure(request, reason=None):
                 http_err = HTTPInternalServerError
                 reason = s.Signin_POST_Internal_InternalServerErrorResponseSchema.description
     content = ag.get_request_info(request, default_message=s.Signin_POST_UnauthorizedResponseSchema.description)
-    content.update({u"reason": str(reason)})
+    content.update({"reason": str(reason)})
     ax.raise_http(http_error=http_err, content=content, detail=s.Signin_POST_UnauthorizedResponseSchema.description)
 
 
@@ -145,10 +145,10 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
                                           local_user_id=user.id, provider_name=provider_name)  # noqa
     ax.evaluate_call(lambda: db_session.add(ex_identity), fallback=lambda: db_session.rollback(),
                      http_error=HTTPConflict, msg_on_fail=s.Signin_POST_ConflictResponseSchema.description,
-                     content={u"provider_name": str(provider_name),
-                              u"internal_user_name": str(internal_user_name),
-                              u"external_user_name": str(external_user_name),
-                              u"external_id": str(external_id)})
+                     content={"provider_name": str(provider_name),
+                              "internal_user_name": str(internal_user_name),
+                              "external_user_name": str(external_user_name),
+                              "external_id": str(external_id)})
     user.external_identities.append(ex_identity)
     return user
 
@@ -177,7 +177,7 @@ def login_success_external(request, external_user_name, external_id, email, prov
     if not header_host:
         homepage_route = magpie_host + ("/" if not homepage_route.startswith("/") else "") + homepage_route
     return ax.valid_http(http_success=HTTPFound, detail=s.ProviderSignin_GET_FoundResponseSchema.description,
-                         content={u"homepage_route": homepage_route},
+                         content={"homepage_route": homepage_route},
                          http_kwargs={"location": homepage_route, "headers": headers})
 
 
@@ -232,7 +232,7 @@ def authomatic_login(request):
                     # this error can happen if providing incorrectly formed authorization header
                     except OAuth2Error as exc:
                         LOGGER.debug("Login failure with Authorization header.")
-                        ax.raise_http(http_error=HTTPBadRequest, content={u"reason": str(exc.message)},
+                        ax.raise_http(http_error=HTTPBadRequest, content={"reason": str(exc.message)},
                                       detail=s.ProviderSignin_GET_BadRequestResponseSchema.description)
                     # verify that the update procedure succeeded with provided token
                     if 400 <= response.status < 500:
@@ -274,9 +274,9 @@ def get_session(request):
         principals = get_principals(req)
         if Authenticated in principals:
             user = request.user
-            json_resp = {u"authenticated": True, u"user": format_user(user)}
+            json_resp = {"authenticated": True, "user": format_user(user)}
         else:
-            json_resp = {u"authenticated": False}
+            json_resp = {"authenticated": False}
         return json_resp
 
     session_json = ax.evaluate_call(lambda: _get_session(request), http_error=HTTPInternalServerError,
@@ -291,5 +291,5 @@ def get_providers(request):     # noqa: F811
     Get list of login providers.
     """
     return ax.valid_http(http_success=HTTPOk, detail=s.Providers_GET_OkResponseSchema.description,
-                         content={u"providers": {u"internal": sorted(MAGPIE_INTERNAL_PROVIDERS.values()),
-                                                 u"external": sorted(MAGPIE_EXTERNAL_PROVIDERS.values()), }})
+                         content={"providers": {"internal": sorted(MAGPIE_INTERNAL_PROVIDERS.values()),
+                                                 "external": sorted(MAGPIE_EXTERNAL_PROVIDERS.values()), }})

@@ -845,9 +845,9 @@ class TestSetup(object):
         svc_name = override_service_name or test_class.test_service_name
         svc_type = override_service_type or test_class.test_service_type
         data = {
-            u"service_name": svc_name,
-            u"service_type": svc_type,
-            u"service_url": u"http://localhost:9000/{}".format(svc_name)
+            "service_name": svc_name,
+            "service_type": svc_type,
+            "service_url": "http://localhost:9000/{}".format(svc_name)
         }
         resp = test_request(app_or_url, "POST", "/services", json=data,
                             headers=test_class.json_headers, cookies=test_class.cookies,

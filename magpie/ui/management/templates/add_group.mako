@@ -18,7 +18,11 @@
                 </label>
             </td>
             <td>
-                <div class="alert-form-error">
+                <div class="alert-form-error"
+                    %if not (invalid_group_name or conflict_group_name):
+                        hidden
+                    %endif
+                >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                              alt="ERROR" class="icon-error" />
                     <div class="alert-form-text">

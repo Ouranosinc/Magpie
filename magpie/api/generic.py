@@ -44,7 +44,7 @@ def internal_server_error(request):
     """
     content = get_request_info(request, exception_details=True,
                                default_message=s.InternalServerErrorResponseSchema.description)
-    return raise_http(nothrow=True, http_error=HTTPInternalServerError, detail=content[u"detail"], content=content,
+    return raise_http(nothrow=True, http_error=HTTPInternalServerError, detail=content["detail"], content=content,
                       content_type=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
 
 
@@ -69,7 +69,7 @@ def not_found_or_method_not_allowed(request):
         http_err = HTTPNotFound
         http_msg = s.NotFoundResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
-    return raise_http(nothrow=True, http_error=http_err, detail=content[u"detail"], content=content,
+    return raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content,
                       content_type=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
 
 
@@ -134,16 +134,16 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
     return validate_accept_header
 
 
-def get_request_info(request, default_message=u"undefined", exception_details=False):
+def get_request_info(request, default_message="undefined", exception_details=False):
     # type: (Request, Str, bool) -> JSON
     """
     Obtains additional content details about the ``request`` according to available information.
     """
     content = {
-        u"route_name": str(request.upath_info),
-        u"request_url": str(request.url),
-        u"detail": default_message,
-        u"method": request.method
+        "route_name": str(request.upath_info),
+        "request_url": str(request.url),
+        "detail": default_message,
+        "method": request.method
     }
     if hasattr(request, "exception"):
         # handle error raised simply by checking for "json" property in python 3 when body is invalid
@@ -155,13 +155,13 @@ def get_request_info(request, default_message=u"undefined", exception_details=Fa
         if has_json and isinstance(request.exception.json, dict):
             content.update(request.exception.json)
         elif isinstance(request.exception, HTTPServerError) and hasattr(request.exception, "message"):
-            content.update({u"exception": str(request.exception.message)})
+            content.update({"exception": str(request.exception.message)})
         elif isinstance(request.exception, Exception) and exception_details:
-            content.update({u"exception": repr(request.exception)})
+            content.update({"exception": repr(request.exception)})
             # get 'request.exc_info' or 'sys.exc_info', whichever one is available
             LOGGER.error("Request exception.", exc_info=getattr(request, "exc_info", True))
-        if not content[u"detail"]:
-            content[u"detail"] = str(request.exception)
+        if not content["detail"]:
+            content["detail"] = str(request.exception)
     elif hasattr(request, "matchdict"):
         if request.matchdict is not None and request.matchdict != "":
             content.update(request.matchdict)

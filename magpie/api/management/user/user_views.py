@@ -37,7 +37,7 @@ def get_users_view(request):
                                                UserService.all(models.User, db_session=request.db)],
                                       fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                       msg_on_fail=s.Users_GET_ForbiddenResponseSchema.description)
-    return ax.valid_http(http_success=HTTPOk, content={u"user_names": sorted(user_name_list)},
+    return ax.valid_http(http_success=HTTPOk, content={"user_names": sorted(user_name_list)},
                          detail=s.Users_GET_OkResponseSchema.description)
 
 
@@ -116,7 +116,7 @@ def get_user_view(request):
     Get user information by name.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
-    return ax.valid_http(http_success=HTTPOk, content={u"user": uf.format_user(user)},
+    return ax.valid_http(http_success=HTTPOk, content={"user": uf.format_user(user)},
                          detail=s.User_GET_OkResponseSchema.description)
 
 
@@ -148,7 +148,7 @@ def get_user_groups_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     group_names = uu.get_user_groups_checked(request, user)
-    return ax.valid_http(http_success=HTTPOk, content={u"group_names": group_names},
+    return ax.valid_http(http_success=HTTPOk, content={"group_names": group_names},
                          detail=s.UserGroups_GET_OkResponseSchema.description)
 
 
@@ -170,14 +170,14 @@ def assign_user_group_view(request):
     ax.verify_param(group, not_none=True, http_error=HTTPNotFound,
                     msg_on_fail=s.UserGroups_POST_GroupNotFoundResponseSchema.description)
     ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, http_error=HTTPConflict,
-                    content={u"user_name": user.user_name, u"group_name": group.group_name},
+                    content={"user_name": user.user_name, "group_name": group.group_name},
                     msg_on_fail=s.UserGroups_POST_ConflictResponseSchema.description)
     ax.evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),  # noqa
                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                      msg_on_fail=s.UserGroups_POST_RelationshipForbiddenResponseSchema.description,
-                     content={u"user_name": user.user_name, u"group_name": group.group_name})
+                     content={"user_name": user.user_name, "group_name": group.group_name})
     return ax.valid_http(http_success=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
-                         content={u"user_name": user.user_name, u"group_name": group.group_name})
+                         content={"user_name": user.user_name, "group_name": group.group_name})
 
 
 @s.UserGroupAPI.delete(schema=s.UserGroup_DELETE_RequestSchema(), tags=[s.UsersTag],
@@ -233,9 +233,9 @@ def get_user_resources_view(request):
     usr_res_dict = ax.evaluate_call(lambda: build_json_user_resource_tree(user),
                                     fallback=lambda: db.rollback(), http_error=HTTPNotFound,
                                     msg_on_fail=s.UserResources_GET_NotFoundResponseSchema.description,
-                                    content={u"user_name": user.user_name,
-                                             u"resource_types": [models.Service.resource_type_name]})
-    return ax.valid_http(http_success=HTTPOk, content={u"resources": usr_res_dict},
+                                    content={"user_name": user.user_name,
+                                             "resource_types": [models.Service.resource_type_name]})
+    return ax.valid_http(http_success=HTTPOk, content={"resources": usr_res_dict},
                          detail=s.UserResources_GET_OkResponseSchema.description)
 
 
@@ -335,7 +335,7 @@ def get_user_services_view(request):
                                     cascade_resources=cascade_resources,
                                     inherit_groups_permissions=inherit_groups_perms,
                                     format_as_list=format_as_list)
-    return ax.valid_http(http_success=HTTPOk, content={u"services": svc_json},
+    return ax.valid_http(http_success=HTTPOk, content={"services": svc_json},
                          detail=s.UserServices_GET_OkResponseSchema.description)
 
 
@@ -386,9 +386,9 @@ def get_user_service_permissions_view(request):
                                                                      inherit_groups_permissions=inherit_groups_perms),
                              fallback=lambda: request.db.rollback(), http_error=HTTPNotFound,
                              msg_on_fail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
-                             content={u"service_name": str(service.resource_name), u"user_name": str(user.user_name)})
+                             content={"service_name": str(service.resource_name), "user_name": str(user.user_name)})
     return ax.valid_http(http_success=HTTPOk, detail=s.UserServicePermissions_GET_OkResponseSchema.description,
-                         content={u"permission_names": sorted(p.value for p in perms)})
+                         content={"permission_names": sorted(p.value for p in perms)})
 
 
 @s.UserServicePermissionsAPI.post(schema=s.UserServicePermissions_POST_RequestSchema, tags=[s.UsersTag],
@@ -448,7 +448,7 @@ def get_user_service_resources_view(request):
         show_private_url=False,
     )
     return ax.valid_http(http_success=HTTPOk, detail=s.UserServiceResources_GET_OkResponseSchema.description,
-                         content={u"service": user_svc_res_json})
+                         content={"service": user_svc_res_json})
 
 
 @s.UserServiceInheritedResourcesAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
