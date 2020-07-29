@@ -22,6 +22,8 @@ Features / Changes
 * Add more validation and inputs to update group information.
 * Allow combined configuration files (providers, permissions, users, groups) with inter-references between them
   specified with ``MAGPIE_CONFIG_PATH`` environment variable or ``magpie.config_path`` setting (example in ``configs``).
+* Add configurable user creation parameters upon `Magpie` application startup through configuration files
+  (fixes `#204 <https://github.com/Ouranosinc/Magpie/issues/204>`_).
 * Add disabled checkboxes for UI rendering of non-editable items
   (relates to `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_).
 * Configuration parameters ``MAGPIE_SECRET``, ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` now require explicit
