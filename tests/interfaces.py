@@ -1,6 +1,6 @@
 import unittest
 import warnings
-from abc import ABCMeta
+from abc import ABCMeta, abstactmethod
 from copy import deepcopy
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from magpie.typedefs import CookiesType, HeadersType, JSON, Optional, Str
 
 
-class Base_Magpie_TestCase(unittest.TestCase):
+class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     """
     Base definition for all other Test Suite interfaces.
 
@@ -62,7 +62,8 @@ class Base_Magpie_TestCase(unittest.TestCase):
     __test__ = False    # won't run this as a test suite, only its derived classes that overrides to True
 
     @classmethod
-    def initClass(cls):  # noqa: N802
+    @abstactmethod
+    def initClass(cls):
         raise NotImplementedError
 
     @classmethod
@@ -2000,17 +2001,41 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
     """
 
+    def __init__(self, *args, **kwargs):
+        super(Interface_MagpieUI_UsersAuth, self).__init__(*args, **kwargs)
+        self.magpie_title = "Magpie User Management"
+
+    def setUp(self):
+        utils.TestSetup.create_TestUser(self)
+        test_credentials = utils.check_or_try_login_user(self, self.test_user_name, self.test_user_name)
+        self.test_headers, self.test_cookies = test_credentials
+        assert self.test_cookies, "Cannot test UI user pages without a logged user"
+        resp = utils.test_request(self, "GET", "/users/{}/groups".format(self.test_user_name))
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_not_in(self.grp, body["group_names"],
+                               msg="Cannot test functionalities if test user has administrator access permissions.")
+
+    @classmethod
+    def check_requirements(cls):
+        headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
+        assert headers and cookies, cls.require             # nosec
+        assert cls.headers and cls.cookies, cls.require     # nosec
+
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_UserAccount_ViewDetails(self):
         """Logged user can view its own details on account page."""
-        raise NotImplementedError  # TODO
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/users/current")
+        utils.check_val_is_in("Account User", resp.text)
+        utils.check_val_is_in(self.test_user_name, resp.text)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_UserAccount_ViewDiscoverableGroupsMembership(self):
         """Logged user can view discoverable groups and which ones he has membership on."""
-        raise NotImplementedError  # TODO
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/users/current")
+        utils.check_val_is_in("Account User", resp.text)
+        utils.check_val_is_in(self.test_user_name, resp.text)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED

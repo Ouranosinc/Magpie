@@ -15,6 +15,7 @@ from magpie.api import schemas as s
 from magpie.api.management.group import group_formats as gf
 from magpie.api.management.register import register_utils as ru
 from magpie.api.management.user import user_utils as uu
+from magpie import models
 
 if TYPE_CHECKING:
     from pyramid.httpexceptions import HTTPException

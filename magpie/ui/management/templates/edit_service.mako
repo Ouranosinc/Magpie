@@ -129,7 +129,7 @@
                         <span class="panel-entry">Protected URL: </span>
                         %if edit_mode == "edit_url":
                             <label>
-                            <input type="text" value="${service_url}" name="new_svc_url"
+                            <input type="url" value="${service_url}" name="new_svc_url"
                                    id="input_url" onkeyup="adjustWidth('input_url')">
                             <input class="button theme" type="submit" value="Save" name="save_url">
                             <input class="button cancel" type="submit" value="Cancel" name="no_edit">

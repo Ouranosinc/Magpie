@@ -67,8 +67,8 @@ class TestCase_MagpieUI_UsersAuth_Local(ti.Interface_MagpieUI_UsersAuth, unittes
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.test_user = get_constant("MAGPIE_TEST_USER", default_value="unittest-user_users-auth-local")
-        cls.test_group = get_constant("MAGPIE_USERS_GROUP")
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user_users-auth-local")
+        cls.test_group_name = get_constant("MAGPIE_USERS_GROUP")
 
 
 @runner.MAGPIE_TEST_UI

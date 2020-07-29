@@ -28,9 +28,10 @@ from magpie.utils import (
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from tests.interfaces import Base_Magpie_TestCase  # noqa: F401
+    from typing import Any, Callable, Dict, Iterable, List, NoReturn, Optional, Type, Union  # noqa: F401
     from magpie.typedefs import (  # noqa: F401
-        Any, AnyMagpieTestType, AnyHeadersType, AnyResponseType, Callable, Dict, Iterable, HeadersType, JSON, List,
-        Optional, OptionalHeaderCookiesType, SettingsType, Str, TestAppOrUrlType, Type, Union
+        AnyMagpieTestType, AnyHeadersType, AnyResponseType, HeadersType, JSON,
+        OptionalHeaderCookiesType, SettingsType, Str, TestAppOrUrlType
     )
 
 OptionalStringType = six.string_types + tuple([type(None)])  # pylint: disable=C0103,invalid-name   # noqa: 802
@@ -303,20 +304,20 @@ def check_or_try_login_user(test_item,                      # type: AnyMagpieTes
                             expect_errors=False,            # type: bool
                             ):                              # type: (...) -> OptionalHeaderCookiesType
     """
-    Verifies that the required user is already logged in (or none is if username=None), or tries to login him otherwise.
-    Validates that the logged user (if any), matched the one specified with `username`.
+    Verifies that the required user is already logged in (or none is if ``username=None``), or attempts to log him in
+    otherwise. Validates that the logged user (if any), matched the one specified by :paramref:`username`.
 
     :param test_item: instance of the test application or remote server URL to call
     :param username: name of the user to login or None otherwise
     :param password: password to use for login if the user was not already logged in
-    :param provider: provider string to use for login (default: `MAGPIE_DEFAULT_PROVIDER`, ie: magpie's local signin)
+    :param provider: provider string to use for login (default: ``MAGPIE_DEFAULT_PROVIDER``, ie: magpie's local signin)
     :param headers: headers to include in the test request
     :param use_ui_form_submit: use Magpie UI login 'form' to obtain cookies
-        (required for local `WebTest.App` login, ignored by requests using URL)
+        (required for local :class:`WebTest.TestApp` login, ignored by requests using URL)
     :param version: server or local app version to evaluate responses with backward compatibility
     :param expect_errors: indicate if the login is expected to fail, used only if using UI form & `webtest.TestApp`
     :return: headers and cookies of the user session or (None, None)
-    :raise: Exception on any login failure as required by the caller's specifications (username/password)
+    :raise AssertionError: if login failed or logged user session does not meet specifications (username/password)
     """
     app_or_url = get_app_or_url(test_item)
     headers = headers or {}
@@ -359,7 +360,7 @@ def check_or_try_login_user(test_item,                      # type: AnyMagpieTes
         else:
             logged_user = body.get("user_name", "")
         if username != logged_user:
-            raise Exception("invalid user")
+            raise AssertionError("invalid user")
         if isinstance(app_or_url, TestApp):
             resp_cookies = app_or_url.cookies
         else:
@@ -523,14 +524,21 @@ def check_response_basic_info(response, expected_code=200, expected_type=CONTENT
     return json_body
 
 
-def check_ui_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_HTML):
+def check_ui_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_HTML,
+                                 expected_title="Magpie Administration"):
+    # type: (AnyResponseType, int, Str, Str) -> Optional[NoReturn]
+    """
+    Validates minimal expected element in a `Magpie` UI page.
+
+    :raises AssertionError: if any of the expected validation elements does not meet requirement.
+    """
     msg = None \
         if get_header("Content-Type", response.headers) != CONTENT_TYPE_JSON \
         else "Response body: {}".format(get_json_body(response))
     check_val_equal(response.status_code, expected_code, msg=msg)
     check_val_is_in("Content-Type", dict(response.headers))
     check_val_is_in(expected_type, get_response_content_types_list(response))
-    check_val_is_in("Magpie Administration", response.text, msg=null)   # don't output big html if failing
+    check_val_is_in(expected_title, response.text, msg=null)   # don't output big html if failing
 
 
 class NullType(six.with_metaclass(SingletonMeta)):
@@ -672,15 +680,18 @@ class TestSetup(object):
 
     @staticmethod
     def check_UpStatus(test_class, method, path, timeout=20):
+        # type: (TestAppOrUrlType, Str, Str, int) -> AnyResponseType
         """
-        Verifies that the Magpie UI page at very least returned an Ok response with the displayed title. Validates that
-        at the bare minimum, no underlying internal error occurred from the API or UI calls.
+        Verifies that the Magpie UI page at very least returned an HTTP Ok response with the displayed title.
+        Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
 
         :returns: response from the rendered page for further tests
         """
         app_or_url = get_app_or_url(test_class)
-        resp = test_request(app_or_url, method, path, cookies=test_class.cookies, timeout=timeout)
-        check_ui_response_basic_info(resp)
+        cookies = getattr(test_class, "test_cookies", getattr(test_class, "cookies"))
+        resp = test_request(app_or_url, method, path, cookies=cookies, timeout=timeout)
+        kw_args = {"expected_title": getattr(test_class, "magpie_title")} if hasattr(test_class, "magpie_title") else {}
+        check_ui_response_basic_info(resp, **kw_args)
         return resp
 
     @staticmethod

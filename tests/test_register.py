@@ -363,6 +363,7 @@ class TestRegister(unittest.TestCase):
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_REGISTER
 def test_register_make_config_registry():
+    # pylint: disable=W0212
     assert register._make_config_registry(None, "whatever") == {}
     assert register._make_config_registry([], "whatever") == {}
     assert register._make_config_registry([{}], "whatever") == {}

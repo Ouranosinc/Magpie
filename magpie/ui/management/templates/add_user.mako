@@ -35,7 +35,7 @@
         <tr>
             <td>Email:</td>
             <td><div class="input-container"><label>
-                <input type="text" name="email" value="${form_user_email}" class="equal-width">
+                <input type="email" name="email" value="${form_user_email}" class="equal-width">
                 </label></div>
             </td>
             <td>

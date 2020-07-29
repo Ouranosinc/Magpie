@@ -332,6 +332,7 @@ def get_user_service_resources_permissions_dict(user, service, request, inherit_
 
 def check_user_info(user_name, email, password, group_name):
     # type: (Str, Str, Str, Str) -> None
+    """Validates provided user information to ensure they are adequate for user creation."""
     ax.verify_param(user_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                     param_name=u"user_name",
                     msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
@@ -342,6 +343,8 @@ def check_user_info(user_name, email, password, group_name):
                     param_name=u"user_name", http_error=HTTPBadRequest,
                     msg_on_fail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
     ax.verify_param(email, not_none=True, not_empty=True, http_error=HTTPBadRequest,
+                    param_name=u"email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
+    ax.verify_param(email, regex_match=True, param_compare=r"", http_error=HTTPBadRequest,
                     param_name=u"email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
     ax.verify_param(password, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                     param_name=u"password",
