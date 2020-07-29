@@ -1,7 +1,7 @@
 from authomatic.adapters import WebObAdapter
 from authomatic.core import Credentials, LoginResult, resolve_provider_class
 from authomatic.exceptions import OAuth2Error
-from pyramid.authentication import Authenticated, IAuthenticationPolicy
+from pyramid.authentication import Authenticated
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
