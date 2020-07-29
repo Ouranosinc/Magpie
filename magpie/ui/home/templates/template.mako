@@ -10,6 +10,11 @@
           rel="stylesheet" type="text/css" media="all" />
     <link href="${request.static_url('magpie.ui.home:static/style.css')}"
           rel="stylesheet" type="text/css" media="all" />
+    <meta name="author" content=${MAGPIE_AUTHOR}>
+    <meta name="title" content=${MAGPIE_TITLE}>
+    <meta name="description" content=${MAGPIE_DESCRIPTION}>
+    <meta name="version" content=${MAGPIE_VERSION}>
+    <meta name="source" content=${MAGPIE_SOURCE_URL}>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
     <style>
         <%block name="style"/>
@@ -28,17 +33,32 @@
                     <img src="${request.static_url('magpie.ui.home:static/magpie.png')}" alt="">
                 </div>
             </div>
-            <div id="title-header">Magpie ${MAGPIE_SUB_TITLE}</div>
+            <div id="title-header">${MAGPIE_TITLE} ${MAGPIE_SUB_TITLE}</div>
         </a>
         <div style="float: right;">
             %if MAGPIE_LOGGED_USER:
-            <button class="img-button theme" type="button"
-                    onclick="location.href='${request.route_url('edit_current_user')}'">Account</button>
-            <button class="img-button theme" type="button"
-                    onclick="location.href='${request.route_url('logout')}'">Log Out</button>
+                <button class="img-button theme" type="button"
+                        onclick="location.href='${request.route_url('edit_current_user')}'">
+                    <img src="${request.static_url('magpie.ui.home:static/account.png')}" alt="">
+                    <meta name="author" content="https://www.flaticon.com/authors/becris">
+                    <meta name="source" content="https://www.flaticon.com/free-icon/user_848043">
+                    Account
+                </button>
+                <button class="img-button theme" type="button"
+                        onclick="location.href='${request.route_url('logout')}'">
+                    <img src="${request.static_url('magpie.ui.home:static/logout.png')}" alt="">
+                    <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                    <meta name="source" content="https://www.flaticon.com/free-icon/logout_2089702">
+                    Log Out
+                </button>
             %else:
-            <button class="img-button theme" type="button"
-                    onclick="location.href='${request.route_url('login')}'">Log In</button>
+                <button class="img-button theme" type="button"
+                        onclick="location.href='${request.route_url('login')}'">
+                    <img src="${request.static_url('magpie.ui.home:static/login.png')}" alt="">
+                    <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                    <meta name="source" content="https://www.flaticon.com/free-icon/login_2089700">
+                    Log In
+                </button>
             %endif
         </div>
     </div>

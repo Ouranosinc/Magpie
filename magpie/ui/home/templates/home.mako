@@ -15,6 +15,8 @@
     </a>
     <a href="${request.route_url('view_services', cur_svc_type='default')}" class="admin-button theme">
         <img src="${request.static_url('magpie.ui.home:static/services.png')}" alt="">
+        <meta name="author" content="https://www.flaticon.com/authors/monkik">
+        <meta name="source" content="https://www.flaticon.com/free-icon/feature_1085821">
         <br>Edit Services
     </a>
 </div>

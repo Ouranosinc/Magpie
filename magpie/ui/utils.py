@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from pyramid.httpexceptions import HTTPBadRequest, exception_response
 from pyramid.request import Request
 
+from magpie import __meta__
 from magpie.api.requests import get_logged_user
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON, get_header, get_logger, get_magpie_url
@@ -96,13 +97,20 @@ class BaseViews(object):
 
         anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=self.request)
         admin = get_constant("MAGPIE_ADMIN_GROUP", settings_container=self.request)
-        self.MAGPIE_FIXED_GROUP_MEMBERSHIPS = [anonymous]   # special groups membership that cannot be edited
-        self.MAGPIE_FIXED_GROUP_EDITS = [anonymous, admin]  # special groups that cannot be edited
+        self.__class__.MAGPIE_FIXED_GROUP_MEMBERSHIPS = [anonymous]   # special groups membership that cannot be edited
+        self.__class__.MAGPIE_FIXED_GROUP_EDITS = [anonymous, admin]  # special groups that cannot be edited
 
     def add_template_data(self, data=None):
         # type: (Optional[Dict[Str, Any]]) -> Dict[Str, Any]
         """Adds required template data for the 'heading' mako template applied to every UI page."""
         all_data = data or {}
+        all_data.update({
+            "MAGPIE_TITLE": __meta__.__title__,
+            "MAGPIE_AUTHOR": __meta__.__author__,
+            "MAGPIE_VERSION": __meta__.__version__,
+            "MAGPIE_SOURCE_URL": __meta__.__url__,
+            "MAGPIE_DESCRIPTION": __meta__.__description__,
+        })
         all_data.setdefault("MAGPIE_SUB_TITLE", "Administration")
         all_data.setdefault("MAGPIE_UI_THEME", self.ui_theme)
         all_data.setdefault("MAGPIE_FIXED_GROUP_MEMBERSHIPS", self.MAGPIE_FIXED_GROUP_MEMBERSHIPS)
