@@ -4,8 +4,12 @@
     <title>Magpie</title>
     <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans" />
-    <link rel="shortcut icon" type="image/x-icon" href="${request.static_url('magpie.ui.home:static/settings.png')}" />
-    <link href="${request.static_url('magpie.ui.home:static/style.css')}" rel="stylesheet" type="text/css" media="all" />
+    <link href="${request.static_url('magpie.ui.home:static/settings.png')}"
+          rel="shortcut icon" type="image/x-icon" />
+    <link href="${request.static_url('magpie.ui.home:static/themes/{}.css'.format(MAGPIE_UI_THEME))}"
+          rel="stylesheet" type="text/css" media="all" />
+    <link href="${request.static_url('magpie.ui.home:static/style.css')}"
+          rel="stylesheet" type="text/css" media="all" />
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
     <style>
         <%block name="style"/>

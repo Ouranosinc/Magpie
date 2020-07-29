@@ -30,7 +30,7 @@
             </div>
         % endif
     %endfor
-    % if not value.get('matches_remote', True):
+    % if not value.get("matches_remote", True):
         <div class="tree-button">
             <input type="submit" class="button-warning" value="Clean" name="clean_resource">
         </div>
@@ -41,7 +41,7 @@
     % endif
     % if level == 0:
         <div class="tree-button">
-            <input type="submit" class="tree-button goto-service" value="Edit Service" name="goto_service">
+            <input type="submit" class="tree-button goto-service theme" value="Edit Service" name="goto_service">
         </div>
     % endif
 </%def>
@@ -56,7 +56,7 @@
     User [${user_name}]</a></li>
 </%block>
 
-<h1>Edit User: ${user_name}</h1>
+<h1>Edit User: [${user_name}]</h1>
 
 <h3>User Information</h3>
 
@@ -65,7 +65,7 @@
     <div class="panel-heading theme">
         <form id="delete_user" action="${request.path}" method="post">
             <span class="panel-title">User: </span>
-            <span class="panel-value">${user_name}</span>
+            <span class="panel-value">[${user_name}]</span>
             <span class="panel-heading-button">
                 <input type="submit" value="Delete" name="delete" class="button delete">
             </span>
@@ -84,13 +84,13 @@
                             <label>
                             <input type="text" value="${user_name}" name="new_user_name"
                                    id="input_username" onkeyup="adjustWidth('input_name')">
-                            <input type="submit" value="Save" name="save_username">
-                            <input type="submit" value="Cancel" name="no_edit">
+                            <input type="submit" value="Save" name="save_username" class="button theme">
+                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
                             </label>
                         %else:
                             <label>
                             <span class="panel-value">${user_name}</span>
-                            <input type="submit" value="Edit" name="edit_username">
+                            <input type="submit" value="Edit" name="edit_username" class="button theme">
                             </label>
                         %endif
                     </p>
@@ -98,17 +98,17 @@
                 <form id="edit_password" action="${request.path}" method="post">
                     <p class="panel-line">
                         <span class="panel-entry">Password: </span>
-                        %if edit_mode == 'edit_password':
+                        %if edit_mode == "edit_password":
                             <label>
                             <input type="text" value="" name="new_user_password"
                                    id="input_password" onkeyup="adjustWidth('input_name')">
-                            <input type="submit" value="Save" name="save_password">
-                            <input type="submit" value="Cancel" name="no_edit">
+                            <input type="submit" value="Save" name="save_password" class="button theme">
+                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
                             </label>
                         %else:
                             <label>
                             <span class="panel-value">***</span>
-                            <input type="submit" value="Edit" name="edit_password">
+                            <input type="submit" value="Edit" name="edit_password" class="button theme">
                             </label>
                         %endif
                     </p>
@@ -116,17 +116,17 @@
                 <form id="edit_email" action="${request.path}" method="post">
                     <p class="panel-line">
                         <span class="panel-entry">Email: </span>
-                        %if edit_mode == 'edit_email':
+                        %if edit_mode == "edit_email":
                             <label>
                             <input type="text" value="${email}" name="new_user_email"
                                    id="input_email" onkeyup="adjustWidth('input_url')">
-                            <input type="submit" value="Save" name="save_email">
-                            <input type="submit" value="Cancel" name="no_edit">
+                            <input type="submit" value="Save" name="save_email" class="button theme">
+                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
                             </label>
                         %else:
                             <label>
                             <span class="panel-value">${email}</span>
-                            <input type="submit" value="Edit" name="edit_email">
+                            <input type="submit" value="Edit" name="edit_email" class="button theme">
                             </label>
                         %endif
                     </p>
@@ -188,7 +188,7 @@
             <a class="current-tab"
                href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % else:
-            <a class="tab"
+            <a class="tab theme"
                href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % endif
     %endfor
@@ -203,7 +203,7 @@
                 <span class="panel-entry">Last synchronization with remote services: </span>
                 %if sync_implemented:
                     <span class="panel-value">${last_sync} </span>
-                    <input type="submit" value="Sync now" name="force_sync">
+                    <input type="submit" value="Sync now" name="force_sync" class="button-warning">
                 %else:
                     <span class="panel-value">Not implemented for this service type.</span>
                 %endif

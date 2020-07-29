@@ -5,7 +5,7 @@
 <li><a href="${request.route_url('edit_current_user', user_name=user_name)}">User [${user_name}]</a></li>
 </%block>
 
-<h1>Account User: ${user_name}</h1>
+<h1>Account User: [${user_name}]</h1>
 
 <h3>User Information</h3>
 
@@ -14,20 +14,22 @@
     <!-- # FIXME: implement with better warning (alert), API route supports operation
         (admin is immediate delete, but we should confirm user self-delete beforehand just in case)
     -->
+    <div class="panel-heading theme">
     <!--
     <form id="delete_user" action="${request.path}" method="post">
-        <div class="panel-heading theme">
-            <span class="panel-title">User: </span>
-            <span class="panel-value">${user_name}</span>
-            <span class="panel-heading-button">
-                <input type="submit" value="Delete Account" name="delete" class="button delete">
-            </span>
-        </div>
+    -->
+        <span class="panel-title">User: </span>
+        <span class="panel-value">[${user_name}]</span>
+    <!--
+        <span class="panel-heading-button">
+            <input type="submit" value="Delete Account" name="delete" class="button delete">
+        </span>
     </form>
     -->
+    </div>
     <div class="panel-body">
         <div class="panel-box">
-            <div class="panel-heading theme">
+            <div class="panel-heading subsection">
                 <div class="panel-title">Details</div>
             </div>
             <div>
@@ -39,17 +41,17 @@
                 <form id="edit_password" action="${request.path}" method="post">
                     <p class="panel-line">
                         <span class="panel-entry">Password: </span>
-                        %if edit_mode == 'edit_password':
+                        %if edit_mode == "edit_password":
                             <label>
                             <input type="text" value="" name="new_user_password"
                                    id="input_password" onkeyup="adjustWidth('input_name')">
-                            <input type="submit" value="Save" name="save_password">
-                            <input type="submit" value="Cancel" name="no_edit">
+                            <input type="submit" value="Save" name="save_password" class="button theme">
+                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
                             </label>
                         %else:
                             <label>
                             <span class="panel-value">***</span>
-                            <input type="submit" value="Edit" name="edit_password">
+                            <input type="submit" value="Edit" name="edit_password" class="button theme">
                             </label>
                         %endif
                     </p>
@@ -57,17 +59,17 @@
                 <form id="edit_email" action="${request.path}" method="post">
                     <p class="panel-line">
                         <span class="panel-entry">Email: </span>
-                        %if edit_mode == 'edit_email':
+                        %if edit_mode == "edit_email":
                             <label>
                             <input type="text" value="${email}" name="new_user_email"
                                    id="input_email" onkeyup="adjustWidth('input_url')">
-                            <input type="submit" value="Save" name="save_email">
-                            <input type="submit" value="Cancel" name="no_edit">
+                            <input type="submit" value="Save" name="save_email" class="button theme">
+                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
                             </label>
                         %else:
                             <label>
                             <span class="panel-value">${email}</span>
-                            <input type="submit" value="Edit" name="edit_email">
+                            <input type="submit" value="Edit" name="edit_email" class="button theme">
                             </label>
                         %endif
                     </p>

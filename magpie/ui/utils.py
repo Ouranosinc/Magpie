@@ -90,11 +90,12 @@ class BaseViews(object):
 
     def __init__(self, request):
         self.request = request
-        self.magpie_url = get_magpie_url(request.registry)
-        self.logged_user = get_logged_user(request)
+        self.magpie_url = get_magpie_url(self.request)
+        self.ui_theme = get_constant("MAGPIE_UI_THEME", self.request)
+        self.logged_user = get_logged_user(self.request)
 
-        anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=request)
-        admin = get_constant("MAGPIE_ADMIN_GROUP", settings_container=request)
+        anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=self.request)
+        admin = get_constant("MAGPIE_ADMIN_GROUP", settings_container=self.request)
         self.MAGPIE_FIXED_GROUP_MEMBERSHIPS = [anonymous]   # special groups membership that cannot be edited
         self.MAGPIE_FIXED_GROUP_EDITS = [anonymous, admin]  # special groups that cannot be edited
 
@@ -103,6 +104,7 @@ class BaseViews(object):
         """Adds required template data for the 'heading' mako template applied to every UI page."""
         all_data = data or {}
         all_data.setdefault("MAGPIE_SUB_TITLE", "Administration")
+        all_data.setdefault("MAGPIE_UI_THEME", self.ui_theme)
         all_data.setdefault("MAGPIE_FIXED_GROUP_MEMBERSHIPS", self.MAGPIE_FIXED_GROUP_MEMBERSHIPS)
         all_data.setdefault("MAGPIE_FIXED_GROUP_EDITS", self.MAGPIE_FIXED_GROUP_EDITS)
         magpie_logged_user = get_logged_user(self.request)

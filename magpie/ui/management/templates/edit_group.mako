@@ -45,7 +45,7 @@
     Group [${group_name}]</a></li>
 </%block>
 
-<h1>Edit Group: ${group_name}</h1>
+<h1>Edit Group: [${group_name}]</h1>
 
 
 <h3>Group Information</h3>
@@ -54,7 +54,7 @@
     <div class="panel-heading theme">
         <form id="delete_group" action="${request.path}" method="post">
             <span class="panel-title">Group: </span>
-            <span class="panel-value">${group_name}</span>
+            <span class="panel-value">[${group_name}]</span>
             <span class="panel-heading-button">
                 <input type="submit" value="Delete" name="delete" class="button delete">
             </span>
@@ -79,7 +79,7 @@
                         %else:
                             <label>
                             <span class="panel-value">${group_name}</span>
-                            <input type="submit" value="Edit" name="edit_group_name">
+                            <input type="submit" value="Edit" name="edit_group_name" class="button theme">
                             </label>
                         %endif
                     </p>
@@ -124,7 +124,7 @@
             <a class="current-tab"
                href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % else:
-            <a class="tab"
+            <a class="tab theme"
                href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % endif
     %endfor

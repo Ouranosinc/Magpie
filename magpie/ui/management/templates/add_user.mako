@@ -16,27 +16,21 @@
                 <input type="text" name="user_name" value="${form_user_name}" class="equal-width">
                 </label></div>
             </td>
-            %if too_long_user_name:
-                <td><p class="alert-form-error">
+            <td>
+                <div class="alert-form-error">
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
-                    Too long </p>
-                </td>
-            %elif invalid_user_name:
-                <td><p class="alert-form-error">
-                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
-                         alt="ERROR" class="icon-error" />
-                    Invalid </p>
-                </td>
-            %elif conflict_user_name:
-                <td><p class="alert-form-error">
-                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
-                         alt="ERROR" class="icon-error" />
-                    Conflict </p>
-                </td>
-            %else:
-                <td><p class="alert-form-error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
-            %endif
+                    <div class="alert-form-text">
+                        %if too_long_user_name:
+                            Too Long
+                        %elif invalid_user_name:
+                            Invalid
+                        %elif conflict_user_name:
+                            Conflict
+                        %endif
+                    </div>
+                </div>
+            </td>
         </tr>
         <tr>
             <td>Email:</td>
@@ -44,21 +38,19 @@
                 <input type="text" name="email" value="${form_user_email}" class="equal-width">
                 </label></div>
             </td>
-            %if invalid_user_email:
-                <td><p class="alert-form-error">
+            <td>
+                <div class="alert-form-error">
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
-                    Invalid </p>
-                </td>
-            %elif conflict_user_email:
-                <td><p class="alert-form-error">
-                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
-                         alt="ERROR" class="icon-error" />
-                    Conflict </p>
-                </td>
-            %else:
-                <td><p class="alert-form-error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
-            %endif
+                    <div class="alert-form-text">
+                        %if invalid_user_email:
+                            Invalid
+                        %elif conflict_user_email:
+                            Conflict
+                        %endif
+                    </div>
+                </div>
+            </td>
         </tr>
         <tr>
             <td>Password:</td>
@@ -67,15 +59,17 @@
                 <input type="password" name="password" value="" class="equal-width">
                 </label></div>
             </td>
-            %if invalid_password:
-                <td><p class="alert-form-error">
+            <td>
+                <div class="alert-form-error">
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
-                    Invalid </p>
-                </td>
-            %else:
-                <td><p class="alert-form-error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
-            %endif
+                    <div class="alert-form-text">
+                        %if invalid_password:
+                            Invalid
+                        %endif
+                    </div>
+                </div>
+            </td>
         </tr>
         <tr>
             <td>User group:</td>

@@ -104,6 +104,7 @@ MAGPIE_LOG_PRINT = asbool(os.getenv("MAGPIE_LOG_PRINT", False))                 
 MAGPIE_LOG_REQUEST = asbool(os.getenv("MAGPIE_LOG_REQUEST", True))              # log detail of every incoming request
 MAGPIE_LOG_EXCEPTION = asbool(os.getenv("MAGPIE_LOG_EXCEPTION", True))          # log detail of generated exceptions
 MAGPIE_UI_ENABLED = asbool(os.getenv("MAGPIE_UI_ENABLED", True))
+MAGPIE_UI_THEME = os.getenv("MAGPIE_UI_THEME", "blue")
 PHOENIX_USER = os.getenv("PHOENIX_USER", "phoenix")
 PHOENIX_PASSWORD = os.getenv("PHOENIX_PASSWORD", "qwerty")
 PHOENIX_HOST = os.getenv("PHOENIX_HOST")  # default None to use HOSTNAME

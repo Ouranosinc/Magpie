@@ -254,10 +254,9 @@ at the start of the `Configuration`_ section.
     prepare a basic logger, after checking if a corresponding ``magpie.log_level`` setting was instead specified.
   | (Default: ``INFO``)
 
-- | ``MAGPIE_LOG_LEVEL``
-  | Specifies whether `Magpie` logging should also enforce printing the details to the console when using *helpers*.
-    Otherwise, the configured logging methodology in `magpie.ini`_ is used (which can also define a
-    console handler).
+- | ``MAGPIE_LOG_PRINT``
+  | Specifies whether `Magpie` logging should also **enforce** printing the details to the console when using *helpers*.
+    Otherwise, the configured logging methodology in `magpie.ini`_ is used (which can also define a console handler).
   | (Default: ``False``)
 
 - | ``MAGPIE_LOG_REQUEST``
@@ -275,6 +274,15 @@ at the start of the `Configuration`_ section.
     all routes that normally refer to the UI will return ``404``, except the frontpage that will return a simple JSON
     description as it is normally the default entrypoint of the application.
   | (Default: ``True``)
+
+- | ``MAGPIE_UI_THEME``
+  | Specifies the adjustable theme to apply `Magpie` UI pages. This theme consist principally of the applied color for
+    generic interface items, but could be extended at a later date. The value must be one of the CSS file names located
+    within the `themes`_ subdirectory.
+  | (Default: ``"blue"``)
+
+
+.. _themes: https://github.com/Ouranosinc/Magpie/tree/master/magpie/ui/home/static/themes
 
 
 Security Settings

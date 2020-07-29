@@ -1,15 +1,15 @@
-html,body {
+/*
+Note:
+    Theme must be loaded before this file.
+    They are employed for buttons, headers, etc. unless overridden here for specific use-case.
+*/
+
+html,
+body {
     margin:0;
     padding:0;
     border:0;
     font-family: "Open Sans", sans-serif;
-}
-
-/* generic theme employed for buttons, headers, etc. unless using other variable for specific use-case */
-.theme {
-    border: 1px solid #2C8F30;
-    background-color: #4CAF50;
-    color: white;
 }
 
 .content {
@@ -114,18 +114,6 @@ input[type="submit"].button.normal {
     cursor:pointer;
     text-decoration: none;
     color: #FFFFFF;
-}
-
-a.tab:hover,
-a.tab:active,
-.img-button:hover,
-.img-button:focus,
-.admin-button:hover,
-.admin-button:active,
-input[type="submit"]:hover,
-input[type="submit"]:focus {
-    background-color: #5CBF60;
-    text-decoration: none;
 }
 
 .img-button,
@@ -568,11 +556,6 @@ ul.breadcrumb li a:hover {
     text-align: center;
 }
 
-.admin-button {
-    margin: auto;
-    width: 100%;
-}
-
 .admin-button,
 .admin-button:focus,
 .admin-button:hover,
@@ -583,16 +566,18 @@ ul.breadcrumb li a:hover {
 .admin-button {
     display:inline-block;
     box-sizing: border-box;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
     width: 10em;
+    height: 10em;
     margin: 3em;
     padding: 1em;
     text-align: center;
     text-decoration: none;
-    background: white;
-    color: black;
+    /* use separate border values to inherit the theme color */
     border-radius: 3px;
-    height: 10em;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    border-width: 1px;
+    border-style: solid;
+    font-weight: bold;
 }
 
 .admin-button>img {

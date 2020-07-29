@@ -94,7 +94,7 @@
 <div class="panel-box">
     <div class="panel-heading theme">
         <span class="panel-title">Service: </span>
-        <span class="panel-value">${service_name}</span>
+        <span class="panel-value">[${service_name}]</span>
         <span class="panel-heading-button">
             <input type="button" value="Remove Service" class="button delete"
                    onclick="$('#EditService_DeleteAlert').show();">
