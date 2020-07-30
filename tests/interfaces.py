@@ -53,6 +53,9 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     test_service_name = None    # type: Optional[Str]
     test_user_name = None       # type: Optional[Str]
     test_group_name = None      # type: Optional[Str]
+    test_resource_name = None   # type: Optional[Str]
+    test_service_name = None    # type: Optional[Str]
+    test_service_type = None    # type: Optional[Str]
 
     __test__ = False    # won't run this as a test suite, only its derived classes that overrides to True
 

@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from tests.interfaces import Base_Magpie_TestCase  # noqa: F401
     from typing import Any, Callable, Dict, Iterable, List, NoReturn, Optional, Tuple, Type, Union  # noqa: F401
     from magpie.typedefs import (  # noqa: F401
-        AnyCookiesType, AnyMagpieTestType, AnyHeadersType, AnyResponseType, CookiesType, HeadersType, JSON,
+        AnyCookiesType, AnyMagpieTestType, AnyHeadersType, AnyResponseType, AnyValue, CookiesType, HeadersType, JSON,
         SettingsType, Str, TestAppOrUrlType
     )
     # pylint: disable=C0103,invalid-name
@@ -494,9 +494,13 @@ def check_no_raise(func):
 
 
 def check_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_JSON, expected_method="GET"):
-    # type: (AnyResponseType, int, Str, Str) -> JSON
+    # type: (AnyResponseType, int, Str, Str) -> Union[JSON, Str]
     """
-    Validates basic Magpie API response metadata.
+    Validates basic `Magpie` API response metadata. For UI pages, employ :func:`check_ui_response_basic_info` instead.
+
+    If the expected content-type is JSON, further validations are accomplished with specific metadata fields that are
+    always expected in the response body. Otherwise, minimal validation of basic fields that can be validated regardless
+    of content-type is done.
 
     :param response: response to validate.
     :param expected_code: status code to validate from the response.
@@ -504,32 +508,41 @@ def check_response_basic_info(response, expected_code=200, expected_type=CONTENT
     :param expected_method: method 'GET', 'POST', etc. to validate from the response if an error.
     :return: json body of the response for convenience.
     """
-    json_body = get_json_body(response)
     check_val_is_in("Content-Type", dict(response.headers), msg="Response doesn't define 'Content-Type' header.")
     content_types = get_response_content_types_list(response)
     check_val_equal(response.status_code, expected_code, msg="Response doesn't match expected HTTP status code.")
     check_val_is_in(expected_type, content_types, msg="Response doesn't match expected HTTP Content-Type header.")
-    check_val_is_in("code", json_body, msg="Parameter 'code' should be in response JSON body.")
-    check_val_is_in("type", json_body, msg="Parameter 'type' should be in response JSON body.")
-    check_val_is_in("detail", json_body, msg="Parameter 'detail' should be in response JSON body.")
-    check_val_equal(json_body["code"], expected_code, msg="Parameter 'code' should match the HTTP status code.")
-    check_val_equal(json_body["type"], expected_type, msg="Parameter 'type' should match the HTTP Content-Type header.")
-    check_val_not_equal(json_body["detail"], "", msg="Parameter 'detail' should not be empty.")
 
-    if response.status_code in [401, 404, 500]:
-        check_val_is_in("request_url", json_body)
-        check_val_is_in("route_name", json_body)
-        check_val_is_in("method", json_body)
-        check_val_equal(json_body["method"], expected_method)
+    if expected_type == CONTENT_TYPE_JSON:
+        body = get_json_body(response)
+        check_val_is_in("code", body, msg="Parameter 'code' should be in response JSON body.")
+        check_val_is_in("type", body, msg="Parameter 'type' should be in response JSON body.")
+        check_val_is_in("detail", body, msg="Parameter 'detail' should be in response JSON body.")
+        check_val_equal(body["code"], expected_code, msg="Parameter 'code' should match the HTTP status code.")
+        check_val_equal(body["type"], expected_type, msg="Parameter 'type' should match the HTTP Content-Type header.")
+        check_val_not_equal(body["detail"], "", msg="Parameter 'detail' should not be empty.")
+    else:
+        body = response.text
 
-    return json_body
+    if response.status_code >= 400:
+        # error details available for any content-type, just in different format
+        check_val_is_in("request_url", body)
+        check_val_is_in("route_name", body)
+        check_val_is_in("method", body)
+        if expected_type == CONTENT_TYPE_JSON:
+            check_val_equal(body["method"], expected_method)
+
+    return body
 
 
 def check_ui_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_HTML,
                                  expected_title="Magpie Administration"):
     # type: (AnyResponseType, int, Str, Str) -> Optional[NoReturn]
     """
-    Validates minimal expected element in a `Magpie` UI page.
+    Validates minimal expected elements in a `Magpie` UI page.
+
+    Number of validations is limited compared to API checks accomplished by :func:`check_response_basic_info`.
+    That function should therefore be employed for responses coming directly from the API routes.
 
     :raises AssertionError: if any of the expected validation elements does not meet requirement.
     """
@@ -667,22 +680,41 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
 
 
 class TestSetup(object):
-    """Generic setup and validation methods across unittests
+    """Generic setup and validation methods across unittests.
+
+    This class offers a large list of commonly reusable operations to setup or cleanup test cases.
 
     All methods take as input an instance of a Test Suite derived from :class:`Base_Magpie_TestCase`.
     Using this Test Suite, common arguments such as JSON headers and user session cookies are automatically extracted
     and passed down to the relevant requests.
 
-    Multiple parameters prefixed by ``test_`` are also automatically extracted from the referenced Test Suite.
+    The multiple parameters prefixed by ``test_`` are also automatically extracted from the referenced Test Suite.
     For example, ``test_user_name`` will be retrieved from the Test Suite class when this information is required for
     the corresponding test operation. It is possible to override this behaviour with corresponding arguments prefixed
-    by ``override`` keyword. For example, if ``override_user_name`` is provided, it will be used instead of
-    ``test_user_name`` from the Test Suite class.
+    by ``override_`` keyword. For example, if ``override_user_name`` is provided, it will be used instead of
+    ``test_user_name`` from the Test Suite class. Furthermore, ``override_data`` can be provided where applicable to
+    provide additional JSON payload fields in the executed request.
     """
     # pylint: disable=C0103,invalid-name
 
     @staticmethod
     def get_Version(test_class):
+        # type: (Base_Magpie_TestCase) -> Str
+        """
+        Obtains the `Magpie` version of the test instance (local or remote). This version can then be used in
+        combination with :class:`LooseVersion` comparisons or :func:`warn_version` to toggle test execution of certain
+        test cases that have version-dependant format, conditions or feature changes.
+
+        This is useful *mostly* for remote server tests which could be out-of-sync compared to the current source code.
+        It provides some form of backward compatibility with older instances provided that tests are updated accordingly
+        when new features or changes are applied, which adds modifications to previously existing test methodologies or
+        results.
+
+        .. seealso::
+            - :func:`warn_version`.
+
+        :raises AssertionError: if the response cannot successfully retrieve the test instance version.
+        """
         app_or_url = get_app_or_url(test_class)
         resp = test_request(app_or_url, "GET", "/version",
                             headers=test_class.json_headers,
@@ -707,32 +739,50 @@ class TestSetup(object):
         return resp
 
     @staticmethod
-    def check_FormSubmit(test_class, form_match, form_data=None, form_submit="submit",
-                         previous_response=None, path=None, method="GET", timeout=20,
-                         expected_code=200, expected_type="text/html", expect_errors=False, max_redirect=5):
+    def check_FormSubmit(test_class,                        # type: Base_Magpie_TestCase
+                         form_match,                        # type: Union[Str, int, Dict[Str, Str]]
+                         form_data=None,                    # type: Optional[Dict[Str, AnyValue]]
+                         form_submit="submit",              # type: Union[Str, int]
+                         previous_response=None,            # type: AnyResponseType
+                         path=None,                         # type: Optional[Str]
+                         method="GET",                      # type: Str
+                         timeout=20,                        # type: int
+                         max_redirect=5,                    # type: int
+                         expected_code=200,                 # type: int
+                         expected_type=CONTENT_TYPE_HTML,   # type: Str
+                         expect_errors=False,               # type: bool
+                         ):                                 # type: (...) -> AnyResponseType
         """
         Simulates the submission of a UI form to evaluate the status of the resulting page. Follows any redirect if the
-        submission results into a move to another page request.
+        submission results into a HTTP Move (3xx) response to be redirected towards another page request.
 
-        Parameter ``form_match`` can be a form name, an index (from all available forms on page) or an
-        iterable of key/values of form fields to search for a match (first match is used if many are available).
+        Successive calls using form submits can be employed to simulate sequential page navigation by providing back
+        the returned `response` object as input to the following page with argument :paramref:`previous_response`.
 
-        Parameter ``form_submit`` specifies which `button` by name or index to submit within the matched form.
+        .. code-block:: json
 
-        Fields to be filed from UI input can be provided via ``form_data`` in a key/value fashion.
+            svc_resp = check_FormSubmit(test, form_match="goto_add_service", path="/ui/services")
+            add_resp = check_FormSubmit(test, form_match="add_service", form_data={...}, previous_response=svc_resp)
 
-        Parameter ``path`` has to be provided to fetch the available form on the desired page, *unless*
-        ``previous_response`` is provided.
-
-        Successive calls using form submits to `navigate pages` can be accomplished using ``previous_response``
-        as the previous `response` object returned.
-
-        Example::
-
-            svc_resp = check_FormSubmit(test, form_match='goto_add_service', path='/ui/services')
-            add_resp = check_FormSubmit(test, form_match='add_service', form_data={...}, previous_response=svc_resp)
+        :param test_class: Test Suite to retrieve the instance and parameters to send requests to.
+        :param form_match:
+            Can be a form name, the form index (from all available forms on page) or an
+            iterable of key/values of form fields to search for a match (first match is used if many are available).
+        :param form_data: specifies matched form fields to be filed as if entered from UI input using given key/value.
+        :param form_submit: specifies which `button` by name or index to submit within the matched form.
+        :param path:
+            Required page location where to send a request to fetch the required form, *unless* provided through
+            :paramref:`previous_response` which must contain the form being looked for in its body.
+        :param method: combined with :paramref:`path` when request is need to fetch the form.
+        :param previous_response: pre-executed request where the form can be directly looked for in its body.
+        :param timeout: response timeout to be used with :paramref:`path` when request must be sent.
+        :param max_redirect: limits how many times follow-redirect from HTTP 3xx responses can be accomplished.
+        :param expected_code: validate the HTTP status code from the response (returned or provided one).
+        :param expected_type: validate the content-type of the response (returned or provided one).
+        :param expect_errors: indicate if error HTTP status codes (>=400) are considered normal in the response.
 
         :returns: response from the rendered page for further tests
+        :raises AssertionError: if any check along the ways results into error or unexpected state.
         """
         app_or_url = get_app_or_url(test_class)
         if not isinstance(app_or_url, TestApp):
@@ -765,6 +815,7 @@ class TestSetup(object):
 
     @staticmethod
     def check_Unauthorized(test_class, method, path, content_type=CONTENT_TYPE_JSON):
+        # type: (Base_Magpie_TestCase, Str, Str, Str) -> JSON
         """
         Verifies that Magpie returned an Unauthorized response.
 
@@ -772,23 +823,34 @@ class TestSetup(object):
         """
         app_or_url = get_app_or_url(test_class)
         resp = test_request(app_or_url, method, path, cookies=test_class.cookies, expect_errors=True)
-        check_response_basic_info(resp, expected_code=401, expected_type=content_type, expected_method=method)
+        return check_response_basic_info(resp, expected_code=401, expected_type=content_type, expected_method=method)
 
     @staticmethod
-    def get_AnyServiceOfTestServiceType(test_class):
+    def get_AnyServiceOfTestServiceType(test_class, override_service_type=None):
+        # type: (Base_Magpie_TestCase, Optional[Str]) -> JSON
+        """Obtains the first service from all available services that match the test service type.
+
+        :raises AssertionError: if the response could not retrieve the test service-type or any service of such type.
+        """
         app_or_url = get_app_or_url(test_class)
-        path = "/services/types/{}".format(test_class.test_service_type)
+        svc_type = override_service_type or test_class.test_service_type
+        path = "/services/types/{}".format(svc_type)
         resp = test_request(app_or_url, "GET", path, headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method="GET")
         check_val_is_in("services", json_body)
-        check_val_is_in(test_class.test_service_type, json_body["services"])
-        check_val_not_equal(len(json_body["services"][test_class.test_service_type]), 0,
+        check_val_is_in(svc_type, json_body["services"])
+        check_val_not_equal(len(json_body["services"][svc_type]), 0,
                             msg="Missing any required service of type: '{}'".format(test_class.test_service_type))
-        services_dict = json_body["services"][test_class.test_service_type]
+        services_dict = json_body["services"][svc_type]
         return list(services_dict.values())[0]
 
     @staticmethod
     def create_TestServiceResource(test_class, override_data=None):
+        # type: (AnyMagpieTestType, Optional[JSON]) -> JSON
+        """Creates the test resource nested *directly* under the test service. Test service *must* exist beforehand.
+
+        :raises AssertionError: if the response correspond to failure to create the test resource.
+        """
         app_or_url = get_app_or_url(test_class)
         TestSetup.create_TestService(test_class)
         path = "/services/{svc}/resources".format(svc=test_class.test_service_name)
@@ -804,39 +866,63 @@ class TestSetup(object):
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
-    def get_ExistingTestServiceInfo(test_class):
+    def get_ExistingTestServiceInfo(test_class, override_service_name=None):
+        # type: (AnyMagpieTestType, Optional[Str]) -> List[JSON]
+        """Obtains test service details.
+
+        :raises AssertionError: if the response correspond to missing service or failure to retrieve it.
+        """
         app_or_url = get_app_or_url(test_class)
-        path = "/services/{svc}".format(svc=test_class.test_service_name)
+        svc_name = override_service_name or test_class.test_service_name
+        path = "/services/{svc}".format(svc=svc_name)
         resp = test_request(app_or_url, "GET", path,
                             headers=test_class.json_headers, cookies=test_class.cookies)
         json_body = get_json_body(resp)
         svc_getter = "service"
         if LooseVersion(test_class.version) < LooseVersion("0.9.1"):
-            svc_getter = test_class.test_service_name
+            svc_getter = svc_name
         return json_body[svc_getter]
 
     @staticmethod
-    def get_TestServiceDirectResources(test_class, ignore_missing_service=False):
-        # type: (AnyMagpieTestType, bool) -> List[JSON]
+    def get_TestServiceDirectResources(test_class, override_service_name=None, ignore_missing_service=False):
+        # type: (AnyMagpieTestType, Optional[Str], bool) -> List[JSON]
+        """Obtains test resources nested *directly* under test service.
+
+        :raises AssertionError: if the response correspond to missing service or resources.
+        """
         app_or_url = get_app_or_url(test_class)
-        path = "/services/{svc}/resources".format(svc=test_class.test_service_name)
+        svc_name = override_service_name or test_class.test_service_name
+        path = "/services/{svc}/resources".format(svc=svc_name)
         resp = test_request(app_or_url, "GET", path,
                             headers=test_class.json_headers, cookies=test_class.cookies,
                             expect_errors=ignore_missing_service)
         if ignore_missing_service and resp.status_code == 404:
             return []
         json_body = get_json_body(resp)
-        resources = json_body[test_class.test_service_name]["resources"]
+        resources = json_body[svc_name]["resources"]
         return [resources[res] for res in resources]
 
     @staticmethod
-    def check_NonExistingTestServiceResource(test_class):
-        resources = TestSetup.get_TestServiceDirectResources(test_class, ignore_missing_service=True)
+    def check_NonExistingTestServiceResource(test_class, override_service_name=None, override_resource_name=None):
+        # type: (Base_Magpie_TestCase, Optional[Str], Optional[Str]) -> None
+        """Validates that test resource nested *directly* under test service does not exist.
+        Skips validation if the test service does not exist.
+
+        :raises AssertionError: if the response correspond to existing resource under the service.
+        """
+        resources = TestSetup.get_TestServiceDirectResources(test_class,
+                                                             override_service_name=override_service_name,
+                                                             ignore_missing_service=True)
         resources_names = [res["resource_name"] for res in resources]
-        check_val_not_in(test_class.test_resource_name, resources_names)
+        check_val_not_in(override_resource_name or test_class.test_resource_name, resources_names)
 
     @staticmethod
     def delete_TestServiceResource(test_class, override_resource_name=None):
+        # type: (Base_Magpie_TestCase, Optional[Str]) -> None
+        """Deletes the test service. If it does not exist, skip. Otherwise, delete it and validate.
+
+        :raises AssertionError: if any response does not correspond to non existing service after execution.
+        """
         app_or_url = get_app_or_url(test_class)
         resource_name = override_resource_name or test_class.test_resource_name
         resources = TestSetup.get_TestServiceDirectResources(test_class, ignore_missing_service=True)
@@ -853,6 +939,11 @@ class TestSetup(object):
 
     @staticmethod
     def create_TestService(test_class, override_service_name=None, override_service_type=None):
+        # type: (Base_Magpie_TestCase, Optional[Str], Optional[Str]) -> JSON
+        """Creates the test service. If already exists, deletes it. Then, attempt creation.
+
+        :raises AssertionError: if any response does not correspond to successful service creation from scratch.
+        """
         app_or_url = get_app_or_url(test_class)
         svc_name = override_service_name or test_class.test_service_name
         svc_type = override_service_type or test_class.test_service_type
@@ -878,6 +969,11 @@ class TestSetup(object):
 
     @staticmethod
     def check_NonExistingTestService(test_class, override_service_name=None):
+        # type: (Base_Magpie_TestCase, Optional[Str]) -> None
+        """Validates that the test service does not exist.
+
+        :raises AssertionError: if the response does not correspond to missing service.
+        """
         services_info = TestSetup.get_RegisteredServicesList(test_class)
         services_names = [svc["service_name"] for svc in services_info]
         service_name = override_service_name or test_class.test_service_name
@@ -885,6 +981,11 @@ class TestSetup(object):
 
     @staticmethod
     def delete_TestService(test_class, override_service_name=None):
+        # type: (Base_Magpie_TestCase, Optional[Str]) -> None
+        """Deletes the test service. If non existing, skip. Otherwise, proceed to remove it.
+
+        :raises AssertionError: if the response does not correspond to successful validation or removal of the service.
+        """
         app_or_url = get_app_or_url(test_class)
         service_name = override_service_name or test_class.test_service_name
         services_info = TestSetup.get_RegisteredServicesList(test_class)
@@ -900,6 +1001,11 @@ class TestSetup(object):
 
     @staticmethod
     def get_RegisteredServicesList(test_class):
+        # type: (Base_Magpie_TestCase) -> List[Str]
+        """Obtains the list of registered users.
+
+        :raises AssertionError: if the response does not correspond to successful retrieval of user names.
+        """
         app_or_url = get_app_or_url(test_class)
         resp = test_request(app_or_url, "GET", "/services",
                             headers=test_class.json_headers,
@@ -915,6 +1021,11 @@ class TestSetup(object):
 
     @staticmethod
     def get_RegisteredUsersList(test_class):
+        # type: (Base_Magpie_TestCase) -> List[Str]
+        """Obtains the list of registered users.
+
+        :raises AssertionError: if the response does not correspond to successful retrieval of user names.
+        """
         app_or_url = get_app_or_url(test_class)
         resp = test_request(app_or_url, "GET", "/users",
                             headers=test_class.json_headers,
@@ -924,6 +1035,11 @@ class TestSetup(object):
 
     @staticmethod
     def check_NonExistingTestUser(test_class, override_user_name=None):
+        # type: (Base_Magpie_TestCase, Optional[Str]) -> None
+        """Ensures that the test user does not exist.
+
+        :raises AssertionError: if the test user exists.
+        """
         users = TestSetup.get_RegisteredUsersList(test_class)
         user_name = override_user_name or test_class.test_user_name
         check_val_not_in(user_name, users)
@@ -931,7 +1047,7 @@ class TestSetup(object):
     @staticmethod
     def create_TestUser(test_class, override_group_name=None, override_data=None):
         # type: (Base_Magpie_TestCase, Optional[Str], Optional[JSON]) -> JSON
-        """Ensures that the test user exists. If it does, deletes him. Otherwise, skip.
+        """Creates the test user.
 
         :raises AssertionError: if the request response does not match successful creation.
         """
