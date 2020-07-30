@@ -23,7 +23,8 @@ Features / Changes
 * Allow combined configuration files (providers, permissions, users, groups) with inter-references between them
   specified with ``MAGPIE_CONFIG_PATH`` environment variable or ``magpie.config_path`` setting (example in ``configs``).
 * Add configurable user creation parameters upon `Magpie` application startup through configuration files
-  (fixes `#204 <https://github.com/Ouranosinc/Magpie/issues/204>`_).
+  (fixes `#47 <https://github.com/Ouranosinc/Magpie/issues/47>`_ and
+   `#204 <https://github.com/Ouranosinc/Magpie/issues/204>`_).
 * Add disabled checkboxes for UI rendering of non-editable items
   (relates to `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_).
 * Add version tag at bottom of UI pages.
