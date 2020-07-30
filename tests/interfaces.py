@@ -54,6 +54,7 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     test_service_type = None    # type: Optional[Str]
     test_service_name = None    # type: Optional[Str]
     test_resource_name = None   # type: Optional[Str]
+    test_resource_type = None   # type: Optional[Str]
     test_user_name = None       # type: Optional[Str]  # reuse for password to simplify calls when created dynamically
     test_group_name = None      # type: Optional[Str]
 
@@ -67,11 +68,56 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     @classmethod
     def tearDownClass(cls):
         # try to catch any missed cleanup of test-based item created dynamically
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
         utils.TestSetup.delete_TestServiceResource(cls)
         utils.TestSetup.delete_TestService(cls)
         utils.TestSetup.delete_TestUser(cls)
         utils.TestSetup.delete_TestGroup(cls)
         pyramid.testing.tearDown()
+
+
+class User_Magpie_TestCase(Base_Magpie_TestCase):
+    @classmethod
+    def setUpClass(cls):
+        raise NotImplementedError
+
+    def setUp(self):
+        utils.TestSetup.create_TestUser(self)
+        self.login_test_user()
+        utils.TestSetup.check_UserGroupMembership(self, member=False, override_cookies=self.test_cookies)
+
+    def tearDown(self):
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.delete_TestUser(self)
+        utils.TestSetup.delete_TestGroup(self)
+
+    @classmethod
+    def login_test_user(cls):
+        # type: () -> utils.OptionalHeaderCookiesType
+        """
+        Obtain headers and cookies with session credentials of the test user (non administrator).
+        The operation assumes that the test user already exists.
+        Only validates that user does not have administrator privileges for integrity.
+
+        Test headers and test cookies entries are updated in the extended class after successful execution.
+        They are also returned.
+
+        .. warning::
+            Must ensure that administrator user (for setup operations) is logged out completely to avoid invalid tests.
+            This is particularly important in the case of local TestApp that can store the session for one active user.
+
+        :raises AssertionError: if test user could not be logged in or is an administrator
+        """
+        utils.check_or_try_logout_user(cls)
+        cls.test_headers, cls.test_cookies = utils.check_or_try_login_user(
+            cls, username=cls.test_user_name, password=cls.test_user_name,
+            use_ui_form_submit=True, version=cls.version)
+        assert cls.test_cookies, "Cannot test UI user pages without a logged user"
+        resp = utils.test_request(cls, "GET", "/users/{}/groups".format(cls.test_user_name))
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_not_in(cls.grp, body["group_names"],
+                               msg="Cannot test functionalities if test user has administrator access permissions.")
+        return cls.test_headers, cls.test_cookies
 
 
 @runner.MAGPIE_TEST_API
@@ -161,15 +207,17 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         utils.check_or_try_logout_user(self)
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, expect_errors=True)
-        utils.check_response_basic_info(resp, 401)
+        utils.check_response_basic_info(resp, 401, expected_method="DELETE")
 
     def test_ListDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot list group names although groups are discoverable."""
-        raise NotImplementedError  # TODO
+        utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
+        resp = utils.test_request(self, "GET", "/register/groups", headers=self.json_headers, expect_errors=True)
+        utils.check_response_basic_info(resp, 401)
 
 
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase, User_Magpie_TestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that require at least logged user AuthN/AuthZ.
@@ -182,21 +230,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         raise NotImplementedError
 
     @classmethod
-    def login_test_user(cls):
-        """
-        Obtain headers and cookies with session credentials of the test user (non administrator).
-
-        .. warning::
-            Must ensure that administrator user (for setup operations) is logged out completely to avoid invalid tests.
-            This is particularly important in the case of local TestApp that can store the session for one active user.
-        """
-        raise NotImplementedError
-
-    def tearDown(self):
-        self.check_requirements()   # re-login as required in case test logged out the user with permissions
-        utils.TestSetup.delete_TestUser(self)
-        utils.TestSetup.delete_TestUser(self, override_user_name=self.other_user_name)
-        utils.TestSetup.delete_TestGroup(self)
+    def tearDownClass(cls):
+        utils.TestSetup.delete_TestUser(cls, override_user_name=cls.other_user_name)
+        super(Interface_MagpieAPI_UsersAuth, cls).tearDownClass()
 
     def run_PutUsers_email_update_itself(self, user_path_variable):
         """
@@ -207,17 +243,16 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         """
         utils.TestSetup.create_TestUser(self)
         new_email = "some-random-email@unittest.com"
-        test_headers, test_cookies = self.login_test_user()
 
         # update existing user name
         data = {"email": new_email}
         path = "/users/{usr}".format(usr=user_path_variable)
-        resp = utils.test_request(self, "PUT", path, headers=test_headers, cookies=test_cookies, data=data)
+        resp = utils.test_request(self, "PUT", path, headers=self.test_headers, cookies=self.test_cookies, data=data)
         utils.check_response_basic_info(resp, 200, expected_method="PUT")
 
         # validate change
         path = "/users/{usr}".format(usr=get_constant("MAGPIE_LOGGED_USER"))
-        resp = utils.test_request(self, "GET", path, headers=test_headers, cookies=test_cookies)
+        resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["user"]["email"], new_email)
 
@@ -289,11 +324,10 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
         utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestUser(self, {"user_name": self.other_user_name, "password": self.other_user_name})
-        test_headers, test_cookies = self.login_test_user()
         new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
         data = {"password": new_password}
         path = "/users/{usr}".format(usr=self.other_user_name)
-        resp = utils.test_request(self, "PUT", path, headers=test_headers, cookies=test_cookies, data=data)
+        resp = utils.test_request(self, "PUT", path, headers=self.test_headers, cookies=self.test_cookies, data=data)
         utils.check_response_basic_info(resp, 403, expected_method="PUT")
         utils.check_or_try_logout_user(self)
 
@@ -317,52 +351,125 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], True)
         utils.check_val_equal(body["user"]["user_name"], self.other_user_name)
-        utils.check_or_try_logout_user(self)
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_username_Forbidden_ReservedKeyword_Current(self):
         """Logged user is not allowed to update its user name to reserved keyword."""
-        raise NotImplementedError  # TODO
+        data = {"user_name": get_constant("MAGPIE_LOGGED_USER")}
+        resp = utils.test_request(self, "PUT", "/users/current", data=data, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="PUT")
+        resp = utils.test_request(self, "GET", "/users/current")
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_username_Forbidden_AnyNonAdmin(self):
         """Non-admin level user is not permitted to update its own user name."""
-        raise NotImplementedError  # TODO
+        data = {"user_name": self.test_user_name + "new-user-name"}
+        resp = utils.test_request(self, "PUT", "/users/current", data=data, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="PUT")
+        resp = utils.test_request(self, "GET", "/users/current")
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_username_Forbidden_UpdateOthers(self):
         """Logged user is not allowed to update any other user's name."""
-        raise NotImplementedError  # TODO
+        utils.TestSetup.create_TestUser(self, {"user_name": self.other_user_name, "password": self.other_user_name})
+        # sanity check that we are still logged as test user
+        resp = utils.test_request(self, "GET", "/users/current")
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
+        # actual test
+        data = {"user_name": self.other_user_name + "new-user-name"}
+        path = "/users/{}".format(self.other_user_name)
+        resp = utils.test_request(self, "PUT", path, data=data, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="PUT")
+        # valid other user not updated by test user, with admin access
+        resp = utils.test_request(self, "GET", path, cookies=self.cookies, headers=self.json_headers)
+        utils.check_response_basic_info(resp)
 
-    @pytest.mark.skip(reason="Not implemented")
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     @runner.MAGPIE_TEST_RESOURCES
     def test_PostUserResourcesPermissions_Forbidden(self):
         """Logged user without administrator access is not allowed to add resource permissions for itself."""
-        raise NotImplementedError  # TODO
+        utils.TestSetup.create_TestService(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        body = utils.TestSetup.get_ResourceInfo(self, body)
+        res_id = body["resource_id"]
+        perm = Permission.READ.value
+        data = {"permission_name": perm}
+        path = "/users/current/resources/{}/permissions".format(res_id)
+        resp = utils.test_request(self, "POST", path, data=data, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="POST")
+        path = "/users/{}/resources/{}/permissions".format(self.test_user_name, res_id)
+        resp = utils.test_request(self, "GET", path, cookies=self.cookies, headers=self.json_headers)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_not_in(perm, body["permission_names"])
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
     def test_RegisterDiscoverableGroup(self):
         """Non-admin logged user is allowed to update is membership to register to a discoverable group by himself."""
-        raise NotImplementedError  # TODO
+        utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True})
+        path = "/register/groups/{}".format(self.test_group_name)
+        resp = utils.test_request(self, "POST", path, data={})
+        body = utils.check_response_basic_info(resp, 201, expected_method="POST")
+        utils.check_val_is_in("group_name", body)
+        utils.check_val_is_in("user_name", body)
+        utils.check_val_is_in(body["group_name"], self.test_group_name)
+        utils.check_val_is_in(body["user_name"], self.test_user_name)
 
     @runner.MAGPIE_TEST_USERS
     def test_UnregisterDiscoverableGroup(self):
         """Non-admin logged user is allowed to revoke its membership to leave a discoverable group by himself."""
-        raise NotImplementedError  # TODO
+        utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True})
+        utils.TestSetup.assign_TestUserGroup(self)
+        path = "/register/groups/{}".format(self.test_group_name)
+        resp = utils.test_request(self, "DELETE", path, data={})
+        utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+        utils.TestSetup.check_UserGroupMembership(self, member=False)
 
     def test_ViewDiscoverableGroup(self):
         """Non-admin logged user can view discoverable group information. Critical details are not displayed."""
-        raise NotImplementedError  # TODO
+        utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True, "description": "Test Group"})
+        path = "/register/groups/{}".format(self.test_group_name)
+        resp = utils.test_request(self, "GET", path)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_is_in("group", body)
+        utils.check_val_is_in("group_name", body["group"])
+        utils.check_val_is_in("description", body["group"])
+        utils.check_val_equal(body["group"]["group_name"], self.test_group_name)
+        utils.check_val_equal(body["group"]["description"], "Test Group")
+        utils.check_val_not_in("group_id", body["group"])
+        utils.check_val_not_in("discoverable", body["group"])
+        utils.check_val_not_in("member_count", body["group"])
+        utils.check_val_not_in("user_names", body["group"])
 
-    def test_ListDiscoverableGroup(self):
+    def test_ListDiscoverableGroups_Filtered(self):
         """Non-admin logged user can view available discoverable group names."""
-        raise NotImplementedError  # TODO
+        utils.TestSetup.create_TestGroup(self)
+        discover_groups = [self.test_group_name + "-1", self.test_group_name + "-2", self.test_group_name + "-3"]
+        for grp in discover_groups:
+            utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True, "group_name": grp})
+        resp = utils.test_request(self, "GET", "/register/groups")
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_is_in("group_names", body)
+        utils.check_all_equal(discover_groups, body["group_names"], any_order=True,
+                              msg="Only discoverable groups should be listed for non-admin user, no more, no less.")
 
     def test_DeleteDiscoverableGroup_Forbidden(self):
         """Non-admin logged user cannot delete a group although it is discoverable."""
-        raise NotImplementedError  # TODO
+        utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True})
+        path = "/register/groups/{}".format(self.test_group_name)
+        resp = utils.test_request(self, "GET", path)
+        utils.check_response_basic_info(resp, 200)
+        path = "/groups/{}".format(self.test_group_name)
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+        resp = utils.test_request(self, "GET", path, cookies=self.cookies, headers=self.headers)
+        utils.check_response_basic_info(resp, 200)
 
 
 @runner.MAGPIE_TEST_API
@@ -992,7 +1099,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers_InvalidParameters(self):
-        utils.warn_version("validate user creation inputs", "2.0.0", skip=True)
+        utils.warn_version(self, "validate user creation inputs", "2.0.0", skip=True)
         data = {
             "user_name": self.test_user_name,
             "email": "{}@mail.com".format(self.test_user_name),
@@ -1213,7 +1320,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.assign_TestUserGroup(self)
-        utils.TestSetup.check_UserIsGroupMember(self)
+        utils.TestSetup.check_UserGroupMembership(self)
 
     @runner.MAGPIE_TEST_GROUPS
     def test_PostUserGroup_not_found(self):
@@ -1512,8 +1619,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def test_PutService_UpdateSuccess(self):
         body = utils.TestSetup.create_TestService(self)
         service = body["service"]
-        new_svc_name = service["service_name"] + "-updated"
-        new_svc_url = service["service_url"] + "/updated"
+        new_svc_name = str(service["service_name"]) + "-updated"
+        new_svc_url = str(service["service_url"]) + "/updated"
         utils.TestSetup.delete_TestService(self, override_service_name=new_svc_name)
         path = "/services/{svc}".format(svc=service["service_name"])
         data = {"service_name": new_svc_name, "service_url": new_svc_url}
@@ -1543,8 +1650,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def test_PutService_UpdateConflict(self):
         body = utils.TestSetup.create_TestService(self)
         service = body["service"]
-        new_svc_name = service["service_name"] + "-updated"
-        new_svc_url = service["service_url"] + "/updated"
+        new_svc_name = str(service["service_name"]) + "-updated"
+        new_svc_url = str(service["service_url"]) + "/updated"
         try:
             utils.TestSetup.create_TestService(self, override_service_name=new_svc_name)
             path = "/services/{svc}".format(svc=service["service_name"])
@@ -1744,9 +1851,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resources_prior = utils.TestSetup.get_TestServiceDirectResources(self)
         resources_prior_ids = [res["resource_id"] for res in resources_prior]
         body = utils.TestSetup.create_TestServiceResource(self)
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            utils.check_val_is_in("resource", body)
-            body = body["resource"]
+        body = utils.TestSetup.get_ResourceInfo(self, body)
         utils.check_val_is_in("resource_id", body)
         utils.check_val_is_in("resource_name", body)
         utils.check_val_is_in("resource_type", body)
@@ -1762,9 +1867,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         service_id = utils.TestSetup.get_ExistingTestServiceInfo(self)["resource_id"]
         extra_data = {"parent_id": service_id}
         body = utils.TestSetup.create_TestServiceResource(self, extra_data)
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            utils.check_val_is_in("resource", body)
-            body = body["resource"]
+        body = utils.TestSetup.get_ResourceInfo(self, body)
         utils.check_val_is_in("resource_id", body)
         utils.check_val_is_in("resource_name", body)
         utils.check_val_is_in("resource_type", body)
@@ -1793,10 +1896,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             "parent_id": test_resource_id
         }
         body = utils.TestSetup.create_TestServiceResource(self, override_data)
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            utils.check_val_is_in("resource", body)
-            utils.check_val_type(body["resource"], dict)
-            body = body["resource"]
+        body = utils.TestSetup.get_ResourceInfo(self, body)
         utils.check_val_is_in("resource_id", body)
         utils.check_val_not_in(body["resource_id"], resources_ids)
         utils.check_val_is_in("resource_name", body)
@@ -1811,8 +1911,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         if LooseVersion(self.version) >= LooseVersion("0.9.2"):
-            utils.check_val_is_in("resource", body)
-            resource_body = body["resource"]
+            resource_body = utils.TestSetup.get_ResourceInfo(self, body)
         else:
             utils.check_val_is_in(str(child_resource_id), body)
             resource_body = body[str(child_resource_id)]
@@ -2043,7 +2142,7 @@ class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase
 
 
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase, User_Magpie_TestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that require at least logged user AuthN/AuthZ.
@@ -2054,16 +2153,6 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     def __init__(self, *args, **kwargs):
         super(Interface_MagpieUI_UsersAuth, self).__init__(*args, **kwargs)
         self.magpie_title = "Magpie User Management"
-
-    def setUp(self):
-        utils.TestSetup.create_TestUser(self)
-        test_credentials = utils.check_or_try_login_user(self, self.test_user_name, self.test_user_name)
-        self.test_headers, self.test_cookies = test_credentials
-        assert self.test_cookies, "Cannot test UI user pages without a logged user"
-        resp = utils.test_request(self, "GET", "/users/{}/groups".format(self.test_user_name))
-        body = utils.check_response_basic_info(resp)
-        utils.check_val_not_in(self.grp, body["group_names"],
-                               msg="Cannot test functionalities if test user has administrator access permissions.")
 
     @classmethod
     def check_requirements(cls):

@@ -10,7 +10,7 @@ Tests for `magpie.register` operations.
 import json
 import shutil
 import tempfile
-import unittest
+from typing import TYPE_CHECKING
 
 import mock
 
@@ -20,12 +20,16 @@ from magpie.db import get_db_session_from_settings
 from magpie.permissions import Permission
 from magpie.services import ServiceAPI
 from magpie.utils import CONTENT_TYPE_JSON
-from tests import runner, utils
+from tests import interfaces, runner, utils
+
+if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
+    from magpie.typedefs import JSON  # noqa: F401
 
 
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_REGISTER
-class TestRegister(unittest.TestCase):
+class TestRegister(interfaces.Base_Magpie_TestCase):
     # pylint: disable=R0914
 
     @classmethod
@@ -105,11 +109,11 @@ class TestRegister(unittest.TestCase):
         utils.check_val_is_in(self.test_perm_grp_name, groups)
         resp = utils.test_request(self.app, "GET", "/services/{}/resources".format(self.test_perm_svc_name))
         body = utils.check_response_basic_info(resp)
-        svc_res = body[self.test_perm_svc_name]["resources"]
+        svc_res = body[self.test_perm_svc_name]["resources"]  # type: JSON
         svc_res_id = body[self.test_perm_svc_name]["resource_id"]
         utils.check_val_is_in(res1_name, [svc_res[r]["resource_name"] for r in svc_res])
         res1_id = [svc_res[r]["resource_id"] for r in svc_res if svc_res[r]["resource_name"] == res1_name][0]
-        res1_sub = svc_res[str(res1_id)]["children"]
+        res1_sub = svc_res[str(res1_id)]["children"]  # type: JSON
         utils.check_val_is_in(res2_name, [res1_sub[r]["resource_name"] for r in res1_sub])
         res2_id = [res1_sub[r]["resource_id"] for r in res1_sub if res1_sub[r]["resource_name"] == res2_name][0]
 
@@ -181,14 +185,14 @@ class TestRegister(unittest.TestCase):
         utils.check_val_is_in(self.test_perm_grp_name, groups)
         resp = utils.test_request(self.app, "GET", "/services/{}/resources".format(self.test_perm_svc_name))
         body = utils.check_response_basic_info(resp)
-        svc_res = body[self.test_perm_svc_name]["resources"]
+        svc_res = body[self.test_perm_svc_name]["resources"]  # type: JSON
         svc_res_id = body[self.test_perm_svc_name]["resource_id"]
         utils.check_val_is_in(res1_name, [svc_res[r]["resource_name"] for r in svc_res])
         res1_id = [svc_res[r]["resource_id"] for r in svc_res if svc_res[r]["resource_name"] == res1_name][0]
-        res1_sub = svc_res[str(res1_id)]["children"]
+        res1_sub = svc_res[str(res1_id)]["children"]  # type: JSON
         utils.check_val_is_in(res2_name, [res1_sub[r]["resource_name"] for r in res1_sub])
         res2_id = [res1_sub[r]["resource_id"] for r in res1_sub if res1_sub[r]["resource_name"] == res2_name][0]
-        res2_sub = res1_sub[str(res2_id)]["children"]
+        res2_sub = res1_sub[str(res2_id)]["children"]  # type: JSON
         utils.check_val_is_in(res3_name, [res2_sub[r]["resource_name"] for r in res2_sub])
         res3_id = [res2_sub[r]["resource_id"] for r in res2_sub if res2_sub[r]["resource_name"] == res3_name][0]
 
@@ -241,14 +245,14 @@ class TestRegister(unittest.TestCase):
         utils.check_val_is_in(self.test_perm_grp_name, groups)
         resp = utils.test_request(self.app, "GET", "/services/{}/resources".format(self.test_perm_svc_name))
         body = utils.check_response_basic_info(resp)
-        svc_res = body[self.test_perm_svc_name]["resources"]
+        svc_res = body[self.test_perm_svc_name]["resources"]  # type: JSON
         svc_res_id = body[self.test_perm_svc_name]["resource_id"]
         utils.check_val_is_in(res1_name, [svc_res[r]["resource_name"] for r in svc_res])
         res1_id = [svc_res[r]["resource_id"] for r in svc_res if svc_res[r]["resource_name"] == res1_name][0]
-        res1_sub = svc_res[str(res1_id)]["children"]
+        res1_sub = svc_res[str(res1_id)]["children"]  # type: JSON
         utils.check_val_is_in(res2_name, [res1_sub[r]["resource_name"] for r in res1_sub])
         res2_id = [res1_sub[r]["resource_id"] for r in res1_sub if res1_sub[r]["resource_name"] == res2_name][0]
-        res2_sub = res1_sub[str(res2_id)]["children"]
+        res2_sub = res1_sub[str(res2_id)]["children"]  # type: JSON
         utils.check_val_is_in(res3_name, [res2_sub[r]["resource_name"] for r in res2_sub])
         res3_id = [res2_sub[r]["resource_id"] for r in res2_sub if res2_sub[r]["resource_name"] == res3_name][0]
 
@@ -291,8 +295,9 @@ class TestRegister(unittest.TestCase):
         print(config)
         assert all([k in ["test-provider-1", "test-provider-2"] for k in config["providers"]])
         assert "${PROVIDER1}" not in config["providers"]
-        assert config["providers"]["test-provider-1"]["url"] == "http://localhost-test/wps"
-        assert config["providers"]["test-provider-2"]["url"] == "http://HOSTNAME/wps"
+        providers = config["providers"]  # type: JSON
+        assert providers["test-provider-1"]["url"] == "http://localhost-test/wps"
+        assert providers["test-provider-2"]["url"] == "http://HOSTNAME/wps"
 
     def test_variable_expansion_permissions_config_style(self):  # noqa: R0201
         permissions_config = {

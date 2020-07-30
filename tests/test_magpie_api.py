@@ -76,13 +76,6 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
         cls.test_user_name = "unittest-user_user-auth-username"
         cls.other_user_name = "unittest-other_user-auth-username"
 
-    @classmethod
-    def login_test_user(cls):
-        utils.check_or_try_logout_user(cls)
-        return utils.check_or_try_login_user(
-            cls, username=cls.test_user_name, password=cls.test_user_name,
-            use_ui_form_submit=True, version=cls.version)
-
 
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_LOCAL

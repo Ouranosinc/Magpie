@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from webob.headers import ResponseHeaders, EnvironHeaders
     from webob.response import Response as WebobResponse
     from webtest.response import TestResponse
-    from webtest.app import TestApp
     from requests.cookies import RequestsCookieJar
     from pyramid.response import Response as PyramidResponse
     from pyramid.registry import Registry
@@ -23,7 +22,6 @@ if TYPE_CHECKING:
     from pyramid.config import Configurator
     from requests.structures import CaseInsensitiveDict
     from logging import Logger as LoggerType  # noqa: F401
-    from tests.interfaces import Base_Magpie_TestCase
     import six
 
     if six.PY2:
@@ -56,6 +54,3 @@ if TYPE_CHECKING:
     ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
     AnyPermissionType = Union[Permission, ResourcePermissionType, Str]
     AccessControlListType = List[Tuple[Str, Str, Str]]
-
-    TestAppOrUrlType = Union[Str, TestApp]
-    AnyMagpieTestType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase, TestAppOrUrlType]

@@ -552,23 +552,37 @@ class UserBodySchema(colander.MappingSchema):
     )
 
 
-class GroupBodySchema(colander.MappingSchema):
+class GroupBaseBodySchema(colander.MappingSchema):
     group_name = colander.SchemaNode(
         colander.String(),
         description="Name of the group.",
         example="Administrators")
+
+
+class GroupDescBodySchema(GroupBaseBodySchema):
+    # note: use an underscore to differentiate between the node and the parent 'description' metadata
+    _description = colander.SchemaNode(
+        colander.String(),
+        description="Description associated to the group.",
+        example="",
+        missing=colander.drop)
+    _description.name = "description"
+
+
+class GroupPublicBodySchema(GroupBaseBodySchema, GroupDescBodySchema):
+    description = "Publicly available group information."  # note: metadata, not the field
+
+
+class GroupInfoBodySchema(GroupBaseBodySchema):
+    description = "Minimal information returned by administrative API routes."
     group_id = colander.SchemaNode(
         colander.Integer(),
         description="ID of the group.",
         example=1)
 
 
-class GroupDetailBodySchema(GroupBodySchema):
-    description = colander.SchemaNode(
-        colander.String(),
-        description="Description associated to the group.",
-        example="",
-        missing=colander.drop)
+class GroupDetailBodySchema(GroupDescBodySchema, GroupInfoBodySchema):
+    description = "Detailed information of the group obtained by specifically requesting it."
     member_count = colander.SchemaNode(
         colander.Integer(),
         description="Number of users member of the group.",
@@ -1965,7 +1979,7 @@ class Groups_POST_RequestSchema(colander.MappingSchema):
 
 
 class Groups_POST_ResponseBodySchema(BaseResponseBodySchema):
-    group = GroupBodySchema()
+    group = GroupInfoBodySchema()
 
 
 class Groups_POST_CreatedResponseSchema(colander.MappingSchema):
@@ -2099,7 +2113,7 @@ class GroupServices_GET_OkResponseSchema(colander.MappingSchema):
 
 
 class GroupServices_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
-    group = GroupBodySchema()
+    group = GroupInfoBodySchema()
 
 
 class GroupServices_InternalServerErrorResponseSchema(colander.MappingSchema):
@@ -2120,7 +2134,7 @@ class GroupServicePermissions_GET_OkResponseSchema(colander.MappingSchema):
 
 
 class GroupServicePermissions_GET_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
-    group = GroupBodySchema()
+    group = GroupInfoBodySchema()
     service = ServiceBodySchema()
 
 
@@ -2152,7 +2166,7 @@ class GroupResourcePermissions_POST_RequestSchema(colander.MappingSchema):
 class GroupResourcePermissions_POST_ResponseBodySchema(BaseResponseBodySchema):
     permission_name = colander.SchemaNode(colander.String(), description="Name of the permission requested.")
     resource = ResourceBodySchema()
-    group = GroupBodySchema()
+    group = GroupInfoBodySchema()
 
 
 class GroupResourcePermissions_POST_CreatedResponseSchema(colander.MappingSchema):
@@ -2274,7 +2288,7 @@ class GroupServicePermission_DELETE_RequestSchema(colander.MappingSchema):
 class GroupServicePermission_DELETE_ResponseBodySchema(BaseResponseBodySchema):
     permission_name = colander.SchemaNode(colander.String(), description="Name of the permission requested.")
     resource = ResourceBodySchema()
-    group = GroupBodySchema()
+    group = GroupInfoBodySchema()
 
 
 class GroupServicePermission_DELETE_OkResponseSchema(colander.MappingSchema):
@@ -2324,7 +2338,7 @@ class RegisterGroups_GET_ForbiddenResponseSchema(colander.MappingSchema):
 
 
 class RegisterGroup_GET_ResponseBodySchema(BaseResponseBodySchema):
-    group = GroupBodySchema()  # not detailed because authenticated route has limited information
+    group = GroupPublicBodySchema()  # not detailed because authenticated route has limited information
 
 
 class RegisterGroup_GET_OkResponseSchema(colander.MappingSchema):
