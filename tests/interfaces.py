@@ -90,6 +90,11 @@ class User_Magpie_TestCase(object):
         raise NotImplementedError
 
     def setUp(self):
+        # cleanup anything that could be left over (e.g.: previous failing test run)
+        utils.TestSetup.delete_TestGroup(self)
+        utils.TestSetup.delete_TestUser(self)
+        utils.TestSetup.delete_TestService(self)
+        # setup minimal test user requirements
         utils.TestSetup.create_TestUser(self)
         self.login_test_user()
         utils.TestSetup.check_UserGroupMembership(self, member=False, override_cookies=self.test_cookies)
@@ -241,6 +246,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def tearDownClass(cls):
         utils.TestSetup.delete_TestUser(cls, override_user_name=cls.other_user_name)
         super(Interface_MagpieAPI_UsersAuth, cls).tearDownClass()
+
+    def setUp(self):
+        User_Magpie_TestCase.setUp(self)
 
     def run_PutUsers_email_update_itself(self, user_path_variable):
         """
@@ -2161,6 +2169,9 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     def __init__(self, *args, **kwargs):
         super(Interface_MagpieUI_UsersAuth, self).__init__(*args, **kwargs)
         self.magpie_title = "Magpie User Management"
+
+    def setUp(self):
+        User_Magpie_TestCase.setUp(self)
 
     @classmethod
     def check_requirements(cls):

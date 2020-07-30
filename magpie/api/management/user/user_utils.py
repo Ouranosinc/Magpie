@@ -110,18 +110,17 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     :returns: valid HTTP response on successful operation.
     """
     check_valid_service_or_resource_permission(permission.value, resource, db_session)
-    resource_id = resource.resource_id
+    res_id = resource.resource_id
     existing_perm = UserResourcePermissionService.by_resource_user_and_perm(
-        user_id=user.id, resource_id=resource_id, perm_name=permission.value, db_session=db_session)
+        user_id=user.id, resource_id=res_id, perm_name=permission.value, db_session=db_session)
     ax.verify_param(existing_perm, is_none=True, http_error=HTTPConflict,
-                    content={"resource_id": resource_id, "user_id": user.id, "permission_name": permission.value},
+                    content={"resource_id": res_id, "user_id": user.id, "permission_name": permission.value},
                     msg_on_fail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
 
-    new_perm = models.UserResourcePermission(resource_id=resource_id,
-                                             user_id=user.id, perm_name=permission.value)  # noqa
-    usr_res_data = {"resource_id": resource_id, "user_id": user.id, "permission_name": permission.value}
+    new_perm = models.UserResourcePermission(resource_id=res_id, user_id=user.id, perm_name=permission.value)  # noqa
+    usr_res_data = {"resource_id": res_id, "user_id": user.id, "permission_name": permission.value}
     ax.verify_param(new_perm, not_none=True, http_error=HTTPForbidden,
-                    content={"resource_id": resource_id, "user_id": user.id},
+                    content={"resource_id": res_id, "user_id": user.id},
                     msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=usr_res_data,
@@ -158,12 +157,12 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
     :raises HTTPException: error HTTP response of corresponding situation.
     """
     check_valid_service_or_resource_permission(permission.value, resource, db_session)
-    resource_id = resource.resource_id
-    del_perm = UserResourcePermissionService.get(user.id, resource_id, permission.value, db_session)
+    res_id = resource.resource_id
+    del_perm = UserResourcePermissionService.get(user.id, res_id, permission.value, db_session)
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPNotFound,
                      msg_on_fail=s.UserResourcePermissions_DELETE_NotFoundResponseSchema.description,
-                     content={"resource_id": resource_id, "user_id": user.id, "permission_name": permission.value})
+                     content={"resource_id": res_id, "user_id": user.id, "permission_name": permission.value})
     return ax.valid_http(http_success=HTTPOk, detail=s.UserResourcePermissions_DELETE_OkResponseSchema.description)
 
 
@@ -339,6 +338,9 @@ def check_user_info(user_name, email, password, group_name):
     ax.verify_param(user_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                     param_name="user_name",
                     msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
+    ax.verify_param(user_name, matches=True, http_error=HTTPBadRequest,
+                    param_name="user_name", param_compare=ax.PARAM_REGEX,
+                    msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
     ax.verify_param(len(user_name), is_in=True, http_error=HTTPBadRequest,
                     param_name="user_name", param_compare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
                     msg_on_fail=s.Users_CheckInfo_Size_BadRequestResponseSchema.description)
@@ -355,13 +357,17 @@ def check_user_info(user_name, email, password, group_name):
     ax.verify_param(group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                     param_name="group_name",
                     msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
+    ax.verify_param(group_name, matches=True, http_error=HTTPBadRequest,
+                    param_name="group_name", param_compare=ax.PARAM_REGEX,
+                    msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
 
 
 def get_user_groups_checked(request, user):
     # type: (Request, models.User) -> List[Str]
+    """Obtains the validated list of group names from a pre-validated user."""
     ax.verify_param(user, not_none=True, http_error=HTTPNotFound,
                     msg_on_fail=s.Groups_CheckInfo_NotFoundResponseSchema.description)
-    group_names = ax.evaluate_call(lambda: [group.group_name for group in user.groups],
+    group_names = ax.evaluate_call(lambda: [group.group_name for group in user.groups],  # noqa
                                    fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                    msg_on_fail=s.Groups_CheckInfo_ForbiddenResponseSchema.description)
     return sorted(group_names)

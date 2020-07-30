@@ -1372,6 +1372,10 @@ class Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema(colander.MappingS
     body = Users_CheckInfo_ResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
+# alias for readability across code, but we actually do the same check
+User_Check_BadRequestResponseSchema = Users_CheckInfo_Name_BadRequestResponseSchema
+
+
 class User_Check_ForbiddenResponseSchema(colander.MappingSchema):
     description = "User check query was refused by db."
     header = HeaderResponseSchema()
@@ -1507,9 +1511,15 @@ class User_CheckAnonymous_NotFoundResponseSchema(colander.MappingSchema):
 
 
 class User_GET_ForbiddenResponseSchema(colander.MappingSchema):
-    description = "User name query refused by db."
+    description = "User access forbidden for this resource."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+class User_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
+    description = "User name query refused by db."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPInternalServerError.code, description=description)
 
 
 class User_GET_NotFoundResponseSchema(colander.MappingSchema):
@@ -2800,6 +2810,7 @@ Users_POST_responses = {
 }
 User_GET_responses = {
     "200": User_GET_OkResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -2808,7 +2819,7 @@ User_GET_responses = {
 }
 User_PUT_responses = {
     "200": Users_PUT_OkResponseSchema(),
-    "400": Users_CheckInfo_Name_BadRequestResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": UserGroup_GET_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -2817,6 +2828,7 @@ User_PUT_responses = {
 }
 User_DELETE_responses = {
     "200": User_DELETE_OkResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
@@ -2826,6 +2838,7 @@ User_DELETE_responses = {
 }
 UserResources_GET_responses = {
     "200": UserResources_GET_OkResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": UserResources_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -2834,6 +2847,7 @@ UserResources_GET_responses = {
 }
 UserGroups_GET_responses = {
     "200": UserGroups_GET_OkResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -2842,6 +2856,7 @@ UserGroups_GET_responses = {
 }
 UserGroups_POST_responses = {
     "201": UserGroups_POST_CreatedResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
@@ -2852,6 +2867,7 @@ UserGroups_POST_responses = {
 }
 UserGroup_DELETE_responses = {
     "200": UserGroup_DELETE_OkResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
@@ -2889,6 +2905,7 @@ UserResourcePermission_DELETE_responses = {
 }
 UserServices_GET_responses = {
     "200": UserServices_GET_OkResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),
     "403": User_GET_ForbiddenResponseSchema(),
     "404": User_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -2897,6 +2914,7 @@ UserServices_GET_responses = {
 }
 UserServicePermissions_GET_responses = {
     "200": UserServicePermissions_GET_OkResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),
     "403": User_GET_ForbiddenResponseSchema(),
     "404": UserServicePermissions_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -2905,6 +2923,7 @@ UserServicePermissions_GET_responses = {
 }
 UserServiceResources_GET_responses = {
     "200": UserServiceResources_GET_OkResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),
     "403": User_GET_ForbiddenResponseSchema(),
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),

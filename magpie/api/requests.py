@@ -13,8 +13,8 @@ from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
 
 from magpie import models
+from magpie.api import exception as ax
 from magpie.api import schemas as s
-from magpie.api.exception import evaluate_call, verify_param
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON, get_logger
 
@@ -44,10 +44,10 @@ def get_multiformat_any(request, key, default=None):
         # avoid json parse error if body is empty
         if not len(request.body):
             return default
-        return evaluate_call(lambda: request.json.get(key, default),
-                             http_error=HTTPInternalServerError, msg_on_fail=msg)
-    return evaluate_call(lambda: get_request_method_content(request).get(key, default),
-                         http_error=HTTPInternalServerError, msg_on_fail=msg)
+        return ax.evaluate_call(lambda: request.json.get(key, default),
+                                http_error=HTTPInternalServerError, msg_on_fail=msg)
+    return ax.evaluate_call(lambda: get_request_method_content(request).get(key, default),
+                            http_error=HTTPInternalServerError, msg_on_fail=msg)
 
 
 def get_multiformat_post(request, key, default=None):
@@ -75,14 +75,14 @@ def get_permission_multiformat_post_checked(request, service_or_resource, permis
 
 def get_value_multiformat_post_checked(request, key, default=None):
     val = get_multiformat_any(request, key, default=default)
-    verify_param(val, not_none=True, not_empty=True, http_error=HTTPUnprocessableEntity,
-                 param_name=key, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    ax.verify_param(val, not_none=True, not_empty=True, http_error=HTTPUnprocessableEntity,
+                    param_name=key, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
     return val
 
 
 def get_principals(request):
     """Obtains the list of effective principals according to detected request session user."""
-    authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
+    authn_policy = request.registry.queryUtility(IAuthenticationPolicy)  # noqa
     principals = authn_policy.effective_principals(request)
     return principals
 
@@ -118,24 +118,28 @@ def get_user(request, user_name_or_token=None):
         if curr_user:
             return curr_user
         anonymous_user = get_constant("MAGPIE_ANONYMOUS_USER", settings_container=request)
-        anonymous = evaluate_call(lambda: UserService.by_user_name(anonymous_user, db_session=request.db),
-                                  fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                                  msg_on_fail=s.User_CheckAnonymous_ForbiddenResponseSchema.description)
-        verify_param(anonymous, not_none=True, http_error=HTTPNotFound,
-                     msg_on_fail=s.User_CheckAnonymous_NotFoundResponseSchema.description)
+        anonymous = ax.evaluate_call(lambda: UserService.by_user_name(anonymous_user, db_session=request.db),
+                                     fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                                     msg_on_fail=s.User_CheckAnonymous_ForbiddenResponseSchema.description)
+        ax.verify_param(anonymous, not_none=True, http_error=HTTPNotFound,
+                        msg_on_fail=s.User_CheckAnonymous_NotFoundResponseSchema.description)
         return anonymous
 
     principals = get_principals(request)
     admin_group_name = get_constant("MAGPIE_ADMIN_GROUP", settings_container=request)
     admin_group = GroupService.by_group_name(admin_group_name, db_session=request.db)
     admin_principal = "group:{}".format(admin_group.id)
-    if admin_principal not in principals:
-        raise HTTPForbidden()
-    user = evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
-                         fallback=lambda: request.db.rollback(),
-                         http_error=HTTPForbidden, msg_on_fail=s.User_GET_ForbiddenResponseSchema.description)
-    verify_param(user, not_none=True, http_error=HTTPNotFound,
-                 msg_on_fail=s.User_GET_NotFoundResponseSchema.description)
+    ax.verify_param(admin_principal, is_in=True, param_compare=principals, with_param=False,
+                    http_error=HTTPForbidden, msg_on_fail=s.User_GET_ForbiddenResponseSchema.description)
+    ax.verify_param(user_name_or_token, not_none=True, not_empty=True, matches=True,
+                    param_compare=ax.PARAM_REGEX, param_name="user_name",
+                    http_error=HTTPBadRequest, msg_on_fail=s.User_Check_BadRequestResponseSchema.description)
+    user = ax.evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
+                            fallback=lambda: request.db.rollback(),
+                            http_error=HTTPInternalServerError,
+                            msg_on_fail=s.User_GET_InternalServerErrorResponseSchema.description)
+    ax.verify_param(user, not_none=True, http_error=HTTPNotFound,
+                    msg_on_fail=s.User_GET_NotFoundResponseSchema.description)
     return user
 
 
@@ -176,11 +180,11 @@ def get_group_matchdict_checked(request, group_name_key="group_name"):
     :raises HTTPNotFound: if the specified group name does not correspond to any existing group.
     """
     group_name = get_value_matchdict_checked(request, group_name_key)
-    group = evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
-                          fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                          msg_on_fail=s.Group_MatchDictCheck_ForbiddenResponseSchema.description)
-    verify_param(group, not_none=True, http_error=HTTPNotFound,
-                 msg_on_fail=s.Group_MatchDictCheck_NotFoundResponseSchema.description)
+    group = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
+                             fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                             msg_on_fail=s.Group_MatchDictCheck_ForbiddenResponseSchema.description)
+    ax.verify_param(group, not_none=True, http_error=HTTPNotFound,
+                    msg_on_fail=s.Group_MatchDictCheck_NotFoundResponseSchema.description)
     return group
 
 
@@ -194,13 +198,13 @@ def get_resource_matchdict_checked(request, resource_name_key="resource_id"):
     :raises HTTPNotFound: if the specified resource ID does not correspond to any existing resource.
     """
     resource_id = get_value_matchdict_checked(request, resource_name_key)
-    resource_id = evaluate_call(lambda: int(resource_id), http_error=HTTPBadRequest,
-                                msg_on_fail=s.Resource_MatchDictCheck_BadRequestResponseSchema.description)
-    resource = evaluate_call(lambda: ResourceService.by_resource_id(resource_id, db_session=request.db),
-                             fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                             msg_on_fail=s.Resource_MatchDictCheck_ForbiddenResponseSchema.description)
-    verify_param(resource, not_none=True, http_error=HTTPNotFound,
-                 msg_on_fail=s.Resource_MatchDictCheck_NotFoundResponseSchema.description)
+    resource_id = ax.evaluate_call(lambda: int(resource_id), http_error=HTTPBadRequest,
+                                   msg_on_fail=s.Resource_MatchDictCheck_BadRequestResponseSchema.description)
+    resource = ax.evaluate_call(lambda: ResourceService.by_resource_id(resource_id, db_session=request.db),
+                                fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                                msg_on_fail=s.Resource_MatchDictCheck_ForbiddenResponseSchema.description)
+    ax.verify_param(resource, not_none=True, http_error=HTTPNotFound,
+                    msg_on_fail=s.Resource_MatchDictCheck_NotFoundResponseSchema.description)
     return resource
 
 
@@ -214,11 +218,11 @@ def get_service_matchdict_checked(request, service_name_key="service_name"):
     :raises HTTPNotFound: if the specified service name does not correspond to any existing service.
     """
     service_name = get_value_matchdict_checked(request, service_name_key)
-    service = evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
-                            fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                            msg_on_fail=s.Service_MatchDictCheck_ForbiddenResponseSchema.description)
-    verify_param(service, not_none=True, http_error=HTTPNotFound, content={"service_name": service_name},
-                 msg_on_fail=s.Service_MatchDictCheck_NotFoundResponseSchema.description)
+    service = ax.evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
+                               fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                               msg_on_fail=s.Service_MatchDictCheck_ForbiddenResponseSchema.description)
+    ax.verify_param(service, not_none=True, http_error=HTTPNotFound, content={"service_name": service_name},
+                    msg_on_fail=s.Service_MatchDictCheck_NotFoundResponseSchema.description)
     return service
 
 
@@ -250,8 +254,8 @@ def get_value_matchdict_checked(request, key):
     :raises HTTPUnprocessableEntity: if the key is not an applicable path variable for this request.
     """
     val = request.matchdict.get(key)
-    verify_param(val, not_none=True, not_empty=True, http_error=HTTPUnprocessableEntity,
-                 param_name=key, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    ax.verify_param(val, not_none=True, not_empty=True, http_error=HTTPUnprocessableEntity,
+                    param_name=key, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
     return val
 
 
