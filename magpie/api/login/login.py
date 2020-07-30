@@ -292,4 +292,4 @@ def get_providers(request):     # noqa: F811
     """
     return ax.valid_http(http_success=HTTPOk, detail=s.Providers_GET_OkResponseSchema.description,
                          content={"providers": {"internal": sorted(MAGPIE_INTERNAL_PROVIDERS.values()),
-                                                 "external": sorted(MAGPIE_EXTERNAL_PROVIDERS.values()), }})
+                                                "external": sorted(MAGPIE_EXTERNAL_PROVIDERS.values()), }})

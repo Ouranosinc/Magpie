@@ -32,7 +32,7 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
     __test__ = True
 
     @classmethod
-    def initClass(cls):
+    def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
         cls.json_headers = utils.get_headers(cls.app, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.cookies = None
@@ -54,7 +54,7 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
     __test__ = True
 
     @classmethod
-    def initClass(cls):
+    def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
         # admin login credentials for setup operations, use 'test' parameters for testing actual feature
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
@@ -68,7 +68,7 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()
 
-        cls.test_user_group = get_constant("MAGPIE_USERS_GROUP")
+        cls.test_group_name = get_constant("MAGPIE_USERS_GROUP")
         cls.test_user_name = "unittest-user_user-auth-username"
         cls.other_user_name = "unittest-other_user-auth-username"
 
@@ -93,7 +93,7 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
     __test__ = True
 
     @classmethod
-    def initClass(cls):
+    def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
@@ -123,7 +123,7 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
     __test__ = True
 
     @classmethod
-    def initClass(cls):
+    def setUpClass(cls):
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
         cls.json_headers = utils.get_headers(cls.url, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.cookies = None
@@ -145,7 +145,7 @@ class TestCase_MagpieAPI_UsersAuth_Remote(ti.Interface_MagpieAPI_UsersAuth, unit
     __test__ = True
 
     @classmethod
-    def initClass(cls):
+    def setUpClass(cls):
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
 
 
@@ -162,7 +162,7 @@ class TestCase_MagpieAPI_AdminAuth_Remote(ti.Interface_MagpieAPI_AdminAuth, unit
     __test__ = True
 
     @classmethod
-    def initClass(cls):
+    def setUpClass(cls):
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")

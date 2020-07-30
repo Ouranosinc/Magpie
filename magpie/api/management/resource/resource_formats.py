@@ -83,8 +83,11 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, _inter
             perms = _internal_svc_res_perm_dict[service_id][resource.resource_type]  # 'resource_type' is str here
 
         fmt_res_tree[child_id] = format_resource(resource, perms)
-        fmt_res_tree[child_id]["children"] = format_resource_tree(new_children, db_session,
-                                                                   resources_perms_dict, _internal_svc_res_perm_dict)
+        fmt_res_tree[child_id]["children"] = format_resource_tree(
+            new_children, db_session,
+            resources_perms_dict,
+            _internal_svc_res_perm_dict
+        )
 
     return fmt_res_tree
 

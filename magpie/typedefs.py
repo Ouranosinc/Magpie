@@ -45,7 +45,6 @@ if TYPE_CHECKING:
     AnyCookiesType = Union[CookiesType, RequestsCookieJar]
     AnyResponseType = Union[WebobResponse, PyramidResponse, TestResponse]
     CookiesOrSessionType = Union[RequestsCookieJar, Session]
-    OptionalHeaderCookiesType = Tuple[Optional[AnyHeadersType], Optional[AnyCookiesType]]
 
     AnyKey = Union[Str, int]
     AnyValue = Union[Str, Number, bool, None]

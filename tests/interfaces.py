@@ -1,6 +1,6 @@
 import unittest
 import warnings
-from abc import ABCMeta, abstactmethod
+from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
@@ -29,7 +29,7 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     """
     Base definition for all other Test Suite interfaces.
 
-    The implementers must provide :meth:`initClass` which prepares the various test parameters, session cookies and
+    The implementers must provide :meth:`setUpClass` which prepares the various test parameters, session cookies and
     the local application or remote Magpie URL configuration to evaluate test cases on.
 
     The implementers Test Suites must also set :attr:`__test__` to ``True`` so that tests are picked up as executable.
@@ -37,37 +37,32 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     .. note::
         Attribute attr:`__test__` is employed to avoid duplicate runs of this base class or other derived classes that
         must not be considered as the *final implementer* Test Suite.
-
-    .. warning::
-        Do not use :meth:`setUpClass` with :py:exception:`NotImplementedError` in this class or any derived *incomplete*
-        class as this method still gets called by some test runners although marked with ``__test__ = False``.
-        The tests would be interpreted as failing in this situation (due to raised error) instead of only indicating an
-        abstract class definition. You are free to use it if the method is non-raising, but remember that the code will
-        be executed during initialization of the Test Suite even if seemingly disabled for testing.
     """
     # pylint: disable=C0103,invalid-name
     version = None              # type: Optional[Str]
+    require = None              # type: Optional[Str]
+    # parameters for setup operations, admin-level access to the app
     grp = None                  # type: Optional[Str]
     usr = None                  # type: Optional[Str]
     pwd = None                  # type: Optional[Str]
-    require = None              # type: Optional[Str]
     cookies = None              # type: Optional[CookiesType]
     headers = None              # type: Optional[HeadersType]
     json_headers = None         # type: Optional[HeadersType]
+    # parameters for testing, extracted automatically within utils.TestSetup methods
     test_service_type = None    # type: Optional[Str]
     test_service_name = None    # type: Optional[Str]
-    test_user = None            # type: Optional[Str]
-    test_group = None           # type: Optional[Str]
+    test_user_name = None       # type: Optional[Str]
+    test_group_name = None      # type: Optional[Str]
 
     __test__ = False    # won't run this as a test suite, only its derived classes that overrides to True
 
     @classmethod
-    @abstactmethod
-    def initClass(cls):
+    @abstractmethod
+    def setUpClass(cls):
         raise NotImplementedError
 
     @classmethod
-    def tearDownClass(cls):  # noqa: N802
+    def tearDownClass(cls):
         pyramid.testing.tearDown()
 
 
@@ -77,16 +72,12 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
     """
     Interface class for unittests of Magpie API. Test any operation that do not require user AuthN/AuthZ.
 
-    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`setUpClass` accordingly to generate the Magpie test application.
     """
 
     @classmethod
-    def initClass(cls):
-        raise NotImplementedError
-
-    @classmethod
     def setUpClass(cls):
-        cls.initClass()
+        raise NotImplementedError
 
     @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Anonymous(self):
@@ -130,18 +121,30 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
             utils.check_response_basic_info(resp, expected_code=406)
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
     def test_RegisterDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot update membership to group although group is discoverable."""
-        raise NotImplementedError  # TODO
+        utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
+        resp = utils.test_request(self, "GET", "/register/groups", headers=self.json_headers, expect_errors=True)
+        body = utils.check_response_basic_info(resp, 401)
+        utils.check_val_not_in("group_names", body)
 
     @runner.MAGPIE_TEST_USERS
     def test_UnregisterDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot remove membership to group although group is discoverable."""
-        raise NotImplementedError  # TODO
+        utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
+        path = "/register/groups/random-group"
+        resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, expect_errors=True)
+        utils.check_response_basic_info(resp, 401)
 
     def test_ViewDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot view group although group is discoverable."""
-        raise NotImplementedError  # TODO
+        utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
+        utils.TestSetup
+
+        path = "/register/groups/random-group"
+        resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, expect_errors=True)
+        utils.check_response_basic_info(resp, 401)
 
     def test_ListDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot list group names although groups are discoverable."""
@@ -154,11 +157,11 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     """
     Interface class for unittests of Magpie API. Test any operation that require at least logged user AuthN/AuthZ.
 
-    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`setUpClass` accordingly to generate the Magpie test application.
     """
 
     @classmethod
-    def initClass(cls):
+    def setUpClass(cls):
         raise NotImplementedError
 
     @classmethod
@@ -352,11 +355,11 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     Interface class for unittests of Magpie API. Test any operation that require at least 'administrator' group
     AuthN/AuthZ.
 
-    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`setUpClass` accordingly to generate the Magpie test application.
     """
 
     @classmethod
-    def initClass(cls):
+    def setUpClass(cls):
         raise NotImplementedError
 
     def tearDown(self):
@@ -404,7 +407,6 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
         cls.test_group_name = "magpie-unittest-dummy-group"
         cls.test_user_name = "magpie-unittest-toto"
-        cls.test_user_group = get_constant("MAGPIE_USERS_GROUP")
 
     def setUp(self):
         self.check_requirements()
@@ -536,15 +538,15 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         body = utils.TestSetup.create_TestService(self, override_service_type=ServiceAPI.service_type)
         test_svc_res_id = body["service"]["resource_id"]
         test_res_type = Route.resource_type_name
-        body = utils.TestSetup.create_TestServiceResource(self, data_override={"resource_type": test_res_type})
+        body = utils.TestSetup.create_TestServiceResource(self, override_data={"resource_type": test_res_type})
         test_parent_res_id = body["resource"]["resource_id"]
         child_resource_name = self.test_resource_name + "-child"
-        data_override = {
+        override_data = {
             "resource_name": child_resource_name,
             "resource_type": test_res_type,
             "parent_id": test_parent_res_id
         }
-        body = utils.TestSetup.create_TestServiceResource(self, data_override)
+        body = utils.TestSetup.create_TestServiceResource(self, override_data)
         test_child_res_id = body["resource"]["resource_id"]
         anonym_usr = get_constant("MAGPIE_ANONYMOUS_USER")
         anonym_grp = get_constant("MAGPIE_ANONYMOUS_GROUP")
@@ -617,7 +619,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
 
         data = {"resource_name": resource_name}
-        body = utils.TestSetup.create_TestServiceResource(self, data_override=data)
+        body = utils.TestSetup.create_TestServiceResource(self, override_data=data)
         test_res_id = body["resource"]["resource_id"]
 
         # test permission creation
@@ -641,7 +643,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
 
         data = {"resource_name": resource_name}
-        body = utils.TestSetup.create_TestServiceResource(self, data_override=data)
+        body = utils.TestSetup.create_TestServiceResource(self, override_data=data)
         test_res_id = body["resource"]["resource_id"]
 
         path = "/users/{usr}/resources/{res}/permissions".format(res=test_res_id, usr=self.usr)
@@ -978,7 +980,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             "user_name": self.test_user_name,
             "email": "{}@mail.com".format(self.test_user_name),
             "password": self.test_user_name,
-            "group_name": self.test_user_group,
+            "group_name": self.test_group_name,
         }
         for code, variant in [
             (400, {"user_name": ""}),
@@ -1214,7 +1216,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserGroups(self):
-        utils.TestSetup.create_TestUser(self)   # automatically adds user to "MAGPIE_USERS_GROUP"
+        users_group = get_constant("MAGPIE_USERS_GROUP")
+        utils.TestSetup.create_TestUser(self, override_group_name=users_group)
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.assign_TestUserGroup(self)
 
@@ -1224,7 +1227,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("group_names", body)
         utils.check_val_type(body["group_names"], list)
-        expected_groups = {self.test_group_name, self.test_user_group}
+        expected_groups = {self.test_group_name, users_group}
         if LooseVersion(self.version) >= LooseVersion("1.4.0"):
             expected_groups.add(get_constant("MAGPIE_ANONYMOUS_GROUP"))
         utils.check_all_equal(body["group_names"], expected_groups, any_order=True)
@@ -1767,12 +1770,12 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
         # create the child resource under the direct resource and validate response info
         child_resource_name = self.test_resource_name + "-children"
-        data_override = {
+        override_data = {
             "resource_name": child_resource_name,
             "resource_type": self.test_resource_type,
             "parent_id": test_resource_id
         }
-        body = utils.TestSetup.create_TestServiceResource(self, data_override)
+        body = utils.TestSetup.create_TestServiceResource(self, override_data)
         if LooseVersion(self.version) >= LooseVersion("0.6.3"):
             utils.check_val_is_in("resource", body)
             utils.check_val_type(body["resource"], dict)
@@ -1950,11 +1953,11 @@ class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase
     """
     Interface class for unittests of Magpie UI. Test any operation that do not require user AuthN/AuthZ.
 
-    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`setUpClass` accordingly to generate the Magpie test application.
     """
 
     @classmethod
-    def initClass(cls):
+    def setUpClass(cls):
         raise NotImplementedError
 
     @runner.MAGPIE_TEST_STATUS
@@ -2028,7 +2031,7 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     """
     Interface class for unittests of Magpie UI. Test any operation that require at least logged user AuthN/AuthZ.
 
-    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`setUpClass` accordingly to generate the Magpie test application.
     """
 
     def __init__(self, *args, **kwargs):
@@ -2087,11 +2090,11 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     Interface class for unittests of Magpie UI. Test any operation that require at least 'administrator' group
     AuthN/AuthZ.
 
-    Derived classes must implement :meth:`initClass` accordingly to generate the Magpie test application.
+    Derived classes must implement :meth:`setUpClass` accordingly to generate the Magpie test application.
     """
 
     @classmethod
-    def initClass(cls):
+    def setUpClass(cls):
         raise NotImplementedError
 
     @classmethod

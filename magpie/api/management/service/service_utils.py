@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING
 
-import colander
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPInternalServerError
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService

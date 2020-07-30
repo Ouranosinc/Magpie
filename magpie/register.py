@@ -48,7 +48,7 @@ from magpie.utils import (
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from magpie.typedefs import (  # noqa: F401
-        Any, AnyCookiesType, CookiesOrSessionType, Dict, List, JSON, Optional, Str, Tuple, Union
+        Any, AnyCookiesType, CookiesOrSessionType, Dict, Iterable, List, JSON, Optional, Str, Tuple, Union
     )
     ConfigItem = Dict[Str, Str]
     ConfigList = List[ConfigItem]
@@ -276,25 +276,27 @@ def _register_services(where,                           # type: Optional[Str]
     return success, statuses
 
 
-def sync_services_phoenix(services_object_dict, services_as_dicts=False):
-    # type: (Dict[Str, Union[models.Service, JSON]], bool) -> bool
+def sync_services_phoenix(services, services_as_dicts=False):
+    # type: (Union[Iterable[models.Service], JSON], bool) -> bool
     """
     Syncs Magpie services by pushing updates to Phoenix.
 
     Services must be one of types specified in :py:data:`magpie.register.SERVICES_PHOENIX_ALLOWED`.
 
-    :param services_object_dict:
-        dictionary of ``{svc-name: models.Service}`` objects containing each service's information
-    :param services_as_dicts:
-        alternatively specify :paramref:`services_object_dict` as dict of ``{svc-name: {service-info}}``
-        where ``{service-info}`` is defined as::
+    :param services:
+        An iterable of :class:`models.Service` by default, or a dictionary of ``{svc-name: {<service-info>}}`` JSON
+        objects containing each service's information if :paramref:`services_ad_dicts` is ``True``.
+
+        where ``<service-info>`` is defined as::
 
             {"public_url": <url>, "service_name": <name>, "service_type": <type>}
+
+    :param services_as_dicts: indicate if services must be parsed as JSON definitions.
     """
     services_dict = {}
-    for svc in services_object_dict:
+    for svc in services:
         if services_as_dicts:
-            svc_dict = services_object_dict[svc]
+            svc_dict = services[svc]
             services_dict[svc] = {"url": svc_dict["public_url"], "title": svc_dict["service_name"],
                                   "type": svc_dict["service_type"], "c4i": False, "public": True}
         else:

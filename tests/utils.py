@@ -28,13 +28,14 @@ from magpie.utils import (
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from tests.interfaces import Base_Magpie_TestCase  # noqa: F401
-    from typing import Any, Callable, Dict, Iterable, List, NoReturn, Optional, Type, Union  # noqa: F401
+    from typing import Any, Callable, Dict, Iterable, List, NoReturn, Optional, Tuple, Type, Union  # noqa: F401
     from magpie.typedefs import (  # noqa: F401
-        AnyMagpieTestType, AnyHeadersType, AnyResponseType, HeadersType, JSON,
-        OptionalHeaderCookiesType, SettingsType, Str, TestAppOrUrlType
+        AnyCookiesType, AnyMagpieTestType, AnyHeadersType, AnyResponseType, CookiesType, HeadersType, JSON,
+        SettingsType, Str, TestAppOrUrlType
     )
-
-OptionalStringType = six.string_types + tuple([type(None)])  # pylint: disable=C0103,invalid-name   # noqa: 802
+    # pylint: disable=C0103,invalid-name
+    OptionalHeaderCookiesType = Tuple[Optional[AnyHeadersType], Optional[AnyCookiesType]]
+    OptionalStringType = six.string_types + tuple([type(None)])
 
 
 class RunOption(object):
@@ -666,7 +667,18 @@ def check_resource_children(resource_dict, parent_resource_id, root_service_id):
 
 
 class TestSetup(object):
-    """Generic setup and validation methods across unittests"""
+    """Generic setup and validation methods across unittests
+
+    All methods take as input an instance of a Test Suite derived from :class:`Base_Magpie_TestCase`.
+    Using this Test Suite, common arguments such as JSON headers and user session cookies are automatically extracted
+    and passed down to the relevant requests.
+
+    Multiple parameters prefixed by ``test_`` are also automatically extracted from the referenced Test Suite.
+    For example, ``test_user_name`` will be retrieved from the Test Suite class when this information is required for
+    the corresponding test operation. It is possible to override this behaviour with corresponding arguments prefixed
+    by ``override`` keyword. For example, if ``override_user_name`` is provided, it will be used instead of
+    ``test_user_name`` from the Test Suite class.
+    """
     # pylint: disable=C0103,invalid-name
 
     @staticmethod
@@ -776,7 +788,7 @@ class TestSetup(object):
         return list(services_dict.values())[0]
 
     @staticmethod
-    def create_TestServiceResource(test_class, data_override=None):
+    def create_TestServiceResource(test_class, override_data=None):
         app_or_url = get_app_or_url(test_class)
         TestSetup.create_TestService(test_class)
         path = "/services/{svc}/resources".format(svc=test_class.test_service_name)
@@ -784,8 +796,8 @@ class TestSetup(object):
             "resource_name": test_class.test_resource_name,
             "resource_type": test_class.test_resource_type,
         }
-        if data_override:
-            data.update(data_override)
+        if override_data:
+            data.update(override_data)
         resp = test_request(app_or_url, "POST", path,
                             headers=test_class.json_headers,
                             cookies=test_class.cookies, json=data)
@@ -917,13 +929,18 @@ class TestSetup(object):
         check_val_not_in(user_name, users)
 
     @staticmethod
-    def create_TestUser(test_class, override_data=None):
+    def create_TestUser(test_class, override_group_name=None, override_data=None):
+        # type: (Base_Magpie_TestCase, Optional[Str], Optional[JSON]) -> JSON
+        """Ensures that the test user exists. If it does, deletes him. Otherwise, skip.
+
+        :raises AssertionError: if the request response does not match successful creation.
+        """
         app_or_url = get_app_or_url(test_class)
         data = {
             "user_name": test_class.test_user_name,
             "email": "{}@mail.com".format(test_class.test_user_name),
             "password": test_class.test_user_name,
-            "group_name": test_class.test_user_group,
+            "group_name": override_group_name or test_class.test_group_name,
         }
         if override_data:
             data.update(override_data)
@@ -934,6 +951,11 @@ class TestSetup(object):
 
     @staticmethod
     def delete_TestUser(test_class, override_user_name=None):
+        # type: (Base_Magpie_TestCase, Optional[Str]) -> None
+        """Ensures that the test user does not exist. If it does, deletes him. Otherwise, skip.
+
+        :raises AssertionError: if any request response does not match successful validation or removal from group.
+        """
         app_or_url = get_app_or_url(test_class)
         users = TestSetup.get_RegisteredUsersList(test_class)
         user_name = override_user_name or test_class.test_user_name
@@ -946,6 +968,11 @@ class TestSetup(object):
 
     @staticmethod
     def check_UserIsGroupMember(test_class, override_user_name=None, override_group_name=None):
+        # type: (Base_Magpie_TestCase, Optional[Str], Optional[Str]) -> None
+        """Ensures that the test user is a member of the test group.
+
+        :raises AssertionError: if the request response does not match successful validation of membership to group.
+        """
         app_or_url = get_app_or_url(test_class)
         usr_name = override_user_name or test_class.test_user_name
         grp_name = override_group_name or test_class.test_group_name
@@ -956,6 +983,11 @@ class TestSetup(object):
 
     @staticmethod
     def assign_TestUserGroup(test_class, override_user_name=None, override_group_name=None):
+        # type: (Base_Magpie_TestCase, Optional[Str], Optional[Str]) -> None
+        """Ensures that the test user is a member of the test group. If already a member, skips. Otherwise, adds him.
+
+        :raises AssertionError: if any request response does not match successful validation or assignation to group.
+        """
         app_or_url = get_app_or_url(test_class)
         usr_name = override_user_name or test_class.test_user_name
         grp_name = override_group_name or test_class.test_group_name
@@ -972,6 +1004,11 @@ class TestSetup(object):
 
     @staticmethod
     def get_RegisteredGroupsList(test_class):
+        # type: (Base_Magpie_TestCase) -> List[Str]
+        """Obtains existing group names.
+
+        :raises AssertionError: if the request response does not match successful groups retrieval.
+        """
         app_or_url = get_app_or_url(test_class)
         resp = test_request(app_or_url, "GET", "/groups",
                             headers=test_class.json_headers,
@@ -981,21 +1018,42 @@ class TestSetup(object):
 
     @staticmethod
     def check_NonExistingTestGroup(test_class, override_group_name=None):
+        # type: (Base_Magpie_TestCase, Optional[Str]) -> None
+        """Validate that test group does not exist.
+
+        :raises AssertionError: if the test group exists
+        """
         groups = TestSetup.get_RegisteredGroupsList(test_class)
         group_name = override_group_name or test_class.test_group_name
         check_val_not_in(group_name, groups)
 
     @staticmethod
-    def create_TestGroup(test_class, override_group_name=None):
+    def create_TestGroup(test_class,                # type: Base_Magpie_TestCase
+                         override_group_name=None,  # type: Optional[Str]
+                         override_data=None,        # type: Optional[JSON]
+                         override_headers=None,     # type: Optional[HeadersType]
+                         override_cookies=None,     # type: Optional[CookiesType]
+                         ):                         # type: (...) -> JSON
+        """Create the test group.
+
+        :raises AssertionError: if the request does not have expected response matching successful creation.
+        """
         app_or_url = get_app_or_url(test_class)
-        data = {"group_name": override_group_name or test_class.test_group_name}
+        data = override_data or {}
+        if "group_name" not in data:
+            data = {"group_name": override_group_name or test_class.test_group_name}
         resp = test_request(app_or_url, "POST", "/groups",
-                            headers=test_class.json_headers,
-                            cookies=test_class.cookies, json=data)
+                            headers=override_headers or test_class.json_headers,
+                            cookies=override_cookies or test_class.cookies, json=data)
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
     def delete_TestGroup(test_class, override_group_name=None):
+        # type: (Base_Magpie_TestCase, Optional[Str]) -> None
+        """Delete the test group.
+
+        :raises AssertionError: if the request does not have expected response matching successful deletion.
+        """
         app_or_url = get_app_or_url(test_class)
         groups = TestSetup.get_RegisteredGroupsList(test_class)
         group_name = override_group_name or test_class.test_group_name

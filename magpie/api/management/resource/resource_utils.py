@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session
-    from magpie.typedefs import List, Str, Optional, Tuple, Type, ServiceOrResourceType  # noqa: F401
+    from magpie.typedefs import List, Str, Optional, Tuple, Type, ServiceOrResourceType, Union  # noqa: F401
     from magpie.services import ServiceInterface  # noqa: F401
 
 
@@ -121,7 +121,7 @@ def get_resource_permissions(resource, db_session):
                     msg_on_fail=s.UserResourcePermissions_GET_BadRequestResourceResponseSchema.description)
     # directly access the service resource
     if resource.root_service_id is None:
-        service = resource
+        service = resource  # type: models.Service  # noqa
         return SERVICE_TYPE_DICT[service.type].permissions
 
     # otherwise obtain root level service to infer sub-resource permissions
@@ -137,7 +137,7 @@ def get_resource_permissions(resource, db_session):
 
 
 def get_resource_root_service(resource, db_session):
-    # type: (models.Resource, Session) -> Optional[models.Resource]
+    # type: (Union[models.Service, models.Resource], Session) -> Optional[models.Service]
     """
     Recursively rewinds back through the top of the resource tree up to the top-level service-resource.
 

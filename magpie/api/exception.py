@@ -41,7 +41,7 @@ EMAIL_REGEX = colander.EMAIL_RE
 URL_REGEX = colander.URL_REGEX
 
 
-def verify_param(  # noqa: E126
+def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                  # --- verification values ---
                  param,                             # type: Any
                  param_compare=None,                # type: Optional[Union[Any, List[Any]]]
