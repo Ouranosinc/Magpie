@@ -370,8 +370,8 @@ def check_or_try_login_user(test_item,                      # type: AnyMagpieTes
     return resp.headers, resp_cookies
 
 
-def check_or_try_logout_user(test_item):
-    # type: (AnyMagpieTestType) -> None
+def check_or_try_logout_user(test_item, msg=None):
+    # type: (AnyMagpieTestType, Optional[Str]) -> None
     """
     Verifies that any user is logged out, or tries to logout him otherwise.
 
@@ -391,11 +391,12 @@ def check_or_try_logout_user(test_item):
     resp_logout = test_request(app_or_url, "GET", "/ui/logout", allow_redirects=True)
     if isinstance(app_or_url, TestApp):
         app_or_url.reset()  # clear app cookies
+    msg = ": {}".format(msg) if msg else ""
     if resp_logout.status_code >= 400:
-        raise Exception("cannot validate logout")
+        raise Exception("cannot validate logout" + msg)
     if _is_logged_out():
         return
-    raise Exception("logout did not succeed")
+    raise Exception("logout did not succeed" + msg)
 
 
 def format_test_val_ref(val, ref, pre="Fail", msg=None):
@@ -723,17 +724,17 @@ class TestSetup(object):
         return json_body["version"]
 
     @staticmethod
-    def check_UpStatus(test_class, method, path, timeout=20):
-        # type: (TestAppOrUrlType, Str, Str, int) -> AnyResponseType
+    def check_UpStatus(test_class, method, path, override_headers=None, override_cookies=None, **request_kwargs):
+        # type: (TestAppOrUrlType, Str, Str, Optional[HeadersType], Optional[CookiesType], Any) -> AnyResponseType
         """
         Verifies that the Magpie UI page at very least returned an HTTP Ok response with the displayed title.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
 
         :returns: response from the rendered page for further tests
         """
-        app_or_url = get_app_or_url(test_class)
-        cookies = getattr(test_class, "test_cookies", getattr(test_class, "cookies"))
-        resp = test_request(app_or_url, method, path, cookies=cookies, timeout=timeout)
+        cookies = override_cookies or getattr(test_class, "test_cookies", getattr(test_class, "cookies", None))
+        headers = override_headers or getattr(test_class, "test_headers", getattr(test_class, "headers", None))
+        resp = test_request(test_class, method, path, headers=headers, cookies=cookies, **request_kwargs)
         kw_args = {"expected_title": getattr(test_class, "magpie_title")} if hasattr(test_class, "magpie_title") else {}
         check_ui_response_basic_info(resp, **kw_args)
         return resp

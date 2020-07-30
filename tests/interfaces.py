@@ -39,6 +39,8 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
         must not be considered as the *final implementer* Test Suite.
     """
     # pylint: disable=C0103,invalid-name
+
+    # note: all following should be overridden by Test Suite accordingly to the needs of their test cases
     version = None              # type: Optional[Str]
     require = None              # type: Optional[Str]
     # parameters for setup operations, admin-level access to the app
@@ -48,14 +50,12 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     cookies = None              # type: Optional[CookiesType]
     headers = None              # type: Optional[HeadersType]
     json_headers = None         # type: Optional[HeadersType]
-    # parameters for testing, extracted automatically within utils.TestSetup methods
+    # parameters for testing, extracted automatically within 'utils.TestSetup' methods
     test_service_type = None    # type: Optional[Str]
     test_service_name = None    # type: Optional[Str]
-    test_user_name = None       # type: Optional[Str]
-    test_group_name = None      # type: Optional[Str]
     test_resource_name = None   # type: Optional[Str]
-    test_service_name = None    # type: Optional[Str]
-    test_service_type = None    # type: Optional[Str]
+    test_user_name = None       # type: Optional[Str]  # reuse for password to simplify calls when created dynamically
+    test_group_name = None      # type: Optional[Str]
 
     __test__ = False    # won't run this as a test suite, only its derived classes that overrides to True
 
@@ -66,6 +66,11 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
 
     @classmethod
     def tearDownClass(cls):
+        # try to catch any missed cleanup of test-based item created dynamically
+        utils.TestSetup.delete_TestServiceResource(cls)
+        utils.TestSetup.delete_TestService(cls)
+        utils.TestSetup.delete_TestUser(cls)
+        utils.TestSetup.delete_TestGroup(cls)
         pyramid.testing.tearDown()
 
 
@@ -81,6 +86,10 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
+
+    def setUp(self):
+        # validate on each new test-case that we are not logged in from invalid operation of some previous test
+        utils.check_or_try_logout_user(self, msg="must be anonymous to evaluate this test case")
 
     @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Anonymous(self):
@@ -112,9 +121,9 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         resp = utils.test_request(self, "GET", "/users/{}".format(logged_user), headers=self.json_headers)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            utils.check_val_equal(body["user"]["user_name"], self.usr)
+            utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
         else:
-            utils.check_val_equal(body["user_name"], self.usr)
+            utils.check_val_equal(body["user_name"], self.test_user_name)
 
     def test_NotAcceptableRequest(self):
         utils.warn_version(self, "Unsupported 'Accept' header returns 406 directly.", "0.10.0", skip=True)
@@ -143,9 +152,14 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
     def test_ViewDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot view group although group is discoverable."""
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
-        utils.TestSetup
 
-        path = "/register/groups/random-group"
+        # setup some actual discoverable group to ensure the error is not caused by some misinterpreted response
+        group_data = {"group_name": self.test_group_name, "discoverable": True}
+        headers, cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pws)
+        utils.TestSetup.create_TestGroup(self, override_data=group_data,
+                                         override_headers=headers, override_cookies=cookies)
+        utils.check_or_try_logout_user(self)
+        path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, expect_errors=True)
         utils.check_response_basic_info(resp, 401)
 

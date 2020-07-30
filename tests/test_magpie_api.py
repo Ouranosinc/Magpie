@@ -35,10 +35,14 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
         cls.json_headers = utils.get_headers(cls.app, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
-        cls.cookies = None
+        cls.cookies = None  # force not logged in
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.usr = get_constant("MAGPIE_ANONYMOUS_USER")
-        cls.grp = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        cls.test_user_name = get_constant("MAGPIE_ANONYMOUS_USER")
+        cls.test_group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        # note: admin credentials to setup data on test instance as needed, but not to be used for these tests
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
 
 
 @runner.MAGPIE_TEST_API
@@ -127,9 +131,13 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
         cls.json_headers = utils.get_headers(cls.url, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.cookies = None
-        cls.usr = get_constant("MAGPIE_ANONYMOUS_USER")
-        cls.grp = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        cls.test_user_name = get_constant("MAGPIE_ANONYMOUS_USER")
+        cls.test_group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
         cls.version = utils.TestSetup.get_Version(cls)
+        # note: admin credentials to setup data on test instance as needed, but not to be used for these tests
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
 
 
 @runner.MAGPIE_TEST_API
