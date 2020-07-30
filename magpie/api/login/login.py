@@ -114,7 +114,7 @@ def login_failure(request, reason=None):
         reason = s.Signin_POST_UnauthorizedResponseSchema.description
         try:
             user_name = get_value_multiformat_post_checked(request, "user_name", default=None)
-            get_value_multiformat_post_checked(request, "password", default=None)
+            get_value_multiformat_post_checked(request, "password", default=None, pattern=None)
         except HTTPException:
             http_err = HTTPBadRequest
             reason = s.Signin_POST_BadRequestResponseSchema.description

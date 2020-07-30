@@ -458,6 +458,12 @@ class InternalServerErrorResponseBodySchema(ErrorResponseBodySchema):
         super(InternalServerErrorResponseBodySchema, self).__init__(**kw)
 
 
+class BadRequestResponseSchema(colander.MappingSchema):
+    description = "Required value for request is missing."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
 class UnauthorizedResponseBodySchema(BaseResponseBodySchema):
     def __init__(self, **kw):
         kw["code"] = HTTPUnauthorized.code

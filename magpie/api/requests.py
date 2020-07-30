@@ -21,7 +21,7 @@ from magpie.utils import CONTENT_TYPE_JSON, get_logger
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from pyramid.request import Request
-    from magpie.typedefs import Any, AnySettingsContainer, Str, Optional, ServiceOrResourceType  # noqa: F401
+    from magpie.typedefs import Any, AnySettingsContainer, Str, Optional, ServiceOrResourceType, Union  # noqa: F401
     from magpie.permissions import Permission  # noqa: F401
 
 LOGGER = get_logger(__name__)
@@ -73,10 +73,26 @@ def get_permission_multiformat_post_checked(request, service_or_resource, permis
     return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
 
 
-def get_value_multiformat_post_checked(request, key, default=None):
+def get_value_multiformat_post_checked(request, key, default=None, pattern=ax.PARAM_REGEX):
+    # type: (Request, Str, Any, Optional[Union[Str, bool]]) -> Str
+    """
+    Obtains and validates the matched value under :paramref:`key` element from the request body according to
+    `Content-Type` header.
+
+    :param request: request from which to retrieve the key.
+    :param key: body key variable.
+    :param default: value to return instead if not found. If this default is ``None``, it will raise.
+    :param pattern: regex pattern to validate the input with.
+        If value evaluates to ``False``, skip this kind of validation (default: :py:data:`ax.PARAM_REGEX`).
+    :return: matched path variable value.
+    :raises HTTPBadRequest: if the key could not be retrieved from the request body and has no provided default value.
+    :raises HTTPUnprocessableEntity: if the retrieved value from the key is invalid for this request.
+    """
     val = get_multiformat_any(request, key, default=default)
-    ax.verify_param(val, not_none=True, not_empty=True, http_error=HTTPUnprocessableEntity,
-                    param_name=key, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    ax.verify_param(val, not_none=True, param_name=key,
+                    http_error=HTTPBadRequest, msg_on_fail=s.BadRequestResponseSchema.description)
+    ax.verify_param(val, not_empty=True, matches=bool(pattern), param_compare=pattern, param_name=key,
+                    http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
     return val
 
 
@@ -197,7 +213,7 @@ def get_resource_matchdict_checked(request, resource_name_key="resource_id"):
     :raises HTTPForbidden: if the requesting user does not have sufficient permission to execute this request.
     :raises HTTPNotFound: if the specified resource ID does not correspond to any existing resource.
     """
-    resource_id = get_value_matchdict_checked(request, resource_name_key)
+    resource_id = get_value_matchdict_checked(request, resource_name_key, pattern=ax.INDEX_REGEX)
     resource_id = ax.evaluate_call(lambda: int(resource_id), http_error=HTTPBadRequest,
                                    msg_on_fail=s.Resource_MatchDictCheck_BadRequestResponseSchema.description)
     resource = ax.evaluate_call(lambda: ResourceService.by_resource_id(resource_id, db_session=request.db),
@@ -243,19 +259,21 @@ def get_permission_matchdict_checked(request, service_or_resource, permission_na
     return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
 
 
-def get_value_matchdict_checked(request, key):
-    # type: (Request, Str) -> Str
+def get_value_matchdict_checked(request, key, pattern=ax.PARAM_REGEX):
+    # type: (Request, Str, Optional[Union[Str, bool]]) -> Str
     """
     Obtains the matched value located at the expected position of the specified path variable.
 
     :param request: request from which to retrieve the key.
     :param key: path variable key.
+    :param pattern: regex pattern to validate the input with.
+        If value evaluates to ``False``, skip this kind of validation (default: :py:data:`ax.PARAM_REGEX`).
     :return: matched path variable value.
     :raises HTTPUnprocessableEntity: if the key is not an applicable path variable for this request.
     """
     val = request.matchdict.get(key)
-    ax.verify_param(val, not_none=True, not_empty=True, http_error=HTTPUnprocessableEntity,
-                    param_name=key, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    ax.verify_param(val, not_none=True, not_empty=True, matches=bool(pattern), param_name=key, param_compare=pattern,
+                    http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
     return val
 
 

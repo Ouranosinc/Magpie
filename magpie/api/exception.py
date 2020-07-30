@@ -28,7 +28,7 @@ from magpie.utils import (
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Callable, List, Iterable, NoReturn, Optional, Tuple, Type, Union
-    from magpie.typedefs import Str, JSON, ParamsType, PyramidResponse  # noqa: F401
+    from magpie.typedefs import AnyResponseType, JSON, ParamsType, Str  # noqa: F401
 
 # control variables to avoid infinite recursion in case of
 # major programming error to avoid application hanging
@@ -39,6 +39,7 @@ RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 PARAM_REGEX = r"^[A-Za-z0-9]+(?:[\s_\-\.][A-Za-z0-9]+)*$"    # request parameters
 EMAIL_REGEX = colander.EMAIL_RE
 URL_REGEX = colander.URL_REGEX
+INDEX_REGEX = r"^[0-9]+$"
 
 
 def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
@@ -105,6 +106,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
     :return: nothing if all tests passed
     """
     content = {} if content is None else content
+    needs_compare = is_equal or not_equal or matches
 
     # precondition evaluation of input parameters
     try:
@@ -134,7 +136,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             raise TypeError("'matches' is not a 'bool'")
         if param_compare is None and (is_in or not_in or is_equal or not_equal or matches):
             raise TypeError("'param_compare' cannot be 'None' with specified test flags")
-        if is_equal or not_equal or matches:
+        if needs_compare:
             # allow 'different' string literals for comparison, otherwise types must match exactly
             if (not (isinstance(param, six.string_types) and isinstance(param_compare, six.string_types))
                      and type(param) != type(param_compare)):   # noqa: E127 # pylint: disable=C0123
@@ -183,7 +185,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             content["param"] = {"value": str(param)}
             if param_name is not None:
                 content["param"]["name"] = str(param_name)
-            if param_compare is not None:
+            if needs_compare and param_compare is not None:
                 content["param"]["compare"] = str(param_compare)
         raise_http(http_error, http_kwargs=http_kwargs, detail=msg_on_fail, content=content, content_type=content_type)
 
@@ -261,12 +263,12 @@ def evaluate_call(call,                                 # type: Callable[[], Any
                content_type=content_type)
 
 
-def valid_http(http_success=HTTPOk,             # type: Optional[Type[HTTPSuccessful]]
+def valid_http(http_success=HTTPOk,             # type: Type[HTTPSuccessful]
                http_kwargs=None,                # type: Optional[ParamsType]
                detail="",                       # type: Optional[Str]
                content=None,                    # type: Optional[JSON]
                content_type=CONTENT_TYPE_JSON,  # type: Optional[Str]
-               ):                               # type: (...) -> HTTPException
+               ):                               # type: (...) -> AnyResponseType
     """
     Returns successful HTTP with standardized information formatted with content type. (see :func:`raise_http` for HTTP
     error calls)
@@ -340,7 +342,7 @@ def raise_http(http_error=HTTPInternalServerError,  # type: Type[HTTPError]
     raise resp
 
 
-def validate_params(http_class,     # type: HTTPException
+def validate_params(http_class,     # type: Type[HTTPException]
                     http_base,      # type: Union[Type[HTTPException], Iterable[Type[HTTPException]]]
                     detail,         # type: Str
                     content,        # type: Optional[JSON]
@@ -414,7 +416,7 @@ def format_content_json_str(http_code, detail, content, content_type):
 
 
 def generate_response_http_format(http_class, http_kwargs, json_content, output_type=CONTENT_TYPE_PLAIN):
-    # type: (Union[Type[HTTPException], Type[PyramidResponse]], ParamsType, JSON, Optional[Str]) -> PyramidResponse
+    # type: (Union[Type[HTTPException]], ParamsType, JSON, Optional[Str]) -> HTTPException
     """
     Formats the HTTP response output according to desired ``output_type`` using provided HTTP code and content.
 
