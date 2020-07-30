@@ -50,7 +50,7 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
 
     ax.verify_param(service_type, is_in=True, param_compare=SERVICE_TYPE_DICT.keys(), param_name="service_type",
                     http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_BadRequestResponseSchema.description)
-    ax.verify_param(service_url, matches=True, param_compare=colander.URL_REGEX, param_name="service_url",
+    ax.verify_param(service_url, matches=True, param_compare=ax.URL_REGEX, param_name="service_url",
                     http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_Params_BadRequestResponseSchema.description)
     ax.verify_param(service_name, not_empty=True, not_none=True, param_compare="service_name",
                     http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_Params_BadRequestResponseSchema.description)

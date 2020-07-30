@@ -78,7 +78,7 @@ Before you submit a pull request, check that it meets these guidelines:
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
-   feature to the list in `history`_ (under relevant category of section `Unreleased`).
+   feature to the list in `changes`_ (under relevant category of section `Unreleased`).
 3. The tests should work for the specified version of Python for this project.
 
 
@@ -93,6 +93,6 @@ To run a subset of tests::
 
 .. References for this page
 .. _new issue: https://github.com/Ouranosinc/Magpie/issues/new
-.. _history: HISTORY.rst
+.. _changes: CHANGES.rst
 .. _installation: docs/installation.rst
 .. _utilities: docs/utilities.rst

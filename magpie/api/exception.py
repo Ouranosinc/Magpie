@@ -3,6 +3,7 @@ import re
 from sys import exc_info
 from typing import TYPE_CHECKING
 
+import colander
 import six
 from pyramid.httpexceptions import (
     HTTPBadRequest,
@@ -33,6 +34,11 @@ if TYPE_CHECKING:
 # major programming error to avoid application hanging
 RAISE_RECURSIVE_SAFEGUARD_MAX = 5
 RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
+
+# utility parameter validation regexes for 'matches' argument
+PARAM_REGEX = r"^[A-Za-z0-9]+(?:[\s_\-\.][A-Za-z0-9]+)*$"    # request parameters
+EMAIL_REGEX = colander.EMAIL_RE
+URL_REGEX = colander.URL_REGEX
 
 
 def verify_param(  # noqa: E126

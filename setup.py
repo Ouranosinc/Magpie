@@ -31,8 +31,8 @@ LOGGER.info("starting setup")
 with open("README.rst") as readme_file:
     README = readme_file.read()
 
-with open("HISTORY.rst") as history_file:
-    HISTORY = history_file.read().replace(".. :changelog:", "")
+with open("CHANGES.rst") as changes_file:
+    CHANGES = changes_file.read().replace(".. :changelog:", "")
 
 
 def _split_requirement(requirement, version=False, python=False):
@@ -154,7 +154,7 @@ setup(
     name=__meta__.__package__,
     version=__meta__.__version__,
     description=__meta__.__description__,
-    long_description=README + "\n\n" + HISTORY,
+    long_description=README + "\n\n" + CHANGES,
     author=__meta__.__author__,
     maintainer=__meta__.__maintainer__,
     maintainer_email=__meta__.__email__,

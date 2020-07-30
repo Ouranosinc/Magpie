@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING
 
-import colander
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
@@ -52,11 +51,14 @@ def create_user(user_name, password, email, group_name, db_session):
 
     def _get_group(grp_name):
         # type: (Str) -> models.Group
+        ax.verify_param(grp_name, not_none=True, not_empty=True, matches=True,
+                        param_compare=ax.PARAM_REGEX, param_name="group_name",
+                        http_error=HTTPBadRequest, msg_on_fail=s.UserGroup_Check_BadRequestResponseSchema.description)
         grp = ax.evaluate_call(lambda: GroupService.by_group_name(grp_name, db_session=db_session),
                                http_error=HTTPForbidden,
                                msg_on_fail=s.UserGroup_GET_ForbiddenResponseSchema.description)
-        ax.verify_param(grp, not_none=True, http_error=HTTPBadRequest,
-                        msg_on_fail=s.UserGroup_Check_BadRequestResponseSchema.description)
+        ax.verify_param(grp, not_none=True, http_error=HTTPNotFound, param_name="group_name",
+                        msg_on_fail=s.UserGroup_Check_NotFoundResponseSchema.description)
         return grp
 
     # Check that group already exists
@@ -345,7 +347,7 @@ def check_user_info(user_name, email, password, group_name):
                     msg_on_fail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
     ax.verify_param(email, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                     param_name="email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
-    ax.verify_param(email, matches=True, param_compare=colander.EMAIL_RE, http_error=HTTPBadRequest,
+    ax.verify_param(email, matches=True, param_compare=ax.EMAIL_REGEX, http_error=HTTPBadRequest,
                     param_name="email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
     ax.verify_param(password, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                     param_name="password",

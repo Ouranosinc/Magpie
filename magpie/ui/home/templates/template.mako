@@ -76,10 +76,10 @@
 <div class="content">
 ${self.body()}
 </div>
+<div class="version-box">
+    <div class="version-title">Magpie Version: </div>
+    <div class="label label-info version-tag">${MAGPIE_VERSION}</div>
+</div>
 
 </body>
 </html>
-
-<script type="text/javascript">
-    <%block name="script"/>
-</script>

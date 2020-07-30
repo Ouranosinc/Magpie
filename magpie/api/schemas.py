@@ -1525,7 +1525,7 @@ class User_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
 
 
 class UserGroup_Check_BadRequestResponseSchema(colander.MappingSchema):
-    description = "Group for new user doesn't exist."
+    description = "Invalid group name to associate to user."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
@@ -1534,6 +1534,12 @@ class UserGroup_GET_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Group query was refused by db."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+class UserGroup_Check_NotFoundResponseSchema(colander.MappingSchema):
+    description = "Group for new user doesn't exist."
+    header = HeaderResponseSchema()
+    body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class UserGroup_Check_ForbiddenResponseSchema(colander.MappingSchema):

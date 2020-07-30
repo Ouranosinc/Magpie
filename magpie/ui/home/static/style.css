@@ -16,6 +16,26 @@ body {
     margin: 5em;
 }
 
+.version-box {
+    position: absolute;
+    right: 0;
+}
+
+.version-box>div{
+    font-size: 75%;
+    display: inline-block;
+    position: relative;
+    bottom: 1em;
+    right: 1em;
+}
+
+.version-title {
+    color: gray;
+}
+
+.version-tag {
+}
+
 .img-button {
     padding: 0.7em;
     margin: 1em 0 1em;

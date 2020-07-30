@@ -1,6 +1,6 @@
 .. :changelog:
 
-History
+Changes
 =======
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
@@ -26,6 +26,7 @@ Features / Changes
   (fixes `#204 <https://github.com/Ouranosinc/Magpie/issues/204>`_).
 * Add disabled checkboxes for UI rendering of non-editable items
   (relates to `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_).
+* Add version tag at bottom of UI pages.
 * Configuration parameters ``MAGPIE_SECRET``, ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` now require explicit
   definitions (either by environment variable or INI settings) to avoid using defaults for security purposes.
 
@@ -33,6 +34,7 @@ Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix invalid API documentation of request body for ``POST /users/{user_name}/groups``.
 * Fix `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_ (forbid *special* users and groups update and delete).
+* Fix `#84 <https://github.com/Ouranosinc/Magpie/issues/84>`_ with additional input validation.
 * Fix minor HTML issues in mako templates.
 
 `1.11.0 <https://github.com/Ouranosinc/Magpie/tree/1.11.0>`_ (2020-06-19)

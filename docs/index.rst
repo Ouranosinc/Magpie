@@ -16,7 +16,7 @@ Package Information
    performance
    contributing
    authors
-   history
+   changes
    security
 
 

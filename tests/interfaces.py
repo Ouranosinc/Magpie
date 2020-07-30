@@ -972,6 +972,36 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_is_in(self.test_user_name, users)
 
     @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_InvalidParameters(self):
+        utils.warn_version("validate user creation inputs", "2.0.0", skip=True)
+        data = {
+            "user_name": self.test_user_name,
+            "email": "{}@mail.com".format(self.test_user_name),
+            "password": self.test_user_name,
+            "group_name": self.test_user_group,
+        }
+        for code, variant in [
+            (400, {"user_name": ""}),
+            (400, {"user_name": "   "}),
+            (400, {"user_name": "abc???def"}),
+            (400, {"user_name": "abc/def"}),
+            (400, {"user_name": "A" * 1024}),
+            (400, {"email": ""}),
+            (400, {"email": "   "}),
+            (400, {"email": "abc???def"}),
+            (400, {"email": "abc/def"}),
+            (400, {"email": "abc-def @ gmail dot com"}),
+            (400, {"password": ""}),
+            (400, {"password": "   "}),
+            (400, {"group_name": "!ABC!"}),
+            (404, {"group_name": ""}),
+        ]:
+            var_data = deepcopy(data).update(variant)
+            resp = utils.test_request(self, "POST", "/users", json=var_data, expect_errors=True,
+                                      headers=self.json_headers, cookies=self.cookies)
+            utils.check_response_basic_info(resp, code, expected_method="POST")
+
+    @runner.MAGPIE_TEST_USERS
     def test_PostUsers_AutoMemberships(self):
         new_test_group = "test-group-{}".format(self._testMethodName)  # noqa
         utils.TestSetup.delete_TestGroup(self, override_group_name=new_test_group)  # if previous run

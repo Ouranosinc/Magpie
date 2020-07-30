@@ -95,9 +95,9 @@ Configuration and Usage
 Change History
 ==============
 
-Addressed features, changes and bug fixes per version tag are available in `history`_.
+Addressed features, changes and bug fixes per version tag are available in `changes`_.
 
-.. _history: HISTORY.rst
+.. _changes: CHANGES.rst
 
 Docker Images
 =============

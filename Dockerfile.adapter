@@ -10,7 +10,7 @@ LABEL Vendor="CRIM"
 
 ENV MAGPIE_DIR=/opt/local/src/magpie
 COPY magpie/__init__.py magpie/__meta__.py $MAGPIE_DIR/magpie/
-COPY requirements* setup.py README.rst HISTORY.rst $MAGPIE_DIR/
+COPY requirements* setup.py README.rst CHANGES.rst $MAGPIE_DIR/
 
 # install dependencies used by Magpie
 RUN apk update \
