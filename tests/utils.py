@@ -27,7 +27,7 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from tests.interfaces import Base_Magpie_TestCase  # noqa: F401
+    from tests.interfaces import Base_Magpie_TestCase, User_Magpie_TestCase  # noqa: F401
     from typing import Any, Callable, Dict, Iterable, List, NoReturn, Optional, Tuple, Type, Union  # noqa: F401
     from magpie.typedefs import (  # noqa: F401
         AnyCookiesType, AnyHeadersType, AnyResponseType, AnyValue, CookiesType, HeadersType, JSON, SettingsType, Str
@@ -36,7 +36,8 @@ if TYPE_CHECKING:
     OptionalHeaderCookiesType = Tuple[Optional[AnyHeadersType], Optional[AnyCookiesType]]
     OptionalStringType = six.string_types + tuple([type(None)])
     TestAppOrUrlType = Union[Str, TestApp]
-    AnyMagpieTestCaseType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase]
+    AnyMagpieTestCaseType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase,
+                                  Type[User_Magpie_TestCase], User_Magpie_TestCase]
     AnyMagpieTestItemType = Union[AnyMagpieTestCaseType, TestAppOrUrlType]
 
 
@@ -497,8 +498,12 @@ def check_no_raise(func):
         raise AssertionError("Exception [{!r}] was raised when none is expected.".format(exc))
 
 
-def check_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_JSON, expected_method="GET"):
-    # type: (AnyResponseType, int, Str, Str) -> Union[JSON, Str]
+def check_response_basic_info(response,                         # type: AnyResponseType
+                              expected_code=200,                # type: int
+                              expected_type=CONTENT_TYPE_JSON,  # type: Str
+                              expected_method="GET",            # type: Str
+                              version=None,                     # type: Optional[Str]
+                              ):                                # type: (...) -> Union[JSON, Str]
     """
     Validates basic `Magpie` API response metadata. For UI pages, employ :func:`check_ui_response_basic_info` instead.
 
@@ -510,6 +515,7 @@ def check_response_basic_info(response, expected_code=200, expected_type=CONTENT
     :param expected_code: status code to validate from the response.
     :param expected_type: Content-Type to validate from the response.
     :param expected_method: method 'GET', 'POST', etc. to validate from the response if an error.
+    :param version: perform conditional checks according to test instance version.
     :return: json body of the response for convenience.
     """
     check_val_is_in("Content-Type", dict(response.headers), msg="Response doesn't define 'Content-Type' header.")
@@ -529,6 +535,9 @@ def check_response_basic_info(response, expected_code=200, expected_type=CONTENT
         body = response.text
 
     if response.status_code >= 400:
+        if version and LooseVersion(version) < "2" and response.status_code not in [401, 404, 500]:
+            return body  # older API error response did not all have the full request details
+
         # error details available for any content-type, just in different format
         check_val_is_in("request_url", body)
         check_val_is_in("route_name", body)

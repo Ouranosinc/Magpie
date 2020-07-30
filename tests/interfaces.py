@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 import mock
 import pyramid.testing
-import pytest
 import six
 import yaml
 from six.moves.urllib.parse import urlparse
@@ -76,7 +75,16 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
         pyramid.testing.tearDown()
 
 
-class User_Magpie_TestCase(Base_Magpie_TestCase):
+class User_Magpie_TestCase(object):
+    """Extension of :class:`Base_Magpie_TestCase` to handle another user session than the administrator-level user."""
+    usr = None              # type: Optional[Str]
+    pwd = None              # type: Optional[Str]
+    grp = None              # type: Optional[Str]
+    version = None          # type: Optional[Str]
+    cookies = None          # type: Optional[CookiesType]
+    headers = None          # type: Optional[HeadersType]
+    test_user_name = None   # type: Optional[Str]
+
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
@@ -176,7 +184,7 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         for path in ["/", "/users/current"]:
             resp = utils.test_request(self, "GET", path, expect_errors=True,
                                       headers={"Accept": "application/pdf"})  # anything not supported
-            utils.check_response_basic_info(resp, expected_code=406)
+            utils.check_response_basic_info(resp, expected_code=406, version=self.version)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -2225,7 +2233,11 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     def test_ViewUsers_GotoEditUser(self):
         form = {"edit": None, "user_name": self.test_user}
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path="/ui/users")
-        utils.check_val_is_in("Edit User: {}".format(self.test_user), resp.text, msg=utils.null)
+        if LooseVersion(self.version) < "2":
+            test = "Edit User: {}".format(self.test_user)
+        else:
+            test = "Edit User: [{}]".format(self.test_user)
+        utils.check_val_is_in(test, resp.text, msg=utils.null)
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewGroups(self):
@@ -2235,7 +2247,11 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     def test_ViewGroups_GotoEditGroup(self):
         form = {"edit": None, "group_name": self.test_group}
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path="/ui/groups")
-        utils.check_val_is_in("Edit Group: {}".format(self.test_group), resp.text, msg=utils.null)
+        if LooseVersion(self.version) < "2":
+            test = "Edit Group: {}".format(self.test_group)
+        else:
+            test = "Edit Group: [{}]".format(self.test_group)
+        utils.check_val_is_in(test, resp.text, msg=utils.null)
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewServicesDefault(self):

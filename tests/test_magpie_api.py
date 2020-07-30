@@ -67,14 +67,14 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
         cls.json_headers = utils.get_headers(cls.app, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd,
-                                                                 use_ui_form_submit=True, version=cls.version)
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd, version=cls.version,
+                                                                 use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
-        cls.check_requirements()
+        assert cls.headers and cls.cookies, cls.require  # nosec
 
-        cls.test_group_name = get_constant("MAGPIE_USERS_GROUP")
-        cls.test_user_name = "unittest-user_user-auth-username"
-        cls.other_user_name = "unittest-other_user-auth-username"
+        cls.test_group_name = "unittest-user-auth_test-group"
+        cls.test_user_name = "unittest-user-auth_test-user-username"
+        cls.other_user_name = "unittest-user-auth_other-user-username"
 
 
 @runner.MAGPIE_TEST_API

@@ -201,8 +201,8 @@ setup(
         ],
         "console_scripts": [
             "magpie_helper = magpie.helpers:magpie_helper_cli",  # redirect to others below
-            "magpie_create_users = magpie.helpers.create_users:main",
-            "magpie_register_default_users = magpie.helpers.register_default_users:main",
+            "magpie_batch_update_users = magpie.helpers.batch_update_users:main",
+            "magpie_register_defaults = magpie.helpers.register_defaults:main",
             "magpie_register_providers = magpie.helpers.register_providers:main",
             "magpie_run_db_migration = magpie.helpers.run_db_migration:main",
             "magpie_sync_resources = magpie.helpers.sync_resources:main",

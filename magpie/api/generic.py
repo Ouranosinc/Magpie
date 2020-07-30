@@ -100,7 +100,7 @@ def unauthorized_or_forbidden(request):
     if content["route_name"].startswith("/ui") and accept != CONTENT_TYPE_JSON:
         path = request.route_path("error").replace("/magpie", "")
         data = {"error_request": content, "error_code": http_err.code}
-        return request_api(request, path, "POST", data)
+        return request_api(request, path, "POST", data)  # noqa
     return raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content, content_type=accept)
 
 
@@ -128,8 +128,10 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
         if not any(magpie_path.startswith(p) for p in ("/ui", "/static")):
             any_supported_header = SUPPORTED_CONTENT_TYPES + [CONTENT_TYPE_ANY]
             accept = get_header("accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
+            http_msg = s.NotAcceptableResponseSchema.description
+            content = get_request_info(request, default_message=http_msg)
             verify_param(accept, is_in=True, param_compare=any_supported_header, param_name="Accept Header",
-                         http_error=HTTPNotAcceptable, msg_on_fail=s.NotAcceptableResponseSchema.description)
+                         http_error=HTTPNotAcceptable, msg_on_fail=http_msg, content=content)
         return handler(request)
     return validate_accept_header
 

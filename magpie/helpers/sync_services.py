@@ -1,3 +1,14 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Sync registered services in Magpie with resources retrieved from actual service.
+
+.. note::
+    Install extra ``sync`` dependencies.
+
+.. seealso::
+    - :py:mod:`magpie.helpers.sync_resources`
+"""
 import abc
 from collections import OrderedDict, defaultdict
 from typing import TYPE_CHECKING

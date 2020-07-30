@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Magpie helpers for database migration.
+"""
 import argparse
 from typing import TYPE_CHECKING
 

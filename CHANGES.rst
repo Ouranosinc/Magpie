@@ -29,6 +29,8 @@ Features / Changes
 * Add version tag at bottom of UI pages.
 * Configuration parameters ``MAGPIE_SECRET``, ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` now require explicit
   definitions (either by environment variable or INI settings) to avoid using defaults for security purposes.
+* Change CLI helper ``create_users`` to ``batch_update_users``.
+* Change CLI helper ``register_default_users`` to ``register_defaults``.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

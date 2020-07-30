@@ -13,8 +13,8 @@ import subprocess
 from tests import runner
 
 KNOWN_HELPERS = [
-    "create_users",
-    "register_default_users",
+    "batch_update_users",
+    "register_defaults",
     "register_providers",
     "run_db_migration",
     "sync_resources"
@@ -39,33 +39,33 @@ def test_magpie_helper_help():
 
 @runner.MAGPIE_TEST_CLI
 @runner.MAGPIE_TEST_LOCAL
-def test_magpie_create_users_help_via_magpie_helper():
-    out_lines = run_and_get_output("magpie_helper create_users --help")
-    assert "usage: magpie_helper create_users" in out_lines[0]
+def test_magpie_batch_update_users_help_via_magpie_helper():
+    out_lines = run_and_get_output("magpie_helper batch_update_users --help")
+    assert "usage: magpie_helper batch_update_users" in out_lines[0]
     assert "Create users on a running Magpie instance" in out_lines[1]
 
 
 @runner.MAGPIE_TEST_CLI
 @runner.MAGPIE_TEST_LOCAL
-def test_magpie_create_users_help_directly():
-    out_lines = run_and_get_output("magpie_create_users --help")
-    assert "usage: magpie_create_users" in out_lines[0]
+def test_magpie_batch_update_users_help_directly():
+    out_lines = run_and_get_output("magpie_batch_update_users --help")
+    assert "usage: magpie_batch_update_users" in out_lines[0]
     assert "Create users on a running Magpie instance" in out_lines[1]
 
 
 @runner.MAGPIE_TEST_CLI
 @runner.MAGPIE_TEST_LOCAL
-def test_magpie_register_default_users_help_via_magpie_helper():
-    out_lines = run_and_get_output("magpie_helper register_default_users --help")
-    assert "usage: magpie_helper register_default_users" in out_lines[0]
+def test_magpie_register_defaults_help_via_magpie_helper():
+    out_lines = run_and_get_output("magpie_helper register_defaults --help")
+    assert "usage: magpie_helper register_defaults" in out_lines[0]
     assert "Registers default users in Magpie" in out_lines[1]
 
 
 @runner.MAGPIE_TEST_CLI
 @runner.MAGPIE_TEST_LOCAL
-def test_magpie_register_default_users_help_directly():
-    out_lines = run_and_get_output("magpie_register_default_users --help")
-    assert "usage: magpie_register_default_users" in out_lines[0]
+def test_magpie_register_defaults_help_directly():
+    out_lines = run_and_get_output("magpie_register_defaults --help")
+    assert "usage: magpie_register_defaults" in out_lines[0]
     assert "Registers default users in Magpie" in out_lines[1]
 
 

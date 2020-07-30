@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 from pyramid.httpexceptions import (
+    HTTPBadRequest,
     HTTPConflict,
     HTTPCreated,
     HTTPForbidden,
@@ -8,6 +9,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
+from pyramid.settings import asbool
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.group_resource_permission import GroupResourcePermissionService
 from ziggurat_foundations.models.services.resource import ResourceService
@@ -73,19 +75,26 @@ def create_group(group_name, description, discoverable, db_session):
     :returns: valid HTTP response on successful operations.
     :raises HTTPException: error HTTP response of corresponding situation.
     """
-    group = GroupService.by_group_name(group_name, db_session=db_session)
+    description = str(description) if description else None
+    discoverable = asbool(discoverable)
     group_content_error = {
         "group_name": str(group_name),
-        "description": str(description),
+        "description": description,
         "discoverable": discoverable
     }
+    ax.verify_param(group_name, matches=True, param_compare=ax.PARAM_REGEX, param_name="group_name",
+                    content=group_content_error, msg_on_fail=s.Groups_POST_BadRequestResponseSchema.description)
+    if description:
+        ax.verify_param(description, matches=ax.PARAM_REGEX, http_error=HTTPBadRequest, param_name="description",
+                        msg_on_fail=s.Groups_POST_BadRequestResponseSchema.description, content=group_content_error)
+
+    group = GroupService.by_group_name(group_name, db_session=db_session)
     ax.verify_param(group, is_none=True, http_error=HTTPConflict, with_param=False,
                     msg_on_fail=s.Groups_POST_ConflictResponseSchema.description, content=group_content_error)
-    new_group = ax.evaluate_call(lambda: models.Group(group_name=group_name, description=description,  # noqa
-                                                      discoverable=discoverable),  # noqa
-                                 fallback=lambda: db_session.rollback(),
-                                 http_error=HTTPForbidden, content=group_content_error,
-                                 msg_on_fail=s.Groups_POST_ForbiddenCreateResponseSchema.description)
+    new_group = ax.evaluate_call(
+        lambda: models.Group(group_name=group_name, description=description, discoverable=discoverable),  # noqa
+        fallback=lambda: db_session.rollback(), http_error=HTTPForbidden, content=group_content_error,
+        msg_on_fail=s.Groups_POST_ForbiddenCreateResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_group), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=group_content_error,
                      msg_on_fail=s.Groups_POST_ForbiddenAddResponseSchema.description)

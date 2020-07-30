@@ -52,6 +52,13 @@ def edit_group_view(request):
     Update a group by name.
     """
     group = ar.get_group_matchdict_checked(request, group_name_key="group_name")
+    special_groups = [
+        get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=request),
+        get_constant("MAGPIE_ADMIN_GROUP", settings_container=request),
+    ]
+    ax.verify_param(group.group_name, not_in=True, param_compare=special_groups, param_name="group_name",
+                    msg_on_fail=s.Group_PUT_ReservedKeyword_ForbiddenResponseSchema.description)
+
     new_group_name = ar.get_multiformat_post(request, "group_name")
     new_description = ar.get_multiformat_post(request, "description")
     new_discoverability = ar.get_multiformat_post(request, "discoverable")
@@ -66,8 +73,9 @@ def edit_group_view(request):
     if new_group_name:
         ax.verify_param(new_group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                         msg_on_fail=s.Group_PUT_Name_BadRequestResponseSchema.description)
+        group_name_size_range = range(1, 1 + get_constant("MAGPIE_GROUP_NAME_MAX_LENGTH", settings_container=request))
         ax.verify_param(len(new_group_name), is_in=True, http_error=HTTPBadRequest,
-                        param_compare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
+                        param_compare=group_name_size_range,
                         msg_on_fail=s.Group_PUT_Size_BadRequestResponseSchema.description)
         ax.verify_param(GroupService.by_group_name(new_group_name, db_session=request.db),
                         is_none=True, http_error=HTTPConflict,

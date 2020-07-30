@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+"""
+Magpie helper to create or delete a list of users using a set of input parameters.
 
+Useful for batch operations.
+"""
 import argparse
 import datetime
 import logging
@@ -86,6 +90,7 @@ def make_parser():
     parser.add_argument("user_name", help="admin username for magpie login")
     parser.add_argument("password", help="admin password for magpie login")
     parser.add_argument("emails", nargs="*", help="list of emails for users to be created")
+    parser.add_argument("-d", "--delete", action="store_true", help="Delete users instead of creating them.")
     return parser
 
 
@@ -97,23 +102,25 @@ def main(args=None, parser=None, namespace=None):
 
     LOGGER.setLevel(logging.DEBUG)
     logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S")
-    users = create_users(args.emails, args.url, args.user_name, args.password)
+    oper_users = delete_users if args.delete else create_users
+    oper_name = "delete" if args.delete else "create"
+    users = oper_users(args.emails, args.url, args.user_name, args.password)
 
     if len(users) == 0:
-        LOGGER.warning("No users to create")
+        LOGGER.warning("No users to {}".format(oper_name))
     else:
         output = "\nUSERNAME".ljust(COLUMN_SIZE) + \
-                 "PASSWORD".ljust(COLUMN_SIZE) + \
+                 ("PASSWORD".ljust(COLUMN_SIZE) if not args.delete else "") + \
                  "RESULT".ljust(COLUMN_SIZE) + "\n"
         output += "".ljust(COLUMN_SIZE * 3, "_") + "\n\n"
         for user in users:
             output += user["user_name"].ljust(COLUMN_SIZE) + \
-                      user["password"].ljust(COLUMN_SIZE) + \
+                      (user["password"].ljust(COLUMN_SIZE) if not args.delete else "") + \
                       user["result"].ljust(COLUMN_SIZE) + "\n"  # noqa: E126
 
         LOGGER.info(output)
 
-        filename = "createUsers_log__" + datetime.datetime.now().strftime("%Y%m%d__%H%M%S") + ".txt"
+        filename = oper_name + "Users_log__" + datetime.datetime.now().strftime("%Y%m%d__%H%M%S") + ".txt"
         with open(filename, "w+") as file:
             file.write(output)
             LOGGER.info("Output results sent to %s", filename)

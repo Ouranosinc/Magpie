@@ -10,7 +10,7 @@ from pyramid_beaker import set_cache_regions_from_settings
 
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
-from magpie.helpers.register_default_users import register_default_users
+from magpie.helpers.register_defaults import register_defaults
 from magpie.register import magpie_register_permissions_from_config, magpie_register_services_from_config
 from magpie.security import get_auth_config
 from magpie.utils import get_logger, patch_magpie_url, print_log
@@ -57,7 +57,7 @@ def main(global_config=None, **settings):  # noqa: F811
         get_constant(req_config, settings_container=settings, raise_missing=True, raise_not_set=True)
 
     print_log("Register default users...", LOGGER)
-    register_default_users(db_session=db_session, settings=settings)
+    register_defaults(db_session=db_session, settings=settings)
 
     combined_config = get_constant("MAGPIE_CONFIG_PATH", default_value=None,
                                    raise_missing=False, raise_not_set=False, print_missing=True)

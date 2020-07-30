@@ -559,18 +559,15 @@ class GroupBaseBodySchema(colander.MappingSchema):
         example="Administrators")
 
 
-class GroupDescBodySchema(GroupBaseBodySchema):
+class GroupPublicBodySchema(GroupBaseBodySchema):
     # note: use an underscore to differentiate between the node and the parent 'description' metadata
+    description = "Publicly available group information."
     _description = colander.SchemaNode(
         colander.String(),
         description="Description associated to the group.",
         example="",
         missing=colander.drop)
     _description.name = "description"
-
-
-class GroupPublicBodySchema(GroupBaseBodySchema, GroupDescBodySchema):
-    description = "Publicly available group information."  # note: metadata, not the field
 
 
 class GroupInfoBodySchema(GroupBaseBodySchema):
@@ -581,7 +578,7 @@ class GroupInfoBodySchema(GroupBaseBodySchema):
         example=1)
 
 
-class GroupDetailBodySchema(GroupDescBodySchema, GroupInfoBodySchema):
+class GroupDetailBodySchema(GroupPublicBodySchema, GroupInfoBodySchema):
     description = "Detailed information of the group obtained by specifically requesting it."
     member_count = colander.SchemaNode(
         colander.Integer(),
@@ -1988,16 +1985,22 @@ class Groups_POST_CreatedResponseSchema(colander.MappingSchema):
     body = Groups_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
 
 
+class Groups_POST_BadRequestResponseSchema(colander.MappingSchema):
+    description = "Invalid parameter for group creation."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
 class Groups_POST_ForbiddenCreateResponseSchema(colander.MappingSchema):
     description = "Create new group by name refused by db."
     header = HeaderResponseSchema()
-    body = Groups_POST_ResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class Groups_POST_ForbiddenAddResponseSchema(colander.MappingSchema):
     description = "Add new group by name refused by db."
     header = HeaderResponseSchema()
-    body = Groups_POST_ResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class Groups_POST_ConflictResponseSchema(colander.MappingSchema):
@@ -2060,6 +2063,12 @@ class Group_PUT_Size_BadRequestResponseSchema(colander.MappingSchema):
         .format(length=get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class Group_PUT_ReservedKeyword_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Update of reserved keyword or special group forbidden."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class Group_PUT_ConflictResponseSchema(colander.MappingSchema):
@@ -3027,6 +3036,7 @@ Groups_GET_responses = {
 }
 Groups_POST_responses = {
     "201": Groups_POST_CreatedResponseSchema(),
+    "400": Groups_POST_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": Groups_POST_ForbiddenCreateResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -3047,7 +3057,7 @@ Group_PUT_responses = {
     "200": Group_PUT_OkResponseSchema(),
     "400": Group_PUT_Name_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "403": Group_PUT_ReservedKeyword_ForbiddenResponseSchema(),
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "409": Group_PUT_ConflictResponseSchema(),

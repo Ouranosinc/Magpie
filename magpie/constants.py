@@ -133,6 +133,7 @@ MAGPIE_DEFAULT_PROVIDER = "ziggurat"
 # above this length is considered a token,
 # refuse longer username creation
 MAGPIE_USER_NAME_MAX_LENGTH = 64
+MAGPIE_GROUP_NAME_MAX_LENGTH = 64
 
 # ===========================
 # utilities

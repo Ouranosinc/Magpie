@@ -11,13 +11,17 @@ from magpie.utils import CONTENT_TYPE_JSON, get_header, get_logger, get_magpie_u
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Any, CookiesType, Dict, HeadersType, JSON, Optional, Str  # noqa: F401
-    from pyramid.response import Response
+    from magpie.typedefs import Any, AnyResponseType, CookiesType, Dict, HeadersType, JSON, Optional, Str  # noqa: F401
 
 LOGGER = get_logger(__name__)
 
 
 def check_response(response):
+    # type: (AnyResponseType) -> AnyResponseType
+    """
+    :returns: response if the HTTP status code is successful.
+    :raises HTTPError: (of appropriate type) if the response corresponds to an HTTP error code
+    """
     if response.status_code >= 400:
         raise exception_response(response.status_code, body=response.text)
     return response
@@ -29,7 +33,7 @@ def request_api(request,            # type: Request
                 data=None,          # type: Optional[JSON]
                 headers=None,       # type: Optional[HeadersType]
                 cookies=None,       # type: Optional[CookiesType]
-                ):                  # type: (...) -> Response
+                ):                  # type: (...) -> AnyResponseType
     """
     Use a pyramid sub-request to request Magpie API routes via the UI. This avoids max retries and closed connections
     when using 1 worker (eg: during tests).

@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Magpie helpers for user and group registration.
+"""
 import argparse
 import logging
 import time
@@ -68,8 +73,9 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
 def init_anonymous(db_session, settings=None):
     # type: (Session, Optional[AnySettingsContainer]) -> None
     """
-    Registers in db the user and group matching ``MAGPIE_ANONYMOUS_USER`` and ``MAGPIE_ANONYMOUS_GROUP`` respectively if
-    not defined.
+    Registers into the database the user and group matching configuration values of
+    :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` and :py:data:`magpie.constants.MAGPIE_ANONYMOUS_GROUP`
+    respectively if not defined.
     """
     register_user_with_group(user_name=get_constant("MAGPIE_ANONYMOUS_USER", settings_container=settings),
                              group_name=get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=settings),
@@ -81,8 +87,9 @@ def init_anonymous(db_session, settings=None):
 def init_admin(db_session, settings=None):
     # type: (Session, Optional[AnySettingsContainer]) -> None
     """
-    Registers in db the user and group matching ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_GROUP`` respectively if not
-    defined.
+    Registers into the database the user and group matching configuration values of
+    :py:data:`magpie.constants.MAGPIE_ADMIN_USER` and :py:data:`magpie.constants.MAGPIE_ADMIN_GROUP` respectively if
+    not defined.
 
     Also associates the created admin user with the admin group and give it admin permissions.
     """
@@ -97,7 +104,7 @@ def init_admin(db_session, settings=None):
                                  db_session=db_session)
 
     # Check if MAGPIE_ADMIN_GROUP has permission MAGPIE_ADMIN_PERMISSION
-    magpie_admin_group = GroupService.by_group_name(admin_grp_name, db_session=db_session)
+    magpie_admin_group = GroupService.by_group_name(admin_grp_name, db_session=db_session)  # type: models.Group
     permission_names = [permission.perm_name for permission in magpie_admin_group.permissions]
     admin_perm = get_constant("MAGPIE_ADMIN_PERMISSION", settings_container=settings)
     if admin_perm not in permission_names:
@@ -108,11 +115,15 @@ def init_admin(db_session, settings=None):
             db_session.rollback()
             raise_log("Failed to create admin user-group permission", exception=type(exc))
 
+    # enforce some admin group fields
+    magpie_admin_group.description = "Administrative group that grants full access to its members."
+    magpie_admin_group.discoverable = False
+
 
 def init_users_group(db_session, settings=None):
     # type: (Session, Optional[AnySettingsContainer]) -> None
     """
-    Registers in db the group matching ``MAGPIE_USERS_GROUP`` if not defined.
+    Registers in db the group matching :py:data:`magpie.constants.MAGPIE_USERS_GROUP` if not defined.
     """
     usr_grp_name = get_constant("MAGPIE_USERS_GROUP", settings_container=settings)
     if not GroupService.by_group_name(usr_grp_name, db_session=db_session):
@@ -122,15 +133,15 @@ def init_users_group(db_session, settings=None):
         print_log("MAGPIE_USERS_GROUP already initialized", level=logging.DEBUG)
 
 
-def register_default_users(db_session=None, settings=None, ini_file_path=None):
+def register_defaults(db_session=None, settings=None, ini_file_path=None):
     # type: (Optional[Session], Optional[AnySettingsContainer], Optional[AnyStr]) -> None
     """
-    Registers in db every undefined default users and groups matching following variables :
+    Registers into database every undefined default users and groups matching following variables :
 
-    - ``MAGPIE_ANONYMOUS_USER``
-    - ``MAGPIE_USERS_GROUP``
-    - ``MAGPIE_ADMIN_GROUP``
-    - ``MAGPIE_ADMIN_USER``
+    - :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`
+    - :py:data:`magpie.constants.MAGPIE_USERS_GROUP`
+    - :py:data:`magpie.constants.MAGPIE_ADMIN_GROUP`
+    - :py:data:`magpie.constants.MAGPIE_ADMIN_USER`
     """
     if not isinstance(db_session, Session):
         if not ini_file_path:
@@ -149,7 +160,7 @@ def register_default_users(db_session=None, settings=None, ini_file_path=None):
 
 def make_parser():
     # type: () -> argparse.ArgumentParser
-    parser = argparse.ArgumentParser(description="Registers default users in Magpie")
+    parser = argparse.ArgumentParser(description="Registers default users and groups in Magpie.")
     parser.add_argument("ini_file_path", help="Path of the configuration INI file to use to retrieve required settings")
     return parser
 
@@ -159,7 +170,7 @@ def main(args=None, parser=None, namespace=None):
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)
-    return register_default_users(ini_file_path=args.ini_file_path)
+    return register_defaults(ini_file_path=args.ini_file_path)
 
 
 if __name__ == "__main__":
