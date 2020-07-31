@@ -226,7 +226,7 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
         path = "/register/groups/random-group"
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, expect_errors=True)
-        utils.check_response_basic_info(resp, 401)
+        utils.check_response_basic_info(resp, 401, expected_method="DELETE")
 
     def test_ViewDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot view group although group is discoverable."""
@@ -234,7 +234,7 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
 
         # setup some actual discoverable group to ensure the error is not caused by some misinterpreted response
         group_data = {"group_name": self.test_group_name, "discoverable": True}
-        headers, cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pws)
+        headers, cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
         utils.TestSetup.create_TestGroup(self, override_data=group_data,
                                          override_headers=headers, override_cookies=cookies)
         utils.check_or_try_logout_user(self)
@@ -268,6 +268,13 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     def setUp(self):
         User_Magpie_TestCase.setUp(self)
+
+    @classmethod
+    def login_test_user(cls):
+        """Apply JSON headers on top of login headers for API calls."""
+        User_Magpie_TestCase.login_test_user(cls)
+        cls.headers.update(cls.json_headers)
+        return cls.headers, cls.cookies
 
     def run_PutUsers_email_update_itself(self, user_path_variable):
         """
@@ -392,9 +399,11 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def test_PutUsers_username_Forbidden_ReservedKeyword_Current(self):
         """Logged user is not allowed to update its user name to reserved keyword."""
         data = {"user_name": get_constant("MAGPIE_LOGGED_USER")}
-        resp = utils.test_request(self, "PUT", "/users/current", data=data, expect_errors=True)
+        self.login_test_user()
+        resp = utils.test_request(self, "PUT", "/users/current", data=data, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method="PUT")
-        resp = utils.test_request(self, "GET", "/users/current")
+        resp = utils.test_request(self, "GET", "/users/current", headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp)
         utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
 
@@ -402,9 +411,11 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def test_PutUsers_username_Forbidden_AnyNonAdmin(self):
         """Non-admin level user is not permitted to update its own user name."""
         data = {"user_name": self.test_user_name + "new-user-name"}
-        resp = utils.test_request(self, "PUT", "/users/current", data=data, expect_errors=True)
+        self.login_test_user()
+        resp = utils.test_request(self, "PUT", "/users/current", data=data, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method="PUT")
-        resp = utils.test_request(self, "GET", "/users/current")
+        resp = utils.test_request(self, "GET", "/users/current", headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp)
         utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
 
@@ -414,7 +425,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         self.extra_user_names.append(self.other_user_name)
         utils.TestSetup.create_TestUser(self, {"user_name": self.other_user_name, "password": self.other_user_name})
         # sanity check that we are still logged as test user
-        resp = utils.test_request(self, "GET", "/users/current")
+        self.login_test_user()
+        resp = utils.test_request(self, "GET", "/users/current", headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp)
         utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
         # actual test
@@ -422,7 +434,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         self.extra_user_names.append(new_test_user_name)
         data = {"user_name": new_test_user_name}
         path = "/users/{}".format(self.other_user_name)
-        resp = utils.test_request(self, "PUT", path, data=data, expect_errors=True)
+        resp = utils.test_request(self, "PUT", path, data=data, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method="PUT")
         # valid other user not updated by test user, with admin access
         resp = utils.test_request(self, "GET", path, cookies=self.cookies, headers=self.json_headers)
@@ -436,11 +449,13 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         body = utils.TestSetup.get_ResourceInfo(self, body)
+        self.login_test_user()
         res_id = body["resource_id"]
         perm = Permission.READ.value
         data = {"permission_name": perm}
         path = "/users/current/resources/{}/permissions".format(res_id)
-        resp = utils.test_request(self, "POST", path, data=data, expect_errors=True)
+        resp = utils.test_request(self, "POST", path, data=data, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method="POST")
         path = "/users/{}/resources/{}/permissions".format(self.test_user_name, res_id)
         resp = utils.test_request(self, "GET", path, cookies=self.cookies, headers=self.json_headers)
@@ -452,8 +467,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def test_RegisterDiscoverableGroup(self):
         """Non-admin logged user is allowed to update is membership to register to a discoverable group by himself."""
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
+        self.login_test_user()
         path = "/register/groups/{}".format(self.test_group_name)
-        resp = utils.test_request(self, "POST", path, data={})
+        resp = utils.test_request(self, "POST", path, data={}, headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp, 201, expected_method="POST")
         utils.check_val_is_in("group_name", body)
         utils.check_val_is_in("user_name", body)
@@ -465,8 +481,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         """Non-admin logged user is allowed to revoke its membership to leave a discoverable group by himself."""
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         utils.TestSetup.assign_TestUserGroup(self)
+        self.login_test_user()
         path = "/register/groups/{}".format(self.test_group_name)
-        resp = utils.test_request(self, "DELETE", path, data={})
+        resp = utils.test_request(self, "DELETE", path, data={}, headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 200, expected_method="DELETE")
         utils.TestSetup.check_UserGroupMembership(self, member=False)
 
@@ -474,8 +491,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         """Non-admin logged user can view discoverable group information. Critical details are not displayed."""
         data = {"discoverable": True, "description": "Test Group", "group_name": self.test_group_name}
         utils.TestSetup.create_TestGroup(self, override_data=data)
+        self.login_test_user()
         path = "/register/groups/{}".format(self.test_group_name)
-        resp = utils.test_request(self, "GET", path)
+        resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp, 200)
         utils.check_val_is_in("group", body)
         utils.check_val_is_in("group_name", body["group"])
@@ -494,7 +512,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         self.extra_group_names.extend(discover_groups)
         for grp in discover_groups:
             utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True, "group_name": grp})
-        resp = utils.test_request(self, "GET", "/register/groups")
+        self.login_test_user()
+        resp = utils.test_request(self, "GET", "/register/groups", headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp, 200)
         utils.check_val_is_in("group_names", body)
         expected_groups = set(body["group_names"]) - discover_before
@@ -505,11 +524,13 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         """Non-admin logged user cannot delete a group although it is discoverable."""
         utils.TestSetup.delete_TestGroup(self)  # remove auto-created by setup
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
+        self.login_test_user()
         path = "/register/groups/{}".format(self.test_group_name)
-        resp = utils.test_request(self, "GET", path)
+        resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 200)
         path = "/groups/{}".format(self.test_group_name)
-        resp = utils.test_request(self, "DELETE", path, expect_errors=True)
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method="DELETE")
         resp = utils.test_request(self, "GET", path, cookies=self.cookies, headers=self.headers)
         utils.check_response_basic_info(resp, 200)
@@ -2216,6 +2237,8 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     @runner.MAGPIE_TEST_LOGGED
     def test_UserAccount_ViewDetails(self):
         """Logged user can view its own details on account page."""
+        utils.warn_version(self, "user account page", "2.0.0", skip=True)
+        self.login_test_user()
         resp = utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/users/current")
         utils.check_val_is_in("Account User", resp.text)
         utils.check_val_is_in(self.test_user_name, resp.text)
@@ -2224,6 +2247,8 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     @runner.MAGPIE_TEST_LOGGED
     def test_UserAccount_ViewDiscoverableGroupsMembership(self):
         """Logged user can view discoverable groups and which ones he has membership on."""
+        utils.warn_version(self, "user account page", "2.0.0", skip=True)
+        self.login_test_user()
         resp = utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/users/current")
         utils.check_val_is_in("Account User", resp.text)
         utils.check_val_is_in(self.test_user_name, resp.text)
@@ -2232,7 +2257,15 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     @runner.MAGPIE_TEST_LOGGED
     def test_UserAccount_UpdateDetails_email(self):
         """Logged user can update its own email on account page."""
-        raise NotImplementedError  # TODO
+        utils.warn_version(self, "user account page", "2.0.0", skip=True)
+        self.login_test_user()
+        data = {"new_user_email": "new-mail@unittest-mail.com"}
+        resp = utils.TestSetup.check_FormSubmit(self, form_match="edit_email", form_data=data, form_submit="edit_email",
+                                                path="/ui/users/current", method="GET")
+        utils.check_ui_response_basic_info(resp, expected_title="Magpie user Management")
+        resp = utils.test_request(self, "GET", "/users/current", headers=self.json_headers, cookies=self.test_cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_equal(body["user"]["email"], data["new_user_email"])
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -2274,7 +2307,7 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/users")
 
     @runner.MAGPIE_TEST_STATUS
-    def test_ViewUsers_GotoEditUser(self):
+    def test_ViewUsers_Goto_EditUser(self):
         form = {"edit": None, "user_name": self.test_user}
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path="/ui/users")
         if LooseVersion(self.version) < "2":
@@ -2288,7 +2321,7 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/groups")
 
     @runner.MAGPIE_TEST_STATUS
-    def test_ViewGroups_GotoEditGroup(self):
+    def test_ViewGroups_Goto_EditGroup(self):
         form = {"edit": None, "group_name": self.test_group}
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path="/ui/groups")
         if LooseVersion(self.version) < "2":
@@ -2307,7 +2340,7 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         utils.TestSetup.check_UpStatus(self, method="GET", path=path)
 
     @runner.MAGPIE_TEST_STATUS
-    def test_ViewServices_GotoEditService(self):
+    def test_ViewServices_Goto_EditService(self):
         form = {"edit": None, "service_name": self.test_service_name}
         path = "/ui/services/{}".format(self.test_service_type)
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path=path)

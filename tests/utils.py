@@ -346,10 +346,10 @@ def check_or_try_login_user(test_item,                      # type: AnyMagpieTes
                 form["password"] = password
                 form["provider_name"] = provider
                 resp = form.submit("submit", expect_errors=expect_errors)
-                resp_cookies = app_or_url.cookies    # automatically set by form submit
+                resp_cookies = app_or_url.cookies   # automatically set by form submit
             else:
                 resp = app_or_url.post_json("/signin", data, headers=headers)
-                resp_cookies = resp.cookies
+                resp_cookies = app_or_url.cookies  # automatically set by TestApp processing
         else:
             resp = requests.post("{}/signin".format(app_or_url), json=data, headers=headers)
             resp_cookies = resp.cookies

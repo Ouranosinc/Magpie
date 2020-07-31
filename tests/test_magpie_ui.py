@@ -67,8 +67,10 @@ class TestCase_MagpieUI_UsersAuth_Local(ti.Interface_MagpieUI_UsersAuth, unittes
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_user-local")
-        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-user-auth_group-local")
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_user-local",
+                                          raise_missing=False, raise_not_set=False)
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-user-auth_group-local",
+                                           raise_missing=False, raise_not_set=False)
 
 
 @runner.MAGPIE_TEST_UI
@@ -110,7 +112,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
     @runner.MAGPIE_TEST_LOCAL   # not implemented for remote URL
     @runner.MAGPIE_TEST_STATUS
     @runner.MAGPIE_TEST_FUNCTIONAL
-    def test_EditService_GotoAddChild_BackToEditService(self):
+    def test_EditService_Goto_AddChild_BackTo_EditService(self):
         """
         Verifies that UI button redirects work for the workflow:
             0. Starting on "Service View", press "Add Child" button (redirects to "New Resource" form)
@@ -187,8 +189,10 @@ class TestCase_MagpieUI_UsersAuth_Remote(ti.Interface_MagpieUI_UsersAuth, unitte
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
         cls.check_requirements()
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.test_user = get_constant("MAGPIE_TEST_USER", default_value="unittest-user_users-auth-remote")
-        cls.test_group = get_constant("MAGPIE_USERS_GROUP")
+        cls.test_user = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_user-remote",
+                                     raise_missing=False, raise_not_set=False)
+        cls.test_group = get_constant("MAGPIE_USERS_GROUP", default_value="unittest-user-auth_group-remote",
+                                      raise_missing=False, raise_not_set=False)
 
 
 @runner.MAGPIE_TEST_UI

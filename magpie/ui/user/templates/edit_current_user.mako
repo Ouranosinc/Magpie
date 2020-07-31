@@ -61,7 +61,7 @@
                         <span class="panel-entry">Email: </span>
                         %if edit_mode == "edit_email":
                             <label>
-                            <input type="text" value="${email}" name="new_user_email"
+                            <input type="email" value="${email}" name="new_user_email"
                                    id="input_email" onkeyup="adjustWidth('input_url')">
                             <input type="submit" value="Save" name="save_email" class="button theme">
                             <input type="submit" value="Cancel" name="no_edit" class="button cancel">
