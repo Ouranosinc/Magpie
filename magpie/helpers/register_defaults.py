@@ -76,12 +76,20 @@ def init_anonymous(db_session, settings=None):
     Registers into the database the user and group matching configuration values of
     :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` and :py:data:`magpie.constants.MAGPIE_ANONYMOUS_GROUP`
     respectively if not defined.
+
+    Afterwards, updates the group's parameters to ensure integrity with `Magpie` settings.
     """
+    anonymous_group = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=settings)
     register_user_with_group(user_name=get_constant("MAGPIE_ANONYMOUS_USER", settings_container=settings),
-                             group_name=get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=settings),
+                             group_name=anonymous_group,
                              email=get_constant("MAGPIE_ANONYMOUS_EMAIL", settings_container=settings),
                              password=get_constant("MAGPIE_ANONYMOUS_PASSWORD", settings_container=settings),
                              db_session=db_session)
+
+    # enforce some admin group fields
+    group = GroupService.by_group_name(anonymous_group, db_session=db_session)
+    group.description = "Group that grants public access to its members for applicable resources."
+    group.discoverable = False
 
 
 def init_admin(db_session, settings=None):
@@ -92,6 +100,7 @@ def init_admin(db_session, settings=None):
     not defined.
 
     Also associates the created admin user with the admin group and give it admin permissions.
+    Finally, updates the group's parameters to ensure integrity with `Magpie` settings.
     """
     admin_usr_name = get_constant("MAGPIE_ADMIN_USER", settings_container=settings)
     admin_grp_name = get_constant("MAGPIE_ADMIN_GROUP", settings_container=settings)
@@ -116,7 +125,7 @@ def init_admin(db_session, settings=None):
             raise_log("Failed to create admin user-group permission", exception=type(exc))
 
     # enforce some admin group fields
-    magpie_admin_group.description = "Administrative group that grants full access to its members."
+    magpie_admin_group.description = "Administrative group that grants full access management control to its members."
     magpie_admin_group.discoverable = False
 
 

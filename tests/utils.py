@@ -964,9 +964,9 @@ class TestSetup(object):
     @staticmethod
     def delete_TestServiceResource(test_case, override_resource_name=None):
         # type: (AnyMagpieTestCaseType, Optional[Str]) -> None
-        """Deletes the test service. If it does not exist, skip. Otherwise, delete it and validate.
+        """Deletes the test resource under test service. If it does not exist, skip. Otherwise, delete it and validate.
 
-        :raises AssertionError: if any response does not correspond to non existing service after execution.
+        :raises AssertionError: if any response does not correspond to non existing service's resource after execution.
         """
         app_or_url = get_app_or_url(test_case)
         resource_name = override_resource_name or test_case.test_resource_name
@@ -1063,6 +1063,25 @@ class TestSetup(object):
             services_of_type = json_body["services"][svc_type]
             services_list.extend(services_of_type.values())
         return services_list
+
+    @staticmethod
+    def delete_TestResource(test_case, resource_id, override_headers=None, override_cookies=None):
+        # type: (AnyMagpieTestCaseType, int, Optional[HeadersType], Optional[CookiesType]) -> None
+        """Deletes the test resource directly using its ID. If non existing, skips. Otherwise, delete and validate.
+
+        :raises AssertionError: if the response does not correspond to non existing resource.
+        """
+        app_or_url = get_app_or_url(test_case)
+        path = "/resources/{res_id}".format(res_id=resource_id)
+        resp = test_request(app_or_url, "DELETE", path, expect_errors=True,
+                            headers=override_headers or test_case.json_headers,
+                            cookies=override_cookies or test_case.cookies)
+        check_val_is_in(resp.status_code, [200, 404])
+        if resp.status_code == 200:
+            resp = test_request(app_or_url, "GET", path, expect_errors=True,
+                                headers=override_headers or test_case.json_headers,
+                                cookies=override_cookies or test_case.cookies)
+            check_val_is_in(resp.status_code, 404)
 
     @staticmethod
     def get_RegisteredUsersList(test_case):
@@ -1179,14 +1198,15 @@ class TestSetup(object):
         TestSetup.check_UserGroupMembership(test_case, override_user_name=usr_name, override_group_name=grp_name)
 
     @staticmethod
-    def get_RegisteredGroupsList(test_case):
-        # type: (AnyMagpieTestCaseType) -> List[Str]
-        """Obtains existing group names.
+    def get_RegisteredGroupsList(test_case, only_discoverable=False):
+        # type: (AnyMagpieTestCaseType, bool) -> List[Str]
+        """Obtains existing group names. Optional only return the publicly discoverable ones.
 
         :raises AssertionError: if the request response does not match successful groups retrieval.
         """
         app_or_url = get_app_or_url(test_case)
-        resp = test_request(app_or_url, "GET", "/groups",
+        path = "/register/groups" if only_discoverable else "/groups"
+        resp = test_request(app_or_url, "GET", path,
                             headers=test_case.json_headers,
                             cookies=test_case.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method="GET")

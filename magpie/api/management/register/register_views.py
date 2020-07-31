@@ -45,8 +45,8 @@ def get_discoverable_group_info_view(request):
     """
     Obtain the information of a discoverable group.
     """
-    group_name = ar.get_group_matchdict_checked(request)
-    public_group = ru.get_discoverable_group_by_name(group_name, db_session=request.db)
+    group = ar.get_group_matchdict_checked(request)
+    public_group = ru.get_discoverable_group_by_name(group.group_name, db_session=request.db)
     group_fmt = gf.format_group(public_group, public_info=True)
     return ax.valid_http(http_success=HTTPOk, content={"group": group_fmt},
                          detail=s.RegisterGroup_GET_OkResponseSchema.description)
