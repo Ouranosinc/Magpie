@@ -37,14 +37,17 @@ if TYPE_CHECKING:
 
 
 def create_user(user_name, password, email, group_name, db_session):
-    # type: (Str, Optional[Str], Str, Str, Session) -> HTTPException
+    # type: (Str, Optional[Str], Str, Optional[Str], Session) -> HTTPException
     """
-    Creates a user if it is permitted and not conflicting. Password must be set to `None` if using external identity.
+    Creates a user if it is permitted and not conflicting. Password must be set to ``None`` if using external identity.
 
-    Created user will be part of group matching ``group_name`` (can be ``MAGPIE_ANONYMOUS_GROUP`` for minimal access).
-    Furthermore, the user will also *always* be associated with ``MAGPIE_ANONYMOUS_GROUP`` (if not already explicitly
-    requested with ``group_name``) to allow access to resources with public permission. The ``group_name`` **must**
-    be an existing group.
+    Created user will immediately assigned membership to the group matching :paramref:`group_name`
+    (can be :py:data:`MAGPIE_ANONYMOUS_GROUP` for minimal access). If no group is provided, this anonymous group will
+    be applied by default, creating a user effectively without any permissions other than ones set directly for him.
+
+    Furthermore, the user will also *always* be associated with :py:data:`MAGPIE_ANONYMOUS_GROUP` (if not already
+    explicitly or implicitly requested with :paramref:`group_name`) to allow access to resources with public permission.
+    Argument :paramref:`group_name` **MUST** be an existing group if provided.
 
     :returns: valid HTTP response on successful operation.
     """
@@ -62,6 +65,8 @@ def create_user(user_name, password, email, group_name, db_session):
         return grp
 
     # Check that group already exists
+    if group_name is None:
+        group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
     group_checked = _get_group(group_name)
 
     # Check if user already exists

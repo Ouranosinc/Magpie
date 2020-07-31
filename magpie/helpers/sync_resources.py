@@ -5,9 +5,6 @@ Synchronize local and remote resources.
 
 To implement a new service, see :class:`magpie.helpers.sync_services.SyncServiceInterface`.
 
-.. note::
-    Install extra ``sync`` dependencies.
-
 .. seealso::
     - :py:mod:`magpie.helpers.sync_services`
 """

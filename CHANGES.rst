@@ -32,6 +32,8 @@ Features / Changes
   definitions (either by environment variable or INI settings) to avoid using defaults for security purposes.
 * Change CLI helper ``create_users`` to ``batch_update_users``.
 * Change CLI helper ``register_default_users`` to ``register_defaults``.
+* Allow null ``group_name`` during user creation request to employ ``MAGPIE_ANONYMOUS_GROUP`` by default
+  (i.e.: created user will have no apparent group membership since that group is always attributed for public access).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

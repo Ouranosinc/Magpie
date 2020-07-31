@@ -98,17 +98,27 @@ def sign_in(request):
                                 msg_on_fail=s.Signin_POST_External_InternalServerErrorResponseSchema.description)
 
 
-# swagger responses referred in `sign_in`
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
 def login_success_ziggurat(request):
+    """Response from redirect upon successful login with valid user credentials.
+
+    Header ``Set-Cookie`` from this response will allow creation of the response cookies.
+
+    .. seealso::
+        - :func:`sign_in`
+    """
     # headers contains login authorization cookie
     return ax.valid_http(http_success=HTTPOk, http_kwargs={"headers": request.context.headers},
                          detail=s.Signin_POST_OkResponseSchema.description)
 
 
-# swagger responses referred in `sign_in`
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
 def login_failure(request, reason=None):
+    """Response from redirect upon login failure, either because of invalid or incorrect user credentials.
+
+    .. seealso::
+        - :func:`sign_in`
+    """
     http_err = HTTPUnauthorized
     if reason is None:
         reason = s.Signin_POST_UnauthorizedResponseSchema.description
@@ -141,7 +151,7 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
     create_user(internal_user_name, password=None, email=email, group_name=group_name, db_session=db_session)
 
     user = UserService.by_user_name(internal_user_name, db_session=db_session)
-    ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,
+    ex_identity = models.ExternalIdentity(external_user_name=external_user_name, external_id=external_id,  # noqa
                                           local_user_id=user.id, provider_name=provider_name)  # noqa
     ax.evaluate_call(lambda: db_session.add(ex_identity), fallback=lambda: db_session.rollback(),
                      http_error=HTTPConflict, msg_on_fail=s.Signin_POST_ConflictResponseSchema.description,

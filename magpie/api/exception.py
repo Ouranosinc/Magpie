@@ -263,22 +263,22 @@ def evaluate_call(call,                                 # type: Callable[[], Any
                content_type=content_type)
 
 
-def valid_http(http_success=HTTPOk,             # type: Type[HTTPSuccessful]
+def valid_http(http_success=HTTPOk,             # type: Union[Type[HTTPSuccessful], Type[HTTPRedirection]]
                http_kwargs=None,                # type: Optional[ParamsType]
                detail="",                       # type: Optional[Str]
                content=None,                    # type: Optional[JSON]
                content_type=CONTENT_TYPE_JSON,  # type: Optional[Str]
-               ):                               # type: (...) -> AnyResponseType
+               ):                               # type: (...) -> Union[HTTPSuccessful, HTTPRedirection]
     """
     Returns successful HTTP with standardized information formatted with content type. (see :func:`raise_http` for HTTP
     error calls)
 
-    :param http_success: any derived class from base `HTTPSuccessful` (default: `HTTPOk`)
+    :param http_success: any derived class from *valid* HTTP codes (<400) (default: `HTTPOk`)
     :param http_kwargs: additional keyword arguments to pass to `http_success` when called
     :param detail: additional message information (default: empty)
     :param content: json formatted content to include
     :param content_type: format in which to return the exception (one of `magpie.common.SUPPORTED_CONTENT_TYPES`)
-    :return `HTTPSuccessful`: formatted successful with additional details and HTTP code
+    :returns: formatted successful response with additional details and HTTP code
     """
     global RAISE_RECURSIVE_SAFEGUARD_COUNT  # pylint: disable=W0603
 
@@ -290,7 +290,7 @@ def valid_http(http_success=HTTPOk,             # type: Type[HTTPSuccessful]
     json_body = format_content_json_str(http_code, detail, content, content_type)
     resp = generate_response_http_format(http_success, http_kwargs, json_body, output_type=content_type)
     RAISE_RECURSIVE_SAFEGUARD_COUNT = 0  # reset counter for future calls (don't accumulate for different requests)
-    return resp
+    return resp  # noqa
 
 
 def raise_http(http_error=HTTPInternalServerError,  # type: Type[HTTPError]

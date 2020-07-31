@@ -3,9 +3,6 @@
 """
 Sync registered services in Magpie with resources retrieved from actual service.
 
-.. note::
-    Install extra ``sync`` dependencies.
-
 .. seealso::
     - :py:mod:`magpie.helpers.sync_resources`
 """

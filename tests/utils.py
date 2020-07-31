@@ -703,10 +703,20 @@ class TestSetup(object):
 
     The multiple parameters prefixed by ``test_`` are also automatically extracted from the referenced Test Suite.
     For example, ``test_user_name`` will be retrieved from the Test Suite class when this information is required for
-    the corresponding test operation. It is possible to override this behaviour with corresponding arguments prefixed
-    by ``override_`` keyword. For example, if ``override_user_name`` is provided, it will be used instead of
-    ``test_user_name`` from the Test Suite class. Furthermore, ``override_data`` can be provided where applicable to
-    provide additional JSON payload fields in the executed request.
+    the corresponding test operation. All these ``test_`` parameters are used to form a *default* request payload. It
+    is possible to override every individual parameter with corresponding arguments prefixed by ``override_`` keyword.
+    For example, if ``override_user_name`` is provided, it will be used instead of ``test_user_name`` from the
+    Test Suite class.
+
+    Furthermore, ``override_data`` can be provided where applicable to specify the *complete* JSON payload fields to use
+    to accomplish required request. Note that doing so will ignore any auto-retrieval of ``test_`` parameters, so you
+    must ensure to provide them as necessary per use-case.
+
+    .. note::
+        Since these methods are intended to *setup* test data, cookies and headers for admin-level API requests are
+        employed by default. Refer to :attr:`Base_Magpie_TestCase.cookies` and :attr:`Base_Magpie_TestCase.json_headers`
+        (N.B.: headers with extended JSON content-type for simplified API response body parsing). Checks that point at
+        UI pages could do otherwise (e.g.: method :meth:`check_UpStatus`).
     """
     # pylint: disable=C0103,invalid-name
 
@@ -742,7 +752,12 @@ class TestSetup(object):
         Verifies that the Magpie UI page at very least returned an HTTP Ok response with the displayed title.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
 
-        :returns: response from the rendered page for further tests
+        .. warning::
+            Because this check is accomplished via the UI interface, :attr:`Base_Magpie_TestCase.test_cookies` and
+            :attr:`Base_Magpie_TestCase.headers` attributes are used instead of admin-level ones as in other methods
+            of :class:`TestSetup`.
+
+        :returns: response from the rendered page for further tests.
         """
         cookies = override_cookies or getattr(test_case, "test_cookies", getattr(test_case, "cookies", None))
         headers = override_headers or getattr(test_case, "test_headers", getattr(test_case, "headers", None))
@@ -858,24 +873,28 @@ class TestSetup(object):
         return list(services_dict.values())[0]
 
     @staticmethod
-    def create_TestServiceResource(test_case, override_data=None):
-        # type: (AnyMagpieTestCaseType, Optional[JSON]) -> JSON
+    def create_TestServiceResource(test_case,                       # type: AnyMagpieTestCaseType
+                                   override_service_name=None,      # type: Optional[Str]
+                                   override_resource_name=None,     # type: Optional[Str]
+                                   override_resource_type=None,     # type: Optional[Str]
+                                   override_data=None,              # type: Optional[JSON]
+                                   override_headers=None,           # type: Optional[HeadersType]
+                                   override_cookies=None,           # type: Optional[CookiesType]
+                                   ):                               # type: (...) -> JSON
         """Creates the test resource nested *immediately* under the test service. Test service *must* exist beforehand.
 
         :raises AssertionError: if the response correspond to failure to create the test resource.
         """
         app_or_url = get_app_or_url(test_case)
         TestSetup.create_TestService(test_case)
-        path = "/services/{svc}/resources".format(svc=test_case.test_service_name)
-        data = {
-            "resource_name": test_case.test_resource_name,
-            "resource_type": test_case.test_resource_type,
+        path = "/services/{svc}/resources".format(svc=override_service_name or test_case.test_service_name)
+        data = override_data if override_data is not None else {
+            "resource_name": override_resource_name or test_case.test_resource_name,
+            "resource_type": override_resource_type or test_case.test_resource_type,
         }
-        if override_data:
-            data.update(override_data)
         resp = test_request(app_or_url, "POST", path,
-                            headers=test_case.json_headers,
-                            cookies=test_case.cookies, json=data)
+                            headers=override_headers or test_case.json_headers,
+                            cookies=override_cookies or test_case.cookies, json=data)
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
@@ -1071,24 +1090,29 @@ class TestSetup(object):
         check_val_not_in(user_name, users)
 
     @staticmethod
-    def create_TestUser(test_case, override_group_name=None, override_data=None):
-        # type: (AnyMagpieTestCaseType, Optional[Str], Optional[JSON]) -> JSON
+    def create_TestUser(test_case,                  # type: AnyMagpieTestCaseType
+                        override_user_name=None,    # type: Optional[Str]
+                        override_email=None,        # type: Optional[Str]
+                        override_password=None,     # type: Optional[Str]
+                        override_group_name=None,   # type: Optional[Str]
+                        override_data=None,         # type: Optional[JSON]
+                        override_headers=None,      # type: Optional[HeadersType]
+                        override_cookies=None,      # type: Optional[CookiesType]
+                        ):                          # type: (...) -> JSON
         """Creates the test user.
 
         :raises AssertionError: if the request response does not match successful creation.
         """
         app_or_url = get_app_or_url(test_case)
-        data = {
-            "user_name": test_case.test_user_name,
-            "email": "{}@mail.com".format(test_case.test_user_name),
-            "password": test_case.test_user_name,
+        data = override_data if override_data is not None else {
+            "user_name": override_user_name or test_case.test_user_name,
+            "email": override_email or "{}@mail.com".format(test_case.test_user_name),
+            "password": override_password or test_case.test_user_name,
             "group_name": override_group_name or test_case.test_group_name,
         }
-        if override_data:
-            data.update(override_data)
-        resp = test_request(app_or_url, "POST", "/users",
-                            headers=test_case.json_headers,
-                            cookies=test_case.cookies, json=data)
+        resp = test_request(app_or_url, "POST", "/users", json=data,
+                            headers=override_headers or test_case.json_headers,
+                            cookies=override_cookies or test_case.cookies)
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
@@ -1180,20 +1204,24 @@ class TestSetup(object):
         check_val_not_in(group_name, groups)
 
     @staticmethod
-    def create_TestGroup(test_case,                # type: Base_Magpie_TestCase
-                         override_group_name=None,  # type: Optional[Str]
-                         override_data=None,        # type: Optional[JSON]
-                         override_headers=None,     # type: Optional[HeadersType]
-                         override_cookies=None,     # type: Optional[CookiesType]
-                         ):                         # type: (...) -> JSON
+    def create_TestGroup(test_case,                     # type: AnyMagpieTestCaseType
+                         override_group_name=None,      # type: Optional[Str]
+                         override_discoverable=None,    # type: Optional[bool]
+                         override_data=None,            # type: Optional[JSON]
+                         override_headers=None,         # type: Optional[HeadersType]
+                         override_cookies=None,         # type: Optional[CookiesType]
+                         ):                             # type: (...) -> JSON
         """Create the test group.
 
         :raises AssertionError: if the request does not have expected response matching successful creation.
         """
         app_or_url = get_app_or_url(test_case)
-        data = override_data or {}
-        if "group_name" not in data:
+        data = override_data
+        if override_data is None:
             data = {"group_name": override_group_name or test_case.test_group_name}
+            # only add 'discoverable' if explicitly provided here to preserve original behaviour of 'no value provided'
+            if override_discoverable is not None:
+                data["discoverable"] = override_discoverable
         resp = test_request(app_or_url, "POST", "/groups",
                             headers=override_headers or test_case.json_headers,
                             cookies=override_cookies or test_case.cookies, json=data)

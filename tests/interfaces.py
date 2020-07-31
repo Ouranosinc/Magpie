@@ -95,6 +95,7 @@ class User_Magpie_TestCase(object):
         utils.TestSetup.delete_TestUser(self)
         utils.TestSetup.delete_TestService(self)
         # setup minimal test user requirements
+        utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
         self.login_test_user()
         utils.TestSetup.check_UserGroupMembership(self, member=False, override_cookies=self.test_cookies)
@@ -428,7 +429,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_LOGGED
     def test_RegisterDiscoverableGroup(self):
         """Non-admin logged user is allowed to update is membership to register to a discoverable group by himself."""
-        utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True})
+        utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "POST", path, data={})
         body = utils.check_response_basic_info(resp, 201, expected_method="POST")
@@ -440,7 +441,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     def test_UnregisterDiscoverableGroup(self):
         """Non-admin logged user is allowed to revoke its membership to leave a discoverable group by himself."""
-        utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True})
+        utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         utils.TestSetup.assign_TestUserGroup(self)
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "DELETE", path, data={})
@@ -449,7 +450,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     def test_ViewDiscoverableGroup(self):
         """Non-admin logged user can view discoverable group information. Critical details are not displayed."""
-        utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True, "description": "Test Group"})
+        data = {"discoverable": True, "description": "Test Group", "group_name": self.test_group_name}
+        utils.TestSetup.create_TestGroup(self, override_data=data)
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "GET", path)
         body = utils.check_response_basic_info(resp, 200)
@@ -477,7 +479,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     def test_DeleteDiscoverableGroup_Forbidden(self):
         """Non-admin logged user cannot delete a group although it is discoverable."""
-        utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True})
+        utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "GET", path)
         utils.check_response_basic_info(resp, 200)
@@ -678,7 +680,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         body = utils.TestSetup.create_TestService(self, override_service_type=ServiceAPI.service_type)
         test_svc_res_id = body["service"]["resource_id"]
         test_res_type = Route.resource_type_name
-        body = utils.TestSetup.create_TestServiceResource(self, override_data={"resource_type": test_res_type})
+        body = utils.TestSetup.create_TestServiceResource(self, override_resource_type=test_res_type)
         test_parent_res_id = body["resource"]["resource_id"]
         child_resource_name = self.test_resource_name + "-child"
         override_data = {
@@ -1144,21 +1146,27 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             utils.check_response_basic_info(resp, code, expected_method="POST")
 
     @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_NoGroupDefaults(self):
+        """
+        Validate that user created with non-special keyword group also becomes a member of ``MAGPIE_ANONYMOUS_GROUP``
+        to ensure he will have access to publicly available resources.
+        """
+        utils.warn_version(self, "user creation without group parameter", "2.0.0", skip=True)
+        data = {"user_name": self.test_user_name}  # no group
+        utils.TestSetup.create_TestUser(self, override_data=data)
+        utils.TestSetup.check_UserGroupMembership(override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+
+    @runner.MAGPIE_TEST_USERS
     def test_PostUsers_AutoMemberships(self):
+        """
+        Validate that user created with non-special keyword group also becomes a member of ``MAGPIE_ANONYMOUS_GROUP``
+        to ensure he will have access to publicly available resources.
+        """
         new_test_group = "test-group-{}".format(self._testMethodName)  # noqa
         utils.TestSetup.delete_TestGroup(self, override_group_name=new_test_group)  # if previous run
         utils.TestSetup.create_TestGroup(self, override_group_name=new_test_group)
         data = {"group_name": new_test_group}
         utils.TestSetup.create_TestUser(self, override_data=data)
-
-        resp = utils.test_request(self, "GET", "/users/{}/groups".format(self.test_user_name),
-                                  headers=self.json_headers, cookies=self.cookies)
-        body = utils.check_response_basic_info(resp)
-        utils.check_val_is_in(new_test_group, body["group_names"],
-                              msg="Specified group during user creation should have been applied.")
-        utils.check_val_is_in(get_constant("MAGPIE_ANONYMOUS_GROUP"), body["group_names"],
-                              msg="User should be automatically added to 'anonymous' group to access public resources.")
-        utils.TestSetup.delete_TestGroup(self, override_group_name=new_test_group)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -1911,7 +1919,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             "resource_type": self.test_resource_type,
             "parent_id": test_resource_id
         }
-        body = utils.TestSetup.create_TestServiceResource(self, override_data)
+        body = utils.TestSetup.create_TestServiceResource(self, override_data=override_data)
         body = utils.TestSetup.get_ResourceInfo(self, body)
         utils.check_val_is_in("resource_id", body)
         utils.check_val_not_in(body["resource_id"], resources_ids)
