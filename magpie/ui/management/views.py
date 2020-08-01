@@ -13,8 +13,8 @@ from pyramid.view import view_config
 from magpie import register
 from magpie.api import schemas
 from magpie.constants import get_constant
-from magpie.helpers import sync_resources
-from magpie.helpers.sync_resources import OUT_OF_SYNC
+from magpie.cli import sync_resources
+from magpie.cli.sync_resources import OUT_OF_SYNC
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT  # TODO: remove, implement getters via API
 from magpie.ui.utils import BaseViews, check_response, error_badrequest, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger

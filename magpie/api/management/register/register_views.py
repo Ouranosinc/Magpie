@@ -63,8 +63,8 @@ def join_discoverable_group_view(request):
     user = ar.get_logged_user(request)
     group = ru.get_discoverable_group_by_name(group_name, db_session=request.db)
 
-    ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, http_error=HTTPConflict,
-                    content={"user_name": user.user_name, "group_name": group.group_name},
+    ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, with_param=False,
+                    http_error=HTTPConflict, content={"user_name": user.user_name, "group_name": group.group_name},
                     msg_on_fail=s.RegisterGroup_POST_ConflictResponseSchema.description)
     ax.evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),  # noqa
                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,

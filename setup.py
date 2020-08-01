@@ -200,12 +200,12 @@ setup(
             "main = magpie.app:main"
         ],
         "console_scripts": [
-            "magpie_helper = magpie.helpers:magpie_helper_cli",  # redirect to others below
-            "magpie_batch_update_users = magpie.helpers.batch_update_users:main",
-            "magpie_register_defaults = magpie.helpers.register_defaults:main",
-            "magpie_register_providers = magpie.helpers.register_providers:main",
-            "magpie_run_db_migration = magpie.helpers.run_db_migration:main",
-            "magpie_sync_resources = magpie.helpers.sync_resources:main",
+            "magpie_helper = magpie.cli:magpie_helper_cli",  # redirect to others below
+            "magpie_batch_update_users = magpie.cli.batch_update_users:main",
+            "magpie_register_defaults = magpie.cli.register_defaults:main",
+            "magpie_register_providers = magpie.cli.register_providers:main",
+            "magpie_run_db_migration = magpie.cli.run_db_migration:main",
+            "magpie_sync_resources = magpie.cli.sync_resources:main",
         ],
     }
 )

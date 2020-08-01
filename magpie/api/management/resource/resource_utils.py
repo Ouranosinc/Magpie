@@ -182,7 +182,7 @@ def create_resource(resource_name, resource_display_name, resource_type, parent_
     tree_struct_dict = models.RESOURCE_TREE_SERVICE.build_subtree_strut(tree_struct)
     direct_children = tree_struct_dict["children"]
     ax.verify_param(resource_name, param_name="resource_name", not_in=True, http_error=HTTPConflict,
-                    msg_on_fail=s.Resources_POST_ConflictResponseSchema.description,
+                    msg_on_fail=s.Resources_POST_ConflictResponseSchema.description, with_param=False,
                     param_compare=[child_dict["node"].resource_name for child_dict in direct_children.values()])
 
     def add_resource_in_tree(new_res, db):

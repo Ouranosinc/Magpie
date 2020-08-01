@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import six
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPInternalServerError
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
@@ -47,15 +48,19 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
                             param_name="service_name")
         return svc
 
+    ax.verify_param(service_type, not_none=True, not_empty=True, is_type=True,
+                    param_name="service_type", param_compare=six.string_types,
+                    http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_BadRequestResponseSchema.description)
     ax.verify_param(service_type, is_in=True, param_compare=SERVICE_TYPE_DICT.keys(), param_name="service_type",
                     http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_BadRequestResponseSchema.description)
     ax.verify_param(service_url, matches=True, param_compare=ax.URL_REGEX, param_name="service_url",
                     http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_Params_BadRequestResponseSchema.description)
-    ax.verify_param(service_name, not_empty=True, not_none=True, param_compare="service_name",
+    ax.verify_param(service_name, not_empty=True, not_none=True, matches=True,
+                    param_name="service_name",  param_compare=ax.PARAM_REGEX,
                     http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_Params_BadRequestResponseSchema.description)
     ax.verify_param(models.Service.by_service_name(service_name, db_session=db_session), is_none=True,
-                    http_error=HTTPConflict, msg_on_fail=s.Services_POST_ConflictResponseSchema.description,
-                    content={"service_name": str(service_name)}, param_name="service_name")
+                    param_name="service_name", with_param=False, content={"service_name": str(service_name)},
+                    http_error=HTTPConflict, msg_on_fail=s.Services_POST_ConflictResponseSchema.description)
     service = ax.evaluate_call(lambda: models.Service(resource_name=str(service_name),
                                                       resource_type=models.Service.resource_type_name,
                                                       url=str(service_url), type=str(service_type)),  # noqa

@@ -83,14 +83,17 @@ def create_group(group_name, description, discoverable, db_session):
         "discoverable": discoverable
     }
     ax.verify_param(group_name, matches=True, param_compare=ax.PARAM_REGEX, param_name="group_name",
-                    content=group_content_error, msg_on_fail=s.Groups_POST_BadRequestResponseSchema.description)
+                    http_error=HTTPBadRequest, content=group_content_error,
+                    msg_on_fail=s.Groups_POST_BadRequestResponseSchema.description)
     if description:
-        ax.verify_param(description, matches=ax.PARAM_REGEX, http_error=HTTPBadRequest, param_name="description",
-                        msg_on_fail=s.Groups_POST_BadRequestResponseSchema.description, content=group_content_error)
+        ax.verify_param(description, matches=True, param_compare=ax.PARAM_REGEX, param_name="description",
+                        http_error=HTTPBadRequest, content=group_content_error,
+                        msg_on_fail=s.Groups_POST_BadRequestResponseSchema.description)
 
     group = GroupService.by_group_name(group_name, db_session=db_session)
-    ax.verify_param(group, is_none=True, http_error=HTTPConflict, with_param=False,
-                    msg_on_fail=s.Groups_POST_ConflictResponseSchema.description, content=group_content_error)
+    ax.verify_param(group, is_none=True, param_name="group_name", with_param=False,  # don't return group as value
+                    http_error=HTTPConflict, content=group_content_error,
+                    msg_on_fail=s.Groups_POST_ConflictResponseSchema.description)
     new_group = ax.evaluate_call(
         lambda: models.Group(group_name=group_name, description=description, discoverable=discoverable),  # noqa
         fallback=lambda: db_session.rollback(), http_error=HTTPForbidden, content=group_content_error,

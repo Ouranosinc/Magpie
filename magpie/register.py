@@ -1,6 +1,8 @@
 import logging
 import os
+import random
 import subprocess   # nosec
+import string
 import time
 from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING
@@ -521,7 +523,7 @@ def _load_config(path_or_dict, section, allow_missing=False):
         raise_log("Invalid config file [{!r}]".format(exc), exception=RegistrationError, logger=LOGGER)
 
 
-def _get_all_configs(path_or_dict, section, allow_missing=False):
+def get_all_configs(path_or_dict, section, allow_missing=False):
     # type: (Union[Str, ConfigDict], Str, bool) -> List[ConfigDict]
     """
     Loads all configuration files specified by the path (if a directory), a single configuration (if a file) or directly
@@ -583,7 +585,7 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
     pushes updates to Phoenix.
     """
     LOGGER.info("Starting services processing.")
-    services_configs = _get_all_configs(service_config_path, "providers")
+    services_configs = get_all_configs(service_config_path, "providers")
     services_config_count = len(services_configs)
     LOGGER.log(logging.INFO if services_config_count else logging.WARNING,
                "Found %s service configurations to process", services_config_count)
@@ -909,14 +911,14 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
         cookies_or_session = db_session
 
     LOGGER.debug("Loading configurations.")
-    permissions = _get_all_configs(permissions_config, "permissions")
+    permissions = get_all_configs(permissions_config, "permissions")
     perms_cfg_count = len(permissions)
     LOGGER.log(logging.INFO if perms_cfg_count else logging.WARNING,
                "Found %s permissions configurations.", perms_cfg_count)
     users = groups = None
     if perms_cfg_count:
-        users = _get_all_configs(permissions_config, "users", allow_missing=True)
-        groups = _get_all_configs(permissions_config, "groups", allow_missing=True)
+        users = get_all_configs(permissions_config, "users", allow_missing=True)
+        groups = get_all_configs(permissions_config, "groups", allow_missing=True)
     for i, perms in enumerate(permissions):
         LOGGER.info("Processing permissions from configuration (%s/%s).", i + 1, perms_cfg_count)
         _process_permissions(perms, magpie_url, cookies_or_session, users, groups)
@@ -1002,3 +1004,12 @@ def _process_permissions(permissions, magpie_url, cookies_or_session, users=None
     if not _use_request(cookies_or_session):
         transaction.commit()
     LOGGER.info("Done processing permissions configuration.")
+
+
+def pseudo_random_string(length=8, allow_chars=string.ascii_letters + string.digits):
+    # type: (int, Str) -> Str
+    """
+    Generate a string made of random characters.
+    """
+    rnd = random.SystemRandom()
+    return "".join(rnd.choice(allow_chars) for _ in range(length))

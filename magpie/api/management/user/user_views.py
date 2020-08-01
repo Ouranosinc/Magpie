@@ -95,7 +95,7 @@ def update_user_view(request):
         existing_user = ax.evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
                                          fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                          msg_on_fail=s.User_PUT_ForbiddenResponseSchema.description)
-        ax.verify_param(existing_user, is_none=True, http_error=HTTPConflict,
+        ax.verify_param(existing_user, is_none=True, with_param=False, http_error=HTTPConflict,
                         msg_on_fail=s.User_PUT_ConflictResponseSchema.description)
         user.user_name = new_user_name
     if update_email:
@@ -169,8 +169,8 @@ def assign_user_group_view(request):
                              msg_on_fail=s.UserGroups_POST_ForbiddenResponseSchema.description)
     ax.verify_param(group, not_none=True, http_error=HTTPNotFound,
                     msg_on_fail=s.UserGroups_POST_GroupNotFoundResponseSchema.description)
-    ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, http_error=HTTPConflict,
-                    content={"user_name": user.user_name, "group_name": group.group_name},
+    ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, with_param=False,
+                    http_error=HTTPConflict, content={"user_name": user.user_name, "group_name": group.group_name},
                     msg_on_fail=s.UserGroups_POST_ConflictResponseSchema.description)
     ax.evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),  # noqa
                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,

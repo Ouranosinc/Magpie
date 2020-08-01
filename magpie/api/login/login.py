@@ -26,10 +26,10 @@ from ziggurat_foundations.models.services.user import UserService
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import generic as ag
+from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
-from magpie.api.requests import get_multiformat_post, get_principals, get_value_multiformat_post_checked
 from magpie.constants import get_constant
 from magpie.security import authomatic_setup, get_provider_names
 from magpie.utils import CONTENT_TYPE_JSON, convert_response, get_logger, get_magpie_url
@@ -74,10 +74,15 @@ def sign_in(request):
     """
     Signs in a user session.
     """
-    provider_name = get_value_multiformat_post_checked(request, "provider_name", default=MAGPIE_DEFAULT_PROVIDER)
+    provider_name = ar.get_value_multiformat_post_checked(request, "provider_name", default=MAGPIE_DEFAULT_PROVIDER)
     provider_name = provider_name.lower()
-    user_name = get_value_multiformat_post_checked(request, "user_name")
-    password = get_multiformat_post(request, "password")   # no check since password is None for external login
+    # magpie supports login from both username or corresponding email
+    # therefore validate pattern combination manually after fetch otherwise email format fails patter match
+    user_name = ar.get_value_multiformat_post_checked(request, "user_name", pattern=None)
+    pattern = ax.EMAIL_REGEX if "@" in user_name else ax.PARAM_REGEX
+    ax.verify_param(user_name, matches=True, param_compare=pattern, param_name="user_name",
+                    http_error=HTTPBadRequest, msg_on_fail=s.BadRequestResponseSchema.description)
+    password = ar.get_multiformat_post(request, "password")   # no check since password is None for external login
     verify_provider(provider_name)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
@@ -123,8 +128,8 @@ def login_failure(request, reason=None):
     if reason is None:
         reason = s.Signin_POST_UnauthorizedResponseSchema.description
         try:
-            user_name = get_value_multiformat_post_checked(request, "user_name", default=None)
-            get_value_multiformat_post_checked(request, "password", default=None, pattern=None)
+            user_name = ar.get_value_multiformat_post_checked(request, "user_name", default=None)
+            ar.get_value_multiformat_post_checked(request, "password", default=None, pattern=None)
         except HTTPException:
             http_err = HTTPBadRequest
             reason = s.Signin_POST_BadRequestResponseSchema.description
@@ -281,7 +286,7 @@ def get_session(request):
     Get information about current session.
     """
     def _get_session(req):
-        principals = get_principals(req)
+        principals = ar.get_principals(req)
         if Authenticated in principals:
             user = request.user
             json_resp = {"authenticated": True, "user": format_user(user)}

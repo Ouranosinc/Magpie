@@ -13,7 +13,7 @@ from ziggurat_foundations.models.services import BaseService
 from ziggurat_foundations.models.services.group import GroupService
 
 from magpie import constants, models
-from magpie.helpers.register_defaults import init_anonymous
+from magpie.cli.register_defaults import init_anonymous
 
 Session = sessionmaker()
 

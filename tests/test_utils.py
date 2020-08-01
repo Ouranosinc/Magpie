@@ -74,31 +74,37 @@ class TestUtils(unittest.TestCase):
         Signin with invalid credentials will call "/signin" followed by sub-request "/signin_internal" and finally
         "ZigguratSignInBadAuth". Both "/signin" and "ZigguratSignInBadAuth" use "get_multiformat_post".
         """
+        from magpie.api.requests import get_multiformat_post as real_get_multiformat_post
+        from magpie.api.requests import get_value_multiformat_post_checked as real_multiform_post_checked
         base_url = "http://localhost"
 
-        def mock_get_multiformat_post(*args, **kwargs):
-            return get_post_item(*args, p=paths.pop(0), **kwargs)
-
-        def get_post_item(request, name, default=None, p=None):
-            from magpie.api.requests import get_multiformat_post as real_get_multiformat_post
-            utils.check_val_equal(request.url, base_url + p,
+        def mock_get_post(real_func, *args, **kwargs):
+            if args[1] != "password":
+                return real_func(*args, **kwargs)
+            request, args = args[0], args[1:]
+            utils.check_val_equal(request.url, base_url + _paths.pop(0),
                                   "Proxied path should have been auto-resolved [URL: {}].".format(url))
-            return real_get_multiformat_post(request, name, default=default)
+            return real_func(request, *args, **kwargs)
 
         for url in ["http://localhost", "http://localhost/magpie"]:
-            paths = ["/signin", "/signin_internal"]  # updated on each *direct* 'get_multiformat_post' call in 'login'
+            # paths are reduced (pop in mock) each time a post to get the 'password' is called in 'login' module
+            # this combination should happen twice, one in signin route and another on the redirected internal login
+            _paths = ["/signin", "/signin_internal"]
             app = utils.get_test_magpie_app({"magpie.url": url})
 
-            with mock.patch("magpie.api.login.login.get_multiformat_post", side_effect=mock_get_multiformat_post):
-                data = {"user_name": "foo", "password": "bar"}
-                headers = {"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON}
-                resp = utils.test_request(app, "POST", paths[0], json=data, headers=headers, expect_errors=True)
-                if LooseVersion(self.version) < LooseVersion("0.10.0"):
-                    # user name doesn't exist
-                    utils.check_response_basic_info(resp, expected_code=406, expected_method="POST")
-                else:
-                    # invalid username/password credentials
-                    utils.check_response_basic_info(resp, expected_code=401, expected_method="POST")
+            with mock.patch("magpie.api.requests.get_value_multiformat_post_checked",
+                            side_effect=lambda *_, **__: mock_get_post(real_multiform_post_checked, *_, **__)):
+                with mock.patch("magpie.api.requests.get_multiformat_post",
+                                side_effect=lambda *_, **__: mock_get_post(real_get_multiformat_post, *_, **__)):
+                    data = {"user_name": "foo", "password": "bar"}
+                    headers = {"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON}
+                    resp = utils.test_request(app, "POST", _paths[0], json=data, headers=headers, expect_errors=True)
+                    if LooseVersion(self.version) < LooseVersion("0.10.0"):
+                        # user name doesn't exist
+                        utils.check_response_basic_info(resp, expected_code=406, expected_method="POST")
+                    else:
+                        # invalid username/password credentials
+                        utils.check_response_basic_info(resp, expected_code=401, expected_method="POST")
 
     def test_get_header_split(self):
         headers = {"Content-Type": "{}; charset=UTF-8".format(CONTENT_TYPE_JSON)}
@@ -144,6 +150,7 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("x", param_compare=["a", "b"], is_in=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("1", param_compare=int, is_type=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(1.0, param_compare=six.string_types, is_type=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("x", param_compare="x", not_equal=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("x", param_compare="y", is_equal=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param(False, is_true=True), HTTPBadRequest)
@@ -180,6 +187,8 @@ class TestUtils(unittest.TestCase):
         ax.verify_param("x", param_compare=["a", "b"], not_in=True)
         ax.verify_param("b", param_compare=["a", "b"], is_in=True)
         ax.verify_param(1, param_compare=int, is_type=True)
+        ax.verify_param("x", param_compare=six.string_types, is_type=True)
+        ax.verify_param("x", param_compare=str, is_type=True)
         ax.verify_param("x", param_compare="y", not_equal=True)
         ax.verify_param("x", param_compare="x", is_equal=True)
         ax.verify_param(True, is_true=True)
@@ -190,23 +199,37 @@ class TestUtils(unittest.TestCase):
         ax.verify_param("", is_empty=True)
         ax.verify_param("abc", matches=True, param_compare=r"[a-z]+")
 
-    def test_verify_param_incorrect_usage(self):
-        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"]), HTTPInternalServerError)
+    def test_verify_param_args_incorrect_usage(self):
+        """Invalid usage of function raises internal server error instead of 'normal HTTP error'."""
+        utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"]),
+                           HTTPInternalServerError, msg="missing any flag specification should be caught")
         utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=None),  # noqa
-                           HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param("b", not_in=True), HTTPInternalServerError)
-        utils.check_raises(lambda:
-                           ax.verify_param("b", param_compare=["a", "b"], not_in=True, http_error=HTTPOk), # noqa
-                           HTTPInternalServerError)
+                           HTTPInternalServerError, msg="flag specified with incorrect type should be caught")
+        utils.check_raises(lambda: ax.verify_param("b", not_in=True),
+                           HTTPInternalServerError, msg="missing 'param_compare' for flag needing it should be caught")
+        utils.check_raises(lambda: ax.verify_param("b", param_compare=["b"], not_in=True, http_error=HTTPOk),  # noqa
+                           HTTPInternalServerError, msg="incorrect HTTP class to raise error should be caught")
+        for flag in ["not_none", "not_empty", "not_in", "not_equal", "is_none", "is_empty", "is_in", "is_equal",
+                     "is_true", "is_false", "is_type", "matches"]:
+            utils.check_raises(lambda: ax.verify_param("x", **{flag: 1}),
+                               HTTPInternalServerError, msg="invalid flag '{}' type should be caught".format(flag))
 
-    def test_verify_param_compare_types(self):
+    def test_verify_param_compare_types_incorrect_usage(self):
         """
-        param and param_compare must be of same type.
+        Arguments ``param`` and ``param_compare`` must be of same type for valid comparison,
+        except for ``is_type`` where compare parameter must be the type directly.
         """
         utils.check_raises(lambda: ax.verify_param("1", param_compare=1, is_equal=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param("1", param_compare=True, is_equal=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param(1, param_compare="1", is_equal=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_equal=True), HTTPInternalServerError)
+
+        utils.check_raises(lambda: ax.verify_param(1, param_compare="x", is_type=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_type=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=None, is_type=True), HTTPInternalServerError)
+
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=1, is_in=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=1, not_in=True), HTTPInternalServerError)
 
         # strings cases handled correctly (no raise)
         utils.check_no_raise(lambda: ax.verify_param("1", param_compare="1", is_equal=True))

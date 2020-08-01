@@ -41,7 +41,8 @@
             <td>
                 <div class="input-container">
                 <label>
-                <input type="text" name="user_name" value="${user_name_internal}" class="equal-width">
+                <input type="text" placeholder="username or email" name="user_name"
+                       value="${user_name_internal}" class="equal-width">
                 </label>
                 </div>
             </td>
@@ -52,7 +53,7 @@
             <td>
                 <div class="input-container">
                 <label>
-                <input type="password" name="password" value="" class="equal-width">
+                <input type="password" placeholder="password" name="password" value="" class="equal-width">
                 </label>
                 </div>
             </td>
@@ -76,7 +77,8 @@
             <td>
                 <label>
                 <div class="input-container">
-                    <input type="text" name="user_name" value="${user_name_external}" class="equal-width">
+                    <input type="text" placeholder="external provider username" name="user_name"
+                           value="${user_name_external}" class="equal-width">
                 </div>
                 </label>
             </td>

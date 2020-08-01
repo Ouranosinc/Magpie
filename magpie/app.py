@@ -10,7 +10,7 @@ from pyramid_beaker import set_cache_regions_from_settings
 
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
-from magpie.helpers.register_defaults import register_defaults
+from magpie.cli.register_defaults import register_defaults
 from magpie.register import magpie_register_permissions_from_config, magpie_register_services_from_config
 from magpie.security import get_auth_config
 from magpie.utils import get_logger, patch_magpie_url, print_log

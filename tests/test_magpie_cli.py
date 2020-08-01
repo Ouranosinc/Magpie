@@ -2,15 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-test_magpie_helpers
+test_magpie_cli
 ----------------------------------
 
-Tests for :mod:`magpie.helpers` module.
+Tests for :mod:`magpie.cli` module.
 """
 
+import json
+import mock
 import subprocess
+import tempfile
 
-from tests import runner
+from magpie.constants import get_constant
+from tests import runner, utils
 
 KNOWN_HELPERS = [
     "batch_update_users",
@@ -51,6 +55,77 @@ def test_magpie_batch_update_users_help_directly():
     out_lines = run_and_get_output("magpie_batch_update_users --help")
     assert "usage: magpie_batch_update_users" in out_lines[0]
     assert "Create users on a running Magpie instance" in out_lines[1]
+
+
+def run_batch_update_user_command(test_app, expected_users, create_command_xargs, delete_command_xargs):
+    """Tests batch user creation and deletion of the CLI utility."""
+    test_admin_usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+    test_admin_pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+    test_url = "http://mock.test"
+
+    def mock_request(*args, **kwargs):
+        url, args = args[0], args[1:]
+        path = url.replace(test_url, "")
+        return utils.test_request(test_app, path, *args, **kwargs)
+
+    # cleanup in case of previous failure
+    utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
+    for user in expected_users:
+        utils.TestSetup.delete_TestUser(test_app, override_user_name=user,  # noqa
+                                        override_headers={}, override_cookies=test_app.cookies)
+    utils.check_or_try_logout_user(test_app)
+
+    # test user creation
+    with mock.patch("requests.Session.request", side_effect=mock_request):
+        cmd = ["magpie_batch_update_users", test_url, test_admin_usr, test_admin_pwd] + create_command_xargs
+        run_and_get_output(cmd)
+
+    # validate that users were all created
+    utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
+    resp = utils.test_request(test_app, "GET", "/users")
+    body = utils.check_response_basic_info(resp)
+    for user in expected_users:
+        utils.check_val_is_in(user, body["user_names"])
+
+    # test user deletion
+    with mock.patch("requests.Session.request", side_effect=mock_request):
+        cmd = ["-d", "magpie_batch_update_users", test_url, test_admin_usr, test_admin_pwd] + delete_command_xargs
+        run_and_get_output(cmd)
+
+    # validate users are all deleted
+    utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
+    resp = utils.test_request(test_app, "GET", "/users")
+    body = utils.check_response_basic_info(resp)
+    for user in expected_users:
+        utils.check_val_not_in(user, body["user_names"])
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+def test_magpie_batch_update_users_validate_operations_from_args():
+    test_users = ["unittest-batch-register-user-args-{}".format(i) for i in range(1, 4)]
+    test_app = utils.get_test_magpie_app()
+    test_args_create = []
+    test_args_delete = []
+    for user in test_users:
+        test_args_create.extend(["-e", "{}@email.com".format(user), "-u", user])
+        test_args_delete.extend(["-u", user])
+    run_batch_update_user_command(test_app, test_users, test_args_create, test_args_delete)
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+def test_magpie_batch_update_users_validate_operations_from_file():
+    test_users = ["unittest-batch-register-user-file-{}".format(i) for i in range(1, 4)]
+    test_app = utils.get_test_magpie_app()
+    user_config = {
+        "users": [{"username": user, "email": "{}@email.com".format(user)} for user in test_users]
+    }
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as tmp_file:
+        tmp_file.write(json.dumps(user_config))
+        tmp_file.seek(0)
+        test_args = ["-f", tmp_file.name]
+        run_batch_update_user_command(test_app, test_users, test_args, test_args)
 
 
 @runner.MAGPIE_TEST_CLI

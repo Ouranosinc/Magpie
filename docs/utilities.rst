@@ -13,18 +13,36 @@ configuration file or creating basic user accounts. Please refer to their corres
 
 Available helpers:
 
-- ``magpie_create_users``
-- ``magpie_register_default_users``
-- ``magpie_register_providers``
-- ``magpie_run_database_migration``
-- ``magpie_sync_resources``
+.. list-table::
+    :header-rows: 1
+
+    * - Command
+      - Description
+    * - ``magpie_batch_update_users``
+      - Register or unregister users using entries provided by batch file or arguments.
+    * - ``magpie_register_defaults``
+      - | Register default users and groups for `Magpie` internal operation.
+        | See `Configuration`_ for details on applicable parameters definitions.
+    * - ``magpie_register_providers``
+      - | Register service providers from a configuration file.
+        | This is the same command executed at `Magpie` startup using files defined through configuration settings.
+    * - ``magpie_run_database_migration``
+      - | Run any required database migration operation, according to detected database state and required one by
+          the current `Magpie` version.
+        | This operation is the same command that is executed at `Magpie` startup to ensure data integrity.
+    * - ``magpie_sync_resources``
+      - | Synchronizes local and remote resources based on `Magpie` service's ``sync-type`` methodology.
+        | See also `magpie-con`_.
+
+.. _configuration: configuration.rst
+.. _magpie-con: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
 
 For convenience, a generic CLI ``magpie_helper`` is also provided which allows calling each of the other helper
 operations as *mode*. You can therefore do as follows.
 
 .. code-block:: console
 
-    # list of available 'helper'
+    # list of available 'helper' commands
     magpie_helper --help
     # arguments of the given helper
     magpie_helper [helper] --help
@@ -34,15 +52,15 @@ For example, the two statements below are equivalent.
 
 .. code-block:: console
 
-    magpie_helper create_users [...]
+    magpie_helper register_providers [...]
     # OR
-    magpie_create_users [...]
+    magpie_register_providers [...]
 
 
 When using an ``conda`` environment, you should be able to directly call the ``magpie_helper`` CLI as above if you
 previously installed the package (see `installation`_).
 
-Source code of these helpers can be found `here <https://github.com/Ouranosinc/Magpie/tree/master/magpie/helpers>`_.
+Source code of these helpers can be found `here <https://github.com/Ouranosinc/Magpie/tree/master/magpie/cli>`_.
 
 .. _installation: installation.rst
 

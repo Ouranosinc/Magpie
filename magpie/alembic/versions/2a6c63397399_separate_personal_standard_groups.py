@@ -23,7 +23,7 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-from magpie.helpers.register_defaults import (  # isort:skip # noqa: E402
+from magpie.cli.register_defaults import (  # isort:skip # noqa: E402
     init_anonymous, init_admin, init_users_group
 )
 

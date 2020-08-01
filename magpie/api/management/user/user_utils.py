@@ -73,7 +73,7 @@ def create_user(user_name, password, email, group_name, db_session):
     user_checked = ax.evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
                                     http_error=HTTPForbidden,
                                     msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
-    ax.verify_param(user_checked, is_none=True, http_error=HTTPConflict,
+    ax.verify_param(user_checked, is_none=True, with_param=False, http_error=HTTPConflict,
                     msg_on_fail=s.User_Check_ConflictResponseSchema.description)
 
     # Create user with specified name and group to assign
@@ -118,7 +118,7 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     res_id = resource.resource_id
     existing_perm = UserResourcePermissionService.by_resource_user_and_perm(
         user_id=user.id, resource_id=res_id, perm_name=permission.value, db_session=db_session)
-    ax.verify_param(existing_perm, is_none=True, http_error=HTTPConflict,
+    ax.verify_param(existing_perm, is_none=True, with_param=False, http_error=HTTPConflict,
                     content={"resource_id": res_id, "user_id": user.id, "permission_name": permission.value},
                     msg_on_fail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
 

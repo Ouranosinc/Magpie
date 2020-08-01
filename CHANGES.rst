@@ -35,8 +35,10 @@ Features / Changes
 * Add version tag at bottom of UI pages.
 * Configuration parameters ``MAGPIE_SECRET``, ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` now require explicit
   definitions (either by environment variable or INI settings) to avoid using defaults for security purposes.
-* Change CLI helper ``create_users`` to ``batch_update_users``.
-* Change CLI helper ``register_default_users`` to ``register_defaults``.
+* Change CLI helper ``create_users`` to ``batch_update_users`` to better represent provided functionalities.
+* Change CLI helper ``register_default_users`` to ``register_defaults`` to avoid confusion on groups also created.
+* Extend CLI ``batch_update_users`` functionality with additional options and corresponding tests.
+* Move all CLI helpers under ``magpie.cli`` and provide more details about them in documentation.
 * Allow null ``group_name`` during user creation request to employ ``MAGPIE_ANONYMOUS_GROUP`` by default
   (i.e.: created user will have no apparent group membership since that group is always attributed for public access).
 

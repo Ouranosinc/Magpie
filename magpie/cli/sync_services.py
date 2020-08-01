@@ -4,7 +4,7 @@
 Sync registered services in Magpie with resources retrieved from actual service.
 
 .. seealso::
-    - :py:mod:`magpie.helpers.sync_resources`
+    - :py:mod:`magpie.cli.sync_resources`
 """
 import abc
 from collections import OrderedDict, defaultdict

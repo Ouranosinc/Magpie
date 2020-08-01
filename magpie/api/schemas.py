@@ -410,25 +410,37 @@ class BaseResponseBodySchema(colander.MappingSchema):
             example=description))
 
 
+class ErrorVerifyParamConditions(colander.MappingSchema):
+    not_none = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    not_empty = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    not_in = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    not_equal = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    is_none = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    is_empty = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    is_in = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    is_equal = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    is_true = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    is_false = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    is_type = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    matches = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+
+
 class ErrorVerifyParamBodySchema(colander.MappingSchema):
     name = colander.SchemaNode(
         colander.String(),
-        description="Name of the failing condition parameter.",
+        description="Name of the failing condition parameter that caused the error.",
         missing=colander.drop)
     value = colander.SchemaNode(
         colander.String(),
-        description="Value of the failing condition parameter.")
+        description="Value of the failing condition parameter that caused the error.",
+        default=None)
     compare = colander.SchemaNode(
         colander.String(),
-        description="Test comparison value of the failing condition parameter.",
+        description="Comparison value(s) employed for evaluation of the failing condition parameter.",
         missing=colander.drop)
-
-
-class ErrorResponseParamsSchema(colander.MappingSchema):
-    name = colander.SchemaNode(colander.String(), description="Name of the parameter that caused the error.")
-    value = colander.SchemaNode(colander.String(), description="Value that caused the error.", default=None)
-    compare = colander.SchemaNode(colander.String(), missing=colander.drop,
-                                  description="Comparison value(s) that caused the error due to invalid validation.")
+    conditions = ErrorVerifyParamConditions(
+        description="Evaluated conditions on the parameter value with corresponding validation status. "
+                    "Some results are relative to the comparison value when provided.")
 
 
 class ErrorResponseBodySchema(BaseResponseBodySchema):
@@ -448,8 +460,9 @@ class ErrorResponseBodySchema(BaseResponseBodySchema):
         colander.String(),
         description="Request method that generated the error.",
         example="GET")
-    param = ErrorResponseParamsSchema(missing=colander.drop,
-                                      description="Additional parameter details to explain the cause of error.")
+    param = ErrorVerifyParamBodySchema(
+        missing=colander.drop,
+        description="Additional parameter details to explain the cause of error.")
 
 
 class InternalServerErrorResponseBodySchema(ErrorResponseBodySchema):
@@ -2528,9 +2541,13 @@ class ProviderSignin_GET_NotFoundResponseSchema(colander.MappingSchema):
 
 
 class Signin_POST_RequestBodySchema(colander.MappingSchema):
-    user_name = colander.SchemaNode(colander.String(), description="User name to use for sign in.")
+    user_name = colander.SchemaNode(colander.String(),
+                                    description="User name to use for sign in. "
+                                                "Can also be the email provided during registration.")
     password = colander.SchemaNode(colander.String(), description="Password to use for sign in.")
-    provider_name = colander.SchemaNode(colander.String(), description="Provider to use for sign in.",
+    provider_name = colander.SchemaNode(colander.String(),
+                                        description="Provider to use for sign in. "
+                                                    "Required for external provider login.",
                                         default=get_constant("MAGPIE_DEFAULT_PROVIDER"), missing=colander.drop)
 
 

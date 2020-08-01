@@ -3,10 +3,10 @@
 """
 Synchronize local and remote resources.
 
-To implement a new service, see :class:`magpie.helpers.sync_services.SyncServiceInterface`.
+To implement a new service, see :class:`magpie.cli.sync_services.SyncServiceInterface`.
 
 .. seealso::
-    - :py:mod:`magpie.helpers.sync_services`
+    - :py:mod:`magpie.cli.sync_services`
 """
 import argparse
 import copy
@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 import transaction
 
 from magpie import constants, db, models
-from magpie.helpers.sync_services import SYNC_SERVICES_TYPES, SyncServiceDefault, is_valid_resource_schema
+from magpie.cli.sync_services import SYNC_SERVICES_TYPES, SyncServiceDefault, is_valid_resource_schema
 from magpie.utils import get_logger
 
 if TYPE_CHECKING:
@@ -60,7 +60,7 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
         - remote_id: id of the RemoteResource
         - matches_remote: True or False depending if the resource is present on the remote server
 
-    :returns: dictionary of the form validated by `magpie.helpers.sync_services.is_valid_resource_schema`.
+    :returns: dictionary of the form validated by `magpie.cli.sync_services.is_valid_resource_schema`.
     """
     if not resources_remote:
         return resources_local

@@ -74,11 +74,11 @@ def edit_group_view(request):
         ax.verify_param(new_group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                         msg_on_fail=s.Group_PUT_Name_BadRequestResponseSchema.description)
         group_name_size_range = range(1, 1 + get_constant("MAGPIE_GROUP_NAME_MAX_LENGTH", settings_container=request))
-        ax.verify_param(len(new_group_name), is_in=True, http_error=HTTPBadRequest,
-                        param_compare=group_name_size_range,
+        ax.verify_param(len(new_group_name), is_in=True, param_compare=group_name_size_range,
+                        http_error=HTTPBadRequest,
                         msg_on_fail=s.Group_PUT_Size_BadRequestResponseSchema.description)
         ax.verify_param(GroupService.by_group_name(new_group_name, db_session=request.db),
-                        is_none=True, http_error=HTTPConflict,
+                        is_none=True, http_error=HTTPConflict, with_param=False,  # don't return group as value
                         msg_on_fail=s.Group_PUT_ConflictResponseSchema.description)
         group.group_name = new_group_name
     if new_description:

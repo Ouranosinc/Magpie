@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import six
 from pyramid.authentication import Authenticated, IAuthenticationPolicy
 from pyramid.httpexceptions import (
     HTTPBadRequest,
@@ -21,8 +22,8 @@ from magpie.utils import CONTENT_TYPE_JSON, get_logger
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from pyramid.request import Request
-    from magpie.typedefs import Any, AnySettingsContainer, Str, Optional, ServiceOrResourceType, Union  # noqa: F401
-    from magpie.permissions import Permission  # noqa: F401
+    from magpie.typedefs import AccessControlListType, Any, Str, Optional, ServiceOrResourceType, Union
+    from magpie.permissions import Permission
 
 LOGGER = get_logger(__name__)
 
@@ -73,8 +74,8 @@ def get_permission_multiformat_post_checked(request, service_or_resource, permis
     return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
 
 
-def get_value_multiformat_post_checked(request, key, default=None, pattern=ax.PARAM_REGEX):
-    # type: (Request, Str, Any, Optional[Union[Str, bool]]) -> Str
+def get_value_multiformat_post_checked(request, key, default=None, check_type=six.string_types, pattern=ax.PARAM_REGEX):
+    # type: (Request, Str, Any, Any, Optional[Union[Str, bool]]) -> Str
     """
     Obtains and validates the matched value under :paramref:`key` element from the request body according to
     `Content-Type` header.
@@ -82,6 +83,7 @@ def get_value_multiformat_post_checked(request, key, default=None, pattern=ax.PA
     :param request: request from which to retrieve the key.
     :param key: body key variable.
     :param default: value to return instead if not found. If this default is ``None``, it will raise.
+    :param check_type: verify that parameter value is of specified type. Set to ``None`` to disable check.
     :param pattern: regex pattern to validate the input with.
         If value evaluates to ``False``, skip this kind of validation (default: :py:data:`ax.PARAM_REGEX`).
     :return: matched path variable value.
@@ -89,14 +91,16 @@ def get_value_multiformat_post_checked(request, key, default=None, pattern=ax.PA
     :raises HTTPUnprocessableEntity: if the retrieved value from the key is invalid for this request.
     """
     val = get_multiformat_any(request, key, default=default)
-    ax.verify_param(val, not_none=True, param_name=key,
+    ax.verify_param(val, not_none=True, is_type=bool(check_type), param_compare=check_type, param_name=key,
                     http_error=HTTPBadRequest, msg_on_fail=s.BadRequestResponseSchema.description)
-    ax.verify_param(val, not_empty=True, matches=bool(pattern), param_compare=pattern, param_name=key,
-                    http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    if bool(pattern) and check_type in six.string_types:
+        ax.verify_param(val, not_empty=True, matches=True, param_compare=pattern, param_name=key,
+                        http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
     return val
 
 
 def get_principals(request):
+    # type: (Request) -> AccessControlListType
     """Obtains the list of effective principals according to detected request session user."""
     authn_policy = request.registry.queryUtility(IAuthenticationPolicy)  # noqa
     principals = authn_policy.effective_principals(request)
@@ -170,7 +174,7 @@ def get_user_matchdict_checked_or_logged(request, user_name_key="user_name"):
     """
     logged_user_name = get_constant("MAGPIE_LOGGED_USER", settings_container=request)
     logged_user_path = s.UserAPI.path.replace("{" + user_name_key + "}", logged_user_name)
-    if user_name_key not in request.matchdict and request.path_info.startswith(logged_user_path):
+    if user_name_key not in request.matchdict or request.path_info.startswith(logged_user_path):
         return get_user(request, logged_user_name)
     return get_user_matchdict_checked(request, user_name_key)
 
@@ -259,21 +263,25 @@ def get_permission_matchdict_checked(request, service_or_resource, permission_na
     return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
 
 
-def get_value_matchdict_checked(request, key, pattern=ax.PARAM_REGEX):
-    # type: (Request, Str, Optional[Union[Str, bool]]) -> Str
+def get_value_matchdict_checked(request, key, check_type=six.string_types, pattern=ax.PARAM_REGEX):
+    # type: (Request, Str, Any, Optional[Union[Str, bool]]) -> Str
     """
     Obtains the matched value located at the expected position of the specified path variable.
 
     :param request: request from which to retrieve the key.
     :param key: path variable key.
+    :param check_type: verify that parameter value is of specified type. Set to ``None`` to disable check.
     :param pattern: regex pattern to validate the input with.
         If value evaluates to ``False``, skip this kind of validation (default: :py:data:`ax.PARAM_REGEX`).
     :return: matched path variable value.
     :raises HTTPUnprocessableEntity: if the key is not an applicable path variable for this request.
     """
     val = request.matchdict.get(key)
-    ax.verify_param(val, not_none=True, not_empty=True, matches=bool(pattern), param_name=key, param_compare=pattern,
+    ax.verify_param(val, not_none=True, is_type=bool(check_type), param_compare=check_type, param_name=key,
                     http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    if bool(pattern) and check_type in six.string_types:
+        ax.verify_param(val, not_empty=True, matches=True, param_name=key, param_compare=pattern,
+                        http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
     return val
 
 

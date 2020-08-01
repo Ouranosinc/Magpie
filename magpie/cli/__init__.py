@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 def magpie_helper_cli():
     """
-    Groups all sub-helper CLI listed in :py:mod:`magpie.helpers` as a common ``magpie_helper``.
+    Groups all sub-helper CLI listed in :py:mod:`magpie.cli` as a common ``magpie_helper``.
 
     Dispatches the provided arguments to the appropriate sub-helper CLI as requested. Each sub-helper CLI must implement
     functions ``make_parser`` and ``main`` to generate the arguments and dispatch them to the corresponding caller.
@@ -28,7 +28,7 @@ def magpie_helper_cli():
         helper_path = os.path.join(helpers_dir, module_item)
         if os.path.isfile(helper_path) and "__init__" not in module_item and module_item.endswith(".py"):
             helper_name = module_item.replace(".py", "")
-            helper_root = "magpie.helpers"
+            helper_root = "magpie.cli"
             helper_module = importlib.import_module("{}.{}".format(helper_root, helper_name), helper_root)
             parser_maker = getattr(helper_module, "make_parser", None)  # type: Callable[[], argparse.ArgumentParser]
             helper_caller = getattr(helper_module, "main", None)

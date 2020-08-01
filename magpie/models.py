@@ -164,7 +164,7 @@ class Service(Resource):
     @declared_attr
     def sync_type(self):
         """
-        Identifier matching ``magpie.helpers.SyncServiceInterface.sync_type``.
+        Identifier matching ``magpie.cli.SyncServiceInterface.sync_type``.
         """
         # project-api, geoserver-api,...
         return sa.Column(sa.UnicodeText(), nullable=True)

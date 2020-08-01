@@ -71,8 +71,9 @@ def register_service_view(request):
     """
     Registers a new service.
     """
+    # accomplish basic validations here, create_service will do more field-specific checks
     service_name = ar.get_value_multiformat_post_checked(request, "service_name")
-    service_url = ar.get_value_multiformat_post_checked(request, "service_url")
+    service_url = ar.get_value_multiformat_post_checked(request, "service_url", pattern=ax.PARAM_REGEX)
     service_type = ar.get_value_multiformat_post_checked(request, "service_type")
     service_push = asbool(ar.get_multiformat_post(request, "service_push"))
     return su.create_service(service_name, service_type, service_url, service_push, db_session=request.db)
@@ -106,9 +107,9 @@ def update_service_view(request):
         for svc_type in SERVICE_TYPE_DICT:
             for svc in su.get_services_by_type(svc_type, db_session=request.db):
                 all_svc_names.append(svc.resource_name)
-        ax.verify_param(svc_name, not_in=True, param_compare=all_svc_names, http_error=HTTPConflict,
-                        msg_on_fail=s.Service_PUT_ConflictResponseSchema.description,
-                        content={"service_name": str(svc_name)})
+        ax.verify_param(svc_name, not_in=True, param_compare=all_svc_names, with_param=False,
+                        http_error=HTTPConflict, content={"service_name": str(svc_name)},
+                        msg_on_fail=s.Service_PUT_ConflictResponseSchema.description)
 
     def update_service_magpie_and_phoenix(_svc, new_name, new_url, svc_push, db_session):
         _svc.resource_name = new_name

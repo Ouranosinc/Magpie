@@ -1,3 +1,4 @@
+import os
 import unittest
 import warnings
 from abc import ABCMeta, abstractmethod
@@ -11,7 +12,7 @@ import six
 import yaml
 from six.moves.urllib.parse import urlparse
 
-from magpie.api.schemas import SwaggerGenerator
+from magpie.api.schemas import SwaggerGenerator, Signin_POST_OkResponseSchema
 from magpie.constants import get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Route
 from magpie.permissions import Permission
@@ -26,20 +27,20 @@ if TYPE_CHECKING:
 
 class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     """
-    Base definition for all other Test Suite interfaces.
+    Base definition for all other `Test Case` interfaces.
 
     The implementers must provide :meth:`setUpClass` which prepares the various test parameters, session cookies and
     the local application or remote Magpie URL configuration to evaluate test cases on.
 
-    The implementers Test Suites must also set :attr:`__test__` to ``True`` so that tests are picked up as executable.
+    The implementing `Test Case` must also set :attr:`__test__` to ``True`` so that tests are picked up as executable.
 
     .. note::
         Attribute attr:`__test__` is employed to avoid duplicate runs of this base class or other derived classes that
-        must not be considered as the *final implementer* Test Suite.
+        must not be considered as the *final implementer* `Test Case`.
     """
     # pylint: disable=C0103,invalid-name
 
-    # note: all following should be overridden by Test Suite accordingly to the needs of their test cases
+    # note: all following should be overridden by Test Case accordingly to the needs of their unit tests
     version = None              # type: Optional[Str]
     require = None              # type: Optional[Str]
     # parameters for setup operations, admin-level access to the app
@@ -63,7 +64,7 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     extra_resource_ids = []     # type: List[int]
     extra_service_names = []    # type: List[Str]
 
-    __test__ = False    # won't run this as a test suite, only its derived classes that overrides to True
+    __test__ = False    # won't run this as a test case, only its derived classes that overrides to True
 
     @classmethod
     @abstractmethod
@@ -73,6 +74,7 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     @classmethod
     def tearDownClass(cls):
         # try to catch any missed cleanup of test-based item created dynamically
+        utils.check_or_try_logout_user(cls)
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
         utils.TestSetup.delete_TestServiceResource(cls)
         utils.TestSetup.delete_TestService(cls)
@@ -97,6 +99,8 @@ class User_Magpie_TestCase(object):
     version = None          # type: Optional[Str]
     cookies = None          # type: Optional[CookiesType]
     headers = None          # type: Optional[HeadersType]
+    test_cookies = None     # type: Optional[CookiesType]
+    test_headers = None     # type: Optional[HeadersType]
     test_user_name = None   # type: Optional[Str]
     test_group_name = None  # type: Optional[Str]
 
@@ -111,7 +115,8 @@ class User_Magpie_TestCase(object):
 
         Ensure that test user will have test group membership but not admin-level access.
         """
-        utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.check_or_try_logout_user(self)  # force logout user of previous test-case (e.g.: non-admin test-user)
+        utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)   # login as admin to setup
         # cleanup anything that could be left over (e.g.: previous failing test run)
         utils.TestSetup.delete_TestGroup(self)
         utils.TestSetup.delete_TestUser(self)
@@ -128,8 +133,7 @@ class User_Magpie_TestCase(object):
         utils.TestSetup.delete_TestUser(self)
         utils.TestSetup.delete_TestGroup(self)
 
-    @classmethod
-    def login_test_user(cls):
+    def login_test_user(self):
         # type: () -> utils.OptionalHeaderCookiesType
         """
         Obtain headers and cookies with session credentials of the test user (non administrator).
@@ -145,12 +149,12 @@ class User_Magpie_TestCase(object):
 
         :raises AssertionError: if test user could not be logged in or is an administrator
         """
-        utils.check_or_try_logout_user(cls)
-        cls.test_headers, cls.test_cookies = utils.check_or_try_login_user(
-            cls, username=cls.test_user_name, password=cls.test_user_name,
-            use_ui_form_submit=True, version=cls.version)
-        assert cls.test_cookies, "Cannot test UI user pages without a logged user"
-        return cls.test_headers, cls.test_cookies
+        utils.check_or_try_logout_user(self)
+        self.test_headers, self.test_cookies = utils.check_or_try_login_user(
+            self, username=self.test_user_name, password=self.test_user_name,
+            use_ui_form_submit=True, version=self.version)
+        assert self.test_cookies, "Cannot test UI user pages without a logged user"
+        return self.test_headers, self.test_cookies
 
 
 @runner.MAGPIE_TEST_API
@@ -269,12 +273,19 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def setUp(self):
         User_Magpie_TestCase.setUp(self)
 
-    @classmethod
-    def login_test_user(cls):
+    def login_test_user(self):
         """Apply JSON headers on top of login headers for API calls."""
-        User_Magpie_TestCase.login_test_user(cls)
-        cls.headers.update(cls.json_headers)
-        return cls.headers, cls.cookies
+        User_Magpie_TestCase.login_test_user(self)
+        self.headers.update(self.json_headers)
+        return self.headers, self.cookies
+
+    def test_PostSignin_EmailAsUsername(self):
+        """User is allowed to use its email as username for login."""
+        utils.check_or_try_logout_user(self)
+        data = {"user_name": "{}@mail.com".format(self.test_user_name)}  # see create test users for value
+        resp = utils.test_request(self, "POST", "/signin", data=data, headers=self.json_headers, cookies={})
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_equal(body["detail"], Signin_POST_OkResponseSchema.description)
 
     def run_PutUsers_email_update_itself(self, user_path_variable):
         """
@@ -283,7 +294,6 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_PutUser_ReservedKeyword_Current`
         """
-        utils.TestSetup.create_TestUser(self)
         new_email = "some-random-email@unittest.com"
 
         # update existing user name
@@ -365,7 +375,6 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         """
         utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
         self.extra_user_names.append(self.other_user_name)
-        utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestUser(self, {"user_name": self.other_user_name, "password": self.other_user_name})
         new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
         data = {"password": new_password}
@@ -466,6 +475,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_LOGGED
     def test_RegisterDiscoverableGroup(self):
         """Non-admin logged user is allowed to update is membership to register to a discoverable group by himself."""
+        utils.TestSetup.delete_TestGroup(self)
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         self.login_test_user()
         path = "/register/groups/{}".format(self.test_group_name)
@@ -479,6 +489,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     def test_UnregisterDiscoverableGroup(self):
         """Non-admin logged user is allowed to revoke its membership to leave a discoverable group by himself."""
+        utils.TestSetup.delete_TestGroup(self)
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         utils.TestSetup.assign_TestUserGroup(self)
         self.login_test_user()
@@ -490,6 +501,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def test_ViewDiscoverableGroup(self):
         """Non-admin logged user can view discoverable group information. Critical details are not displayed."""
         data = {"discoverable": True, "description": "Test Group", "group_name": self.test_group_name}
+        utils.TestSetup.delete_TestGroup(self)
         utils.TestSetup.create_TestGroup(self, override_data=data)
         self.login_test_user()
         path = "/register/groups/{}".format(self.test_group_name)
@@ -506,19 +518,26 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_not_in("user_names", body["group"])
 
     def test_ListDiscoverableGroups_Filtered(self):
-        """Non-admin logged user can view available discoverable group names."""
+        """Non-admin logged user can view only available discoverable group names."""
+        # setup some discoverable groups, but ignore others that *could* exist depending on the reference database
+        # test user should have pre-assigned membership to non-discoverable test group (from setUp)
+        # but that group must not be returned in the list of discoverable groups
         discover_before = set(utils.TestSetup.get_RegisteredGroupsList(self, only_discoverable=True))
         discover_groups = {self.test_group_name + "-1", self.test_group_name + "-2", self.test_group_name + "-3"}
         self.extra_group_names.extend(discover_groups)
         for grp in discover_groups:
             utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True, "group_name": grp})
+        # test that only just added discoverable groups are visible (ignore pre-existing discoverable groups if any)
         self.login_test_user()
         resp = utils.test_request(self, "GET", "/register/groups", headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp, 200)
         utils.check_val_is_in("group_names", body)
-        expected_groups = set(body["group_names"]) - discover_before
-        utils.check_all_equal(discover_groups, expected_groups, any_order=True,
+        returned_groups = set(body["group_names"]) - discover_before
+        utils.check_all_equal(discover_groups, returned_groups, any_order=True,
                               msg="Only discoverable groups should be listed for non-admin user, no more, no less.")
+        # validate that anonymous doesn't come up in this list even though test user is a member of it
+        # we do not even need to consider pre-existing discoverable groups as anonymous shouldn't be one
+        utils.check_val_not_in(get_constant("MAGPIE_ANONYMOUS_GROUP"), body["group_names"])
 
     def test_DeleteDiscoverableGroup_Forbidden(self):
         """Non-admin logged user cannot delete a group although it is discoverable."""
@@ -566,7 +585,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @classmethod
     def setup_test_values(cls):
-        services_cfg = yaml.safe_load(open(get_constant("MAGPIE_PROVIDERS_CONFIG_PATH"), "r"))
+        provider_file = os.path.join(os.path.dirname(__file__), "config", "providers.cfg")
+        services_cfg = yaml.safe_load(open(provider_file, "r"))
         provider_services_info = services_cfg["providers"]
         # filter impossible providers from possible previous version of remote server
         possible_service_types = utils.get_service_types_for_version(cls.version)
