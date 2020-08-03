@@ -132,7 +132,7 @@ def init_admin(db_session, settings=None):
 def init_users_group(db_session, settings=None):
     # type: (Session, Optional[AnySettingsContainer]) -> None
     """
-    Registers in db the group matching :py:data:`magpie.constants.MAGPIE_USERS_GROUP` if not defined.
+    Registers into database the group matching :py:data:`magpie.constants.MAGPIE_USERS_GROUP` if not defined.
     """
     usr_grp_name = get_constant("MAGPIE_USERS_GROUP", settings_container=settings)
     if not GroupService.by_group_name(usr_grp_name, db_session=db_session):

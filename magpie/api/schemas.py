@@ -750,7 +750,7 @@ class Resource_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
 
 
 class Resource_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
-    description = "Resource ID not found in db."
+    description = "Resource ID not found."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
 
@@ -1027,7 +1027,7 @@ class Service_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
 
 
 class Service_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
-    description = "Service name not found in db."
+    description = "Service name not found."
     header = HeaderResponseSchema()
     body = Service_FailureBodyResponseSchema(code=HTTPNotFound.code, description=description)
 
@@ -1524,7 +1524,7 @@ class User_CheckAnonymous_ForbiddenResponseSchema(colander.MappingSchema):
 
 
 class User_CheckAnonymous_NotFoundResponseSchema(colander.MappingSchema):
-    description = "Anonymous user not found in db."
+    description = "Anonymous user not found."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
 
@@ -1542,7 +1542,7 @@ class User_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
 
 
 class User_GET_NotFoundResponseSchema(colander.MappingSchema):
-    description = "User name not found in db."
+    description = "User name not found."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
 
@@ -1958,13 +1958,13 @@ class Group_MatchDictCheck_ForbiddenResponseSchema(colander.MappingSchema):
 
 
 class Group_MatchDictCheck_NotFoundResponseSchema(colander.MappingSchema):
-    description = "Group name not found in db."
+    description = "Group name not found."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
 class Groups_CheckInfo_NotFoundResponseSchema(colander.MappingSchema):
-    description = "User name not found in db."
+    description = "User name not found."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 

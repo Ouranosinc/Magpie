@@ -51,7 +51,6 @@ def create_user_view(request):
     email = ar.get_multiformat_post(request, "email")
     password = ar.get_multiformat_post(request, "password")
     group_name = ar.get_multiformat_post(request, "group_name")
-    uu.check_user_info(user_name, email, password, group_name)
     return uu.create_user(user_name, password, email, group_name, db_session=request.db)
 
 
@@ -68,7 +67,7 @@ def update_user_view(request):
     new_user_name = ar.get_multiformat_post(request, "user_name", default=user.user_name)
     new_email = ar.get_multiformat_post(request, "email", default=user.email)
     new_password = ar.get_multiformat_post(request, "password", default=user.user_password)
-    uu.check_user_info(new_user_name, new_email, new_password, group_name=new_user_name)
+    uu.check_user_info(new_user_name, new_email, new_password, group_name=None)
 
     update_username = user.user_name != new_user_name and new_user_name is not None
     if update_username:

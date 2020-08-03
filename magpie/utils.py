@@ -43,7 +43,8 @@ CONTENT_TYPE_PLAIN = "text/plain"
 SUPPORTED_CONTENT_TYPES = [CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PLAIN]
 
 
-def get_logger(name, level=None):
+def get_logger(name, level=None, force_stdout=None, format=None, datetime_format=None):
+    # type: (Str, Optional[int], bool, Optional[Str], Optional[Str]) -> LoggerType
     """
     Immediately sets the logger level to avoid duplicate log outputs from the `root logger` and `this logger` when
     `level` is ``logging.NOTSET``.
@@ -57,10 +58,33 @@ def get_logger(name, level=None):
             from magpie.constants import MAGPIE_LOG_LEVEL
             level = MAGPIE_LOG_LEVEL
         logger.setLevel(level)
+    if force_stdout or format or datetime_format:
+        set_logger_config(logger, force_stdout, format, datetime_format)
     return logger
 
 
 LOGGER = get_logger(__name__)
+
+
+def set_logger_config(logger, force_stdout=False, format=None, datetime_format=None):
+    # type: (LoggerType, bool, Optional[Str], Optional[Str]) -> LoggerType
+    if not logger:
+        return logger
+    handler = None
+    if force_stdout:
+        all_handlers = logging.root.handlers + logger.handlers
+        if not any(isinstance(h, logging.StreamHandler) for h in all_handlers):
+            handler = logging.StreamHandler(sys.stdout)
+            logger.addHandler(handler)  # noqa: type
+    if not handler:
+        if logger.handlers:
+            handler = logger.handlers
+        else:
+            handler = logging.StreamHandler(sys.stdout)
+            logger.addHandler(handler)
+    if format or datetime_format:
+        handler.setFormatter(logging.Formatter(fmt=format, datefmt=datetime_format))
+    return logger
 
 
 def print_log(msg, logger=None, level=logging.INFO):
@@ -75,16 +99,14 @@ def print_log(msg, logger=None, level=logging.INFO):
     if not logger:
         logger = get_logger(__name__)
     if MAGPIE_LOG_PRINT:
-        all_handlers = logging.root.handlers + logger.handlers
-        if not any(isinstance(h, logging.StreamHandler) for h in all_handlers):
-            logger.addHandler(logging.StreamHandler(sys.stdout))  # noqa: type
+        set_logger_config(logger, force_stdout=True)
     if logger.disabled:
         logger.disabled = False
     logger.log(level, msg)
 
 
 def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
-    # type: (Str, Optional[Type[Exception]], Optional[LoggerType], int) -> NoReturn
+    # type: (Str, Type[Exception], Optional[LoggerType], int) -> NoReturn
     """Logs the provided message to the logger and raises the corresponding exception afterwards."""
     if not logger:
         logger = get_logger(__name__)
@@ -359,6 +381,7 @@ def log_exception_tween(handler, registry):  # noqa: F811
 
 
 def is_json_body(body):
+    # type: (Any) -> bool
     if not body:
         return False
     try:

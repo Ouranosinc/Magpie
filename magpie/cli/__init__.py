@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from typing import Callable
 
 
-def magpie_helper_cli():
+def magpie_helper_cli(args=None):
     """
     Groups all sub-helper CLI listed in :py:mod:`magpie.cli` as a common ``magpie_helper``.
 
@@ -39,8 +39,8 @@ def magpie_helper_cli():
                                       add_help=False, help=helper_parser.description,
                                       description=helper_parser.description, usage=helper_parser.usage)
                 helpers[helper_name] = {"caller": helper_caller, "parser": helper_parser}
-    args = sys.argv[1:]       # save as was parse args does, but we must provide them to subparser
-    ns = parser.parse_args()  # if 'helper' is unknown, auto prints the help message with exit(2)
+    args = args or sys.argv[1:]         # same as was parse args does, but we must provide them to subparser
+    ns = parser.parse_args(args=args)   # if 'helper' is unknown, auto prints the help message with exit(2)
     helper_name = vars(ns).pop("helper")
     if not helper_name:
         parser.print_help()

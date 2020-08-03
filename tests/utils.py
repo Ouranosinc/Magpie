@@ -302,6 +302,7 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
         # convert JSON body as required
         if _body is not None and (json or kwargs["content_type"] == CONTENT_TYPE_JSON):
             kwargs["params"] = json_pkg.dumps(_body, cls=json_pkg.JSONEncoder)
+            kwargs["content_type"] = CONTENT_TYPE_JSON  # enforce if only 'json' keyword provided
         if status and status >= 300:
             kwargs["expect_errors"] = True
         resp = app_or_url._gen_request(method, path, **kwargs)  # pylint: disable=W0212  # noqa: W0212

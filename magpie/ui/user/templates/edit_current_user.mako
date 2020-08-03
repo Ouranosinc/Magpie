@@ -43,7 +43,7 @@
                         <span class="panel-entry">Password: </span>
                         %if edit_mode == "edit_password":
                             <label>
-                            <input type="text" value="" name="new_user_password"
+                            <input type="password" placeholder="new password" value="" name="new_user_password"
                                    id="input_password" onkeyup="adjustWidth('input_name')">
                             <input type="submit" value="Save" name="save_password" class="button theme">
                             <input type="submit" value="Cancel" name="no_edit" class="button cancel">
@@ -61,7 +61,7 @@
                         <span class="panel-entry">Email: </span>
                         %if edit_mode == "edit_email":
                             <label>
-                            <input type="email" value="${email}" name="new_user_email"
+                            <input type="email" placeholder="new email" value="${email}" name="new_user_email"
                                    id="input_email" onkeyup="adjustWidth('input_url')">
                             <input type="submit" value="Save" name="save_email" class="button theme">
                             <input type="submit" value="Cancel" name="no_edit" class="button cancel">

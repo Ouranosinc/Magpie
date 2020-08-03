@@ -67,6 +67,8 @@ def create_user(user_name, password, email, group_name, db_session):
     # Check that group already exists
     if group_name is None:
         group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
+
+    check_user_info(user_name, email, password, group_name)
     group_checked = _get_group(group_name)
 
     # Check if user already exists

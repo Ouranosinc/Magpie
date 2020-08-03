@@ -200,7 +200,8 @@ setup(
             "main = magpie.app:main"
         ],
         "console_scripts": [
-            "magpie_helper = magpie.cli:magpie_helper_cli",  # redirect to others below
+            "magpie_cli = magpie.cli:magpie_helper_cli",     # redirect to others below
+            "magpie_helper = magpie.cli:magpie_helper_cli",  # alias to helper
             "magpie_batch_update_users = magpie.cli.batch_update_users:main",
             "magpie_register_defaults = magpie.cli.register_defaults:main",
             "magpie_register_providers = magpie.cli.register_providers:main",

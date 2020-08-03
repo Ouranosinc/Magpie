@@ -446,14 +446,19 @@ test-all: install-dev install		## run all tests combinations
 	@echo "Running tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+.PHONY: test-cli
+test-cli: install-dev install		## run only CLI tests with the environment Python
+	@echo "Running local tests..."
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
 # note: use 'not remote' instead of 'local' to capture other low-level tests like 'utils' unittests
 .PHONY: test-local
-test-local: install-dev install		## run only local tests with the default Python
+test-local: install-dev install		## run only local tests with the environment Python
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-remote
-test-remote: install-dev install	## run only remote tests with the default Python
+test-remote: install-dev install	## run only remote tests with the environment Python
 	@echo "Running remote tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 

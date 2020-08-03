@@ -2281,7 +2281,7 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         self.login_test_user()
         data = {"new_user_email": "new-mail@unittest-mail.com"}
         resp = utils.TestSetup.check_FormSubmit(self, form_match="edit_email", form_data=data, form_submit="edit_email",
-                                                path="/ui/users/current", method="GET")
+                                                method="GET", path="/ui/users/current")
         utils.check_ui_response_basic_info(resp, expected_title="Magpie user Management")
         resp = utils.test_request(self, "GET", "/users/current", headers=self.json_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp)
@@ -2291,7 +2291,22 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     @runner.MAGPIE_TEST_LOGGED
     def test_UserAccount_UpdateDetails_password(self):
         """Logged user can update its own password on account page."""
-        raise NotImplementedError  # TODO
+        utils.warn_version(self, "user account page", "2.0.0", skip=True)
+        self.login_test_user()
+        data = {"new_user_password": "123456"}
+        resp = utils.TestSetup.check_FormSubmit(self, form_match="edit_password", form_data=data,
+                                                form_submit="edit_email", method="GET", path="/ui/users/current")
+        utils.check_ui_response_basic_info(resp, expected_title="Magpie user Management")
+        # cannot check modified password value directly (because regenerated hash), therefore validate login with it
+        utils.check_or_try_logout_user(self)
+        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
+                                  data={"user_name": self.test_user_name, "password": data["new_user_password"]})
+        body = utils.check_response_basic_info(resp, 200, expected_method="POST")
+        # verify that old password does not work anymore
+        utils.check_or_try_logout_user(self)
+        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={}, expect_errors=True,
+                                  data={"user_name": self.test_user_name, "password": self.test_user_name})
+        body = utils.check_response_basic_info(resp, 401, expected_method="POST")
 
 
 @runner.MAGPIE_TEST_UI

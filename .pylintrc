@@ -133,7 +133,10 @@ max-nested-blocks=5
 # inconsistent-return-statements if a never returning function is called then
 # it will be considered as an explicit return statement and no message will be
 # printed.
-never-returning-functions=sys.exit
+never-returning-functions=
+    sys.exit
+    magpie.utils.raise_log
+    magpie.api.exception.raise_http
 
 
 [TYPECHECK]
