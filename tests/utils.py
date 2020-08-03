@@ -297,12 +297,13 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
 
         kwargs.update({
             "params": _body,  # TestApp uses 'params' for the body during POST (these are not the query parameters)
-            "headers": headers,
+            "headers": dict(headers or {}),  # adjust if none provided or specified as tuple list
         })
         # convert JSON body as required
         if _body is not None and (json or kwargs["content_type"] == CONTENT_TYPE_JSON):
             kwargs["params"] = json_pkg.dumps(_body, cls=json_pkg.JSONEncoder)
             kwargs["content_type"] = CONTENT_TYPE_JSON  # enforce if only 'json' keyword provided
+            kwargs["headers"]["Content-Length"] = str(len(kwargs["params"]))  # need to fix with override JSON payload
         if status and status >= 300:
             kwargs["expect_errors"] = True
         resp = app_or_url._gen_request(method, path, **kwargs)  # pylint: disable=W0212  # noqa: W0212

@@ -73,17 +73,25 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
 
     @classmethod
     def tearDownClass(cls):
-        # try to catch any missed cleanup of test-based item created dynamically
+        """
+        Cleans up any left-over known object prefixed by ``test_`` as well as any other items added to lists
+        prefixed by ``extra_``, in case some test failed to do so (e.g.: because it raised midway).
+        """
         utils.check_or_try_logout_user(cls)
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
         utils.TestSetup.delete_TestServiceResource(cls)
         utils.TestSetup.delete_TestService(cls)
-        utils.TestSetup.delete_TestUser(cls)
-        utils.TestSetup.delete_TestGroup(cls)
+        # avoid attempt cleanup of reserved keyword user/group, since it will fail with magpie '>=2.x'
+        reserved_users = [get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ANONYMOUS_USER")]
+        reserved_groups = [get_constant("MAGPIE_ADMIN_GROUP"), get_constant("MAGPIE_ANONYMOUS_GROUP")]
+        cls.extra_user_names.append(cls.test_user_name)
+        cls.extra_group_names.append(cls.test_group_name)
         for usr in cls.extra_user_names:
-            utils.TestSetup.delete_TestUser(cls, override_user_name=usr)
+            if usr not in reserved_users:
+                utils.TestSetup.delete_TestUser(cls, override_user_name=usr)
         for grp in cls.extra_group_names:
-            utils.TestSetup.delete_TestGroup(cls, override_group_name=grp)
+            if grp not in reserved_groups:
+                utils.TestSetup.delete_TestGroup(cls, override_group_name=grp)
         for svc in cls.extra_service_names:
             utils.TestSetup.delete_TestService(cls, override_service_name=svc)
         for res in cls.extra_resource_ids:
@@ -245,12 +253,14 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
 
         # setup some actual discoverable group to ensure the error is not caused by some misinterpreted response
-        group_data = {"group_name": self.test_group_name, "discoverable": True}
+        test_group = "unittest-no-auth_test-group"
+        self.extra_group_names.append(test_group)
+        group_data = {"group_name": test_group, "discoverable": True}
         headers, cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
         utils.TestSetup.create_TestGroup(self, override_data=group_data,
                                          override_headers=headers, override_cookies=cookies)
         utils.check_or_try_logout_user(self)
-        path = "/register/groups/{}".format(self.test_group_name)
+        path = "/register/groups/{}".format(test_group)
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, expect_errors=True)
         utils.check_response_basic_info(resp, 401, expected_method="DELETE")
 
@@ -558,10 +568,14 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 200)
+        # test non-admin user cannot delete group
         path = "/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "DELETE", path, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+        # validate with admin access that group still exists
+        utils.check_or_try_logout_user(self)
+        utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
         resp = utils.test_request(self, "GET", path, cookies=self.cookies, headers=self.headers)
         utils.check_response_basic_info(resp, 200)
 
@@ -1186,7 +1200,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         permission applied by admin directly on that resource.
         """
         # setup
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         info = utils.TestSetup.get_ResourceInfo(self, body, full_detail=True)
@@ -1213,7 +1227,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         permission applied on a parent resource of the targeted resource that supports sub-tree inheritance.
         """
         # setup
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         info = utils.TestSetup.get_ResourceInfo(self, body)
@@ -1235,7 +1249,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers(self):
-        body = utils.TestSetup.create_TestUser(self)
+        body = utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         if LooseVersion(self.version) >= LooseVersion("0.6.3"):
             utils.check_val_is_in("user", body)
             utils.check_val_is_in("user_name", body["user"])
@@ -1296,6 +1310,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         to ensure he will have access to publicly available resources.
         """
         new_test_group = "test-group-{}".format(self._testMethodName)  # noqa
+        self.extra_group_names.append(new_test_group)
         utils.TestSetup.delete_TestGroup(self, override_group_name=new_test_group)  # if previous run
         utils.TestSetup.create_TestGroup(self, override_group_name=new_test_group)
         data = {"group_name": new_test_group}
@@ -1318,16 +1333,18 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_LOGGED
     def test_PutUser_ReservedKeyword_Current(self):
         utils.warn_version(self, "user update own information ", "2.0.0", older=True, skip=True)
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         path = "/users/{usr}".format(usr=get_constant("MAGPIE_LOGGED_USER"))
-        data = {"user_name": self.test_user_name + "-new-put-over-current"}
+        new_user_name = self.test_user_name + "-new-put-over-current"
+        self.extra_user_names.append(new_user_name)
+        data = {"user_name": new_user_name}
         resp = utils.test_request(self, "PUT", path, data=data,
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 400, expected_method="PUT")
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_nothing(self):
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         path = "/users/{usr}".format(usr=self.test_user_name)
         resp = utils.test_request(self, "PUT", path, data={},
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
@@ -1335,8 +1352,9 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_username(self):
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         new_name = self.test_user_name + "-new"
+        self.extra_user_names.append(new_name)
 
         # cleanup in case the updated username already exists (ex: previous test execution failure)
         utils.TestSetup.delete_TestUser(self, override_user_name=new_name)
@@ -1382,7 +1400,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_LOGGED
     def test_PutUser_username_ReservedKeyword_Current(self):
         """Even administrator level user is not allowed to update any user name to reserved keyword."""
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         data = {"user_name": get_constant("MAGPIE_LOGGED_USER")}
         path = "/users/{usr}".format(usr=self.test_user_name)
         resp = utils.test_request(self, "PUT", path, data=data, expect_errors=True,
@@ -1391,7 +1409,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_email(self):
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         new_email = "toto@new-email.lol"
         data = {"email": new_email}
         path = "/users/{usr}".format(usr=self.test_user_name)
@@ -1404,7 +1422,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_password(self):
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         old_password = self.test_user_name
         new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
         data = {"password": new_password}
@@ -1433,7 +1451,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUser_existing(self):
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
         path = "/users/{usr}".format(usr=self.test_user_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
@@ -1474,8 +1492,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_GROUPS
     def test_PostUserGroup(self):
-        utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
         utils.TestSetup.assign_TestUserGroup(self)
         utils.TestSetup.check_UserGroupMembership(self)
 
@@ -1515,7 +1533,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_DeleteUser(self):
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         path = "/users/{usr}".format(usr=self.test_user_name)
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 200, expected_method="GET")
@@ -1544,8 +1562,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_DeleteUserGroup(self):
-        utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
         utils.TestSetup.assign_TestUserGroup(self)
         path = "/users/{usr}/groups/{grp}".format(usr=self.test_user_name, grp=self.test_group_name)
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
@@ -1589,8 +1607,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroup_exists(self):
-        utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
         utils.TestSetup.assign_TestUserGroup(self)
 
         path = "/groups/{grp}".format(grp=self.test_group_name)
@@ -1625,8 +1643,9 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             body = utils.check_response_basic_info(resp, 200, expected_method="GET")
             utils.check_val_equal(body["group"]["member_count"], i)
             user_name = "magpie-unittest-user-group-{}".format(i)
+            self.extra_user_names.append(user_name)
             utils.TestSetup.delete_TestUser(self, override_user_name=user_name)  # clean other test runs
-            utils.TestSetup.create_TestUser(self, override_data={"user_name": user_name})
+            utils.TestSetup.create_TestUser(self, override_user_name=user_name)
             utils.TestSetup.assign_TestUserGroup(self, override_user_name=user_name)
             resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
             body = utils.check_response_basic_info(resp, 200, expected_method="GET")
@@ -1680,7 +1699,9 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroupUsers_not_found(self):
-        path = "/groups/magpie-unittest-random-group/users"
+        fake_group = "magpie-unittest-random-group"
+        utils.TestSetup.delete_TestGroup(self, override_group_name=fake_group)
+        path = "/groups/{}/users".format(fake_group)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies,
                                   expect_errors=True)
         utils.check_response_basic_info(resp, 404, expected_method="GET")
@@ -1778,6 +1799,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         service = body["service"]
         new_svc_name = str(service["service_name"]) + "-updated"
         new_svc_url = str(service["service_url"]) + "/updated"
+        self.extra_service_names.append(new_svc_name)
         utils.TestSetup.delete_TestService(self, override_service_name=new_svc_name)
         path = "/services/{svc}".format(svc=service["service_name"])
         data = {"service_name": new_svc_name, "service_url": new_svc_url}
@@ -1809,6 +1831,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         service = body["service"]
         new_svc_name = str(service["service_name"]) + "-updated"
         new_svc_url = str(service["service_url"]) + "/updated"
+        self.extra_service_names.append(new_svc_name)
         try:
             utils.TestSetup.create_TestService(self, override_service_name=new_svc_name)
             path = "/services/{svc}".format(svc=service["service_name"])

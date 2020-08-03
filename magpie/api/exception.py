@@ -184,10 +184,10 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
         fail_conditions.update({"is_false": param is False})
         fail_verify = fail_verify or not fail_conditions["is_false"]
     if not_empty:
-        fail_conditions.update({"not_empty": len(param) > 0})
+        fail_conditions.update({"not_empty": hasattr(param, "__len__") and len(param) > 0})
         fail_verify = fail_verify or not fail_conditions["not_empty"]
     if is_empty:
-        fail_conditions.update({"is_empty": len(param) == 0})
+        fail_conditions.update({"is_empty": hasattr(param, "__len__") and len(param) == 0})
         fail_verify = fail_verify or not fail_conditions["is_empty"]
     if not_in:
         fail_conditions.update({"not_in": param not in param_compare})

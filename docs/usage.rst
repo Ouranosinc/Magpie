@@ -44,9 +44,35 @@ liking for their respective setup requirements.
 API
 ~~~~~~~
 
-When the application is started, the Swagger API should be available under ``/api`` path. Please refer to this
-documentation to discover all provided API paths and operations supported by `Magpie`. The API allows an administrator
-with sufficient access rights to modify services, resources, users and groups references via HTTP requests.
+When the application is started, the Swagger API should be available under ``/api`` path. This will render the *current*
+version API and applicable requests. Please refer to this documentation to discover all provided API paths and
+operations supported by `Magpie` on a *running* instance (that could be older than latest code base). Alternatively,
+documentation of *all* versions is available on `readthedocs`_.
+
+.. _readthedocs: https://pavics-magpie.readthedocs.io/en/latest/api.html
+
+The API allows an administrator-level user to modify services, resources, users and groups references via HTTP requests.
+To do these kind of operations, sufficient access rights must be provided to the corresponding user (either directly or
+through administrative-level group membership).
+
+Some API routes are accessible by *any*-level user access. These are designated by `Logged User` in the documentation.
+When accessing such API paths, the applicable user for which the request is accomplished uses contextual information
+from authentication headers and/or cookies of the request. When no user is authenticated, a minimal subset of paths
+will provide some publicly available details, such as current session user. Other routes will be more verbose according
+to the applicable user permission (or is inherited group memberships).
+
+.. versionchanged:: 2.0.0
+
+As of this version, some API paths will offer additional `Logged User` operations such as self-registration to publicly
+available groups. See the appropriate API version documentation for routes that could be added or adjusted with this
+new functionality. Note also that a valid user account will still be required to access these routes.
+
+CLI
+~~~~~~~
+
+After successful `installation`_ of `Magpie` package, multiple `helper utilities <utilities>`_ become available
+as CLI applications callable from the shell. These can be quite useful to run typical `Magpie` operations targeting
+a local or remote instance. Please refer to the relevant page for further details.
 
 GUI
 ~~~~~~~
@@ -55,6 +81,13 @@ When the application is started, `Magpie`'s UI should be directly accessible on 
 allows quicker editing of elements accessible through the API by providing common operations such as modifying service
 fields or adjusting specific user-resource permissions. To have access to this interface, the user must have
 administrator permissions.
+
+.. versionchanged:: 2.0.0
+
+User-scoped views such as logged-user account details are now accessible to non-administrator level users. These offer
+some basic functionalities such as registration to publicly visible groups. Users minimally require to be logged-in in
+order to access these pages. The UI pages are accessible using the ``Account`` button from the main entrypoint of the
+`Magpie` UI.
 
 Additional Utilities
 ~~~~~~~~~~~~~~~~~~~~
