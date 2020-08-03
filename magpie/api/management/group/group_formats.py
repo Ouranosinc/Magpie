@@ -15,8 +15,9 @@ def format_group(group, basic_info=False, public_info=False, db_session=None):
     """Obtains the JSON formatted group definition according to field selection flags."""
     def fmt_grp(grp, is_basic, is_public):
         info = {"group_name": str(grp.group_name)}
-        if is_basic:
+        if not is_public:
             info["group_id"] = grp.id
+        if is_basic:
             return info
         info["description"] = str(grp.description) if grp.description else None
         if is_public:

@@ -13,7 +13,7 @@ import yaml
 from six.moves.urllib.parse import urlparse
 
 from magpie.api.schemas import SwaggerGenerator, Signin_POST_OkResponseSchema
-from magpie.constants import get_constant
+from magpie.constants import MAGPIE_ROOT, get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Route
 from magpie.permissions import Permission
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceTHREDDS
@@ -186,6 +186,7 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
             utils.check_val_not_in("user_email", body)
             utils.check_val_not_in("group_names", body)
 
+    @runner.MAGPIE_TEST_STATUS
     def test_GetVersion(self):
         resp = utils.test_request(self, "GET", "/version", headers=self.json_headers)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
@@ -208,6 +209,7 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         else:
             utils.check_val_equal(body["user_name"], self.test_user_name)
 
+    @runner.MAGPIE_TEST_STATUS
     def test_NotAcceptableRequest(self):
         utils.warn_version(self, "Unsupported 'Accept' header returns 406 directly.", "0.10.0", skip=True)
         for path in ["/", "/users/current"]:
@@ -215,8 +217,9 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
                                       headers={"Accept": "application/pdf"})  # anything not supported
             utils.check_response_basic_info(resp, expected_code=406, version=self.version)
 
-    @runner.MAGPIE_TEST_USERS
-    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_STATUS
+    @runner.MAGPIE_TEST_REGISTER
     def test_RegisterDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot update membership to group although group is discoverable."""
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
@@ -224,7 +227,9 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         body = utils.check_response_basic_info(resp, 401)
         utils.check_val_not_in("group_names", body)
 
-    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_STATUS
+    @runner.MAGPIE_TEST_REGISTER
     def test_UnregisterDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot remove membership to group although group is discoverable."""
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
@@ -232,6 +237,9 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, expect_errors=True)
         utils.check_response_basic_info(resp, 401, expected_method="DELETE")
 
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_STATUS
+    @runner.MAGPIE_TEST_REGISTER
     def test_ViewDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot view group although group is discoverable."""
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
@@ -246,6 +254,9 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, expect_errors=True)
         utils.check_response_basic_info(resp, 401, expected_method="DELETE")
 
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_STATUS
+    @runner.MAGPIE_TEST_REGISTER
     def test_ListDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot list group names although groups are discoverable."""
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
@@ -585,7 +596,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @classmethod
     def setup_test_values(cls):
-        provider_file = os.path.join(os.path.dirname(__file__), "config", "providers.cfg")
+        provider_file = os.path.join(MAGPIE_ROOT, "config", "providers.cfg")
         services_cfg = yaml.safe_load(open(provider_file, "r"))
         provider_services_info = services_cfg["providers"]
         # filter impossible providers from possible previous version of remote server
@@ -1165,6 +1176,62 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_is_in(str(res_id), body["service"]["resources"])
         utils.check_all_equal(body["service"]["resources"][str(res_id)]["permission_names"],  # noqa
                               [perm_res_usr, perm_res_grp], any_order=True)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PUBLIC
+    def test_GetUserServiceResourcePermission_InheritedPublic_DirectPermission(self):
+        """
+        Tests that validates that non-admin user can obtain some specific resource permission via anonymous group
+        permission applied by admin directly on that resource.
+        """
+        # setup
+        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestService(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, body, full_detail=True)
+        applicable_perm = info["permission_names"][0]
+        res_id = body["resource_id"]
+        path = "groups/{}/resources/{}/permissions".format(get_constant("MAGPIE_ANONYMOUS_GROUP"), res_id)
+        resp = utils.test_request(self, "POST", path, json={"permission_name": applicable_perm})
+        utils.check_response_basic_info(resp, 201, expected_method="POST")
+
+        # test
+        path = "/users/{}/resources/{}/permissions?effective=true".format(self.test_user_name, res_id)
+        resp = utils.test_request(self, "GET", path)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("permission_names", body)
+        utils.check_val_is_in(body["permission_names"], applicable_perm,
+                              msg="Permission applied to anonymous group which user is member of should be effective")
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PUBLIC
+    def test_GetUserServiceResourcePermission_InheritedPublic_ParentPermission(self):
+        """
+        Tests that validates that non-admin user can obtain some specific resource permission via anonymous group
+        permission applied on a parent resource of the targeted resource that supports sub-tree inheritance.
+        """
+        # setup
+        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestService(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, body)
+        parent_id = info["resource_id"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=parent_id)
+        applicable_perm = body["permission_names"][0]
+        child_res_id = body["resource_id"]
+        path = "groups/{}/resources/{}/permissions".format(get_constant("MAGPIE_ANONYMOUS_GROUP"), parent_id)
+        resp = utils.test_request(self, "POST", path, json={"permission_name": applicable_perm})
+        utils.check_response_basic_info(resp, 201, expected_method="POST")
+
+        # test
+        path = "/users/{}/resources/{}/permissions?effective=true".format(self.test_user_name, child_res_id)
+        resp = utils.test_request(self, "GET", path)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("permission_names", body)
+        utils.check_val_is_in(body["permission_names"], applicable_perm,
+                              msg="Permission applied to anonymous group which user is member of should be effective")
 
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers(self):
@@ -2275,6 +2342,7 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_FUNCTIONAL
     def test_UserAccount_UpdateDetails_email(self):
         """Logged user can update its own email on account page."""
         utils.warn_version(self, "user account page", "2.0.0", skip=True)
@@ -2289,13 +2357,17 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_FUNCTIONAL
     def test_UserAccount_UpdateDetails_password(self):
         """Logged user can update its own password on account page."""
         utils.warn_version(self, "user account page", "2.0.0", skip=True)
         self.login_test_user()
         data = {"new_user_password": "123456"}
+        # trigger the edit button form to obtain the 1st response with input field, then submit 2nd form with new value
+        resp = utils.TestSetup.check_FormSubmit(self, form_match="edit_password", form_data={"edit_password": True},
+                                                form_submit="edit_password", method="GET", path="/ui/users/current")
         resp = utils.TestSetup.check_FormSubmit(self, form_match="edit_password", form_data=data,
-                                                form_submit="edit_email", method="GET", path="/ui/users/current")
+                                                form_submit="save_password", previous_response=resp)
         utils.check_ui_response_basic_info(resp, expected_title="Magpie user Management")
         # cannot check modified password value directly (because regenerated hash), therefore validate login with it
         utils.check_or_try_logout_user(self)

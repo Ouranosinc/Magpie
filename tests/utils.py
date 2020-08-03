@@ -959,16 +959,73 @@ class TestSetup(object):
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
-    def get_ResourceInfo(test_case, body):
-        # type: (AnyMagpieTestCaseType, JSON) -> JSON
+    def create_TestResource(test_case,                      # type: AnyMagpieTestCaseType
+                            parent_resource_id,             # type: int
+                            override_resource_name=null,    # type: Optional[Str]
+                            override_resource_type=null,    # type: Optional[Str]
+                            override_data=null,             # type: Optional[JSON]
+                            override_headers=null,          # type: Optional[HeadersType]
+                            override_cookies=null,          # type: Optional[CookiesType]
+                            ):                              # type: (...) -> JSON
+        """Creates the test resource nested *immediately* under the parent resource id.
+        Parent resource *must* exist beforehand and *must* support nested children resource.
+        For convenience, all details of the successfully created resource are fetched and returned.
+
+        :raises AssertionError: if the response correspond to failure to create the test resource.
+        """
+        app_or_url = get_app_or_url(test_case)
+        path = "/resources/{}".format(parent_resource_id)
+        resp = test_request(app_or_url, "GET", path,
+                            headers=override_headers if override_headers is not null else test_case.json_headers,
+                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        check_response_basic_info(resp)
+        data = override_data if override_data is not None else {
+            "resource_name": override_resource_name or test_case.test_resource_name,
+            "resource_type": override_resource_type or test_case.test_resource_type,
+            "parent_id": parent_resource_id,
+        }
+        # creation response provides only 'basic' info, fetch detailed ones with additional get
+        resp = test_request(app_or_url, "POST", "/resources", json=data,
+                            headers=override_headers if override_headers is not null else test_case.json_headers,
+                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        body = check_response_basic_info(resp, 201, expected_method="POST")
+        info = TestSetup.get_ResourceInfo(test_case, body)
+        path = "/resources/{}".format(info["resource_id"])
+        resp = test_request(app_or_url, "GET", path,
+                            headers=override_headers if override_headers is not null else test_case.json_headers,
+                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        return check_response_basic_info(resp)
+
+    @staticmethod
+    def get_ResourceInfo(test_case,                 # type: AnyMagpieTestCaseType
+                         body=None,                 # type: JSON
+                         full_detail=False,         # type: bool
+                         resource_id=None,          # type: Optional[int]
+                         override_headers=null,     # type: Optional[HeadersType]
+                         override_cookies=null,     # type: Optional[CookiesType]
+                         ):                         # type: (...) -> JSON
         """
         Obtains in a backward compatible way the resource details based on resource response body and the tested
         instance version.
+
+        Alternatively to :paramref:`body`, one can directly fetch details from provided :paramref:`resource_id`.
+        Otherwise, if :paramref:`body` was provided and :paramref:`full_detail` is requested, executes another request
+        to obtain the additional information with inferred resource ID available from the body. This obtains additional
+        details resource such as applicable permissions that are not available from base request body returned at
+        resource creation. This is essentially the same as requesting the details directly with :paramref:`resource_id`.
         """
-        if LooseVersion(test_case.version) >= LooseVersion("0.6.3"):
-            check_val_is_in("resource", body)
-            check_val_type(body["resource"], dict)
-            body = body["resource"]
+        if body:
+            if LooseVersion(test_case.version) >= LooseVersion("0.6.3"):
+                check_val_is_in("resource", body)
+                check_val_type(body["resource"], dict)
+                body = body["resource"]
+            resource_id = body["resource_id"]
+        if resource_id or full_detail:
+            resp = test_request(test_case, "GET", "/resources/{}".format(resource_id),
+                                headers=override_headers if override_headers is not null else test_case.json_headers,
+                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
+            body = check_response_basic_info(resp)
+            body = TestSetup.get_ResourceInfo(test_case, body=body, resource_id=None, full_detail=False)
         return body
 
     @staticmethod

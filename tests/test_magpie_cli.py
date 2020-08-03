@@ -140,6 +140,7 @@ def run_batch_update_user_command(test_app, expected_users, create_command_xargs
 
 @runner.MAGPIE_TEST_CLI
 @runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_FUNCTIONAL
 def test_magpie_batch_update_users_validate_operations_from_args():
     test_users = ["unittest-batch-register-user-args-{}".format(i) for i in range(1, 4)]
     test_app = utils.get_test_magpie_app()
@@ -150,6 +151,7 @@ def test_magpie_batch_update_users_validate_operations_from_args():
 
 @runner.MAGPIE_TEST_CLI
 @runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_FUNCTIONAL
 def test_magpie_batch_update_users_validate_operations_from_file():
     test_users = ["unittest-batch-register-user-file-{}".format(i) for i in range(1, 4)]
     test_app = utils.get_test_magpie_app()
