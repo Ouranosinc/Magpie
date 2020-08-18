@@ -1,4 +1,5 @@
 from pyramid.httpexceptions import HTTPInternalServerError
+from typing import TYPE_CHECKING
 from ziggurat_foundations.models.services.resource import ResourceService
 
 from magpie.api.exception import evaluate_call
@@ -6,10 +7,15 @@ from magpie.models import RESOURCE_TREE_SERVICE
 from magpie.permissions import format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 
+if TYPE_CHECKING:
+    from magpie.models import Resource
+    from magpie.typedefs import AnyPermissionType, Iterable, JSON, Optional
+
 
 def format_resource(resource, permissions=None, basic_info=False):
+    # type: (Resource, Optional[Iterable[AnyPermissionType]], bool) -> JSON
     """
-    Formats the ``resource`` information into JSON.
+    Formats the :paramref:`resource` information into JSON.
     """
     def fmt_res(res, perms, info):
         result = {

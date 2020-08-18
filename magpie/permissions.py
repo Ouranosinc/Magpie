@@ -34,7 +34,7 @@ class Permission(with_metaclass(ExtendedEnumMeta, Enum)):
 def convert_permission(permission):
     # type: (AnyPermissionType) -> Optional[Permission]
     """
-    Converts any permission representation to the ``Permission`` enum.
+    Converts any permission representation to the :class:`Permission` enum.
 
     If the permission cannot be matched to one of the enum's value, ``None`` is returned instead.
     """
@@ -46,7 +46,7 @@ def convert_permission(permission):
 def format_permissions(permissions):
     # type: (Iterable[AnyPermissionType]) -> List[Str]
     """
-    Obtains the formatted permission representation after validation that it is a member of ``Permission`` enum.
+    Obtains the formatted permission representation after validation that it is a member of :class:`Permission` enum.
 
     The returned list is sorted alphabetically and cleaned of any duplicate entries.
     """

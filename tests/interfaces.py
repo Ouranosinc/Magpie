@@ -12,7 +12,7 @@ import six
 import yaml
 from six.moves.urllib.parse import urlparse
 
-from magpie.api.schemas import SwaggerGenerator, Signin_POST_OkResponseSchema
+from magpie.api import schemas as s
 from magpie.constants import MAGPIE_ROOT, get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Route
 from magpie.permissions import Permission
@@ -193,10 +193,12 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         resp = utils.test_request(self, "GET", "/session", headers=self.json_headers)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], False)
-        info = utils.TestSetup.get_UserInfo(self, override_body=body)
-        utils.check_val_not_in("user_name", info)
-        utils.check_val_not_in("user_email", info)
-        utils.check_val_not_in("group_names", info)
+        # current format (with below as sub-fields)
+        utils.check_val_not_in("user", body)
+        # pre 0.6.3, fields were directly in body
+        utils.check_val_not_in("user_name", body)
+        utils.check_val_not_in("user_email", body)
+        utils.check_val_not_in("group_names", body)
 
     @runner.MAGPIE_TEST_STATUS
     def test_GetVersion(self):
@@ -316,7 +318,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         data = {"user_name": info["email"]}
         resp = utils.test_request(self, "POST", "/signin", data=data, headers=self.json_headers, cookies={})
         body = utils.check_response_basic_info(resp)
-        utils.check_val_equal(body["detail"], Signin_POST_OkResponseSchema.description)
+        utils.check_val_equal(body["detail"], s.Signin_POST_OkResponseSchema.description)
 
     def run_PatchUsers_email_update_itself(self, user_path_variable):
         """
@@ -673,7 +675,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.delete_TestGroup(self)
 
     def test_GetAPI(self):
-        resp = utils.test_request(self, "GET", SwaggerGenerator.path, headers=self.json_headers)
+        resp = utils.test_request(self, "GET", s.SwaggerGenerator.path, headers=self.json_headers)
         body = utils.get_json_body(resp)
         content_types = utils.get_response_content_types_list(resp)
         utils.check_val_is_in(CONTENT_TYPE_JSON, content_types)
@@ -936,7 +938,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         Returns a tuple of all employed and generated information above.
         """
         utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.create_TestUser(self, override_data={"group_name": self.test_group_name})
+        utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         res_id = body["resource"]["resource_id"]
@@ -1077,6 +1079,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_DeleteUserResourcePermission(self):
+        utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
@@ -1098,6 +1101,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_DeleteUserServicePermission(self):
+        utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestService(self)
         path = "/users/{usr}/services/{svc}/permissions".format(usr=self.test_user_name, svc=self.test_service_name)
@@ -1637,7 +1641,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_is_in("group_id", body["group"])
         utils.check_val_type(body["group"]["group_id"], int)
         utils.check_val_is_in("description", body["group"])
-        utils.check_val_type(body["group"]["description"], six.string_types)
+        utils.check_val_type(body["group"]["description"], utils.OptionalStringType)
         utils.check_val_is_in("group_name", body["group"])
         utils.check_val_type(body["group"]["group_name"], six.string_types)
         utils.check_val_is_in("member_count", body["group"])
@@ -1905,7 +1909,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         data = {"service_name": "types"}
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        utils.check_response_basic_info(resp, 400, expected_method=self.update_method)   # don't allow naming to 'types'
+        body = utils.check_response_basic_info(resp, 400, expected_method=self.update_method)  # forbidden name 'types'
+        utils.check_val_equal(body["detail"], s.Service_PATCH_BadRequestResponseSchema_ReservedKeyword.description)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetService_ResponseFormat(self):

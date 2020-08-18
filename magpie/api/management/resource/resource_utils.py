@@ -161,7 +161,7 @@ def create_resource(resource_name, resource_display_name, resource_type, parent_
     ax.verify_param(resource_type, param_name="resource_type", not_none=True, not_empty=True,
                     http_error=HTTPBadRequest,
                     msg_on_fail="Invalid 'resource_type' specified for child resource creation.")
-    ax.verify_param(parent_id, param_name="parent_id", not_none=True, not_empty=True, param_compare=int, is_type=True,
+    ax.verify_param(parent_id, param_name="parent_id", not_none=True, is_type=True, param_compare=int,
                     http_error=HTTPBadRequest, msg_on_fail="Invalid 'parent_id' specified for child resource creation.")
     parent_resource = ax.evaluate_call(lambda: ResourceService.by_resource_id(parent_id, db_session=db_session),
                                        fallback=lambda: db_session.rollback(), http_error=HTTPNotFound,

@@ -217,9 +217,10 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             if param_name is not None:
                 content["param"]["name"] = str(param_name)
             if needs_compare and param_compare is not None:
-                if is_in:
+                if needs_iterable or is_type:
                     param_compare = str if param_compare == six.string_types else param_compare
                     param_compare = getattr(param_compare, "__name__", str(param_compare))
+                    param_compare = "Type[{}]".format(param_compare) if is_type else param_compare
                 content["param"]["compare"] = str(param_compare)
         raise_http(http_error, http_kwargs=http_kwargs, detail=msg_on_fail, content=content, content_type=content_type)
 
@@ -265,36 +266,34 @@ def evaluate_call(call,                                 # type: Callable[[], Any
     :raises `HTTPInternalServerError`: on `fallback` failure
     :return: whichever return value `call` might have if no exception occurred
     """
-    msg_on_fail = repr(msg_on_fail) if isinstance(msg_on_fail, six.string_types) else msg_on_fail
+    msg_on_fail = str(msg_on_fail) if isinstance(msg_on_fail, six.string_types) else repr(msg_on_fail)
+    content_repr = repr(content) if content is not None else content
     if not islambda(call):
         raise_http(http_error=HTTPInternalServerError, http_kwargs=http_kwargs,
                    detail="Input 'call' is not a lambda expression.",
-                   content={"call": {"detail": msg_on_fail, "content": repr(content)}},
-                   content_type=content_type)
+                   content={"call": {"detail": msg_on_fail, "content": content_repr}}, content_type=content_type)
 
     # preemptively check fallback to avoid possible call exception without valid recovery
     if fallback is not None:
         if not islambda(fallback):
             raise_http(http_error=HTTPInternalServerError, http_kwargs=http_kwargs,
                        detail="Input 'fallback'  is not a lambda expression, not attempting 'call'.",
-                       content={"call": {"detail": msg_on_fail, "content": repr(content)}},
-                       content_type=content_type)
+                       content={"call": {"detail": msg_on_fail, "content": content_repr}}, content_type=content_type)
     try:
         return call()
     except Exception as exc:
-        exc_call = repr(exc)
+        exc_call = {"exception": type(exc).__name__, "type": str(exc),
+                    "detail": msg_on_fail, "content": content_repr}
     try:
         if fallback is not None:
             fallback()
     except Exception as exc:
+        exc_fallback = {"exception": type(exc).__name__, "error": str(exc)}
         raise_http(http_error=HTTPInternalServerError, http_kwargs=http_kwargs,
                    detail="Exception occurred during 'fallback' called after failing 'call' exception.",
-                   content={"call": {"exception": exc_call, "detail": msg_on_fail, "content": repr(content)},
-                            "fallback": {"exception": repr(exc)}},
-                   content_type=content_type)
+                   content={"call": exc_call, "fallback": exc_fallback}, content_type=content_type)
     raise_http(http_error, detail=msg_on_fail, http_kwargs=http_kwargs,
-               content={"call": {"exception": exc_call, "content": repr(content)}},
-               content_type=content_type)
+               content={"call": exc_call}, content_type=content_type)
 
 
 def valid_http(http_success=HTTPOk,             # type: Union[Type[HTTPSuccessful], Type[HTTPRedirection]]

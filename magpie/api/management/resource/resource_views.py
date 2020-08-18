@@ -42,7 +42,7 @@ def get_resource_view(request):
     res_json = ax.evaluate_call(lambda: rf.format_resource_with_children(resource, db_session=request.db),
                                 fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                                 msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
-                                content={"resource": rf.format_resource(resource, basic_info=True)})
+                                content={"resource": rf.format_resource(resource, basic_info=False)})
     return ax.valid_http(http_success=HTTPOk, content={"resource": res_json},
                          detail=s.Resource_GET_OkResponseSchema.description)
 

@@ -34,11 +34,12 @@ if TYPE_CHECKING:
     )
     # pylint: disable=C0103,invalid-name
     OptionalHeaderCookiesType = Tuple[Optional[AnyHeadersType], Optional[AnyCookiesType]]
-    OptionalStringType = six.string_types + tuple([type(None)])
     TestAppOrUrlType = Union[Str, TestApp]
     AnyMagpieTestCaseType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase,
                                   Type[User_Magpie_TestCase], User_Magpie_TestCase]
     AnyMagpieTestItemType = Union[AnyMagpieTestCaseType, TestAppOrUrlType]
+
+OptionalStringType = six.string_types + tuple([type(None)])
 
 
 class RunOption(object):
@@ -952,7 +953,7 @@ class TestSetup(object):
         TestSetup.create_TestService(test_case)
         svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
         path = "/services/{svc}/resources".format(svc=svc_name)
-        data = override_data if override_data is not None else {
+        data = override_data if override_data is not null else {
             "resource_name": override_resource_name or test_case.test_resource_name,
             "resource_type": override_resource_type or test_case.test_resource_type,
         }
@@ -982,7 +983,7 @@ class TestSetup(object):
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
         check_response_basic_info(resp)
-        data = override_data if override_data is not None else {
+        data = override_data if override_data is not null else {
             "resource_name": override_resource_name or test_case.test_resource_name,
             "resource_type": override_resource_type or test_case.test_resource_type,
             "parent_id": parent_resource_id,
@@ -1024,7 +1025,7 @@ class TestSetup(object):
                 check_val_type(body["resource"], dict)
                 body = body["resource"]
             resource_id = body["resource_id"]
-        if resource_id or full_detail:
+        if resource_id and full_detail:
             resp = test_request(test_case, "GET", "/resources/{}".format(resource_id),
                                 headers=override_headers if override_headers is not null else test_case.json_headers,
                                 cookies=override_cookies if override_cookies is not null else test_case.cookies)
@@ -1104,7 +1105,7 @@ class TestSetup(object):
         :raises AssertionError: if any response does not correspond to non existing service's resource after execution.
         """
         app_or_url = get_app_or_url(test_case)
-        resource_name = override_resource_name if override_resource_name is not None else test_case.test_resource_name
+        resource_name = override_resource_name if override_resource_name is not null else test_case.test_resource_name
         resources = TestSetup.get_TestServiceDirectResources(test_case, ignore_missing_service=True)
         test_resource = list(filter(lambda r: r["resource_name"] == resource_name, resources))
         # delete as required, skip if non-existing
