@@ -93,13 +93,13 @@ class TestServices(unittest.TestCase):
         assert parser.params["test"] == "something"
 
         params = {"test": "something"}
-        parser = make_ows_parser(method="PUT", content_type=None, params=params, body="")
+        parser = make_ows_parser(method=self.update_method, content_type=None, params=params, body="")
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.WPSGet)
         assert parser.params["test"] == "something"
 
         body = '{"test": "something"}'  # pylint: disable=C4001
-        parser = make_ows_parser(method="PUT", content_type=CONTENT_TYPE_JSON, params=None, body=body)
+        parser = make_ows_parser(method=self.update_method, content_type=CONTENT_TYPE_JSON, params=None, body=body)
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.MultiFormatParser)
         assert parser.params["test"] == "something"

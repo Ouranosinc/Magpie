@@ -28,9 +28,9 @@ def create_group_view(request):
     """
     Create a group.
     """
-    group_name = ar.get_value_multiformat_post_checked(request, "group_name")
-    group_desc = ar.get_multiformat_post(request, "description", default="")
-    group_disc = asbool(ar.get_multiformat_post(request, "discoverable", default=False))
+    group_name = ar.get_value_multiformat_body_checked(request, "group_name")
+    group_desc = ar.get_multiformat_body(request, "description", default="")
+    group_disc = asbool(ar.get_multiformat_body(request, "discoverable", default=False))
     return gu.create_group(group_name, group_desc, group_disc, request.db)
 
 
@@ -45,8 +45,8 @@ def get_group_view(request):
                          content={"group": gf.format_group(group, db_session=request.db)})
 
 
-@s.GroupAPI.put(schema=s.Group_PUT_RequestSchema(), tags=[s.GroupsTag], response_schemas=s.Group_PUT_responses)
-@view_config(route_name=s.GroupAPI.name, request_method="PUT")
+@s.GroupAPI.patch(schema=s.Group_PATCH_RequestSchema(), tags=[s.GroupsTag], response_schemas=s.Group_PATCH_responses)
+@view_config(route_name=s.GroupAPI.name, request_method="PATCH")
 def edit_group_view(request):
     """
     Update a group by name.
@@ -58,11 +58,11 @@ def edit_group_view(request):
     ]
     ax.verify_param(group.group_name, not_in=True, param_compare=special_groups, param_name="group_name",
                     http_error=HTTPForbidden,
-                    msg_on_fail=s.Group_PUT_ReservedKeyword_ForbiddenResponseSchema.description)
+                    msg_on_fail=s.Group_PATCH_ReservedKeyword_ForbiddenResponseSchema.description)
 
-    new_group_name = ar.get_multiformat_post(request, "group_name")
-    new_description = ar.get_multiformat_post(request, "description")
-    new_discoverability = ar.get_multiformat_post(request, "discoverable")
+    new_group_name = ar.get_multiformat_body(request, "group_name")
+    new_description = ar.get_multiformat_body(request, "description")
+    new_discoverability = ar.get_multiformat_body(request, "discoverable")
     if new_discoverability is not None:
         new_discoverability = asbool(new_discoverability)
     update_name = group.group_name != new_group_name and new_group_name is not None
@@ -70,23 +70,23 @@ def edit_group_view(request):
     update_disc = group.discoverable != new_discoverability and new_discoverability is not None
     ax.verify_param(any([update_name, update_desc, update_disc]), is_true=True,
                     http_error=HTTPBadRequest, content={"group_name": group.group_name},
-                    msg_on_fail=s.Group_PUT_None_BadRequestResponseSchema.description)
-    if new_group_name:
+                    msg_on_fail=s.Group_PATCH_None_BadRequestResponseSchema.description)
+    if update_name:
         ax.verify_param(new_group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                        msg_on_fail=s.Group_PUT_Name_BadRequestResponseSchema.description)
+                        msg_on_fail=s.Group_PATCH_Name_BadRequestResponseSchema.description)
         group_name_size_range = range(1, 1 + get_constant("MAGPIE_GROUP_NAME_MAX_LENGTH", settings_container=request))
         ax.verify_param(len(new_group_name), is_in=True, param_compare=group_name_size_range,
                         http_error=HTTPBadRequest,
-                        msg_on_fail=s.Group_PUT_Size_BadRequestResponseSchema.description)
+                        msg_on_fail=s.Group_PATCH_Size_BadRequestResponseSchema.description)
         ax.verify_param(GroupService.by_group_name(new_group_name, db_session=request.db),
                         is_none=True, http_error=HTTPConflict, with_param=False,  # don't return group as value
-                        msg_on_fail=s.Group_PUT_ConflictResponseSchema.description)
+                        msg_on_fail=s.Group_PATCH_ConflictResponseSchema.description)
         group.group_name = new_group_name
-    if new_description:
+    if update_desc:
         group.description = new_description
-    if new_discoverability:
+    if update_disc:
         group.discoverable = new_discoverability
-    return ax.valid_http(http_success=HTTPOk, detail=s.Group_PUT_OkResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.Group_PATCH_OkResponseSchema.description)
 
 
 @s.GroupAPI.delete(schema=s.Group_DELETE_RequestSchema(), tags=[s.GroupsTag], response_schemas=s.Group_DELETE_responses)
@@ -153,7 +153,7 @@ def create_group_service_permission_view(request):
     """
     group = ar.get_group_matchdict_checked(request)
     service = ar.get_service_matchdict_checked(request)
-    permission = ar.get_permission_multiformat_post_checked(request, service)
+    permission = ar.get_permission_multiformat_body_checked(request, service)
     return gu.create_group_resource_permission_response(group, service, permission, db_session=request.db)
 
 
@@ -205,7 +205,7 @@ def create_group_resource_permission_view(request):
     """
     group = ar.get_group_matchdict_checked(request)
     resource = ar.get_resource_matchdict_checked(request)
-    permission = ar.get_permission_multiformat_post_checked(request, resource)
+    permission = ar.get_permission_multiformat_body_checked(request, resource)
     return gu.create_group_resource_permission_response(group, resource, permission, db_session=request.db)
 
 

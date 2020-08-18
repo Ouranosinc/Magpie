@@ -22,7 +22,7 @@ from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from sqlalchemy.orm.session import Session
-    from magpie.typedefs import List, Optional  # noqa: F401
+    from magpie.typedefs import List, Optional
 LOGGER = get_logger(__name__)
 
 
@@ -54,9 +54,16 @@ class ManagementViews(BaseViews):
     @error_badrequest
     def update_group_info(self, group_name, group_info):
         path = schemas.GroupAPI.path.format(group_name=group_name)
-        resp = request_api(self.request, path, "PUT", data=group_info)
+        resp = request_api(self.request, path, "PATCH", data=group_info)
         check_response(resp)
-        return get_json(resp)["group"]
+        return self.get_group_info(group_info.get("group_name", group_name))
+
+    @error_badrequest
+    def delete_group(self, group_name):
+        path = schemas.GroupAPI.path.format(group_name=group_name)
+        resp = request_api(self.request, path, "DELETE")
+        check_response(resp)
+        return get_json(resp)
 
     @error_badrequest
     def get_user_groups(self, user_name):
@@ -125,7 +132,7 @@ class ManagementViews(BaseViews):
         svc_data["service_push"] = service_push
         svc_id = str(svc_data["resource_id"])
         path = schemas.ResourceAPI.path.format(resource_id=svc_id)
-        resp = request_api(self.request, path, "PUT", data=svc_data)
+        resp = request_api(self.request, path, "PATCH", data=svc_data)
         check_response(resp)
 
     @error_badrequest
@@ -134,7 +141,7 @@ class ManagementViews(BaseViews):
         svc_data["service_url"] = new_service_url
         svc_data["service_push"] = service_push
         path = schemas.ServiceAPI.path.format(service_name=service_name)
-        resp = request_api(self.request, path, "PUT", data=svc_data)
+        resp = request_api(self.request, path, "PATCH", data=svc_data)
         check_response(resp)
 
     @error_badrequest
@@ -252,11 +259,7 @@ class ManagementViews(BaseViews):
         #   we have to access the database directly here
         session = self.request.db
 
-        try:
-            # The service type is "default". This function replaces cur_svc_type with the first service type.
-            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-        except Exception as exc:
-            raise HTTPBadRequest(detail=repr(exc))
+        svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
 
         user_path = schemas.UserAPI.path.format(user_name=user_name)
         user_resp = request_api(self.request, user_path, "GET")
@@ -337,10 +340,10 @@ class ManagementViews(BaseViews):
                     self.delete_resource(id_)
 
             if is_save_user_info:
-                resp = request_api(self.request, user_path, "PUT", data=user_info)
+                resp = request_api(self.request, user_path, "PATCH", data=user_info)
                 check_response(resp)
-                # need to commit updates since we are using the same session
-                # otherwise, updated user doesn't exist yet in the db for next calls
+                # FIXME: need to commit updates since we are using the same session
+                #        otherwise, updated user doesn't exist yet in the db for next calls
                 self.request.tm.commit()
 
             # always remove password from output
@@ -574,7 +577,6 @@ class ManagementViews(BaseViews):
         group_name = self.request.matchdict["group_name"]
         cur_svc_type = self.request.matchdict["cur_svc_type"]
         group_info = {"edit_mode": "no_edit", "group_name": group_name, "cur_svc_type": cur_svc_type}
-
         error_message = ""
 
         # TODO:
@@ -582,11 +584,8 @@ class ManagementViews(BaseViews):
         #   we have to access the database directly here
         session = self.request.db
 
-        try:
-            # The service type is 'default'. This function replaces cur_svc_type with the first service type.
-            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-        except Exception as exc:
-            raise HTTPBadRequest(detail=repr(exc))
+        # when service type is 'default', this function replaces 'cur_svc_type' with the first one available
+        svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
 
         # In case of update, changes are not reflected when calling
         # get_user_or_group_resources_permissions_dict so we must take care
@@ -598,11 +597,9 @@ class ManagementViews(BaseViews):
         # move to service or edit requested group/permission changes
         if self.request.method == "POST":
             res_id = self.request.POST.get("resource_id")
-            group_path = schemas.GroupAPI.path.format(group_name=group_name)
 
             if "delete" in self.request.POST:
-                resp = request_api(self.request, group_path, "DELETE")
-                check_response(resp)
+                self.delete_group(group_name)
                 return HTTPFound(self.request.route_url("view_groups"))
 
             if "goto_service" in self.request.POST:
@@ -612,8 +609,7 @@ class ManagementViews(BaseViews):
                 group_info["edit_mode"] = "edit_group_name"
             elif "save_group_name" in self.request.POST:
                 group_info["group_name"] = self.request.POST.get("new_group_name")
-                resp = request_api(self.request, group_path, "PUT", data=group_info)
-                check_response(resp)
+                group_info = self.update_group_info(group_name, group_info)
                 # return immediately with updated URL to group with new name (reprocess this template from scratch)
                 return HTTPFound(self.request.route_url("edit_group", **group_info))
 
@@ -621,15 +617,13 @@ class ManagementViews(BaseViews):
                 group_info["edit_mode"] = "edit_description"
             elif "save_description" in self.request.POST:
                 group_info["description"] = self.request.POST.get("new_description")
-                resp = request_api(self.request, group_path, "PUT", data=group_info)
-                check_response(resp)
-
-            if "clean_resource" in self.request.POST:
+                group_info.update(self.update_group_info(group_name, group_info))
+            elif "clean_resource" in self.request.POST:
                 # "clean_resource" must be above "edit_permissions" because they"re in the same form.
                 self.delete_resource(res_id)
-            elif "edit_discoverable" in self.request.POST:
-
-                self.update_group(group_info)
+            elif "new_discoverable" in self.request.POST:
+                group_info["discoverable"] = self.request.POST.get("new_discoverable")
+                group_info.update(self.update_group_info(group_name, group_info))
             elif "edit_permissions" in self.request.POST:
                 if not res_id or res_id == "None":
                     remote_id = int(self.request.POST.get("remote_id"))
@@ -655,8 +649,8 @@ class ManagementViews(BaseViews):
                 ids_to_clean = self.request.POST.get("ids_to_clean").split(";")
                 for id_ in ids_to_clean:
                     self.delete_resource(id_)
-            else:
-                return HTTPBadRequest(detail="Invalid POST request.")
+            elif "no_edit" not in self.request.POST:
+                return HTTPBadRequest(detail="Invalid POST request for group edit.")
 
         # display resources permissions per service type tab
         try:
@@ -810,7 +804,8 @@ class ManagementViews(BaseViews):
             service_name = self.request.POST.get("service_name")
             service_data = {"service_push": self.request.POST.get("service_push")}
             path = schemas.ServiceAPI.path.format(service_name=service_name)
-            resp = request_api(self.request, path, "DELETE", data=json.dumps(service_data))
+            data = json.dumps(service_data)
+            resp = request_api(self.request, path, "DELETE", data=data)
             check_response(resp)
 
         cur_svc_type = self.request.matchdict["cur_svc_type"]

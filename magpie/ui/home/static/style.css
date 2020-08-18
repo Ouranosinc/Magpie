@@ -230,6 +230,13 @@ table thead {
     height: auto;
 }
 
+.panel-line-checkbox {
+    vertical-align: middle;
+    display: inline-flex;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
 .panel-title {
     font-weight: bold;
 }
@@ -498,6 +505,7 @@ ul.breadcrumb li a:hover {
 
 /*---Header---*/
 
+/*noinspection CssInvalidFunction*/
 .header {
     background: black; /* For browsers that do not support gradients */
     background: -webkit-gradient(bottom top, black, gray); /* Chrome, Safari4+ */

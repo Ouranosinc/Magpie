@@ -5,13 +5,16 @@ from pyramid.httpexceptions import HTTPBadRequest, exception_response
 from pyramid.request import Request
 
 from magpie import __meta__
+from magpie.api.generic import get_exception_info
 from magpie.api.requests import get_logged_user
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON, get_header, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Any, AnyResponseType, CookiesType, Dict, HeadersType, JSON, Optional, Str  # noqa: F401
+    from magpie.typedefs import (  # noqa: F401
+        Any, AnyResponseType, CookiesType, Dict, HeadersType, JSON, Optional, Str, Union
+    )
 
 LOGGER = get_logger(__name__)
 
@@ -30,7 +33,7 @@ def check_response(response):
 def request_api(request,            # type: Request
                 path,               # type: Str
                 method="GET",       # type: Str
-                data=None,          # type: Optional[JSON]
+                data=None,          # type: Optional[Union[JSON, Str]]
                 headers=None,       # type: Optional[HeadersType]
                 cookies=None,       # type: Optional[CookiesType]
                 ):                  # type: (...) -> AnyResponseType
@@ -38,11 +41,19 @@ def request_api(request,            # type: Request
     Use a pyramid sub-request to request Magpie API routes via the UI. This avoids max retries and closed connections
     when using 1 worker (eg: during tests).
 
-    Some information is retrieved from ``request`` to pass down to the sub-request (eg: cookies).
-    If they are passed as argument, corresponding values will override the ones found in ``request``.
+    Some information is retrieved from :paramref:`request` to pass down to the sub-request (eg: cookies).
+    If they are passed as argument, corresponding values will override the ones found in :paramref:`request`.
 
-    All sub-requests to the API are assumed to be of ``magpie.common.CONTENT_TYPE_JSON`` unless explicitly overridden
-    with ``headers``.
+    All sub-requests to the API are assumed to be :py:data:`magpie.common.CONTENT_TYPE_JSON` unless explicitly
+    overridden with :paramref:`headers`. Headers are also looked for for additional ``Set-Cookie`` header in case they
+    need to be passed down to :paramref:`cookies`.
+
+    :param request: incoming Magpie UI request that requires sub-request to Magpie API, to retrieve required details.
+    :param path: local Magpie API path (relative to root without URL).
+    :param method: HTTP method to send the API sub-request.
+    :param data: JSON dictionary or literal string content of the request body.
+    :param headers: override headers to employ for the API sub-request. Defaults to JSON Accept & Content-Type headers.
+    :param cookies: override cookies to employ for the API sub-request. Defaults to current logged user.
     """
     method = method.upper()
     extra_kwargs = {"method": method}
@@ -84,6 +95,9 @@ def error_badrequest(func):
         try:
             return func(*args, **kwargs)
         except Exception as exc:
+            detail = "{}: {}".format(type(exc).__name__, str(exc))
+            exc_info = get_exception_info(exc, exception_details=True) or detail  # noqa
+            LOGGER.error("Unexpected API error under UI operation. [%s]", exc_info)
             raise HTTPBadRequest(detail=str(exc))
     return wrap
 

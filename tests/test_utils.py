@@ -72,10 +72,10 @@ class TestUtils(unittest.TestCase):
         Test multiple request routing with fixed "MAGPIE_URL" within the API application.
 
         Signin with invalid credentials will call "/signin" followed by sub-request "/signin_internal" and finally
-        "ZigguratSignInBadAuth". Both "/signin" and "ZigguratSignInBadAuth" use "get_multiformat_post".
+        "ZigguratSignInBadAuth". Both "/signin" and "ZigguratSignInBadAuth" use "get_multiformat_body".
         """
-        from magpie.api.requests import get_multiformat_post as real_get_multiformat_post
-        from magpie.api.requests import get_value_multiformat_post_checked as real_multiform_post_checked
+        from magpie.api.requests import get_multiformat_body as real_get_multiformat_body
+        from magpie.api.requests import get_value_multiformat_body_checked as real_multiform_post_checked
         base_url = "http://localhost"
 
         def mock_get_post(real_func, *args, **kwargs):
@@ -92,10 +92,10 @@ class TestUtils(unittest.TestCase):
             _paths = ["/signin", "/signin_internal"]
             app = utils.get_test_magpie_app({"magpie.url": url})
 
-            with mock.patch("magpie.api.requests.get_value_multiformat_post_checked",
+            with mock.patch("magpie.api.requests.get_value_multiformat_body_checked",
                             side_effect=lambda *_, **__: mock_get_post(real_multiform_post_checked, *_, **__)):
-                with mock.patch("magpie.api.requests.get_multiformat_post",
-                                side_effect=lambda *_, **__: mock_get_post(real_get_multiformat_post, *_, **__)):
+                with mock.patch("magpie.api.requests.get_multiformat_body",
+                                side_effect=lambda *_, **__: mock_get_post(real_get_multiformat_body, *_, **__)):
                     data = {"user_name": "foo", "password": "bar"}
                     headers = {"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON}
                     resp = utils.test_request(app, "POST", _paths[0], json=data, headers=headers, expect_errors=True)

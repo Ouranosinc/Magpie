@@ -17,7 +17,6 @@ from simplejson import JSONDecodeError
 from magpie.api import schemas as s
 from magpie.api.exception import raise_http, verify_param
 from magpie.api.requests import get_principals
-from magpie.ui.utils import request_api
 from magpie.utils import (
     CONTENT_TYPE_ANY,
     CONTENT_TYPE_JSON,
@@ -29,11 +28,11 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Callable  # noqa: F401
-    from magpie.typedefs import Str, JSON  # noqa: F401
-    from pyramid.registry import Registry  # noqa: F401
-    from pyramid.response import Response  # noqa: F401
-    from pyramid.httpexceptions import HTTPException  # noqa: F401
+    from typing import Callable
+    from magpie.typedefs import Str, JSON, Union
+    from pyramid.registry import Registry
+    from pyramid.response import Response
+    from pyramid.httpexceptions import HTTPException
 LOGGER = get_logger(__name__)
 
 
@@ -98,6 +97,7 @@ def unauthorized_or_forbidden(request):
     content = get_request_info(request, default_message=http_msg)
     accept = get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
     if content["route_name"].startswith("/ui") and accept != CONTENT_TYPE_JSON:
+        from magpie.ui.utils import request_api
         path = request.route_path("error").replace("/magpie", "")
         data = {"error_request": content, "error_code": http_err.code}
         return request_api(request, path, "POST", data)  # noqa
@@ -136,10 +136,39 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
     return validate_accept_header
 
 
-def get_request_info(request, default_message="undefined", exception_details=False):
-    # type: (Request, Str, bool) -> JSON
+def get_exception_info(response, exception_details=False):
+    # type: (Union[HTTPException, Request, Response], bool) -> JSON
     """
-    Obtains additional content details about the ``request`` according to available information.
+    Obtains additional exception content details about the :paramref:`response` according to available information.
+    """
+    content = {}
+    if hasattr(response, "exception"):
+        # handle error raised simply by checking for "json" property in python 3 when body is invalid
+        has_json = False
+        try:
+            has_json = hasattr(response.exception, "json")
+        except JSONDecodeError:
+            pass
+        if has_json and isinstance(response.exception.json, dict):
+            content.update(response.exception.json)
+        elif isinstance(response.exception, HTTPServerError) and hasattr(response.exception, "message"):
+            content.update({"exception": str(response.exception.message)})
+        elif isinstance(response.exception, Exception) and exception_details:
+            content.update({"exception": repr(response.exception)})
+            # get 'request.exc_info' or 'sys.exc_info', whichever one is available
+            LOGGER.error("Request exception.", exc_info=getattr(response, "exc_info", True))
+        if not content.get("detail"):
+            content["detail"] = str(response.exception)
+    elif hasattr(response, "matchdict"):
+        if response.matchdict is not None and response.matchdict != "":
+            content.update(response.matchdict)
+    return content
+
+
+def get_request_info(request, default_message="undefined", exception_details=False):
+    # type: (Union[Request, HTTPException], Str, bool) -> JSON
+    """
+    Obtains additional content details about the :paramref:`request` according to available information.
     """
     content = {
         "route_name": str(request.upath_info),
@@ -147,24 +176,5 @@ def get_request_info(request, default_message="undefined", exception_details=Fal
         "detail": default_message,
         "method": request.method
     }
-    if hasattr(request, "exception"):
-        # handle error raised simply by checking for "json" property in python 3 when body is invalid
-        has_json = False
-        try:
-            has_json = hasattr(request.exception, "json")
-        except JSONDecodeError:
-            pass
-        if has_json and isinstance(request.exception.json, dict):
-            content.update(request.exception.json)
-        elif isinstance(request.exception, HTTPServerError) and hasattr(request.exception, "message"):
-            content.update({"exception": str(request.exception.message)})
-        elif isinstance(request.exception, Exception) and exception_details:
-            content.update({"exception": repr(request.exception)})
-            # get 'request.exc_info' or 'sys.exc_info', whichever one is available
-            LOGGER.error("Request exception.", exc_info=getattr(request, "exc_info", True))
-        if not content["detail"]:
-            content["detail"] = str(request.exception)
-    elif hasattr(request, "matchdict"):
-        if request.matchdict is not None and request.matchdict != "":
-            content.update(request.matchdict)
+    content.update(get_exception_info(request), exception_details=exception_details)
     return content

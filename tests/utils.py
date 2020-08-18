@@ -256,7 +256,7 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
         otherwise they will be picked up automatically. For 'empty' cookies, provide an empty dictionary.
 
     :param test_item: one of `Base_Magpie_TestCase`, `webtest.TestApp` or remote server URL to call with `requests`
-    :param method: request method (GET, POST, PUT, DELETE)
+    :param method: request method (GET, POST, PATCH, PUT, DELETE)
     :param path: test path starting at base path that will be appended to the application's endpoint.
     :param params: query parameters added to the request path.
     :param json: explicit JSON body content to use as request body.

@@ -44,6 +44,8 @@ Features / Changes
 * Move all CLI helpers under ``magpie.cli`` and provide more details about them in documentation.
 * Allow unspecified ``group_name`` during user creation request to employ ``MAGPIE_ANONYMOUS_GROUP`` by default
   (i.e.: created user will have no apparent group membership since that group is always attributed for public access).
+* Change all ``PUT`` requests to ``PATCH`` to better reflect their actual behaviour according to RESTful best practices
+  (partial field updates instead of complete resource replacement and conflict responses on duplicate identifiers).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

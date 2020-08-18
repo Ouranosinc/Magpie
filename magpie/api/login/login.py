@@ -74,15 +74,15 @@ def sign_in(request):
     """
     Signs in a user session.
     """
-    provider_name = ar.get_value_multiformat_post_checked(request, "provider_name", default=MAGPIE_DEFAULT_PROVIDER)
+    provider_name = ar.get_value_multiformat_body_checked(request, "provider_name", default=MAGPIE_DEFAULT_PROVIDER)
     provider_name = provider_name.lower()
     # magpie supports login from both username or corresponding email
     # therefore validate pattern combination manually after fetch otherwise email format fails patter match
-    user_name = ar.get_value_multiformat_post_checked(request, "user_name", pattern=None)
+    user_name = ar.get_value_multiformat_body_checked(request, "user_name", pattern=None)
     pattern = ax.EMAIL_REGEX if "@" in user_name else ax.PARAM_REGEX
     ax.verify_param(user_name, matches=True, param_compare=pattern, param_name="user_name",
                     http_error=HTTPBadRequest, msg_on_fail=s.BadRequestResponseSchema.description)
-    password = ar.get_multiformat_post(request, "password")   # no check since password is None for external login
+    password = ar.get_multiformat_body(request, "password")   # no check since password is None for external login
     verify_provider(provider_name)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
@@ -128,8 +128,8 @@ def login_failure(request, reason=None):
     if reason is None:
         reason = s.Signin_POST_UnauthorizedResponseSchema.description
         try:
-            user_name = ar.get_value_multiformat_post_checked(request, "user_name", default=None)
-            ar.get_value_multiformat_post_checked(request, "password", default=None, pattern=None)
+            user_name = ar.get_value_multiformat_body_checked(request, "user_name", default=None)
+            ar.get_value_multiformat_body_checked(request, "password", default=None, pattern=None)
         except HTTPException:
             http_err = HTTPBadRequest
             reason = s.Signin_POST_BadRequestResponseSchema.description

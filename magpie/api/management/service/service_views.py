@@ -72,35 +72,35 @@ def register_service_view(request):
     Registers a new service.
     """
     # accomplish basic validations here, create_service will do more field-specific checks
-    service_name = ar.get_value_multiformat_post_checked(request, "service_name")
-    service_url = ar.get_value_multiformat_post_checked(request, "service_url", pattern=ax.PARAM_REGEX)
-    service_type = ar.get_value_multiformat_post_checked(request, "service_type")
-    service_push = asbool(ar.get_multiformat_post(request, "service_push"))
+    service_name = ar.get_value_multiformat_body_checked(request, "service_name")
+    service_url = ar.get_value_multiformat_body_checked(request, "service_url", pattern=ax.PARAM_REGEX)
+    service_type = ar.get_value_multiformat_body_checked(request, "service_type")
+    service_push = asbool(ar.get_multiformat_body(request, "service_push"))
     return su.create_service(service_name, service_type, service_url, service_push, db_session=request.db)
 
 
-@s.ServiceAPI.put(schema=s.Service_PUT_RequestBodySchema(), tags=[s.ServicesTag],
-                  response_schemas=s.Service_PUT_responses)
-@view_config(route_name=s.ServiceAPI.name, request_method="PUT")
+@s.ServiceAPI.patch(schema=s.Service_PATCH_RequestBodySchema(), tags=[s.ServicesTag],
+                  response_schemas=s.Service_PATCH_responses)
+@view_config(route_name=s.ServiceAPI.name, request_method="PATCH")
 def update_service_view(request):
     """
     Update a service information.
     """
     service = ar.get_service_matchdict_checked(request)
-    service_push = asbool(ar.get_multiformat_post(request, "service_push", default=False))
+    service_push = asbool(ar.get_multiformat_body(request, "service_push", default=False))
 
     def select_update(new_value, old_value):
         return new_value if new_value is not None and not new_value == "" else old_value
 
     # None/Empty values are accepted in case of unspecified
-    svc_name = select_update(ar.get_multiformat_post(request, "service_name"), service.resource_name)
-    svc_url = select_update(ar.get_multiformat_post(request, "service_url"), service.url)
+    svc_name = select_update(ar.get_multiformat_body(request, "service_name"), service.resource_name)
+    svc_url = select_update(ar.get_multiformat_body(request, "service_url"), service.url)
     ax.verify_param(svc_name, param_compare="types", not_equal=True,
                     param_name="service_name", http_error=HTTPBadRequest,
-                    msg_on_fail=s.Service_PUT_BadRequestResponseSchema_ReservedKeyword.description)
+                    msg_on_fail=s.Service_PATCH_BadRequestResponseSchema_ReservedKeyword.description)
     ax.verify_param(svc_name == service.resource_name and svc_url == service.url, not_equal=True,
                     param_compare=True, param_name="service_name/service_url",
-                    http_error=HTTPBadRequest, msg_on_fail=s.Service_PUT_BadRequestResponseSchema.description)
+                    http_error=HTTPBadRequest, msg_on_fail=s.Service_PATCH_BadRequestResponseSchema.description)
 
     if svc_name != service.resource_name:
         all_svc_names = list()
@@ -109,7 +109,7 @@ def update_service_view(request):
                 all_svc_names.append(svc.resource_name)
         ax.verify_param(svc_name, not_in=True, param_compare=all_svc_names, with_param=False,
                         http_error=HTTPConflict, content={"service_name": str(svc_name)},
-                        msg_on_fail=s.Service_PUT_ConflictResponseSchema.description)
+                        msg_on_fail=s.Service_PATCH_ConflictResponseSchema.description)
 
     def update_service_magpie_and_phoenix(_svc, new_name, new_url, svc_push, db_session):
         _svc.resource_name = new_name
@@ -124,9 +124,9 @@ def update_service_view(request):
     err_svc_content = {"service": old_svc_content, "new_service_name": svc_name, "new_service_url": svc_url}
     ax.evaluate_call(lambda: update_service_magpie_and_phoenix(service, svc_name, svc_url, service_push, request.db),
                      fallback=lambda: request.db.rollback(),
-                     http_error=HTTPForbidden, msg_on_fail=s.Service_PUT_ForbiddenResponseSchema.description,
+                     http_error=HTTPForbidden, msg_on_fail=s.Service_PATCH_ForbiddenResponseSchema.description,
                      content=err_svc_content)
-    return ax.valid_http(http_success=HTTPOk, detail=s.Service_PUT_OkResponseSchema.description,
+    return ax.valid_http(http_success=HTTPOk, detail=s.Service_PATCH_OkResponseSchema.description,
                          content={"service": sf.format_service(service, show_private_url=True)})
 
 
@@ -150,7 +150,7 @@ def unregister_service_view(request):
     Unregister a service.
     """
     service = ar.get_service_matchdict_checked(request)
-    service_push = asbool(ar.get_multiformat_delete(request, "service_push", default=False))
+    service_push = asbool(ar.get_multiformat_body(request, "service_push", default=False))
     svc_content = sf.format_service(service, show_private_url=True)
     svc_res_id = service.resource_id
     ax.evaluate_call(lambda: models.RESOURCE_TREE_SERVICE.delete_branch(resource_id=svc_res_id, db_session=request.db),
@@ -214,10 +214,10 @@ def create_service_direct_resource_view(request):
     Register a new resource directly under a service.
     """
     service = ar.get_service_matchdict_checked(request)
-    resource_name = ar.get_multiformat_post(request, "resource_name")
-    resource_display_name = ar.get_multiformat_post(request, "resource_display_name", default=resource_name)
-    resource_type = ar.get_multiformat_post(request, "resource_type")
-    parent_id = ar.get_multiformat_post(request, "parent_id")  # no check because None/empty is allowed
+    resource_name = ar.get_multiformat_body(request, "resource_name")
+    resource_display_name = ar.get_multiformat_body(request, "resource_display_name", default=resource_name)
+    resource_type = ar.get_multiformat_body(request, "resource_type")
+    parent_id = ar.get_multiformat_body(request, "parent_id")  # no check because None/empty is allowed
     if not parent_id:
         parent_id = service.resource_id
     return create_resource(resource_name, resource_display_name, resource_type,

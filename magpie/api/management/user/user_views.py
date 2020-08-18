@@ -47,26 +47,26 @@ def create_user_view(request):
     """
     Create a new user.
     """
-    user_name = ar.get_multiformat_post(request, "user_name")
-    email = ar.get_multiformat_post(request, "email")
-    password = ar.get_multiformat_post(request, "password")
-    group_name = ar.get_multiformat_post(request, "group_name")
+    user_name = ar.get_multiformat_body(request, "user_name")
+    email = ar.get_multiformat_body(request, "email")
+    password = ar.get_multiformat_body(request, "password")
+    group_name = ar.get_multiformat_body(request, "group_name")
     return uu.create_user(user_name, password, email, group_name, db_session=request.db)
 
 
-@s.UserAPI.put(schema=s.User_PUT_RequestSchema(), tags=[s.UsersTag], response_schemas=s.User_PUT_responses)
-@s.LoggedUserAPI.put(schema=s.User_PUT_RequestSchema(), tags=[s.LoggedUserTag],
-                     response_schemas=s.LoggedUser_PUT_responses)
-@view_config(route_name=s.UserAPI.name, request_method="PUT")
+@s.UserAPI.patch(schema=s.User_PATCH_RequestSchema(), tags=[s.UsersTag], response_schemas=s.User_PATCH_responses)
+@s.LoggedUserAPI.patch(schema=s.User_PATCH_RequestSchema(), tags=[s.LoggedUserTag],
+                       response_schemas=s.LoggedUser_PATCH_responses)
+@view_config(route_name=s.UserAPI.name, request_method="PATCH")
 def update_user_view(request):
     """
     Update user information by user name.
     """
     user_key = "user_name"
     user = ar.get_user_matchdict_checked_or_logged(request, user_name_key=user_key)
-    new_user_name = ar.get_multiformat_post(request, "user_name", default=user.user_name)
-    new_email = ar.get_multiformat_post(request, "email", default=user.email)
-    new_password = ar.get_multiformat_post(request, "password", default=user.user_password)
+    new_user_name = ar.get_multiformat_body(request, "user_name", default=user.user_name)
+    new_email = ar.get_multiformat_body(request, "email", default=user.email)
+    new_password = ar.get_multiformat_body(request, "password", default=user.user_password)
     group_name = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=request)
     uu.check_user_info(new_user_name, new_email, new_password, group_name=group_name)
 
@@ -80,23 +80,23 @@ def update_user_view(request):
         ax.verify_param(user.user_name, not_in=True, with_param=False,  # avoid leaking username details
                         param_compare=always_forbidden_user_names, param_name=user_key,
                         http_error=HTTPBadRequest, content={user_key: logged_user_name},
-                        msg_on_fail=s.User_PUT_ForbiddenResponseSchema.description)
+                        msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
         ax.verify_param(new_user_name, not_in=True, with_param=False,  # avoid leaking username details
                         param_compare=[logged_user_name] + always_forbidden_user_names, param_name=user_key,
                         http_error=HTTPBadRequest, content={user_key: logged_user_name},
-                        msg_on_fail=s.User_PUT_ForbiddenResponseSchema.description)
+                        msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
     update_password = user.user_password != new_password and new_password is not None
     update_email = user.email != new_email and new_email is not None
     ax.verify_param(any([update_username, update_password, update_email]), is_true=True, http_error=HTTPBadRequest,
                     content={user_key: user.user_name},
-                    msg_on_fail=s.User_PUT_BadRequestResponseSchema.description)
+                    msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
 
     if update_username:
         existing_user = ax.evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
                                          fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                                         msg_on_fail=s.User_PUT_ForbiddenResponseSchema.description)
+                                         msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
         ax.verify_param(existing_user, is_none=True, with_param=False, http_error=HTTPConflict,
-                        msg_on_fail=s.User_PUT_ConflictResponseSchema.description)
+                        msg_on_fail=s.User_PATCH_ConflictResponseSchema.description)
         user.user_name = new_user_name
     if update_email:
         user.email = new_email
@@ -104,7 +104,7 @@ def update_user_view(request):
         UserService.set_password(user, new_password)
         UserService.regenerate_security_code(user)
 
-    return ax.valid_http(http_success=HTTPOk, detail=s.Users_PUT_OkResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.Users_PATCH_OkResponseSchema.description)
 
 
 @s.UserAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI, response_schemas=s.User_GET_responses)
@@ -163,7 +163,7 @@ def assign_user_group_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
 
-    group_name = ar.get_value_multiformat_post_checked(request, "group_name")
+    group_name = ar.get_value_multiformat_body_checked(request, "group_name")
     group = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
                              fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                              msg_on_fail=s.UserGroups_POST_ForbiddenResponseSchema.description)
@@ -297,7 +297,7 @@ def create_user_resource_permission_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request)
-    permission = ar.get_permission_multiformat_post_checked(request, resource)
+    permission = ar.get_permission_multiformat_body_checked(request, resource)
     return uu.create_user_resource_permission_response(user, resource, permission, request.db)
 
 
@@ -402,7 +402,7 @@ def create_user_service_permission_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
-    permission = ar.get_permission_multiformat_post_checked(request, service)
+    permission = ar.get_permission_multiformat_body_checked(request, service)
     return uu.create_user_resource_permission_response(user, service, permission, request.db)
 
 

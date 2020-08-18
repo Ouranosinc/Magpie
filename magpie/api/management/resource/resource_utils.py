@@ -200,7 +200,7 @@ def create_resource(resource_name, resource_display_name, resource_type, parent_
 
 def delete_resource(request):
     resource = ar.get_resource_matchdict_checked(request)
-    service_push = asbool(ar.get_multiformat_post(request, "service_push"))
+    service_push = asbool(ar.get_multiformat_body(request, "service_push"))
     res_content = {"resource": format_resource(resource, basic_info=True)}
     ax.evaluate_call(
         lambda: models.RESOURCE_TREE_SERVICE.delete_branch(resource_id=resource.resource_id, db_session=request.db),

@@ -34,10 +34,15 @@ def get_request_method_content(request):
     return getattr(request, method_property)
 
 
-def get_multiformat_any(request, key, default=None):
+def get_multiformat_body(request, key, default=None):
     # type: (Request, Str, Optional[Any]) -> Any
     """
-    Obtains the :paramref:`key` element from the request body using found `Content-Type` header.
+    Obtains the value of :paramref:`key` element from the request body according to specified `Content-Type` header.
+
+    .. seealso::
+        - :func:`get_multiformat_body_checked`
+        - :func:`get_permission_multiformat_body_checked`
+        - :func:`get_value_multiformat_body_checked`
     """
     msg = "Key '{key}' could not be extracted from '{method}' of type '{type}'" \
           .format(key=repr(key), method=request.method, type=request.content_type)
@@ -51,30 +56,23 @@ def get_multiformat_any(request, key, default=None):
                             http_error=HTTPInternalServerError, msg_on_fail=msg)
 
 
-def get_multiformat_post(request, key, default=None):
-    return get_multiformat_any(request, key, default)
-
-
-def get_multiformat_put(request, key, default=None):
-    return get_multiformat_any(request, key, default)
-
-
-def get_multiformat_delete(request, key, default=None):
-    return get_multiformat_any(request, key, default)
-
-
-def get_permission_multiformat_post_checked(request, service_or_resource, permission_name_key="permission_name"):
+def get_permission_multiformat_body_checked(request, service_or_resource, permission_name_key="permission_name"):
     # type: (Request, ServiceOrResourceType, Str) -> Permission
     """
     Retrieves the permission from the body and validates that it is allowed for the specified `service` or `resource`.
+
+    Validation combines basic field checks followed by contextual values applicable for the `service` or `resource`.
+
+    .. seealso::
+        - :func:`get_value_multiformat_body_checked`
     """
     # import here to avoid circular import error with undefined functions between (api_request, resource_utils)
     from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
-    perm_name = get_value_multiformat_post_checked(request, permission_name_key)
+    perm_name = get_value_multiformat_body_checked(request, permission_name_key)
     return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
 
 
-def get_value_multiformat_post_checked(request, key, default=None, check_type=six.string_types, pattern=ax.PARAM_REGEX):
+def get_value_multiformat_body_checked(request, key, default=None, check_type=six.string_types, pattern=ax.PARAM_REGEX):
     # type: (Request, Str, Any, Any, Optional[Union[Str, bool]]) -> Str
     """
     Obtains and validates the matched value under :paramref:`key` element from the request body according to
@@ -89,8 +87,11 @@ def get_value_multiformat_post_checked(request, key, default=None, check_type=si
     :return: matched path variable value.
     :raises HTTPBadRequest: if the key could not be retrieved from the request body and has no provided default value.
     :raises HTTPUnprocessableEntity: if the retrieved value from the key is invalid for this request.
+
+    .. seealso::
+        - :func:`get_multiformat_body`
     """
-    val = get_multiformat_any(request, key, default=default)
+    val = get_multiformat_body(request, key, default=default)
     ax.verify_param(val, not_none=True, is_type=bool(check_type), param_compare=check_type, param_name=key,
                     http_error=HTTPBadRequest, msg_on_fail=s.BadRequestResponseSchema.description)
     if bool(pattern) and check_type in six.string_types:

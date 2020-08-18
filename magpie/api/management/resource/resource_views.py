@@ -54,10 +54,10 @@ def create_resource_view(request):
     """
     Register a new resource.
     """
-    resource_name = ar.get_value_multiformat_post_checked(request, "resource_name")
-    resource_display_name = ar.get_multiformat_any(request, "resource_display_name", default=resource_name)
-    resource_type = ar.get_value_multiformat_post_checked(request, "resource_type")
-    parent_id = ar.get_value_multiformat_post_checked(request, "parent_id", pattern=ax.INDEX_REGEX)
+    resource_name = ar.get_value_multiformat_body_checked(request, "resource_name")
+    resource_display_name = ar.get_multiformat_body(request, "resource_display_name", default=resource_name)
+    resource_type = ar.get_value_multiformat_body_checked(request, "resource_type")
+    parent_id = ar.get_value_multiformat_body_checked(request, "parent_id", pattern=ax.INDEX_REGEX)
     return ru.create_resource(resource_name, resource_display_name, resource_type, parent_id, request.db)
 
 
@@ -71,17 +71,17 @@ def delete_resource_view(request):
     return ru.delete_resource(request)
 
 
-@s.ResourceAPI.put(schema=s.Resource_PUT_RequestSchema(), tags=[s.ResourcesTag],
-                   response_schemas=s.Resource_PUT_responses)
-@view_config(route_name=s.ResourceAPI.name, request_method="PUT")
+@s.ResourceAPI.patch(schema=s.Resource_PATCH_RequestSchema(), tags=[s.ResourcesTag],
+                     response_schemas=s.Resource_PATCH_responses)
+@view_config(route_name=s.ResourceAPI.name, request_method="PATCH")
 def update_resource(request):
     """
     Update a resource information.
     """
     resource = ar.get_resource_matchdict_checked(request, "resource_id")
-    service_push = asbool(ar.get_multiformat_post(request, "service_push"))
+    service_push = asbool(ar.get_multiformat_body(request, "service_push"))
     res_old_name = resource.resource_name
-    res_new_name = ar.get_value_multiformat_post_checked(request, "resource_name")
+    res_new_name = ar.get_value_multiformat_body_checked(request, "resource_name")
 
     def rename_service_magpie_and_phoenix(res, new_name, svc_push, db):
         if res.resource_type != "service":
@@ -92,10 +92,10 @@ def update_resource(request):
 
     ax.evaluate_call(lambda: rename_service_magpie_and_phoenix(resource, res_new_name, service_push, request.db),
                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                     msg_on_fail=s.Resource_PUT_ForbiddenResponseSchema.description,
+                     msg_on_fail=s.Resource_PATCH_ForbiddenResponseSchema.description,
                      content={"resource_id": resource.resource_id, "resource_name": resource.resource_name,
                               "old_resource_name": res_old_name, "new_resource_name": res_new_name})
-    return ax.valid_http(http_success=HTTPOk, detail=s.Resource_PUT_OkResponseSchema.description,
+    return ax.valid_http(http_success=HTTPOk, detail=s.Resource_PATCH_OkResponseSchema.description,
                          content={"resource_id": resource.resource_id, "resource_name": resource.resource_name,
                                   "old_resource_name": res_old_name, "new_resource_name": res_new_name})
 

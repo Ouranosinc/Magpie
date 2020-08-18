@@ -777,7 +777,7 @@ class Resource_GET_InternalServerErrorResponseSchema(colander.MappingSchema):
     body = InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
 
 
-class Resource_PUT_RequestBodySchema(colander.MappingSchema):
+class Resource_PATCH_RequestBodySchema(colander.MappingSchema):
     resource_name = colander.SchemaNode(
         colander.String(),
         description="New name to apply to the resource to update",
@@ -789,13 +789,13 @@ class Resource_PUT_RequestBodySchema(colander.MappingSchema):
     )
 
 
-class Resource_PUT_RequestSchema(colander.MappingSchema):
+class Resource_PATCH_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchemaAPI()
-    body = Resource_PUT_RequestBodySchema()
+    body = Resource_PATCH_RequestBodySchema()
     resource_id = ResourceIdParameter
 
 
-class Resource_PUT_ResponseBodySchema(BaseResponseBodySchema):
+class Resource_PATCH_ResponseBodySchema(BaseResponseBodySchema):
     resource_id = colander.SchemaNode(
         colander.String(),
         description="Updated resource identification number."
@@ -814,13 +814,13 @@ class Resource_PUT_ResponseBodySchema(BaseResponseBodySchema):
     )
 
 
-class Resource_PUT_OkResponseSchema(colander.MappingSchema):
+class Resource_PATCH_OkResponseSchema(colander.MappingSchema):
     description = "Update resource successful."
     header = HeaderResponseSchema()
-    body = Resource_PUT_ResponseBodySchema(code=HTTPOk.code, description=description)
+    body = Resource_PATCH_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class Resource_PUT_ForbiddenResponseSchema(colander.MappingSchema):
+class Resource_PATCH_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Failed to update resource with new name."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
@@ -1135,7 +1135,7 @@ class Services_POST_InternalServerErrorResponseSchema(colander.MappingSchema):
     body = BaseResponseBodySchema(code=HTTPInternalServerError.code, description=description)
 
 
-class Service_PUT_ResponseBodySchema(colander.MappingSchema):
+class Service_PATCH_ResponseBodySchema(colander.MappingSchema):
     service_name = colander.SchemaNode(
         colander.String(),
         description="New service name to apply to service specified in path",
@@ -1158,40 +1158,40 @@ class Service_PUT_ResponseBodySchema(colander.MappingSchema):
     )
 
 
-class Service_PUT_RequestBodySchema(colander.MappingSchema):
+class Service_PATCH_RequestBodySchema(colander.MappingSchema):
     header = HeaderRequestSchemaAPI()
-    body = Service_PUT_ResponseBodySchema()
+    body = Service_PATCH_ResponseBodySchema()
 
 
 class Service_SuccessBodyResponseSchema(BaseResponseBodySchema):
     service = ServiceBodySchema()
 
 
-class Service_PUT_OkResponseSchema(colander.MappingSchema):
+class Service_PATCH_OkResponseSchema(colander.MappingSchema):
     description = "Update service successful."
     header = HeaderResponseSchema()
     body = Service_SuccessBodyResponseSchema(code=HTTPOk.code, description=description)
 
 
-class Service_PUT_BadRequestResponseSchema(colander.MappingSchema):
+class Service_PATCH_BadRequestResponseSchema(colander.MappingSchema):
     description = "Registered service values are already equal to update values."
     header = HeaderResponseSchema()
     body = Service_FailureBodyResponseSchema(code=HTTPBadRequest.code, description=description)
 
 
-class Service_PUT_BadRequestResponseSchema_ReservedKeyword(colander.MappingSchema):
+class Service_PATCH_BadRequestResponseSchema_ReservedKeyword(colander.MappingSchema):
     description = "Update service name to 'types' not allowed (reserved keyword)."
     header = HeaderResponseSchema()
     body = Service_FailureBodyResponseSchema(code=HTTPBadRequest.code, description=description)
 
 
-class Service_PUT_ForbiddenResponseSchema(colander.MappingSchema):
+class Service_PATCH_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Update service failed during value assignment."
     header = HeaderResponseSchema()
     body = Service_FailureBodyResponseSchema(code=HTTPForbidden.code, description=description)
 
 
-class Service_PUT_ConflictResponseSchema(colander.MappingSchema):
+class Service_PATCH_ConflictResponseSchema(colander.MappingSchema):
     description = "Specified 'service_name' already exists."
     header = HeaderResponseSchema()
     body = Service_FailureBodyResponseSchema(code=HTTPConflict.code, description=description)
@@ -1457,7 +1457,7 @@ class UserNew_POST_ForbiddenResponseSchema(colander.MappingSchema):
     body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class User_PUT_RequestBodySchema(colander.MappingSchema):
+class User_PATCH_RequestBodySchema(colander.MappingSchema):
     user_name = colander.SchemaNode(
         colander.String(),
         description="New name to apply to the user",
@@ -1478,30 +1478,30 @@ class User_PUT_RequestBodySchema(colander.MappingSchema):
     )
 
 
-class User_PUT_RequestSchema(colander.MappingSchema):
+class User_PATCH_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchemaAPI()
-    body = User_PUT_RequestBodySchema()
+    body = User_PATCH_RequestBodySchema()
 
 
-class Users_PUT_OkResponseSchema(colander.MappingSchema):
+class Users_PATCH_OkResponseSchema(colander.MappingSchema):
     description = "Update user successful."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class User_PUT_BadRequestResponseSchema(colander.MappingSchema):
+class User_PATCH_BadRequestResponseSchema(colander.MappingSchema):
     description = "Missing new user parameters to update."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class User_PUT_ForbiddenResponseSchema(colander.MappingSchema):
+class User_PATCH_ForbiddenResponseSchema(colander.MappingSchema):
     description = "User name update not allowed."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class User_PUT_ConflictResponseSchema(colander.MappingSchema):
+class User_PATCH_ConflictResponseSchema(colander.MappingSchema):
     description = "New name user already exists."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPConflict.code, description=description)
@@ -2054,7 +2054,7 @@ class Group_GET_NotFoundResponseSchema(colander.MappingSchema):
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
-class Group_PUT_RequestBodySchema(colander.MappingSchema):
+class Group_PATCH_RequestBodySchema(colander.MappingSchema):
     group_name = colander.SchemaNode(colander.String(), missing=colander.drop,
                                      description="New name to apply to the group.")
     description = colander.SchemaNode(colander.String(), missing=colander.drop,
@@ -2063,44 +2063,44 @@ class Group_PUT_RequestBodySchema(colander.MappingSchema):
                                        description="New discoverable status to apply to the group.")
 
 
-class Group_PUT_RequestSchema(colander.MappingSchema):
+class Group_PATCH_RequestSchema(colander.MappingSchema):
     header = HeaderRequestSchemaAPI()
-    body = Group_PUT_RequestBodySchema()
+    body = Group_PATCH_RequestBodySchema()
     group_name = GroupNameParameter
 
 
-class Group_PUT_OkResponseSchema(colander.MappingSchema):
+class Group_PATCH_OkResponseSchema(colander.MappingSchema):
     description = "Update group successful."
     header = HeaderResponseSchema()
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class Group_PUT_None_BadRequestResponseSchema(colander.MappingSchema):
+class Group_PATCH_None_BadRequestResponseSchema(colander.MappingSchema):
     description = "Missing new group parameters to update."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class Group_PUT_Name_BadRequestResponseSchema(colander.MappingSchema):
+class Group_PATCH_Name_BadRequestResponseSchema(colander.MappingSchema):
     description = "Invalid 'group_name' value specified."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class Group_PUT_Size_BadRequestResponseSchema(colander.MappingSchema):
+class Group_PATCH_Size_BadRequestResponseSchema(colander.MappingSchema):
     description = "Invalid 'group_name' length specified (>{length} characters)." \
         .format(length=get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class Group_PUT_ReservedKeyword_ForbiddenResponseSchema(colander.MappingSchema):
+class Group_PATCH_ReservedKeyword_ForbiddenResponseSchema(colander.MappingSchema):
     description = "Update of reserved keyword or special group forbidden."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class Group_PUT_ConflictResponseSchema(colander.MappingSchema):
+class Group_PATCH_ConflictResponseSchema(colander.MappingSchema):
     description = "Group name already exists."
     header = HeaderResponseSchema()
     body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
@@ -2662,10 +2662,10 @@ Resource_GET_responses = {
     "422": UnprocessableEntityResponseSchema(),
     "500": Resource_GET_InternalServerErrorResponseSchema()
 }
-Resource_PUT_responses = {
-    "200": Resource_PUT_OkResponseSchema(),
+Resource_PATCH_responses = {
+    "200": Resource_PATCH_OkResponseSchema(),
     "400": Resource_MatchDictCheck_BadRequestResponseSchema(),
-    "403": Resource_PUT_ForbiddenResponseSchema(),
+    "403": Resource_PATCH_ForbiddenResponseSchema(),
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2746,13 +2746,13 @@ Service_GET_responses = {
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-Service_PUT_responses = {
-    "200": Service_PUT_OkResponseSchema(),
-    "400": Service_PUT_BadRequestResponseSchema(),
+Service_PATCH_responses = {
+    "200": Service_PATCH_OkResponseSchema(),
+    "400": Service_PATCH_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Service_PUT_ForbiddenResponseSchema(),
+    "403": Service_PATCH_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
-    "409": Service_PUT_ConflictResponseSchema(),
+    "409": Service_PATCH_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Service_DELETE_responses = {
@@ -2846,8 +2846,8 @@ User_GET_responses = {
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-User_PUT_responses = {
-    "200": Users_PUT_OkResponseSchema(),
+User_PATCH_responses = {
+    "200": Users_PATCH_OkResponseSchema(),
     "400": User_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": UserGroup_GET_ForbiddenResponseSchema(),
@@ -2969,13 +2969,13 @@ LoggedUser_GET_responses = {
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-LoggedUser_PUT_responses = {
-    "200": Users_PUT_OkResponseSchema(),
-    "400": User_PUT_BadRequestResponseSchema(),
+LoggedUser_PATCH_responses = {
+    "200": Users_PATCH_OkResponseSchema(),
+    "400": User_PATCH_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": User_PUT_ForbiddenResponseSchema(),
+    "403": User_PATCH_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
-    "409": User_PUT_ConflictResponseSchema(),
+    "409": User_PATCH_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 LoggedUser_DELETE_responses = {
@@ -3101,14 +3101,14 @@ Group_GET_responses = {
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-Group_PUT_responses = {
-    "200": Group_PUT_OkResponseSchema(),
-    "400": Group_PUT_Name_BadRequestResponseSchema(),
+Group_PATCH_responses = {
+    "200": Group_PATCH_OkResponseSchema(),
+    "400": Group_PATCH_Name_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Group_PUT_ReservedKeyword_ForbiddenResponseSchema(),
+    "403": Group_PATCH_ReservedKeyword_ForbiddenResponseSchema(),
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
-    "409": Group_PUT_ConflictResponseSchema(),
+    "409": Group_PATCH_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }

@@ -88,11 +88,15 @@
                 </form>
                 <form id="edit_description" action="${request.path}" method="post">
                     <p class="panel-line">
-                        <span class="panel-entry">Name: </span>
+                        <span class="panel-entry">Description: </span>
                         %if edit_mode == "edit_description" and group_name not in MAGPIE_FIXED_GROUP_EDITS:
                             <label>
-                            <input type="text" value="${description}" placeholder="description" name="new_description"
-                                   id="input_description" onkeyup="adjustWidth('input_description')">
+                            <input type="text" placeholder="description" name="new_description"
+                                   id="input_description" onkeyup="adjustWidth('input_description')"
+                                %if description:
+                                    value="${description}"
+                                %endif
+                            >
                             <input type="submit" value="Save" name="save_description" class="button theme">
                             <input type="submit" value="Cancel" name="no_edit" class="button cancel">
                             </label>
@@ -113,11 +117,10 @@
                     </p>
                 </form>
                 <form id="edit_discoverable" action="${request.path}" method="post">
-                    <p class="panel-line">
-                        <span class="panel-entry">Name: </span>
+                    <p class="panel-line panel-line-checkbox">
+                        <span class="panel-entry">Discoverable: </span>
                         <label>
-                        <input type="checkbox" value="${discoverable}" name="new_discoverable"
-                               id="input_discoverable"
+                        <input type="checkbox" name="new_discoverable" id="input_discoverable"
                             %if discoverable:
                                checked
                             %endif

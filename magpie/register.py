@@ -377,7 +377,7 @@ def _magpie_update_services_conflict(conflict_services, services_dict, request_c
         svc_url_old = svc_info["service_url"]
         if svc_url_old != svc_url_new:
             svc_info["service_url"] = svc_url_new
-            res_svc_put = requests.put(svc_url_db, data=svc_info, cookies=request_cookies)
+            res_svc_put = requests.patch(svc_url_db, data=svc_info, cookies=request_cookies)
             statuses[svc_name] = res_svc_put.status_code
             print_log("[{url_old}] => [{url_new}] Service URL update ({svc}): {resp}"
                       .format(svc=svc_name, url_old=svc_url_old, url_new=svc_url_new, resp=res_svc_put.status_code),
