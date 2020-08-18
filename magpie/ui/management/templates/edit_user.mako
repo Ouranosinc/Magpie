@@ -83,7 +83,7 @@
                         %if edit_mode == 'edit_username':
                             <label>
                             <input type="text" placeholder="new user name" value="${user_name}" name="new_user_name"
-                                   id="input_username" onkeyup="adjustWidth('input_name')">
+                                   id="input_username" onkeyup="adjustWidth('input_username')">
                             <input type="submit" value="Save" name="save_username" class="button theme">
                             <input type="submit" value="Cancel" name="no_edit" class="button cancel">
                             </label>
@@ -101,7 +101,7 @@
                         %if edit_mode == "edit_password":
                             <label>
                             <input type="password" placeholder="new password" value="" name="new_user_password"
-                                   id="input_password" onkeyup="adjustWidth('input_name')">
+                                   id="input_password" onkeyup="adjustWidth('input_password')">
                             <input type="submit" value="Save" name="save_password" class="button theme">
                             <input type="submit" value="Cancel" name="no_edit" class="button cancel">
                             </label>

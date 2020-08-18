@@ -60,33 +60,79 @@
             </span>
         </form>
     </div>
-    <form id="edit_info" action="${request.path}" method="post">
-        <div class="panel-body">
-            <div class="panel-box">
-                <div class="panel-heading subsection">
-                    <div class="panel-title">Details</div>
-                </div>
-                <div>
+    <div class="panel-body">
+        <div class="panel-box">
+            <div class="panel-heading subsection">
+                <div class="panel-title">Details</div>
+            </div>
+            <div>
+                <form id="edit_name" action="${request.path}" method="post">
                     <p class="panel-line">
                         <span class="panel-entry">Name: </span>
-                        %if edit_mode == "edit_group_name":
+                        %if edit_mode == "edit_group_name" and group_name not in MAGPIE_FIXED_GROUP_EDITS:
                             <label>
                             <input type="text" value="${group_name}" placeholder="group name" name="new_group_name"
-                                   id="input_group_name" onkeyup="adjustWidth('input_name')">
+                                   id="input_group_name" onkeyup="adjustWidth('input_group_name')">
                             <input type="submit" value="Save" name="save_group_name" class="button theme">
                             <input type="submit" value="Cancel" name="no_edit" class="button cancel">
                             </label>
                         %else:
                             <label>
                             <span class="panel-value">${group_name}</span>
+                            %if group_name not in MAGPIE_FIXED_GROUP_EDITS:
                             <input type="submit" value="Edit" name="edit_group_name" class="button theme">
+                            %endif
                             </label>
                         %endif
                     </p>
-                </div>
+                </form>
+                <form id="edit_description" action="${request.path}" method="post">
+                    <p class="panel-line">
+                        <span class="panel-entry">Name: </span>
+                        %if edit_mode == "edit_description" and group_name not in MAGPIE_FIXED_GROUP_EDITS:
+                            <label>
+                            <input type="text" value="${description}" placeholder="description" name="new_description"
+                                   id="input_description" onkeyup="adjustWidth('input_description')">
+                            <input type="submit" value="Save" name="save_description" class="button theme">
+                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                            </label>
+                        %else:
+                            <label>
+                            <span class="panel-value">
+                                %if description:
+                                    ${description}
+                                %else:
+                                    n/a
+                                %endif
+                            </span>
+                            %if group_name not in MAGPIE_FIXED_GROUP_EDITS:
+                            <input type="submit" value="Edit" name="edit_description" class="button theme">
+                            %endif
+                            </label>
+                        %endif
+                    </p>
+                </form>
+                <form id="edit_discoverable" action="${request.path}" method="post">
+                    <p class="panel-line">
+                        <span class="panel-entry">Name: </span>
+                        <label>
+                        <input type="checkbox" value="${discoverable}" name="new_discoverable"
+                               id="input_discoverable"
+                            %if discoverable:
+                               checked
+                            %endif
+                            %if group_name in MAGPIE_FIXED_GROUP_EDITS:
+                               disabled
+                            %else:
+                               onchange="document.getElementById('edit_discoverable').submit()"
+                            %endif
+                        >
+                        </label>
+                    </p>
+                </form>
             </div>
         </div>
-    </form>
+    </div>
 </div>
 
 <h3>Members</h3>

@@ -1,4 +1,4 @@
-import json as json_pkg
+import json as json_pkg  # avoid conflict name with json argument employed for some function
 import unittest
 import warnings
 from distutils.version import LooseVersion
@@ -401,10 +401,8 @@ def check_or_try_login_user(test_item,                      # type: AnyMagpieTes
             return resp.headers, resp_cookies
 
     if auth is True:
-        if LooseVersion(version) >= LooseVersion("0.6.3"):
-            logged_user = body.get("user", {}).get("user_name", "")
-        else:
-            logged_user = body.get("user_name", "")
+        body = TestSetup.get_UserInfo(app_or_url, override_body=body, override_version=version)
+        logged_user = body.get("user_name", "")
         if username != logged_user:
             raise AssertionError("invalid user")
         if isinstance(app_or_url, TestApp):
@@ -565,8 +563,12 @@ def check_response_basic_info(response,                         # type: AnyRespo
     """
     check_val_is_in("Content-Type", dict(response.headers), msg="Response doesn't define 'Content-Type' header.")
     content_types = get_response_content_types_list(response)
-    check_val_equal(response.status_code, expected_code, msg="Response doesn't match expected HTTP status code.")
     check_val_is_in(expected_type, content_types, msg="Response doesn't match expected HTTP Content-Type header.")
+    code_message = "Response doesn't match expected HTTP status code."
+    if expected_type == CONTENT_TYPE_JSON:
+        # provide more details about mismatching code since to help debug cause of error
+        code_message += "\nReason:\n{}".format(json_pkg.dumps(get_json_body(response), indent=4), ensure_ascii=False)
+    check_val_equal(response.status_code, expected_code, msg=code_message)
 
     if expected_type == CONTENT_TYPE_JSON:
         body = get_json_body(response)
@@ -990,7 +992,7 @@ class TestSetup(object):
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
         body = check_response_basic_info(resp, 201, expected_method="POST")
-        info = TestSetup.get_ResourceInfo(test_case, body)
+        info = TestSetup.get_ResourceInfo(test_case, override_body=body)
         path = "/resources/{}".format(info["resource_id"])
         resp = test_request(app_or_url, "GET", path,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
@@ -999,7 +1001,7 @@ class TestSetup(object):
 
     @staticmethod
     def get_ResourceInfo(test_case,                 # type: AnyMagpieTestCaseType
-                         body=None,                 # type: JSON
+                         override_body=None,        # type: Optional[JSON]
                          full_detail=False,         # type: bool
                          resource_id=None,          # type: Optional[int]
                          override_headers=null,     # type: Optional[HeadersType]
@@ -1015,7 +1017,8 @@ class TestSetup(object):
         details resource such as applicable permissions that are not available from base request body returned at
         resource creation. This is essentially the same as requesting the details directly with :paramref:`resource_id`.
         """
-        if body:
+        body = override_body
+        if override_body:
             if LooseVersion(test_case.version) >= LooseVersion("0.6.3"):
                 check_val_is_in("resource", body)
                 check_val_type(body["resource"], dict)
@@ -1026,7 +1029,7 @@ class TestSetup(object):
                                 headers=override_headers if override_headers is not null else test_case.json_headers,
                                 cookies=override_cookies if override_cookies is not null else test_case.cookies)
             body = check_response_basic_info(resp)
-            body = TestSetup.get_ResourceInfo(test_case, body=body, resource_id=None, full_detail=False)
+            body = TestSetup.get_ResourceInfo(test_case, override_body=body, resource_id=None, full_detail=False)
         return body
 
     @staticmethod
@@ -1293,6 +1296,36 @@ class TestSetup(object):
             check_response_basic_info(resp, 200, expected_method="DELETE")
         TestSetup.check_NonExistingTestUser(test_case, override_user_name=user_name,
                                             override_headers=override_headers, override_cookies=override_cookies)
+
+    @staticmethod
+    def get_UserInfo(test_case,                 # type: AnyMagpieTestCaseType
+                     override_body=None,        # type: JSON
+                     override_username=null,    # type: Optional[Str]
+                     override_version=null,     # type: Optional[Str]
+                     override_headers=null,     # type: Optional[HeadersType]
+                     override_cookies=null,     # type: Optional[CookiesType]
+                     ):                         # type: (...) -> JSON
+        """
+        Obtains in a backward compatible way the user details based on response body and the tested instance version.
+
+        Executes an HTTP request with the currently logged user (using cookies/headers) or for another user (using
+        :paramref:`override_username` (needs admin-level login cookies/headers).
+        Using :paramref:`body`, one can directly fetch details from JSON body instead of performing the request.
+        Employed version is extracted from the :paramref:`test_case` unless provided by :paramref:`override_version`.
+        """
+        if override_body:
+            body = override_body
+        else:
+            username = override_username if override_username is not null else get_constant("MAGPIE_LOGGED_USER")
+            resp = test_request(test_case, "GET", "/users/{}".format(username),
+                                headers=override_headers if override_headers is not null else test_case.json_headers,
+                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
+            body = check_response_basic_info(resp)
+        version = override_version if override_version is not null else test_case.version
+        if LooseVersion(version) >= LooseVersion("0.6.3"):
+            check_val_is_in("user", body)
+            body = body["user"]
+        return body or {}
 
     @staticmethod
     def check_UserGroupMembership(test_case,                    # type: AnyMagpieTestCaseType

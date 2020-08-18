@@ -57,6 +57,7 @@ def edit_group_view(request):
         get_constant("MAGPIE_ADMIN_GROUP", settings_container=request),
     ]
     ax.verify_param(group.group_name, not_in=True, param_compare=special_groups, param_name="group_name",
+                    http_error=HTTPForbidden,
                     msg_on_fail=s.Group_PUT_ReservedKeyword_ForbiddenResponseSchema.description)
 
     new_group_name = ar.get_multiformat_post(request, "group_name")
@@ -67,8 +68,8 @@ def edit_group_view(request):
     update_name = group.group_name != new_group_name and new_group_name is not None
     update_desc = group.description != new_description and new_description is not None
     update_disc = group.discoverable != new_discoverability and new_discoverability is not None
-    ax.verify_param(any([update_name, update_desc, update_disc]), is_true=True, http_error=HTTPBadRequest,
-                    content={"group_name": group.group_name},
+    ax.verify_param(any([update_name, update_desc, update_disc]), is_true=True,
+                    http_error=HTTPBadRequest, content={"group_name": group.group_name},
                     msg_on_fail=s.Group_PUT_None_BadRequestResponseSchema.description)
     if new_group_name:
         ax.verify_param(new_group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
@@ -95,6 +96,13 @@ def delete_group_view(request):
     Delete a group by name.
     """
     group = ar.get_group_matchdict_checked(request)
+    special_groups = [
+        get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=request),
+        get_constant("MAGPIE_ADMIN_GROUP", settings_container=request),
+    ]
+    ax.verify_param(group.group_name, not_in=True, param_compare=special_groups, param_name="group_name",
+                    http_error=HTTPForbidden,
+                    msg_on_fail=s.Group_DELETE_ReservedKeyword_ForbiddenResponseSchema.description)
     ax.evaluate_call(lambda: request.db.delete(group),
                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                      msg_on_fail=s.Group_DELETE_ForbiddenResponseSchema.description)

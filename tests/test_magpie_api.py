@@ -72,6 +72,10 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         assert cls.headers and cls.cookies, cls.require  # nosec
 
+        cls.test_service_name = "unittest-user-auth_test-service"
+        cls.test_service_type = "api"
+        cls.test_resource_name = "unittest-user-auth_test-resource"
+        cls.test_resource_type = "route"
         cls.test_group_name = "unittest-user-auth_test-group"
         cls.test_user_name = "unittest-user-auth_test-user-username"
         cls.other_user_name = "unittest-user-auth_other-user-username"

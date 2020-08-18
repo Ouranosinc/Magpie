@@ -119,7 +119,7 @@ class User_Magpie_TestCase(object):
     def setUp(self):
         """
         Login as admin to setup test items from fresh start and remain logged in as admin since test cases might need
-        to setup additional items. Each test should call :meth:`login_test_user` when finished setup and ready to test.
+        to setup additional items. Each test **MUST** call :meth:`login_test_user` before testing when finished setup.
 
         Ensure that test user will have test group membership but not admin-level access.
         """
@@ -187,12 +187,10 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         resp = utils.test_request(self, "GET", "/session", headers=self.json_headers)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], False)
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            utils.check_val_not_in("user", body)
-        else:
-            utils.check_val_not_in("user_name", body)
-            utils.check_val_not_in("user_email", body)
-            utils.check_val_not_in("group_names", body)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_not_in("user_name", info)
+        utils.check_val_not_in("user_email", info)
+        utils.check_val_not_in("group_names", info)
 
     @runner.MAGPIE_TEST_STATUS
     def test_GetVersion(self):
@@ -212,10 +210,8 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         logged_user = get_constant("MAGPIE_LOGGED_USER")
         resp = utils.test_request(self, "GET", "/users/{}".format(logged_user), headers=self.json_headers)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
-        else:
-            utils.check_val_equal(body["user_name"], self.test_user_name)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], self.test_user_name)
 
     @runner.MAGPIE_TEST_STATUS
     def test_NotAcceptableRequest(self):
@@ -294,6 +290,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def setUp(self):
         User_Magpie_TestCase.setUp(self)
 
+    def tearDown(self):
+        utils.check_or_try_logout_user(self)
+
     def login_test_user(self):
         """Apply JSON headers on top of login headers for API calls."""
         User_Magpie_TestCase.login_test_user(self)
@@ -302,8 +301,13 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     def test_PostSignin_EmailAsUsername(self):
         """User is allowed to use its email as username for login."""
+        User_Magpie_TestCase.login_test_user(self)
+        info = utils.TestSetup.get_UserInfo(self,
+                                            override_headers=self.test_headers,
+                                            override_cookies=self.test_cookies)
+        utils.check_val_is_in(self.test_user_name, info["email"])
         utils.check_or_try_logout_user(self)
-        data = {"user_name": "{}@mail.com".format(self.test_user_name)}  # see create test users for value
+        data = {"user_name": info["email"]}
         resp = utils.test_request(self, "POST", "/signin", data=data, headers=self.json_headers, cookies={})
         body = utils.check_response_basic_info(resp)
         utils.check_val_equal(body["detail"], Signin_POST_OkResponseSchema.description)
@@ -315,19 +319,20 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_PutUser_ReservedKeyword_Current`
         """
-        new_email = "some-random-email@unittest.com"
+        self.login_test_user()
 
         # update existing user name
+        new_email = "some-random-email@unittest.com"
         data = {"email": new_email}
         path = "/users/{usr}".format(usr=user_path_variable)
         resp = utils.test_request(self, "PUT", path, headers=self.test_headers, cookies=self.test_cookies, data=data)
         utils.check_response_basic_info(resp, 200, expected_method="PUT")
 
         # validate change
-        path = "/users/{usr}".format(usr=get_constant("MAGPIE_LOGGED_USER"))
-        resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
-        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["user"]["email"], new_email)
+        info = utils.TestSetup.get_UserInfo(self,
+                                            override_headers=self.test_headers,
+                                            override_cookies=self.test_cookies)
+        utils.check_val_equal(info["email"], new_email)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -347,7 +352,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_PutUser_ReservedKeyword_Current`
         """
-        utils.TestSetup.create_TestUser(self)
+        self.login_test_user()
         old_password = self.test_user_name
         new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
         data = {"password": new_password}
@@ -363,7 +368,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], True)
-        utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], self.test_user_name)
         utils.check_or_try_logout_user(self)
 
         # validate that previous password is ineffective
@@ -397,12 +403,13 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
         self.extra_user_names.append(self.other_user_name)
         utils.TestSetup.create_TestUser(self, {"user_name": self.other_user_name, "password": self.other_user_name})
+        self.login_test_user()
+
         new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
         data = {"password": new_password}
         path = "/users/{usr}".format(usr=self.other_user_name)
         resp = utils.test_request(self, "PUT", path, headers=self.test_headers, cookies=self.test_cookies, data=data)
         utils.check_response_basic_info(resp, 403, expected_method="PUT")
-        utils.check_or_try_logout_user(self)
 
         # validate that current user password was not randomly updated
         # make sure we clear any potential leftover cookies by re-login
@@ -413,7 +420,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], True)
-        utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], self.test_user_name)
 
         # validate that the new password was not applied to other user
         utils.check_or_try_logout_user(self)
@@ -423,42 +431,42 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], True)
-        utils.check_val_equal(body["user"]["user_name"], self.other_user_name)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], self.other_user_name)
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_username_Forbidden_ReservedKeyword_Current(self):
         """Logged user is not allowed to update its user name to reserved keyword."""
-        data = {"user_name": get_constant("MAGPIE_LOGGED_USER")}
         self.login_test_user()
+        data = {"user_name": get_constant("MAGPIE_LOGGED_USER")}
         resp = utils.test_request(self, "PUT", "/users/current", data=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method="PUT")
-        resp = utils.test_request(self, "GET", "/users/current", headers=self.test_headers, cookies=self.test_cookies)
-        body = utils.check_response_basic_info(resp)
-        utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
+        info = utils.TestSetup.get_UserInfo(self,
+                                            override_headers=self.test_headers,
+                                            override_cookies=self.test_cookies)
+        utils.check_val_equal(info["user_name"], self.test_user_name)
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_username_Forbidden_AnyNonAdmin(self):
         """Non-admin level user is not permitted to update its own user name."""
-        data = {"user_name": self.test_user_name + "new-user-name"}
         self.login_test_user()
+        data = {"user_name": self.test_user_name + "new-user-name"}
         resp = utils.test_request(self, "PUT", "/users/current", data=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method="PUT")
-        resp = utils.test_request(self, "GET", "/users/current", headers=self.test_headers, cookies=self.test_cookies)
-        body = utils.check_response_basic_info(resp)
-        utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
+        info = utils.TestSetup.get_UserInfo(self,
+                                            override_headers=self.test_headers,
+                                            override_cookies=self.test_cookies)
+        utils.check_val_equal(info["user_name"], self.test_user_name)
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_username_Forbidden_UpdateOthers(self):
         """Logged user is not allowed to update any other user's name."""
         self.extra_user_names.append(self.other_user_name)
         utils.TestSetup.create_TestUser(self, {"user_name": self.other_user_name, "password": self.other_user_name})
-        # sanity check that we are still logged as test user
         self.login_test_user()
-        resp = utils.test_request(self, "GET", "/users/current", headers=self.test_headers, cookies=self.test_cookies)
-        body = utils.check_response_basic_info(resp)
-        utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
+
         # actual test
         new_test_user_name = self.other_user_name + "new-user-name"
         self.extra_user_names.append(new_test_user_name)
@@ -467,6 +475,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "PUT", path, data=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method="PUT")
+
         # valid other user not updated by test user, with admin access
         resp = utils.test_request(self, "GET", path, cookies=self.cookies, headers=self.json_headers)
         utils.check_response_basic_info(resp)
@@ -478,8 +487,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         """Logged user without administrator access is not allowed to add resource permissions for itself."""
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
-        body = utils.TestSetup.get_ResourceInfo(self, body)
+        body = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         self.login_test_user()
+
         res_id = body["resource_id"]
         perm = Permission.READ.value
         data = {"permission_name": perm}
@@ -499,6 +509,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.delete_TestGroup(self)
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         self.login_test_user()
+
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "POST", path, data={}, headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp, 201, expected_method="POST")
@@ -514,6 +525,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         utils.TestSetup.assign_TestUserGroup(self)
         self.login_test_user()
+
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "DELETE", path, data={}, headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 200, expected_method="DELETE")
@@ -525,6 +537,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.delete_TestGroup(self)
         utils.TestSetup.create_TestGroup(self, override_data=data)
         self.login_test_user()
+
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp, 200)
@@ -548,8 +561,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         self.extra_group_names.extend(discover_groups)
         for grp in discover_groups:
             utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True, "group_name": grp})
-        # test that only just added discoverable groups are visible (ignore pre-existing discoverable groups if any)
         self.login_test_user()
+
+        # test that only just added discoverable groups are visible (ignore pre-existing discoverable groups if any)
         resp = utils.test_request(self, "GET", "/register/groups", headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp, 200)
         utils.check_val_is_in("group_names", body)
@@ -565,6 +579,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.delete_TestGroup(self)  # remove auto-created by setup
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         self.login_test_user()
+
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 200)
@@ -697,17 +712,12 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], True)
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            utils.check_val_is_in("user", body)
-            utils.check_val_equal(body["user"]["user_name"], self.usr)
-            utils.check_val_is_in(get_constant("MAGPIE_ADMIN_GROUP"), body["user"]["group_names"])
-            utils.check_val_type(body["user"]["group_names"], list)
-            utils.check_val_is_in("email", body["user"])
-        else:
-            utils.check_val_equal(body["user_name"], self.usr)
-            utils.check_val_is_in(get_constant("MAGPIE_ADMIN_GROUP"), body["group_names"])
-            utils.check_val_type(body["group_names"], list)
-            utils.check_val_is_in("user_email", body)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_is_in("user", body)
+        utils.check_val_equal(info["user_name"], self.usr)
+        utils.check_val_is_in(get_constant("MAGPIE_ADMIN_GROUP"), info["group_names"])
+        utils.check_val_type(info["group_names"], list)
+        utils.check_val_is_in("email", info)
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUsers(self):
@@ -745,10 +755,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         path = "/users/{}".format(logged_user)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            utils.check_val_equal(body["user"]["user_name"], self.usr)
-        else:
-            utils.check_val_equal(body["user_name"], self.usr)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], self.usr)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -1203,7 +1211,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
-        info = utils.TestSetup.get_ResourceInfo(self, body, full_detail=True)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
         applicable_perm = info["permission_names"][0]
         res_id = body["resource_id"]
         path = "groups/{}/resources/{}/permissions".format(get_constant("MAGPIE_ANONYMOUS_GROUP"), res_id)
@@ -1230,7 +1238,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
-        info = utils.TestSetup.get_ResourceInfo(self, body)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         parent_id = info["resource_id"]
         body = utils.TestSetup.create_TestResource(self, parent_resource_id=parent_id)
         applicable_perm = body["permission_names"][0]
@@ -1250,14 +1258,13 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers(self):
         body = utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            utils.check_val_is_in("user", body)
-            utils.check_val_is_in("user_name", body["user"])
-            utils.check_val_type(body["user"]["user_name"], six.string_types)
-            utils.check_val_is_in("email", body["user"])
-            utils.check_val_type(body["user"]["email"], six.string_types)
-            utils.check_val_is_in("group_names", body["user"])
-            utils.check_val_type(body["user"]["group_names"], list)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_is_in("user_name", info)
+        utils.check_val_type(info["user_name"], six.string_types)
+        utils.check_val_is_in("email", info)
+        utils.check_val_type(info["email"], six.string_types)
+        utils.check_val_is_in("group_names", info)
+        utils.check_val_type(info["group_names"], list)
 
         users = utils.TestSetup.get_RegisteredUsersList(self)
         utils.check_val_is_in(self.test_user_name, users)
@@ -1369,7 +1376,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         path = "/users/{usr}".format(usr=new_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["user"]["user_name"], new_name)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], new_name)
 
         # validate removed previous user name
         path = "/users/{usr}".format(usr=self.test_user_name)
@@ -1384,7 +1392,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], True)
-        utils.check_val_equal(body["user"]["user_name"], new_name)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], new_name)
 
         # validate ineffective previous user name
         utils.check_or_try_logout_user(self)
@@ -1418,7 +1427,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["user"]["email"], new_email)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["email"], new_email)
 
     @runner.MAGPIE_TEST_USERS
     def test_PutUsers_password(self):
@@ -1438,7 +1448,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], True)
-        utils.check_val_equal(body["user"]["user_name"], self.test_user_name)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], self.test_user_name)
         utils.check_or_try_logout_user(self)
 
         # validate that previous password is ineffective
@@ -1456,21 +1467,13 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         path = "/users/{usr}".format(usr=self.test_user_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            utils.check_val_is_in("user", body)
-            utils.check_val_is_in("user_name", body["user"])
-            utils.check_val_type(body["user"]["user_name"], six.string_types)
-            utils.check_val_is_in("email", body["user"])
-            utils.check_val_type(body["user"]["email"], six.string_types)
-            utils.check_val_is_in("group_names", body["user"])
-            utils.check_val_type(body["user"]["group_names"], list)
-        else:
-            utils.check_val_is_in("user_name", body)
-            utils.check_val_type(body["user_name"], six.string_types)
-            utils.check_val_is_in("email", body)
-            utils.check_val_type(body["email"], six.string_types)
-            utils.check_val_is_in("group_names", body)
-            utils.check_val_type(body["group_names"], list)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_is_in("user_name", info)
+        utils.check_val_type(info["user_name"], six.string_types)
+        utils.check_val_is_in("email", info)
+        utils.check_val_type(info["email"], six.string_types)
+        utils.check_val_is_in("group_names", info)
+        utils.check_val_type(info["group_names"], list)
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUser_missing(self):
@@ -1676,7 +1679,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_DEFAULTS
     def test_DeleteGroup_forbidden_ReservedKeyword_Anonymous(self):
-        """Even administrator level user is not allowed to remove the special anonymous group."""
+        """Even administrator level user is not allowed to remove the special keyword anonymous group."""
         anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP")
         groups = utils.TestSetup.get_RegisteredGroupsList(self)
         utils.check_val_is_in(anonymous, groups, msg="Anonymous group pre-requirement missing for test.")
@@ -1686,6 +1689,20 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_response_basic_info(resp, 403, expected_method="DELETE")
         groups = utils.TestSetup.get_RegisteredGroupsList(self)
         utils.check_val_is_in(anonymous, groups, msg="Anonymous special group should still exist.")
+
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_DEFAULTS
+    def test_DeleteGroup_forbidden_ReservedKeyword_Admin(self):
+        """Even administrator level user is not allowed to remove the special keyword admin group."""
+        admins = get_constant("MAGPIE_ADMIN_GROUP")
+        groups = utils.TestSetup.get_RegisteredGroupsList(self)
+        utils.check_val_is_in(admins, groups, msg="Admin group pre-requirement missing for test.")
+        path = "/groups/{}".format(admins)
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+        groups = utils.TestSetup.get_RegisteredGroupsList(self)
+        utils.check_val_is_in(admins, groups, msg="Admin special group should still exist.")
 
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroupUsers(self):
@@ -2031,7 +2048,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resources_prior = utils.TestSetup.get_TestServiceDirectResources(self)
         resources_prior_ids = [res["resource_id"] for res in resources_prior]
         body = utils.TestSetup.create_TestServiceResource(self)
-        body = utils.TestSetup.get_ResourceInfo(self, body)
+        body = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         utils.check_val_is_in("resource_id", body)
         utils.check_val_is_in("resource_name", body)
         utils.check_val_is_in("resource_type", body)
@@ -2047,7 +2064,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         service_id = utils.TestSetup.get_ExistingTestServiceInfo(self)["resource_id"]
         extra_data = {"parent_id": service_id}
         body = utils.TestSetup.create_TestServiceResource(self, extra_data)
-        body = utils.TestSetup.get_ResourceInfo(self, body)
+        body = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         utils.check_val_is_in("resource_id", body)
         utils.check_val_is_in("resource_name", body)
         utils.check_val_is_in("resource_type", body)
@@ -2061,10 +2078,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         body = utils.TestSetup.create_TestServiceResource(self)
         resources = utils.TestSetup.get_TestServiceDirectResources(self)
         resources_ids = [res["resource_id"] for res in resources]
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            test_resource_id = body["resource"]["resource_id"]
-        else:
-            test_resource_id = body["resource_id"]
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        test_resource_id = info["resource_id"]
         utils.check_val_is_in(test_resource_id, resources_ids,
                               msg="service resource must exist to create child resource")
 
@@ -2076,22 +2091,22 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             "parent_id": test_resource_id
         }
         body = utils.TestSetup.create_TestServiceResource(self, override_data=override_data)
-        body = utils.TestSetup.get_ResourceInfo(self, body)
-        utils.check_val_is_in("resource_id", body)
-        utils.check_val_not_in(body["resource_id"], resources_ids)
-        utils.check_val_is_in("resource_name", body)
-        utils.check_val_equal(body["resource_name"], child_resource_name)
-        utils.check_val_is_in("resource_type", body)
-        utils.check_val_equal(body["resource_type"], self.test_resource_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        utils.check_val_is_in("resource_id", info)
+        utils.check_val_not_in(info["resource_id"], resources_ids)
+        utils.check_val_is_in("resource_name", info)
+        utils.check_val_equal(info["resource_name"], child_resource_name)
+        utils.check_val_is_in("resource_type", info)
+        utils.check_val_equal(info["resource_type"], self.test_resource_type)
 
         # validate created child resource info
         service_root_id = utils.TestSetup.get_ExistingTestServiceInfo(self)["resource_id"]
-        child_resource_id = body["resource_id"]
+        child_resource_id = info["resource_id"]
         path = "/resources/{res_id}".format(res_id=child_resource_id)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         if LooseVersion(self.version) >= LooseVersion("0.9.2"):
-            resource_body = utils.TestSetup.get_ResourceInfo(self, body)
+            resource_body = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         else:
             utils.check_val_is_in(str(child_resource_id), body)
             resource_body = body[str(child_resource_id)]
@@ -2199,11 +2214,9 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_RESOURCES
     def test_PostResources_ChildrenResource(self):
-        resource_info = utils.TestSetup.create_TestServiceResource(self)
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            direct_resource_id = resource_info["resource"]["resource_id"]
-        else:
-            direct_resource_id = resource_info["resource_id"]
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        direct_resource_id = info["resource_id"]
 
         data = {
             "resource_name": self.test_resource_name,
@@ -2232,10 +2245,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_RESOURCES
     def test_DeleteResource(self):
         body = utils.TestSetup.create_TestServiceResource(self)
-        if LooseVersion(self.version) >= LooseVersion("0.6.3"):
-            resource_id = body["resource"]["resource_id"]
-        else:
-            resource_id = body["resource_id"]
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        resource_id = info["resource_id"]
 
         path = "/resources/{res_id}".format(res_id=resource_id)
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
@@ -2376,7 +2387,8 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         utils.check_ui_response_basic_info(resp, expected_title="Magpie user Management")
         resp = utils.test_request(self, "GET", "/users/current", headers=self.json_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp)
-        utils.check_val_equal(body["user"]["email"], data["new_user_email"])
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["email"], data["new_user_email"])
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -2396,12 +2408,12 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         utils.check_or_try_logout_user(self)
         resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
                                   data={"user_name": self.test_user_name, "password": data["new_user_password"]})
-        body = utils.check_response_basic_info(resp, 200, expected_method="POST")
+        utils.check_response_basic_info(resp, 200, expected_method="POST")
         # verify that old password does not work anymore
         utils.check_or_try_logout_user(self)
         resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={}, expect_errors=True,
                                   data={"user_name": self.test_user_name, "password": self.test_user_name})
-        body = utils.check_response_basic_info(resp, 401, expected_method="POST")
+        utils.check_response_basic_info(resp, 401, expected_method="POST")
 
 
 @runner.MAGPIE_TEST_UI

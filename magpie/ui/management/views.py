@@ -38,11 +38,25 @@ class ManagementViews(BaseViews):
         return groups
 
     @error_badrequest
+    def get_group_info(self, group_name):
+        path = schemas.GroupAPI.path.format(group_name=group_name)
+        resp = request_api(self.request, path, "GET")
+        check_response(resp)
+        return get_json(resp)["group"]
+
+    @error_badrequest
     def get_group_users(self, group_name):
         path = schemas.GroupUsersAPI.path.format(group_name=group_name)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
         return get_json(resp)["user_names"]
+
+    @error_badrequest
+    def update_group_info(self, group_name, group_info):
+        path = schemas.GroupAPI.path.format(group_name=group_name)
+        resp = request_api(self.request, path, "PUT", data=group_info)
+        check_response(resp)
+        return get_json(resp)["group"]
 
     @error_badrequest
     def get_user_groups(self, user_name):
@@ -591,21 +605,31 @@ class ManagementViews(BaseViews):
                 check_response(resp)
                 return HTTPFound(self.request.route_url("view_groups"))
 
+            if "goto_service" in self.request.POST:
+                return self.goto_service(res_id)
+
             if "edit_group_name" in self.request.POST:
                 group_info["edit_mode"] = "edit_group_name"
             elif "save_group_name" in self.request.POST:
                 group_info["group_name"] = self.request.POST.get("new_group_name")
                 resp = request_api(self.request, group_path, "PUT", data=group_info)
                 check_response(resp)
-                # return immediately with updated URL to group with new name
+                # return immediately with updated URL to group with new name (reprocess this template from scratch)
                 return HTTPFound(self.request.route_url("edit_group", **group_info))
 
-            if "goto_service" in self.request.POST:
-                return self.goto_service(res_id)
+            if "edit_description" in self.request.POST:
+                group_info["edit_mode"] = "edit_description"
+            elif "save_description" in self.request.POST:
+                group_info["description"] = self.request.POST.get("new_description")
+                resp = request_api(self.request, group_path, "PUT", data=group_info)
+                check_response(resp)
 
             if "clean_resource" in self.request.POST:
                 # "clean_resource" must be above "edit_permissions" because they"re in the same form.
                 self.delete_resource(res_id)
+            elif "edit_discoverable" in self.request.POST:
+
+                self.update_group(group_info)
             elif "edit_permissions" in self.request.POST:
                 if not res_id or res_id == "None":
                     remote_id = int(self.request.POST.get("remote_id"))
@@ -654,15 +678,15 @@ class ManagementViews(BaseViews):
         if out_of_sync:
             error_message = self.make_sync_error_message(out_of_sync)
 
+        group_info.update(self.get_group_info(group_name))
+        group_info["members"] = group_info.pop("user_names")
         group_info["error_message"] = error_message
         group_info["ids_to_clean"] = ";".join(ids_to_clean)
         group_info["last_sync"] = last_sync_humanized
         group_info["sync_implemented"] = sync_implemented
         group_info["out_of_sync"] = out_of_sync
-        group_info["group_name"] = group_name
         group_info["cur_svc_type"] = cur_svc_type
         group_info["users"] = self.get_user_names()
-        group_info["members"] = self.get_group_users(group_name)
         group_info["svc_types"] = svc_types
         group_info["cur_svc_type"] = cur_svc_type
         group_info["resources"] = res_perms

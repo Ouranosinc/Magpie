@@ -2124,6 +2124,12 @@ class Group_DELETE_ForbiddenResponseSchema(colander.MappingSchema):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
+class Group_DELETE_ReservedKeyword_ForbiddenResponseSchema(colander.MappingSchema):
+    description = "Deletion of reserved keyword or special group forbidden."
+    header = HeaderResponseSchema()
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
 class GroupUsers_GET_ResponseBodySchema(BaseResponseBodySchema):
     user_names = UserNamesListSchema()
 
@@ -3109,7 +3115,7 @@ Group_PUT_responses = {
 Group_DELETE_responses = {
     "200": Group_DELETE_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Group_DELETE_ForbiddenResponseSchema(),
+    "403": Group_DELETE_ReservedKeyword_ForbiddenResponseSchema(),
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),

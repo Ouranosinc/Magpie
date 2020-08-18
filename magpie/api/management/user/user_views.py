@@ -67,7 +67,8 @@ def update_user_view(request):
     new_user_name = ar.get_multiformat_post(request, "user_name", default=user.user_name)
     new_email = ar.get_multiformat_post(request, "email", default=user.email)
     new_password = ar.get_multiformat_post(request, "password", default=user.user_password)
-    uu.check_user_info(new_user_name, new_email, new_password, group_name=None)
+    group_name = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=request)
+    uu.check_user_info(new_user_name, new_email, new_password, group_name=group_name)
 
     update_username = user.user_name != new_user_name and new_user_name is not None
     if update_username:
@@ -90,7 +91,7 @@ def update_user_view(request):
                     content={user_key: user.user_name},
                     msg_on_fail=s.User_PUT_BadRequestResponseSchema.description)
 
-    if user.user_name != new_user_name:
+    if update_username:
         existing_user = ax.evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
                                          fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                          msg_on_fail=s.User_PUT_ForbiddenResponseSchema.description)

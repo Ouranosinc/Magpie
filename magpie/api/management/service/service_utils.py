@@ -56,7 +56,7 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
     ax.verify_param(service_url, matches=True, param_compare=ax.URL_REGEX, param_name="service_url",
                     http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_Params_BadRequestResponseSchema.description)
     ax.verify_param(service_name, not_empty=True, not_none=True, matches=True,
-                    param_name="service_name",  param_compare=ax.PARAM_REGEX,
+                    param_name="service_name", param_compare=ax.PARAM_REGEX,
                     http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_Params_BadRequestResponseSchema.description)
     ax.verify_param(models.Service.by_service_name(service_name, db_session=db_session), is_none=True,
                     param_name="service_name", with_param=False, content={"service_name": str(service_name)},
