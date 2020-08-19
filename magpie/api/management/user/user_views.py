@@ -57,7 +57,7 @@ def create_user_view(request):
 @s.UserAPI.patch(schema=s.User_PATCH_RequestSchema(), tags=[s.UsersTag], response_schemas=s.User_PATCH_responses)
 @s.LoggedUserAPI.patch(schema=s.User_PATCH_RequestSchema(), tags=[s.LoggedUserTag],
                        response_schemas=s.LoggedUser_PATCH_responses)
-@view_config(route_name=s.UserAPI.name, request_method="PATCH")
+@view_config(route_name=s.UserAPI.name, request_method="PATCH", permission="MAGPIE_LOGGED_USER")
 def update_user_view(request):
     """
     Update user information by user name.
@@ -139,7 +139,7 @@ def delete_user_view(request):
 @s.UserGroupsAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI, response_schemas=s.UserGroups_GET_responses)
 @s.LoggedUserGroupsAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
                            response_schemas=s.LoggedUserGroups_GET_responses)
-@view_config(route_name=s.UserGroupsAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=s.UserGroupsAPI.name, request_method="GET", permission="MAGPIE_LOGGED_USER")
 def get_user_groups_view(request):
     """
     List all groups a user belongs to.

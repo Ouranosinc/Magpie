@@ -80,13 +80,18 @@ def get_security(service, method):
 
 # Service Routes
 def service_api_route_info(service_api):
-    return {"name": service_api.name, "pattern": service_api.path}
+    return {
+        "name": service_api.name,
+        "pattern": service_api.path,
+        "traverse": getattr(service_api, "traverse", None),
+        "factory": getattr(service_api, "factory", None),
+    }
 
 
 _LOGGED_USER_VALUE = get_constant("MAGPIE_LOGGED_USER")
 LoggedUserBase = "/users/{}".format(_LOGGED_USER_VALUE)
 
-
+from magpie.models import UserFactory
 SwaggerGenerator = Service(
     path="/json",
     name="swagger_schema_json")
@@ -99,7 +104,7 @@ UsersAPI = Service(
     name="Users")
 UserAPI = Service(
     path="/users/{user_name}",
-    name="User")
+    name="User", factory=UserFactory, traverse="/{user_name}")
 UserGroupsAPI = Service(
     path="/users/{user_name}/groups",
     name="UserGroups")

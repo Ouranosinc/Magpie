@@ -23,11 +23,13 @@ from ziggurat_foundations.models.user_resource_permission import UserResourcePer
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
 
 from magpie.api.exception import evaluate_call
+from magpie.constants import get_constant
 from magpie.permissions import Permission
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Str  # noqa: F401
+    from typing import Dict, Type
+    from magpie.typedefs import Str
 
 Base = declarative_base()   # pylint: disable=C0103,invalid-name
 
@@ -76,11 +78,10 @@ class Resource(ResourceMixin, Base):
 
     @property
     def __acl__(self):
+        """User or group that owns a resource are granted full access to it."""
         acl = []
-
         if self.owner_user_id:
             acl.extend([(Allow, self.owner_user_id, ALL_PERMISSIONS,), ])
-
         if self.owner_group_id:
             acl.extend([(Allow, "group:%s" % self.owner_group_id, ALL_PERMISSIONS,), ])
         return acl
@@ -110,20 +111,54 @@ class RootFactory(object):
     the pyramid view according to the ``permission`` value it was configured with.
 
     .. note::
-        Keep in mind that `Magpie` is configured with default permission as ``MAGPIE_ADMIN_PERMISSION``.
+        Keep in mind that `Magpie` is configured with default permission
+        :py:data:`magpie.constants.MAGPIE_ADMIN_PERMISSION`.
         Views that require more permissive authorization must be overridden with ``permission`` argument.
 
     .. seealso::
-        - :func:`magpie.includeme`
+        - ``set_default_permission`` within :func:`magpie.includeme` initialization steps
     """
     def __init__(self, request):
-        self.__acl__ = []
-        user = request.user
+        self.request = request
+
+    @property
+    def __acl__(self):
+        """Administrators have all permissions, user/group-specific permissions added if user is logged in."""
+        user = self.request.user
         if user:
-            permissions = UserService.permissions(user, request.db)
+            permissions = UserService.permissions(user, self.request.db)
             user_acl = permission_to_pyramid_acls(permissions)
-            auth_acl = [(Allow, user.id, Authenticated,)]
-            self.__acl__.extend(user_acl + auth_acl)
+            auth_acl = [(Allow, user.id, Authenticated)]
+            return user_acl + auth_acl
+        return []
+
+
+class UserFactory(RootFactory):
+    def __init__(self, request):
+        super(UserFactory, self).__init__(request)
+        self.path_user = None
+
+    def __getitem__(self, user_name):
+        if user_name == get_constant("MAGPIE_LOGGED_USER", self.request):
+            self.path_user = self.request.user
+        else:
+            self.path_user = UserService.by_user_name(user_name, self.request.db)
+        if self.path_user is not None:
+            self.path_user.__parent__ = self
+            self.path_user.__name__ = user_name
+        return self.path_user
+
+    @property
+    def __acl__(self):
+        """
+        Grant access to authenticated request user if it is the same as referenced user by path parameter
+        (either from explicit name or logged reserved keyword), to allow operations for itself.
+        """
+        acl = super(UserFactory, self).__acl__
+        user = self.request.user
+        if user and self.path_user and user.id == self.path_user.id:
+            return acl + [(Allow, user.id, "MAGPIE_LOGGED_USER")]
+        return acl
 
 
 class Service(Resource):
@@ -306,7 +341,7 @@ ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
 RESOURCE_TREE_SERVICE = ResourceTreeService(ResourceTreeServicePostgreSQL)
 REMOTE_RESOURCE_TREE_SERVICE = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
-RESOURCE_TYPE_DICT = dict()
+RESOURCE_TYPE_DICT = dict()  # type: Dict[Str, Type[Resource]]
 for res in [Service, Directory, File, Workspace, Route]:
     if res.resource_type_name in RESOURCE_TYPE_DICT:
         raise KeyError("Duplicate resource type identifiers not allowed")
@@ -317,7 +352,8 @@ def resource_factory(**kwargs):
     resource_type = evaluate_call(lambda: kwargs["resource_type"], http_error=HTTPInternalServerError,
                                   msg_on_fail="kwargs do not contain required 'resource_type'",
                                   content={"kwargs": repr(kwargs)})
-    return evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs), http_error=HTTPInternalServerError,
+    return evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs),  # noqa
+                         http_error=HTTPInternalServerError,
                          msg_on_fail="kwargs unpacking failed from specified 'resource_type' and 'RESOURCE_TYPE_DICT'",
                          content={"kwargs": repr(kwargs), "RESOURCE_TYPE_DICT": repr(RESOURCE_TYPE_DICT)})
 
