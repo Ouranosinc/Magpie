@@ -28,8 +28,8 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Callable
-    from magpie.typedefs import Str, JSON, Union
+    from typing import Callable, Optional, Union
+    from magpie.typedefs import Str, JSON
     from pyramid.registry import Registry
     from pyramid.response import Response
     from pyramid.httpexceptions import HTTPException
@@ -107,7 +107,8 @@ def unauthorized_or_forbidden(request):
 def validate_accept_header_tween(handler, registry):    # noqa: F811
     # type: (Callable[[Request], Response], Registry) -> Callable[[Request], Response]
     """
-    Tween that validates that the specified request ``Accept`` header (if any) is a supported one by the application.
+    Tween that validates that the specified request ``Accept`` header or query (if any) is a supported one by the
+    application and for the given context.
 
     :raises HTTPNotAcceptable: if `Accept` header was specified and is not supported.
     """
@@ -116,6 +117,7 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
         """
         Validates the specified request according to its ``Accept`` header, ignoring UI related routes that request more
         content-types than the ones supported by the application for display purposes (styles, images etc.).
+        Alternatively, if no ``Accept`` header is found, look for equivalent value provided via query parameter.
         """
         # server URL could have more prefixes than only /magpie, so start by removing them using explicit URL setting
         # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
@@ -136,12 +138,12 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
     return validate_accept_header
 
 
-def get_exception_info(response, exception_details=False):
-    # type: (Union[HTTPException, Request, Response], bool) -> JSON
+def get_exception_info(response, content=None, exception_details=False):
+    # type: (Union[HTTPException, Request, Response], Optional[JSON], bool) -> JSON
     """
     Obtains additional exception content details about the :paramref:`response` according to available information.
     """
-    content = {}
+    content = content or {}
     if hasattr(response, "exception"):
         # handle error raised simply by checking for "json" property in python 3 when body is invalid
         has_json = False
@@ -154,7 +156,7 @@ def get_exception_info(response, exception_details=False):
         elif isinstance(response.exception, HTTPServerError) and hasattr(response.exception, "message"):
             content.update({"exception": str(response.exception.message)})
         elif isinstance(response.exception, Exception) and exception_details:
-            content.update({"exception": repr(response.exception)})
+            content.update({"exception": type(response.exception).__name__})
             # get 'request.exc_info' or 'sys.exc_info', whichever one is available
             LOGGER.error("Request exception.", exc_info=getattr(response, "exc_info", True))
         if not content.get("detail"):
@@ -165,8 +167,8 @@ def get_exception_info(response, exception_details=False):
     return content
 
 
-def get_request_info(request, default_message="undefined", exception_details=False):
-    # type: (Union[Request, HTTPException], Str, bool) -> JSON
+def get_request_info(request, default_message=None, exception_details=False):
+    # type: (Union[Request, HTTPException], Optional[Str], bool) -> JSON
     """
     Obtains additional content details about the :paramref:`request` according to available information.
     """
@@ -176,5 +178,6 @@ def get_request_info(request, default_message="undefined", exception_details=Fal
         "detail": default_message,
         "method": request.method
     }
-    content.update(get_exception_info(request), exception_details=exception_details)
+    content.update(get_exception_info(request, content=content, exception_details=exception_details))
+    content.setdefault("detail", "undefined")
     return content

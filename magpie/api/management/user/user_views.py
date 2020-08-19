@@ -62,36 +62,32 @@ def update_user_view(request):
     """
     Update user information by user name.
     """
-    user_key = "user_name"
-    user = ar.get_user_matchdict_checked_or_logged(request, user_name_key=user_key)
+    user = ar.get_user_matchdict_checked_or_logged(request)
     new_user_name = ar.get_multiformat_body(request, "user_name", default=user.user_name)
     new_email = ar.get_multiformat_body(request, "email", default=user.email)
     new_password = ar.get_multiformat_body(request, "password", default=user.user_password)
-    group_name = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=request)
-    uu.check_user_info(new_user_name, new_email, new_password, group_name=group_name)
 
     update_username = user.user_name != new_user_name and new_user_name is not None
-    if update_username:
-        logged_user_name = get_constant("MAGPIE_LOGGED_USER", request)
-        always_forbidden_user_names = [
-            get_constant("MAGPIE_ADMIN_USER", request),
-            get_constant("MAGPIE_ANONYMOUS_USER", request)
-        ]
-        ax.verify_param(user.user_name, not_in=True, with_param=False,  # avoid leaking username details
-                        param_compare=always_forbidden_user_names, param_name=user_key,
-                        http_error=HTTPBadRequest, content={user_key: logged_user_name},
-                        msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
-        ax.verify_param(new_user_name, not_in=True, with_param=False,  # avoid leaking username details
-                        param_compare=[logged_user_name] + always_forbidden_user_names, param_name=user_key,
-                        http_error=HTTPBadRequest, content={user_key: logged_user_name},
-                        msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
     update_password = user.user_password != new_password and new_password is not None
     update_email = user.email != new_email and new_email is not None
     ax.verify_param(any([update_username, update_password, update_email]), is_true=True, http_error=HTTPBadRequest,
-                    content={user_key: user.user_name},
+                    with_param=False,  # params are not useful in response for this case
+                    content={"user_name": user.user_name},
                     msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
 
     if update_username:
+        uu.check_user_info(user_name=new_user_name, check_email=False, check_password=False, check_group=False)
+        forbidden_user_names = [
+            get_constant("MAGPIE_ADMIN_USER", request),
+            get_constant("MAGPIE_ANONYMOUS_USER", request),
+            get_constant("MAGPIE_LOGGED_USER", request),
+        ]
+        # logged user updating itself is forbidden if it corresponds to special users
+        # cannot edit reserved keywords nor apply them to another user
+        for check_user_name in [user.user_name, new_user_name]:
+            ax.verify_param(check_user_name, not_in=True, param_compare=forbidden_user_names, param_name="user_name",
+                            http_error=HTTPForbidden, content={"user_name": str(check_user_name)},
+                            msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
         existing_user = ax.evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
                                          fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                          msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
@@ -99,8 +95,10 @@ def update_user_view(request):
                         msg_on_fail=s.User_PATCH_ConflictResponseSchema.description)
         user.user_name = new_user_name
     if update_email:
+        uu.check_user_info(email=new_email, check_name=False, check_password=False, check_group=False)
         user.email = new_email
     if update_password:
+        uu.check_user_info(password=new_password, check_name=False, check_email=False, check_group=False)
         UserService.set_password(user, new_password)
         UserService.regenerate_security_code(user)
 

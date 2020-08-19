@@ -27,12 +27,12 @@ from magpie.constants import get_constant
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import NoReturn  # noqa: F401
-    from magpie.typedefs import (  # noqa: F401
+    from typing import NoReturn
+    from magpie.typedefs import (
         Any, AnyKey, Str, List, Optional, Type, Union,
         AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,
     )
-    from pyramid.events import NewRequest   # noqa: F401
+    from pyramid.events import NewRequest
     from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
 
 CONTENT_TYPE_ANY = "*/*"
@@ -41,6 +41,8 @@ CONTENT_TYPE_FORM = "application/x-www-form-urlencoded"
 CONTENT_TYPE_HTML = "text/html"
 CONTENT_TYPE_PLAIN = "text/plain"
 SUPPORTED_CONTENT_TYPES = [CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PLAIN]
+SUPPORTED_FORMAT_TYPES = SUPPORTED_CONTENT_TYPES + [fmt.split("/")[-1] for fmt in SUPPORTED_CONTENT_TYPES] + ["text"]
+KNOWN_CONTENT_TYPES = SUPPORTED_CONTENT_TYPES + [CONTENT_TYPE_FORM, CONTENT_TYPE_ANY]
 
 
 def get_logger(name, level=None, force_stdout=None, format=None, datetime_format=None):
@@ -107,7 +109,10 @@ def print_log(msg, logger=None, level=logging.INFO):
 
 def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
     # type: (Str, Type[Exception], Optional[LoggerType], int) -> NoReturn
-    """Logs the provided message to the logger and raises the corresponding exception afterwards."""
+    """Logs the provided message to the logger and raises the corresponding exception afterwards.
+
+    :raises exception: whichever exception provided is raised systematically after logging.
+    """
     if not logger:
         logger = get_logger(__name__)
     logger.log(level, msg)
@@ -118,11 +123,17 @@ def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
 
 def bool2str(value):
     # type: (Any) -> Str
+    """
+    Converts :paramref:`value` to explicit ``"true"`` or ``"false"`` :class:`str` with permissive variants comparison
+    that can represent common falsy or truthy values.
+    """
     return "true" if str(value).lower() in truthy else "false"
 
 
 def islambda(func):
-    return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__
+    # type: (Any) -> bool
+    """Evaluate if argument is a callable :class:`lambda` expression."""
+    return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__  # noqa
 
 
 def isclass(obj):

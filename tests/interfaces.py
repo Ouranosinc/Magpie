@@ -167,7 +167,9 @@ class User_Magpie_TestCase(object):
         self.test_headers, self.test_cookies = utils.check_or_try_login_user(
             self, username=self.test_user_name, password=self.test_user_name,
             use_ui_form_submit=True, version=self.version)
-        assert self.test_cookies, "Cannot test UI user pages without a logged user"
+        for header in ["Location", "Content-Type", "Content-Length"]:
+            self.test_headers.pop(header, None)
+        assert self.test_cookies, "Cannot test user-level access routes without logged user"
         return self.test_headers, self.test_cookies
 
 
@@ -304,8 +306,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def login_test_user(self):
         """Apply JSON headers on top of login headers for API calls."""
         User_Magpie_TestCase.login_test_user(self)
-        self.headers.update(self.json_headers)
-        return self.headers, self.cookies
+        self.test_headers.update(self.json_headers)
+        return self.test_headers, self.test_cookies
 
     def test_PostSignin_EmailAsUsername(self):
         """User is allowed to use its email as username for login."""
@@ -362,12 +364,13 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             - :meth:`Interface_MagpieAPI_AdminAuth.test_PatchUser_ReservedKeyword_Current`
         """
         self.login_test_user()
+
         old_password = self.test_user_name
         new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
         data = {"password": new_password}
         path = "/users/{usr}".format(usr=user_path_variable)
         resp = utils.test_request(self, self.update_method, path, data=data,
-                                  headers=self.json_headers, cookies=self.cookies)
+                                  headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
         utils.check_or_try_logout_user(self)
 
@@ -418,7 +421,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
         data = {"password": new_password}
         path = "/users/{usr}".format(usr=self.other_user_name)
-        resp = utils.test_request(self, self.update_method, path, data=data,
+        resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
 
@@ -528,6 +531,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_is_in("user_name", body)
         utils.check_val_is_in(body["group_name"], self.test_group_name)
         utils.check_val_is_in(body["user_name"], self.test_user_name)
+        utils.TestSetup.check_UserGroupMembership(self, member=True,  # validate as admin that user was registered
+                                                  override_headers=self.json_headers, override_cookies=self.cookies)
 
     @runner.MAGPIE_TEST_USERS
     def test_UnregisterDiscoverableGroup(self):
@@ -540,7 +545,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "DELETE", path, data={}, headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 200, expected_method="DELETE")
-        utils.TestSetup.check_UserGroupMembership(self, member=False)
+        utils.TestSetup.check_UserGroupMembership(self, member=False,  # validate as admin that user was unregistered
+                                                  override_headers=self.json_headers, override_cookies=self.cookies)
 
     def test_ViewDiscoverableGroup(self):
         """Non-admin logged user can view discoverable group information. Critical details are not displayed."""
@@ -571,6 +577,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         discover_groups = {self.test_group_name + "-1", self.test_group_name + "-2", self.test_group_name + "-3"}
         self.extra_group_names.extend(discover_groups)
         for grp in discover_groups:
+            utils.TestSetup.delete_TestGroup(self, override_group_name=grp)  # in case previous test run failed/stopped
             utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True, "group_name": grp})
         self.login_test_user()
 
@@ -798,7 +805,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             "resource_type": test_res_type,
             "parent_id": test_parent_res_id
         }
-        body = utils.TestSetup.create_TestServiceResource(self, override_data)
+        body = utils.TestSetup.create_TestServiceResource(self, override_data=override_data)
         test_child_res_id = body["resource"]["resource_id"]
         anonym_usr = get_constant("MAGPIE_ANONYMOUS_USER")
         anonym_grp = get_constant("MAGPIE_ANONYMOUS_GROUP")
@@ -1364,7 +1371,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_PatchUsers_nothing(self):
-        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        utils.TestSetup.create_TestUser(self, override_data={})
         path = "/users/{usr}".format(usr=self.test_user_name)
         resp = utils.test_request(self, self.update_method, path, data={},
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)

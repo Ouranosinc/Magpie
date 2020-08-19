@@ -59,9 +59,9 @@ def join_discoverable_group_view(request):
     """
     Assigns membership of the logged user to a publicly discoverable group.
     """
-    group_name = ar.get_group_matchdict_checked(request)
+    group = ar.get_group_matchdict_checked(request)
     user = ar.get_logged_user(request)
-    group = ru.get_discoverable_group_by_name(group_name, db_session=request.db)
+    group = ru.get_discoverable_group_by_name(group.group_name, db_session=request.db)
 
     ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, with_param=False,
                     http_error=HTTPConflict, content={"user_name": user.user_name, "group_name": group.group_name},
@@ -82,8 +82,8 @@ def leave_discoverable_group_view(request):
     """
     Removes membership of the logged user from a previously joined discoverable group.
     """
-    group_name = ar.get_group_matchdict_checked(request)
+    group = ar.get_group_matchdict_checked(request)
     user = ar.get_logged_user(request)
-    group = ru.get_discoverable_group_by_name(group_name, db_session=request.db)
+    group = ru.get_discoverable_group_by_name(group.group_name, db_session=request.db)
     uu.delete_user_group(user, group, request.db)
     return ax.valid_http(http_success=HTTPOk, detail=s.RegisterGroup_DELETE_OkResponseSchema.description)

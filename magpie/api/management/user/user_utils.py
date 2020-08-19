@@ -26,14 +26,13 @@ from magpie.services import service_factory
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.services import ServiceInterface  # noqa: F401
+    from magpie.services import ServiceInterface
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
     from sqlalchemy.orm.session import Session
-    from magpie.typedefs import (  # noqa: F401
-        Any, Str, Dict, Iterable, List, Optional, ResourcePermissionType, UserServicesType, ServiceOrResourceType
-    )
-    from magpie.permissions import Permission  # noqa: F401
+    from typing import Any, Dict, Iterable, List, Optional
+    from magpie.typedefs import Str, ResourcePermissionType, UserServicesType, ServiceOrResourceType
+    from magpie.permissions import Permission
 
 
 def create_user(user_name, password, email, group_name, db_session):
@@ -338,34 +337,49 @@ def get_user_service_resources_permissions_dict(user, service, request, inherit_
                                                inherit_groups_permissions=inherit_groups_permissions)
 
 
-def check_user_info(user_name, email, password, group_name):
-    # type: (Str, Str, Str, Str) -> None
-    """Validates provided user information to ensure they are adequate for user creation."""
-    ax.verify_param(user_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    param_name="user_name",
-                    msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
-    ax.verify_param(user_name, matches=True, http_error=HTTPBadRequest,
-                    param_name="user_name", param_compare=ax.PARAM_REGEX,
-                    msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
-    ax.verify_param(len(user_name), is_in=True, http_error=HTTPBadRequest,
-                    param_name="user_name", param_compare=range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH")),
-                    msg_on_fail=s.Users_CheckInfo_Size_BadRequestResponseSchema.description)
-    ax.verify_param(user_name, param_compare=get_constant("MAGPIE_LOGGED_USER"), not_equal=True,
-                    param_name="user_name", http_error=HTTPBadRequest,
-                    msg_on_fail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
-    ax.verify_param(email, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    param_name="email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
-    ax.verify_param(email, matches=True, param_compare=ax.EMAIL_REGEX, http_error=HTTPBadRequest,
-                    param_name="email", msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
-    ax.verify_param(password, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    param_name="password",
-                    msg_on_fail=s.Users_CheckInfo_Password_BadRequestResponseSchema.description)
-    ax.verify_param(group_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    param_name="group_name",
-                    msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
-    ax.verify_param(group_name, matches=True, http_error=HTTPBadRequest,
-                    param_name="group_name", param_compare=ax.PARAM_REGEX,
-                    msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
+def check_user_info(user_name=None, email=None, password=None, group_name=None,  # required unless disabled explicitly
+                    check_name=True, check_email=True, check_password=True, check_group=True):
+    # type: (Str, Str, Str, Str, bool, bool, bool, bool) -> None
+    """Validates provided user information to ensure they are adequate for user creation.
+
+    Using ``check_`` prefixed arguments, individual field checks can be disabled (check all by default).
+
+    :raises HTTPException: appropriate error for the invalid field value or format that was checked as applicable.
+    :returns: nothing if all enabled checks are successful.
+    """
+    if check_name:
+        ax.verify_param(user_name, not_none=True, not_empty=True, param_name="user_name",
+                        http_error=HTTPBadRequest,
+                        msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
+        ax.verify_param(user_name, matches=True, param_name="user_name", param_compare=ax.PARAM_REGEX,
+                        http_error=HTTPBadRequest,
+                        msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
+        name_range = range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))
+        ax.verify_param(len(user_name), is_in=True, param_name="user_name", param_compare=name_range,
+                        http_error=HTTPBadRequest,
+                        msg_on_fail=s.Users_CheckInfo_Size_BadRequestResponseSchema.description)
+        name_logged = get_constant("MAGPIE_LOGGED_USER")
+        ax.verify_param(user_name, param_compare=name_logged, not_equal=True, param_name="user_name",
+                        http_error=HTTPBadRequest,
+                        msg_on_fail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
+    if check_email:
+        ax.verify_param(email, not_none=True, not_empty=True, param_name="email",
+                        http_error=HTTPBadRequest,
+                        msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
+        ax.verify_param(email, matches=True, param_compare=ax.EMAIL_REGEX, param_name="email",
+                        http_error=HTTPBadRequest,
+                        msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
+    if check_password:
+        ax.verify_param(password, not_none=True, not_empty=True, param_name="password",
+                        http_error=HTTPBadRequest,
+                        msg_on_fail=s.Users_CheckInfo_Password_BadRequestResponseSchema.description)
+    if check_group:
+        ax.verify_param(group_name, not_none=True, not_empty=True, param_name="group_name",
+                        http_error=HTTPBadRequest,
+                        msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
+        ax.verify_param(group_name, matches=True, param_name="group_name", param_compare=ax.PARAM_REGEX,
+                        http_error=HTTPBadRequest,
+                        msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
 
 
 def get_user_groups_checked(request, user):

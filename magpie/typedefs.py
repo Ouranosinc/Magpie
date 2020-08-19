@@ -53,4 +53,5 @@ if TYPE_CHECKING:
     ServiceOrResourceType = Union[models.Service, models.Resource]
     ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
     AnyPermissionType = Union[Permission, ResourcePermissionType, Str]
+    AnyAccessPrincipalType = Union[Str, Iterable[Str]]
     AccessControlListType = List[Union[Tuple[Str, Str, Str], Str]]

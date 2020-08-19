@@ -142,7 +142,7 @@ def login_failure(request, reason=None):
                 http_err = HTTPInternalServerError
                 reason = s.Signin_POST_Internal_InternalServerErrorResponseSchema.description
     content = ag.get_request_info(request, default_message=s.Signin_POST_UnauthorizedResponseSchema.description)
-    content.update({"reason": str(reason)})
+    content.setdefault({"detail": str(reason)})
     ax.raise_http(http_error=http_err, content=content, detail=s.Signin_POST_UnauthorizedResponseSchema.description)
 
 

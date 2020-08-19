@@ -27,9 +27,9 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from tests.interfaces import Base_Magpie_TestCase, User_Magpie_TestCase  # noqa: F401
-    from typing import Any, Callable, Dict, Iterable, List, NoReturn, Optional, Tuple, Type, Union  # noqa: F401
-    from magpie.typedefs import (  # noqa: F401
+    from tests.interfaces import Base_Magpie_TestCase, User_Magpie_TestCase
+    from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
+    from magpie.typedefs import (
         AnyCookiesType, AnyHeadersType, AnyResponseType, AnyValue, CookiesType, HeadersType, JSON, SettingsType, Str
     )
     # pylint: disable=C0103,invalid-name
@@ -301,7 +301,7 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
             "headers": dict(headers or {}),  # adjust if none provided or specified as tuple list
         })
         # convert JSON body as required
-        if _body is not None and (json or kwargs["content_type"] == CONTENT_TYPE_JSON):
+        if _body is not None and (json is not None or kwargs["content_type"] == CONTENT_TYPE_JSON):
             kwargs["params"] = json_pkg.dumps(_body, cls=json_pkg.JSONEncoder)
             kwargs["content_type"] = CONTENT_TYPE_JSON  # enforce if only 'json' keyword provided
             kwargs["headers"]["Content-Length"] = str(len(kwargs["params"]))  # need to fix with override JSON payload
@@ -598,7 +598,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
 
 def check_ui_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_HTML,
                                  expected_title="Magpie Administration"):
-    # type: (AnyResponseType, int, Str, Str) -> Optional[NoReturn]
+    # type: (AnyResponseType, int, Str, Str) -> None
     """
     Validates minimal expected elements in a `Magpie` UI page.
 
@@ -606,6 +606,7 @@ def check_ui_response_basic_info(response, expected_code=200, expected_type=CONT
     That function should therefore be employed for responses coming directly from the API routes.
 
     :raises AssertionError: if any of the expected validation elements does not meet requirement.
+    :returns: nothing if every check was successful.
     """
     msg = None \
         if get_header("Content-Type", response.headers) != CONTENT_TYPE_JSON \
@@ -1437,9 +1438,10 @@ class TestSetup(object):
     @staticmethod
     def delete_TestGroup(test_case, override_group_name=null, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, Optional[Str], Optional[HeadersType], Optional[CookiesType]) -> None
-        """Delete the test group.
+        """Delete the test group. Skip operation if the group does not exist.
 
         :raises AssertionError: if the request does not have expected response matching successful deletion.
+        :return: nothing. Group is ensured to not exist.
         """
         app_or_url = get_app_or_url(test_case)
         groups = TestSetup.get_RegisteredGroupsList(test_case)
