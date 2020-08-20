@@ -62,7 +62,7 @@ def update_user_view(request):
     """
     Update user information by user name.
     """
-    user = ar.get_user_matchdict_checked_or_logged(request)
+    user = ar.get_user_matchdict_checked_or_logged(request, access_principals="MAGPIE_LOGGED_USER")
     new_user_name = ar.get_multiformat_body(request, "user_name", default=user.user_name)
     new_email = ar.get_multiformat_body(request, "email", default=user.email)
     new_password = ar.get_multiformat_body(request, "password", default=user.user_password)

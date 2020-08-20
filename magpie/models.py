@@ -118,6 +118,9 @@ class RootFactory(object):
     .. seealso::
         - ``set_default_permission`` within :func:`magpie.includeme` initialization steps
     """
+    __name__ = None
+    __parent__ = ""
+
     def __init__(self, request):
         self.request = request
 
@@ -125,12 +128,16 @@ class RootFactory(object):
     def __acl__(self):
         """Administrators have all permissions, user/group-specific permissions added if user is logged in."""
         user = self.request.user
+        acl = [(Allow, get_constant("MAGPIE_ADMIN_PERMISSION", self.request), ALL_PERMISSIONS)]
         if user:
             permissions = UserService.permissions(user, self.request.db)
             user_acl = permission_to_pyramid_acls(permissions)
             auth_acl = [(Allow, user.id, Authenticated)]
-            return user_acl + auth_acl
-        return []
+            acl += user_acl + auth_acl
+        return acl
+
+
+#class UsersContainerFactory(object):
 
 
 class UserFactory(RootFactory):

@@ -1,5 +1,4 @@
 from magpie.api import schemas as s
-from magpie.models import UserFactory
 from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -7,7 +6,7 @@ LOGGER = get_logger(__name__)
 
 def includeme(config):
     LOGGER.info("Adding API user...")
-    # Add all the rest api routes
+    # Add user variable routes
     config.add_route(**s.service_api_route_info(s.UsersAPI))
     config.add_route(**s.service_api_route_info(s.UserAPI))
     config.add_route(**s.service_api_route_info(s.UserGroupsAPI))

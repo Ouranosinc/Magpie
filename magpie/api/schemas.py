@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 
 from magpie import __meta__
 from magpie.constants import get_constant
+from magpie.models import UserFactory
 from magpie.permissions import Permission
 from magpie.security import get_provider_names
 from magpie.utils import (
@@ -79,19 +80,19 @@ def get_security(service, method):
 
 
 # Service Routes
-def service_api_route_info(service_api):
-    return {
+def service_api_route_info(service_api, **kwargs):
+    kwargs.update({
         "name": service_api.name,
         "pattern": service_api.path,
-        "traverse": getattr(service_api, "traverse", None),
-        "factory": getattr(service_api, "factory", None),
-    }
+    })
+    kwargs.setdefault("traverse", getattr(service_api, "traverse", None))
+    kwargs.setdefault("factory", getattr(service_api, "factory", None))
+    return kwargs
 
 
 _LOGGED_USER_VALUE = get_constant("MAGPIE_LOGGED_USER")
 LoggedUserBase = "/users/{}".format(_LOGGED_USER_VALUE)
 
-from magpie.models import UserFactory
 SwaggerGenerator = Service(
     path="/json",
     name="swagger_schema_json")
@@ -101,10 +102,12 @@ SwaggerAPI = Service(
     description="{} documentation".format(TitleAPI))
 UsersAPI = Service(
     path="/users",
-    name="Users")
+    name="Users",
+    factory=UserFactory, traverse="/{user_name}")
 UserAPI = Service(
     path="/users/{user_name}",
-    name="User", factory=UserFactory, traverse="/{user_name}")
+    name="User",
+    factory=UserFactory, traverse="/{user_name}")
 UserGroupsAPI = Service(
     path="/users/{user_name}/groups",
     name="UserGroups")
