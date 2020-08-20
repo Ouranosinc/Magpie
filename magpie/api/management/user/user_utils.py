@@ -148,6 +148,9 @@ def delete_user_group(user, group, db_session):
             .filter(models.UserGroup.group_id == grp.id) \
             .delete()
 
+    ax.verify_param(group.group_name, not_equal=True, param_compare=get_constant("MAGPIE_ANONYMOUS_GROUP"),
+                    param_name="group_name", http_error=HTTPForbidden,
+                    msg_on_fail=s.UserGroup_DELETE_ForbiddenResponseSchema.description)
     ax.evaluate_call(lambda: del_usr_grp(user, group), fallback=lambda: db_session.rollback(),
                      http_error=HTTPNotFound, msg_on_fail=s.UserGroup_DELETE_NotFoundResponseSchema.description,
                      content={"user_name": user.user_name, "group_name": group.group_name})

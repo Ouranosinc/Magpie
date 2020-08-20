@@ -128,17 +128,24 @@ def check_user_has_access(request, access_principals=None):
 
     Principals can be in the any string of the following form:
         - (int) ``<user-id>``
-        - (str) ``group:<group-id>``
+        - (str) ``"group:<group-id>"``
         - (str) :py:data:`pyramid.security.Authenticated`
         - (str) :py:data:`pyramid.security.Everyone`
-        - (str) ``<custom-scope-string>``
+        - (str) ``"<custom-scope-string>"``
 
     .. seealso::
         - :py:mod:`ziggurat_foundations.permissions` for details about expected principal values.
 
+    When no principals are provided, the application :py:data:`magpie.constants.MAGPIE_ADMIN_GROUP` is employed as
+    required group principal. If the request context contains a :class:`models.User` that matches the request session
+    user, that permission requirement is "lowered" to self-referenced user access using additional principals
+    ``<user-id>`` and ``"MAGPIE_LOGGED_USER"``.
+
+    .. seealso::
+        - :class:`models.UserFactory` for request context user.
+
     :param request: request for which to evaluate granted user access.
-    :param access_principals: none, a single, or many access level principals/scopes.
-        If none provided, defaults to :py:data:`magpie.constants.MAGPIE_ADMIN_GROUP` (default application permission).
+    :param access_principals: none, a single, or multiple access level principals/scopes.
     :returns: status indicating if user has required access.
     """
     principals = get_principals(request)
@@ -147,6 +154,9 @@ def check_user_has_access(request, access_principals=None):
         admin_group = GroupService.by_group_name(admin_group_name, db_session=request.db)
         admin_principal = "group:{}".format(admin_group.id)
         access_principals = [admin_principal]
+        if isinstance(request.context, models.User):
+            if request.user.id == request.context.id:
+                access_principals += ["MAGPIE_LOGGED_USER", request.context.id]
     if isinstance(access_principals, six.string_types + (int, )):
         access_principals = [access_principals]
     return any(access in principals for access in access_principals)

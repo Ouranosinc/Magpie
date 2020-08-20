@@ -491,6 +491,7 @@ class ErrorResponseBodySchema(BaseResponseBodySchema):
         example="/users/toto")
     request_url = colander.SchemaNode(
         colander.String(),
+        title="Request URL",
         description="Request URL that generated the error.",
         example="http://localhost:2001/magpie/users/toto")
     method = colander.SchemaNode(
@@ -498,6 +499,7 @@ class ErrorResponseBodySchema(BaseResponseBodySchema):
         description="Request method that generated the error.",
         example="GET")
     param = ErrorVerifyParamBodySchema(
+        title="Parameter",
         missing=colander.drop,
         description="Additional parameter details to explain the cause of error.")
     call = ErrorCallBodySchema(
@@ -1595,6 +1597,11 @@ class UserGroup_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
+class UserGroup_DELETE_ForbiddenResponseSchema(BaseResponseSchemaAPI):
+    description = "Delete user-group relationship not permitted for this combination."
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
 class UserGroup_DELETE_NotFoundResponseSchema(BaseResponseSchemaAPI):
     description = "Could not remove user from group. Could not find any matching group membership for user."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
@@ -2275,12 +2282,8 @@ class RegisterGroup_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class RegisterGroup_DELETE_ForbiddenResponseSchema(BaseResponseSchemaAPI):
-    description = "Remove logged used from discoverable group was refused by db."
-    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
-
-
 # check done using same util function
+RegisterGroup_DELETE_ForbiddenResponseSchema = UserGroup_DELETE_ForbiddenResponseSchema
 RegisterGroup_DELETE_NotFoundResponseSchema = UserGroup_DELETE_NotFoundResponseSchema
 
 
@@ -2719,8 +2722,8 @@ UserGroup_DELETE_responses = {
     "200": UserGroup_DELETE_OkResponseSchema(),
     "400": User_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
-    "404": User_CheckAnonymous_NotFoundResponseSchema(),
+    "403": UserGroup_DELETE_ForbiddenResponseSchema(),
+    "404": UserGroup_DELETE_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
