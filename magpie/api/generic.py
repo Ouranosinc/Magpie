@@ -30,7 +30,7 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Callable, Optional, Union
+    from typing import Callable, Optional, Tuple, Union
     from magpie.typedefs import Str, JSON
     from pyramid.registry import Registry
     from pyramid.response import Response
@@ -104,23 +104,28 @@ def unauthorized_or_forbidden(request):
 
 
 def guess_target_format(request):
-    # type: (Request) -> Str
+    # type: (Request) -> Tuple[Str, bool]
     """
     Guess the best applicable response ``Content-Type`` header according to request ``Accept`` header and ``format``
     query, or defaulting to :py:data:`CONTENT_TYPE_JSON`.
+
+    :returns: tuple of matched MIME-type and where it was found (``True``: header, ``False``: query)
     """
     format = FORMAT_TYPE_MAPPING.get(request.params.get("format"))
+    is_header = False
     if not format:
+        is_header = True
         format = get_header("accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
         if format != CONTENT_TYPE_JSON:
             # because most browsers enforce some 'visual' list of accept header, revert to JSON if detected
             # explicit request set by other client (e.g.: using 'requests') will have full control over desired content
             user_agent = get_header("user-agent", request.headers)
-            if any(browser in user_agent for browser in ["Mozilla", "Chrome", "Safari"]):
+            if user_agent and any(browser in user_agent for browser in ["Mozilla", "Chrome", "Safari"]):
                 format = CONTENT_TYPE_JSON
     if not format or format == CONTENT_TYPE_ANY:
+        is_header = True
         format = CONTENT_TYPE_JSON
-    return format
+    return format, is_header
 
 
 def validate_accept_header_tween(handler, registry):    # noqa: F811
@@ -139,7 +144,7 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
         (styles, images, etc.).
         """
         if not is_magpie_ui_path(request):
-            accept = guess_target_format(request)
+            accept, _ = guess_target_format(request)
             http_msg = s.NotAcceptableResponseSchema.description
             content = get_request_info(request, default_message=http_msg)
             ax.verify_param(accept, is_in=True, param_compare=SUPPORTED_ACCEPT_TYPES,
@@ -165,19 +170,24 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
         Alternatively, if no ``Accept`` header is found, look for equivalent value provided via query parameter.
         """
         # all magpie API routes expected to either call 'valid_http' or 'raise_http' of 'magpie.api.exception' module
-        # an HTTPException is always returned
+        # an HTTPException is always returned, and content is a JSON-like string
+        format, is_header = guess_target_format(request)
+        if not is_header:
+            # NOTE:
+            # enforce the accept header in case it was specified with format query, since some renderer implementations
+            # will afterward erroneously overwrite the 'content-type' value that we enforce when converting the response
+            # from the HTTPException. See:
+            #   - https://github.com/Pylons/webob/issues/204
+            #   - https://github.com/Pylons/webob/issues/238
+            #   - https://github.com/Pylons/pyramid/issues/1344
+            request.accept = format
         resp = handler(request)  # no exception when EXCVIEW tween is placed under this tween
         if is_magpie_ui_path(request):
             if not resp.content_type:
                 resp.content_type = CONTENT_TYPE_HTML
             return resp
-        format = guess_target_format(request)
-        # forward any headers such as session cookies to be applied, but omit override content-type (and related)
-        headers = resp.headers
-        for header in dict(headers):
-            if header.lower().startswith("content-"):
-                headers.pop(header, None)
-        return ax.generate_response_http_format(type(resp), {"headers": headers}, resp.text, format)
+        # forward any headers such as session cookies to be applied
+        return ax.generate_response_http_format(type(resp), {"headers": request.headers}, resp.text, format)
     return apply_format
 
 

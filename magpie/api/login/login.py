@@ -68,7 +68,7 @@ def verify_provider(provider_name):
                     http_error=HTTPNotFound, msg_on_fail=s.ProviderSignin_GET_NotFoundResponseSchema.description)
 
 
-@s.SigninAPI.post(schema=s.Signin_POST_RequestSchema(), tags=[s.LoginTag], response_schemas=s.Signin_POST_responses)
+@s.SigninAPI.post(schema=s.Signin_POST_RequestSchema(), tags=[s.SessionTag], response_schemas=s.Signin_POST_responses)
 @view_config(route_name=s.SigninAPI.name, request_method="POST", permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
     """
@@ -196,7 +196,7 @@ def login_success_external(request, external_user_name, external_id, email, prov
                          http_kwargs={"location": homepage_route, "headers": headers})
 
 
-@s.ProviderSigninAPI.get(schema=s.ProviderSignin_GET_RequestSchema, tags=[s.LoginTag],
+@s.ProviderSigninAPI.get(schema=s.ProviderSignin_GET_RequestSchema, tags=[s.SessionTag],
                          response_schemas=s.ProviderSignin_GET_responses)
 @view_config(route_name=s.ProviderSigninAPI.name, permission=NO_PERMISSION_REQUIRED)
 def authomatic_login(request):
@@ -269,7 +269,7 @@ def authomatic_login(request):
     return response
 
 
-@s.SignoutAPI.get(tags=[s.LoginTag], response_schemas=s.Signout_GET_responses)
+@s.SignoutAPI.get(tags=[s.SessionTag], response_schemas=s.Signout_GET_responses)
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
 def sign_out(request):
     """
@@ -279,7 +279,7 @@ def sign_out(request):
                          detail=s.Signout_GET_OkResponseSchema.description)
 
 
-@s.SessionAPI.get(tags=[s.LoginTag], response_schemas=s.Session_GET_responses)
+@s.SessionAPI.get(tags=[s.SessionTag], response_schemas=s.Session_GET_responses)
 @view_config(route_name=s.SessionAPI.name, permission=NO_PERMISSION_REQUIRED)
 def get_session(request):
     """
@@ -299,7 +299,7 @@ def get_session(request):
     return ax.valid_http(http_success=HTTPOk, detail=s.Session_GET_OkResponseSchema.description, content=session_json)
 
 
-@s.ProvidersAPI.get(tags=[s.LoginTag], response_schemas=s.Providers_GET_responses)
+@s.ProvidersAPI.get(tags=[s.SessionTag], response_schemas=s.Providers_GET_responses)
 @view_config(route_name=s.ProvidersAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
 def get_providers(request):     # noqa: F811
     """

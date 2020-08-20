@@ -44,7 +44,7 @@ InfoAPI = {
 
 # Tags
 APITag = "API"
-LoginTag = "Login"
+SessionTag = "Session"
 UsersTag = "User"
 LoggedUserTag = "Logged User"
 GroupsTag = "Group"
@@ -296,7 +296,7 @@ HomepageAPI = Service(
 
 TAG_DESCRIPTIONS = {
     APITag: "General information about the API.",
-    LoginTag: "Session login management and available providers for authentification.",
+    SessionTag: "Session user management and available providers for authentification.",
     UsersTag:
         "Users information management and control of their applicable groups, services, resources and permissions.\n\n"
         "Administrator-level permissions are required to access most paths. Depending on context, some paths are "

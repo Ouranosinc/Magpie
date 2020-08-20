@@ -17,7 +17,7 @@ from magpie.constants import MAGPIE_ROOT, get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Route
 from magpie.permissions import Permission
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceTHREDDS
-from magpie.utils import CONTENT_TYPE_JSON, get_twitcher_protected_service_url
+from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_TXT_XML, CONTENT_TYPE_JSON, get_twitcher_protected_service_url
 from tests import runner, utils
 
 if TYPE_CHECKING:
@@ -226,10 +226,37 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
     @runner.MAGPIE_TEST_STATUS
     def test_NotAcceptableRequest(self):
         utils.warn_version(self, "Unsupported 'Accept' header returns 406 directly.", "0.10.0", skip=True)
-        for path in ["/", "/users/current"]:
+        for path in ["/session", "/users/current"]:
             resp = utils.test_request(self, "GET", path, expect_errors=True,
                                       headers={"Accept": "application/pdf"})  # anything not supported
             utils.check_response_basic_info(resp, expected_code=406, version=self.version)
+
+    @runner.MAGPIE_TEST_STATUS
+    def test_AcceptHeaderFormatQuery(self):
+        warn_msg = "Request desired response content-type from 'Accept' header or 'format' query ."
+        utils.warn_version(self, warn_msg, "2.0.0", skip=True)
+
+        # using Accept header
+        resp = utils.test_request(self, "GET", "/session", headers={"Accept": CONTENT_TYPE_JSON})
+        body = utils.check_response_basic_info(resp, expected_type=CONTENT_TYPE_JSON)
+        utils.check_val_type(body, dict)
+        resp = utils.test_request(self, "GET", "/session", headers={"Accept": CONTENT_TYPE_TXT_XML})
+        body = utils.check_response_basic_info(resp, expected_type=CONTENT_TYPE_TXT_XML)
+        utils.check_val_is_in("<?xml", body)
+        resp = utils.test_request(self, "GET", "/session", headers={"Accept": CONTENT_TYPE_HTML})
+        body = utils.check_response_basic_info(resp, expected_type=CONTENT_TYPE_HTML)
+        utils.check_val_is_in("<html>", body)
+
+        # using format query
+        resp = utils.test_request(self, "GET", "/session?format=json", headers={"Accept": ""})
+        body = utils.check_response_basic_info(resp, expected_type=CONTENT_TYPE_JSON)
+        utils.check_val_type(body, dict)
+        resp = utils.test_request(self, "GET", "/session?format=xml", headers={"Accept": ""})
+        body = utils.check_response_basic_info(resp, expected_type=CONTENT_TYPE_TXT_XML)
+        utils.check_val_is_in("<?xml", body)
+        resp = utils.test_request(self, "GET", "/session?format=html", headers=None)
+        body = utils.check_response_basic_info(resp, expected_type=CONTENT_TYPE_HTML)
+        utils.check_val_is_in("<html>", body)
 
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_STATUS

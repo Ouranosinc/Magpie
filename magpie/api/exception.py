@@ -452,45 +452,84 @@ def format_content_json_str(http_code, detail, content, content_type):
     return json_body
 
 
-def generate_response_http_format(http_class, http_kwargs, json_content, content_type=CONTENT_TYPE_PLAIN):
+def rewrite_content_type(content, content_type):
+    # type: (Union[Str, JSON], Str) -> Tuple[Str, Optional[JSON]]
+    """
+    Attempts to rewrite the ``type`` field inserted by various functions such as :func:`format_content_json_str`,
+    :func:`raise_http` or :func:`valid_http` and to set it to :paramref:`content_type`.
+
+    :returns: content with rewritten type (if possible) and converted to string directly insertable to a response body.
+    """
+    json_content = None
+    if isinstance(content, six.string_types):
+        try:
+            content = json.loads(content)
+            json_content = content
+        except Exception:
+            pass
+    if isinstance(content, (list, dict)) and "type" in content:
+        content["type"] = content_type
+    if isinstance(content, (list, dict)):
+        content = json.dumps(content)
+    return content, json_content
+
+
+def generate_response_http_format(http_class, http_kwargs, content, content_type=CONTENT_TYPE_PLAIN):
     # type: (Type[HTTPException], Optional[ParamsType], JSON, Optional[Str]) -> HTTPException
     """
     Formats the HTTP response content according to desired ``content_type`` using provided HTTP code and content.
 
     :param http_class: `HTTPException` derived class to use for output (code, generic title/explanation, etc.)
     :param http_kwargs: additional keyword arguments to pass to `http_class` when called
-    :param json_content: formatted json content providing additional details for the response cause
+    :param content: formatted JSON content or literal string content providing additional details for the response
     :param content_type: one of `magpie.common.SUPPORTED_ACCEPT_TYPES` (default: `magpie.common.CONTENT_TYPE_PLAIN`)
     :return: `http_class` instance with requested information and content type if creation succeeds
     :raises: `HTTPInternalServerError` instance details about requested information and content type if creation fails
     """
     # content body is added manually to avoid auto-format and suppression of fields by `HTTPException`
-    json_content = str(json_content) if not isinstance(json_content, six.string_types) else json_content
+    content, json_content = rewrite_content_type(content, content_type)
+    content = str(content) if not isinstance(content, six.string_types) else content
 
     # adjust additional keyword arguments and try building the http response class with them
     http_kwargs = dict() if http_kwargs is None else http_kwargs
+    http_headers = http_kwargs.get("headers", {})
+    # omit content-type and related headers that we override
+    for header in dict(http_headers):
+        if header.lower().startswith("content-"):
+            http_headers.pop(header, None)
+
     try:
         # directly output json
         if content_type == CONTENT_TYPE_JSON:
-            json_type = "{}; charset=UTF-8".format(CONTENT_TYPE_JSON)
-            http_response = http_class(body=json_content, content_type=json_type, **http_kwargs)
+            content_type = "{}; charset=UTF-8".format(CONTENT_TYPE_JSON)
+            http_response = http_class(body=content, content_type=content_type, **http_kwargs)
 
         # otherwise json is contained within the html <body> section
         elif content_type == CONTENT_TYPE_HTML:
+            if http_class is HTTPOk:
+                http_class.explanation = "Operation successful."
+            if not http_class.explanation:
+                http_class.explanation = http_class.title  # some don't have any defined
             # add preformat <pre> section to output as is within the <body> section
-            html_body = "{}<br><h2>Exception Details</h2>" \
-                        "<pre style='word-wrap: break-word; white-space: pre-wrap;'>{}</pre>" \
-                .format(http_class.explanation, json_content)
-            http_response = http_class(body_template=html_body, content_type=CONTENT_TYPE_HTML, **http_kwargs)
+            html_status = "Exception" if http_class.code >= 400 else "Response"
+            html_header = "{}<br><h2>{} Details</h2>".format(http_class.explanation, html_status)
+            html_template = "<pre style='word-wrap: break-word; white-space: pre-wrap;'>{}</pre>"
+            content_type = "{}; charset=UTF-8".format(CONTENT_TYPE_HTML)
+            if json_content:
+                html_body = html_template.format(json.dumps(json_content, indent=True, ensure_ascii=False))
+            else:
+                html_body = html_template.format(content)
+            html_body = html_header + html_body
+            http_response = http_class(body_template=html_body, content_type=content_type, **http_kwargs)
 
         elif content_type in [CONTENT_TYPE_APP_XML, CONTENT_TYPE_TXT_XML]:
-            json_body = readfromstring(json_content)
+            json_body = readfromstring(content)
             xml_body = Json2xml(json_body, wrapper="response").to_xml()  # noqa
             http_response = http_class(body=xml_body, content_type=CONTENT_TYPE_TXT_XML, **http_kwargs)
 
         # default back to plain text
         else:
-            http_response = http_class(body=json_content, content_type=CONTENT_TYPE_PLAIN, **http_kwargs)
+            http_response = http_class(body=content, content_type=CONTENT_TYPE_PLAIN, **http_kwargs)
 
         return http_response
     except Exception as exc:  # pylint: disable=W0703
