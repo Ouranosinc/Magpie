@@ -46,12 +46,16 @@ Features / Changes
   (i.e.: created user will have no apparent group membership since that group is always attributed for public access).
 * Change all ``PUT`` requests to ``PATCH`` to better reflect their actual behaviour according to RESTful best practices
   (partial field updates instead of complete resource replacement and conflict responses on duplicate identifiers).
+* Add support of new response content-type as XML.
+* Add support of ``Accept`` header and ``format`` query parameter for all API responses, for content-types variations
+  in either plain text, HTML, XML or JSON (default), and include applicable values in schemas for Swagger generation.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix invalid API documentation of request body for ``POST /users/{user_name}/groups``.
 * Fix `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_ (forbid *special* users and groups update and delete).
 * Fix `#84 <https://github.com/Ouranosinc/Magpie/issues/84>`_ with additional input validation.
+* Fix `#194 <https://github.com/Ouranosinc/Magpie/issues/194>`_ to render API error responses according to content-type.
 * Fix minor HTML issues in mako templates.
 
 `1.11.0 <https://github.com/Ouranosinc/Magpie/tree/1.11.0>`_ (2020-06-19)
