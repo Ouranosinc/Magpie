@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 import requests
 import six
+from six.moves.urllib.parse import urlparse
 from pyramid.config import ConfigurationError, Configurator
 from pyramid.httpexceptions import HTTPClientError, HTTPException, HTTPOk
 from pyramid.registry import Registry
@@ -362,12 +363,12 @@ def is_magpie_ui_path(request):
     # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
     magpie_url = get_magpie_url(request)
     magpie_url = request.url.replace(magpie_url, "")
-    magpie_path = magpie_url.replace(request.host, "")
+    magpie_path = urlparse(magpie_url).path
     magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
     magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
     magpie_ui_home = get_constant("MAGPIE_UI_ENABLED", request) and magpie_path in ("", "/")
     # ignore types defined under UI or static routes to allow rendering
-    return any(magpie_path.startswith(p) for p in ("/api", "/ui", "/static")) or magpie_ui_home
+    return magpie_ui_home or any(magpie_path.startswith(p) for p in ("/api", "/ui", "/static"))
 
 
 def fully_qualified_name(obj):
