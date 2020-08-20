@@ -365,8 +365,9 @@ def is_magpie_ui_path(request):
     magpie_path = magpie_url.replace(request.host, "")
     magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
     magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
+    magpie_ui_home = get_constant("MAGPIE_UI_ENABLED", request) and magpie_path in ("", "/")
     # ignore types defined under UI or static routes to allow rendering
-    return any(magpie_path.startswith(p) for p in ("/api", "/ui", "/static"))
+    return any(magpie_path.startswith(p) for p in ("/api", "/ui", "/static")) or magpie_ui_home
 
 
 def fully_qualified_name(obj):
