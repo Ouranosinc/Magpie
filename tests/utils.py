@@ -185,7 +185,13 @@ def get_headers(app_or_url, header_dict):
 def get_response_content_types_list(response):
     # type: (AnyResponseType) -> List[Str]
     """Obtains the specified response Content-Type header(s) without additional formatting parameters."""
-    return [ct.strip() for ct in response.headers["Content-Type"].split(";")]
+    content_types = []
+    known_types = ["application", "audio", "font", "example", "image", "message", "model", "multipart", "text", "video"]
+    for part in response.headers["Content-Type"].split(";"):
+        for sub_type in part.strip().split(","):
+            if "=" not in sub_type and sub_type.split("/")[0] in known_types:
+                content_types.append(sub_type)
+    return content_types
 
 
 def get_json_body(response):

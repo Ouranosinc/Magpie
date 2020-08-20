@@ -19,6 +19,7 @@ from magpie.api import schemas as s
 from magpie.api.requests import get_principals
 from magpie.utils import (
     CONTENT_TYPE_ANY,
+    CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
     FORMAT_TYPE_MAPPING,
     SUPPORTED_ACCEPT_TYPES,
@@ -29,7 +30,7 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Callable, Optional, Type, Union
+    from typing import Callable, Optional, Union
     from magpie.typedefs import Str, JSON
     from pyramid.registry import Registry
     from pyramid.response import Response
@@ -167,6 +168,8 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
         # an HTTPException is always returned
         resp = handler(request)  # no exception when EXCVIEW tween is placed under this tween
         if is_magpie_ui_path(request):
+            if not resp.content_type:
+                resp.content_type = CONTENT_TYPE_HTML
             return resp
         format = guess_target_format(request)
         # forward any headers such as session cookies to be applied, but omit override content-type (and related)
