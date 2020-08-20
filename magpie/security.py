@@ -11,16 +11,20 @@ from ziggurat_foundations.models import groupfinder
 
 from magpie.api.login import esgfopenid, wso2
 from magpie.constants import get_constant
+from magpie.models import RootFactory
 from magpie.utils import get_logger, get_settings
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import JSON  # noqa: F401
+    from magpie.typedefs import AnySettingsContainer, JSON  # noqa: F401
+
 AUTHOMATIC_LOGGER = get_logger("magpie.authomatic", level=logging.DEBUG)
 LOGGER = get_logger("magpie.security")
 
 
 def get_auth_config(container):
+    # type: (AnySettingsContainer) -> Configurator
+    """Generates Magpie application configuration with all utilities required for security and access control."""
     settings = get_settings(container)
     magpie_secret = get_constant("MAGPIE_SECRET", settings, settings_name="magpie.secret")
     magpie_cookie_expire = get_constant("MAGPIE_COOKIE_EXPIRE", settings,
@@ -46,11 +50,9 @@ def get_auth_config(container):
 
     # create configurator or use one defined as input to preserve previous setup/include/etc.
     config = Configurator() if not isinstance(container, Configurator) else container
-
-    from magpie import models   # pylint: disable=C0415     # avoid circular import
     config.setup_registry(
         settings=settings,
-        root_factory=models.RootFactory,
+        root_factory=RootFactory,
         authentication_policy=authn_policy,
         authorization_policy=authz_policy
     )

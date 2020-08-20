@@ -14,21 +14,22 @@ from pyramid.httpexceptions import (
 from pyramid.request import Request
 from simplejson import JSONDecodeError
 
+from magpie.api import exception as ax
 from magpie.api import schemas as s
-from magpie.api.exception import raise_http, verify_param
 from magpie.api.requests import get_principals
 from magpie.utils import (
     CONTENT_TYPE_ANY,
     CONTENT_TYPE_JSON,
-    SUPPORTED_CONTENT_TYPES,
+    FORMAT_TYPE_MAPPING,
+    SUPPORTED_ACCEPT_TYPES,
     get_header,
     get_logger,
-    get_magpie_url
+    is_magpie_ui_path,
 )
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Callable, Optional, Union
+    from typing import Callable, Optional, Type, Union
     from magpie.typedefs import Str, JSON
     from pyramid.registry import Registry
     from pyramid.response import Response
@@ -43,8 +44,7 @@ def internal_server_error(request):
     """
     content = get_request_info(request, exception_details=True,
                                default_message=s.InternalServerErrorResponseSchema.description)
-    return raise_http(nothrow=True, http_error=HTTPInternalServerError, detail=content["detail"], content=content,
-                      content_type=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
+    return ax.raise_http(nothrow=True, http_error=HTTPInternalServerError, detail=content["detail"], content=content)
 
 
 def not_found_or_method_not_allowed(request):
@@ -68,8 +68,7 @@ def not_found_or_method_not_allowed(request):
         http_err = HTTPNotFound
         http_msg = s.NotFoundResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
-    return raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content,
-                      content_type=get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,"))
+    return ax.raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content)
 
 
 def unauthorized_or_forbidden(request):
@@ -95,47 +94,83 @@ def unauthorized_or_forbidden(request):
         http_err = HTTPUnauthorized
         http_msg = s.UnauthorizedResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
-    accept = get_header("Accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
-    if content["route_name"].startswith("/ui") and accept != CONTENT_TYPE_JSON:
+    if is_magpie_ui_path(request):
         from magpie.ui.utils import request_api
         path = request.route_path("error").replace("/magpie", "")
         data = {"error_request": content, "error_code": http_err.code}
         return request_api(request, path, "POST", data)  # noqa
-    return raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content, content_type=accept)
+    return ax.raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content)
+
+
+def guess_target_format(request):
+    # type: (Request) -> Str
+    """
+    Guess the best applicable response ``Content-Type`` header according to request ``Accept`` header and ``format``
+    query, or defaulting to :py:data:`CONTENT_TYPE_JSON`.
+    """
+    format = FORMAT_TYPE_MAPPING.get(request.params.get("format"))
+    if not format:
+        format = get_header("accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
+        if format != CONTENT_TYPE_JSON:
+            # because most browsers enforce some 'visual' list of accept header, revert to JSON if detected
+            # explicit request set by other client (e.g.: using 'requests') will have full control over desired content
+            user_agent = get_header("user-agent", request.headers)
+            if any(browser in user_agent for browser in ["Mozilla", "Chrome", "Safari"]):
+                format = CONTENT_TYPE_JSON
+    if not format or format == CONTENT_TYPE_ANY:
+        format = CONTENT_TYPE_JSON
+    return format
 
 
 def validate_accept_header_tween(handler, registry):    # noqa: F811
     # type: (Callable[[Request], Response], Registry) -> Callable[[Request], Response]
     """
-    Tween that validates that the specified request ``Accept`` header or query (if any) is a supported one by the
-    application and for the given context.
+    Tween that validates that the specified request ``Accept`` header or ``format`` query (if any) is a supported one
+    by the application and for the given context.
 
-    :raises HTTPNotAcceptable: if `Accept` header was specified and is not supported.
+    :raises HTTPNotAcceptable: if desired ``Content-Type`` is not supported.
     """
-    def validate_accept_header(request):
+    def validate_format(request):
         # type: (Request) -> Response
+        """
+        Validates the specified request according to its ``Accept`` header or ``format`` query, ignoring UI related
+        routes that require more content-types than the ones supported by the API for display purposes
+        (styles, images, etc.).
+        """
+        if not is_magpie_ui_path(request):
+            accept = guess_target_format(request)
+            http_msg = s.NotAcceptableResponseSchema.description
+            content = get_request_info(request, default_message=http_msg)
+            ax.verify_param(accept, is_in=True, param_compare=SUPPORTED_ACCEPT_TYPES,
+                            param_name="Accept Header or Format Query",
+                            http_error=HTTPNotAcceptable, msg_on_fail=http_msg,
+                            content=content, content_type=CONTENT_TYPE_JSON)  # enforce type to avoid recursion
+        return handler(request)
+    return validate_format
+
+
+def apply_response_format_tween(handler, registry):    # noqa: F811
+    # type: (Callable[[Request], HTTPException], Registry) -> Callable[[Request], Response]
+    """
+    Tween that obtains the request ``Accept`` header or ``format`` query (if any) to generate the response with the
+    desired ``Content-Type``. The target ``Content-Type`` is expected to have been validated by
+    :func:`validate_accept_header_tween` beforehand to handle not-acceptable errors.
+    """
+    def apply_format(request):
+        # type: (Request) -> HTTPException
         """
         Validates the specified request according to its ``Accept`` header, ignoring UI related routes that request more
         content-types than the ones supported by the application for display purposes (styles, images etc.).
         Alternatively, if no ``Accept`` header is found, look for equivalent value provided via query parameter.
         """
-        # server URL could have more prefixes than only /magpie, so start by removing them using explicit URL setting
-        # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
-        magpie_url = get_magpie_url(request)
-        magpie_url = request.url.replace(magpie_url, "")
-        magpie_path = magpie_url.replace(request.host, "")
-        magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
-        magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
-        # ignore types defined under UI or static routes to allow rendering
-        if not any(magpie_path.startswith(p) for p in ("/ui", "/static")):
-            any_supported_header = SUPPORTED_CONTENT_TYPES + [CONTENT_TYPE_ANY]
-            accept = get_header("accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
-            http_msg = s.NotAcceptableResponseSchema.description
-            content = get_request_info(request, default_message=http_msg)
-            verify_param(accept, is_in=True, param_compare=any_supported_header, param_name="Accept Header",
-                         http_error=HTTPNotAcceptable, msg_on_fail=http_msg, content=content)
-        return handler(request)
-    return validate_accept_header
+        resp = handler(request)  # no exception when EXCVIEW tween is placed under this tween
+        if is_magpie_ui_path(request):
+            return resp
+        # all magpie API routes expected to either call 'valid_http' or 'raise_http' of 'magpie.api.exception' module
+        # an HTTPException is always returned
+        format = guess_target_format(request)
+        return ax.generate_response_http_format(type(resp), None, resp.text, format)
+    return apply_format
 
 
 def get_exception_info(response, content=None, exception_details=False):

@@ -25,7 +25,7 @@ from magpie.constants import get_constant
 from magpie.permissions import Permission
 from magpie.security import get_provider_names
 from magpie.utils import (
-    CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, KNOWN_CONTENT_TYPES, SUPPORTED_CONTENT_TYPES, SUPPORTED_FORMAT_TYPES,
+    CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, KNOWN_CONTENT_TYPES, SUPPORTED_ACCEPT_TYPES, SUPPORTED_FORMAT_TYPES,
 )
 
 if TYPE_CHECKING:
@@ -359,9 +359,9 @@ class ContentType(colander.SchemaNode):
 
 
 class HeaderRequestSchemaAPI(colander.MappingSchema):
-    accept = AcceptType(name="Accept", validator=colander.OneOf(KNOWN_CONTENT_TYPES),
+    accept = AcceptType(name="Accept", validator=colander.OneOf(SUPPORTED_ACCEPT_TYPES),
                         description="Desired MIME type for the response body content.")
-    content_type = ContentType(validator=colander.OneOf(SUPPORTED_CONTENT_TYPES),
+    content_type = ContentType(validator=colander.OneOf(KNOWN_CONTENT_TYPES),
                                description="MIME content type of the request body.")
 
 
@@ -371,9 +371,9 @@ class HeaderRequestSchemaUI(colander.MappingSchema):
 
 
 class QueryRequestSchemaAPI(colander.MappingSchema):
-    accept = AcceptType(name="accept", validator=colander.OneOf(SUPPORTED_FORMAT_TYPES),
-                        description="Desired MIME type for the response body content. This formatting alternative by "
-                                    "query parameter simulates and overrides the Accept header.")
+    format = AcceptType(validator=colander.OneOf(SUPPORTED_FORMAT_TYPES),
+                        description="Desired MIME type for the response body content. "
+                                    "This formatting alternative by query parameter overrides the Accept header.")
 
 
 QueryEffectivePermissions = colander.SchemaNode(
@@ -395,7 +395,7 @@ class BaseRequestSchemaAPI(colander.MappingSchema):
 
 
 class HeaderResponseSchema(colander.MappingSchema):
-    content_type = ContentType(validator=colander.OneOf(SUPPORTED_CONTENT_TYPES),
+    content_type = ContentType(validator=colander.OneOf(SUPPORTED_ACCEPT_TYPES),
                                description="MIME content type of the response body.")
 
 

@@ -9,6 +9,7 @@ futures; python_version < "3"
 # flag --paste breaks for >20 unless using pserve
 gunicorn<20
 humanize
+json2xml
 lxml>=3.7
 paste
 pastedeploy

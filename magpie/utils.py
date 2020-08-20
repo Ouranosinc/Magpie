@@ -7,6 +7,7 @@ import sys
 import types
 from distutils.dir_util import mkpath
 from enum import EnumMeta  # noqa: W0212
+from inspect import isfunction
 from typing import TYPE_CHECKING
 
 import requests
@@ -40,9 +41,25 @@ CONTENT_TYPE_JSON = "application/json"
 CONTENT_TYPE_FORM = "application/x-www-form-urlencoded"
 CONTENT_TYPE_HTML = "text/html"
 CONTENT_TYPE_PLAIN = "text/plain"
-SUPPORTED_CONTENT_TYPES = [CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PLAIN]
-SUPPORTED_FORMAT_TYPES = SUPPORTED_CONTENT_TYPES + [fmt.split("/")[-1] for fmt in SUPPORTED_CONTENT_TYPES] + ["text"]
-KNOWN_CONTENT_TYPES = SUPPORTED_CONTENT_TYPES + [CONTENT_TYPE_FORM, CONTENT_TYPE_ANY]
+CONTENT_TYPE_APP_XML = "application/xml"
+CONTENT_TYPE_TXT_XML = "text/xml"
+FORMAT_TYPE_MAPPING = {
+    CONTENT_TYPE_JSON: CONTENT_TYPE_JSON,
+    CONTENT_TYPE_HTML: CONTENT_TYPE_HTML,
+    CONTENT_TYPE_PLAIN: CONTENT_TYPE_PLAIN,
+    CONTENT_TYPE_APP_XML: CONTENT_TYPE_APP_XML,
+    CONTENT_TYPE_TXT_XML: CONTENT_TYPE_TXT_XML,
+    "json": CONTENT_TYPE_JSON,
+    "html": CONTENT_TYPE_HTML,
+    "text": CONTENT_TYPE_PLAIN,
+    "plain": CONTENT_TYPE_PLAIN,
+    "xml": CONTENT_TYPE_TXT_XML,
+}
+SUPPORTED_ACCEPT_TYPES = [
+    CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PLAIN, CONTENT_TYPE_APP_XML, CONTENT_TYPE_TXT_XML
+]
+SUPPORTED_FORMAT_TYPES = list(FORMAT_TYPE_MAPPING.keys())
+KNOWN_CONTENT_TYPES = SUPPORTED_ACCEPT_TYPES + [CONTENT_TYPE_FORM, CONTENT_TYPE_ANY]
 
 
 def get_logger(name, level=None, force_stdout=None, format=None, datetime_format=None):
@@ -137,12 +154,8 @@ def islambda(func):
 
 
 def isclass(obj):
-    """
-    Evaluate an object for class type (ie: class definition, not an instance nor any other type).
-
-    :param obj: object to evaluate for class type
-    :return: (bool) indicating if `object` is a class
-    """
+    # type: (Any) -> bool
+    """Evaluate an object for :class:`class` type (ie: class definition, not an instance nor any other type)."""
     return isinstance(obj, (type, six.class_types))
 
 
@@ -340,6 +353,27 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
         twitcher_proxy_url = "https://{0}{1}".format(hostname, twitcher_proxy)
     twitcher_proxy_url = twitcher_proxy_url.rstrip("/")
     return "{0}/{1}".format(twitcher_proxy_url, magpie_service_name)
+
+
+def is_magpie_ui_path(request):
+    # type: (Request) -> bool
+    """Determines if the request path corresponds to any Magpie UI location."""
+    # server URL could have more prefixes than only /magpie, so start by removing them using explicit URL setting
+    # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
+    magpie_url = get_magpie_url(request)
+    magpie_url = request.url.replace(magpie_url, "")
+    magpie_path = magpie_url.replace(request.host, "")
+    magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
+    magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
+    # ignore types defined under UI or static routes to allow rendering
+    return any(magpie_path.startswith(p) for p in ("/ui", "/static"))
+
+
+def fully_qualified_name(obj):
+    # type: (Union[Any, Type[Any]]) -> str
+    """Obtains the ``'<module>.<name>'`` full path definition of the object to allow finding and importing it."""
+    cls = obj if isclass(obj) or isfunction(obj) else type(obj)
+    return ".".join([obj.__module__, cls.__name__])
 
 
 def log_request_format(request):
