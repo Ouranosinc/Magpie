@@ -163,13 +163,18 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
         content-types than the ones supported by the application for display purposes (styles, images etc.).
         Alternatively, if no ``Accept`` header is found, look for equivalent value provided via query parameter.
         """
+        # all magpie API routes expected to either call 'valid_http' or 'raise_http' of 'magpie.api.exception' module
+        # an HTTPException is always returned
         resp = handler(request)  # no exception when EXCVIEW tween is placed under this tween
         if is_magpie_ui_path(request):
             return resp
-        # all magpie API routes expected to either call 'valid_http' or 'raise_http' of 'magpie.api.exception' module
-        # an HTTPException is always returned
         format = guess_target_format(request)
-        return ax.generate_response_http_format(type(resp), None, resp.text, format)
+        # forward any headers such as session cookies to be applied, but omit override content-type (and related)
+        headers = resp.headers
+        for header in dict(headers):
+            if header.lower().startswith("content-"):
+                headers.pop(header, None)
+        return ax.generate_response_http_format(type(resp), {"headers": headers}, resp.text, format)
     return apply_format
 
 
