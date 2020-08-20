@@ -2328,7 +2328,7 @@ class ProviderSignin_GET_HeaderRequestSchema(HeaderRequestSchemaAPI):
                     "Must be a relative path to Magpie for security reasons.")
 
 
-class ProviderSignin_GET_RequestSchema(colander.MappingSchema):
+class ProviderSignin_GET_RequestSchema(BaseRequestSchemaAPI):
     header = ProviderSignin_GET_HeaderRequestSchema()
     provider_name = ProviderNameParameter
 
@@ -2372,7 +2372,7 @@ class ProviderSignin_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
     body = ProviderSignin_GET_NotFoundResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
-class Signin_POST_RequestBodySchema(colander.MappingSchema):
+class Signin_BaseRequestSchema(colander.MappingSchema):
     user_name = colander.SchemaNode(colander.String(),
                                     description="User name to use for sign in. "
                                                 "Can also be the email provided during registration.")
@@ -2383,8 +2383,16 @@ class Signin_POST_RequestBodySchema(colander.MappingSchema):
                                         default=get_constant("MAGPIE_DEFAULT_PROVIDER"), missing=colander.drop)
 
 
+class SigninQueryParamSchema(QueryRequestSchemaAPI, Signin_BaseRequestSchema):
+    pass
+
+
+class Signin_GET_RequestSchema(BaseRequestSchemaAPI):
+    querystring = SigninQueryParamSchema()
+
+
 class Signin_POST_RequestSchema(BaseRequestSchemaAPI):
-    body = Signin_POST_RequestBodySchema()
+    body = Signin_BaseRequestSchema()
 
 
 class Signin_POST_OkResponseSchema(BaseResponseSchemaAPI):
@@ -3055,6 +3063,7 @@ Signin_POST_responses = {
     "422": UnprocessableEntityResponseSchema(),
     "500": Signin_POST_Internal_InternalServerErrorResponseSchema(),
 }
+Signin_GET_responses = Signin_POST_responses
 Signout_GET_responses = {
     "200": Signout_GET_OkResponseSchema(),
     "406": NotAcceptableResponseSchema(),

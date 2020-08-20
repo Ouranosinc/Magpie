@@ -1,3 +1,4 @@
+import json
 from authomatic.adapters import WebObAdapter
 from authomatic.core import Credentials, LoginResult, resolve_provider_class
 from authomatic.exceptions import OAuth2Error
@@ -66,6 +67,18 @@ def process_sign_in_external(request, username, provider):
 def verify_provider(provider_name):
     ax.verify_param(provider_name, param_name="provider_name", param_compare=MAGPIE_PROVIDER_KEYS, is_in=True,
                     http_error=HTTPNotFound, msg_on_fail=s.ProviderSignin_GET_NotFoundResponseSchema.description)
+
+
+@s.SigninAPI.get(schema=s.Signin_GET_RequestSchema, tags=[s.SessionTag], response_schemas=s.Signin_GET_responses)
+@view_config(route_name=s.SigninAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+def signin_in_param(request):
+    """
+    Signs in a user session using query parameters.
+    """
+    data = dict(request.params)
+    subreq = Request.blank(s.SigninAPI.path, base_url=request.application_url,
+                           headers={"Content-Type": CONTENT_TYPE_JSON}, POST=json.dumps(data))
+    return request.invoke_subrequest(subreq, use_tweens=True)
 
 
 @s.SigninAPI.post(schema=s.Signin_POST_RequestSchema(), tags=[s.SessionTag], response_schemas=s.Signin_POST_responses)
