@@ -137,9 +137,6 @@ class RootFactory(object):
         return acl
 
 
-#class UsersContainerFactory(object):
-
-
 class UserFactory(RootFactory):
     def __init__(self, request):
         super(UserFactory, self).__init__(request)

@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING
 
 from magpie import __meta__
 from magpie.constants import get_constant
-from magpie.models import UserFactory
 from magpie.permissions import Permission
 from magpie.security import get_provider_names
 from magpie.utils import (
@@ -102,12 +101,10 @@ SwaggerAPI = Service(
     description="{} documentation".format(TitleAPI))
 UsersAPI = Service(
     path="/users",
-    name="Users",
-    factory=UserFactory, traverse="/{user_name}")
+    name="Users")
 UserAPI = Service(
     path="/users/{user_name}",
-    name="User",
-    factory=UserFactory, traverse="/{user_name}")
+    name="User")
 UserGroupsAPI = Service(
     path="/users/{user_name}/groups",
     name="UserGroups")
