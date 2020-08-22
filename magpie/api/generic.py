@@ -187,7 +187,7 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
                 resp.content_type = CONTENT_TYPE_HTML
             return resp
         # forward any headers such as session cookies to be applied
-        return ax.generate_response_http_format(type(resp), {"headers": request.headers}, resp.text, format)
+        return ax.generate_response_http_format(type(resp), {"headers": resp.headers}, resp.text, format)
     return apply_format
 
 
