@@ -284,15 +284,16 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
     def test_ViewDiscoverableGroup_Unauthorized(self):
         """Not logged-in user cannot view group although group is discoverable."""
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
+        admin_headers, admin_cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
 
         # setup some actual discoverable group to ensure the error is not caused by some misinterpreted response
         test_group = "unittest-no-auth_test-group"
         self.extra_group_names.append(test_group)
         group_data = {"group_name": test_group, "discoverable": True}
-        headers, cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
         utils.TestSetup.create_TestGroup(self, override_data=group_data,
-                                         override_headers=headers, override_cookies=cookies)
+                                         override_headers=admin_headers, override_cookies=admin_cookies)
         utils.check_or_try_logout_user(self)
+
         path = "/register/groups/{}".format(test_group)
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, expect_errors=True)
         utils.check_response_basic_info(resp, 401, expected_method="DELETE")
@@ -346,8 +347,25 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_or_try_logout_user(self)
         data = {"user_name": info["email"]}
         resp = utils.test_request(self, "POST", "/signin", data=data, headers=self.json_headers, cookies={})
-        body = utils.check_response_basic_info(resp)
+        body = utils.check_response_basic_info(resp, expected_method="POST")
         utils.check_val_equal(body["detail"], s.Signin_POST_OkResponseSchema.description)
+
+    def test_GetSignin_UsingParameters(self):
+        """User is allowed to use its email as username for login."""
+        utils.check_or_try_logout_user(self)
+
+        queries = {"user_name": self.test_user_name, "password": self.test_user_name}
+        resp = utils.test_request(self, "GET", "/signin", params=queries, headers={}, cookies={})
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_equal(body["detail"], s.Signin_POST_OkResponseSchema.description)  # same as POST (redirect)
+
+        resp_headers = getattr(resp, "headers", None)
+        resp_cookies = getattr(resp, "cookies", None)
+        resp = utils.test_request(self, "GET", "/session", headers=resp_headers, cookies=resp_cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_equal(body["authenticated"], True)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], self.test_user_name)
 
     def run_PatchUsers_email_update_itself(self, user_path_variable):
         """
@@ -442,7 +460,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         """
         utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
         self.extra_user_names.append(self.other_user_name)
-        utils.TestSetup.create_TestUser(self, {"user_name": self.other_user_name, "password": self.other_user_name})
+        data = {"user_name": self.other_user_name, "password": self.other_user_name}
+        utils.TestSetup.create_TestUser(self, override_data=data)
         self.login_test_user()
 
         new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
@@ -476,6 +495,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_equal(info["user_name"], self.other_user_name)
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
     def test_PatchUsers_username_Forbidden_ReservedKeyword_Current(self):
         """Logged user is not allowed to update its user name to reserved keyword."""
         self.login_test_user()
@@ -522,7 +542,28 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_response_basic_info(resp)
 
     @runner.MAGPIE_TEST_USERS
-    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_GROUPS
+    def test_PostUserGroup_Forbidden_SelfAssignMembership(self):
+        """
+        Non-admin level user cannot change its own group memberships nor any other user's group memberships.
+        (can only change is own discoverable groups memberships through register routes, but not this route)
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_PostUserGroup_AllowAdmin_SelfAssignMembership`
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_RegisterDiscoverableGroup`
+        """
+        test_group_name = "unittest-users-auth_new-group-self-assign"
+        self.extra_group_names.append(test_group_name)
+        utils.TestSetup.create_TestGroup(self, override_group_name=test_group_name)
+        self.login_test_user()
+
+        path = "/users/{}/groups".format(self.test_user_name)
+        data = {"group_name": test_group_name}
+        resp = utils.test_request(self, "POST", path, data=data, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, expected_method="POST", expected_code=403)
+
+    @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     def test_PostUserResourcesPermissions_Forbidden(self):
         """Logged user without administrator access is not allowed to add resource permissions for itself."""
@@ -544,9 +585,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_not_in(perm, body["permission_names"])
 
     @runner.MAGPIE_TEST_USERS
-    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_GROUPS
     def test_RegisterDiscoverableGroup(self):
-        """Non-admin logged user is allowed to update is membership to register to a discoverable group by himself."""
+        """Non-admin logged user is allowed to update is membership to register to a discoverable group by itself."""
         utils.TestSetup.delete_TestGroup(self)
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         self.login_test_user()
@@ -562,8 +603,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
                                                   override_headers=self.json_headers, override_cookies=self.cookies)
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_GROUPS
     def test_UnregisterDiscoverableGroup(self):
-        """Non-admin logged user is allowed to revoke its membership to leave a discoverable group by himself."""
+        """Non-admin logged user is allowed to revoke its membership to leave a discoverable group by itself."""
         utils.TestSetup.delete_TestGroup(self)
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         utils.TestSetup.assign_TestUserGroup(self)
@@ -575,6 +617,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.check_UserGroupMembership(self, member=False,  # validate as admin that user was unregistered
                                                   override_headers=self.json_headers, override_cookies=self.cookies)
 
+    @runner.MAGPIE_TEST_GROUPS
     def test_ViewDiscoverableGroup(self):
         """Non-admin logged user can view discoverable group information. Critical details are not displayed."""
         data = {"discoverable": True, "description": "Test Group", "group_name": self.test_group_name}
@@ -595,6 +638,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_not_in("member_count", body["group"])
         utils.check_val_not_in("user_names", body["group"])
 
+    @runner.MAGPIE_TEST_GROUPS
     def test_ListDiscoverableGroups_Filtered(self):
         """Non-admin logged user can view only available discoverable group names."""
         # setup some discoverable groups, but ignore others that *could* exist depending on the reference database
@@ -606,6 +650,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         for grp in discover_groups:
             utils.TestSetup.delete_TestGroup(self, override_group_name=grp)  # in case previous test run failed/stopped
             utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True, "group_name": grp})
+            discover_before.remove(grp)
         self.login_test_user()
 
         # test that only just added discoverable groups are visible (ignore pre-existing discoverable groups if any)
@@ -619,6 +664,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         # we do not even need to consider pre-existing discoverable groups as anonymous shouldn't be one
         utils.check_val_not_in(get_constant("MAGPIE_ANONYMOUS_GROUP"), body["group_names"])
 
+    @runner.MAGPIE_TEST_GROUPS
     def test_DeleteDiscoverableGroup_Forbidden(self):
         """Non-admin logged user cannot delete a group although it is discoverable."""
         utils.TestSetup.delete_TestGroup(self)  # remove auto-created by setup
@@ -1567,6 +1613,28 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_response_basic_info(resp, 409, expected_method="POST")
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_LOGGED
+    def test_PostUserGroup_AllowAdmin_SelfAssignMembership(self):
+        """
+        Admin-level user is allowed to assign itself to any group.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_PostUserGroup_Forbidden_SelfAssignMembership`
+        """
+        # logged admin user assigns itself to new test group
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=self.usr)
+
+        # new user assigned to admin-group by current admin-user, then that new-user self-assigns to test group
+        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.assign_TestUserGroup(self, override_group_name=self.grp)
+        utils.check_or_try_logout_user(self)
+        utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name)
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=self.test_user_name,
+                                             override_headers=self.test_headers, override_cookies=self.test_cookies)
+
+    @runner.MAGPIE_TEST_USERS
     def test_GetUserGroups(self):
         users_group = get_constant("MAGPIE_USERS_GROUP")
         utils.TestSetup.create_TestUser(self, override_group_name=users_group)
@@ -1614,6 +1682,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_response_basic_info(resp, 404, expected_method="DELETE")
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_GROUPS
     def test_DeleteUserGroup(self):
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
@@ -1631,6 +1700,22 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_not_in(self.test_user_name, body["group"]["user_names"])
         utils.check_val_equal(body["group"]["member_count"], 0)
         utils.warn_version(self, "Member count invalid (always zero).", "0.10.0", skip=False)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_GROUPS
+    def test_DeleteUserGroup_Forbidden_Anonymous(self):
+        """
+        Nobody is allowed to remove anonymous group membership to ensure 'Public' resource permission remain coherent.
+        """
+        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestGroup(self)
+
+        anonymous_group = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        path = "/users/{}/groups".format(self.test_user_name)
+        data = {"group_name": anonymous_group}
+        resp = utils.test_request(self, "DELETE", path, data=data, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, expected_method="DELETE", expected_code=403)
 
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroups(self):
@@ -2405,6 +2490,21 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
         assert headers and cookies, cls.require             # nosec
         assert cls.headers and cls.cookies, cls.require     # nosec
+
+    @runner.MAGPIE_TEST_LOGIN
+    def test_FormLogin(self):
+        utils.check_or_try_logout_user(self)
+        resp = utils.test_request(self, "GET", "/session", headers=self.test_headers, cookies=self.test_cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_equal(body["authenticated"], False)
+
+        header, cookies = utils.check_or_try_login_user(self, use_ui_form_submit=True,
+                                                        username=self.test_user_name, password=self.test_user_name)
+        resp = utils.test_request(self, "GET", "/session", headers=header, cookies=cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_equal(body["authenticated"], True)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], self.test_user_name)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED

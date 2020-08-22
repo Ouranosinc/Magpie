@@ -130,8 +130,8 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
     def effective_permissions(self, resource, user):
         # type: (models.Resource, models.User) -> List[ResourcePermissionType]
         """
-        Recursively rewind the resource tree from the specified resource up to the topmost parent service resource and
-        retrieve permissions along the way that should be applied to children when using resource inheritance.
+        Recursively rewind the resource tree from the specified resource up to the top-most parent service's resource
+        and retrieve permissions along the way that should be applied to children when using resource inheritance.
         """
         resource_effective_perms = list()
         while resource is not None:

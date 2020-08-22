@@ -1,4 +1,5 @@
-.. usage_link:
+.. _usage:
+.. include:: references.rst
 
 ========
 Usage
@@ -36,10 +37,6 @@ configuration file for specific settings. `Magpie` also employs such INI file to
 See `Configuration`_ for further details, and please refer to the employed `WSGI` application documentation of your
 liking for their respective setup requirements.
 
-.. _Gunicorn: https://gunicorn.org/
-.. _PostgreSQL: https://www.postgresql.org/
-.. _Twitcher: https://github.com/bird-house/twitcher
-.. _Waitress: https://github.com/Pylons/waitress
 
 API
 ~~~~~~~
@@ -47,15 +44,13 @@ API
 When the application is started, the Swagger API should be available under ``/api`` path. This will render the *current*
 version API and applicable requests. Please refer to this documentation to discover all provided API paths and
 operations supported by `Magpie` on a *running* instance (that could be older than latest code base). Alternatively,
-documentation of *all* versions is available on `readthedocs`_.
-
-.. _readthedocs: https://pavics-magpie.readthedocs.io/en/latest/api.html
+documentation of *all* versions is available on `readthedocs <Magpie REST API>`_.
 
 The API allows an administrator-level user to modify services, resources, users and groups references via HTTP requests.
 To do these kind of operations, sufficient access rights must be provided to the corresponding user (either directly or
 through administrative-level group membership).
 
-Some API routes are accessible by *any*-level user access. These are designated by `Logged User` in the documentation.
+Some API routes are accessible by *any*-level user access. These are designated by :term:`Logged User` in the documentation.
 When accessing such API paths, the applicable user for which the request is accomplished uses contextual information
 from authentication headers and/or cookies of the request. When no user is authenticated, a minimal subset of paths
 will provide some publicly available details, such as current session user. Other routes will be more verbose according
@@ -63,9 +58,11 @@ to the applicable user permission (or is inherited group memberships).
 
 .. versionchanged:: 2.0.0
 
-As of this version, some API paths will offer additional `Logged User` operations such as self-registration to publicly
+As of this version, some API paths will offer additional :term:`Logged User` operations such as self-registration to publicly
 available groups. See the appropriate API version documentation for routes that could be added or adjusted with this
 new functionality. Note also that a valid user account will still be required to access these routes.
+
+Please refer to `permissions` for further details about applicable user access levels.
 
 CLI
 ~~~~~~~
@@ -97,4 +94,5 @@ Please refer to this section for more details.
 
 .. _configuration: configuration.rst
 .. _installation: installation.rst
+.. _permissions: permissions.rst
 .. _utilities: utilities.rst

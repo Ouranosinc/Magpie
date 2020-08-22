@@ -43,12 +43,13 @@ OptionalStringType = six.string_types + tuple([type(None)])
 
 
 class RunOption(object):
-    __slots__ = ["_name", "_enabled", "_marker"]
+    __slots__ = ["_name", "_enabled", "_marker", "_description"]
 
-    def __init__(self, name, marker=None):
+    def __init__(self, name, marker=None, description=None):
         self._name = name
         self._marker = marker if marker else name.lower().replace("magpie_test_", "")
         self._enabled = self._default_run()
+        self._description = description
 
     def __call__(self, *args, **kwargs):
         """
@@ -129,8 +130,8 @@ class RunOptionDecorator(object):
 
         RunOptionDecorator("MAGPIE_TEST_CUSTOM_MARKER")
     """
-    def __new__(cls, name):
-        return make_run_option_decorator(RunOption(name))
+    def __new__(cls, name, description=None):
+        return make_run_option_decorator(RunOption(name, description=description))
 
 
 def config_setup_from_ini(config_ini_file_path):

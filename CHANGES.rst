@@ -1,7 +1,8 @@
+.. explicit references must be used in this file (not references.rst) to ensure they are directly rendered on Github
 .. :changelog:
 
 Changes
-=======
+*******
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
@@ -31,7 +32,7 @@ Features / Changes
   specified with ``MAGPIE_CONFIG_PATH`` environment variable or ``magpie.config_path`` setting (example in ``configs``).
 * Add configurable user creation parameters upon `Magpie` application startup through configuration files
   (fixes `#47 <https://github.com/Ouranosinc/Magpie/issues/47>`_ and
-   `#204 <https://github.com/Ouranosinc/Magpie/issues/204>`_).
+  `#204 <https://github.com/Ouranosinc/Magpie/issues/204>`_).
 * Add disabled checkboxes for UI rendering of non-editable items
   (relates to `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_).
 * Add more tests to validate forbidden operations such as update or delete of reserved user and group details.
@@ -49,6 +50,9 @@ Features / Changes
 * Add support of new response content-type as XML.
 * Add support of ``Accept`` header and ``format`` query parameter for all API responses, for content-types variations
   in either plain text, HTML, XML or JSON (default), and include applicable values in schemas for Swagger generation.
+* Add documentation details about different types of ``Permission``, interaction between various `Magpie` models,
+  glossary and other general improvements (relates to `#332 <https://github.com/Ouranosinc/Magpie/issues/332>`_ and
+  `#341 <https://github.com/Ouranosinc/Magpie/issues/341>`_).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

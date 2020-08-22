@@ -188,7 +188,7 @@ docs-show: $(DOC_LOCATION)	## display HTML webpage of generated documentation (b
 	@-test -f "$(DOC_LOCATION)" || $(MAKE) -C "$(APP_ROOT)" docs
 	$(BROWSER) "$(DOC_LOCATION)"
 
-## --- Versionning targets --- ##
+## --- Versioning targets --- ##
 
 # Bumpversion 'dry' config
 # if 'dry' is specified as target, any bumpversion call using 'BUMP_XARGS' will not apply changes

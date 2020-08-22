@@ -1,3 +1,6 @@
+"""
+User Views, both for specific user-name provided as request path variable and special keyword for logged session user.
+"""
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
@@ -121,7 +124,7 @@ def get_user_view(request):
 @s.UserAPI.delete(schema=s.User_DELETE_RequestSchema(), tags=[s.UsersTag], response_schemas=s.User_DELETE_responses)
 @s.LoggedUserAPI.delete(schema=s.User_DELETE_RequestSchema(), tags=[s.LoggedUserTag],
                         response_schemas=s.LoggedUser_DELETE_responses)
-@view_config(route_name=s.UserAPI.name, request_method="DELETE")
+@view_config(route_name=s.UserAPI.name, request_method="DELETE")  # FIXME: permission=MAGPIE_LOGGED_USER self-unregister
 def delete_user_view(request):
     """
     Delete a user by name.
@@ -139,7 +142,7 @@ def delete_user_view(request):
 @s.UserGroupsAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI, response_schemas=s.UserGroups_GET_responses)
 @s.LoggedUserGroupsAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
                            response_schemas=s.LoggedUserGroups_GET_responses)
-@view_config(route_name=s.UserGroupsAPI.name, request_method="GET", permission="MAGPIE_LOGGED_USER")
+@view_config(route_name=s.UserGroupsAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
 def get_user_groups_view(request):
     """
     List all groups a user belongs to.

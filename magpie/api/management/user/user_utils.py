@@ -239,17 +239,19 @@ def get_user_services(user, request, cascade_resources=False,
     :param user: user for which to find services
     :param request: request with database session connection
     :param cascade_resources:
-        If `False`, return only services with *Direct* user permissions on their corresponding service-resource.
+        If ``False``, return only services with :term:`Direct` user permissions on their corresponding service-resource.
         Otherwise, return every service that has at least one sub-resource with user permissions.
     :param inherit_groups_permissions:
-        If `False`, return only user-specific service/sub-resources permissions.
+        If ``False``, return only user-specific service/sub-resources permissions.
         Otherwise, resolve inherited permissions using all groups the user is member of.
     :param format_as_list:
         returns as list of service dict information (not grouped by type and by name)
-    :return: only services which the user as *Direct* or *Inherited* permissions, according to `inherit_from_resources`
+    :return:
+        only services which the user as :term:`Direct` or :term:`Inherited` permissions, according to
+        :paramref:`inherit_from_resources`.
     :rtype:
         dict of services by type with corresponding services by name containing sub-dict information,
-        unless `format_as_list` is `True`
+        unless :paramref:`format_as_list` is ``True``
     """
     db_session = request.db
     resource_type = None if cascade_resources else [models.Service.resource_type]
