@@ -1709,8 +1709,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         """
         Nobody is allowed to remove anonymous group membership to ensure 'Public' resource permission remain coherent.
         """
-        utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
 
         anonymous_group = get_constant("MAGPIE_ANONYMOUS_GROUP")
         path = "/users/{}/groups".format(self.test_user_name)

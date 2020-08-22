@@ -102,7 +102,7 @@ def get_value_multiformat_body_checked(request, key, default=None, check_type=si
 
 
 def get_principals(request):
-    # type: (Request) -> List[Str]
+    # type: (Request) -> List[AnyAccessPrincipalType]
     """Obtains the list of effective principals according to detected request session user."""
     authn_policy = request.registry.queryUtility(IAuthenticationPolicy)  # noqa
     principals = authn_policy.effective_principals(request)
@@ -121,55 +121,13 @@ def get_logged_user(request):
     return None
 
 
-def check_user_has_access(request, access_principals=None):
-    # type: (Request, Optional[AnyAccessPrincipalType]) -> bool
-    """
-    Verifies if the request user has *any* of the specified access principals for the given request.
-
-    Principals can be in the any string of the following form:
-        - (int) ``<user-id>``
-        - (str) ``"group:<group-id>"``
-        - (str) :py:data:`pyramid.security.Authenticated`
-        - (str) :py:data:`pyramid.security.Everyone`
-        - (str) ``"<custom-scope-string>"``
-
-    .. seealso::
-        - :py:mod:`ziggurat_foundations.permissions` for details about expected principal values.
-
-    When no principals are provided, the application :py:data:`magpie.constants.MAGPIE_ADMIN_GROUP` is employed as
-    required group principal. If the request context contains a :class:`models.User` that matches the request session
-    user, that permission requirement is "lowered" to self-referenced user access using additional principals
-    ``<user-id>`` and ``"MAGPIE_LOGGED_USER"``.
-
-    .. seealso::
-        - :class:`models.UserFactory` for request context user.
-
-    :param request: request for which to evaluate granted user access.
-    :param access_principals: none, a single, or multiple access level principals/scopes.
-    :returns: status indicating if user has required access.
-    """
-    principals = get_principals(request)
-    if access_principals is None:
-        admin_group_name = get_constant("MAGPIE_ADMIN_GROUP", settings_container=request)
-        admin_group = GroupService.by_group_name(admin_group_name, db_session=request.db)
-        admin_principal = "group:{}".format(admin_group.id)
-        access_principals = [admin_principal]
-        if isinstance(request.context, models.User):
-            if request.user.id == request.context.id:
-                access_principals += ["MAGPIE_LOGGED_USER", request.context.id]
-    if isinstance(access_principals, six.string_types + (int, )):
-        access_principals = [access_principals]
-    return any(access in principals for access in access_principals)
-
-
-def get_user(request, user_name_or_token=None, access_principals=None):
-    # type: (Request, Optional[Str], Optional[AnyAccessPrincipalType]) -> models.User
+def get_user(request, user_name_or_token=None):
+    # type: (Request, Optional[Str]) -> models.User
     """
     Obtains the user corresponding to the provided user-name, token or via lookup of the logged user request session.
 
     :param request: request from which to obtain application settings and session user as applicable.
     :param user_name_or_token: reference value to employ for lookup of the user.
-    :param access_principals: alternative principals needed by the user doing the request (default admin-level).
     :returns: found user.
     :raises HTTPForbidden: if the requesting user does not have sufficient permission to execute this request.
     :raises HTTPNotFound: if the specified user name or token does not correspond to any existing user.
@@ -192,8 +150,6 @@ def get_user(request, user_name_or_token=None, access_principals=None):
     ax.verify_param(user_name_or_token, not_none=True, not_empty=True, matches=True,
                     param_compare=ax.PARAM_REGEX, param_name="user_name",
                     http_error=HTTPBadRequest, msg_on_fail=s.User_Check_BadRequestResponseSchema.description)
-    ax.verify_param(check_user_has_access(request, access_principals), is_true=True, with_param=False,
-                    http_error=HTTPForbidden, msg_on_fail=s.User_GET_ForbiddenResponseSchema.description)
     user = ax.evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
                             fallback=lambda: request.db.rollback(),
                             http_error=HTTPInternalServerError,
@@ -203,8 +159,8 @@ def get_user(request, user_name_or_token=None, access_principals=None):
     return user
 
 
-def get_user_matchdict_checked_or_logged(request, user_name_key="user_name", access_principals=None):
-    # type: (Request, Str, Optional[AnyAccessPrincipalType]) -> models.User
+def get_user_matchdict_checked_or_logged(request, user_name_key="user_name"):
+    # type: (Request, Str) -> models.User
     """
     Obtains either the explicit or logged user specified in the request path variable.
 
@@ -215,12 +171,12 @@ def get_user_matchdict_checked_or_logged(request, user_name_key="user_name", acc
     logged_user_name = get_constant("MAGPIE_LOGGED_USER", settings_container=request)
     logged_user_path = s.UserAPI.path.replace("{" + user_name_key + "}", logged_user_name)
     if user_name_key not in request.matchdict or request.path_info.startswith(logged_user_path):
-        return get_user(request, logged_user_name, access_principals=access_principals)
-    return get_user_matchdict_checked(request, user_name_key, access_principals=access_principals)
+        return get_user(request, logged_user_name)
+    return get_user_matchdict_checked(request, user_name_key)
 
 
-def get_user_matchdict_checked(request, user_name_key="user_name", access_principals=None):
-    # type: (Request, Str, Optional[AnyAccessPrincipalType]) -> models.User
+def get_user_matchdict_checked(request, user_name_key="user_name"):
+    # type: (Request, Str) -> models.User
     """Obtains the user matched against the specified request path variable.
 
     :returns: found user.
@@ -232,7 +188,7 @@ def get_user_matchdict_checked(request, user_name_key="user_name", access_princi
         - :func:`get_user`
     """
     user_name = get_value_matchdict_checked(request, user_name_key)
-    return get_user(request, user_name, access_principals=access_principals)
+    return get_user(request, user_name)
 
 
 def get_group_matchdict_checked(request, group_name_key="group_name"):

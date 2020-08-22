@@ -173,6 +173,7 @@ def get_group_resource_permissions_response(group, resource, db_session):
     """
     def get_grp_res_perms(grp, res, db):
         if res.owner_group_id == grp.id:
+            # FIXME: no 'magpie.models.Resource.permissions' - ok for now because no owner handling...
             return models.RESOURCE_TYPE_DICT[res.type].permissions
         perms = db.query(models.GroupResourcePermission) \
                   .filter(models.GroupResourcePermission.resource_id == res.resource_id) \

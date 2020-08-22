@@ -210,6 +210,7 @@ def get_user_resource_permissions_response(user, resource, request,
 
     def get_usr_res_perms():
         if resource.owner_user_id == user.id:
+            # FIXME: no 'magpie.models.Resource.permissions' - ok for now because no owner handling...
             res_perm_list = models.RESOURCE_TYPE_DICT[resource.type].permissions
         else:
             if effective_permissions:

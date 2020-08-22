@@ -116,7 +116,12 @@ def get_service_or_resource_types(service_or_resource):
 
 
 def get_resource_permissions(resource, db_session):
-    # type: (models.Resource, Session) -> List[Permission]
+    # type: (Union[models.Service, models.Resource], Session) -> List[Permission]
+    """Obtains the applicable permissions on the service or resource, accordingly to what was provided.
+
+    When parsing a resource, rewinds the hierarchy up to the top-most service in order to find the context under
+    which the resource resides, and therefore which permissions this resource is allowed to have under that service.
+    """
     ax.verify_param(resource, not_none=True, http_error=HTTPBadRequest, param_name="resource",
                     msg_on_fail=s.UserResourcePermissions_GET_BadRequestResourceResponseSchema.description)
     # directly access the service resource

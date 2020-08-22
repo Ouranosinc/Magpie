@@ -53,6 +53,15 @@ More specifically, following distinction can be considered between different kin
     can be referred to as "roles", but are inferred by :term:`Group` memberships of the :term:`Logged User` attempting
     to complete the request. See `Route Access`_ details.
 
+.. following are potential but not implemented:
+ownership permissions:
+    user/group that owns the service/resource
+    defined with the id saved directly under that Resource (see Resource.owner_[user|group]_id)
+role permission:
+    (user|group, permission) relationship, within separate tables in database
+    maybe could be combined used with group permissions and 'access permissions' do, but there
+    is still a need to check view access dynamic group with them, might require some GroupFactory?
+
 
 Route Access
 -------------
@@ -124,6 +133,56 @@ for  , making every existing :term:`User` automatically receiving the effective 
 Example to distinguish Applied, Inherited and Effective Permissions
 --------------------------------------------------------------------------------------
 
+Let's say we have some fictive :term:`Service` that allows the following *permission scheme*, and that it implements
+the default hierarchical resolution of :term:`Resource` items (i.e.: having permissions on ``resource-type-1`` also
+provides the same ones for child resources ``resource-type-2``).
+
+.. code-block::
+
+    service-type                [read | write]
+        resource-type-1         [read | write]
+            resource-type-2     [read | write]
+
+Given that scheme, let's say that existing elements are defined as follows:
+
+.. code-block::
+
+    service-1               (service-type)
+    service-2               (service-type)
+        resource-A          (resource-type-1)
+    service-3               (service-type)
+        resource-B1         (resource-type-1)
+            resource-B2     (resource-type-2)
+
+Let's says we also got a ``example-user`` that is member of ``example-group``, and that  `applied permissions`_ on them
+are as follows:
+
+.. code-block::
+
+    (service-1,   example-user,  write)
+    (service-2,   example-group, write)
+    (resource-A,  example-user,  read)
+    (resource-B2, example-user,  write)
+    (resource-B1, example-group, read)
+
+For simplification purposes, we will use the names directly in following steps, but remember that requests would
+normally require unique identifiers for :term:`Resource` resolution. Lets observe what happens using different query
+parameters with request ``GET /users/{usr}/resources/{id}/permissions``.
+
+If no query parameter is specified, we obtain permissions as follows:
+
+.. code-block::
+
+    /users/example-user/resources/service-1/permissions     => [write]
+
+
+Using ``inherited`` option, we obtain the following:
+
+.. code-block::
+
+    /users/example-user/resources/service-1/permissions     => [write]
+
+
 Using the query parameter in `/users/{usr}/resources/{id}/permissions?effective=true` allows to obtain the effective permission of that specific user/resource combination including permissions group permissions the user is member of.
 
 Although both `inherit` and `effective` flag consider the permissions of groups the user is part of, the `effective` flag goes an extra step to rewind up to the service any permissions that apply to children resources, while `inherit` with only resolve the user & group permissions of the specific resource. This means that a recursive-permission placed on a parent resource at higher level than the current resource will be shown by `effective` but not by `inherit` as the permission is not set directly on that resource.
@@ -134,3 +193,8 @@ Although both `inherit` and `effective` flag consider the permissions of groups 
     :term:`Permission` that should be inherited by all sub-nodes. Each :term:`Service` can implement its own parsing
     methodology according to desired its functionality. Please refer to :ref:`services` for details about each type's
     implementation.
+
+
+
+Another special query parameter ``cascade`` is also available on route ``GET /users/{usr}/services``.
+This option allows to recursively search all children :term:`Resource` under the :term:`Service`

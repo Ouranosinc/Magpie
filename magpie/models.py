@@ -128,7 +128,7 @@ class RootFactory(object):
     def __acl__(self):
         """Administrators have all permissions, user/group-specific permissions added if user is logged in."""
         user = self.request.user
-        acl = [(Allow, get_constant("MAGPIE_ADMIN_PERMISSION", self.request), ALL_PERMISSIONS)]
+        acl = [(Allow, get_constant("MAGPIE_ADMIN_PERMISSION"), ALL_PERMISSIONS)]
         if user:
             permissions = UserService.permissions(user, self.request.db)
             user_acl = permission_to_pyramid_acls(permissions)
@@ -143,6 +143,7 @@ class UserFactory(RootFactory):
         self.path_user = None
 
     def __getitem__(self, user_name):
+        context = UserFactory(self.request)
         if user_name == get_constant("MAGPIE_LOGGED_USER", self.request):
             self.path_user = self.request.user
         else:
@@ -150,7 +151,8 @@ class UserFactory(RootFactory):
         if self.path_user is not None:
             self.path_user.__parent__ = self
             self.path_user.__name__ = user_name
-        return self.path_user
+        context.path_user = self.path_user
+        return context
 
     @property
     def __acl__(self):
@@ -161,7 +163,7 @@ class UserFactory(RootFactory):
         acl = super(UserFactory, self).__acl__
         user = self.request.user
         if user and self.path_user and user.id == self.path_user.id:
-            return acl + [(Allow, user.id, "MAGPIE_LOGGED_USER")]
+            return acl + [(Allow, user.id, get_constant("MAGPIE_LOGGED_PERMISSION"))]
         return acl
 
 

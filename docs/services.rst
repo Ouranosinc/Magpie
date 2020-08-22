@@ -5,8 +5,8 @@
 Services
 ===========
 
-This section describes :term:`Service` and underlying :term:`Resource` elements packaged with `Magpie`, as well as their respective
-functionalities and intended procedural behavior.
+This section describes :term:`Service` and underlying :term:`Resource` elements packaged with `Magpie`, as well as
+their respective functionalities and intended procedural behavior.
 
 Available Services
 -------------------
@@ -18,7 +18,10 @@ Available Services
 .. seealso::
     - :py:mod:`magpie.services`
 
-
+.. todo:
+    dynamic custom service definition
+    https://github.com/Ouranosinc/Magpie/issues/149
+.. todo: even if not implementing above, could be good to document fields or ServiceInterface for future reference
 
 Resource Synchronization
 ------------------------

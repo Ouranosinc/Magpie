@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from pyramid.authentication import Authenticated
 from pyramid.exceptions import PredicateMismatch
 from pyramid.httpexceptions import (
+    HTTPException,
     HTTPForbidden,
     HTTPInternalServerError,
     HTTPMethodNotAllowed,
@@ -34,7 +35,6 @@ if TYPE_CHECKING:
     from magpie.typedefs import Str, JSON
     from pyramid.registry import Registry
     from pyramid.response import Response
-    from pyramid.httpexceptions import HTTPException
 LOGGER = get_logger(__name__)
 
 
@@ -185,6 +185,9 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
         if is_magpie_ui_path(request):
             if not resp.content_type:
                 resp.content_type = CONTENT_TYPE_HTML
+            return resp
+        # return routes already converted (valid_http/raise_http where not used, pyramid already generated response)
+        if not isinstance(resp, HTTPException):
             return resp
         # forward any headers such as session cookies to be applied
         return ax.generate_response_http_format(type(resp), {"headers": resp.headers}, resp.text, format)
