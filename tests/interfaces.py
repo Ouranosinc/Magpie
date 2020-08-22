@@ -290,6 +290,7 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
         test_group = "unittest-no-auth_test-group"
         self.extra_group_names.append(test_group)
         group_data = {"group_name": test_group, "discoverable": True}
+        utils.TestSetup.delete_TestGroup(self, override_group_name=test_group)
         utils.TestSetup.create_TestGroup(self, override_data=group_data,
                                          override_headers=admin_headers, override_cookies=admin_cookies)
         utils.check_or_try_logout_user(self)
@@ -709,6 +710,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @classmethod
     def check_requirements(cls):
+        utils.check_or_try_logout_user(cls)  # in case user changed during another test
         headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd,
                                                          use_ui_form_submit=True, version=cls.version)
         assert headers and cookies, cls.require             # nosec

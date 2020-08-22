@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING
 
 import colander
 import six
-from json2xml.json2xml import Json2xml
-from json2xml.utils import readfromstring
+from dicttoxml import dicttoxml
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPError,
@@ -523,8 +522,7 @@ def generate_response_http_format(http_class, http_kwargs, content, content_type
             http_response = http_class(body_template=html_body, content_type=content_type, **http_kwargs)
 
         elif content_type in [CONTENT_TYPE_APP_XML, CONTENT_TYPE_TXT_XML]:
-            json_body = readfromstring(content)
-            xml_body = Json2xml(json_body, wrapper="response").to_xml()  # noqa
+            xml_body = dicttoxml(json_content, custom_root="response")
             http_response = http_class(body=xml_body, content_type=CONTENT_TYPE_TXT_XML, **http_kwargs)
 
         # default back to plain text
