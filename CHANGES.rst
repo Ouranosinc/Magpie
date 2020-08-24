@@ -60,6 +60,9 @@ Bug Fixes
 * Fix `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_ (forbid *special* users and groups update and delete).
 * Fix `#84 <https://github.com/Ouranosinc/Magpie/issues/84>`_ with additional input validation.
 * Fix `#194 <https://github.com/Ouranosinc/Magpie/issues/194>`_ to render API error responses according to content-type.
+* Fix `#337 <https://github.com/Ouranosinc/Magpie/issues/337>`_ documentation mismatch with previously denied request
+  users since they are now allowed to run these requests with new user-scoped functionalities
+  (`#340 <https://github.com/Ouranosinc/Magpie/issues/340>`_).
 * Fix minor HTML issues in mako templates.
 
 `1.11.0 <https://github.com/Ouranosinc/Magpie/tree/1.11.0>`_ (2020-06-19)
