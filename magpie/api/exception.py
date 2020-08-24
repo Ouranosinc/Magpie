@@ -117,6 +117,8 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
 
     # precondition evaluation of input parameters
     try:
+        # following TypeError/ValueError are used instead of HTTPError as they would be incorrect setup by the developer
+        # after validation of their conditions, we do actual validation of the parameters according to conditions
         if not isinstance(not_none, bool):
             raise TypeError("'not_none' is not a 'bool'")
         if not isinstance(not_empty, bool):
@@ -159,11 +161,19 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                 LOGGER.debug("[param: %s] != [param_compare: %s]", type(param), param_compare)
                 raise TypeError("'param_compare' cannot be of non-type with specified verification flags")
             if not is_type and not ((is_str_cmp and ok_str_cmp) or (not is_str_cmp and eq_typ_cmp)):
+                # since 'param' depends of provided input by user, it *could* be a user-side invalid parameter
+                # there is no way to tell if it is instead bad 'param_compare' from developer (InternalServerError)
+                # raise immediately since incorrect param types can make following checks fail uncontrollably
                 LOGGER.debug("[param: %s] != [param_compare: %s]", type(param), type(param_compare))
-                raise TypeError("'param_compare' cannot be of incompatible type with specified verification flags")
+                content = apply_param_content(content, param, param_compare, param_name, with_param,
+                                              needs_compare, needs_iterable, is_type, {"is_type": False})
+                raise_http(http_error, http_kwargs=http_kwargs, detail=msg_on_fail,
+                           content=content, content_type=content_type)
         if needs_iterable and not hasattr(param_compare, "__iter__"):
             LOGGER.debug("[param_compare: %s]", param_compare)
             raise TypeError("'param_compare' must be an iterable for specified verification flags")
+    except HTTPException:
+        raise
     except Exception as exc:
         content["traceback"] = repr(exc_info())
         content["exception"] = repr(exc)
@@ -171,7 +181,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                    content=content, content_type=content_type,
                    detail="Error occurred during parameter verification")
 
-    # evaluate requested parameter combinations
+    # passed this point, input condition flags are valid, evaluate requested parameter combinations
     fail_conditions = {}
     fail_verify = False
     if not_none:
@@ -211,21 +221,41 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
         fail_conditions.update({"matches": bool(re.match(param_compare, param))})
         fail_verify = fail_verify or not fail_conditions["matches"]
     if fail_verify:
-        if with_param:
-            content["param"] = {"conditions": fail_conditions}
-            if isinstance(param, six.string_types + (int, float, bool, type(None))):
-                content["param"]["value"] = param
-            else:
-                content["param"]["value"] = str(param)
-            if param_name is not None:
-                content["param"]["name"] = str(param_name)
-            if needs_compare and param_compare is not None:
-                if needs_iterable or is_type:
-                    param_compare = str if param_compare == six.string_types else param_compare
-                    param_compare = getattr(param_compare, "__name__", str(param_compare))
-                    param_compare = "Type[{}]".format(param_compare) if is_type else param_compare
-                content["param"]["compare"] = str(param_compare)
+        content = apply_param_content(content, param, param_compare, param_name, with_param,
+                                      needs_compare, needs_iterable, is_type, fail_conditions)
         raise_http(http_error, http_kwargs=http_kwargs, detail=msg_on_fail, content=content, content_type=content_type)
+
+
+def apply_param_content(content,            # type: JSON
+                        param,              # type: Any
+                        param_compare,      # type: Any
+                        param_name,         # type: Str
+                        with_param,         # type: bool
+                        needs_compare,      # type: bool
+                        needs_iterable,     # type: bool
+                        is_type,            # type: bool
+                        fail_conditions,    # type: JSON
+                        ):                  # type: (...) -> JSON
+    """Formats and applies the failing parameter conditions and results to returned JSON content according to flags.
+
+    .. seealso::
+        :func:`verify_param`
+    """
+    if with_param:
+        content["param"] = {"conditions": fail_conditions}
+        if isinstance(param, six.string_types + (int, float, bool, type(None))):
+            content["param"]["value"] = param
+        else:
+            content["param"]["value"] = str(param)
+        if param_name is not None:
+            content["param"]["name"] = str(param_name)
+        if needs_compare and param_compare is not None:
+            if needs_iterable or is_type:
+                param_compare = str if param_compare == six.string_types else param_compare
+                param_compare = getattr(param_compare, "__name__", str(param_compare))
+                param_compare = "Type[{}]".format(param_compare) if is_type else param_compare
+            content["param"]["compare"] = str(param_compare)
+    return content
 
 
 def evaluate_call(call,                                 # type: Callable[[], Any]

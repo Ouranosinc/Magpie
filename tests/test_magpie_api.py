@@ -78,7 +78,6 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
         cls.test_resource_type = "route"
         cls.test_group_name = "unittest-user-auth_test-group"
         cls.test_user_name = "unittest-user-auth_test-user-username"
-        cls.other_user_name = "unittest-user-auth_other-user-username"
 
 
 @runner.MAGPIE_TEST_API

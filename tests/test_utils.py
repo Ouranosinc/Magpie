@@ -218,18 +218,24 @@ class TestUtils(unittest.TestCase):
         """
         Arguments ``param`` and ``param_compare`` must be of same type for valid comparison,
         except for ``is_type`` where compare parameter must be the type directly.
+
+        .. versionchanged:: 2.0.0
+
+            Since ``param`` can come from user input, ``HTTPBadRequest`` is expected instead
+            of ``HTTPInternalServerError`` (as for other invalid ``param_compare`` checks) since it
+            must be taken as the ground truth.
         """
-        utils.check_raises(lambda: ax.verify_param("1", param_compare=1, is_equal=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param("1", param_compare=True, is_equal=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param(1, param_compare="1", is_equal=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_equal=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=1, is_equal=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=True, is_equal=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare="1", is_equal=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_equal=True), HTTPBadRequest)
 
-        utils.check_raises(lambda: ax.verify_param(1, param_compare="x", is_type=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_type=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param("1", param_compare=None, is_type=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare="x", is_type=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_type=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=None, is_type=True), HTTPBadRequest)
 
-        utils.check_raises(lambda: ax.verify_param(1, param_compare=1, is_in=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param(1, param_compare=1, not_in=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=1, is_in=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=1, not_in=True), HTTPBadRequest)
 
         # strings cases handled correctly (no raise)
         utils.check_no_raise(lambda: ax.verify_param("1", param_compare="1", is_equal=True))

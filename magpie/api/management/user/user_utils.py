@@ -388,12 +388,12 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
                         msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
 
 
-def get_user_groups_checked(request, user):
-    # type: (Request, models.User) -> List[Str]
+def get_user_groups_checked(user, db_session):
+    # type: (models.User, Session) -> List[Str]
     """Obtains the validated list of group names from a pre-validated user."""
     ax.verify_param(user, not_none=True, http_error=HTTPNotFound,
                     msg_on_fail=s.Groups_CheckInfo_NotFoundResponseSchema.description)
     group_names = ax.evaluate_call(lambda: [group.group_name for group in user.groups],  # noqa
-                                   fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                                   fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
                                    msg_on_fail=s.Groups_CheckInfo_ForbiddenResponseSchema.description)
     return sorted(group_names)

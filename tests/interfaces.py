@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import mock
 import pyramid.testing
+import pytest
 import six
 import yaml
 from six.moves.urllib.parse import urlparse
@@ -346,13 +347,24 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
                                             override_cookies=self.test_cookies)
         utils.check_val_is_in(self.test_user_name, info["email"])
         utils.check_or_try_logout_user(self)
-        data = {"user_name": info["email"]}
+        data = {"user_name": info["email"], "password": self.test_user_name}
         resp = utils.test_request(self, "POST", "/signin", data=data, headers=self.json_headers, cookies={})
         body = utils.check_response_basic_info(resp, expected_method="POST")
         utils.check_val_equal(body["detail"], s.Signin_POST_OkResponseSchema.description)
 
+    def test_PostSignin_MissingCredentials(self):
+        """Signin attempt with missing returns bad request, not internal server error nor """
+        utils.warn_version(self, "signin missing credentials status code check", "2.0.0", skip=False)
+        utils.check_or_try_logout_user(self)
+
+        data = {"user_name": self.usr}  # missing required password
+        resp = utils.test_request(self, "POST", "/signin", data=data, expect_errors=True,
+                                  headers=self.json_headers, cookies={})
+        utils.check_response_basic_info(resp, expected_method="POST", expected_code=400)
+
     def test_GetSignin_UsingParameters(self):
         """User is allowed to use its email as username for login."""
+        utils.warn_version(self, "signin using query parameters", "2.0.0", skip=True)
         utils.check_or_try_logout_user(self)
 
         queries = {"user_name": self.test_user_name, "password": self.test_user_name}
@@ -394,12 +406,12 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_PatchUsers_email_ReservedKeyword_Current(self):
-        utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
+        utils.warn_version(self, "user update own information", "2.0.0", skip=True)
         self.run_PatchUsers_email_update_itself(get_constant("MAGPIE_LOGGED_USER"))
 
     @runner.MAGPIE_TEST_USERS
     def test_PatchUsers_email_MatchingUserName_Current(self):
-        utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
+        utils.warn_version(self, "user update own information", "2.0.0", skip=True)
         self.run_PatchUsers_email_update_itself(self.test_user_name)
 
     def run_PatchUsers_password_update_itself(self, user_path_variable):
@@ -460,14 +472,17 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             - :meth:`Interface_MagpieAPI_AdminAuth.test_PatchUser_ReservedKeyword_Current`
         """
         utils.warn_version(self, "user update own information ", "2.0.0", skip=True)
-        self.extra_user_names.append(self.other_user_name)
-        data = {"user_name": self.other_user_name, "password": self.other_user_name}
-        utils.TestSetup.create_TestUser(self, override_data=data)
+        other_user_name = "unittest-user-auth_other-user-username"
+        self.extra_user_names.append(other_user_name)
+        utils.TestSetup.delete_TestUser(self, override_user_name=other_user_name)
+        utils.TestSetup.create_TestUser(self,
+                                        override_user_name=other_user_name,
+                                        override_password=other_user_name)
         self.login_test_user()
 
         new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
         data = {"password": new_password}
-        path = "/users/{usr}".format(usr=self.other_user_name)
+        path = "/users/{usr}".format(usr=other_user_name)
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
@@ -487,13 +502,13 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         # validate that the new password was not applied to other user
         utils.check_or_try_logout_user(self)
         headers, cookies = utils.check_or_try_login_user(
-            self, username=self.other_user_name, password=self.other_user_name,
+            self, username=other_user_name, password=other_user_name,
             use_ui_form_submit=True, version=self.version)
         resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], True)
         info = utils.TestSetup.get_UserInfo(self, override_body=body)
-        utils.check_val_equal(info["user_name"], self.other_user_name)
+        utils.check_val_equal(info["user_name"], other_user_name)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -512,8 +527,12 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     def test_PatchUsers_username_Forbidden_AnyNonAdmin(self):
         """Non-admin level user is not permitted to update its own user name."""
+        new_user_name = self.test_user_name + "new-user-name"
+        self.extra_user_names.append(new_user_name)
+        utils.TestSetup.delete_TestUser(self, override_user_name=new_user_name)
         self.login_test_user()
-        data = {"user_name": self.test_user_name + "new-user-name"}
+
+        data = {"user_name": new_user_name}
         resp = utils.test_request(self, self.update_method, "/users/current", data=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
@@ -525,15 +544,20 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     def test_PatchUsers_username_Forbidden_UpdateOthers(self):
         """Logged user is not allowed to update any other user's name."""
-        self.extra_user_names.append(self.other_user_name)
-        utils.TestSetup.create_TestUser(self, {"user_name": self.other_user_name, "password": self.other_user_name})
+        other_user_name = "unittest-user-auth_other-user-username"
+        self.extra_user_names.append(other_user_name)
+        utils.TestSetup.delete_TestUser(self, override_user_name=other_user_name)
+        utils.TestSetup.create_TestUser(self,
+                                        override_user_name=other_user_name,
+                                        override_password=other_user_name)
         self.login_test_user()
 
         # actual test
-        new_test_user_name = self.other_user_name + "new-user-name"
+        # does not even matter if other user exists or not, forbidden should be raised as soon as user mismatches
+        new_test_user_name = other_user_name + "new-user-name"
         self.extra_user_names.append(new_test_user_name)
         data = {"user_name": new_test_user_name}
-        path = "/users/{}".format(self.other_user_name)
+        path = "/users/{}".format(other_user_name)
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
@@ -600,7 +624,11 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_is_in("user_name", body)
         utils.check_val_is_in(body["group_name"], self.test_group_name)
         utils.check_val_is_in(body["user_name"], self.test_user_name)
-        utils.TestSetup.check_UserGroupMembership(self, member=True,  # validate as admin that user was registered
+
+        # validate as admin that user was registered
+        utils.check_or_try_logout_user(self)
+        utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.check_UserGroupMembership(self, member=True,
                                                   override_headers=self.json_headers, override_cookies=self.cookies)
 
     @runner.MAGPIE_TEST_USERS
@@ -615,7 +643,11 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "DELETE", path, data={}, headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 200, expected_method="DELETE")
-        utils.TestSetup.check_UserGroupMembership(self, member=False,  # validate as admin that user was unregistered
+
+        # validate as admin that user was unregistered
+        utils.check_or_try_logout_user(self)
+        utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.check_UserGroupMembership(self, member=False,
                                                   override_headers=self.json_headers, override_cookies=self.cookies)
 
     @runner.MAGPIE_TEST_GROUPS
@@ -651,7 +683,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         for grp in discover_groups:
             utils.TestSetup.delete_TestGroup(self, override_group_name=grp)  # in case previous test run failed/stopped
             utils.TestSetup.create_TestGroup(self, override_data={"discoverable": True, "group_name": grp})
-            discover_before.remove(grp)
+            discover_before = discover_before - {grp}
         self.login_test_user()
 
         # test that only just added discoverable groups are visible (ignore pre-existing discoverable groups if any)
@@ -715,6 +747,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
                                                          use_ui_form_submit=True, version=cls.version)
         assert headers and cookies, cls.require             # nosec
         assert cls.headers and cls.cookies, cls.require     # nosec
+        cls.test_headers = cls.headers
+        cls.test_cookies = cls.cookies
 
     @classmethod
     def setup_test_values(cls):
@@ -1712,12 +1746,15 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
 
-        anonymous_group = get_constant("MAGPIE_ANONYMOUS_GROUP")
-        path = "/users/{}/groups".format(self.test_user_name)
-        data = {"group_name": anonymous_group}
-        resp = utils.test_request(self, "DELETE", path, data=data, expect_errors=True,
+        path = "/users/{}/groups/{}".format(self.test_user_name, get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        resp = utils.test_request(self, "DELETE", path, data={}, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, expected_method="DELETE", expected_code=403)
+
+        # validate unmodified membership with admin user
+        utils.check_or_try_logout_user(self)
+        utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.check_UserGroupMembership(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroups(self):
@@ -2408,67 +2445,68 @@ class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase
 
     @runner.MAGPIE_TEST_STATUS
     def test_Home(self):
-        utils.TestSetup.check_UpStatus(self, method="GET", path="/")
+        utils.TestSetup.check_UpStatus(self, method="GET", path="/", expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_Login(self):
-        utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/login")
+        utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/login", expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewUsers(self):
-        utils.TestSetup.check_Unauthorized(self, method="GET", path="/ui/users")
+        utils.TestSetup.check_Unauthorized(self, method="GET", path="/ui/users", expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewGroups(self):
-        utils.TestSetup.check_Unauthorized(self, method="GET", path="/ui/groups")
+        utils.TestSetup.check_Unauthorized(self, method="GET", path="/ui/groups", expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewServices(self):
-        utils.TestSetup.check_Unauthorized(self, method="GET", path="/ui/services/default")
+        utils.TestSetup.check_Unauthorized(self, method="GET", path="/ui/services/default",
+                                           expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewServicesOfType(self):
         path = "/ui/services/{}".format(self.test_service_type)
-        utils.TestSetup.check_Unauthorized(self, method="GET", path=path)
+        utils.TestSetup.check_Unauthorized(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditUser(self):
-        path = "/ui/users/{}/default".format(self.test_user)
-        utils.TestSetup.check_Unauthorized(self, method="GET", path=path)
+        path = "/ui/users/{}/default".format(self.test_user_name)
+        utils.TestSetup.check_Unauthorized(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditGroup(self):
-        path = "/ui/groups/{}/default".format(self.test_group)
-        utils.TestSetup.check_Unauthorized(self, method="GET", path=path)
+        path = "/ui/groups/{}/default".format(self.test_group_name)
+        utils.TestSetup.check_Unauthorized(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditService(self):
         path = "/ui/services/{type}/{name}".format(type=self.test_service_type, name=self.test_service_name)
-        utils.TestSetup.check_Unauthorized(self, method="GET", path=path)
+        utils.TestSetup.check_Unauthorized(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_AddUser(self):
         path = "/ui/users/add"
-        utils.TestSetup.check_Unauthorized(self, method="GET", path=path)
-        utils.TestSetup.check_Unauthorized(self, method="POST", path=path)
+        utils.TestSetup.check_Unauthorized(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+        utils.TestSetup.check_Unauthorized(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_AddGroup(self):
         path = "/ui/groups/add"
-        utils.TestSetup.check_Unauthorized(self, method="GET", path=path)
-        utils.TestSetup.check_Unauthorized(self, method="POST", path=path)
+        utils.TestSetup.check_Unauthorized(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+        utils.TestSetup.check_Unauthorized(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_AddService(self):
         path = "/ui/services/{}/add".format(self.test_service_type)
-        utils.TestSetup.check_Unauthorized(self, method="GET", path=path)
-        utils.TestSetup.check_Unauthorized(self, method="POST", path=path)
+        utils.TestSetup.check_Unauthorized(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+        utils.TestSetup.check_Unauthorized(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewUserAccount(self):
         path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
-        utils.TestSetup.check_Unauthorized(self, method="GET", path=path)
-        utils.TestSetup.check_Unauthorized(self, method="POST", path=path)
+        utils.TestSetup.check_Unauthorized(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+        utils.TestSetup.check_Unauthorized(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
 
 
 @runner.MAGPIE_TEST_UI
@@ -2604,12 +2642,13 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewUsers_Goto_EditUser(self):
-        form = {"edit": None, "user_name": self.test_user}
-        resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path="/ui/users")
+        form = {"edit": None, "user_name": self.test_user_name}
+        form_name = "edit_username" if LooseVersion(self.version) >= LooseVersion("2.0.0") else "edit"
+        resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit=form_name, path="/ui/users")
         if LooseVersion(self.version) < "2":
-            test = "Edit User: {}".format(self.test_user)
+            test = "Edit User: {}".format(self.test_user_name)
         else:
-            test = "Edit User: [{}]".format(self.test_user)
+            test = "Edit User: [{}]".format(self.test_user_name)
         utils.check_val_is_in(test, resp.text, msg=utils.null)
 
     @runner.MAGPIE_TEST_STATUS
@@ -2618,12 +2657,12 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewGroups_Goto_EditGroup(self):
-        form = {"edit": None, "group_name": self.test_group}
+        form = {"edit": None, "group_name": self.test_group_name}
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path="/ui/groups")
         if LooseVersion(self.version) < "2":
-            test = "Edit Group: {}".format(self.test_group)
+            test = "Edit Group: {}".format(self.test_group_name)
         else:
-            test = "Edit Group: [{}]".format(self.test_group)
+            test = "Edit Group: [{}]".format(self.test_group_name)
         utils.check_val_is_in(test, resp.text, msg=utils.null)
 
     @runner.MAGPIE_TEST_STATUS
@@ -2645,43 +2684,46 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditUser(self):
-        path = "/ui/users/{}/default".format(self.test_user)
-        utils.TestSetup.check_UpStatus(self, method="GET", path=path)
+        path = "/ui/users/{}/default".format(self.test_user_name)
+        utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditUserService(self):
-        path = "/ui/users/{usr}/{type}".format(usr=self.test_user, type=self.test_service_type)
-        utils.TestSetup.check_UpStatus(self, method="GET", path=path)
+        path = "/ui/users/{usr}/{type}".format(usr=self.test_user_name, type=self.test_service_type)
+        utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditGroup(self):
-        path = "/ui/groups/{}/default".format(self.test_group)
-        utils.TestSetup.check_UpStatus(self, method="GET", path=path)
+        path = "/ui/groups/{}/default".format(self.test_group_name)
+        utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditGroupService(self):
-        path = "/ui/groups/{grp}/{type}".format(grp=self.test_group, type=self.test_service_type)
-        utils.TestSetup.check_UpStatus(self, method="GET", path=path)
+        path = "/ui/groups/{grp}/{type}".format(grp=self.test_group_name, type=self.test_service_type)
+        utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditService(self):
         path = "/ui/services/{type}/{name}".format(type=self.test_service_type, name=self.test_service_name)
-        utils.TestSetup.check_UpStatus(self, method="GET", path=path)
+        utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_AddUser(self):
         path = "/ui/users/add"
-        utils.TestSetup.check_UpStatus(self, method="GET", path=path)
-        utils.TestSetup.check_UpStatus(self, method="POST", path=path)  # empty fields, same page but 'incorrect'
+        utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+        # empty fields, same page but with 'incorrect' indicator due to invalid form inputs
+        utils.TestSetup.check_UpStatus(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_AddGroup(self):
         path = "/ui/groups/add"
-        utils.TestSetup.check_UpStatus(self, method="GET", path=path)
-        utils.TestSetup.check_UpStatus(self, method="POST", path=path)  # empty fields, same page but 'incorrect'
+        utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+        # empty fields, same page but with 'incorrect' indicator due to invalid form inputs
+        utils.TestSetup.check_UpStatus(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_AddService(self):
         path = "/ui/services/{}/add".format(self.test_service_type)
-        utils.TestSetup.check_UpStatus(self, method="GET", path=path)
-        utils.TestSetup.check_UpStatus(self, method="POST", path=path)  # empty fields, same page but 'incorrect'
+        utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+        # empty fields, same page but with 'incorrect' indicator due to invalid form inputs
+        utils.TestSetup.check_UpStatus(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)

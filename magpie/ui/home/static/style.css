@@ -19,7 +19,6 @@ body {
 .version-box {
     position: absolute;
     right: 0;
-    bottom: 0;
 }
 
 .version-box>div{

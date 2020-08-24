@@ -20,6 +20,7 @@ from pyramid.response import Response
 from pyramid.security import NO_PERMISSION_REQUIRED, forget, remember
 from pyramid.view import view_config
 from six.moves.urllib.parse import urlparse
+from typing import TYPE_CHECKING
 from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInBadAuth, ZigguratSignInSuccess, ZigguratSignOut
 from ziggurat_foundations.models.services.external_identity import ExternalIdentityService
 from ziggurat_foundations.models.services.user import UserService
@@ -34,6 +35,9 @@ from magpie.api.management.user.user_utils import create_user
 from magpie.constants import get_constant
 from magpie.security import authomatic_setup, get_provider_names
 from magpie.utils import CONTENT_TYPE_JSON, convert_response, get_logger, get_magpie_url
+
+if TYPE_CHECKING:
+    from magpie.typedefs import Session, Str
 
 LOGGER = get_logger(__name__)
 
@@ -65,6 +69,8 @@ def process_sign_in_external(request, username, provider):
 
 
 def verify_provider(provider_name):
+    # type: (Str) -> None
+    """:raises HTTPNotFound: if provider name is not one of known providers."""
     ax.verify_param(provider_name, param_name="provider_name", param_compare=MAGPIE_PROVIDER_KEYS, is_in=True,
                     http_error=HTTPNotFound, msg_on_fail=s.ProviderSignin_GET_NotFoundResponseSchema.description)
 
@@ -160,6 +166,7 @@ def login_failure(request, reason=None):
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):
+    # type: (Str, Str, Str, Str, Session) -> models.User
     """
     Create new user with an External Identity.
     """
@@ -182,6 +189,8 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
 
 
 def login_success_external(request, external_user_name, external_id, email, provider_name):
+    # type: (Request, Str, Str, Str, Str) -> HTTPException
+    """Generates the login response in case of successful external provider identification."""
     # find possibly already registered user by external_id/provider
     user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name, request.db)
     if user is None:

@@ -37,8 +37,8 @@ class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.Test
         cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.json_headers = utils.get_headers(cls.app, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.cookies = None
-        cls.test_user = get_constant("MAGPIE_ANONYMOUS_USER")
-        cls.test_group = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        cls.test_user_name = get_constant("MAGPIE_ANONYMOUS_USER")
+        cls.test_group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
         cls.test_service_type = ServiceWPS.service_type
         cls.test_service_name = "flyingpigeon"
 

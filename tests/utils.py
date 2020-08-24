@@ -90,25 +90,29 @@ class RunOption(object):
 def make_run_option_decorator(run_option):
     # type: (RunOption) -> Callable
     """
-    Decorates the test/class with ``pytest.mark`` and ``unittest.skipUnless`` using the provided test condition
-    represented by the given ``RunOption``.
+    Decorates (by default) the test/class with ``pytest.mark`` and ``unittest.skipUnless`` using the provided test
+    condition represented by the specified :class:`RunOption`.
 
-    Allows to decorate a function or class such that::
+    Allows to decorate a function or class such that:
 
-        option = make_run_option_decorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
+    .. code-block: python
 
-        @option
+        run_option = make_run_option_decorator(RunOption("MAGPIE_TEST_CUSTOM_MARKER"))
+
+        @run_option
         def test_func():
-            <test>
+            pass  # <tests>
 
-    is equivalent to::
+    is equivalent to:
+
+    .. code-block: python
 
         @pytest.mark.custom_marker
         @unittest.skipUnless(runner.MAGPIE_TEST_CUSTOM_MARKER, reason="...")
         def test_func():
-            <test>
+            pass  # <tests>
 
-    All ``<custom_marker>`` definitions should be added to ``setup.cfg``.
+    All ``<custom_marker>`` definitions should be added to ``setup.cfg`` to allow :mod:`pytest` to reference them.
     """
     def wrap(test_func, *args, **kwargs):  # noqa: F811
         pytest_marker = pytest.mark.__getattr__(run_option.marker)
@@ -807,8 +811,16 @@ class TestSetup(object):
         return json_body["version"]
 
     @staticmethod
-    def check_UpStatus(test_case, method, path, override_headers=null, override_cookies=null, **request_kwargs):
-        # type: (TestAppOrUrlType, Str, Str, Optional[HeadersType], Optional[CookiesType], Any) -> AnyResponseType
+    def check_UpStatus(test_case,               # type: TestAppOrUrlType
+                       method,                  # type: Str
+                       path,                    # type: Str
+                       override_headers=null,   # type: Optional[HeadersType]
+                       override_cookies=null,   # type: Optional[CookiesType]
+                       expected_code=null,      # type: Optional[int]
+                       expected_type=null,      # type: Optional[Str]
+                       expected_title=null,     # type: Optional[Str]
+                       **request_kwargs         # type: Any
+                       ):                       # type: (...) -> AnyResponseType
         """
         Verifies that the Magpie UI page at very least returned an HTTP Ok response with the displayed title.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
@@ -820,11 +832,25 @@ class TestSetup(object):
 
         :returns: response from the rendered page for further tests.
         """
-        cookies = override_cookies or getattr(test_case, "test_cookies", getattr(test_case, "cookies", None))
-        headers = override_headers or getattr(test_case, "test_headers", getattr(test_case, "headers", None))
+        if override_cookies is null:
+            cookies = getattr(test_case, "test_cookies", getattr(test_case, "cookies", None))
+        else:
+            cookies = override_cookies
+        if override_headers is null:
+            headers = getattr(test_case, "test_headers", getattr(test_case, "headers", None))
+        else:
+            headers = override_headers
         resp = test_request(test_case, method, path, headers=headers, cookies=cookies, **request_kwargs)
-        kw_args = {"expected_title": getattr(test_case, "magpie_title")} if hasattr(test_case, "magpie_title") else {}
-        check_ui_response_basic_info(resp, **kw_args)
+        kwargs = {}
+        if expected_title is null and hasattr(test_case, "magpie_title"):
+            kwargs["expected_title"] = getattr(test_case, "magpie_title")
+        else:
+            kwargs["expected_title"] = expected_title
+        if expected_code is not null:
+            kwargs["expected_code"] = expected_code
+        if expected_type is not null:
+            kwargs["expected_type"] = expected_type
+        check_ui_response_basic_info(resp, **kwargs)
         return resp
 
     @staticmethod
@@ -906,7 +932,7 @@ class TestSetup(object):
         return resp
 
     @staticmethod
-    def check_Unauthorized(test_case, method, path, content_type=CONTENT_TYPE_JSON, override_cookies=null):
+    def check_Unauthorized(test_case, method, path, expected_type=CONTENT_TYPE_JSON, override_cookies=null):
         # type: (AnyMagpieTestCaseType, Str, Str, Str, Optional[CookiesType]) -> JSON
         """
         Verifies that Magpie returned an Unauthorized response.
@@ -915,10 +941,10 @@ class TestSetup(object):
         """
         app_or_url = get_app_or_url(test_case)
         resp = test_request(app_or_url, method, path,
-                            headers={"Content-Type": content_type},
+                            headers={"Accept": expected_type},
                             cookies=override_cookies if override_cookies is not null else test_case.cookies,
                             expect_errors=True)
-        return check_response_basic_info(resp, expected_code=401, expected_type=content_type, expected_method=method)
+        return check_response_basic_info(resp, expected_code=401, expected_type=expected_type, expected_method=method)
 
     @staticmethod
     def get_AnyServiceOfTestServiceType(test_case,                      # type: AnyMagpieTestCaseType
@@ -1261,11 +1287,11 @@ class TestSetup(object):
 
     @staticmethod
     def create_TestUser(test_case,                  # type: AnyMagpieTestCaseType
+                        override_data=null,         # type: Optional[JSON]
                         override_user_name=null,    # type: Optional[Str]
                         override_email=null,        # type: Optional[Str]
                         override_password=null,     # type: Optional[Str]
                         override_group_name=null,   # type: Optional[Str]
-                        override_data=null,         # type: Optional[JSON]
                         override_headers=null,      # type: Optional[HeadersType]
                         override_cookies=null,      # type: Optional[CookiesType]
                         ):                          # type: (...) -> JSON
@@ -1274,12 +1300,15 @@ class TestSetup(object):
         :raises AssertionError: if the request response does not match successful creation.
         """
         app_or_url = get_app_or_url(test_case)
-        data = override_data if override_data is not null else {
-            "user_name": override_user_name if override_user_name is not null else test_case.test_user_name,
-            "email": override_email if override_email is not null else "{}@mail.com".format(test_case.test_user_name),
-            "password": override_password if override_password is not null else test_case.test_user_name,
-            "group_name": override_group_name if override_group_name is not null else test_case.test_group_name,
-        }
+        if override_data is not null:
+            data = override_data
+        else:
+            data = {
+                "user_name": override_user_name if override_user_name is not null else test_case.test_user_name,
+                "password": override_password if override_password is not null else test_case.test_user_name,
+                "group_name": override_group_name if override_group_name is not null else test_case.test_group_name,
+            }
+            data["email"] = override_email if override_email is not null else "{}@mail.com".format(data["user_name"])
         resp = test_request(app_or_url, "POST", "/users", json=data,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)

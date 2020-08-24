@@ -58,11 +58,12 @@ to the applicable user permission (or is inherited group memberships).
 
 .. versionchanged:: 2.0.0
 
-As of this version, some API paths will offer additional :term:`Logged User` operations such as self-registration to publicly
-available groups. See the appropriate API version documentation for routes that could be added or adjusted with this
-new functionality. Note also that a valid user account will still be required to access these routes.
+    As of this version, some API paths will offer additional :term:`Logged User` operations such as self-registration
+    to publicly available groups. See the appropriate API version documentation for routes that could be added or
+    adjusted with this new functionality. Note also that a valid user account will still be required to access these
+    routes.
 
-Please refer to `permissions` for further details about applicable user access levels.
+Please refer to :ref:`permissions` for further details about applicable user access levels.
 
 CLI
 ~~~~~~~
@@ -81,10 +82,10 @@ administrator permissions.
 
 .. versionchanged:: 2.0.0
 
-User-scoped views such as logged-user account details are now accessible to non-administrator level users. These offer
-some basic functionalities such as registration to publicly visible groups. Users minimally require to be logged-in in
-order to access these pages. The UI pages are accessible using the ``Account`` button from the main entrypoint of the
-`Magpie` UI.
+    User-scoped views such as logged-user account details are now accessible to non-administrator level users.
+    These offer some basic functionalities such as registration to publicly visible groups. Users minimally require
+    to be logged-in (successful :term:`Authentication`) in order to access these pages. The UI pages are accessible
+    using the ``Account`` button from the main entrypoint of the `Magpie` UI.
 
 Additional Utilities
 ~~~~~~~~~~~~~~~~~~~~

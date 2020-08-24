@@ -84,7 +84,8 @@ def get_value_multiformat_body_checked(request, key, default=None, check_type=si
     :param default: value to return instead if not found. If this default is ``None``, it will raise.
     :param check_type: verify that parameter value is of specified type. Set to ``None`` to disable check.
     :param pattern: regex pattern to validate the input with.
-        If value evaluates to ``False``, skip this kind of validation (default: :py:data:`ax.PARAM_REGEX`).
+        If value evaluates to ``False``, skip this kind of validation
+        (default: :py:data:`magpie.api.exception.PARAM_REGEX`).
     :return: matched path variable value.
     :raises HTTPBadRequest: if the key could not be retrieved from the request body and has no provided default value.
     :raises HTTPUnprocessableEntity: if the retrieved value from the key is invalid for this request.

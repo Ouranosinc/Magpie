@@ -1437,7 +1437,7 @@ class User_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
 
 
 class User_PATCH_ForbiddenResponseSchema(BaseResponseSchemaAPI):
-    description = "User name update not allowed."
+    description = "Targeted user update not allowed by requesting user."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
