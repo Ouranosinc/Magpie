@@ -1993,11 +1993,11 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             utils.check_val_type(svc_dict["service_url"], six.string_types)
 
     @runner.MAGPIE_TEST_SERVICES
-    def test_GetServices_ResponseFormat(self):
+    def test_GetServices_ResponseFormat_Default(self):
         utils.TestSetup.create_TestService(self)
         resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_is_in("service", body)
+        utils.check_val_is_in("services", body)
         utils.check_val_type(body["services"], dict)
         service_types = utils.get_service_types_for_version(self.version)
         utils.check_all_equal(body["services"], service_types)
@@ -2024,8 +2024,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
                     utils.check_val_type(body["service"]["service_sync_type"], utils.OptionalStringType)
 
     @runner.MAGPIE_TEST_SERVICES
-    def test_GetServices_ResponseFormat(self):
-        utils.warn_version(self, "Service listing as object list with query parameter", "2.0.0", skip=True)
+    def test_GetServices_ResponseFormat_Flatten(self):
+        utils.warn_version(self, "Service flattened listing as objects with query parameter", "2.0.0", skip=True)
 
         resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
@@ -2034,7 +2034,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             for svc_name in body["services"][svc_type]:
                 svc_name_list.append(svc_name)
 
-        resp = utils.test_request(self, "GET", "/services?list=true", headers=self.json_headers, cookies=self.cookies)
+        path = "/services?flatten=true"
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("services", body)
         utils.check_val_type(body["services"], list)
@@ -2475,7 +2476,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
                 # top level resource is a service, should have corresponding details
                 utils.check_val_is_in("resource_id", resource)
                 utils.check_val_is_in("public_url", resource)
-                utils.check_val_is_in("service_url", resource)
+                utils.check_val_not_in("service_url", resource)  # explicitly omitted for this route
                 utils.check_val_is_in("service_name", resource)
                 utils.check_val_is_in("service_type", resource)
                 utils.check_val_is_in("permission_names", resource)

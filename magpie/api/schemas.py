@@ -392,6 +392,10 @@ QueryCascadeResourcesPermissions = colander.SchemaNode(
     colander.Boolean(), default=False, missing=colander.drop,
     description="Display any service that has at least one sub-resource user permission, "
                 "or only services that have user permissions directly set on them.", )
+QueryFlattenResources = colander.SchemaNode(
+    colander.Boolean(), default=False, missing=colander.drop,
+    description="Return services as a flattened list of JSON objects. Default is a nested JSON of service-type keys "
+                "with children service-name keys pointing to each corresponding service definition.")
 
 
 class BaseRequestSchemaAPI(colander.MappingSchema):
@@ -1017,9 +1021,7 @@ class ServiceTypesList(colander.SequenceSchema):
 
 
 class ServiceListingQuerySchema(QueryRequestSchemaAPI):
-    list = colander.SchemaNode(
-        colander.Boolean(), default=False, missing=colander.drop,
-        description="Return services as a list of dicts. Default is a dict by service type, and by service name.")
+    flatten = QueryFlattenResources
 
 
 class ServiceTypes_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -1833,9 +1835,7 @@ class UserServicePermission_DELETE_RequestSchema(BaseRequestSchemaAPI):
 class UserServices_GET_QuerySchema(QueryRequestSchemaAPI):
     cascade = QueryCascadeResourcesPermissions
     inherit = QueryInheritGroupsPermissions
-    list = colander.SchemaNode(
-        colander.Boolean(), default=False, missing=colander.drop,
-        description="Return services as a list of dicts. Default is a dict by service type, and by service name.")
+    flatten = QueryFlattenResources
 
 
 class UserServices_GET_RequestSchema(BaseRequestSchemaAPI):

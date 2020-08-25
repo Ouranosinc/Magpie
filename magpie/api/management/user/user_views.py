@@ -336,7 +336,7 @@ def get_user_services_view(request):
     user = ar.get_user_matchdict_checked_or_logged(request)
     cascade_resources = asbool(ar.get_query_param(request, "cascade"))
     inherit_groups_perms = asbool(ar.get_query_param(request, "inherit"))
-    format_as_list = asbool(ar.get_query_param(request, "list"))
+    format_as_list = asbool(ar.get_query_param(request, "flatten"))
 
     svc_json = uu.get_user_services(user, request=request,
                                     cascade_resources=cascade_resources,

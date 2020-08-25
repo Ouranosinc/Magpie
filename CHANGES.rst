@@ -53,8 +53,10 @@ Features / Changes
 * Add documentation details about different types of ``Permission``, interaction between various `Magpie` models,
   glossary and other general improvements (relates to `#332 <https://github.com/Ouranosinc/Magpie/issues/332>`_ and
   `#341 <https://github.com/Ouranosinc/Magpie/issues/341>`_).
-* Add alternative response format for service and service-type paths using ``list`` query parameter to obtain a flat
+* Add alternative response format for service and service-type paths using ``flatten`` query parameter to obtain a flat
   list of services instead of nested dictionaries (fixes `#345 <https://github.com/Ouranosinc/Magpie/issues/345>`_).
+* Change pre-existing ``list`` query parameter of user-scoped views to ``flatten`` response format to match new query
+  of service-scoped views.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
