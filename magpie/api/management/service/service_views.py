@@ -93,7 +93,7 @@ def register_service_view(request):
 
 
 @s.ServiceAPI.patch(schema=s.Service_PATCH_RequestBodySchema(), tags=[s.ServicesTag],
-                  response_schemas=s.Service_PATCH_responses)
+                    response_schemas=s.Service_PATCH_responses)
 @view_config(route_name=s.ServiceAPI.name, request_method="PATCH")
 def update_service_view(request):
     """

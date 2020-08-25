@@ -202,6 +202,40 @@ def test_magpie_homepage():
         utils.check_val_is_in("magpie", body["name"])
 
 
+@runner.MAGPIE_TEST_API
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_STATUS
+def test_ResponseMetadata():
+    """Validate that regardless of response type (success/error) and status-code, metadata details are added.
+
+    note: test only locally to avoid remote server side-effects and because mock cannot be done remotely
+    """
+
+    def raise_request(*_, **__):
+        raise TypeError()
+
+    app = utils.get_test_magpie_app()
+    # all paths below must be publicly accessible
+    for code, method, path, kwargs in [
+        (200, "GET", "/session", {}),
+        (400, "POST", "/signin", {"body": {}}),  # missing credentials
+        (401, "GET", "/services", {}),  # anonymous unauthorized
+        (404, "GET", "/random", {}),
+        (405, "POST", "/users/{}".format("MAGPIE_LOGGED_USER"), {"body": {}}),
+        (406, "GET", "/session", {"headers": {"Accept": "application/pdf"}}),
+        # 409: need connection to test conflict, no route available without so (other tests validates them though)
+        (422, "POST", "/signin", {"body": {"user_name": "!!!!"}}),  # invalid format
+        (500, "GET", "/json", {}),  # see mock
+    ]:
+        with mock.patch("magpie.api.schemas.generate_api_schema", side_effect=raise_request):
+            headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
+            headers.update(kwargs.get("headers", {}))
+            kwargs.pop("headers", None)
+            resp = utils.test_request(app, method, path, expect_errors=True, headers=headers, **kwargs)
+            # following util check validates all expected request metadata in response body
+            utils.check_response_basic_info(resp, expected_code=code, expected_method=method)
+
+
 if __name__ == "__main__":
     import sys
     sys.exit(unittest.main())

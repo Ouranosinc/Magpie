@@ -161,6 +161,9 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
     Tween that obtains the request ``Accept`` header or ``format`` query (if any) to generate the response with the
     desired ``Content-Type``. The target ``Content-Type`` is expected to have been validated by
     :func:`validate_accept_header_tween` beforehand to handle not-acceptable errors.
+
+    The tween also ensures that additional request metadata extracted from :func:`get_request_info` is applied to
+    the response body if not already provided by a previous operation.
     """
     def apply_format(request):
         # type: (Request) -> HTTPException
@@ -190,7 +193,8 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
         if not isinstance(resp, HTTPException):
             return resp
         # forward any headers such as session cookies to be applied
-        return ax.generate_response_http_format(type(resp), {"headers": resp.headers}, resp.text, format)
+        metadata = get_request_info(request)
+        return ax.generate_response_http_format(type(resp), {"headers": resp.headers}, resp.text, format, metadata)
     return apply_format
 
 
@@ -216,7 +220,8 @@ def get_exception_info(response, content=None, exception_details=False):
             # get 'request.exc_info' or 'sys.exc_info', whichever one is available
             LOGGER.error("Request exception.", exc_info=getattr(response, "exc_info", True))
         if not content.get("detail"):
-            content["detail"] = str(response.exception)
+            detail = response.exception
+            content["detail"] = str(detail) if detail is not None else None
     elif hasattr(response, "matchdict"):
         if response.matchdict is not None and response.matchdict != "":
             content.update(response.matchdict)
@@ -235,5 +240,4 @@ def get_request_info(request, default_message=None, exception_details=False):
         "method": request.method
     }
     content.update(get_exception_info(request, content=content, exception_details=exception_details))
-    content.setdefault("detail", "undefined")
     return content

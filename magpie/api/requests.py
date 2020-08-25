@@ -170,8 +170,10 @@ def get_user_matchdict_checked_or_logged(request, user_name_key="user_name"):
     :raises HTTPNotFound: if the specified user name or logged user keyword does not correspond to any existing user.
     """
     logged_user_name = get_constant("MAGPIE_LOGGED_USER", settings_container=request)
-    logged_user_path = s.UserAPI.path.replace("{" + user_name_key + "}", logged_user_name)
-    if user_name_key not in request.matchdict or request.path_info.startswith(logged_user_path):
+    # add final slash to avoid trailing characters that mismatches the logged user keyword (eg: "<logged-user>random")
+    logged_user_path = s.UserAPI.path.replace("{" + user_name_key + "}", logged_user_name + "/")
+    request_path = request.path_info if request.path_info.endswith("/") else request.path_info + "/"
+    if user_name_key not in request.matchdict or request_path.startswith(logged_user_path):
         return get_user(request, logged_user_name)
     return get_user_matchdict_checked(request, user_name_key)
 

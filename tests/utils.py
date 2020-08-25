@@ -842,8 +842,8 @@ class TestSetup(object):
             headers = override_headers
         resp = test_request(test_case, method, path, headers=headers, cookies=cookies, **request_kwargs)
         kwargs = {}
-        if expected_title is null and hasattr(test_case, "magpie_title"):
-            kwargs["expected_title"] = getattr(test_case, "magpie_title")
+        if expected_title is null:
+            kwargs["expected_title"] = getattr(test_case, "magpie_title", "Magpie Administration")
         else:
             kwargs["expected_title"] = expected_title
         if expected_code is not null:
@@ -921,7 +921,9 @@ class TestSetup(object):
                     form = f
                     break
         if not form:
-            test_case.fail("could not find requested form for submission")
+            test_case.fail("could not find requested form for submission "
+                           "[form_match: {!r}, form_submit: !{r}, form_data: {!r}]"
+                           .format(form_match, form_submit, form_data))
         if form_data:
             for f_field, f_value in dict(form_data).items():
                 form[f_field] = f_value

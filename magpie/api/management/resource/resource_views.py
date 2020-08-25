@@ -57,7 +57,7 @@ def create_resource_view(request):
     resource_name = ar.get_value_multiformat_body_checked(request, "resource_name")
     resource_display_name = ar.get_multiformat_body(request, "resource_display_name", default=resource_name)
     resource_type = ar.get_value_multiformat_body_checked(request, "resource_type")
-    parent_id = ar.get_value_multiformat_body_checked(request, "parent_id", pattern=ax.INDEX_REGEX)
+    parent_id = ar.get_value_multiformat_body_checked(request, "parent_id", check_type=int)
     return ru.create_resource(resource_name, resource_display_name, resource_type, parent_id, request.db)
 
 

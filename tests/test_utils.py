@@ -22,6 +22,7 @@ from pyramid.testing import DummyRequest
 
 from magpie import __meta__, models
 from magpie.api import exception as ax
+from magpie.api import generic as ag
 from magpie.api import requests as ar
 from magpie.permissions import Permission, format_permissions
 from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnumMeta, get_header
@@ -209,33 +210,48 @@ class TestUtils(unittest.TestCase):
                            HTTPInternalServerError, msg="missing 'param_compare' for flag needing it should be caught")
         utils.check_raises(lambda: ax.verify_param("b", param_compare=["b"], not_in=True, http_error=HTTPOk),  # noqa
                            HTTPInternalServerError, msg="incorrect HTTP class to raise error should be caught")
+        utils.check_raises(lambda: ax.verify_param([1], param_compare=1, is_in=True),
+                           HTTPInternalServerError, msg="incorrect non-iterable compare should raise invalid type")
         for flag in ["not_none", "not_empty", "not_in", "not_equal", "is_none", "is_empty", "is_in", "is_equal",
                      "is_true", "is_false", "is_type", "matches"]:
             utils.check_raises(lambda: ax.verify_param("x", **{flag: 1}),
                                HTTPInternalServerError, msg="invalid flag '{}' type should be caught".format(flag))
 
-    def test_verify_param_compare_types_incorrect_usage(self):
+    def test_verify_param_compare_types(self):
         """
         Arguments ``param`` and ``param_compare`` must be of same type for valid comparison,
         except for ``is_type`` where compare parameter must be the type directly.
 
         .. versionchanged:: 2.0.0
 
-            Since ``param`` can come from user input, ``HTTPBadRequest`` is expected instead
-            of ``HTTPInternalServerError`` (as for other invalid ``param_compare`` checks) since it
-            must be taken as the ground truth.
+            Since ``param`` can come from user input, we should **NOT** raise ``HTTPInternalServerError`` because the
+            whole point of the method is to ensure that values are compared accordingly in a controlled fashion.
+            Therefore, error to be raised is an 'expected' validation failure (``HTTPBadRequest`` or whichever
+            ``http_error`` provided) instead of runtime 'unexpected' processing error.
+
+            On the other hand, when ``is_type`` flag is requested, we know that ``param_compare`` must be a type.
+            Inversely, ``param_compare`` must not be a type if ``is_type`` is not requested, but other flags require
+            some form of comparison between values. We evaluate these use cases here.
+
+        .. seealso::
+            - :func:`test_verify_param_args_incorrect_usage` for invalid input use-cases
         """
         utils.check_raises(lambda: ax.verify_param("1", param_compare=1, is_equal=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("1", param_compare=True, is_equal=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param(1, param_compare="1", is_equal=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_equal=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=str, is_equal=True), HTTPInternalServerError)
 
-        utils.check_raises(lambda: ax.verify_param(1, param_compare="x", is_type=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_type=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param("1", param_compare=None, is_type=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare="x", is_type=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_type=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=None, is_type=True), HTTPInternalServerError)
 
         utils.check_raises(lambda: ax.verify_param(1, param_compare=1, is_in=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=list, is_in=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=str, is_in=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param(1, param_compare=1, not_in=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=list, not_in=True), HTTPInternalServerError)
+        utils.check_raises(lambda: ax.verify_param("1", param_compare=str, not_in=True), HTTPInternalServerError)
 
         # strings cases handled correctly (no raise)
         utils.check_no_raise(lambda: ax.verify_param("1", param_compare="1", is_equal=True))
@@ -268,3 +284,41 @@ class TestUtils(unittest.TestCase):
             Permission.WRITE_MATCH.value,
         ]
         utils.check_all_equal(format_perms, expect_perms, any_order=False)
+
+    def test_evaluate_call_callable_incorrect_usage(self):
+        """Verifies that incorrect usage of utility is raised accordingly."""
+        utils.check_raises(lambda: ax.evaluate_call(int),
+                           HTTPInternalServerError, msg="invalid callable non-lambda 'call' should raise")
+        utils.check_raises(lambda: ax.evaluate_call(lambda: int, fallback=int),  # noqa
+                           HTTPInternalServerError, msg="invalid callable non-lambda 'fallback' should raise")
+
+    def test_evaluate_call_recursive_safeguard(self):
+        mock_calls = {"counter": 0}
+
+        def mock_raise(*_, **__):
+            if mock_calls["counter"] >= 2 * ax.RAISE_RECURSIVE_SAFEGUARD_MAX:
+                return
+            mock_calls["counter"] += 1
+            raise TypeError()
+
+        with mock.patch("magpie.api.exception.generate_response_http_format", side_effet=mock_raise):
+            ax.evaluate_call(lambda: int)
+
+        utils.check_val_equal(mock_calls["counter"], ax.RAISE_RECURSIVE_SAFEGUARD_MAX)
+
+    def test_format_content_json_str_invalid_usage(self):
+        non_json_serializable_content = {"key": HTTPInternalServerError()}
+        utils.check_raises(
+            lambda: ax.format_content_json_str(200, "", non_json_serializable_content, CONTENT_TYPE_JSON),
+            HTTPInternalServerError, msg="invalid content format expected as JSON serializable should raise"
+        )
+
+    def test_generate_response_http_format_invalid_usage(self):
+        utils.check_raises(
+            lambda: ax.generate_response_http_format(None, {}, {}, "", {}),  # noqa
+            HTTPInternalServerError, msg="invalid arguments resulting in error during response generation should raise"
+        )
+
+    def test_guess_target_format_default(self):
+        request = DummyRequest()
+        utils.check_val_equal(ag.guess_target_format(request), CONTENT_TYPE_JSON)  # noqa

@@ -1,5 +1,4 @@
 import json
-import six
 from authomatic.adapters import WebObAdapter
 from authomatic.core import Credentials, LoginResult, resolve_provider_class
 from authomatic.exceptions import OAuth2Error
@@ -14,7 +13,8 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk,
     HTTPTemporaryRedirect,
-    HTTPUnauthorized
+    HTTPUnauthorized,
+    HTTPUnprocessableEntity,
 )
 from pyramid.request import Request
 from pyramid.response import Response
@@ -98,10 +98,10 @@ def sign_in(request):
     provider_name = provider_name.lower()
     # magpie supports login from both username or corresponding email
     # therefore validate pattern combination manually after fetch otherwise email format fails patter match
-    user_name = ar.get_value_multiformat_body_checked(request, "user_name", pattern=None)
+    user_name = ar.get_value_multiformat_body_checked(request, "user_name", pattern=None)  # bad request if missing
     pattern = ax.EMAIL_REGEX if "@" in user_name else ax.PARAM_REGEX
     ax.verify_param(user_name, matches=True, param_compare=pattern, param_name="user_name",
-                    http_error=HTTPBadRequest, msg_on_fail=s.BadRequestResponseSchema.description)
+                    http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
     verify_provider(provider_name)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
