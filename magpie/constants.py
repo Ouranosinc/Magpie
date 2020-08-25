@@ -159,19 +159,19 @@ def get_constant(constant_name,             # type: Str
                  raise_not_set=True         # type: bool
                  ):                         # type: (...) -> SettingValue
     """
-    Search in order for matched value of ``constant_name``:
+    Search in order for matched value of :paramref:`constant_name`:
       1. search in settings if specified
-      2. search alternative setting names
-      3. search in ``magpie.constants`` definitions
+      2. search alternative setting names (see below)
+      3. search in :mod:`magpie.constants` definitions
       4. search in environment variables
 
-    Parameter ``constant_name`` is expected to have the format ``MAGPIE_[VARIABLE_NAME]`` although any value can
+    Parameter :paramref:`constant_name` is expected to have the format ``MAGPIE_[VARIABLE_NAME]`` although any value can
     be passed to retrieve generic settings from all above mentioned search locations.
 
-    If ``settings_name`` is provided as alternative name, it is used as is to search for results if ``constant_name``
-    was not found. Otherwise, ``magpie.[variable_name]`` is used for additional search when the format
-    ``MAGPIE_[VARIABLE_NAME]`` was used for ``constant_name``
-    (ie: ``MAGPIE_ADMIN_USER`` will also search for ``magpie.admin_user`` and so on for corresponding constants).
+    If :paramref:`settings_name` is provided as alternative name, it is used as is to search for results if
+    :paramref:`constant_name` was not found. Otherwise, ``magpie.[variable_name]`` is used for additional search when
+    the format ``MAGPIE_[VARIABLE_NAME]`` was used for :paramref:`constant_name`
+    (i.e.: ``MAGPIE_ADMIN_USER`` will also search for ``magpie.admin_user`` and so on for corresponding constants).
 
     :param constant_name: key to search for a value
     :param settings_container: wsgi app settings container
@@ -181,7 +181,8 @@ def get_constant(constant_name,             # type: Str
     :param print_missing: print message if key is not found anywhere, return ``None``
     :param raise_not_set: raise an exception if the found key is ``None``, search until last case if others are ``None``
     :returns: found value or `default_value`
-    :raises: according message based on options (by default raise missing/``None`` value)
+    :raises ValueError: if resulting value is invalid based on options (by default raise missing/``None`` value)
+    :raises LookupError: if no appropriate value could be found from all search locations (according to options)
     """
     from magpie.utils import get_settings, raise_log, print_log  # pylint: disable=C0415  # avoid circular import error
 

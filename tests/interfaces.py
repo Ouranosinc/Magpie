@@ -1964,10 +1964,37 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             utils.check_val_type(svc_dict["service_url"], six.string_types)
 
     @runner.MAGPIE_TEST_SERVICES
-    def test_PostService_ResponseFormat(self):
+    def test_GetServices_ResponseFormat(self):
+        body = utils.TestSetup.create_TestService(self)
+        resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("service", body)
+        utils.check_val_type(body["services"], dict)
+        utils.check_all_equal(body["services"], SERVICE_TYPE_DICT.keys())
+        #for svc_info in
+        utils.check_val_not_in("resources", body, msg="Must only provide summary details, not full resource tree.")
+        utils.check_val_is_in("resource_id", body["service"])
+        utils.check_val_is_in("public_url", body["service"])
+        utils.check_val_is_in("service_url", body["service"])
+        utils.check_val_is_in("service_name", body["service"])
+        utils.check_val_is_in("service_type", body["service"])
+        utils.check_val_is_in("permission_names", body["service"])
+        utils.check_val_type(body["service"]["resource_id"], int)
+        utils.check_val_type(body["service"]["public_url"], six.string_types)
+        utils.check_val_type(body["service"]["service_url"], six.string_types)
+        utils.check_val_type(body["service"]["service_name"], six.string_types)
+        utils.check_val_type(body["service"]["service_type"], six.string_types)
+        utils.check_val_type(body["service"]["permission_names"], list)
+        if LooseVersion(self.version) >= LooseVersion("0.7.0"):
+            utils.check_val_is_in("service_sync_type", body["service"])
+            utils.check_val_type(body["service"]["service_sync_type"], utils.OptionalStringType)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_PostServices_ResponseFormat(self):
         body = utils.TestSetup.create_TestService(self)
         utils.check_val_is_in("service", body)
         utils.check_val_type(body["service"], dict)
+        utils.check_val_not_in("resources", body, msg="Must only provide summary details, not full resource tree.")
         utils.check_val_is_in("resource_id", body["service"])
         utils.check_val_is_in("public_url", body["service"])
         utils.check_val_is_in("service_url", body["service"])
@@ -1999,6 +2026,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         body = utils.check_response_basic_info(resp, expected_method=self.update_method)
         utils.check_val_is_in("service", body)
         utils.check_val_type(body["service"], dict)
+        utils.check_val_not_in("resources", body, msg="Must only provide summary details, not full resource tree.")
         utils.check_val_is_in("resource_id", body["service"])
         utils.check_val_is_in("public_url", body["service"])
         utils.check_val_is_in("service_url", body["service"])
@@ -2094,6 +2122,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
                 utils.check_all_equal(svc_info["resource_types_allowed"], allowed_res_type_names)
             else:
                 utils.check_val_equal(len(svc_info["resource_types_allowed"]), 0)
+        utils.check_val_not_in("resources", svc_info, msg="Must only provide summary details, not full resource tree.")
         utils.check_val_is_in("resource_id", svc_info)
         utils.check_val_is_in("service_name", svc_info)
         utils.check_val_is_in("service_type", svc_info)
@@ -2203,6 +2232,12 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         if LooseVersion(self.version) >= LooseVersion("0.7.0"):
             utils.check_val_is_in("service_sync_type", svc_dict)
             utils.check_val_type(svc_dict["service_sync_type"], utils.OptionalStringType)
+        # FIXME: there must always be applicable permissions for Service route
+        if LooseVersion(self.version) >= LooseVersion("2.0.0"):
+            utils.check_val_not_equal(len(svc_dict["permission_names"]), 0,
+                                      msg="Non user-scoped service route must always provide applicable permissions.")
+            service_perms = [p.value for p in SERVICE_TYPE_DICT[svc_dict["service_type"]].permissions]
+            utils.check_all_equal(svc_dict["permission_names"], service_perms, any_order=True)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServicePermissions(self):

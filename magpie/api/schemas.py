@@ -959,36 +959,47 @@ class ServiceResourcesBodySchema(ServiceBodySchema):
 
 
 class ServiceType_access_SchemaNode(colander.MappingSchema):
+    title = "Services typed for Access"
+    description = "These services are all-or-nothing root endpoint access."
     frontend = ServiceBodySchema(missing=colander.drop)
     geoserver_web = ServiceBodySchema(missing=colander.drop, name="geoserver-web")
     magpie = ServiceBodySchema(missing=colander.drop)
 
 
 class ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
+    name = "geoserver-api"
+    title = "Services typed for GeoServer API"
     geoserver_api = ServiceBodySchema(missing=colander.drop, name="geoserver-api")
 
 
 class ServiceType_geoserverwms_SchemaNode(colander.MappingSchema):
+    title = "Services typed for GeoServer WMS"
     geoserverwms = ServiceBodySchema(missing=colander.drop)
 
 
 class ServiceType_ncwms_SchemaNode(colander.MappingSchema):
+    title = "Services typed for ncWMS2"
     ncwms = ServiceBodySchema(missing=colander.drop, name="ncWMS2")
 
 
 class ServiceType_projectapi_SchemaNode(colander.MappingSchema):
+    name = "project-api"
+    title = "Services typed for Project-API"
     project_api = ServiceBodySchema(missing=colander.drop, name="project-api")
 
 
 class ServiceType_thredds_SchemaNode(colander.MappingSchema):
+    title = "Services typed for Thredds"
     thredds = ServiceBodySchema(missing=colander.drop)
 
 
 class ServiceType_wfs_SchemaNode(colander.MappingSchema):
+    title = "Services typed for GeoServer WFS"
     geoserver = ServiceBodySchema(missing=colander.drop)
 
 
 class ServiceType_wps_SchemaNode(colander.MappingSchema):
+    title = "Services typed for WPS"
     lb_flyingpigeon = ServiceBodySchema(missing=colander.drop)
     flyingpigeon = ServiceBodySchema(missing=colander.drop)
     project = ServiceBodySchema(missing=colander.drop)
@@ -1015,11 +1026,13 @@ class ServiceTypes_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class ServicesSchemaNode(colander.MappingSchema):
+    description = "Registered services categorized by supported service-type. " + \
+                  "Listed service-types depend on Magpie version."
     access = ServiceType_access_SchemaNode()
-    geoserver_api = ServiceType_geoserverapi_SchemaNode(missing=colander.drop, name="geoserver-api")
+    geoserver_api = ServiceType_geoserverapi_SchemaNode(missing=colander.drop)
     geoserverwms = ServiceType_geoserverwms_SchemaNode(missing=colander.drop)
     ncwms = ServiceType_ncwms_SchemaNode()
-    project_api = ServiceType_projectapi_SchemaNode(missing=colander.drop, name="project-api")
+    project_api = ServiceType_projectapi_SchemaNode(missing=colander.drop)
     thredds = ServiceType_thredds_SchemaNode()
     wfs = ServiceType_wfs_SchemaNode(missing=colander.drop)
     wps = ServiceType_wps_SchemaNode(missing=colander.drop)

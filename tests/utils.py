@@ -1223,7 +1223,7 @@ class TestSetup(object):
     @staticmethod
     def get_RegisteredServicesList(test_case, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType]) -> List[Str]
-        """Obtains the list of registered users.
+        """Obtains the list of registered services names.
 
         :raises AssertionError: if the response does not correspond to successful retrieval of user names.
         """
