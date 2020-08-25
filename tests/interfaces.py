@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 import mock
 import pyramid.testing
-import pytest
 import six
 import yaml
 from six.moves.urllib.parse import urlparse
@@ -354,13 +353,15 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     def test_PostSignin_MissingCredentials(self):
         """Signin attempt with missing returns bad request, not internal server error nor """
-        utils.warn_version(self, "signin missing credentials status code check", "2.0.0", skip=False)
+        # warn for new check, but don't skip lower version as it should work in previous releases
+        utils.warn_version(self, "signin missing credentials field validation", "2.0.0", skip=False)
         utils.check_or_try_logout_user(self)
 
         data = {"user_name": self.usr}  # missing required password
         resp = utils.test_request(self, "POST", "/signin", data=data, expect_errors=True,
                                   headers=self.json_headers, cookies={})
-        utils.check_response_basic_info(resp, expected_method="POST", expected_code=400)
+        code = 400 if LooseVersion(self.version) >= "2.0.0" else 401
+        utils.check_response_basic_info(resp, expected_method="POST", expected_code=code)
 
     def test_GetSignin_UsingParameters(self):
         """User is allowed to use its email as username for login."""
@@ -2000,16 +2001,16 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
         resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        svc_name_total = 0
+        svc_name_list = []
         for svc_type in body["services"]:
             for svc_name in body["services"][svc_type]:
-                svc_name_total += 1
+                svc_name_list.append(svc_name)
 
         resp = utils.test_request(self, "GET", "/services?list=true", headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("services", body)
         utils.check_val_type(body["services"], list)
-        utils.check_val_equal(len(body["services"]), svc_name_total)
+        utils.check_val_equal(len(body["services"]), len(svc_name_list))
         for svc_info in body["services"]:
             utils.check_val_type(svc_info, dict)
             utils.check_val_not_in("resources", svc_info,
@@ -2028,6 +2029,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             utils.check_val_type(body["service"]["service_sync_type"], utils.OptionalStringType)
             utils.check_val_type(body["service"]["permission_names"], list)
             utils.check_val_not_equal(len(body["service"]["permission_names"]), 0)
+        utils.check_all_equal([svc["service_name"] for svc in body["services"]], svc_name_list, any_order=True)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PostServices_ResponseFormat(self):

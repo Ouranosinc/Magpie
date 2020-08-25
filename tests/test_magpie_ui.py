@@ -191,10 +191,10 @@ class TestCase_MagpieUI_UsersAuth_Remote(ti.Interface_MagpieUI_UsersAuth, unitte
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
         cls.check_requirements()
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.test_user = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_user-remote",
-                                     raise_missing=False, raise_not_set=False)
-        cls.test_group = get_constant("MAGPIE_USERS_GROUP", default_value="unittest-user-auth_group-remote",
-                                      raise_missing=False, raise_not_set=False)
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_user-remote",
+                                          raise_missing=False, raise_not_set=False)
+        cls.test_group_name = get_constant("MAGPIE_USERS_GROUP", default_value="unittest-user-auth_group-remote",
+                                           raise_missing=False, raise_not_set=False)
 
 
 @runner.MAGPIE_TEST_UI
@@ -217,9 +217,9 @@ class TestCase_MagpieUI_AdminAuth_Remote(ti.Interface_MagpieUI_AdminAuth, unitte
         cls.json_headers = utils.get_headers(cls.url, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.check_requirements()
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.test_user = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_user-remote",
-                                     raise_missing=False, raise_not_set=False)
-        cls.test_group = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-admin-auth_group-remote",
-                                      raise_missing=False, raise_not_set=False)
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_user-remote",
+                                          raise_missing=False, raise_not_set=False)
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-admin-auth_group-remote",
+                                           raise_missing=False, raise_not_set=False)
         cls.test_service_type = utils.get_service_types_for_version(cls.version)[0]
         cls.test_service_name = utils.TestSetup.get_AnyServiceOfTestServiceType(cls)["service_name"]

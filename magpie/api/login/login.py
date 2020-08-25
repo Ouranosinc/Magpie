@@ -1,4 +1,5 @@
 import json
+import six
 from authomatic.adapters import WebObAdapter
 from authomatic.core import Credentials, LoginResult, resolve_provider_class
 from authomatic.exceptions import OAuth2Error
@@ -101,10 +102,12 @@ def sign_in(request):
     pattern = ax.EMAIL_REGEX if "@" in user_name else ax.PARAM_REGEX
     ax.verify_param(user_name, matches=True, param_compare=pattern, param_name="user_name",
                     http_error=HTTPBadRequest, msg_on_fail=s.BadRequestResponseSchema.description)
-    password = ar.get_multiformat_body(request, "password")   # no check since password is None for external login
     verify_provider(provider_name)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
+        # password can be None for external login, validate only here as needed
+        password = ar.get_value_multiformat_body_checked(request, "password", pattern=None)
+        # check manually to avoid inserting value in result body
         # obtain the raw path, without any '/magpie' prefix (if any), let 'application_url' handle it
         signin_internal_path = request.route_url("ziggurat.routes.sign_in", _app_url="")
         signin_internal_data = {"user_name": user_name, "password": password, "provider_name": provider_name}
@@ -161,7 +164,7 @@ def login_failure(request, reason=None):
                 http_err = HTTPInternalServerError
                 reason = s.Signin_POST_Internal_InternalServerErrorResponseSchema.description
     content = ag.get_request_info(request, default_message=s.Signin_POST_UnauthorizedResponseSchema.description)
-    content.setdefault({"detail": str(reason)})
+    content.setdefault("detail", str(reason))
     ax.raise_http(http_error=http_err, content=content, detail=s.Signin_POST_UnauthorizedResponseSchema.description)
 
 
