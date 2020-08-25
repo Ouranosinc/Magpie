@@ -1965,29 +1965,69 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServices_ResponseFormat(self):
-        body = utils.TestSetup.create_TestService(self)
+        utils.TestSetup.create_TestService(self)
         resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("service", body)
         utils.check_val_type(body["services"], dict)
-        utils.check_all_equal(body["services"], SERVICE_TYPE_DICT.keys())
-        #for svc_info in
-        utils.check_val_not_in("resources", body, msg="Must only provide summary details, not full resource tree.")
-        utils.check_val_is_in("resource_id", body["service"])
-        utils.check_val_is_in("public_url", body["service"])
-        utils.check_val_is_in("service_url", body["service"])
-        utils.check_val_is_in("service_name", body["service"])
-        utils.check_val_is_in("service_type", body["service"])
-        utils.check_val_is_in("permission_names", body["service"])
-        utils.check_val_type(body["service"]["resource_id"], int)
-        utils.check_val_type(body["service"]["public_url"], six.string_types)
-        utils.check_val_type(body["service"]["service_url"], six.string_types)
-        utils.check_val_type(body["service"]["service_name"], six.string_types)
-        utils.check_val_type(body["service"]["service_type"], six.string_types)
-        utils.check_val_type(body["service"]["permission_names"], list)
-        if LooseVersion(self.version) >= LooseVersion("0.7.0"):
-            utils.check_val_is_in("service_sync_type", body["service"])
+        service_types = utils.get_service_types_for_version(self.version)
+        utils.check_all_equal(body["services"], service_types)
+        for svc_type in body["services"]:
+            for svc_name in body["services"][svc_type]:
+                svc_info = body["services"][svc_type][svc_name]
+                utils.check_val_not_in("resources", svc_info,
+                                       msg="Must only provide summary details, not full resource tree.")
+                utils.check_val_is_in("resource_id", body["service"])
+                utils.check_val_is_in("public_url", body["service"])
+                utils.check_val_is_in("service_url", body["service"])
+                utils.check_val_is_in("service_name", body["service"])
+                utils.check_val_is_in("service_type", body["service"])
+                utils.check_val_is_in("permission_names", body["service"])
+                utils.check_val_type(body["service"]["resource_id"], int)
+                utils.check_val_type(body["service"]["public_url"], six.string_types)
+                utils.check_val_type(body["service"]["service_url"], six.string_types)
+                utils.check_val_type(body["service"]["service_name"], six.string_types)
+                utils.check_val_type(body["service"]["service_type"], six.string_types)
+                utils.check_val_type(body["service"]["permission_names"], list)
+                utils.check_val_not_equal(len(body["service"]["permission_names"]), 0)
+                if LooseVersion(self.version) >= LooseVersion("0.7.0"):
+                    utils.check_val_is_in("service_sync_type", body["service"])
+                    utils.check_val_type(body["service"]["service_sync_type"], utils.OptionalStringType)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetServices_ResponseFormat(self):
+        utils.warn_version(self, "Service listing as object list with query parameter", "2.0.0", skip=True)
+
+        resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        svc_name_total = 0
+        for svc_type in body["services"]:
+            for svc_name in body["services"][svc_type]:
+                svc_name_total += 1
+
+        resp = utils.test_request(self, "GET", "/services?list=true", headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("services", body)
+        utils.check_val_type(body["services"], list)
+        utils.check_val_equal(len(body["services"]), svc_name_total)
+        for svc_info in body["services"]:
+            utils.check_val_type(svc_info, dict)
+            utils.check_val_not_in("resources", svc_info,
+                                   msg="Must only provide summary details, not full resource tree.")
+            utils.check_val_is_in("resource_id", body["service"])
+            utils.check_val_is_in("public_url", body["service"])
+            utils.check_val_is_in("service_url", body["service"])
+            utils.check_val_is_in("service_name", body["service"])
+            utils.check_val_is_in("service_type", body["service"])
+            utils.check_val_is_in("permission_names", body["service"])
+            utils.check_val_type(body["service"]["resource_id"], int)
+            utils.check_val_type(body["service"]["public_url"], six.string_types)
+            utils.check_val_type(body["service"]["service_url"], six.string_types)
+            utils.check_val_type(body["service"]["service_name"], six.string_types)
+            utils.check_val_type(body["service"]["service_type"], six.string_types)
             utils.check_val_type(body["service"]["service_sync_type"], utils.OptionalStringType)
+            utils.check_val_type(body["service"]["permission_names"], list)
+            utils.check_val_not_equal(len(body["service"]["permission_names"]), 0)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PostServices_ResponseFormat(self):
@@ -2007,6 +2047,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_type(body["service"]["service_name"], six.string_types)
         utils.check_val_type(body["service"]["service_type"], six.string_types)
         utils.check_val_type(body["service"]["permission_names"], list)
+        utils.check_val_not_equal(len(body["service"]["permission_names"]), 0)
         if LooseVersion(self.version) >= LooseVersion("0.7.0"):
             utils.check_val_is_in("service_sync_type", body["service"])
             utils.check_val_type(body["service"]["service_sync_type"], utils.OptionalStringType)
@@ -2039,6 +2080,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_type(body["service"]["service_name"], six.string_types)
         utils.check_val_type(body["service"]["service_type"], six.string_types)
         utils.check_val_type(body["service"]["permission_names"], list)
+        utils.check_val_not_equal(len(body["service"]["permission_names"]), 0)
         if LooseVersion(self.version) >= LooseVersion("0.7.0"):
             utils.check_val_is_in("service_sync_type", body["service"])
             utils.check_val_type(body["service"]["service_sync_type"], utils.OptionalStringType)

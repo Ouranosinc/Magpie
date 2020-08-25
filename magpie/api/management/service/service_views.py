@@ -25,7 +25,8 @@ def get_service_types_view(request):  # noqa: F811
                          detail=s.ServiceTypes_GET_OkResponseSchema.description)
 
 
-@s.ServiceTypeAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceType_GET_responses)
+@s.ServiceTypeAPI.get(schema=s.ServiceTypes_GET_RequestSchema(), tags=[s.ServicesTag],
+                      response_schemas=s.ServiceType_GET_responses)
 @view_config(route_name=s.ServiceTypeAPI.name, request_method="GET")
 def get_services_by_type_view(request):
     """
@@ -34,7 +35,8 @@ def get_services_by_type_view(request):
     return get_services_runner(request)
 
 
-@s.ServicesAPI.get(tags=[s.ServicesTag], response_schemas=s.Services_GET_responses)
+@s.ServicesAPI.get(schema=s.Services_GET_RequestSchema(), tags=[s.ServicesTag],
+                   response_schemas=s.Services_GET_responses)
 @view_config(route_name=s.ServicesAPI.name, request_method="GET")
 def get_services_view(request):
     """
@@ -44,8 +46,13 @@ def get_services_view(request):
 
 
 def get_services_runner(request):
+    """
+    Obtains the full or filtered list of services categorized by type, or listed as flat list according to request
+    path and query parameters.
+    """
     service_type_filter = request.matchdict.get("service_type")  # no check because None/empty is for 'all services'
-    json_response = {}
+    services_as_list = asbool(ar.get_query_param(request, "list", False))
+
     if not service_type_filter:
         service_types = SERVICE_TYPE_DICT.keys()
     else:
@@ -54,13 +61,19 @@ def get_services_runner(request):
                         content={"service_type": str(service_type_filter)}, content_type=CONTENT_TYPE_JSON)
         service_types = [service_type_filter]
 
+    svc_content = [] if services_as_list else {}
     for service_type in service_types:
         services = su.get_services_by_type(service_type, db_session=request.db)
-        json_response[service_type] = {}
+        if not services_as_list:
+            svc_content[service_type] = {}
         for service in services:
-            json_response[service_type][service.resource_name] = sf.format_service(service, show_private_url=True)
+            svc_fmt = sf.format_service(service, show_private_url=True)
+            if services_as_list:
+                svc_content.append(svc_fmt)
+            else:
+                svc_content[service_type][service.resource_name] = svc_fmt
 
-    return ax.valid_http(http_success=HTTPOk, content={"services": json_response},
+    return ax.valid_http(http_success=HTTPOk, content={"services": svc_content},
                          detail=s.Services_GET_OkResponseSchema.description)
 
 

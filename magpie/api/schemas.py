@@ -1016,6 +1016,16 @@ class ServiceTypesList(colander.SequenceSchema):
     )
 
 
+class ServiceListingQuerySchema(QueryRequestSchemaAPI):
+    list = colander.SchemaNode(
+        colander.Boolean(), default=False, missing=colander.drop,
+        description="Return services as a list of dicts. Default is a dict by service type, and by service name.")
+
+
+class ServiceTypes_GET_RequestSchema(BaseRequestSchemaAPI):
+    querystring = ServiceListingQuerySchema()
+
+
 class ServiceTypes_GET_OkResponseBodySchema(BaseResponseBodySchema):
     service_types = ServiceTypesList(description="List of available service types.")
 
@@ -1025,7 +1035,7 @@ class ServiceTypes_GET_OkResponseSchema(BaseResponseSchemaAPI):
     body = ServiceTypes_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class ServicesSchemaNode(colander.MappingSchema):
+class ServicesCategorizedSchemaNode(colander.MappingSchema):
     description = "Registered services categorized by supported service-type. " + \
                   "Listed service-types depend on Magpie version."
     access = ServiceType_access_SchemaNode()
@@ -1038,6 +1048,10 @@ class ServicesSchemaNode(colander.MappingSchema):
     wps = ServiceType_wps_SchemaNode(missing=colander.drop)
 
 
+class ServicesListingSchemaNode(colander.SequenceSchema):
+    service = ServiceBodySchema()
+
+
 class Service_MatchDictCheck_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     description = "Service query by name refused by db."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
@@ -1046,6 +1060,9 @@ class Service_MatchDictCheck_ForbiddenResponseSchema(BaseResponseSchemaAPI):
 class Service_MatchDictCheck_NotFoundResponseSchema(BaseResponseSchemaAPI):
     description = "Service name not found."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+Services_GET_RequestSchema = ServiceTypes_GET_RequestSchema
 
 
 class Service_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1058,7 +1075,9 @@ class Service_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class Services_GET_ResponseBodySchema(BaseResponseBodySchema):
-    services = ServicesSchemaNode()
+    # FIXME: add support schema OneOf(ServicesCategorizedSchemaNode, ServicesListingSchemaNode)
+    #        requires https://github.com/fmigneault/cornice.ext.swagger/tree/oneOf-objects
+    services = ServicesCategorizedSchemaNode()
 
 
 class Services_GET_OkResponseSchema(BaseResponseSchemaAPI):
@@ -1825,7 +1844,7 @@ class UserServices_GET_RequestSchema(BaseRequestSchemaAPI):
 
 
 class UserServices_GET_ResponseBodySchema(BaseResponseBodySchema):
-    services = ServicesSchemaNode()
+    services = ServicesCategorizedSchemaNode()
 
 
 class UserServices_GET_OkResponseSchema(BaseResponseSchemaAPI):
@@ -2029,7 +2048,7 @@ class GroupUsers_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
 
 
 class GroupServices_GET_ResponseBodySchema(BaseResponseBodySchema):
-    services = ServicesSchemaNode()
+    services = ServicesCategorizedSchemaNode()
 
 
 class GroupServices_GET_OkResponseSchema(BaseResponseSchemaAPI):
