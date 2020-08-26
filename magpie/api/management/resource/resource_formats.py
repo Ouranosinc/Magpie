@@ -8,8 +8,11 @@ from magpie.permissions import format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 
 if TYPE_CHECKING:
-    from magpie.models import Resource
-    from magpie.typedefs import AnyPermissionType, Iterable, JSON, Optional
+    from sqlalchemy.orm.session import Session
+    from typing import Iterable, Optional
+    from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
+    from magpie.models import Resource, Service
+    from magpie.typedefs import AnyPermissionType, ChildrenResourceNodes, JSON, ServiceOrResourceType
 
 
 def format_resource(resource, permissions=None, basic_info=False):
@@ -42,20 +45,18 @@ def format_resource(resource, permissions=None, basic_info=False):
 
 
 def format_resource_tree(children, db_session, resources_perms_dict=None, _internal_svc_res_perm_dict=None):
+    # type: (ChildrenResourceNodes, Session, Optional[ChildrenResourceNodes], Optional[ChildrenResourceNodes]) -> JSON
     """
-    Generates the formatted service/resource tree with all its children resources by calling :func:`format_resource`
-    recursively.
+    Generates the formatted resource tree under the provided children resources, with all of their children resources
+    by calling :func:`format_resource` recursively.
 
     Filters resource permissions with ``resources_perms_dict`` if provided.
 
     :param children: service or resource for which to generate the formatted resource tree
     :param db_session: connection to db
     :param resources_perms_dict: any pre-established user- or group-specific permissions. Only those are shown if given.
-    :param _internal_svc_res_perm_dict: *for this function's use only*,
-        avoid re-fetch of already obtained permissions for corresponding resources
     :return: formatted resource tree
     """
-    _internal_svc_res_perm_dict = dict() if _internal_svc_res_perm_dict is None else _internal_svc_res_perm_dict
 
     fmt_res_tree = {}
     for child_id, child_dict in children.items():
@@ -71,7 +72,7 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, _inter
         # case of full fetch (permitted resource permissions)
         else:
             # directly access the resource if it is a service
-            service = None
+            service = None  # type: Optional[Service]
             if resource.root_service_id is None:
                 service = resource
                 service_id = resource.resource_id
@@ -90,7 +91,8 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, _inter
 
         fmt_res_tree[child_id] = format_resource(resource, perms)
         fmt_res_tree[child_id]["children"] = format_resource_tree(
-            new_children, db_session,
+            new_children,
+            db_session,
             resources_perms_dict,
             _internal_svc_res_perm_dict
         )
@@ -98,9 +100,20 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, _inter
     return fmt_res_tree
 
 
-def get_resource_children(resource, db_session):
-    query = RESOURCE_TREE_SERVICE.from_parent_deeper(resource.resource_id, db_session=db_session)
-    tree_struct_dict = RESOURCE_TREE_SERVICE.build_subtree_strut(query)
+def get_resource_children(resource, db_session, tree_service_builder=None):
+    # type: (ServiceOrResourceType, Session, Optional[ResourceTreeService]) -> ChildrenResourceNodes
+    """
+    Obtains the children resource node structure of the input service or resource.
+
+    :param resource: initial resource where to start building the tree from
+    :param db_session: database connection to retrieve resources
+    :param tree_service_builder: service that build the tree (default: :py:data:`RESOURCE_TREE_SERVICE`)
+    :returns: {node: Resource, children: {node_id: <recursive>}}
+    """
+    if tree_service_builder is None:
+        tree_service_builder = RESOURCE_TREE_SERVICE
+    query = tree_service_builder.from_parent_deeper(resource.resource_id, db_session=db_session)
+    tree_struct_dict = tree_service_builder.build_subtree_strut(query)
     return tree_struct_dict["children"]
 
 

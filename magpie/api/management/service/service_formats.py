@@ -63,7 +63,7 @@ def format_service_resources(service,                       # type: Service
                              show_private_url=True,         # type: bool
                              ):                             # type: (...) -> JSON
     """
-    Formats the service and its resource tree as a JSON body.
+    Formats the service and its children resource tree as a JSON body.
 
     :param service: service for which to display details with sub-resources
     :param db_session: database session
