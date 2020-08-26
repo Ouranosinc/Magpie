@@ -1111,6 +1111,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserResources_OnlyUserAndInheritedGroupPermissions_values(self):
+        utils.warn_version(self, "inherited permissions", "0.7.4", skip=True)
         values = self.setup_UniquePermissionsForEach_UserGroupServiceResource()
         perm_svc_usr, perm_svc_grp, perm_res_usr, perm_res_grp, usr_name, _, svc_name, svc_type, res_id = values
 
@@ -1171,12 +1172,14 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserInheritedResources_format(self):
+        utils.warn_version(self, "inherited resource permissions", "0.7.4", skip=True)
         utils.TestSetup.create_TestService(self)
         utils.TestSetup.create_TestServiceResource(self)
-        if LooseVersion(self.version) >= LooseVersion("0.7.0"):
-            path = "/users/{usr}/inherited_resources".format(usr=self.usr)
-        else:
+        if LooseVersion(self.version) >= LooseVersion("0.7.4"):
             path = "/users/{usr}/resources?inherit=true".format(usr=self.usr)
+        else:
+            # deprecated as of 0.7.4, removed in 2.0.0
+            path = "/users/{usr}/inherited_resources".format(usr=self.usr)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies, timeout=20)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("resources", body)

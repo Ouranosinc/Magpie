@@ -11,43 +11,58 @@ Types of Permissions
 Across the documentation and the code, term :term:`Permission` is often employed interchangeably to represent different
 more subtle contextual functionalities. This is mostly an abuse of language, but is preserved regardless in order to
 maintain backward compatibility of features and API response content with older systems that could employ `Magpie`.
-Therefore, care must be taken to consider under which context this term is observed to ensure one correctly interprets
-the results.
+Therefore, care must be taken to consider under which context this term is observed to ensure correct interpretation
+of observed results.
 
 More specifically, following distinction can be considered between different kind of :term:`Permission` used by
 `Magpie`:
 
-.. _applied permissions:
-- **Applied Permissions**:
-    Represents a "rule" which defines a combination of ``(User|Group, Service|Resource, Permission)``.
-    These entries are parsed during requests to determine which access rights will be granted or denied for the
-    respective :term:`User`.
+.. _`allowed permissions`:
+- **Allowed Permissions**:
+    Represents the set of valid :term:`Permission` values that *could* be applied to a given :term:`Service` or
+    :term:`Resource`, depending on their type's implementation. Every allowed :term:`Permission` is one entry from
+    :py:data:`magpie.permissions.Permission`, and their set define the *schema* that will pass validation if applied
+    to corresponding items of :py:mod:`magpie.services`, but they are not necessarily an active nor existing entry
+    in the database (i.e.: `Applied Permissions`_). In general, these values are obtained from requests scoped under
+    paths ``/service`` and ``/resources``.
 
-.. _direct permissions:
+.. _`applied permissions`:
+- **Applied Permissions**:
+    Represents an active "rule" which defines a combination of ``(User|Group, Service|Resource, Permission)``.
+    These entries are validated during requests against the appropriate `Allowed Permissions`_ of the targeted item
+    (:term:`Service` or :term:`Resource`) to create the "rule" under (for) the targeted :term:`User` or :term:`Group`.
+    When executing requests under scopes ``/users`` and ``/groups``, responses without query parameter modifiers
+    (see `perm_example`_) are by default `Applied Permissions`_. These are also scoped under a *single context*
+    at a given time (:term:`User` or :term:`Group`), depending on the request path being executed. They determine
+    which access rights will be granted or denied for the respective :term:`User` or :term`Group`.
+
+.. _`direct permissions`:
 - **Direct Permissions**:
     Represents a "rule" combination that was explicitly applied to a :term:`Service`. Rules applied to children
-    :term:`Resource` are **NOT** considered :term:`Direct Permission` (they are simply `applied permissions`_ without
-    any special connotation. :term:`Direct Permission` are retrieved from the :term:`Service` definition while others
-    are obtained from corresponding :term:`Resource` permissions allowed under this :term:`Service`. The actual values
-    extracted in each case are purely dependant of the :term:`Service`'s implementation, as each :term:`Service` is
-    only a specialized :term:`Resource`.
+    :term:`Resource` are **NOT** considered :term:`Direct Permission` (they are simply `Applied Permissions`_ without
+    any special connotation). Note that `Direct Permissions`_ are still `Applied Permissions`_. They are a special
+    subset of `Applied Permissions`_ matching how :term:`Service` are a specialized implementation of :term:`Resource`
+    (see: :class:`magpie.models.Service`). This kind of :term:`Permissions` is notably referred to by requests employed
+    for `Finding User Permissions`_ as they provide useful functionalities.
 
-.. _inherited permissions:
+.. _`inherited permissions`:
 - **Inherited Permissions**:
-    Represents the combined set of `applied permissions`_ for a :term:`User` and every one of its :term:`Group`
-    memberships. When requesting :term:`Group` permissions, only "rules" explicitly set on the given group are returned.
-    The same concept applies when *only* requesting :term:`User` permissions. Providing applicable :term:`User`-scoped
-    requests with ``inherit=true`` query parameter will return the *merged* set of `applied permissions`_ for that
-    :term:`User` and all his :term:`Group` membership. See `perm_example`_ for complete comparison.
+    Represents the combined set of `Applied Permissions`_ from the :term:`User` context and every one of its
+    :term:`Group` membership contexts. When requesting a :term:`Group`'s permissions, only "rules" explicitly set on
+    the given group are returned. The same concept applies when *only* requesting :term:`User` permissions. Providing
+    applicable :term:`User`-scoped requests with ``inherit=true`` query parameter will return the *merged* set of
+    `Applied Permissions`_ for that :term:`User` and all his :term:`Group` membership simultaneously.
+    See `perm_example`_ for complete comparison.
 
-.. _effective permissions:
+.. _`effective permissions`:
 - **Effective Permissions**:
-    Represents all `applied permissions`_ of the :term:`User` and all :term:`Group` membership, as well as the
-    extensive resolution of the :term:`Service` and every children :term:`Resource` in its hierarchy. Effective
-    permissions automatically imply ``inherit=True``, and can be obtained from :term:`User`-scoped requests with
-    ``effective=true`` query parameter wherever supported. See `perm_example`_ for complete comparison.
+    Represents all `Inherited Permissions`_ of the :term:`User` and all its :term:`Group` membership, as well as the
+    extensive resolution of the :term:`Service` and every children :term:`Resource` in its hierarchy for the requested
+    :term:`Resource` scope. Effective permissions automatically imply ``inherit=True``, and can be obtained from
+    :term:`User`-scoped requests with ``effective=true`` query parameter wherever supported. See `perm_example`_ for
+    complete comparison.
 
-.. _access permissions:
+.. _`access permissions`:
 - **Access Permissions**:
     Represents the required level of :term:`Permission` needed to access `Magpie` API routes to request details. These
     can be referred to as "roles", but are inferred by :term:`Group` memberships of the :term:`Logged User` attempting
@@ -77,7 +92,7 @@ documentation served under a running `Magpie` instance.
     :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION`. In other words, if the :term:`Logged User` corresponds to the
     path variable :term:`User`, access is also granted to allow that individual to obtain or update its own details.
 
-Typically, request `access permissions`_ fall into one of the following category for all API endpoints. Higher
+Typically, request `Access Permissions`_ fall into one of the following category for all API endpoints. Higher
 permissions in the table imply higher access.
 
 .. list-table::
@@ -98,7 +113,7 @@ permissions in the table imply higher access.
 When targeting specific :term:`User`-scoped routes, the following (simplified) operations are applied to determine if
 access should be granted to execute the request:
 
-1. :term:`Logged User` has administrative-level `access permissions`_ (always granted access).
+1. :term:`Logged User` has administrative-level `Access Permissions`_ (always granted access).
 2. :term:`Logged User` corresponds exactly to same :term:`User` identified from the path variable's value.
 3. :term:`User` in path variable is the special keyword :py:data:`magpie.constants.MAGPIE_LOGGED_USER`.
 4. :term:`User` in path variable is special user :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`.
@@ -170,7 +185,7 @@ Given that scheme, let's say that existing elements are defined using the allowe
         resource-B1         (resource-type-1)
             resource-B2     (resource-type-2)
 
-Let's says we also got a ``example-user`` that is member of ``example-group``, and that  `applied permissions`_ on them
+Let's says we also got a ``example-user`` that is member of ``example-group``, and that  `Applied Permissions`_ on them
 are as follows:
 
 .. code-block::
@@ -207,7 +222,7 @@ Using ``inherited`` option, we obtain the following:
     /users/example-user/resources/resource-B1/permissions?inherited=true    => [read]   :sup:`(1)`
     /users/example-user/resources/resource-B2/permissions?inherited=true    => []
 
-As illustrated, requesting for `inherited permissions`_ now also returns :term:`Group`-related :term:`Permission`
+As illustrated, requesting for `Inherited Permissions`_ now also returns :term:`Group`-related :term:`Permission`
 :sup:`(1)` where they where not returned before with only :term:`User`-related :term:`Permission`.
 
 On the other hand, using ``effective`` would result in the following:
@@ -223,17 +238,17 @@ On the other hand, using ``effective`` would result in the following:
 
 In this case, :term:`Resource`s that had :term:`Permission` directly set on them :sup:`(2)`, whether through
 :term:`User` or :term:`Group` combination, all return the exact same set of :term:`Permission`. This is because
-`effective permissions`_ always imply `inherited permissions`_ (i.e.: using both query simultaneously is redundant).
+`Effective Permissions`_ always imply `Inherited Permissions`_ (i.e.: using both query simultaneously is redundant).
 The reason why we obtain these sets for cases :sup:`(2)` is also because there is no other :term:`Permission` applied
 to any of their parent :term:`Service` or :term:`Resource`. Contrarily, ``resource-A`` :sup:`(3)` now additionally
 receives :term:`Permission` ``read`` indirectly from its parent ``service-2`` (note: ``write`` is redundant here).
 Similarly, ``resource-B2`` :sup:`(4)` which did not even have any immediate :term:`Permission` applied to it,
 now receives both ``read`` and ``write`` access, respectively from its parents ``resource-B1`` and ``service-3``. This
-demonstrates why, although `effective permissions`_ imply `inherited permissions`_, they do not necessarily resolve to
+demonstrates why, although `Effective Permissions`_ imply `Inherited Permissions`_, they do not necessarily resolve to
 the same result according to the effective :term:`Resource` hierarchy and its parent-children resolution implementation.
 
 Using ``effective`` query tells `Magpie` to rewind the :term:`Resource` tree from the requested :term:`Resource` up to
-the top-most :term:`Service` in order to accumulate all `inherited permissions`_ observed along the way for every
+the top-most :term:`Service` in order to accumulate all `Inherited Permissions`_ observed along the way for every
 encountered element. All :term:`Permission` that is applied *higher* to the requested :term:`Resource` are considered
 as if applied directly on it. Query ``inherited`` limits itself only to the specifically requested :term:`Resource`,
 without hierarchy resolution, but still considering :term:`Group` memberships. For this reason, ``inherited`` *could*
@@ -257,8 +272,8 @@ not to mention costly in terms of request lookup and resources.
 
 For this purpose, there is one query parameter named ``cascade`` that can be employed with request
 ``GET /users/{user_name}/services``. In normal condition (without the parameter), this request responds with every
-:term:`Service` where the user has `direct permissions`_ on. With the added query parameter, it tells `Magpie` to
-recursively search the hierarchy of `effective permissions`_ and return all :term:`Service` instances that possess
+:term:`Service` where the user has `Direct Permissions`_ on. With the added query parameter, it tells `Magpie` to
+recursively search the hierarchy of `Effective Permissions`_ and return all :term:`Service` instances that possess
 *any* :term:`Permission` applied to at least one child :term:`Resource` at *any* level.
 
 This query can be extremely useful to quickly answer *"does the user have any permission at all on this service"*,

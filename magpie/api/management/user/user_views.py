@@ -6,7 +6,6 @@ from pyramid.httpexceptions import (
     HTTPConflict,
     HTTPCreated,
     HTTPForbidden,
-    HTTPMovedPermanently,
     HTTPNotFound,
     HTTPOk
 )
@@ -246,19 +245,6 @@ def get_user_resources_view(request):
                          detail=s.UserResources_GET_OkResponseSchema.description)
 
 
-@s.UserInheritedResourcesAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
-                                 response_schemas=s.UserResources_GET_responses)
-@s.LoggedUserInheritedResourcesAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
-                                       response_schemas=s.LoggedUserResources_GET_responses)
-@view_config(route_name=s.UserInheritedResourcesAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
-def get_user_inherited_resources_view(request):
-    """[DEPRECATED: use '/users/{user_name}/resources?inherit=true']
-    List all resources a user has permissions on with his inherited user and groups permissions."""
-    LOGGER.warning("Route deprecated: [%s], Instead Use: [%s]",
-                   s.UserInheritedResourcesAPI.path, s.UserResourcesAPI.path + "?inherit=true")
-    return HTTPMovedPermanently(location=request.path.replace("/inherited_resources", "/resources?inherit=true"))
-
-
 @s.UserResourcePermissionsAPI.get(schema=s.UserResourcePermissions_GET_RequestSchema(),
                                   tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
                                   response_schemas=s.UserResourcePermissions_GET_responses)
@@ -277,20 +263,6 @@ def get_user_resource_permissions_view(request):
     return uu.get_user_resource_permissions_response(user, resource, request,
                                                      inherit_groups_permissions=inherit_groups_perms,
                                                      effective_permissions=effective_perms)
-
-
-@s.UserResourceInheritedPermissionsAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
-                                           response_schemas=s.UserResourcePermissions_GET_responses)
-@s.LoggedUserResourceInheritedPermissionsAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
-                                                 response_schemas=s.LoggedUserResourcePermissions_GET_responses)
-@view_config(route_name=s.UserResourceInheritedPermissionsAPI.name, request_method="GET",
-             permission=NO_PERMISSION_REQUIRED)
-def get_user_resource_inherit_groups_permissions_view(request):
-    """[DEPRECATED: use '/users/{user_name}/resources/{resource_id}/permissions?inherit=true']
-    List all permissions a user has on a specific resource with his inherited user and groups permissions."""
-    LOGGER.warning("Route deprecated: [%s], Instead Use: [%s]",
-                   s.UserResourceInheritedPermissionsAPI.path, s.UserResourcePermissionsAPI.path + "?inherit=true")
-    return HTTPMovedPermanently(location=request.path.replace("/inherited_permissions", "/permissions?inherit=true"))
 
 
 @s.UserResourcePermissionsAPI.post(schema=s.UserResourcePermissions_POST_RequestSchema(), tags=[s.UsersTag],
@@ -316,7 +288,7 @@ def create_user_resource_permission_view(request):
 @view_config(route_name=s.UserResourcePermissionAPI.name, request_method="DELETE")
 def delete_user_resource_permission_view(request):
     """
-    Delete a direct permission on a resource for a user (not including his groups permissions).
+    Delete an applied permission on a resource for a user (not including his groups permissions).
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request)
@@ -344,35 +316,6 @@ def get_user_services_view(request):
                                     format_as_list=format_as_list)
     return ax.valid_http(http_success=HTTPOk, content={"services": svc_json},
                          detail=s.UserServices_GET_OkResponseSchema.description)
-
-
-@s.UserInheritedServicesAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
-                                response_schemas=s.UserServices_GET_responses)
-@s.LoggedUserInheritedServicesAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
-                                      response_schemas=s.LoggedUserServices_GET_responses)
-@view_config(route_name=s.UserInheritedServicesAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
-def get_user_inherited_services_view(request):
-    """[DEPRECATED: use '/users/{user_name}/services?inherit=true']
-    List all services a user has permissions on with his inherited user and groups permissions."""
-    LOGGER.warning("Route deprecated: [%s], Instead Use: [%s]",
-                   s.LoggedUserInheritedServicesAPI.path, s.LoggedUserServicesAPI.path + "?inherit=true")
-    return HTTPMovedPermanently(location=request.path.replace("/inherited_services", "/services?inherit=true"))
-
-
-@s.UserServiceInheritedPermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema,
-                                          tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
-                                          response_schemas=s.UserServicePermissions_GET_responses)
-@s.LoggedUserServiceInheritedPermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema,
-                                                tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
-                                                response_schemas=s.LoggedUserServicePermissions_GET_responses)
-@view_config(route_name=s.UserServiceInheritedPermissionsAPI.name, request_method="GET",
-             permission=NO_PERMISSION_REQUIRED)
-def get_user_service_inherited_permissions_view(request):
-    """[DEPRECATED: use '/users/{user_name}/services/{service_name}/permissions?inherit=true']
-    List all permissions a user has on a service using all his inherited user and groups permissions."""
-    LOGGER.warning("Route deprecated: [%s], Instead Use: [%s]",
-                   s.UserServiceInheritedPermissionsAPI.path, s.UserServicePermissionsAPI.path + "?inherit=true")
-    return HTTPMovedPermanently(location=request.path.replace("/inherited_permissions", "/permissions?inherit=true"))
 
 
 @s.UserServicePermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema,
@@ -420,7 +363,7 @@ def create_user_service_permission_view(request):
 @view_config(route_name=s.UserServicePermissionAPI.name, request_method="DELETE")
 def delete_user_service_permission_view(request):
     """
-    Delete a direct permission on a service for a user (not including his groups permissions).
+    Delete an applied permission on a service for a user (not including his groups permissions).
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
@@ -456,17 +399,3 @@ def get_user_service_resources_view(request):
     )
     return ax.valid_http(http_success=HTTPOk, detail=s.UserServiceResources_GET_OkResponseSchema.description,
                          content={"service": user_svc_res_json})
-
-
-@s.UserServiceInheritedResourcesAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
-                                        response_schemas=s.UserServiceResources_GET_responses)
-@s.LoggedUserServiceInheritedResourcesAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
-                                              response_schemas=s.LoggedUserServiceResources_GET_responses)
-@view_config(route_name=s.UserServiceInheritedResourcesAPI.name, request_method="GET",
-             permission=NO_PERMISSION_REQUIRED)
-def get_user_service_inherited_resources_view(request):
-    """[DEPRECATED: use '/users/{user_name}/services/{service_name}/resources?inherit=true']
-    List all resources under a service a user has permission on using all his inherited user and groups permissions."""
-    LOGGER.warning("Route deprecated: [%s], Instead Use: [%s]",
-                   s.UserServiceInheritedResourcesAPI.path, s.UserServiceResourcesAPI.path + "?inherit=true")
-    return HTTPMovedPermanently(location=request.path.replace("/inherited_resources", "/resources?inherit=true"))

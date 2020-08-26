@@ -240,18 +240,20 @@ def get_user_services(user, request, cascade_resources=False,
     :param user: user for which to find services
     :param request: request with database session connection
     :param cascade_resources:
-        If ``False``, return only services with :term:`Direct` user permissions on their corresponding service-resource.
-        Otherwise, return every service that has at least one sub-resource with user permissions.
+        If ``False``, return only services which the user has :term:`Direct Permission` on specialized
+        resources corresponding to services.
+        Otherwise, return every service that has at least one sub-resource with user permissions (any children).
     :param inherit_groups_permissions:
         If ``False``, return only user-specific service/sub-resources permissions.
-        Otherwise, resolve inherited permissions using all groups the user is member of.
+        Otherwise, resolve :term:`Inherited Permissions` using all groups the user is member of.
     :param format_as_list:
         returns as list of service dict information (not grouped by type and by name)
     :return:
-        only services which the user as :term:`Direct` or :term:`Inherited` permissions, according to
-        :paramref:`inherit_from_resources`.
+        Only services which the user as :term:`Direct Permission` or considering all tree hierarchy,
+        and for each case, either considering only user permissions or every :term:`Inherited Permission`,
+        according to provided options.
     :rtype:
-        dict of services by type with corresponding services by name containing sub-dict information,
+        Dict of services by type with corresponding services by name containing sub-dict information,
         unless :paramref:`format_as_list` is ``True``
     """
     db_session = request.db
@@ -310,9 +312,11 @@ def get_user_resources_permissions_dict(user, request, resource_types=None,
     :param resource_types: filter the search query with specified resource types
     :param resource_ids: filter the search query with specified resource ids
     :param inherit_groups_permissions:
-        If `False`, return only user-specific resource permissions.
+        If ``False``, return only user-specific resource permissions.
         Otherwise, resolve inherited permissions using all groups the user is member of.
-    :return: only services which the user as *Direct* or *Inherited* permissions, according to `inherit_from_resources`
+    :return:
+        Only services which the user as permissions on, or including all :term:`Inherited Permission`, according to
+        :paramref:`inherit_groups_permissions` argument.
     """
     ax.verify_param(user, not_none=True, http_error=HTTPNotFound,
                     msg_on_fail=s.UserResourcePermissions_GET_NotFoundResponseSchema.description)

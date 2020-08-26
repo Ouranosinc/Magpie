@@ -57,6 +57,8 @@ Features / Changes
   list of services instead of nested dictionaries (fixes `#345 <https://github.com/Ouranosinc/Magpie/issues/345>`_).
 * Change pre-existing ``list`` query parameter of user-scoped views to ``flatten`` response format to match new query
   of service-scoped views.
+* Obsolete all API routes using ``inherited_permission`` format (deprecated since ``0.7.4``) in favor of equivalent
+  ``permissions?inherited=true`` query parameter modifier.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

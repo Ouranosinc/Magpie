@@ -13,6 +13,13 @@ Glossary
         Set of :term:`User` and :term:`Group` scopes, provided session :term:`Authentication` elements, that either
         grants or denies access to the applicable :term:`User` to the targeted HTTP request.
 
+    Allowed Permission
+        Set of applicable :term:`Permission` values onto an element. See :ref:`Allowed Permissions` section.
+
+    Applied Permission
+        An active :term:`Permission` for a given :term:`User` or :term:`Group` depending on context.
+        See also :ref:`Applied Permissions` details.
+
     Authentication
         Process of identifying one-self using credentials in order to login into `Magpie`, or retrieving connected
         session :term:`User` during an HTTP request using supported methods.
@@ -27,8 +34,8 @@ Glossary
         :term:`Logged User`.
 
     Direct Permission
-        Describes a :term:`Permission` that originates directly from a :term:`Service`.
-        See :ref:`direct permissions` details.
+        Describes a :term:`Permission` that originates directly and only from a :term:`Service`.
+        See also :ref:`Direct Permissions` description.
 
     Discoverable Group
         :term:`Group` that has property ``discoverable=True``, making it publicly viewable to any-level user.
@@ -36,7 +43,7 @@ Glossary
 
     Effective Permission
         A :term:`Permission` that has been completely resolved according to all applicable contexts, that indicates
-        the final granted or denied result. See also :ref:`effective permissions`.
+        the final granted or denied result. See also :ref:`Effective Permissions` section.
 
     Group
         Entity on which :term:`Permission` over a :term:`Service` or :term:`Resource` can be applied. Any :term:`User`
@@ -44,8 +51,8 @@ Glossary
         :term:`Permission`.
 
     Inherited Permission
-        Describes a :term:`Permission` that originates from a children :term:`Resource` under a :term:`Service`.
-        See :ref:`inherited permissions` details.
+        Describes a :term:`Permission` that includes both :term:`User` and :term:`Group` contexts simultaneously.
+        See :ref:`Inherited Permissions` details.
 
     Logged User
         Specific :term:`User` that corresponds to the active request session. This :term:`User` can automatically be
@@ -56,8 +63,12 @@ Glossary
 
     Permission
         Element that defines which rules are applicable for a given combination of :term:`User` and/or :term:`Group`
-        against one or many :term:`Service` and/or :term:`Resource`. See `permissions`_ for more exhaustive details.
-        Applicable values defined by enum :py:class:`magpie.permissions.Permission`.
+        against one or many :term:`Service` and/or :term:`Resource`, depending of the many contexts for which they
+        can apply. Applicable values are defined by enum :py:class:`magpie.permissions.Permission`.
+
+        .. note::
+            See `permissions`_ for more exhaustive details, including contextual comparisons for all other
+            *Permission*-related terms presented here.
 
     Proxy
         Sibling service (typically `Twitcher <Twitcher>`_) that employs `Magpie` as access management of :term:`User`,
