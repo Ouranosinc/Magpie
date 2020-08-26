@@ -353,15 +353,15 @@ class QueryRequestSchemaAPI(colander.MappingSchema):
 
 QueryEffectivePermissions = colander.SchemaNode(
     colander.Boolean(), default=False, missing=colander.drop,
-    description="User groups effective permissions resolved with corresponding service inheritance functionality. "
+    description="Obtain user's effective permissions resolved with corresponding service inheritance functionality. "
                 "(Note: group inheritance is enforced regardless of any 'inherit' flag).")
 QueryInheritGroupsPermissions = colander.SchemaNode(
     colander.Boolean(), default=False, missing=colander.drop,
-    description="User groups memberships inheritance to resolve service resource permissions.")
+    description="Include the user's groups memberships inheritance to resolve service resource permissions.")
 QueryCascadeResourcesPermissions = colander.SchemaNode(
     colander.Boolean(), default=False, missing=colander.drop,
-    description="Display any service that has at least one sub-resource user permission, "
-                "or only services that have user permissions directly set on them.", )
+    description="Display any service that has at least one children resource permission (at any level), "
+                "or only services that have permissions explicitly set on them (ignoring children resources).", )
 QueryFlattenResources = colander.SchemaNode(
     colander.Boolean(), default=False, missing=colander.drop,
     description="Return services as a flattened list of JSON objects. Default is a nested JSON of service-type keys "

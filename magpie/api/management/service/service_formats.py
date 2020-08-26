@@ -58,7 +58,7 @@ def format_service(service, permissions=None, show_private_url=False, show_resou
 def format_service_resources(service,                       # type: Service
                              db_session,                    # type: Session
                              service_perms=None,            # type: Optional[List[Permission]]
-                             resources_perms_dict=None,     # type: Optional[Dict[Str, List[Str]]]
+                             resources_perms_dict=None,     # type: Optional[Dict[int, List[Permission]]]
                              show_all_children=False,       # type: bool
                              show_private_url=True,         # type: bool
                              ):                             # type: (...) -> JSON
@@ -67,9 +67,16 @@ def format_service_resources(service,                       # type: Service
 
     :param service: service for which to display details with sub-resources
     :param db_session: database session
-    :param service_perms: permissions to display instead of specific ``service``-type ones
-    :param resources_perms_dict: permission(s) of resource(s) id(s) to *preserve* if ``resources_perms_dict = False``
-    :param show_all_children: display all children resources recursively, or only ones matching ``resources_perms_dict``
+    :param service_perms:
+        If provided, sets :term:`Applied Permissions` to display on the formatted :paramref:`service`.
+        Otherwise, sets the :term:`Allowed Permissions` specific to the :paramref:`service`'s type.
+    :param resources_perms_dict:
+        If provided (not ``None``), set the :term:`Applied Permissions` on each specified resource matched by ID.
+        If ``None``, retrieve and set :term:`Allowed Permissions` for the corresponding resources under the service.
+        To set empty :term:`Applied Permissions` (e.g.: :term:`User` doesn't have permissions on that resource), provide
+        an explicit empty dictionary instead.
+    :param show_all_children:
+        Display all children resources recursively, or only ones specified by ID with :paramref:`resources_perms_dict`.
     :param show_private_url: displays the
     :return: JSON body representation of the service resource tree
     """

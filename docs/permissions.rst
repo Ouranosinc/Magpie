@@ -38,12 +38,21 @@ More specifically, following distinction can be considered between different kin
 
 .. _`direct permissions`:
 - **Direct Permissions**:
+    Explicitly represents :term:`Applied Permissions` "rules" in the case of :term:`User` context, which is, when
+    :term:`Group` membership are **NOT** considered (i.e.: :term:`Inherited Permissions`). Since calling ``/users``
+    scoped requests can lead to all different :term:`Permission` variations presented here with different contextual
+    information, this term is employed to specifically indicate the situations of the default behaviour of the routes
+    without query parameters.
+
+.. _`immediate permissions`:
+- **Immediate Permissions**:
     Represents a "rule" combination that was explicitly applied to a :term:`Service`. Rules applied to children
-    :term:`Resource` are **NOT** considered :term:`Direct Permission` (they are simply `Applied Permissions`_ without
-    any special connotation). Note that `Direct Permissions`_ are still `Applied Permissions`_. They are a special
-    subset of `Applied Permissions`_ matching how :term:`Service` are a specialized implementation of :term:`Resource`
-    (see: :class:`magpie.models.Service`). This kind of :term:`Permissions` is notably referred to by requests employed
-    for `Finding User Permissions`_ as they provide useful functionalities.
+    :term:`Resource` are **NOT** considered :term:`Immediate Permissions` (they are simply `Applied Permissions`_
+    without any special connotation). Note that `Immediate Permissions`_ are still `Applied Permissions`_.
+    They are a special subset of `Applied Permissions`_ matching how :term:`Service` are a specialized implementation
+    of :term:`Resource` (see: :class:`magpie.models.Service`).
+    This kind of :term:`Permissions` is notably referred to by requests for `Finding User Permissions`_ as they
+    provide useful and unique properties.
 
 .. _`inherited permissions`:
 - **Inherited Permissions**:
@@ -271,15 +280,17 @@ Finding User Permissions
 ----------------------------
 
 One of the trickiest (and often annoying) situation when we want to figure out which :term:`Service` a :term:`User` has
-any :term:`Permission` on, is where to start looking. Effectively, if we have a vast amount of registered
+any :term:`Permission` on, is where to actually start looking? Effectively, if we have a vast amount of registered
 :term:`Service` each with a immense hierarchy of :term:`Resource`, doing an exhaustive search can be quite daunting,
 not to mention costly in terms of request lookup and resources.
 
 For this purpose, there is one query parameter named ``cascade`` that can be employed with request
 ``GET /users/{user_name}/services``. In normal condition (without the parameter), this request responds with every
-:term:`Service` where the user has `Direct Permissions`_ on. With the added query parameter, it tells `Magpie` to
-recursively search the hierarchy of `Effective Permissions`_ and return all :term:`Service` instances that possess
-*any* :term:`Permission` applied to at least one child :term:`Resource` at *any* level.
+:term:`Service` where the user has :term:`Immediate Permissions` on (doesn't lookup the whole tree hierarchy). With the
+added query parameter, it tells `Magpie` to recursively search the hierarchy of `Applied Permissions`_ and return all
+:term:`Service` instances that possess *any* :term:`Permission` given to at least one child :term:`Resource` at *any*
+level. Furthermore, the ``cascade`` query can be combined with ``inherited`` query to search for all combinations of
+:term:`Inherited Permissions` instead of (by default) only for the :term:`User`'s :term:`Direct Permissions`.
 
 This query can be extremely useful to quickly answer *"does the user have any permission at all on this service"*,
 without needing to manually execute multiple successive lookup requests with all combinations of :term:`Resource`

@@ -418,16 +418,15 @@ remain available as described at the start of the `Configuration`_ section.
 - | ``MAGPIE_ADMIN_PERMISSION`` [constant]
   | (Value: ``"admin"``)
 
-  Name of the :term:`Access Permission` used to represent highest administration privilege in the application.
-  Except for some public routes, most API and UI paths will require the user to have this permission (either with
-  direct permission or by inherited group permission) to be granted access to view and edit content.
-  The group defined by ``MAGPIE_ADMIN_GROUP`` automatically gets granted this permission.
+  Name of the :term:`Permission` used to represent highest administration privilege in the application. It is one of
+  the special :term:`Access Permissions` known by the application (see also :ref:`Route Access` section).
 
 - | MAGPIE_LOGGED_PERMISSION [constant]
   | (Value: ``"MAGPIE_LOGGED_USER"``)
 
-See ``MAGPIE_LOGGED_PERMISSION``
-    and :ref:`Route Access` for further details.
+  .. versionadded:: 2.0.0
+
+  This define a special case of :term:`Access Permissions`. See details in :ref:`Route Access` for when it applies.
 
 - | ``MAGPIE_LOGGED_USER`` [constant]
   | (Value: ``"current"``)

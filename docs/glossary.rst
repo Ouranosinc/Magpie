@@ -18,10 +18,10 @@ Glossary
         Set of :term:`User` and :term:`Group` scopes, provided session :term:`Authentication` elements, that either
         grants or denies access to the applicable :term:`User` to the targeted HTTP request.
 
-    Allowed Permission
+    Allowed Permissions
         Set of applicable :term:`Permission` values onto an element. See :ref:`Allowed Permissions` section.
 
-    Applied Permission
+    Applied Permissions
         An active :term:`Permission` for a given :term:`User` or :term:`Group` depending on context.
         See also :ref:`Applied Permissions` details.
 
@@ -38,15 +38,15 @@ Glossary
         Set of :term:`Authentication` identifiers primarily employed by `Magpie` HTTP requests to determine the
         :term:`Logged User`.
 
-    Direct Permission
-        Describes a :term:`Permission` that originates directly and only from a :term:`Service`.
-        See also :ref:`Direct Permissions` description.
+    Direct Permissions
+        Describes a :term:`Permission` that is given to a :term:`User` explicitly, rather than one of its :term:`Group`
+        memberships. See also :ref:`Direct Permissions` details.
 
     Discoverable Group
         :term:`Group` that has property ``discoverable=True``, making it publicly viewable to any-level user.
         Otherwise, groups can be listed or accessed only by administrators.
 
-    Effective Permission
+    Effective Permissions
         A :term:`Permission` that has been completely resolved according to all applicable contexts, that indicates
         the final granted or denied result. See also :ref:`Effective Permissions` section.
 
@@ -60,7 +60,11 @@ Glossary
         can be set as a member of any number of :term:`Group`, making it inherit all applicable set of
         :term:`Permission`.
 
-    Inherited Permission
+    Immediate Permissions
+        Describes a :term:`Permission` that originates directly and only from a :term:`Service`.
+        This is referenced in only a few use-cases, notably for :ref:`Finding User Permissions`.
+
+    Inherited Permissions
         Describes a :term:`Permission` that includes both :term:`User` and :term:`Group` contexts simultaneously.
         See :ref:`Inherited Permissions` details.
 
