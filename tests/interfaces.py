@@ -2003,7 +2003,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_is_in("services", body)
         utils.check_val_type(body["services"], dict)
         service_types = utils.get_service_types_for_version(self.version)
-        utils.check_all_equal(body["services"], service_types)
+        utils.check_all_equal(list(body["services"]), service_types, any_order=True)
         for svc_type in body["services"]:
             for svc_name in body["services"][svc_type]:
                 svc_info = body["services"][svc_type][svc_name]
@@ -2485,7 +2485,6 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
                 utils.check_val_is_in("permission_names", resource)
                 utils.check_val_type(resource["resource_id"], int)
                 utils.check_val_type(resource["public_url"], six.string_types)
-                utils.check_val_type(resource["service_url"], six.string_types)
                 utils.check_val_type(resource["service_name"], six.string_types)
                 utils.check_val_type(resource["service_type"], six.string_types)
                 utils.check_val_type(resource["permission_names"], list)

@@ -66,7 +66,9 @@ More specifically, following distinction can be considered between different kin
 - **Access Permissions**:
     Represents the required level of :term:`Permission` needed to access `Magpie` API routes to request details. These
     can be referred to as "roles", but are inferred by :term:`Group` memberships of the :term:`Logged User` attempting
-    to complete the request. See `Route Access`_ details.
+    to complete the request. It is the only kind of :term:`Permission` which the values are not retrieved from the
+    enum :class:`magpie.permissions.Permission`, but rather from a combination of special :term:`Group` and
+    :ref:`Configuration` constants. See `Route Access`_ for more details.
 
 .. following are potential but not implemented:
 ownership permissions:
@@ -147,7 +149,10 @@ accessible **ONLY** while not authenticated (i.e.: when :term:`Logged User` corr
 :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`). Once a real :term:`User` would authenticate itself, they would
 suddenly *lose* the :term:`Public` :term:`Permission` since :term:`Logged User` would not be the special :term:`User`
 anymore. That would lead to unexpected behavior where :term:`Resource` intended to be always :term:`Public` would
-contextually change access criteria depending on active :term:`Logged User` session.
+contextually change access criteria depending on active :term:`Logged User` session. More precisely, this would cause
+confusing situation where an unauthenticated :term:`User` would be able to see publicly accessible elements, but
+wouldn't see them anymore as soon as he would authenticate itself (login). That :term:`User` would have the impression
+that its access rights are lowered although they should be increased by authenticating itself.
 
 Special user :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` is available only for evaluation purpose of
 :term:`Public`-only :term:`Permission` applied to :term:`Service` and :term:`Resource`, but is technically not required

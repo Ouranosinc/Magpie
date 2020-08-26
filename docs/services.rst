@@ -41,7 +41,7 @@ Available Services
     https://github.com/Ouranosinc/Magpie/issues/149
 .. todo: even if not implementing above, could be good to document fields or ServiceInterface for future reference
 
-Resource Synchronization
+Service Synchronization
 ------------------------
 
 .. todo:

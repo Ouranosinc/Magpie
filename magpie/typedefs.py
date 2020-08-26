@@ -49,6 +49,10 @@ if TYPE_CHECKING:
     BaseJSON = Union[AnyValue, List["BaseJSON"], Dict[AnyKey, "BaseJSON"]]
     JSON = Union[Dict[AnyKey, Union[BaseJSON, "JSON"]], List[BaseJSON]]
 
+    # recursive nodes structure employed by functions for listing children resources hierarchy
+    # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
+    ChildrenResourceNodes = Dict[int, Dict[Str, Union[models.Resource, int, "ChildrenResourceNodes"]]]
+
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ServiceOrResourceType = Union[models.Service, models.Resource]
     ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]

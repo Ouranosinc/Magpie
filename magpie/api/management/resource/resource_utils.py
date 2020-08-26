@@ -25,7 +25,8 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session
-    from magpie.typedefs import List, Str, Optional, Tuple, Type, ServiceOrResourceType, Union  # noqa: F401
+    from typing import List, Optional, Tuple, Type, Union
+    from magpie.typedefs import ChildrenResourceNodes, ServiceOrResourceType, Str
     from magpie.services import ServiceInterface  # noqa: F401
 
 
@@ -80,6 +81,30 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
 
 
 def crop_tree_with_permission(children, resource_id_list):
+    # type: (ChildrenResourceNodes, List[int]) -> Tuple[ChildrenResourceNodes, List[int]]
+    """
+    Recursively prunes all children resources from the tree hierarchy *except* listed ones matched by ID.
+
+    Input :paramref:`children` is expected to be a dictionary of resource nodes and children resources with their ID
+    as keys::
+
+        {
+            <res-id>: {
+                "node": <res>,
+                "children": {
+                    <res-id>: {
+                        "node": <res>,
+                        "children": { <...> }
+                    },
+                    <...>
+            },
+            <...>
+        }
+
+    :param children: full hierarchy of children resource nodes.
+    :param resource_id_list: resource IDs of nodes to preserve.
+    :return: pruned hierarchy of resource nodes.
+    """
     for child_id, child_dict in list(children.items()):
         new_children = child_dict["children"]
         children_returned, resource_id_list = crop_tree_with_permission(new_children, resource_id_list)
@@ -91,6 +116,21 @@ def crop_tree_with_permission(children, resource_id_list):
 
 
 def get_resource_path(resource_id, db_session):
+    # type: (int, Session) -> Str
+    """
+    Obtains the full path representation of the specified resource ID from the root service it resides under using all
+    respective names of the intermediate resources.
+
+    For example, the following hierarchy::
+
+        <service-1> (id: 1)
+            <resource-1> (id: 2)
+                <resource-2> (id: 3)
+
+    Will return the following path: ``/service-1/resource-1/resource-2``.
+
+    This is the same representation of the ``resource`` field within startup permissions configuration file.
+    """
     parent_resources = models.RESOURCE_TREE_SERVICE.path_upper(resource_id, db_session=db_session)
     parent_path = ""
     for parent_resource in parent_resources:

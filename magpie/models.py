@@ -185,7 +185,7 @@ class Service(Resource):
                        "inherit_condition": resource_id == Resource.resource_id}
 
     @property
-    def permissions(self):
+    def permissions(self):  # pragma: no cover
         raise TypeError("Service permissions must be accessed by 'magpie.services.ServiceInterface' "
                         "instead of 'magpie.models.Service'.")
 
@@ -349,7 +349,7 @@ REMOTE_RESOURCE_TREE_SERVICE = RemoteResourceTreeService(RemoteResourceTreeServi
 
 RESOURCE_TYPE_DICT = dict()  # type: Dict[Str, Type[Resource]]
 for res in [Service, Directory, File, Workspace, Route]:
-    if res.resource_type_name in RESOURCE_TYPE_DICT:
+    if res.resource_type_name in RESOURCE_TYPE_DICT:  # pragma: no cover
         raise KeyError("Duplicate resource type identifiers not allowed")
     RESOURCE_TYPE_DICT[res.resource_type_name] = res
 
