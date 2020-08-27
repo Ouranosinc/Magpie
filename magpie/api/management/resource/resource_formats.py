@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from ziggurat_foundations.models.services.resource import ResourceService
 
 from magpie.api.exception import evaluate_call
+from magpie.api.management.resource import resource_utils as ru
 from magpie.models import RESOURCE_TREE_SERVICE
 from magpie.permissions import format_permissions
 from magpie.services import SERVICE_TYPE_DICT
@@ -44,7 +45,7 @@ def format_resource(resource, permissions=None, basic_info=False):
     )
 
 
-def format_resource_tree(children, db_session, resources_perms_dict=None, _internal_svc_res_perm_dict=None):
+def format_resource_tree(children, db_session, resources_perms_dict=None, *args):
     # type: (ChildrenResourceNodes, Session, Optional[ChildrenResourceNodes], Optional[ChildrenResourceNodes]) -> JSON
     """
     Generates the formatted resource tree under the provided children resources, with all of their children resources
@@ -61,6 +62,9 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, _inter
         Otherwise (``None``), defaults to extracting :term:`Allowed Permissions`.
     :return: formatted resource tree
     """
+    # optimization to avoid re-lookup of 'allowed permissions' when already fetched
+    # unused when parsing 'applied permissions'
+    __internal_svc_res_perm_dict = {} if not args else args[0]
 
     fmt_res_tree = {}
     for child_id, child_dict in children.items():
@@ -73,32 +77,33 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, _inter
             if resource.resource_id in resources_perms_dict.keys():
                 perms = resources_perms_dict[resource.resource_id]
 
-        # case of full fetch (permitted resource permissions)
+        # case of full fetch (allowed resource permissions)
         else:
             # directly access the resource if it is a service
             service = None  # type: Optional[Service]
             if resource.root_service_id is None:
                 service = resource
                 service_id = resource.resource_id
-            # obtain corresponding top-level service resource if not already available
+            # obtain corresponding top-level service resource if not already available,
+            # get resource permissions allowed under the top service's scope
             else:
                 service_id = resource.root_service_id
-                if service_id not in _internal_svc_res_perm_dict:
+                if service_id not in __internal_svc_res_perm_dict:
                     service = ResourceService.by_resource_id(service_id, db_session=db_session)
             # add to dict only if not already added
-            if service is not None and service_id not in _internal_svc_res_perm_dict:
-                _internal_svc_res_perm_dict[service_id] = {
+            if service is not None and service_id not in __internal_svc_res_perm_dict:
+                __internal_svc_res_perm_dict[service_id] = {
                     res_type.resource_type_name: res_perms  # use str key to match below 'resource_type' field
                     for res_type, res_perms in SERVICE_TYPE_DICT[service.type].resource_types_permissions.items()
                 }
-            perms = _internal_svc_res_perm_dict[service_id][resource.resource_type]  # 'resource_type' is str here
+            perms = __internal_svc_res_perm_dict[service_id][resource.resource_type]  # 'resource_type' is str here
 
         fmt_res_tree[child_id] = format_resource(resource, perms)
         fmt_res_tree[child_id]["children"] = format_resource_tree(
             new_children,
             db_session,
             resources_perms_dict,
-            _internal_svc_res_perm_dict
+            __internal_svc_res_perm_dict
         )
 
     return fmt_res_tree
@@ -122,7 +127,12 @@ def get_resource_children(resource, db_session, tree_service_builder=None):
 
 
 def format_resource_with_children(resource, db_session):
-    resource_formatted = format_resource(resource)
+    # type: (ServiceOrResourceType, Session) -> JSON
+    """
+    Obtains the formatted :term:`Resource` tree with all its formatted children hierarchy.
+    """
+    resource_permissions = ru.get_resource_permissions(resource, db_session=db_session)
+    resource_formatted = format_resource(resource, permissions=resource_permissions)
 
     resource_formatted["children"] = format_resource_tree(
         get_resource_children(resource, db_session),

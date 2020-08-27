@@ -518,7 +518,7 @@ class ManagementViews(BaseViews):
     def get_user_or_group_resources_permissions_dict(self, user_or_group_name, services, service_type,
                                                      is_user=False, is_inherit_groups_permissions=False):
         if is_user:
-            query = "?inherit=true" if is_inherit_groups_permissions else ""
+            query = "?inherited=true" if is_inherit_groups_permissions else ""
             path = schemas.UserResourcesAPI.path.format(user_name=user_or_group_name) + query
         else:
             path = schemas.GroupResourcesAPI.path.format(group_name=user_or_group_name)

@@ -217,9 +217,10 @@ def get_user_resource_permissions_response(user, resource, request,
                 svc = get_resource_root_service(resource, request)
                 res_perm_list = svc.effective_permissions(resource, user)
             else:
-                res_perm_list = ResourceService.perms_for_user(resource, user, db_session=db_session)
-                if not inherit_groups_permissions:
-                    res_perm_list = filter_user_permission(res_perm_list, user)
+                if inherit_groups_permissions:
+                    res_perm_list = ResourceService.perms_for_user(resource, user, db_session=db_session)
+                else:
+                    res_perm_list = ResourceService.direct_perms_for_user(resource, user, db_session=db_session)
         return format_permissions(res_perm_list)
 
     perm_names = ax.evaluate_call(
@@ -297,9 +298,10 @@ def get_user_service_permissions(user, service, request, inherit_groups_permissi
     if service.owner_user_id == user.id:
         usr_svc_perms = service_factory(service, request).permissions
     else:
-        usr_svc_perms = ResourceService.perms_for_user(service, user, db_session=request.db)
-        if not inherit_groups_permissions:
-            usr_svc_perms = filter_user_permission(usr_svc_perms, user)
+        if inherit_groups_permissions:
+            usr_svc_perms = ResourceService.perms_for_user(service, user, db_session=request.db)
+        else:
+            usr_svc_perms = ResourceService.direct_perms_for_user(service, user, db_session=request.db)
     return [convert_permission(p) for p in usr_svc_perms]
 
 

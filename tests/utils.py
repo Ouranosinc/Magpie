@@ -938,7 +938,6 @@ class TestSetup(object):
         # type: (AnyMagpieTestCaseType, Str, Str, Str, Optional[CookiesType]) -> JSON
         """
         Verifies that Magpie returned an Unauthorized response.
-
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
         app_or_url = get_app_or_url(test_case)

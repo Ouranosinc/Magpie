@@ -83,7 +83,8 @@ def format_service_resources(service,                       # type: Service
     def fmt_svc_res(svc, db, svc_perms, res_perms, show_all):
         tree = get_resource_children(svc, db)
         if not show_all:
-            tree, _ = crop_tree_with_permission(tree, list(res_perms.keys()))
+            filter_res_ids = list(res_perms) if res_perms else []
+            tree, _ = crop_tree_with_permission(tree, filter_res_ids)
 
         svc_perms = SERVICE_TYPE_DICT[svc.type].permissions if svc_perms is None else svc_perms
         svc_res = format_service(svc, svc_perms, show_private_url=show_private_url)
@@ -91,7 +92,7 @@ def format_service_resources(service,                       # type: Service
         return svc_res
 
     return evaluate_call(
-        lambda: fmt_svc_res(service, db_session, service_perms, resources_perms_dict or {}, show_all_children),
+        lambda: fmt_svc_res(service, db_session, service_perms, resources_perms_dict, show_all_children),
         fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
         msg_on_fail="Failed to format service resources tree",
         content=format_service(service, service_perms, show_private_url=show_private_url)

@@ -83,6 +83,9 @@ def update_resource(request):
     res_old_name = resource.resource_name
     res_new_name = ar.get_value_multiformat_body_checked(request, "resource_name")
 
+    ax.verify_param(res_new_name, not_equal=True, param_compare=res_old_name, param_name="resource_name",
+                    http_error=HTTPBadRequest, msg_on_fail=s.Resource_PATCH_BadRequestResponseSchema.description)
+
     def rename_service_magpie_and_phoenix(res, new_name, svc_push, db):
         if res.resource_type != "service":
             svc_push = False

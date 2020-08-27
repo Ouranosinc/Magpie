@@ -212,7 +212,7 @@ def get_user_resources_view(request):
     """
     List all resources a user has permissions on.
     """
-    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit"))
+    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
     user = ar.get_user_matchdict_checked_or_logged(request)
     db = request.db
 
@@ -258,7 +258,7 @@ def get_user_resource_permissions_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request, "resource_id")
-    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit"))
+    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
     effective_perms = asbool(ar.get_query_param(request, "effective"))
     return uu.get_user_resource_permissions_response(user, resource, request,
                                                      inherit_groups_permissions=inherit_groups_perms,
@@ -307,7 +307,7 @@ def get_user_services_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     cascade_resources = asbool(ar.get_query_param(request, "cascade"))
-    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit"))
+    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
     format_as_list = asbool(ar.get_query_param(request, "flatten"))
 
     svc_json = uu.get_user_services(user, request=request,
@@ -331,7 +331,7 @@ def get_user_service_permissions_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
-    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit"))
+    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
     perms = ax.evaluate_call(lambda: uu.get_user_service_permissions(service=service, user=user, request=request,
                                                                      inherit_groups_permissions=inherit_groups_perms),
                              fallback=lambda: request.db.rollback(), http_error=HTTPNotFound,
@@ -382,7 +382,7 @@ def get_user_service_resources_view(request):
     """
     List all resources under a service a user has permission on.
     """
-    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit"))
+    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
     service_perms = uu.get_user_service_permissions(

@@ -352,18 +352,18 @@ class QueryRequestSchemaAPI(colander.MappingSchema):
 
 
 QueryEffectivePermissions = colander.SchemaNode(
-    colander.Boolean(), default=False, missing=colander.drop,
+    colander.Boolean(), name="effective", default=False, missing=colander.drop,
     description="Obtain user's effective permissions resolved with corresponding service inheritance functionality. "
                 "(Note: group inheritance is enforced regardless of any 'inherit' flag).")
 QueryInheritGroupsPermissions = colander.SchemaNode(
-    colander.Boolean(), default=False, missing=colander.drop,
+    colander.Boolean(), name="inherited", default=False, missing=colander.drop,
     description="Include the user's groups memberships inheritance to resolve service resource permissions.")
 QueryCascadeResourcesPermissions = colander.SchemaNode(
-    colander.Boolean(), default=False, missing=colander.drop,
+    colander.Boolean(), name="cascade", default=False, missing=colander.drop,
     description="Display any service that has at least one children resource permission (at any level), "
                 "or only services that have permissions explicitly set on them (ignoring children resources).", )
 QueryFlattenResources = colander.SchemaNode(
-    colander.Boolean(), default=False, missing=colander.drop,
+    colander.Boolean(), name="flatten", default=False, missing=colander.drop,
     description="Return services as a flattened list of JSON objects. Default is a nested JSON of service-type keys "
                 "with children service-name keys pointing to each corresponding service definition.")
 
@@ -821,6 +821,11 @@ class Resource_PATCH_ResponseBodySchema(BaseResponseBodySchema):
 class Resource_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Update resource successful."
     body = Resource_PATCH_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class Resource_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Cannot update resource with provided new name."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class Resource_PATCH_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -2490,7 +2495,7 @@ Resource_GET_responses = {
 }
 Resource_PATCH_responses = {
     "200": Resource_PATCH_OkResponseSchema(),
-    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),
+    "400": Resource_PATCH_BadRequestResponseSchema(),
     "403": Resource_PATCH_ForbiddenResponseSchema(),
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),

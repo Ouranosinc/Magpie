@@ -50,24 +50,29 @@ More specifically, following distinction can be considered between different kin
     :term:`Resource` are **NOT** considered :term:`Immediate Permissions` (they are simply `Applied Permissions`_
     without any special connotation). Note that `Immediate Permissions`_ are still `Applied Permissions`_.
     They are a special subset of `Applied Permissions`_ matching how :term:`Service` are a specialized implementation
-    of :term:`Resource` (see: :class:`magpie.models.Service`).
-    This kind of :term:`Permissions` is notably referred to by requests for `Finding User Permissions`_ as they
-    provide useful and unique properties.
+    of :term:`Resource` (see: :class:`magpie.models.Service`). This kind of :term:`Permissions` is notably referred
+    to by requests for `Finding User Permissions`_ as they provide useful and unique properties.
 
 .. _`inherited permissions`:
 - **Inherited Permissions**:
     Represents the combined set of `Applied Permissions`_ from the :term:`User` context and every one of its
     :term:`Group` membership contexts. When requesting a :term:`Group`'s permissions, only "rules" explicitly set on
     the given group are returned. The same concept applies when *only* requesting :term:`User` permissions. Providing
-    applicable :term:`User`-scoped requests with ``inherit=true`` query parameter will return the *merged* set of
+    applicable :term:`User`-scoped requests with ``inherited=true`` query parameter will return the *merged* set of
     `Applied Permissions`_ for that :term:`User` and all his :term:`Group` membership simultaneously.
     See `perm_example`_ for complete comparison.
+
+    .. versionchanged:: 2.0.0
+        Prior to this version, ``inherit`` (without ``ed``) was employed as query parameter name. This often lead to
+        confusion between expected and returned results due to mistakenly employed adjective. Because they are referred
+        to as :term:`Inherited Permissions` in the documentation and naturally from a linguistic standpoint, query
+        ``inherited`` (with ``ed``) is now the *official* parameter. The older variant remains supported and equivalent.
 
 .. _`effective permissions`:
 - **Effective Permissions**:
     Represents all `Inherited Permissions`_ of the :term:`User` and all its :term:`Group` membership, as well as the
     extensive resolution of the :term:`Service` and every children :term:`Resource` in its hierarchy for the requested
-    :term:`Resource` scope. Effective permissions automatically imply ``inherit=True``, and can be obtained from
+    :term:`Resource` scope. Effective permissions automatically imply ``inherited=True``, and can be obtained from
     :term:`User`-scoped requests with ``effective=true`` query parameter wherever supported. See `perm_example`_ for
     complete comparison.
 
@@ -246,7 +251,7 @@ On the other hand, using ``effective`` would result in the following:
     /users/example-user/resources/service-1/permissions?effective=true      => [write]
     /users/example-user/resources/service-2/permissions?effective=true      => [write]          :sup:`(2)`
     /users/example-user/resources/resource-A/permissions?effective=true     => [read, write]    :sup:`(3)`
-    /users/example-user/resources/service-3/permissions?inherited=true      => []
+    /users/example-user/resources/service-3/permissions?effective=true      => []
     /users/example-user/resources/resource-B1/permissions?effective=true    => [read]           :sup:`(2)`
     /users/example-user/resources/resource-B2/permissions?effective=true    => [read, write]    :sup:`(4)`
 
@@ -264,12 +269,12 @@ the same result according to the effective :term:`Resource` hierarchy and its pa
 Using ``effective`` query tells `Magpie` to rewind the :term:`Resource` tree from the requested :term:`Resource` up to
 the top-most :term:`Service` in order to accumulate all `Inherited Permissions`_ observed along the way for every
 encountered element. All :term:`Permission` that is applied *higher* to the requested :term:`Resource` are considered
-as if applied directly on it. Query ``inherited`` limits itself only to the specifically requested :term:`Resource`,
-without hierarchy resolution, but still considering :term:`Group` memberships. For this reason, ``inherited`` *could*
-look the same to ``effective`` results if the :term:`Service` hierarchy is "flat", or if all :term:`Permission` can be
-found directly on the target :term:`Resource`, but it is not guaranteed. This is further important if the
-:term:`Service`'s type implementation provides custom methodology for parsing the hierarchy resolution (see
-:ref:`services` for more details).
+as if applied directly on it. Query parameter ``inherited`` limits itself only to specifically requested
+:term:`Resource`, without hierarchy resolution, but still considering :term:`Group` memberships. For this reason,
+``inherited`` *could* look the same to ``effective`` results if the :term:`Service` hierarchy is "flat", or if all
+:term:`Permission` can be found directly on the target :term:`Resource`, but it is not guaranteed. This is further
+important if the :term:`Service`'s type implementation provides custom methodology for parsing the hierarchy resolution
+(see :ref:`services` for more details).
 
 In summary, ``effective`` tells us *"which permissions does the user have access to for this resource"*, while
 ``inherited`` answers *"which permissions does the user have on this resource alone"*, and without any query, we

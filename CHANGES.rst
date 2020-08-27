@@ -59,6 +59,8 @@ Features / Changes
   of service-scoped views.
 * Obsolete all API routes using ``inherited_permission`` format (deprecated since ``0.7.4``) in favor of equivalent
   ``permissions?inherited=true`` query parameter modifier.
+* Replace ``inherit`` query parameter wherever applicable by ``inherited`` to match documentation names, but preserve
+  backward compatibility support of old name.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -70,6 +72,10 @@ Bug Fixes
 * Fix `#337 <https://github.com/Ouranosinc/Magpie/issues/337>`_ documentation mismatch with previously denied request
   users since they are now allowed to run these requests with new user-scoped functionalities
   (`#340 <https://github.com/Ouranosinc/Magpie/issues/340>`_).
+* Fix bug introduced in `0.9.4 <https://github.com/Ouranosinc/Magpie/tree/0.9.4>`_
+  (`4a23a49 <https://github.com/Ouranosinc/Magpie/commit/4a23a497e3ce1dc39ccaf31ba1857fc199d399db>`_) where some
+  API routes would not return the `Allowed Permissions` for children ``Resource`` under ``Service`` (only ``Service``
+  permissions would be filled), or when requesting ``Resource`` details directly.
 * Fix minor HTML issues in mako templates.
 
 `1.11.0 <https://github.com/Ouranosinc/Magpie/tree/1.11.0>`_ (2020-06-19)
@@ -277,14 +283,14 @@ Bug Fixes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix a bug in ows_parser_factory that caused query parameters for wps services to be case sensitive.
+* Fix a bug in ``ows_parser_factory`` that caused query parameters for wps services to be case sensitive.
 
 `1.6.1 <https://github.com/Ouranosinc/Magpie/tree/1.6.1>`_ (2019-10-01)
 ------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix migration script for project-api service type.
+* Fix migration script for ``project-api`` service type.
 
 `1.6.0 <https://github.com/Ouranosinc/Magpie/tree/1.6.0>`_ (2019-09-20)
 ------------------------------------------------------------------------------------
