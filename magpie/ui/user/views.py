@@ -43,8 +43,8 @@ class UserViews(BaseViews):
 
         :raises HTTPBadRequest: if the operation is not valid.
         """
-        data = {"group_name": group_name}
-        resp = request_api(self.request, schemas.RegisterGroupsAPI.path, "POST", data=data)
+        path = schemas.RegisterGroupAPI.path.format(group_name=group_name)
+        resp = request_api(self.request, path, "POST", data={})
         check_response(resp)
 
     @error_badrequest
