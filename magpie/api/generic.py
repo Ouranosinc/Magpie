@@ -97,7 +97,8 @@ def unauthorized_or_forbidden(request):
     content = get_request_info(request, default_message=http_msg)
     if is_magpie_ui_path(request):
         from magpie.ui.utils import request_api
-        path = request.route_path("error").replace("/magpie", "")
+        path = request.route_path("error")
+        path = path.replace("/magpie/", "/") if path.startswith("/magpie") else path  # avoid glob other 'magpie'
         data = {"error_request": content, "error_code": http_err.code}
         return request_api(request, path, "POST", data)  # noqa
     return ax.raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content)
