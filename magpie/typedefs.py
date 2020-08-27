@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from webob.response import Response as WebobResponse
     from webtest.response import TestResponse
     from requests.cookies import RequestsCookieJar
+    from pyramid.httpexceptions import HTTPException
     from pyramid.response import Response as PyramidResponse
     from pyramid.registry import Registry
     from pyramid.request import Request
@@ -41,7 +42,7 @@ if TYPE_CHECKING:
     HeadersType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
     AnyHeadersType = Union[HeadersType, ResponseHeaders, EnvironHeaders, CaseInsensitiveDict]
     AnyCookiesType = Union[CookiesType, RequestsCookieJar]
-    AnyResponseType = Union[WebobResponse, PyramidResponse, TestResponse]
+    AnyResponseType = Union[WebobResponse, PyramidResponse, HTTPException, TestResponse]
     CookiesOrSessionType = Union[RequestsCookieJar, Session]
 
     AnyKey = Union[Str, int]

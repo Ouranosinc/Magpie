@@ -30,8 +30,8 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Dict, List, JSON, Str, Union  # noqa: F401
-    from pyramid.request import Request  # noqa: F401
+    from magpie.typedefs import Dict, List, JSON, Str, Union
+    from pyramid.request import Request
 
 # ignore naming style of tags
 # pylint: disable=C0103,invalid-name
@@ -833,6 +833,11 @@ class Resource_PATCH_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
+class Resource_PATCH_ConflictResponseSchema(BaseResponseSchemaAPI):
+    description = "Resource name already exists at requested tree level for update."
+    body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
 class Resource_DELETE_RequestBodySchema(colander.MappingSchema):
     service_push = colander.SchemaNode(
         colander.Boolean(),
@@ -1170,9 +1175,9 @@ class Service_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class Service_PATCH_BadRequestResponseSchema_ReservedKeyword(BaseResponseSchemaAPI):
+class Service_PATCH_ForbiddenResponseSchema_ReservedKeyword(BaseResponseSchemaAPI):
     description = "Update service name to 'types' not allowed (reserved keyword)."
-    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class Service_PATCH_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -2499,6 +2504,7 @@ Resource_PATCH_responses = {
     "403": Resource_PATCH_ForbiddenResponseSchema(),
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "409": Resource_PATCH_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }

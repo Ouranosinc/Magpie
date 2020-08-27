@@ -97,7 +97,7 @@ def register_service_view(request):
 @view_config(route_name=s.ServiceAPI.name, request_method="PATCH")
 def update_service_view(request):
     """
-    Update a service information.
+    Update service information.
     """
     service = ar.get_service_matchdict_checked(request)
     service_push = asbool(ar.get_multiformat_body(request, "service_push", default=False))
@@ -109,17 +109,15 @@ def update_service_view(request):
     svc_name = select_update(ar.get_multiformat_body(request, "service_name"), service.resource_name)
     svc_url = select_update(ar.get_multiformat_body(request, "service_url"), service.url)
     ax.verify_param(svc_name, param_compare="types", not_equal=True,
-                    param_name="service_name", http_error=HTTPBadRequest,
-                    msg_on_fail=s.Service_PATCH_BadRequestResponseSchema_ReservedKeyword.description)
+                    param_name="service_name", http_error=HTTPForbidden,
+                    msg_on_fail=s.Service_PATCH_ForbiddenResponseSchema_ReservedKeyword.description)
     ax.verify_param(svc_name == service.resource_name and svc_url == service.url, not_equal=True,
                     param_compare=True, param_name="service_name/service_url",
                     http_error=HTTPBadRequest, msg_on_fail=s.Service_PATCH_BadRequestResponseSchema.description)
 
     if svc_name != service.resource_name:
-        all_svc_names = list()
-        for svc_type in SERVICE_TYPE_DICT:
-            for svc in su.get_services_by_type(svc_type, db_session=request.db):
-                all_svc_names.append(svc.resource_name)
+        all_services = request.db.query(models.Service)
+        all_svc_names = [svc.resource_name for svc in all_services]
         ax.verify_param(svc_name, not_in=True, param_compare=all_svc_names, with_param=False,
                         http_error=HTTPConflict, content={"service_name": str(svc_name)},
                         msg_on_fail=s.Service_PATCH_ConflictResponseSchema.description)

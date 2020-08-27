@@ -630,7 +630,7 @@ ul.breadcrumb li a:hover {
     font-size: inherit;
 }
 
-.img-forbidden {
+.img-error {
     width: 24px;
     height: 24px;
     vertical-align: middle;

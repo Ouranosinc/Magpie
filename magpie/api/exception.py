@@ -158,12 +158,16 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             is_cmp_typ = isinstance(param_compare, type)
             eq_typ_cmp = type(param) == type(param_compare)
             if is_type and not (is_str_typ or is_cmp_typ):
-                LOGGER.debug("[param: %s] not of type [param_compare: %s]", type(param), param_compare)
+                LOGGER.debug("[param: %s] invalid type compare with [param_compare: %s]", type(param), param_compare)
                 raise TypeError("'param_compare' cannot be of non-type with specified verification flags")
             if not is_type and not ((is_str_cmp and ok_str_cmp) or (not is_str_cmp and eq_typ_cmp)):
-                # since 'param' depends of provided input by user, it *could* be a user-side invalid parameter
-                # there is no way to tell if it is instead bad 'param_compare' from developer (InternalServerError)
-                # raise immediately since incorrect param types can make following checks fail uncontrollably
+                # since 'param' depends of provided input by user, it should be a user-side invalid parameter
+                # only exception is if 'param_compare' is not value-based, then developer combined wrong flags
+                if is_str_typ or is_cmp_typ:
+                    LOGGER.debug("[param: %s] invalid value compare with [param_compare: %s]", param, param_compare)
+                    raise TypeError("'param_compare' must be value-based for specified verification flags")
+                # when both 'param' and 'param_compare' are values, then the types must match
+                # raise immediately since mismatching param types can make following checks fail uncontrollably
                 LOGGER.debug("[param: %s] != [param_compare: %s]", type(param), type(param_compare))
                 content = apply_param_content(content, param, param_compare, param_name, with_param,
                                               needs_compare, needs_iterable, is_type, {"is_type": False})

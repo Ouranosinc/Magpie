@@ -1451,7 +1451,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             resp = utils.test_request(self, "POST", "/users", json=var_data, expect_errors=True,
                                       headers=self.json_headers, cookies=self.cookies)
             info = utils.check_response_basic_info(resp, code, expected_method="POST")
-            utils.check_val_equal(info["param"]["name"], list(variant.keys())[0],  # sanity check
+            utils.check_val_equal(info["param"]["name"], list(variant.keys())[0],  # sanity check of failure reason
                                   msg="failing input validation was not accomplished for expected field")
 
     @runner.MAGPIE_TEST_USERS
@@ -1470,19 +1470,6 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         }
         utils.TestSetup.create_TestUser(self, override_data=data)
         utils.TestSetup.check_UserGroupMembership(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
-
-    @runner.MAGPIE_TEST_USERS
-    def test_PostUsers_AutoMemberships(self):
-        """
-        Validate that user created with non-special keyword group also becomes a member of ``MAGPIE_ANONYMOUS_GROUP``
-        to ensure he will have access to publicly available resources.
-        """
-        new_test_group = "test-group-{}".format(self._testMethodName)  # noqa
-        self.extra_group_names.append(new_test_group)
-        utils.TestSetup.delete_TestGroup(self, override_group_name=new_test_group)  # if previous run
-        utils.TestSetup.create_TestGroup(self, override_group_name=new_test_group)
-        data = {"group_name": new_test_group}
-        utils.TestSetup.create_TestUser(self, override_data=data)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -2590,10 +2577,24 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "POST", "/resources",
                                   headers=self.json_headers, cookies=self.cookies, data=data, expect_errors=True)
         # pre-check of existing parameter in request added for 400, then value gets validated for processing 422
-        code = 400 if LooseVersion(self.version) >= LooseVersion("2.0.0") else 422
+        if LooseVersion(self.version) >= LooseVersion("2.0.0"):
+            code = 400
+            none = None
+        else:
+            code = 422
+            none = repr(None)
         body = utils.check_response_basic_info(resp, code, expected_method="POST")
-        utils.check_error_param_structure(body, version=self.version,
-                                          param_name="parent_id", param_value=repr(None))
+        utils.check_error_param_structure(body, version=self.version, param_name="parent_id", param_value=none)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_PostResources_ConflictName(self):
+        utils.warn_version(self, "check resource name unique under parent", "2.0.0", skip=True)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        data = {"resource": info["resource_name"]}
+        resp = utils.test_request(self, "POST", "/resources", data=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 409, expected_method="POST")
 
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetResource_ResponseFormat(self):
@@ -2641,7 +2642,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
         # check details of every resource in tree
         svc_perms = SERVICE_TYPE_DICT[self.test_service_type].permissions
-        res_perms = SERVICE_TYPE_DICT[self.test_service_type].resource_types_permissions[self.test_resource_type]
+        res_perms = SERVICE_TYPE_DICT[self.test_service_type].get_resource_permissions(self.test_resource_type)
         child_res = check_resource_node(body["resource"], None, None, svc_perms, res_id)
         final_res = check_resource_node(child_res, svc_id, svc_id, res_perms, end_id)
         empty_res = check_resource_node(final_res, res_id, svc_id, res_perms, None)
@@ -2716,7 +2717,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_type(body["permission_names"], list)
         utils.check_all_equal(body["permission_names"], [perm.value for perm in svc_perms], any_order=True)
 
-        res_perms = SERVICE_TYPE_DICT[self.test_service_type].resource_types_permissions[self.test_resource_type]
+        res_perms = SERVICE_TYPE_DICT[self.test_service_type].get_resource_permissions(self.test_resource_type)
         path = "/resources/{}/permissions".format(res_id)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)

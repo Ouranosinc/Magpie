@@ -96,11 +96,9 @@ def unauthorized_or_forbidden(request):
         http_msg = s.UnauthorizedResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
     if is_magpie_ui_path(request):
-        from magpie.ui.utils import request_api
-        path = request.route_path("error")
-        path = path.replace("/magpie/", "/") if path.startswith("/magpie") else path  # avoid glob other 'magpie'
-        data = {"error_request": content, "error_code": http_err.code}
-        return request_api(request, path, "POST", data)  # noqa
+        # need to handle 401/403 immediately otherwise target view is not even called
+        from magpie.ui.utils import redirect_error
+        return redirect_error(request, code=http_err.code, content=content)
     return ax.raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content)
 
 
@@ -235,8 +233,8 @@ def get_request_info(request, default_message=None, exception_details=False):
     Obtains additional content details about the :paramref:`request` according to available information.
     """
     content = {
-        "route_name": str(request.upath_info),
-        "request_url": str(request.url),
+        "path": str(request.upath_info),
+        "url": str(request.url),
         "detail": default_message,
         "method": request.method
     }

@@ -22,7 +22,8 @@ from magpie.utils import (
     SingletonMeta,
     get_header,
     get_magpie_url,
-    get_settings_from_config_ini
+    get_settings_from_config_ini,
+    is_magpie_ui_path
 )
 
 if TYPE_CHECKING:
@@ -598,8 +599,8 @@ def check_response_basic_info(response,                         # type: AnyRespo
             return body  # older API error response did not all have the full request details
 
         # error details available for any content-type, just in different format
-        check_val_is_in("request_url", body)
-        check_val_is_in("route_name", body)
+        check_val_is_in("url" if LooseVersion(version) >= "2" else "request_url", body)
+        check_val_is_in("path" if LooseVersion(version) >= "2" else "route_name", body)
         check_val_is_in("method", body)
         if expected_type == CONTENT_TYPE_JSON:
             check_val_equal(body["method"], expected_method)
@@ -922,7 +923,7 @@ class TestSetup(object):
                     break
         if not form:
             test_case.fail("could not find requested form for submission "
-                           "[form_match: {!r}, form_submit: !{r}, form_data: {!r}]"
+                           "[form_match: {!r}, form_submit: {!r}, form_data: {!r}]"
                            .format(form_match, form_submit, form_data))
         if form_data:
             for f_field, f_value in dict(form_data).items():
@@ -935,7 +936,7 @@ class TestSetup(object):
 
     @staticmethod
     def check_Unauthorized(test_case, method, path, expected_type=CONTENT_TYPE_JSON, override_cookies=null):
-        # type: (AnyMagpieTestCaseType, Str, Str, Str, Optional[CookiesType]) -> JSON
+        # type: (AnyMagpieTestCaseType, Str, Str, Str, Optional[CookiesType]) -> Union[JSON, Str]
         """
         Verifies that Magpie returned an Unauthorized response.
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
@@ -945,6 +946,11 @@ class TestSetup(object):
                             headers={"Accept": expected_type},
                             cookies=override_cookies if override_cookies is not null else test_case.cookies,
                             expect_errors=True)
+        if is_magpie_ui_path(path):
+            check_ui_response_basic_info(resp, expected_code=401, expected_type=expected_type)
+            if expected_type == CONTENT_TYPE_JSON:
+                return get_json_body(resp)
+            return resp.text
         return check_response_basic_info(resp, expected_code=401, expected_type=expected_type, expected_method=method)
 
     @staticmethod

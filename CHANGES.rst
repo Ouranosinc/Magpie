@@ -19,37 +19,37 @@ Features / Changes
 * Add tag description into generated Swagger API documentation.
 * Add more usage details to start `Magpie` web application in documentation.
 * Add database migration for new ``discoverable`` column of groups.
-* Allow logged user to update its own information
+* Allow logged user to update its own information both via API and UI
   (relates to `#170 <https://github.com/Ouranosinc/Magpie/issues/170>`_).
-* Allow logged user of any access-level to register by itself to *discoverable* groups.
+* Allow logged user of any access-level to register by itself to ``discoverable`` groups.
 * Change some UI CSS for certain pages to improve table readability.
-* Add UI page to render unauthorized and forbidden views due to insufficient permissions
-  (instead of default server-side HTML error rendering).
+* Add UI page to render error details from API responses (instead of default server-side HTML error rendering).
 * Add ``MAGPIE_UI_THEME`` with new default *blue* theme and legacy *green* theme (with few improvements).
-* Add more validation and inputs to update group information.
+* Add more validation and inputs parameters to update ``Group`` information.
 * Add UI input fields to allow administrator to update group description and group discoverability.
-* Allow combined configuration files (providers, permissions, users, groups) with inter-references between them
-  specified with ``MAGPIE_CONFIG_PATH`` environment variable or ``magpie.config_path`` setting (example in ``configs``).
-* Add configurable user creation parameters upon `Magpie` application startup through configuration files
+* Allow combined configuration files (``providers``, ``permissions``, ``users`` and ``groups`` sections) with
+  resolution of inter-references between them. File can be specified with ``MAGPIE_CONFIG_PATH`` environment variable
+  or ``magpie.config_path`` setting (example in ``configs``).
+* Add configurable ``User`` creation parameters upon `Magpie` application startup through configuration files
   (fixes `#47 <https://github.com/Ouranosinc/Magpie/issues/47>`_ and
   `#204 <https://github.com/Ouranosinc/Magpie/issues/204>`_).
-* Add disabled checkboxes for UI rendering of non-editable items
-  (relates to `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_).
-* Add more tests to validate forbidden operations such as update or delete of reserved user and group details.
-* Add version tag at bottom of UI pages (same version as returned by API ``/version`` route).
-* Configuration parameters ``MAGPIE_SECRET``, ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` now enforce explicitly
+* Add disabled checkboxes for UI rendering of non-editable items to avoid user doing operations that will always be
+  blocked by corresponding API validation (relates to `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_).
+* Add more tests to validate forbidden operations such as update or delete of reserved ``User`` and ``Group`` details.
+* Add active version tag at bottom of UI pages (same version as returned by API ``/version`` route).
+* Enforce configuration parameters ``MAGPIE_SECRET``, ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` by explicitly
   defined values (either by environment variable or INI settings) to avoid using defaults for security purposes.
 * Change CLI helper ``create_users`` to ``batch_update_users`` to better represent provided functionalities.
 * Change CLI helper ``register_default_users`` to ``register_defaults`` to avoid confusion on groups also created.
 * Extend CLI ``batch_update_users`` functionality with additional options and corresponding tests.
 * Move all CLI helpers under ``magpie.cli`` and provide more details about them in documentation.
 * Allow unspecified ``group_name`` during user creation request to employ ``MAGPIE_ANONYMOUS_GROUP`` by default
-  (i.e.: created user will have no apparent group membership since that group is always attributed for public access).
+  (i.e.: created user will have no other apparent group membership since it is always attributed for public access).
 * Change all ``PUT`` requests to ``PATCH`` to better reflect their actual behaviour according to RESTful best practices
   (partial field updates instead of complete resource replacement and conflict responses on duplicate identifiers).
-* Add support of new response content-type as XML.
 * Add support of ``Accept`` header and ``format`` query parameter for all API responses, for content-types variations
   in either plain text, HTML, XML or JSON (default), and include applicable values in schemas for Swagger generation.
+* Add support of new response content-type as XML (must request using ``Accept`` header or ``format`` query parameter).
 * Add documentation details about different types of ``Permission``, interaction between various `Magpie` models,
   glossary and other general improvements (relates to `#332 <https://github.com/Ouranosinc/Magpie/issues/332>`_ and
   `#341 <https://github.com/Ouranosinc/Magpie/issues/341>`_).
@@ -76,6 +76,7 @@ Bug Fixes
   (`4a23a49 <https://github.com/Ouranosinc/Magpie/commit/4a23a497e3ce1dc39ccaf31ba1857fc199d399db>`_) where some
   API routes would not return the `Allowed Permissions` for children ``Resource`` under ``Service`` (only ``Service``
   permissions would be filled), or when requesting ``Resource`` details directly.
+* Fix input check to avoid situations where updating ``Resource`` name could cause involuntary duplicate errors.
 * Fix minor HTML issues in mako templates.
 
 `1.11.0 <https://github.com/Ouranosinc/Magpie/tree/1.11.0>`_ (2020-06-19)

@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 
 import requests
 import six
-from six.moves.urllib.parse import urlparse
 from pyramid.config import ConfigurationError, Configurator
 from pyramid.httpexceptions import HTTPClientError, HTTPException, HTTPOk
 from pyramid.registry import Registry
@@ -29,10 +28,10 @@ from magpie.constants import get_constant
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import NoReturn
+    from typing import Any, List, NoReturn, Optional, Type, Union
     from magpie.typedefs import (
-        Any, AnyKey, Str, List, Optional, Type, Union,
         AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,
+        JSON, Str
     )
     from pyramid.events import NewRequest
     from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
@@ -226,8 +225,11 @@ def get_header(header_name, header_container, default=None, split=None):
 def convert_response(response):
     # type: (AnyResponseType) -> Response
     """
-    Converts a ``response`` implementation (e.g.: :class:`requests.Response`) to an equivalent
-    :class:`pyramid.response.Response` object.
+    Converts a :class:`requests.Response` object to an equivalent :class:`pyramid.response.Response` object.
+    Content of the :paramref:`response` is expected to be JSON.
+
+    :param response: response to be converted
+    :returns: converted response
     """
     if isinstance(response, Response):
         return response
@@ -357,13 +359,16 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
 
 
 def is_magpie_ui_path(request):
-    # type: (Request) -> bool
+    # type: (Union[Request, Str]) -> bool
     """Determines if the request path corresponds to any Magpie UI location."""
     # server URL could have more prefixes than only /magpie, so start by removing them using explicit URL setting
     # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
-    magpie_url = get_magpie_url(request)
-    magpie_url = request.url.replace(magpie_url, "")
-    magpie_path = urlparse(magpie_url).path
+    if isinstance(request, Request):
+        magpie_url = get_magpie_url(request)
+        magpie_url = request.url.replace(magpie_url, "")
+        magpie_path = urlparse(magpie_url).path
+    else:
+        magpie_path = request
     magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
     magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
     magpie_ui_home = get_constant("MAGPIE_UI_ENABLED", request) and magpie_path in ("", "/")

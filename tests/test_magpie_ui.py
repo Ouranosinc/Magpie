@@ -40,7 +40,7 @@ class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.Test
         cls.test_user_name = get_constant("MAGPIE_ANONYMOUS_USER")
         cls.test_group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
         cls.test_service_type = ServiceWPS.service_type
-        cls.test_service_name = "flyingpigeon"
+        cls.test_service_name = "magpie-unittest-service-wps"
 
 
 @runner.MAGPIE_TEST_UI
@@ -99,10 +99,10 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()
 
-        cls.test_user = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_user-local",
-                                     raise_missing=False, raise_not_set=False)
-        cls.test_group = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-admin-auth_group-local",
-                                      raise_missing=False, raise_not_set=False)
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_user-local",
+                                          raise_missing=False, raise_not_set=False)
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-admin-auth_group-local",
+                                           raise_missing=False, raise_not_set=False)
         cls.test_service_type = utils.get_service_types_for_version(cls.version)[0]
         cls.test_service_name = utils.TestSetup.get_AnyServiceOfTestServiceType(cls)["service_name"]
 
@@ -169,7 +169,7 @@ class TestCase_MagpieUI_NoAuth_Remote(ti.Interface_MagpieUI_NoAuth, unittest.Tes
         cls.test_user = get_constant("MAGPIE_ANONYMOUS_USER")
         cls.test_group = get_constant("MAGPIE_ANONYMOUS_GROUP")
         cls.test_service_type = ServiceWPS.service_type
-        cls.test_service_name = "flyingpigeon"
+        cls.test_service_name = "magpie-unittest-service-wps"
 
 
 @runner.MAGPIE_TEST_UI

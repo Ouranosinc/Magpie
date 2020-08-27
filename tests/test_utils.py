@@ -302,7 +302,7 @@ class TestUtils(unittest.TestCase):
             raise TypeError()
 
         with mock.patch("magpie.api.exception.generate_response_http_format", side_effet=mock_raise):
-            ax.evaluate_call(lambda: int)
+            ax.evaluate_call(lambda: int("x"))
 
         utils.check_val_equal(mock_calls["counter"], ax.RAISE_RECURSIVE_SAFEGUARD_MAX)
 
@@ -321,4 +321,6 @@ class TestUtils(unittest.TestCase):
 
     def test_guess_target_format_default(self):
         request = DummyRequest()
-        utils.check_val_equal(ag.guess_target_format(request), CONTENT_TYPE_JSON)  # noqa
+        content_type, where = ag.guess_target_format(request)
+        utils.check_val_equal(content_type, CONTENT_TYPE_JSON)  # noqa
+        utils.check_val_equal(where, True)

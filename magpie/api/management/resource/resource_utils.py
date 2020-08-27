@@ -81,6 +81,23 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
     return root_service
 
 
+def check_unique_child_resource_name(resource_name, parent_id, error_message, db_session):
+    # type: (Str, int, Str, Session) -> None
+    """
+    Verifies that the provided :paramref:`resource_name` does not already exist amongst other children resources
+    (only level immediately under the parent), for the specified parent resource.
+
+    :returns: nothing if no conflict detected
+    :raises HTTPConflict: if the :paramref:`resource_name` conflict with another existing resource
+    """
+    tree_struct = models.RESOURCE_TREE_SERVICE.from_parent_deeper(parent_id, limit_depth=1, db_session=db_session)
+    tree_struct_dict = models.RESOURCE_TREE_SERVICE.build_subtree_strut(tree_struct)
+    direct_children = tree_struct_dict["children"]
+    ax.verify_param(resource_name, param_name="resource_name", not_in=True, with_param=False,
+                    param_compare=[child_dict["node"].resource_name for child_dict in direct_children.values()],
+                    http_error=HTTPConflict, msg_on_fail=error_message)
+
+
 def crop_tree_with_permission(children, resource_id_list):
     # type: (ChildrenResourceNodes, List[int]) -> Tuple[ChildrenResourceNodes, List[int]]
     """
@@ -240,13 +257,9 @@ def create_resource(resource_name, resource_display_name, resource_type, parent_
                                            root_service_id=root_service.resource_id,
                                            parent_id=parent_resource.resource_id)
 
-    # Two resources with the same parent can't have the same name !
-    tree_struct = models.RESOURCE_TREE_SERVICE.from_parent_deeper(parent_id, limit_depth=1, db_session=db_session)
-    tree_struct_dict = models.RESOURCE_TREE_SERVICE.build_subtree_strut(tree_struct)
-    direct_children = tree_struct_dict["children"]
-    ax.verify_param(resource_name, param_name="resource_name", not_in=True, http_error=HTTPConflict,
-                    msg_on_fail=s.Resources_POST_ConflictResponseSchema.description, with_param=False,
-                    param_compare=[child_dict["node"].resource_name for child_dict in direct_children.values()])
+    # two resources with the same parent can't have the same name
+    err_msg = s.Resources_POST_ConflictResponseSchema.description
+    check_unique_child_resource_name(resource_name, parent_id, err_msg, db_session=db_session)
 
     def add_resource_in_tree(new_res, db):
         db_session.add(new_res)

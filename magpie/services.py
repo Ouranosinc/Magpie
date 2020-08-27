@@ -2,8 +2,7 @@ from typing import TYPE_CHECKING
 
 from beaker.cache import cache_region, cache_regions
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound, HTTPNotImplemented
-from pyramid.security import Allow as ALLOW
-from pyramid.security import Everyone as EVERYONE  # noqa
+from pyramid.security import Allow, Everyone
 from six import with_metaclass
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -113,7 +112,7 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
                     raise Exception("No Anonymous user in the database")
                 permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
                 for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-                    self.acl.append((outcome, EVERYONE, perm_name,))
+                    self.acl.append((outcome, Everyone, perm_name,))
 
     def permission_requested(self):
         # type: () -> Permission
@@ -255,7 +254,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
                 netcdf_file = netcdf_file.rsplit("/", 1)[0]
 
         else:
-            return [(ALLOW, EVERYONE, permission_requested.value,)]
+            return [(Allow, Everyone, permission_requested.value,)]
 
         if netcdf_file:
             ax.verify_param("outputs/", param_compare=netcdf_file, http_error=HTTPNotFound,

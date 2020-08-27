@@ -59,7 +59,7 @@ def create_user(user_name, password, email, group_name, db_session):
         grp = ax.evaluate_call(lambda: GroupService.by_group_name(grp_name, db_session=db_session),
                                http_error=HTTPForbidden,
                                msg_on_fail=s.UserGroup_GET_ForbiddenResponseSchema.description)
-        ax.verify_param(grp, not_none=True, http_error=HTTPNotFound, param_name="group_name",
+        ax.verify_param(grp, not_none=True, http_error=HTTPNotFound, with_param=False,
                         msg_on_fail=s.UserGroup_Check_NotFoundResponseSchema.description)
         return grp
 

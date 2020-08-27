@@ -6,11 +6,12 @@
 
 <div class="error">
     <div>
-        <img src="${request.static_url('magpie.ui.home:static/forbidden.png')}" alt="FORBIDDEN" class="img-forbidden">
+        <img src="${request.static_url('magpie.ui.home:static/{}.png'.format(error_image))}"
+             alt="ERROR" class="img-error">
         <span style="">
-            Forbidden Access.
+            ${error_title}
             <br>
-            Higher user privileges required to access this content.
+            ${error_detail}
         </span>
         %if error_request:
             <div id="error_details">
