@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 import transaction
 
 from magpie import constants, db, models
-from magpie.api.management.resource.resource_formats import get_resource_children
+from magpie.api.management.resource.resource_utils import get_resource_children
 from magpie.cli.sync_services import SYNC_SERVICES_TYPES, SyncServiceDefault, is_valid_resource_schema
 from magpie.utils import get_logger
 

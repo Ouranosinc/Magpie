@@ -3,15 +3,12 @@ from typing import TYPE_CHECKING
 from ziggurat_foundations.models.services.resource import ResourceService
 
 from magpie.api.exception import evaluate_call
-from magpie.api.management.resource import resource_utils as ru
-from magpie.models import RESOURCE_TREE_SERVICE
 from magpie.permissions import format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
     from typing import Iterable, Optional
-    from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
     from magpie.models import Resource, Service
     from magpie.typedefs import AnyPermissionType, ChildrenResourceNodes, JSON, ServiceOrResourceType
 
@@ -109,33 +106,18 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, *args)
     return fmt_res_tree
 
 
-def get_resource_children(resource, db_session, tree_service_builder=None):
-    # type: (ServiceOrResourceType, Session, Optional[ResourceTreeService]) -> ChildrenResourceNodes
-    """
-    Obtains the children resource node structure of the input service or resource.
-
-    :param resource: initial resource where to start building the tree from
-    :param db_session: database connection to retrieve resources
-    :param tree_service_builder: service that build the tree (default: :py:data:`RESOURCE_TREE_SERVICE`)
-    :returns: {node: Resource, children: {node_id: <recursive>}}
-    """
-    if tree_service_builder is None:
-        tree_service_builder = RESOURCE_TREE_SERVICE
-    query = tree_service_builder.from_parent_deeper(resource.resource_id, db_session=db_session)
-    tree_struct_dict = tree_service_builder.build_subtree_strut(query)
-    return tree_struct_dict["children"]
-
-
 def format_resource_with_children(resource, db_session):
     # type: (ServiceOrResourceType, Session) -> JSON
     """
     Obtains the formatted :term:`Resource` tree with all its formatted children hierarchy.
     """
+    from magpie.api.management.resource import resource_utils as ru
+
     resource_permissions = ru.get_resource_permissions(resource, db_session=db_session)
     resource_formatted = format_resource(resource, permissions=resource_permissions)
 
     resource_formatted["children"] = format_resource_tree(
-        get_resource_children(resource, db_session),
+        ru.get_resource_children(resource, db_session),
         db_session=db_session
     )
     return resource_formatted

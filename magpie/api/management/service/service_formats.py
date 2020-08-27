@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 from pyramid.httpexceptions import HTTPInternalServerError
 
 from magpie.api.exception import evaluate_call
-from magpie.api.management.resource.resource_formats import format_resource_tree, get_resource_children
-from magpie.api.management.resource.resource_utils import crop_tree_with_permission
+from magpie.api.management.resource.resource_formats import format_resource_tree
+from magpie.api.management.resource.resource_utils import crop_tree_with_permission, get_resource_children
 from magpie.permissions import format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_twitcher_protected_service_url

@@ -26,8 +26,9 @@ if TYPE_CHECKING:
     from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session
     from typing import List, Optional, Tuple, Type, Union
+    from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
     from magpie.typedefs import ChildrenResourceNodes, ServiceOrResourceType, Str
-    from magpie.services import ServiceInterface  # noqa: F401
+    from magpie.services import ServiceInterface
 
 
 def check_valid_service_or_resource_permission(permission_name, service_or_resource, db_session):
@@ -153,6 +154,23 @@ def get_service_or_resource_types(service_or_resource):
         ax.raise_http(http_error=HTTPInternalServerError, detail="Invalid service/resource object",
                       content={"service_resource": repr(type(service_or_resource))})
     return svc_res_type_cls, svc_res_type_str   # noqa: W804
+
+
+def get_resource_children(resource, db_session, tree_service_builder=None):
+    # type: (ServiceOrResourceType, Session, Optional[ResourceTreeService]) -> ChildrenResourceNodes
+    """
+    Obtains the children resource node structure of the input service or resource.
+
+    :param resource: initial resource where to start building the tree from
+    :param db_session: database connection to retrieve resources
+    :param tree_service_builder: service that build the tree (default: :py:data:`RESOURCE_TREE_SERVICE`)
+    :returns: {node: Resource, children: {node_id: <recursive>}}
+    """
+    if tree_service_builder is None:
+        tree_service_builder = models.RESOURCE_TREE_SERVICE
+    query = tree_service_builder.from_parent_deeper(resource.resource_id, db_session=db_session)
+    tree_struct_dict = tree_service_builder.build_subtree_strut(query)
+    return tree_struct_dict["children"]
 
 
 def get_resource_permissions(resource, db_session):
