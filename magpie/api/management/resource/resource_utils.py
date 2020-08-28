@@ -93,7 +93,7 @@ def check_unique_child_resource_name(resource_name, parent_id, error_message, db
     tree_struct = models.RESOURCE_TREE_SERVICE.from_parent_deeper(parent_id, limit_depth=1, db_session=db_session)
     tree_struct_dict = models.RESOURCE_TREE_SERVICE.build_subtree_strut(tree_struct)
     direct_children = tree_struct_dict["children"]
-    ax.verify_param(resource_name, param_name="resource_name", not_in=True, with_param=False,
+    ax.verify_param(resource_name, param_name="resource_name", not_in=True,
                     param_compare=[child_dict["node"].resource_name for child_dict in direct_children.values()],
                     http_error=HTTPConflict, msg_on_fail=error_message)
 

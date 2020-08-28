@@ -79,8 +79,11 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
         """
         utils.check_or_try_logout_user(cls)
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
-        utils.TestSetup.delete_TestServiceResource(cls)
-        utils.TestSetup.delete_TestService(cls)
+        # remove test service/resource if overridden by test-case class implementers
+        if cls.test_resource_name:
+            utils.TestSetup.delete_TestServiceResource(cls)
+        if cls.test_service_name:
+            utils.TestSetup.delete_TestService(cls)
         # avoid attempt cleanup of reserved keyword user/group, since it will fail with magpie '>=2.x'
         reserved_users = [get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ANONYMOUS_USER")]
         reserved_groups = [get_constant("MAGPIE_ADMIN_GROUP"), get_constant("MAGPIE_ANONYMOUS_GROUP")]
@@ -1000,9 +1003,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def test_PostUserResourcesPermissions_Created(self):
         resource_name = "post_res_perm_created"
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
-
-        data = {"resource_name": resource_name}
-        body = utils.TestSetup.create_TestServiceResource(self, override_data=data)
+        body = utils.TestSetup.create_TestServiceResource(self, override_resource_name=resource_name)
         test_res_id = body["resource"]["resource_id"]
 
         # test permission creation
@@ -1024,9 +1025,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def test_PostUserResourcesPermissions_Conflict(self):
         resource_name = "post_res_perm_conflict"
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
-
-        data = {"resource_name": resource_name}
-        body = utils.TestSetup.create_TestServiceResource(self, override_data=data)
+        body = utils.TestSetup.create_TestServiceResource(self, override_resource_name=resource_name)
         test_res_id = body["resource"]["resource_id"]
 
         path = "/users/{usr}/resources/{res}/permissions".format(res=test_res_id, usr=self.usr)
@@ -1360,8 +1359,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         body = utils.TestSetup.create_TestServiceResource(self)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
         applicable_perm = info["permission_names"][0]
-        res_id = body["resource_id"]
-        path = "groups/{}/resources/{}/permissions".format(get_constant("MAGPIE_ANONYMOUS_GROUP"), res_id)
+        res_id = info["resource_id"]
+        path = "/groups/{}/resources/{}/permissions".format(get_constant("MAGPIE_ANONYMOUS_GROUP"), res_id)
         resp = utils.test_request(self, "POST", path, json={"permission_name": applicable_perm})
         utils.check_response_basic_info(resp, 201, expected_method="POST")
 
@@ -1370,7 +1369,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "GET", path)
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in("permission_names", body)
-        utils.check_val_is_in(body["permission_names"], applicable_perm,
+        utils.check_val_is_in(applicable_perm, body["permission_names"],
                               msg="Permission applied to anonymous group which user is member of should be effective")
 
     @runner.MAGPIE_TEST_USERS
@@ -1388,9 +1387,10 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         parent_id = info["resource_id"]
         body = utils.TestSetup.create_TestResource(self, parent_resource_id=parent_id)
-        applicable_perm = body["permission_names"][0]
-        child_res_id = body["resource_id"]
-        path = "groups/{}/resources/{}/permissions".format(get_constant("MAGPIE_ANONYMOUS_GROUP"), parent_id)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        applicable_perm = info["permission_names"][0]
+        child_res_id = info["resource_id"]
+        path = "/groups/{}/resources/{}/permissions".format(get_constant("MAGPIE_ANONYMOUS_GROUP"), parent_id)
         resp = utils.test_request(self, "POST", path, json={"permission_name": applicable_perm})
         utils.check_response_basic_info(resp, 201, expected_method="POST")
 
@@ -1399,7 +1399,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "GET", path)
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in("permission_names", body)
-        utils.check_val_is_in(body["permission_names"], applicable_perm,
+        utils.check_val_is_in(applicable_perm, body["permission_names"],
                               msg="Permission applied to anonymous group which user is member of should be effective")
 
     @runner.MAGPIE_TEST_USERS
@@ -1420,16 +1420,17 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def test_PostUsers_InvalidParameters(self):
         utils.warn_version(self, "validate user creation inputs", "2.0.0", skip=True)
         utils.TestSetup.delete_TestUser(self)
+        utils.TestSetup.create_TestGroup(self)
 
         # must add valid data for other fields than tested one,
-        # otherwise validation could fail because of missing details for other field than tested one
+        # otherwise validation could fail because of missing details for other fields evaluated before targeted one
         data = {
             "user_name": self.test_user_name,
             "email": "{}@mail.com".format(self.test_user_name),
             "password": self.test_user_name,
             "group_name": self.test_group_name,
         }
-        for code, variant in [
+        for i, (code, variant) in enumerate([
             (400, {"user_name": ""}),
             (400, {"user_name": "   "}),
             (400, {"user_name": "abc???def"}),
@@ -1445,12 +1446,13 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             (400, {"group_name": "!ABC!"}),
             (400, {"group_name": "abc/def"}),
             (400, {"group_name": ""}),
-        ]:
+        ]):
             var_data = deepcopy(data)
             var_data.update(variant)
             resp = utils.test_request(self, "POST", "/users", json=var_data, expect_errors=True,
                                       headers=self.json_headers, cookies=self.cookies)
-            info = utils.check_response_basic_info(resp, code, expected_method="POST")
+            test_iter = "(Test #{})".format(i)
+            info = utils.check_response_basic_info(resp, code, expected_method="POST", extra_message=test_iter)
             utils.check_val_equal(info["param"]["name"], list(variant.keys())[0],  # sanity check of failure reason
                                   msg="failing input validation was not accomplished for expected field")
 
@@ -1505,7 +1507,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_UpdateUsers_nothing(self):
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=None)
         path = "/users/{usr}".format(usr=self.test_user_name)
         resp = utils.test_request(self, self.update_method, path, data={},
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
@@ -2151,12 +2153,11 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         data = {"service_name": "dummy", "service_url": "dummy"}
         resp = utils.test_request(self, self.update_method, "/services/types", data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
+
+        code = 404  # before update did not exist, path was not found
         if LooseVersion(self.version) >= LooseVersion("0.9.5"):
-            # directly interpreted as expected path `/services/types` behaviour, so method PUT not allowed
-            utils.check_response_basic_info(resp, 405, expected_method=self.update_method)
-        else:
-            # no path with service named 'types', filtered as not found
-            utils.check_response_basic_info(resp, 404, expected_method=self.update_method)
+            code = 405  # directly interpreted as expected path `/services/types` behaviour, so method not allowed
+        utils.check_response_basic_info(resp, expected_code=code, expected_method=self.update_method)
 
         utils.warn_version(self, "check for update service named 'types'", "0.9.1", skip=True)
         # try to PUT on valid service with new name 'types' should raise the error
@@ -2165,8 +2166,11 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         data = {"service_name": "types"}
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        body = utils.check_response_basic_info(resp, 400, expected_method=self.update_method)  # forbidden name 'types'
-        utils.check_val_equal(body["detail"], s.Service_PATCH_BadRequestResponseSchema_ReservedKeyword.description)
+        code = 400  # before considered as bad request value
+        if LooseVersion(self.version) >= LooseVersion("2.0.0"):
+            code = 403  # later version distinguish with more explicit forbidden
+        body = utils.check_response_basic_info(resp, code, expected_method=self.update_method)  # forbidden name 'types'
+        utils.check_val_is_in("'types'", body["detail"])  # validate error message specific to this keyword
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetService_ResponseFormat(self):
@@ -2343,15 +2347,19 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resources_prior = utils.TestSetup.get_TestServiceDirectResources(self)
         resources_prior_ids = [res["resource_id"] for res in resources_prior]
         service_id = utils.TestSetup.get_ExistingTestServiceInfo(self)["resource_id"]
-        extra_data = {"parent_id": service_id}
-        body = utils.TestSetup.create_TestServiceResource(self, extra_data)
-        body = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        utils.check_val_is_in("resource_id", body)
-        utils.check_val_is_in("resource_name", body)
-        utils.check_val_is_in("resource_type", body)
-        utils.check_val_not_in(body["resource_id"], resources_prior_ids)
-        utils.check_val_equal(body["resource_name"], self.test_resource_name)
-        utils.check_val_equal(body["resource_type"], self.test_resource_type)
+        data = {
+            "parent_id": service_id,
+            "resource_name": self.test_resource_name,
+            "resource_type": self.test_resource_type,
+        }
+        body = utils.TestSetup.create_TestServiceResource(self, override_data=data)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        utils.check_val_is_in("resource_id", info)
+        utils.check_val_is_in("resource_name", info)
+        utils.check_val_is_in("resource_type", info)
+        utils.check_val_not_in(info["resource_id"], resources_prior_ids)
+        utils.check_val_equal(info["resource_name"], self.test_resource_name)
+        utils.check_val_equal(info["resource_type"], self.test_resource_type)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PostServiceResources_ChildrenResource_ParentID(self):
@@ -2404,8 +2412,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.TestSetup.create_TestServiceResource(self)
         path = "/services/{svc}/resources".format(svc=self.test_service_name)
         data = {"resource_name": self.test_resource_name, "resource_type": self.test_resource_type}
-        resp = utils.test_request(self, "POST", path, headers=self.json_headers,
-                                  cookies=self.cookies, json=data, expect_errors=True)
+        resp = utils.test_request(self, "POST", path, data=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 409, expected_method="POST")
         utils.check_error_param_structure(body, version=self.version,
                                           is_param_value_literal_unicode=True, param_compare_exists=True,
@@ -2590,30 +2598,40 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def test_PostResources_ConflictName(self):
         utils.warn_version(self, "check resource name unique under parent", "2.0.0", skip=True)
         body = utils.TestSetup.create_TestServiceResource(self)
-        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        data = {"resource": info["resource_name"]}
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
+        data = {
+            "resource_name": self.test_resource_name,
+            "resource_type": self.test_resource_type,
+            "parent_id": info["parent_id"],
+        }
         resp = utils.test_request(self, "POST", "/resources", data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 409, expected_method="POST")
 
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetResource_ResponseFormat(self):
+        # svc
+        #   res1
+        #     res3
+        #   res2
         body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
+        svc_id = info["parent_id"]
+        res1_id = info["resource_id"]
+        res_name = self.test_resource_name + "-other"
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc_id, override_resource_name=res_name)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        svc_id = info["resource_id"]
-        body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc_id)
+        res2_id = info["resource_id"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=res1_id)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        res_id = info["resource_id"]
-        body = utils.TestSetup.create_TestResource(self, parent_resource_id=res_id)
-        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        end_id = info["resource_id"]
+        res3_id = info["resource_id"]
 
         path = "/resources/{}".format(svc_id)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in("resource", body)
 
-        def check_resource_node(res_body, parent_id, root_id, perms, child_id):
+        def check_resource_node(res_body, parent_id, root_id, perms, children_id):
             utils.check_val_type(res_body, dict)
             utils.check_val_is_in("resource_name", res_body)
             utils.check_val_type(res_body["resource_name"], six.string_types)
@@ -2633,20 +2651,23 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             utils.check_all_equal(res_body["permission_names"], [perm.value for perm in perms], any_order=True)
             utils.check_val_is_in("children", res_body)
             utils.check_val_type(res_body["children"], dict)
-            if child_id is None:
+            if children_id is None:
                 utils.check_val_equal(len(res_body["children"]), 0)
-                return res_body["children"]
-            utils.check_val_equal(len(res_body["children"]), 1)
-            utils.check_val_is_in(res_body["children"], str(child_id))
-            return res_body["children"][str(child_id)]
+            utils.check_val_equal(len(res_body["children"]), len(children_id))
+            for child_id in children_id:
+                utils.check_val_is_in(res_body["children"], str(child_id))
 
         # check details of every resource in tree
         svc_perms = SERVICE_TYPE_DICT[self.test_service_type].permissions
         res_perms = SERVICE_TYPE_DICT[self.test_service_type].get_resource_permissions(self.test_resource_type)
-        child_res = check_resource_node(body["resource"], None, None, svc_perms, res_id)
-        final_res = check_resource_node(child_res, svc_id, svc_id, res_perms, end_id)
-        empty_res = check_resource_node(final_res, res_id, svc_id, res_perms, None)
-        utils.check_val_equal(empty_res, {})
+        check_resource_node(body["resource"], None, None, svc_perms, [res1_id, res2_id])
+        svc_body = body["resource"]  # type: JSON
+        res1_body = svc_body["children"][str(res1_id)]  # type: JSON
+        res2_body = svc_body["children"][str(res2_id)]  # type: JSON
+        check_resource_node(res1_body, svc_id, svc_id, res_perms, [res3_id])
+        check_resource_node(res2_body, svc_id, svc_id, res_perms, None)
+        res3_body = res2_body["children"][str(res1_id)]
+        check_resource_node(res3_body, res1_id, svc_id, res_perms, None)
 
     @runner.MAGPIE_TEST_RESOURCES
     def test_UpdateResource(self):
@@ -2748,7 +2769,8 @@ class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase
 
     @runner.MAGPIE_TEST_STATUS
     def test_Swagger(self):
-        utils.TestSetup.check_UpStatus(self, method="GET", path="/api", expected_type=CONTENT_TYPE_HTML)
+        utils.TestSetup.check_UpStatus(self, method="GET", path="/api", expected_type=CONTENT_TYPE_HTML,
+                                       expected_title=None)  # explicitly ignore title value check
 
     @runner.MAGPIE_TEST_STATUS
     def test_Login(self):
@@ -2954,6 +2976,8 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewUsers_Goto_EditUser(self):
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.delete_TestUser(self)
         form = {"edit": None, "user_name": self.test_user_name}
         form_name = "edit_username" if LooseVersion(self.version) >= LooseVersion("2.0.0") else "edit"
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit=form_name, path="/ui/users")
@@ -2969,6 +2993,8 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewGroups_Goto_EditGroup(self):
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.delete_TestUser(self)
         form = {"edit": None, "group_name": self.test_group_name}
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path="/ui/groups")
         if LooseVersion(self.version) < "2":
@@ -2988,6 +3014,7 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
 
     @runner.MAGPIE_TEST_STATUS
     def test_ViewServices_Goto_EditService(self):
+        utils.TestSetup.create_TestService(self)
         form = {"edit": None, "service_name": self.test_service_name}
         path = "/ui/services/{}".format(self.test_service_type)
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path=path)
@@ -2996,26 +3023,35 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditUser(self):
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
         path = "/ui/users/{}/default".format(self.test_user_name)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditUserService(self):
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestService(self)
         path = "/ui/users/{usr}/{type}".format(usr=self.test_user_name, type=self.test_service_type)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditGroup(self):
+        utils.TestSetup.create_TestGroup(self)
         path = "/ui/groups/{}/default".format(self.test_group_name)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditGroupService(self):
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestService(self)
         path = "/ui/groups/{grp}/{type}".format(grp=self.test_group_name, type=self.test_service_type)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditService(self):
+        utils.TestSetup.create_TestService(self)
         path = "/ui/services/{type}/{name}".format(type=self.test_service_type, name=self.test_service_name)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 

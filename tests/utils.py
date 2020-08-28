@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 import requests
 import six
+from pyramid.httpexceptions import HTTPException
 from pyramid.settings import asbool
 from pyramid.testing import setUp as PyramidSetUp
 from six.moves.urllib.parse import urlparse
@@ -23,7 +24,6 @@ from magpie.utils import (
     get_header,
     get_magpie_url,
     get_settings_from_config_ini,
-    is_magpie_ui_path
 )
 
 if TYPE_CHECKING:
@@ -319,7 +319,14 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
             kwargs["headers"]["Content-Length"] = str(len(kwargs["params"]))  # need to fix with override JSON payload
         if status and status >= 300:
             kwargs["expect_errors"] = True
-        resp = app_or_url._gen_request(method, path, **kwargs)  # pylint: disable=W0212  # noqa: W0212
+        try:
+            resp = app_or_url._gen_request(method, path, **kwargs)  # pylint: disable=W0212  # noqa: W0212
+        except Exception as exc:
+            if isinstance(exc, HTTPException):
+                info = json_pkg.dumps({"path": path, "method": method, "body": _body}, indent=4, ensure_ascii=False)
+                raise AssertionError("Request raised unexpected HTTP error: {!s}\n".format(exc.status_code) +
+                                     "\nRequest:\n{}".format(info))
+            raise
         # automatically follow the redirect if any and evaluate its response
         max_redirect = kwargs.get("max_redirects", 5)
         while 300 <= resp.status_code < 400 and max_redirect > 0:
@@ -558,6 +565,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
                               expected_code=200,                # type: int
                               expected_type=CONTENT_TYPE_JSON,  # type: Str
                               expected_method="GET",            # type: Str
+                              extra_message=None,               # type: Optional[Str]
                               version=None,                     # type: Optional[Str]
                               ):                                # type: (...) -> Union[JSON, Str]
     """
@@ -571,46 +579,51 @@ def check_response_basic_info(response,                         # type: AnyRespo
     :param expected_code: status code to validate from the response.
     :param expected_type: Content-Type to validate from the response.
     :param expected_method: method 'GET', 'POST', etc. to validate from the response if an error.
-    :param version: perform conditional checks according to test instance version.
+    :param extra_message: additional message to append to every specific test message if provided.
+    :param version: perform conditional checks according to test instance version (default to latest if not provided).
     :return: json body of the response for convenience.
     """
-    check_val_is_in("Content-Type", dict(response.headers), msg="Response doesn't define 'Content-Type' header.")
+    def _(_msg):
+        return _msg + " " + extra_message if extra_message else _msg
+
+    check_val_is_in("Content-Type", dict(response.headers), msg=_("Response doesn't define 'Content-Type' header."))
     content_types = get_response_content_types_list(response)
-    check_val_is_in(expected_type, content_types, msg="Response doesn't match expected HTTP Content-Type header.")
+    check_val_is_in(expected_type, content_types, msg=_("Response doesn't match expected HTTP Content-Type header."))
     code_message = "Response doesn't match expected HTTP status code."
     if expected_type == CONTENT_TYPE_JSON:
         # provide more details about mismatching code since to help debug cause of error
-        code_message += "\nReason:\n{}".format(json_pkg.dumps(get_json_body(response), indent=4), ensure_ascii=False)
-    check_val_equal(response.status_code, expected_code, msg=code_message)
+        code_message += "\nReason:\n{}".format(json_pkg.dumps(get_json_body(response), indent=4, ensure_ascii=False))
+    check_val_equal(response.status_code, expected_code, msg=_(code_message))
 
     if expected_type == CONTENT_TYPE_JSON:
         body = get_json_body(response)
-        check_val_is_in("code", body, msg="Parameter 'code' should be in response JSON body.")
-        check_val_is_in("type", body, msg="Parameter 'type' should be in response JSON body.")
-        check_val_is_in("detail", body, msg="Parameter 'detail' should be in response JSON body.")
-        check_val_equal(body["code"], expected_code, msg="Parameter 'code' should match the HTTP status code.")
-        check_val_equal(body["type"], expected_type, msg="Parameter 'type' should match the HTTP Content-Type header.")
-        check_val_not_equal(body["detail"], "", msg="Parameter 'detail' should not be empty.")
+        check_val_is_in("code", body, msg=_("Parameter 'code' should be in response JSON body."))
+        check_val_is_in("type", body, msg=_("Parameter 'type' should be in response JSON body."))
+        check_val_is_in("detail", body, msg=_("Parameter 'detail' should be in response JSON body."))
+        check_val_equal(body["code"], expected_code, msg=_("Parameter 'code' should match HTTP status code."))
+        check_val_equal(body["type"], expected_type, msg=_("Parameter 'type' should match HTTP Content-Type header."))
+        check_val_not_equal(body["detail"], "", msg=_("Parameter 'detail' should not be empty."))
     else:
         body = response.text
 
     if response.status_code >= 400:
-        if version and LooseVersion(version) < "2" and response.status_code not in [401, 404, 500]:
+        v2_and_up = not bool(version) or LooseVersion(version) >= LooseVersion("2")
+        if not v2_and_up and response.status_code not in [401, 404, 500]:
             return body  # older API error response did not all have the full request details
 
         # error details available for any content-type, just in different format
-        check_val_is_in("url" if LooseVersion(version) >= "2" else "request_url", body)
-        check_val_is_in("path" if LooseVersion(version) >= "2" else "route_name", body)
-        check_val_is_in("method", body)
-        if expected_type == CONTENT_TYPE_JSON:
-            check_val_equal(body["method"], expected_method)
+        check_val_is_in("url" if v2_and_up else "request_url", body, msg=_("Request URL missing from contents,"))
+        check_val_is_in("path" if v2_and_up else "route_name", body, msg=_("Request path missing from contents."))
+        check_val_is_in("method", body, msg=_("Request method missing from contents."))
+        if expected_type == CONTENT_TYPE_JSON:  # explicitly check by dict-key if JSON
+            check_val_equal(body["method"], expected_method, msg=_("Request method not matching expected value."))
 
     return body
 
 
 def check_ui_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_HTML,
                                  expected_title="Magpie Administration"):
-    # type: (AnyResponseType, int, Str, Str) -> None
+    # type: (AnyResponseType, int, Str, Optional[Str]) -> None
     """
     Validates minimal expected elements in a `Magpie` UI page.
 
@@ -626,7 +639,8 @@ def check_ui_response_basic_info(response, expected_code=200, expected_type=CONT
     check_val_equal(response.status_code, expected_code, msg=msg)
     check_val_is_in("Content-Type", dict(response.headers))
     check_val_is_in(expected_type, get_response_content_types_list(response))
-    check_val_is_in(expected_title, response.text, msg=null)   # don't output big html if failing
+    if expected_title:
+        check_val_is_in(expected_title, response.text, msg=null)   # don't output big html if failing
 
 
 class NullType(six.with_metaclass(SingletonMeta)):
@@ -845,7 +859,7 @@ class TestSetup(object):
         kwargs = {}
         if expected_title is null:
             kwargs["expected_title"] = getattr(test_case, "magpie_title", "Magpie Administration")
-        else:
+        elif expected_title is not None:
             kwargs["expected_title"] = expected_title
         if expected_code is not null:
             kwargs["expected_code"] = expected_code
@@ -931,7 +945,10 @@ class TestSetup(object):
         resp = form.submit(form_submit, expect_errors=expect_errors)
         while 300 <= resp.status_code < 400 and max_redirect > 0:
             resp = resp.follow()
-        check_ui_response_basic_info(resp, expected_code=expected_code, expected_type=expected_type)
+        # basic validation of UI response, but ignore title because it is irrelevant during form validation
+        check_ui_response_basic_info(
+            resp, expected_code=expected_code, expected_type=expected_type, expected_title=None
+        )
         return resp
 
     @staticmethod
@@ -946,7 +963,7 @@ class TestSetup(object):
                             headers={"Accept": expected_type},
                             cookies=override_cookies if override_cookies is not null else test_case.cookies,
                             expect_errors=True)
-        if is_magpie_ui_path(path):
+        if path.startswith("/ui"):
             check_ui_response_basic_info(resp, expected_code=401, expected_type=expected_type)
             if expected_type == CONTENT_TYPE_JSON:
                 return get_json_body(resp)

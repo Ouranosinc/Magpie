@@ -75,7 +75,6 @@ class TestUtils(unittest.TestCase):
         Signin with invalid credentials will call "/signin" followed by sub-request "/signin_internal" and finally
         "ZigguratSignInBadAuth". Both "/signin" and "ZigguratSignInBadAuth" use "get_multiformat_body".
         """
-        from magpie.api.requests import get_multiformat_body as real_get_multiformat_body
         from magpie.api.requests import get_value_multiformat_body_checked as real_multiform_post_checked
         base_url = "http://localhost"
 
@@ -95,17 +94,15 @@ class TestUtils(unittest.TestCase):
 
             with mock.patch("magpie.api.requests.get_value_multiformat_body_checked",
                             side_effect=lambda *_, **__: mock_get_post(real_multiform_post_checked, *_, **__)):
-                with mock.patch("magpie.api.requests.get_multiformat_body",
-                                side_effect=lambda *_, **__: mock_get_post(real_get_multiformat_body, *_, **__)):
-                    data = {"user_name": "foo", "password": "bar"}
-                    headers = {"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON}
-                    resp = utils.test_request(app, "POST", _paths[0], json=data, headers=headers, expect_errors=True)
-                    if LooseVersion(self.version) < LooseVersion("0.10.0"):
-                        # user name doesn't exist
-                        utils.check_response_basic_info(resp, expected_code=406, expected_method="POST")
-                    else:
-                        # invalid username/password credentials
-                        utils.check_response_basic_info(resp, expected_code=401, expected_method="POST")
+                data = {"user_name": "foo", "password": "bar"}
+                headers = {"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON}
+                resp = utils.test_request(app, "POST", _paths[0], json=data, headers=headers, expect_errors=True)
+                if LooseVersion(self.version) < LooseVersion("0.10.0"):
+                    # user name doesn't exist
+                    utils.check_response_basic_info(resp, expected_code=406, expected_method="POST")
+                else:
+                    # invalid username/password credentials
+                    utils.check_response_basic_info(resp, expected_code=401, expected_method="POST")
 
     def test_get_header_split(self):
         headers = {"Content-Type": "{}; charset=UTF-8".format(CONTENT_TYPE_JSON)}
@@ -236,20 +233,25 @@ class TestUtils(unittest.TestCase):
         .. seealso::
             - :func:`test_verify_param_args_incorrect_usage` for invalid input use-cases
         """
+        # compare flags expecting a value (can only consider it bad request because comparison values are valid)
         utils.check_raises(lambda: ax.verify_param("1", param_compare=1, is_equal=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("1", param_compare=True, is_equal=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param(1, param_compare="1", is_equal=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_equal=True), HTTPBadRequest)
+        # when compare flags expect a value but type is provided, should still detect incorrect input
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=int, is_equal=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param("1", param_compare=str, is_equal=True), HTTPInternalServerError)
 
+        # compare flags expecting param_compare to be a type while value provided is not
         utils.check_raises(lambda: ax.verify_param(1, param_compare="x", is_type=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param(1, param_compare=True, is_type=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param("1", param_compare=None, is_type=True), HTTPInternalServerError)
 
-        utils.check_raises(lambda: ax.verify_param(1, param_compare=1, is_in=True), HTTPBadRequest)
+        # compare flags expecting param_compare to be some container instance while value provided is not
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=1, is_in=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param(1, param_compare=list, is_in=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param("1", param_compare=str, is_in=True), HTTPInternalServerError)
-        utils.check_raises(lambda: ax.verify_param(1, param_compare=1, not_in=True), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param(1, param_compare=1, not_in=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param(1, param_compare=list, not_in=True), HTTPInternalServerError)
         utils.check_raises(lambda: ax.verify_param("1", param_compare=str, not_in=True), HTTPInternalServerError)
 
@@ -293,11 +295,16 @@ class TestUtils(unittest.TestCase):
                            HTTPInternalServerError, msg="invalid callable non-lambda 'fallback' should raise")
 
     def test_evaluate_call_recursive_safeguard(self):
+        """
+        Validate use case if internal function that handles formatting and generation of a resulting HTTP response
+        raises itself an error (because of implementation issue), while it is processing another pre-raised error,
+        that it does not end up into an endless recursive call stack of raised errors.
+        """
         mock_calls = {"counter": 0}
 
         def mock_raise(*_, **__):
             if mock_calls["counter"] >= 2 * ax.RAISE_RECURSIVE_SAFEGUARD_MAX:
-                return
+                return TypeError()
             mock_calls["counter"] += 1
             raise TypeError()
 

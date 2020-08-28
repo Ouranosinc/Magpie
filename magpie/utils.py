@@ -359,16 +359,13 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
 
 
 def is_magpie_ui_path(request):
-    # type: (Union[Request, Str]) -> bool
+    # type: (Request) -> bool
     """Determines if the request path corresponds to any Magpie UI location."""
     # server URL could have more prefixes than only /magpie, so start by removing them using explicit URL setting
     # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
-    if isinstance(request, Request):
-        magpie_url = get_magpie_url(request)
-        magpie_url = request.url.replace(magpie_url, "")
-        magpie_path = urlparse(magpie_url).path
-    else:
-        magpie_path = request
+    magpie_url = get_magpie_url(request)
+    magpie_url = request.url.replace(magpie_url, "")
+    magpie_path = urlparse(magpie_url).path
     magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
     magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
     magpie_ui_home = get_constant("MAGPIE_UI_ENABLED", request) and magpie_path in ("", "/")
@@ -403,13 +400,16 @@ def log_request(event):
         params_str = items_str(request.params)
         body_str = str(request.body) or "-"
         LOGGER.debug("Request details:\n"
+                     "URL: %s\n"
+                     "Path: %s\n"
+                     "Method: %s\n"
                      "Headers:\n"
                      "  %s\n"
                      "Parameters:\n"
                      "  %s\n"
                      "Body:\n"
                      "  %s",
-                     header_str, params_str, body_str)
+                     request.url, request.path, request.method, header_str, params_str, body_str)
 
 
 def log_exception_tween(handler, registry):  # noqa: F811

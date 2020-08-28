@@ -23,7 +23,7 @@ from magpie.api import schemas as s
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
-from magpie.constants import get_constant
+from magpie.constants import MAGPIE_LOGGED_PERMISSION, get_constant
 from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -59,7 +59,7 @@ def create_user_view(request):
 @s.UserAPI.patch(schema=s.User_PATCH_RequestSchema(), tags=[s.UsersTag], response_schemas=s.User_PATCH_responses)
 @s.LoggedUserAPI.patch(schema=s.User_PATCH_RequestSchema(), tags=[s.LoggedUserTag],
                        response_schemas=s.LoggedUser_PATCH_responses)
-@view_config(route_name=s.UserAPI.name, request_method="PATCH", permission="MAGPIE_LOGGED_USER")
+@view_config(route_name=s.UserAPI.name, request_method="PATCH", permission=MAGPIE_LOGGED_PERMISSION)
 def update_user_view(request):
     """
     Update user information by user name.

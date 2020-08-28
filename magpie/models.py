@@ -15,6 +15,7 @@ from ziggurat_foundations.models.resource import ResourceMixin
 from ziggurat_foundations.models.services import BaseService
 from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
 from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
+from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.user import UserService
 from ziggurat_foundations.models.user import UserMixin
 from ziggurat_foundations.models.user_group import UserGroupMixin
@@ -128,10 +129,18 @@ class RootFactory(object):
     def __acl__(self):
         """Administrators have all permissions, user/group-specific permissions added if user is logged in."""
         user = self.request.user
+        # allow if role MAGPIE_ADMIN_PERMISSION is somehow directly set instead of inferred via members of admin-group
         acl = [(Allow, get_constant("MAGPIE_ADMIN_PERMISSION"), ALL_PERMISSIONS)]
+        admins = GroupService.by_group_name(get_constant("MAGPIE_ADMIN_GROUP"), db_session=self.request.db)
+        if admins:
+            # need to add explicit admin-group ALL_PERMISSIONS otherwise views with other permissions than the
+            # default MAGPIE_ADMIN_PERMISSION will be refused access (e.g.: views with MAGPIE_LOGGED_PERMISSION)
+            acl += [(Allow, "group:{}".format(admins.id), ALL_PERMISSIONS)]
         if user:
+            # user-specific permissions
             permissions = UserService.permissions(user, self.request.db)
             user_acl = permission_to_pyramid_acls(permissions)
+            # allow views that require minimally to be logged in
             auth_acl = [(Allow, user.id, Authenticated)]
             acl += user_acl + auth_acl
         return acl
