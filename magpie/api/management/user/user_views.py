@@ -72,10 +72,10 @@ def update_user_view(request):
     update_username = user.user_name != new_user_name and new_user_name is not None
     update_password = user.user_password != new_password and new_password is not None
     update_email = user.email != new_email and new_email is not None
-    ax.verify_param(any([update_username, update_password, update_email]), is_true=True, http_error=HTTPBadRequest,
+    ax.verify_param(any([update_username, update_password, update_email]), is_true=True,
                     with_param=False,  # params are not useful in response for this case
                     content={"user_name": user.user_name},
-                    msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
+                    http_error=HTTPBadRequest, msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
     # user name change is admin-only operation
     if update_username:
         ax.verify_param(get_constant("MAGPIE_ADMIN_GROUP"), is_in=True,

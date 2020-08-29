@@ -1,3 +1,4 @@
+import six
 from typing import TYPE_CHECKING
 
 from pyramid.httpexceptions import (
@@ -66,7 +67,8 @@ def create_user(user_name, password, email, group_name, db_session):
     # Check that group already exists
     if group_name is None:
         group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
-    check_user_info(user_name, email, password, group_name)
+    is_internal = password is not None
+    check_user_info(user_name, email, password, group_name, check_password=is_internal)
     group_checked = _get_group(group_name)
 
     # Check if user already exists
@@ -78,7 +80,7 @@ def create_user(user_name, password, email, group_name, db_session):
 
     # Create user with specified name and group to assign
     new_user = models.User(user_name=user_name, email=email)  # noqa
-    if password:
+    if is_internal:
         UserService.set_password(new_user, password)
         UserService.regenerate_security_code(new_user)
     ax.evaluate_call(lambda: db_session.add(new_user), fallback=lambda: db_session.rollback(),
@@ -364,14 +366,14 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
     if check_name:
         ax.verify_param(user_name, not_none=True, not_empty=True, param_name="user_name",
                         http_error=HTTPBadRequest,
-                        msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
+                        msg_on_fail=s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description)
         ax.verify_param(user_name, matches=True, param_name="user_name", param_compare=ax.PARAM_REGEX,
                         http_error=HTTPBadRequest,
-                        msg_on_fail=s.Users_CheckInfo_Name_BadRequestResponseSchema.description)
+                        msg_on_fail=s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description)
         name_range = range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))
         ax.verify_param(len(user_name), is_in=True, param_name="user_name", param_compare=name_range,
                         http_error=HTTPBadRequest,
-                        msg_on_fail=s.Users_CheckInfo_Size_BadRequestResponseSchema.description)
+                        msg_on_fail=s.Users_CheckInfo_UserNameSize_BadRequestResponseSchema.description)
         name_logged = get_constant("MAGPIE_LOGGED_USER")
         ax.verify_param(user_name, param_compare=name_logged, not_equal=True, param_name="user_name",
                         http_error=HTTPBadRequest,
@@ -385,8 +387,13 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
                         msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
     if check_password:
         ax.verify_param(password, not_none=True, not_empty=True, param_name="password",
+                        is_type=True, param_compare=six.string_types,  # no match since it can be any character
                         http_error=HTTPBadRequest,
-                        msg_on_fail=s.Users_CheckInfo_Password_BadRequestResponseSchema.description)
+                        msg_on_fail=s.Users_CheckInfo_PasswordValue_BadRequestResponseSchema.description)
+        ax.verify_param(len(password), not_in=True, param_name="password",
+                        param_compare=range(get_constant("MAGPIE_PASSWORD_MIN_LENGTH")),
+                        http_error=HTTPBadRequest,
+                        msg_on_fail=s.Users_CheckInfo_PasswordSize_BadRequestResponseSchema.description)
     if check_group:
         ax.verify_param(group_name, not_none=True, not_empty=True, param_name="group_name",
                         http_error=HTTPBadRequest,

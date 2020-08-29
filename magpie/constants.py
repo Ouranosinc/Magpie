@@ -86,6 +86,7 @@ MAGPIE_URL = os.getenv("MAGPIE_URL", None)
 MAGPIE_SECRET = os.getenv("MAGPIE_SECRET", "")
 MAGPIE_COOKIE_NAME = os.getenv("MAGPIE_COOKIE_NAME", "auth_tkt")
 MAGPIE_COOKIE_EXPIRE = os.getenv("MAGPIE_COOKIE_EXPIRE", None)
+MAGPIE_PASSWORD_MIN_LENGTH = os.getenv("MAGPIE_PASSWORD_MIN_LENGTH", 12)
 MAGPIE_ADMIN_USER = os.getenv("MAGPIE_ADMIN_USER", "")
 MAGPIE_ADMIN_PASSWORD = os.getenv("MAGPIE_ADMIN_PASSWORD", "")
 MAGPIE_ADMIN_EMAIL = "{}@mail.com".format(MAGPIE_ADMIN_USER)
@@ -123,7 +124,7 @@ MAGPIE_POSTGRES_PORT = int(os.getenv("MAGPIE_POSTGRES_PORT", 5432))
 MAGPIE_POSTGRES_DB = os.getenv("MAGPIE_POSTGRES_DB", "magpie")
 
 # ===========================
-# other constants
+# constants
 # ===========================
 MAGPIE_ADMIN_PERMISSION = "admin"   # user must be administrator to access a view (default permission)
 MAGPIE_LOGGED_PERMISSION = "MAGPIE_LOGGED_USER"  # user must MAGPIE_LOGGED_USER (either literally or inferred)

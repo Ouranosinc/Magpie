@@ -13,11 +13,14 @@ from typing import TYPE_CHECKING
 
 import requests
 
+from magpie.constants import get_constant
 from magpie.utils import get_json, get_logger
 from magpie.register import get_all_configs, pseudo_random_string
 
 if TYPE_CHECKING:
-    from typing import Any, AnyStr, Dict, List, Optional, Sequence
+    from typing import Any, Dict, List, Optional, Sequence
+    from magpie.typedefs import Str
+    UserConfig = List[Dict[Str, Str]]
 
 LOGGER = get_logger(__name__,
                     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -45,13 +48,19 @@ def get_login_session(magpie_url, username, password, return_response=False):
     return session
 
 
-def create_users(user_config, magpie_url, magpie_admin_username, magpie_admin_password):
+def create_users(user_config, magpie_url, magpie_admin_username, magpie_admin_password, password_length=None):
+    # type: (UserConfig, Str, Str, Str, Optional[int]) -> UserConfig
+    """Creates the users using provided configuration.
+
+    :returns: updated configuration with generated user-credentials.
+    """
     session = get_login_session(magpie_url, magpie_admin_username, magpie_admin_password)
     if not session:
         return []
 
+    password_length = password_length or get_constant("MAGPIE_PASSWORD_MIN_LENGTH")
     for usr_cfg in user_config:
-        usr_cfg["password"] = pseudo_random_string()
+        usr_cfg["password"] = pseudo_random_string(length=password_length)
         data = {"user_name": usr_cfg["username"], "password": usr_cfg["password"],
                 "group_name": usr_cfg["group"], "email": usr_cfg["email"]}
         response = session.post(magpie_url + "/users", json=data)
@@ -67,7 +76,12 @@ def create_users(user_config, magpie_url, magpie_admin_username, magpie_admin_pa
     return user_config
 
 
-def delete_users(user_config, magpie_url, magpie_admin_username, magpie_admin_password):
+def delete_users(user_config, magpie_url, magpie_admin_username, magpie_admin_password, **__):
+    # type: (UserConfig, Str, Str, Str, Any) -> UserConfig
+    """Deletes the specified users.
+
+    :returns: details about request success or failure for each user to be deleted.
+    """
     session = get_login_session(magpie_url, magpie_admin_username, magpie_admin_password)
     if not session:
         return []
@@ -84,7 +98,7 @@ def delete_users(user_config, magpie_url, magpie_admin_username, magpie_admin_pa
 
 
 def make_output(user_results, is_delete, output_location=None):
-    # type: (List[Dict[AnyStr, AnyStr]], bool, Optional[AnyStr]) -> None
+    # type: (UserConfig, bool, Optional[Str]) -> None
     """Generates the output from obtained user creation/deletion results."""
 
     cols_space = 5
@@ -122,6 +136,8 @@ def make_parser():
     parser.add_argument("url", help="URL used to access the magpie service.")
     parser.add_argument("username", help="Admin username for magpie login.")
     parser.add_argument("password", help="Admin password for magpie login.")
+    parser.add_argument("-l", "--length", type=int,
+                        help="Required length for passwords to be generated (must full Magpie conditions).")
     parser.add_argument("-d", "--delete", action="store_true", help="Delete users instead of creating them.")
     parser.add_argument("-o", "--output", help="Alternate output directory of results.")
     parser.add_argument("-q", "--quiet", help="Suppress informative logging.")
@@ -138,7 +154,7 @@ def make_parser():
 
 
 def main(args=None, parser=None, namespace=None):
-    # type: (Optional[Sequence[AnyStr]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> Any
+    # type: (Optional[Sequence[Str]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> Any
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)
@@ -175,7 +191,7 @@ def main(args=None, parser=None, namespace=None):
         LOGGER.warning("No users to %s", oper_name)
         return ERROR_EXEC
     oper_users = delete_users if args.delete else create_users
-    users = oper_users(users_cfg, args.url, args.username, args.password)
+    users = oper_users(users_cfg, args.url, args.username, args.password, password_length=args.length)
     make_output(users, args.delete, args.output)
     return 0
 

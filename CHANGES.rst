@@ -61,6 +61,7 @@ Features / Changes
   ``permissions?inherited=true`` query parameter modifier.
 * Replace ``inherit`` query parameter wherever applicable by ``inherited`` to match documentation names, but preserve
   backward compatibility support of old name.
+* Add ``MAGPIE_PASSWORD_MIN_LENGTH`` setting with corresponding validation of field during ``User`` creation and update.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

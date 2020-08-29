@@ -97,16 +97,21 @@ role permission:
 Route Access
 -------------
 
-Most of the HTTP routes require by default administrative privileges. Exceptions to this are notably the requests
+Most of the HTTP routes require by default administrative privileges (i.e.: ``MAGPIE_ADMIN_PERMISSION`` or equivalent
+inferred from ``MAGPIE_ADMIN_GROUP`` membership for the :term:`Logged User`). Exceptions to this are notably requests
 with :term:`User`-scoped routes under ``/users/{user_name}`` which allow retrieval of :term:`Public` :term:`Resource`
-details, and informational API routes that are granted full access to anyone such as the `Magpie REST API`_
-documentation served under a running `Magpie` instance.
+details (e.g.: obtaining information about what ``MAGPIE_ANONYMOUS_GROUP`` members have access to), and informational
+API routes that are granted full access to anyone such as the `Magpie REST API`_ documentation served under a running
+`Magpie` instance.
 
 .. versionchanged:: 2.0.0
 
     Some routes under ``/users/{user_name}`` are also granted more *contextual access* to self-referencing users using
     :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION`. In other words, if the :term:`Logged User` corresponds to the
-    path variable :term:`User`, access is also granted to allow that individual to obtain or update its own details.
+    path variable :term:`User`, access is also granted to allow that individual to obtain or update its own details. In
+    this situation, allowed routes are controlled on a per-request basis with for the respective contextual operations
+    accomplished by each request. For example, :term:`Logged User` could be granted access to update its account
+    details, but won't be able to grant itself more permissions on :term:`Service` and :term:`Resource` elements.
 
 Typically, request `Access Permissions`_ fall into one of the following category for all API endpoints. Higher
 permissions in the table imply higher access.

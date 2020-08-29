@@ -421,12 +421,13 @@ remain available as described at the start of the `Configuration`_ section.
   Name of the :term:`Permission` used to represent highest administration privilege in the application. It is one of
   the special :term:`Access Permissions` known by the application (see also :ref:`Route Access` section).
 
-- | MAGPIE_LOGGED_PERMISSION [constant]
+- | ``MAGPIE_LOGGED_PERMISSION`` [constant]
   | (Value: ``"MAGPIE_LOGGED_USER"``)
 
   .. versionadded:: 2.0.0
 
-  This define a special case of :term:`Access Permissions`. See details in :ref:`Route Access` for when it applies.
+  Defines a special condition of :term:`Access Permissions` related to the :term:`Logged User` session and the
+  targeted :term:`User` by the request. See details in :ref:`Route Access` for when it applies.
 
 - | ``MAGPIE_LOGGED_USER`` [constant]
   | (Value: ``"current"``)
@@ -496,9 +497,19 @@ remain available as described at the start of the `Configuration`_ section.
   Maximum length to consider a :term:`User` name as valid.
   The name specified during creation will be forbidden if longer.
 
-  .. note::
+  .. warning::
     This value should not be greater than the token length used to identify a :term:`User` to preserve internal
     functionalities.
+
+- | ``MAGPIE_PASSWORD_MIN_LENGTH``
+  | (Default: ``12``)
+
+  .. versionadded:: 2.0.0
+    Minimum length of the password for :term:`User` creation or update.
+
+  .. note::
+    Because of backward-compatibility requirements, passwords are not enforced this condition during login procedure
+    as shorter passwords could have been used and not yet updated for older accounts.
 
 - | ``MAGPIE_DEFAULT_PROVIDER`` [constant]
   | (Value: ``"ziggurat"``)

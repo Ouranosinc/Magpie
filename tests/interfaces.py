@@ -16,13 +16,15 @@ from magpie.api import schemas as s
 from magpie.constants import MAGPIE_ROOT, get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Route
 from magpie.permissions import Permission
+from magpie.register import pseudo_random_string
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceTHREDDS
 from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_TXT_XML, CONTENT_TYPE_JSON, get_twitcher_protected_service_url
 from tests import runner, utils
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import CookiesType, HeadersType, JSON, List, Optional, Str
+    from magpie.typedefs import CookiesType, HeadersType, JSON, List, Optional, Str, Type, Union
+    from webtest import TestApp
 
 
 class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
@@ -43,6 +45,8 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     # note: all following should be overridden by Test Case accordingly to the needs of their unit tests
     version = None              # type: Optional[Str]
     require = None              # type: Optional[Str]
+    app = None                  # type: Optional[TestApp]
+    url = None                  # type: Optional[Str]
     # parameters for setup operations, admin-level access to the app
     grp = None                  # type: Optional[Str]
     usr = None                  # type: Optional[Str]
@@ -50,6 +54,8 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     cookies = None              # type: Optional[CookiesType]
     headers = None              # type: Optional[HeadersType]
     json_headers = None         # type: Optional[HeadersType]
+    test_headers = None         # type: Optional[HeadersType]
+    test_cookies = None         # type: Optional[CookiesType]
     # parameters for testing, extracted automatically within 'utils.TestSetup' methods
     test_service_type = None    # type: Optional[Str]
     test_service_name = None    # type: Optional[Str]
@@ -107,23 +113,72 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
             return "PATCH"
         return "PUT"
 
+    def setup(self):
+        pass
 
-class User_Magpie_TestCase(object):
+    def tearDown(self):
+        pass
+
+
+class NoAuth_Magpie_TestCase(Base_Magpie_TestCase):
+    @classmethod
+    def setUpClass(cls):
+        raise NotImplementedError
+
+    @classmethod
+    def tearDownClass(cls):
+        super(NoAuth_Magpie_TestCase, cls).tearDownClass()
+
+    def setUp(self):
+        # validate on each new test-case that we are not logged in from invalid operation of some previous test
+        utils.check_or_try_logout_user(self, msg="must be anonymous to evaluate this test case")
+
+    def tearDown(self):
+        super(NoAuth_Magpie_TestCase, self).tearDownClass()
+
+
+class Admin_Magpie_TestCase(Base_Magpie_TestCase):
+    """Extension of :class:`Base_Magpie_TestCase` to handle test preparation/cleanup by administrator-level user."""
+    @classmethod
+    def setUpClass(cls):
+        raise NotImplementedError
+
+    @classmethod
+    def tearDownClass(cls):
+        super(Admin_Magpie_TestCase, cls).tearDownClass()
+
+    @classmethod
+    def check_requirements(cls):
+        utils.check_or_try_logout_user(cls)  # in case user changed during another test
+        headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
+        assert headers and cookies, cls.require             # nosec
+        assert cls.headers and cls.cookies, cls.require     # nosec
+
+    def setUp(self):
+        self.check_requirements()
+        utils.TestSetup.delete_TestServiceResource(self)
+        utils.TestSetup.delete_TestService(self)
+        utils.TestSetup.delete_TestUser(self)
+        utils.TestSetup.delete_TestGroup(self)
+
+    def tearDown(self):
+        self.check_requirements()   # re-login as needed in case test logged out the user with permissions
+        utils.TestSetup.delete_TestServiceResource(self)
+        utils.TestSetup.delete_TestService(self)
+        utils.TestSetup.delete_TestUser(self)
+        utils.TestSetup.delete_TestGroup(self)
+
+
+class User_Magpie_TestCase(Admin_Magpie_TestCase):
     """Extension of :class:`Base_Magpie_TestCase` to handle another user session than the administrator-level user."""
-    usr = None              # type: Optional[Str]
-    pwd = None              # type: Optional[Str]
-    grp = None              # type: Optional[Str]
-    version = None          # type: Optional[Str]
-    cookies = None          # type: Optional[CookiesType]
-    headers = None          # type: Optional[HeadersType]
-    test_cookies = None     # type: Optional[CookiesType]
-    test_headers = None     # type: Optional[HeadersType]
-    test_user_name = None   # type: Optional[Str]
-    test_group_name = None  # type: Optional[Str]
 
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
+
+    @classmethod
+    def tearDownClass(cls):
+        super(User_Magpie_TestCase, cls).tearDownClass()
 
     def setUp(self):
         """
@@ -132,12 +187,7 @@ class User_Magpie_TestCase(object):
 
         Ensure that test user will have test group membership but not admin-level access.
         """
-        utils.check_or_try_logout_user(self)  # force logout user of previous test-case (e.g.: non-admin test-user)
-        utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)   # login as admin to setup
-        # cleanup anything that could be left over (e.g.: previous failing test run)
-        utils.TestSetup.delete_TestGroup(self)
-        utils.TestSetup.delete_TestUser(self)
-        utils.TestSetup.delete_TestService(self)
+        super(User_Magpie_TestCase, self).setUp()  # admin login and cleanup
         # setup minimal test user requirements
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
@@ -146,9 +196,7 @@ class User_Magpie_TestCase(object):
         utils.TestSetup.check_UserGroupMembership(self, member=True, override_group_name=self.test_group_name)
 
     def tearDown(self):
-        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
-        utils.TestSetup.delete_TestUser(self)
-        utils.TestSetup.delete_TestGroup(self)
+        utils.check_or_try_logout_user(self)
 
     def login_test_user(self):
         # type: () -> utils.OptionalHeaderCookiesType
@@ -177,7 +225,7 @@ class User_Magpie_TestCase(object):
 
 
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuth_Magpie_TestCase, Base_Magpie_TestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that do not require user AuthN/AuthZ.
@@ -188,10 +236,6 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
-
-    def setUp(self):
-        # validate on each new test-case that we are not logged in from invalid operation of some previous test
-        utils.check_or_try_logout_user(self, msg="must be anonymous to evaluate this test case")
 
     @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Anonymous(self):
@@ -324,7 +368,7 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCas
 
 
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase, User_Magpie_TestCase)):
+class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestCase, Base_Magpie_TestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that require at least logged user AuthN/AuthZ.
@@ -336,22 +380,13 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     def setUpClass(cls):
         raise NotImplementedError
 
-    @classmethod
-    def tearDownClass(cls):
-        super(Interface_MagpieAPI_UsersAuth, cls).tearDownClass()
-
-    def setUp(self):
-        User_Magpie_TestCase.setUp(self)
-
-    def tearDown(self):
-        utils.check_or_try_logout_user(self)
-
     def login_test_user(self):
         """Apply JSON headers on top of login headers for API calls."""
         User_Magpie_TestCase.login_test_user(self)
         self.test_headers.update(self.json_headers)
         return self.test_headers, self.test_cookies
 
+    @runner.MAGPIE_TEST_LOGIN
     def test_PostSignin_EmailAsUsername(self):
         """User is allowed to use its email as username for login."""
         User_Magpie_TestCase.login_test_user(self)
@@ -365,6 +400,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         body = utils.check_response_basic_info(resp, expected_method="POST")
         utils.check_val_equal(body["detail"], s.Signin_POST_OkResponseSchema.description)
 
+    @runner.MAGPIE_TEST_LOGIN
     def test_PostSignin_MissingCredentials(self):
         """Signin attempt with missing returns bad request, not internal server error nor """
         # warn for new check, but don't skip lower version as it should work in previous releases
@@ -377,6 +413,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         code = 400 if LooseVersion(self.version) >= "2.0.0" else 401
         utils.check_response_basic_info(resp, expected_method="POST", expected_code=code)
 
+    @runner.MAGPIE_TEST_LOGIN
     def test_GetSignin_UsingParameters(self):
         """User is allowed to use its email as username for login."""
         utils.warn_version(self, "signin using query parameters", "2.0.0", skip=True)
@@ -738,7 +775,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
 
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_TestCase, Base_Magpie_TestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that require at least 'administrator' group
@@ -750,23 +787,6 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
-
-    def tearDown(self):
-        self.check_requirements()   # re-login as required in case test logged out the user with permissions
-        utils.TestSetup.delete_TestServiceResource(self)
-        utils.TestSetup.delete_TestService(self)
-        utils.TestSetup.delete_TestUser(self)
-        utils.TestSetup.delete_TestGroup(self)
-
-    @classmethod
-    def check_requirements(cls):
-        utils.check_or_try_logout_user(cls)  # in case user changed during another test
-        headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd,
-                                                         use_ui_form_submit=True, version=cls.version)
-        assert headers and cookies, cls.require             # nosec
-        assert cls.headers and cls.cookies, cls.require     # nosec
-        cls.test_headers = cls.headers
-        cls.test_cookies = cls.cookies
 
     @classmethod
     def setup_test_values(cls):
@@ -800,13 +820,6 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
         cls.test_group_name = "magpie-unittest-dummy-group"
         cls.test_user_name = "magpie-unittest-toto"
-
-    def setUp(self):
-        self.check_requirements()
-        utils.TestSetup.delete_TestServiceResource(self)
-        utils.TestSetup.delete_TestService(self)
-        utils.TestSetup.delete_TestUser(self)
-        utils.TestSetup.delete_TestGroup(self)
 
     def test_GetAPI(self):
         resp = utils.test_request(self, "GET", s.SwaggerGenerator.path, headers=self.json_headers)
@@ -1435,14 +1448,14 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             (400, {"user_name": "   "}),
             (400, {"user_name": "abc???def"}),
             (400, {"user_name": "abc/def"}),
-            (400, {"user_name": "A" * 1024}),
+            (400, {"user_name": "A" * 1024}),  # too long
             (400, {"email": ""}),
             (400, {"email": "   "}),
             (400, {"email": "abc???def"}),
             (400, {"email": "abc/def"}),
             (400, {"email": "abc-def @ gmail dot com"}),
             (400, {"password": ""}),
-            (400, {"password": "   "}),
+            (400, {"password": "abc"}),  # not long enough
             (400, {"group_name": "!ABC!"}),
             (400, {"group_name": "abc/def"}),
             (400, {"group_name": ""}),
@@ -1451,7 +1464,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             var_data.update(variant)
             resp = utils.test_request(self, "POST", "/users", json=var_data, expect_errors=True,
                                       headers=self.json_headers, cookies=self.cookies)
-            test_iter = "(Test #{})".format(i)
+            test_iter = "(Test #{})".format(i)  # 0-based index to help identify error cause during debugging
             info = utils.check_response_basic_info(resp, code, expected_method="POST", extra_message=test_iter)
             utils.check_val_equal(info["param"]["name"], list(variant.keys())[0],  # sanity check of failure reason
                                   msg="failing input validation was not accomplished for expected field")
@@ -1506,7 +1519,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
 
     @runner.MAGPIE_TEST_USERS
-    def test_UpdateUsers_nothing(self):
+    def test_UpdateUser_nothing(self):
         utils.TestSetup.create_TestUser(self, override_group_name=None)
         path = "/users/{usr}".format(usr=self.test_user_name)
         resp = utils.test_request(self, self.update_method, path, data={},
@@ -1514,7 +1527,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
 
     @runner.MAGPIE_TEST_USERS
-    def test_UpdateUsers_username(self):
+    def test_UpdateUser_username(self):
         utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         new_name = self.test_user_name + "-new"
         self.extra_user_names.append(new_name)
@@ -1574,7 +1587,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
 
     @runner.MAGPIE_TEST_USERS
-    def test_UpdateUsers_email(self):
+    def test_UpdateUser_email(self):
         utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         new_email = "toto@new-email.lol"
         data = {"email": new_email}
@@ -1589,7 +1602,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         utils.check_val_equal(info["email"], new_email)
 
     @runner.MAGPIE_TEST_USERS
-    def test_UpdateUsers_password(self):
+    def test_UpdateUser_password(self):
         utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         old_password = self.test_user_name
         new_password = "n0t-SO-ez-2-Cr4cK"  # nosec
@@ -1618,6 +1631,18 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         resp = utils.test_request(self, "GET", "/session", headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["authenticated"], False)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_UpdateUser_PasswordTooShort(self):
+        utils.warn_version(self, "user password min length validation", "2.0.0", skip=True)
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+
+        data = {"password": pseudo_random_string(3)}
+        path = "/users/{}".format(self.test_user_name)
+        resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUser_existing(self):
@@ -2610,10 +2635,15 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetResource_ResponseFormat(self):
-        # svc
-        #   res1
-        #     res3
-        #   res2
+        """Test format of nested resource tree.
+
+        Test structure::
+
+            svc
+              res1
+                res3
+              res2
+        """
         body = utils.TestSetup.create_TestServiceResource(self)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
         svc_id = info["parent_id"]
@@ -2631,7 +2661,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in("resource", body)
 
-        def check_resource_node(res_body, parent_id, root_id, perms, children_id):
+        def check_resource_node(res_body, res_id, parent_id, root_id, perms, children_id):
             utils.check_val_type(res_body, dict)
             utils.check_val_is_in("resource_name", res_body)
             utils.check_val_type(res_body["resource_name"], six.string_types)
@@ -2640,7 +2670,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
                 utils.check_val_type(res_body["resource_display_name"], six.string_types)
             utils.check_val_is_in("resource_id", res_body)
             utils.check_val_type(res_body["resource_id"], int)
-            utils.check_val_equal(res_body["resource_id"], svc_id)
+            utils.check_val_equal(res_body["resource_id"], res_id)
             utils.check_val_is_in("parent_id", res_body)
             utils.check_val_equal(res_body["parent_id"], parent_id)
             if LooseVersion(self.version) >= LooseVersion("0.5.1"):
@@ -2653,21 +2683,22 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
             utils.check_val_type(res_body["children"], dict)
             if children_id is None:
                 utils.check_val_equal(len(res_body["children"]), 0)
-            utils.check_val_equal(len(res_body["children"]), len(children_id))
-            for child_id in children_id:
-                utils.check_val_is_in(res_body["children"], str(child_id))
+            else:
+                utils.check_val_equal(len(res_body["children"]), len(children_id))
+                for child_id in children_id:
+                    utils.check_val_is_in(str(child_id), res_body["children"])
 
         # check details of every resource in tree
         svc_perms = SERVICE_TYPE_DICT[self.test_service_type].permissions
         res_perms = SERVICE_TYPE_DICT[self.test_service_type].get_resource_permissions(self.test_resource_type)
-        check_resource_node(body["resource"], None, None, svc_perms, [res1_id, res2_id])
+        check_resource_node(body["resource"], svc_id, None, None, svc_perms, [res1_id, res2_id])
         svc_body = body["resource"]  # type: JSON
         res1_body = svc_body["children"][str(res1_id)]  # type: JSON
         res2_body = svc_body["children"][str(res2_id)]  # type: JSON
-        check_resource_node(res1_body, svc_id, svc_id, res_perms, [res3_id])
-        check_resource_node(res2_body, svc_id, svc_id, res_perms, None)
+        check_resource_node(res1_body, res1_id, svc_id, svc_id, res_perms, [res3_id])
+        check_resource_node(res2_body, res2_id, svc_id, svc_id, res_perms, None)
         res3_body = res2_body["children"][str(res1_id)]
-        check_resource_node(res3_body, res1_id, svc_id, res_perms, None)
+        check_resource_node(res3_body, res3_id, res1_id, svc_id, res_perms, None)
 
     @runner.MAGPIE_TEST_RESOURCES
     def test_UpdateResource(self):
@@ -2748,7 +2779,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_Test
 
 
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, NoAuth_Magpie_TestCase, Base_Magpie_TestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that do not require user AuthN/AuthZ.
@@ -2759,9 +2790,6 @@ class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
-
-    def setUp(self):
-        utils.check_or_try_logout_user(self, msg="must be anonymous to evaluate this test case")
 
     @runner.MAGPIE_TEST_STATUS
     def test_Home(self):
@@ -2837,7 +2865,7 @@ class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase
 
 
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase, User_Magpie_TestCase)):
+class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestCase, Base_Magpie_TestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that require at least logged user AuthN/AuthZ.
@@ -2849,11 +2877,9 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         super(Interface_MagpieUI_UsersAuth, self).__init__(*args, **kwargs)
         self.magpie_title = "Magpie User Management"
 
-    def setUp(self):
-        User_Magpie_TestCase.setUp(self)
-
     @classmethod
     def check_requirements(cls):
+        utils.check_or_try_logout_user(cls)  # in case user changed during another test
         headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
         assert headers and cookies, cls.require             # nosec
         assert cls.headers and cls.cookies, cls.require     # nosec
@@ -2908,7 +2934,7 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
                                                 method="GET", path=path)
         resp = utils.TestSetup.check_FormSubmit(self, form_match="edit_email", form_submit="edit_email",
                                                 form_data=data, previous_response=resp)
-        utils.check_ui_response_basic_info(resp, expected_title="Magpie user Management")
+        utils.check_ui_response_basic_info(resp, expected_title="Magpie User Management")
         path = "/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp)
@@ -2922,7 +2948,7 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         """Logged user can update its own password on account page."""
         utils.warn_version(self, "user account page", "2.0.0", skip=True)
         self.login_test_user()
-        data = {"new_user_password": "123456"}
+        data = {"new_user_password": "12345678987654321"}
         # trigger the edit button form to obtain the 1st response with input field, then submit 2nd form with new value
         path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
         resp = utils.TestSetup.check_FormSubmit(self, form_match="edit_password", form_submit="edit_password",
@@ -2943,7 +2969,7 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
 
 
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestCase)):
+class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_TestCase, Base_Magpie_TestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that require at least 'administrator' group
@@ -2955,12 +2981,6 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
-
-    @classmethod
-    def check_requirements(cls):
-        headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
-        assert headers and cookies, cls.require             # nosec
-        assert cls.headers and cls.cookies, cls.require     # nosec
 
     @runner.MAGPIE_TEST_STATUS
     def test_Home(self):
@@ -2979,8 +2999,7 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.delete_TestUser(self)
         form = {"edit": None, "user_name": self.test_user_name}
-        form_name = "edit_username" if LooseVersion(self.version) >= LooseVersion("2.0.0") else "edit"
-        resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit=form_name, path="/ui/users")
+        resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path="/ui/users")
         if LooseVersion(self.version) < "2":
             test = "Edit User: {}".format(self.test_user_name)
         else:
@@ -3075,3 +3094,9 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Base_Magpie_TestC
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
         # empty fields, same page but with 'incorrect' indicator due to invalid form inputs
         utils.TestSetup.check_UpStatus(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
+
+
+if TYPE_CHECKING:
+    AnyMagpieTestCaseType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase,
+                                  Type[Admin_Magpie_TestCase], Admin_Magpie_TestCase,
+                                  Type[User_Magpie_TestCase], User_Magpie_TestCase]

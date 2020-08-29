@@ -11,7 +11,7 @@ from pyramid.httpexceptions import HTTPException
 from pyramid.settings import asbool
 from pyramid.testing import setUp as PyramidSetUp
 from six.moves.urllib.parse import urlparse
-from webtest import TestApp
+from webtest.app import AppError, TestApp  # noqa
 from webtest.response import TestResponse
 
 from magpie import __meta__, app, services
@@ -28,7 +28,7 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from tests.interfaces import Base_Magpie_TestCase, User_Magpie_TestCase
+    from tests.interfaces import AnyMagpieTestCaseType
     from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
     from magpie.typedefs import (
         AnyCookiesType, AnyHeadersType, AnyResponseType, AnyValue, CookiesType, HeadersType, JSON, SettingsType, Str
@@ -36,8 +36,6 @@ if TYPE_CHECKING:
     # pylint: disable=C0103,invalid-name
     OptionalHeaderCookiesType = Tuple[Optional[AnyHeadersType], Optional[AnyCookiesType]]
     TestAppOrUrlType = Union[Str, TestApp]
-    AnyMagpieTestCaseType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase,
-                                  Type[User_Magpie_TestCase], User_Magpie_TestCase]
     AnyMagpieTestItemType = Union[AnyMagpieTestCaseType, TestAppOrUrlType]
 
 OptionalStringType = six.string_types + tuple([type(None)])
@@ -319,14 +317,25 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
             kwargs["headers"]["Content-Length"] = str(len(kwargs["params"]))  # need to fix with override JSON payload
         if status and status >= 300:
             kwargs["expect_errors"] = True
+        err_code = None
+        err_msg = None
         try:
             resp = app_or_url._gen_request(method, path, **kwargs)  # pylint: disable=W0212  # noqa: W0212
+        except AppError as exc:
+            err_code = exc
+            err_msg = str(exc)
+        except HTTPException as exc:
+            err_code = exc.status_code
+            err_msg = str(exc)
         except Exception as exc:
-            if isinstance(exc, HTTPException):
+            err_code = 500
+            err_msg = "Unknown: {!s}".format(exc)
+        finally:
+            if err_code:
                 info = json_pkg.dumps({"path": path, "method": method, "body": _body}, indent=4, ensure_ascii=False)
-                raise AssertionError("Request raised unexpected HTTP error: {!s}\n".format(exc.status_code) +
-                                     "\nRequest:\n{}".format(info))
-            raise
+                result = "Request raised unexpected error: {!s}\nError: {}\nRequest:\n{}"
+                raise AssertionError(result.format(err_code, err_msg, info))
+
         # automatically follow the redirect if any and evaluate its response
         max_redirect = kwargs.get("max_redirects", 5)
         while 300 <= resp.status_code < 400 and max_redirect > 0:

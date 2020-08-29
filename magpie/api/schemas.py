@@ -1324,14 +1324,14 @@ class Users_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class Users_CheckInfo_Name_BadRequestResponseSchema(BaseResponseSchemaAPI):
+class Users_CheckInfo_UserNameValue_BadRequestResponseSchema(BaseResponseSchemaAPI):
     description = "Invalid 'user_name' value specified."
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class Users_CheckInfo_Size_BadRequestResponseSchema(BaseResponseSchemaAPI):
+class Users_CheckInfo_UserNameSize_BadRequestResponseSchema(BaseResponseSchemaAPI):
     description = "Invalid 'user_name' length specified (>{length} characters)." \
-        .format(length=get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))
+                  .format(length=get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
@@ -1340,8 +1340,14 @@ class Users_CheckInfo_Email_BadRequestResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class Users_CheckInfo_Password_BadRequestResponseSchema(BaseResponseSchemaAPI):
+class Users_CheckInfo_PasswordValue_BadRequestResponseSchema(BaseResponseSchemaAPI):
     description = "Invalid 'password' value specified."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class Users_CheckInfo_PasswordSize_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid 'password' length specified (<{length} characters)." \
+                  .format(length=get_constant("MAGPIE_PASSWORD_MIN_LENGTH"))
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
@@ -1356,7 +1362,7 @@ class Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema(BaseResponseSchem
 
 
 # alias for readability across code, but we actually do the same check
-User_Check_BadRequestResponseSchema = Users_CheckInfo_Name_BadRequestResponseSchema
+User_Check_BadRequestResponseSchema = Users_CheckInfo_UserNameValue_BadRequestResponseSchema
 
 
 class User_Check_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -2667,7 +2673,7 @@ Users_GET_responses = {
 }
 Users_POST_responses = {
     "201": Users_POST_CreatedResponseSchema(),
-    "400": Users_CheckInfo_Name_BadRequestResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": Users_POST_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
