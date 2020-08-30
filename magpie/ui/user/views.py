@@ -92,7 +92,7 @@ class UserViews(BaseViews):
                 is_save_user_info = True
 
             if is_save_user_info:
-                resp = request_api(self.request, schemas.LoggedUserAPI, "PATCH", data=user_info)
+                resp = request_api(self.request, schemas.LoggedUserAPI.path, "PATCH", data=user_info)
                 check_response(resp)
                 # need to commit updates since we are using the same session
                 # otherwise, updated user doesn't exist yet in the db for next calls

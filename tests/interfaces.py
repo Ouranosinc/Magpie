@@ -53,6 +53,7 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     pwd = None                  # type: Optional[Str]
     cookies = None              # type: Optional[CookiesType]
     headers = None              # type: Optional[HeadersType]
+    json_headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
     test_headers = None         # type: Optional[HeadersType]
     test_cookies = None         # type: Optional[CookiesType]
     # parameters for testing, extracted automatically within 'utils.TestSetup' methods
@@ -111,12 +112,6 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
         if LooseVersion(self.version) >= LooseVersion("2.0.0"):
             return "PATCH"
         return "PUT"
-
-    @property
-    def json_headers(self):
-        # type: () -> HeadersType
-        test_item = utils.get_app_or_url(self)
-        return utils.get_headers(test_item, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
 
     def setup(self):
         pass
@@ -694,8 +689,6 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
             - :meth:`Interface_MagpieAPI_AdminAuth.test_GetUserServices_CascadeAndInherited`
             - :meth:`Interface_MagpieAPI_AdminAuth.test_GetUserServices_Inherited`
         """
-        utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.create_TestUser(self)
         body = utils.TestSetup.create_TestService(self)
         info = utils.TestSetup.create_TestUserResourcePermission(self, resource_info=body)
         usr_svc_perm, svc_id = info["permission_name"], info["resource_id"]
@@ -724,7 +717,16 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
         .. seealso::
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserServices_AllowedItself`
         """
-        raise NotImplementedError  # FIXME
+        other_user = self.test_user_name + "-other"
+        self.extra_user_names.append(other_user)
+        utils.TestSetup.delete_TestUser(self, override_user_name=other_user)
+        utils.TestSetup.create_TestUser(self, override_user_name=other_user)
+        self.login_test_user()
+
+        path = "/users/{}/services".format(other_user)
+        resp = utils.test_request(self, "GET", path, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 403)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
@@ -746,7 +748,16 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
         .. seealso::
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResources_AllowedItself`
         """
-        raise NotImplementedError  # FIXME
+        other_user = self.test_user_name + "-other"
+        self.extra_user_names.append(other_user)
+        utils.TestSetup.delete_TestUser(self, override_user_name=other_user)
+        utils.TestSetup.create_TestUser(self, override_user_name=other_user)
+        self.login_test_user()
+
+        path = "/users/{}/resources".format(other_user)
+        resp = utils.test_request(self, "GET", path, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 403)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
@@ -759,7 +770,17 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
             - :meth:`Interface_MagpieAPI_AdminAuth.test_GetLoggedUserResourcesPermissions`
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_ForbiddenOther`
         """
-        raise NotImplementedError  # FIXME
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.create_TestUserResourcePermission(self, resource_info=body)
+        res_id, res_perm = info["resource_id"], info["permission_name"]
+        self.login_test_user()
+
+        path = "/users/{}/resources/{}/permissions".format(self.test_user_name, res_id)
+        resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("permission_names", body)
+        utils.check_all_equal(body["permission_names"], [res_perm],
+                              msg="Only single direct resource permission should be listed.")
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
@@ -769,7 +790,18 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
         .. seealso::
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_AllowedItself`
         """
-        raise NotImplementedError  # FIXME
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        other_user = self.test_user_name + "-other"
+        self.extra_user_names.append(other_user)
+        utils.TestSetup.delete_TestUser(self, override_user_name=other_user)
+        utils.TestSetup.create_TestUser(self, override_user_name=other_user)
+        self.login_test_user()
+
+        path = "/users/{}/resources/{}/permissions".format(other_user, info["resource_id"])
+        resp = utils.test_request(self, "GET", path, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 403)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
@@ -3073,7 +3105,7 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestC
         path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
         resp = utils.TestSetup.check_FormSubmit(self, form_match="edit_email", form_submit="edit_email",
                                                 method="GET", path=path)
-        resp = utils.TestSetup.check_FormSubmit(self, form_match="edit_email", form_submit="edit_email",
+        resp = utils.TestSetup.check_FormSubmit(self, form_match="edit_email", form_submit="save_email",
                                                 form_data=data, previous_response=resp)
         utils.check_ui_response_basic_info(resp, expected_title="Magpie User Management")
         path = "/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))

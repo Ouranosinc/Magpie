@@ -304,14 +304,14 @@ class TestUtils(unittest.TestCase):
 
         def mock_raise(*_, **__):
             if mock_calls["counter"] >= 2 * ax.RAISE_RECURSIVE_SAFEGUARD_MAX:
-                return
+                return TypeError()
             mock_calls["counter"] += 1
-            return TypeError()
+            raise TypeError()
 
         try:
             with mock.patch("magpie.api.exception.generate_response_http_format", side_effect=mock_raise):
                 ax.evaluate_call(lambda: int("x"))
-        finally:
+        except Exception:
             pass
 
         utils.check_val_equal(mock_calls["counter"], ax.RAISE_RECURSIVE_SAFEGUARD_MAX)

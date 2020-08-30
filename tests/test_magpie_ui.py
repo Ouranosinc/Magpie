@@ -40,6 +40,10 @@ class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.Test
         cls.test_group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
         cls.test_service_type = ServiceWPS.service_type
         cls.test_service_name = "magpie-unittest-service-wps"
+        # note: admin credentials to setup data on test instance as needed, but not to be used for these tests
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
 
 
 @runner.MAGPIE_TEST_UI

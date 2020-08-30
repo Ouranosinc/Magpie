@@ -870,7 +870,7 @@ class TestSetup(object):
         kwargs = {}
         if expected_title is null:
             kwargs["expected_title"] = getattr(test_case, "magpie_title", "Magpie Administration")
-        elif expected_title is not None:
+        else:
             kwargs["expected_title"] = expected_title
         if expected_code is not null:
             kwargs["expected_code"] = expected_code
@@ -947,11 +947,12 @@ class TestSetup(object):
                     form = f
                     break
         if not form:
-            available_forms = {fm: {(fk, fv[0].value) for fk, fv in f.fields.items()} for fm, f in resp.forms.items()}
+            available_forms = {fm: {fk: fv[0].value for fk, fv in f.fields.items()} for fm, f in resp.forms.items()}
+            available_forms = json_pkg.dumps(available_forms, indent=4, ensure_ascii=False)
             test_case.fail("could not find requested form for submission "
                            "[form_match: {!r}, form_submit: {!r}, form_data: {!r}] "
                            .format(form_match, form_submit, form_data) +
-                           "from available (form_match: {{form_data}}) combinations: [{}]".format(available_forms))
+                           "from available form match/data combinations: [{}]".format(available_forms))
         if form_data:
             for f_field, f_value in dict(form_data).items():
                 form[f_field] = f_value
@@ -1281,7 +1282,9 @@ class TestSetup(object):
         """
         app_or_url = get_app_or_url(test_case)
         service_name = override_service_name if override_service_name is not null else test_case.test_service_name
-        services_info = TestSetup.get_RegisteredServicesList(test_case)
+        services_info = TestSetup.get_RegisteredServicesList(test_case,
+                                                             override_headers=override_headers,
+                                                             override_cookies=override_cookies)
         test_service = list(filter(lambda r: r["service_name"] == service_name, services_info))
         # delete as required, skip if non-existing
         if len(test_service) > 0:
