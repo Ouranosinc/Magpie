@@ -354,18 +354,20 @@ class QueryRequestSchemaAPI(colander.MappingSchema):
 QueryEffectivePermissions = colander.SchemaNode(
     colander.Boolean(), name="effective", default=False, missing=colander.drop,
     description="Obtain user's effective permissions resolved with corresponding service inheritance functionality. "
-                "(Note: group inheritance is enforced regardless of any 'inherit' flag).")
+                "(Note: group inheritance is enforced regardless of other query parameter values).")
 QueryInheritGroupsPermissions = colander.SchemaNode(
     colander.Boolean(), name="inherited", default=False, missing=colander.drop,
-    description="Include the user's groups memberships inheritance to resolve service resource permissions.")
+    description="Include the user's groups memberships inheritance to resolve permissions.")
 QueryCascadeResourcesPermissions = colander.SchemaNode(
     colander.Boolean(), name="cascade", default=False, missing=colander.drop,
-    description="Display any service that has at least one children resource permission (at any level), "
-                "or only services that have permissions explicitly set on them (ignoring children resources).", )
-QueryFlattenResources = colander.SchemaNode(
+    description="Display all services that has at least one permission at any level in his hierarchy "
+                "(including all children resources). Otherwise (default), only returns services that have permissions "
+                "explicitly set on them, ignoring permissions set on children resources.")
+QueryFlattenServices = colander.SchemaNode(
     colander.Boolean(), name="flatten", default=False, missing=colander.drop,
-    description="Return services as a flattened list of JSON objects. Default is a nested JSON of service-type keys "
-                "with children service-name keys pointing to each corresponding service definition.")
+    description="Return elements as a flattened list of JSON objects instead of default response format. "
+                "Default is a nested JSON of service-type keys with children service-name keys, each containing "
+                "their respective service definition as JSON object.")
 
 
 class BaseRequestSchemaAPI(colander.MappingSchema):
@@ -1001,7 +1003,7 @@ class ServiceTypesList(colander.SequenceSchema):
 
 
 class ServiceListingQuerySchema(QueryRequestSchemaAPI):
-    flatten = QueryFlattenResources
+    flatten = QueryFlattenServices
 
 
 class ServiceTypes_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -1821,7 +1823,7 @@ class UserServicePermission_DELETE_RequestSchema(BaseRequestSchemaAPI):
 class UserServices_GET_QuerySchema(QueryRequestSchemaAPI):
     cascade = QueryCascadeResourcesPermissions
     inherit = QueryInheritGroupsPermissions
-    flatten = QueryFlattenResources
+    flatten = QueryFlattenServices
 
 
 class UserServices_GET_RequestSchema(BaseRequestSchemaAPI):

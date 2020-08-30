@@ -270,20 +270,25 @@ def get_user_services(user, request, cascade_resources=False,
     for resource_id, perms in res_perm_dict.items():
         resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
         service_id = resource.root_service_id or resource.resource_id
-
         is_service = resource.resource_type == models.Service.resource_type_name
 
         if not is_service:
+            # if any children resource had user/group permissions, minimally return its root service without
+            # any immediate permission, otherwise (cascade off) it is skipped and not returned at all in response
             if not cascade_resources:
                 continue
-            perms = get_resource_root_service(resource, request).permissions
+            perms = []
 
-        svc = db_session.query(models.Service).filter_by(resource_id=service_id).first()
+        svc = get_resource_root_service(resource, request)
+        if svc.service_type not in services:
+            services[svc.service_type] = {}
+        svc_name = svc.service.resource_name
+        svc_type = svc.service_type
 
-        if svc.type not in services:
-            services[svc.type] = {}
-        if svc.resource_name not in services[svc.type]:
-            services[svc.type][svc.resource_name] = format_service(svc, perms, show_private_url=False)
+        # if service was not already added, add it (could be directly its permissions, or empty via children resource)
+        # otherwise, set explicit immediate permissions on service instead of empty children resource permissions
+        if svc_name not in services[svc_type] or is_service:
+            services[svc_type][svc_name] = format_service(svc.service, perms, show_private_url=False)
 
     if not format_as_list:
         return services

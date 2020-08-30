@@ -53,7 +53,6 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     pwd = None                  # type: Optional[Str]
     cookies = None              # type: Optional[CookiesType]
     headers = None              # type: Optional[HeadersType]
-    json_headers = None         # type: Optional[HeadersType]
     test_headers = None         # type: Optional[HeadersType]
     test_cookies = None         # type: Optional[CookiesType]
     # parameters for testing, extracted automatically within 'utils.TestSetup' methods
@@ -113,6 +112,12 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
             return "PATCH"
         return "PUT"
 
+    @property
+    def json_headers(self):
+        # type: () -> HeadersType
+        test_item = utils.get_app_or_url(self)
+        return utils.get_headers(test_item, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
+
     def setup(self):
         pass
 
@@ -134,7 +139,7 @@ class NoAuth_Magpie_TestCase(Base_Magpie_TestCase):
         utils.check_or_try_logout_user(self, msg="must be anonymous to evaluate this test case")
 
     def tearDown(self):
-        super(NoAuth_Magpie_TestCase, self).tearDownClass()
+        super(NoAuth_Magpie_TestCase, self).tearDown()
 
 
 class Admin_Magpie_TestCase(Base_Magpie_TestCase):
@@ -273,7 +278,7 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuth_Magpie_TestC
     @runner.MAGPIE_TEST_LOGGED
     def test_GetLoggedUser_InvalidNotGlobed(self):
         """
-        Test logged user with more characters that could be incorrectly interpreted.
+        Test that logged user special keyword with more characters doesn't get incorrectly interpreted.
         Older version bug would infer the logged user keyword although path variable was not *exactly* equal to it.
         """
         utils.warn_version(self, "validation of complete logged user keyword", "2.0.0", skip=True)
@@ -580,7 +585,11 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_UpdateUsers_username_Forbidden_AnyNonAdmin(self):
-        """Non-admin level user is not permitted to update its own user name."""
+        """Non-admin level user is not permitted to update its own user name.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_UpdateUser_username`
+        """
         new_user_name = self.test_user_name + "new-user-name"
         self.extra_user_names.append(new_user_name)
         utils.TestSetup.delete_TestUser(self, override_user_name=new_user_name)
@@ -598,7 +607,11 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_UpdateUsers_username_Forbidden_UpdateOthers(self):
-        """Logged user is not allowed to update any other user's name."""
+        """Logged user is not allowed to update any other user's name.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_UpdateUser_username`
+        """
         other_user_name = "unittest-user-auth_other-user-username"
         self.extra_user_names.append(other_user_name)
         utils.TestSetup.delete_TestUser(self, override_user_name=other_user_name)
@@ -634,6 +647,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
         """
         test_group_name = "unittest-users-auth_new-group-self-assign"
         self.extra_group_names.append(test_group_name)
+        utils.TestSetup.delete_TestGroup(self, override_group_name=test_group_name)  # in case of failing previous run
         utils.TestSetup.create_TestGroup(self, override_group_name=test_group_name)
         self.login_test_user()
 
@@ -665,7 +679,101 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
         utils.check_val_not_in(perm, body["permission_names"])
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetUserServices_AllowedItself(self):
+        """
+        Validate that non-admin user can view services it has access to when referenced to explicitly in path variable
+        instead of via logged user keyword.
+
+        Without 'cascade' query, need to have direct service permissions for it to be listed it in response.
+        Otherwise nothing would be returned.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserServices_ForbiddenOther`
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_GetUserServices_Cascade`
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_GetUserServices_CascadeAndInherited`
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_GetUserServices_Inherited`
+        """
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+        body = utils.TestSetup.create_TestService(self)
+        info = utils.TestSetup.create_TestUserResourcePermission(self, resource_info=body)
+        usr_svc_perm, svc_id = info["permission_name"], info["resource_id"]
+        self.login_test_user()
+
+        path = "/users/{}/services".format(self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("services", body)
+        utils.check_val_is_in(self.test_service_type, body["services"])
+        utils.check_val_equal(len(body["services"]), 1,
+                              msg="Only unique service with immediate user permission should be listed in types.")
+        utils.check_val_is_in(self.test_service_name, body["services"][self.test_service_type])
+        utils.check_val_equal(len(body["services"][self.test_service_type]), 1,
+                              msg="Only unique specific service with immediate user permission should be listed.")
+        service = body["services"][self.test_service_type][self.test_service_name]
+        utils.check_all_equal(service["permission_names"], [usr_svc_perm],
+                              msg="Only single immediate permission applied on service for user should be listed.")
+        utils.check_val_not_in("resources", service)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetUserServices_ForbiddenOther(self):
+        """Validate that non-admin user cannot view another user's services.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserServices_AllowedItself`
+        """
+        raise NotImplementedError  # FIXME
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_GetUserResources_AllowedItself(self):
+        """
+        Validate that non-admin user can view resources it has access to when referenced to explicitly in path variable
+        instead of via logged user keyword.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResources_ForbiddenOther`
+        """
+        raise NotImplementedError  # FIXME
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_GetUserResources_ForbiddenOther(self):
+        """Validate that non-admin user cannot view another user's resources.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResources_AllowedItself`
+        """
+        raise NotImplementedError  # FIXME
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_GetUserResourcesPermissions_AllowedItself(self):
+        """
+        Validate that non-admin user can view its own permissions when referenced to explicitly in path variable
+        instead of via logged user keyword.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_GetLoggedUserResourcesPermissions`
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_ForbiddenOther`
+        """
+        raise NotImplementedError  # FIXME
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_GetUserResourcesPermissions_ForbiddenOther(self):
+        """Validate that non-admin user cannot view another user's permissions.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_AllowedItself`
+        """
+        raise NotImplementedError  # FIXME
+
+    @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_REGISTER
     def test_RegisterDiscoverableGroup(self):
         """Non-admin logged user is allowed to update is membership to register to a discoverable group by itself."""
         utils.TestSetup.delete_TestGroup(self)
@@ -688,6 +796,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_REGISTER
     def test_UnregisterDiscoverableGroup(self):
         """Non-admin logged user is allowed to revoke its membership to leave a discoverable group by itself."""
         utils.TestSetup.delete_TestGroup(self)
@@ -919,6 +1028,12 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_GetLoggedUserResourcesPermissions(self):
+        """
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_GetLoggedUserResourcesPermissions_Queries`
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_AllowedItself`
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_ForbiddenOther`
+        """
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         res_id = body["resource"]["resource_id"]
@@ -926,6 +1041,12 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
 
     @runner.MAGPIE_TEST_USERS
     def test_GetLoggedUserResourcesPermissions_Queries(self):
+        """
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_GetLoggedUserResourcesPermissions`
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_AllowedItself`
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_ForbiddenOther`
+        """
         utils.warn_version(self, "permission effect queries", "0.7.0", skip=True)
 
         # setup test resources under service with permissions
@@ -1303,6 +1424,24 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
                     utils.check_val_type(svc_dict["service_url"], six.string_types)
 
     @runner.MAGPIE_TEST_USERS
+    def test_GetUserServices_Flatten(self):
+        utils.warn_version(self, "flatten user services response format", "2.0.0", skip=True)
+        # FIXME: which version was 'list' added? adjust test for it?
+        raise NotImplementedError  # FIXME
+
+    @runner.MAGPIE_TEST_USERS
+    def test_GetUserServices_Cascade(self):
+        raise NotImplementedError  # FIXME
+
+    @runner.MAGPIE_TEST_USERS
+    def test_GetUserServices_Inherited(self):
+        raise NotImplementedError  # FIXME
+
+    @runner.MAGPIE_TEST_USERS
+    def test_GetUserServices_CascadeAndInherited(self):
+        raise NotImplementedError  # FIXME
+
+    @runner.MAGPIE_TEST_USERS
     def test_GetUserServiceResources_format(self):
         utils.TestSetup.create_TestService(self)
         utils.TestSetup.create_TestServiceResource(self)
@@ -1528,10 +1667,15 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
 
     @runner.MAGPIE_TEST_USERS
     def test_UpdateUser_username(self):
+        """Administrator level user is allowed to modify the username of another user.
+
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_UpdateUsers_username_Forbidden_AnyNonAdmin`
+            - :meth:`Interface_MagpieAPI_UsersAuth.test_UpdateUsers_username_Forbidden_UpdateOthers`
+        """
         utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         new_name = self.test_user_name + "-new"
         self.extra_user_names.append(new_name)
-
         # cleanup in case the updated username already exists (ex: previous test execution failure)
         utils.TestSetup.delete_TestUser(self, override_user_name=new_name)
 
@@ -2331,7 +2475,6 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
         if LooseVersion(self.version) >= LooseVersion("0.7.0"):
             utils.check_val_is_in("service_sync_type", svc_dict)
             utils.check_val_type(svc_dict["service_sync_type"], utils.OptionalStringType)
-        # FIXME: there must always be applicable permissions for Service route
         if LooseVersion(self.version) >= LooseVersion("2.0.0"):
             utils.check_val_not_equal(len(svc_dict["permission_names"]), 0,
                                       msg="Non user-scoped service route must always provide applicable permissions.")
@@ -2514,7 +2657,6 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
                 utils.check_val_type(resource["service_name"], six.string_types)
                 utils.check_val_type(resource["service_type"], six.string_types)
                 utils.check_val_type(resource["permission_names"], list)
-                # FIXME: there must always be applicable permissions for Resources route
                 if LooseVersion(self.version) >= LooseVersion("2.0.0"):
                     utils.check_val_not_equal(len(resource["permission_names"]), 0,
                                               msg="Resource route must always provide its applicable permissions.")
@@ -2541,7 +2683,6 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
                     utils.check_val_type(child["permission_names"], list)
                     utils.check_val_equal(str(child["resource_id"]), res_id,
                                           msg="Key resource ID must match object's value, although of different types.")
-                    # FIXME: there must always be applicable permissions for Resources route
                     if LooseVersion(self.version) >= LooseVersion("2.0.0"):
                         utils.check_val_not_equal(len(child["permission_names"]), 0,
                                                   msg="Resource route must always provide its applicable permissions.")
@@ -2697,7 +2838,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
         res2_body = svc_body["children"][str(res2_id)]  # type: JSON
         check_resource_node(res1_body, res1_id, svc_id, svc_id, res_perms, [res3_id])
         check_resource_node(res2_body, res2_id, svc_id, svc_id, res_perms, None)
-        res3_body = res2_body["children"][str(res1_id)]
+        res3_body = res1_body["children"][str(res3_id)]
         check_resource_node(res3_body, res3_id, res1_id, svc_id, res_perms, None)
 
     @runner.MAGPIE_TEST_RESOURCES

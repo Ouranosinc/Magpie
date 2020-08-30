@@ -1,3 +1,4 @@
+import functools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import unittest
 import warnings
@@ -113,6 +114,7 @@ def make_run_option_decorator(run_option):
 
     All ``<custom_marker>`` definitions should be added to ``setup.cfg`` to allow :mod:`pytest` to reference them.
     """
+    @functools.wraps(run_option)
     def wrap(test_func, *args, **kwargs):  # noqa: F811
         pytest_marker = pytest.mark.__getattr__(run_option.marker)
         unittest_skip = unittest.skipUnless(*run_option())
@@ -908,7 +910,7 @@ class TestSetup(object):
         :param form_match:
             Can be a form name, the form index (from all available forms on page) or an
             iterable of key/values of form fields to search for a match (first match is used if many are available).
-        :param form_data: specifies matched form fields to be filed as if entered from UI input using given key/value.
+        :param form_data: specifies matched form fields to be filled as if entered from UI input using given key/value.
         :param form_submit: specifies which `button` by name or index to submit within the matched form.
         :param path:
             Required page location where to send a request to fetch the required form, *unless* provided through
@@ -945,9 +947,11 @@ class TestSetup(object):
                     form = f
                     break
         if not form:
+            available_forms = {fm: {(fk, fv[0].value) for fk, fv in f.fields.items()} for fm, f in resp.forms.items()}
             test_case.fail("could not find requested form for submission "
-                           "[form_match: {!r}, form_submit: {!r}, form_data: {!r}]"
-                           .format(form_match, form_submit, form_data))
+                           "[form_match: {!r}, form_submit: {!r}, form_data: {!r}] "
+                           .format(form_match, form_submit, form_data) +
+                           "from available (form_match: {{form_data}}) combinations: [{}]".format(available_forms))
         if form_data:
             for f_field, f_value in dict(form_data).items():
                 form[f_field] = f_value
@@ -1066,6 +1070,41 @@ class TestSetup(object):
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
         return check_response_basic_info(resp)
+
+    @staticmethod
+    def create_TestUserResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
+                                          resource_info=null,               # type: Optional[JSON]
+                                          override_resource_id=null,        # type: Optional[int]
+                                          override_permission_name=null,    # type: Optional[Str]
+                                          override_user_name=null,          # type: Optional[Str]
+                                          override_headers=null,            # type: Optional[HeadersType]
+                                          override_cookies=null,            # type: Optional[CookiesType]
+                                          ):                                # type: (...) -> JSON
+        """Utility method to create a permission on given resource for the user.
+
+        Employs the resource information returned from one of the creation utilities:
+            - :meth:`create_TestResource`
+            - :meth:`create_TestService`
+            - :meth:`create_TestServiceResource`
+
+        If resource information container is not provided, all desired values must be given as parameter for creation.
+        """
+        if resource_info is null:
+            resource_info = TestSetup.get_ResourceInfo(test_case, resource_id=override_resource_id, full_detail=True,
+                                                       override_headers=override_headers,
+                                                       override_cookies=override_cookies)
+        else:
+            resource_info = TestSetup.get_ResourceInfo(test_case, override_body=resource_info, full_detail=False)
+        res_id = resource_info["resource_id"]
+        if override_permission_name is null:
+            override_permission_name = resource_info["permission_names"][0]
+        user = override_user_name if override_user_name is not null else test_case.test_user_name
+        data = {"permission_name": override_permission_name}
+        path = "/users/{}/resources/{}/permissions".format(user, res_id)
+        resp = test_request(test_case, "POST", path, data=data,
+                            headers=override_headers if override_headers is not null else test_case.json_headers,
+                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
     def get_ResourceInfo(test_case,                 # type: AnyMagpieTestCaseType

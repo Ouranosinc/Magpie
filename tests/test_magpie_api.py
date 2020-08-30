@@ -34,7 +34,6 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
     @classmethod
     def setUpClass(cls):
         cls.app = utils.get_test_magpie_app()
-        cls.json_headers = utils.get_headers(cls.app, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.cookies = None  # force not logged in
         cls.version = utils.TestSetup.get_Version(cls)
         cls.test_user_name = get_constant("MAGPIE_ANONYMOUS_USER")
@@ -98,7 +97,6 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
-        cls.json_headers = utils.get_headers(cls.app, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
         # TODO: fix UI views so that they can be "found" directly in the WebTest.TestApp
@@ -125,7 +123,6 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
     @classmethod
     def setUpClass(cls):
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
-        cls.json_headers = utils.get_headers(cls.url, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.cookies = None
         cls.test_user_name = get_constant("MAGPIE_ANONYMOUS_USER")
         cls.test_group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
@@ -173,7 +170,6 @@ class TestCase_MagpieAPI_AdminAuth_Remote(ti.Interface_MagpieAPI_AdminAuth, unit
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
-        cls.json_headers = utils.get_headers(cls.url, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.version = utils.TestSetup.get_Version(cls)
         cls.check_requirements()
         cls.setup_test_values()

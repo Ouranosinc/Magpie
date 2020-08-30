@@ -79,7 +79,7 @@ def update_user_view(request):
     # user name change is admin-only operation
     if update_username:
         ax.verify_param(get_constant("MAGPIE_ADMIN_GROUP"), is_in=True,
-                        param_compare=uu.get_user_groups_checked(user, request.db), with_param=False,
+                        param_compare=uu.get_user_groups_checked(request.user, request.db), with_param=False,
                         http_error=HTTPForbidden, msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
 
     # logged user updating itself is forbidden if it corresponds to special users

@@ -67,8 +67,9 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
     resource_types_permissions = {}     # type: Dict[models.Resource, List[Permission]]
 
     def __init__(self, service, request):
-        self.service = service
-        self.request = request
+        # type: (models.Service, Request) -> None
+        self.service = service          # type: models.Service
+        self.request = request          # type: Request
         self.acl = []                   # type: AccessControlListType
         self.parser = ows_parser_factory(request)
         self.parser.parse(self.params_expected)
