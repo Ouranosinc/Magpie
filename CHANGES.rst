@@ -62,6 +62,9 @@ Features / Changes
 * Replace ``inherit`` query parameter wherever applicable by ``inherited`` to match documentation names, but preserve
   backward compatibility support of old name.
 * Add ``MAGPIE_PASSWORD_MIN_LENGTH`` setting with corresponding validation of field during ``User`` creation and update.
+* Avoid returning ``Service`` entries where user, group or both (according to request path and query options) does not
+  actually have any permission set either directly on them or onto one of their respective children ``Resource``. This
+  avoids unnecessarily exposing all ``Service`` for which the user cannot (or should not) be interacting with anyway.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -75,8 +78,8 @@ Bug Fixes
   (`#340 <https://github.com/Ouranosinc/Magpie/issues/340>`_).
 * Fix bug introduced in `0.9.4 <https://github.com/Ouranosinc/Magpie/tree/0.9.4>`_
   (`4a23a49 <https://github.com/Ouranosinc/Magpie/commit/4a23a497e3ce1dc39ccaf31ba1857fc199d399db>`_) where some
-  API routes would not return the `Allowed Permissions` for children ``Resource`` under ``Service`` (only ``Service``
-  permissions would be filled), or when requesting ``Resource`` details directly.
+  API routes would not return the `Allowed Permissions` for children ``Resource`` under ``Service``
+  (only ``Service`` permissions would be filled), or when requesting ``Resource`` details directly.
 * Fix input check to avoid situations where updating ``Resource`` name could cause involuntary duplicate errors.
 * Fix minor HTML issues in mako templates.
 

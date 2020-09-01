@@ -6,7 +6,7 @@ from magpie import models
 from magpie.api import exception as ax
 from magpie.api import requests as ar
 from magpie.api import schemas as s
-from magpie.api.management.resource.resource_utils import create_resource, delete_resource
+from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service import service_formats as sf
 from magpie.api.management.service import service_utils as su
 from magpie.permissions import Permission, format_permissions
@@ -201,7 +201,7 @@ def delete_service_resource_view(request):
     """
     Unregister a resource.
     """
-    return delete_resource(request)
+    return ru.delete_resource(request)
 
 
 @s.ServiceResourcesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceResources_GET_responses)
@@ -220,19 +220,30 @@ def get_service_resources_view(request):
 @s.ServiceResourcesAPI.post(schema=s.ServiceResources_POST_RequestSchema, tags=[s.ServicesTag],
                             response_schemas=s.ServiceResources_POST_responses)
 @view_config(route_name=s.ServiceResourcesAPI.name, request_method="POST")
-def create_service_direct_resource_view(request):
+def create_service_resource_view(request):
     """
-    Register a new resource directly under a service.
+    Register a new resource directly under a service or under one of its children resources.
     """
     service = ar.get_service_matchdict_checked(request)
     resource_name = ar.get_multiformat_body(request, "resource_name")
     resource_display_name = ar.get_multiformat_body(request, "resource_display_name", default=resource_name)
     resource_type = ar.get_multiformat_body(request, "resource_type")
     parent_id = ar.get_multiformat_body(request, "parent_id")  # no check because None/empty is allowed
+    db_session = request.db
     if not parent_id:
         parent_id = service.resource_id
-    return create_resource(resource_name, resource_display_name, resource_type,
-                           parent_id=parent_id, db_session=request.db)
+    else:
+        # validate target service is actually the root service of the provided parent resource ID
+        root_service = ru.get_resource_root_service_by_id(parent_id, db_session=db_session)
+        ax.verify_param(root_service, not_none=True, param_name="parent_id",
+                        msg_on_fail=s.ServiceResources_POST_NotFoundResponseSchema.description,
+                        http_error=HTTPNotFound)
+        ax.verify_param(root_service.resource_id, is_equal=True,
+                        param_compare=service.resource_id, param_name="parent_id",
+                        msg_on_fail=s.ServiceResources_POST_BadRequestResponseSchema.description,
+                        http_error=HTTPBadRequest)
+    return ru.create_resource(resource_name, resource_display_name, resource_type,
+                              parent_id=parent_id, db_session=db_session)
 
 
 @s.ServiceTypeResourcesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypeResources_GET_responses)

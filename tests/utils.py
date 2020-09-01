@@ -17,7 +17,7 @@ from webtest.response import TestResponse
 
 from magpie import __meta__, app, services
 from magpie.constants import get_constant
-from magpie.services import ServiceAccess
+from magpie.services import SERVICE_TYPE_DICT, ServiceAccess
 from magpie.utils import (
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
@@ -677,105 +677,62 @@ def is_null(item):
     return isinstance(item, NullType) or item is null
 
 
-def check_error_param_structure(json_body, param_value=null, param_name=null, param_compare=null,
-                                is_param_value_literal_unicode=False, param_compare_exists=False, version=None):
+def check_error_param_structure(body,                                   # type: JSON
+                                version=null,                           # type: Optional[Str]
+                                param_value=null,                       # type: Optional[Any]
+                                param_name=null,                        # type: Optional[Str]
+                                param_compare=null,                     # type: Optional[Any]
+                                is_param_value_literal_unicode=False,   # type: bool
+                                param_name_exists=False,                # type: bool
+                                param_compare_exists=False,             # type: bool
+                                ):                                      # type: (...) -> None
     """
-    Validates error response 'param' information based on different Magpie version formats.
+    Validates error response ``param`` information based on different Magpie version formats.
 
-    :param json_body: json body of the response to validate.
-    :param param_value: expected 'value' of param, not verified if <Null>
-    :param param_name: expected 'name' of param, not verified if <Null> or non existing for Magpie version
-    :param param_compare: expected 'compare'/'param_compare' value, not verified if <Null>
-    :param is_param_value_literal_unicode: param value is represented as `u'{paramValue}'` for older Magpie version
-    :param param_compare_exists: verify that 'compare'/'param_compare' is in the body, not validating its actual value
-    :param version: version of application/remote server to use for format validation, use local Magpie version if None
-    :raises AssertionError: failing condition
+    :param body: JSON body of the response to validate.
+    :param version: explicit Magpie version to use for validation, or the current package version if ``null``.
+    :param param_value:
+        Expected 'value' of param the parameter.
+        Contained field value not verified if ``null``, only presence of the field.
+    :param param_name:
+        Expected 'name' of param. Ignored for older Magpie version that did not provide this information.
+        Contained field value not verified if ``null`` and ``param_name_exists`` is ``True`` (only its presence).
+        If provided, automatically implies ``param_name_exists=True``. Skipped otherwise.
+    :param param_compare:
+        Expected 'compare'/'param_compare' value (filed name according to version)
+        Contained field value not verified if ``null`` and ``param_compare_exists`` is ``True`` (only its presence).
+        If provided, automatically implies ``param_compare_exists=True``. Skipped otherwise.
+    :param is_param_value_literal_unicode: param value is represented as `u'{paramValue}'` for older Magpie version.
+    :param param_name_exists: verify that 'name' is in the body, not validating its value.
+    :param param_compare_exists: verify that 'compare'/'param_compare' is in the body, not validating its value.
+    :raises AssertionError: on any failing condition
     """
-    check_val_type(json_body, dict)
-    check_val_is_in("param", json_body)
+    check_val_type(body, dict)
+    check_val_is_in("param", body)
     version = version or __meta__.__version__
     if LooseVersion(version) >= LooseVersion("0.6.3"):
-        check_val_type(json_body["param"], dict)
-        check_val_is_in("value", json_body["param"])
-        check_val_is_in("name", json_body["param"])
-        check_val_equal(json_body["param"]["name"], param_name)
-        check_val_equal(json_body["param"]["value"], param_value)
-        if param_compare_exists:
-            check_val_is_in("compare", json_body["param"])
-            check_val_equal(json_body["param"]["compare"], param_compare)
+        check_val_type(body["param"], dict)
+        check_val_is_in("value", body["param"])
+        if param_name_exists or param_name is not null:
+            check_val_is_in("name", body["param"])
+            if param_name is not null:
+                check_val_equal(body["param"]["name"], param_name)
+        if param_value is not null:
+            check_val_equal(body["param"]["value"], param_value)
+        if param_compare_exists or param_compare is not null:
+            check_val_is_in("compare", body["param"])
+            if param_compare is not null:
+                check_val_equal(body["param"]["compare"], param_compare)
     else:
-        # unicode representation was explicitly returned in value only when of string type
-        if is_param_value_literal_unicode and isinstance(param_value, six.string_types):
-            param_value = u"u\'{}\'".format(param_value)
-        check_val_equal(json_body["param"], param_value)
-        if param_compare_exists:
-            check_val_is_in("param_compare", json_body)
-            check_val_equal(json_body["param_compare"], param_compare)
-
-
-def check_post_resource_structure(json_body, resource_name, resource_type, resource_display_name, version=None):
-    """
-    Validates POST /resource response information based on different Magpie version formats.
-
-    :param json_body: json body of the response to validate.
-    :param resource_name: name of the resource to validate.
-    :param resource_type: type of the resource to validate.
-    :param resource_display_name: display name of the resource to validate.
-    :param version: version of application/remote server to use for format validation, use local Magpie version if None.
-    :raises AssertionError: failing condition
-    """
-    version = version or __meta__.__version__
-    if LooseVersion(version) >= LooseVersion("0.6.3"):
-        check_val_is_in("resource", json_body)
-        check_val_type(json_body["resource"], dict)
-        check_val_is_in("resource_name", json_body["resource"])
-        check_val_is_in("resource_display_name", json_body["resource"])
-        check_val_is_in("resource_type", json_body["resource"])
-        check_val_is_in("resource_id", json_body["resource"])
-        check_val_equal(json_body["resource"]["resource_name"], resource_name)
-        check_val_equal(json_body["resource"]["resource_display_name"], resource_display_name)
-        check_val_equal(json_body["resource"]["resource_type"], resource_type)
-        check_val_type(json_body["resource"]["resource_id"], int)
-    else:
-        check_val_is_in("resource_name", json_body)
-        check_val_is_in("resource_type", json_body)
-        check_val_is_in("resource_id", json_body)
-        check_val_equal(json_body["resource_name"], resource_name)
-        check_val_equal(json_body["resource_type"], resource_type)
-        check_val_type(json_body["resource_id"], int)
-
-
-def check_resource_children(resource_dict, parent_resource_id, root_service_id):
-    """
-    Crawls through a resource-children tree to validate data field, types and corresponding values.
-
-    :param resource_dict: top-level 'resources' dictionary possibly containing children resources.
-    :param parent_resource_id: top-level resource/service id (int)
-    :param root_service_id: top-level service id (int)
-    :raises AssertionError: any invalid match on expected data field, type or value
-    """
-    check_val_type(resource_dict, dict)
-    for resource_id in resource_dict:
-        check_val_type(resource_id, six.string_types)
-        resource_int_id = int(resource_id)  # should by an 'int' string, no error raised
-        resource_info = resource_dict[resource_id]
-        check_val_is_in("root_service_id", resource_info)
-        check_val_type(resource_info["root_service_id"], int)
-        check_val_equal(resource_info["root_service_id"], root_service_id)
-        check_val_is_in("resource_id", resource_info)
-        check_val_type(resource_info["resource_id"], int)
-        check_val_equal(resource_info["resource_id"], resource_int_id)
-        check_val_is_in("parent_id", resource_info)
-        check_val_type(resource_info["parent_id"], int)
-        check_val_equal(resource_info["parent_id"], parent_resource_id)
-        check_val_is_in("resource_name", resource_info)
-        check_val_type(resource_info["resource_name"], six.string_types)
-        check_val_is_in("resource_display_name", resource_info)
-        check_val_type(resource_info["resource_display_name"], six.string_types)
-        check_val_is_in("permission_names", resource_info)
-        check_val_type(resource_info["permission_names"], list)
-        check_val_is_in("children", resource_info)
-        check_resource_children(resource_info["children"], resource_int_id, root_service_id)
+        if param_value is not null:
+            # unicode representation was explicitly returned in value only when of string type
+            if is_param_value_literal_unicode and isinstance(param_value, six.string_types):
+                param_value = u"u\'{}\'".format(param_value)
+            check_val_equal(body["param"], param_value)
+        if param_compare_exists or param_compare is not null:
+            check_val_is_in("param_compare", body)
+            if param_compare is not null:
+                check_val_equal(body["param_compare"], param_compare)
 
 
 class TestSetup(object):
@@ -985,6 +942,145 @@ class TestSetup(object):
         return check_response_basic_info(resp, expected_code=401, expected_type=expected_type, expected_method=method)
 
     @staticmethod
+    def check_ResourceStructure(test_case,                      # type: AnyMagpieTestCaseType
+                                body,                           # type: JSON
+                                resource_name,                  # type: Str
+                                resource_type,                  # type: Str
+                                resource_display_name=null,     # type: Str
+                                ):                              # type: (...) -> None
+        """
+        Validates :term:`Resource` basic information (not checking children) based on different Magpie version formats.
+
+        :param body: JSON body of the response to validate.
+        :param resource_name: name of the resource to validate.
+        :param resource_type: type of the resource to validate.
+        :param resource_display_name: display name of the resource to validate.
+        :raises AssertionError: failing condition
+        """
+        if LooseVersion(test_case.version) >= LooseVersion("0.6.3"):
+            if resource_display_name is null:
+                resource_display_name = resource_name
+            check_val_is_in("resource", body)
+            check_val_type(body["resource"], dict)
+            check_val_is_in("resource_name", body["resource"])
+            check_val_is_in("resource_display_name", body["resource"])
+            check_val_is_in("resource_type", body["resource"])
+            check_val_is_in("resource_id", body["resource"])
+            check_val_equal(body["resource"]["resource_name"], resource_name)
+            check_val_equal(body["resource"]["resource_display_name"], resource_display_name)
+            check_val_equal(body["resource"]["resource_type"], resource_type)
+            check_val_type(body["resource"]["resource_id"], int)
+        else:
+            check_val_is_in("resource_name", body)
+            check_val_is_in("resource_type", body)
+            check_val_is_in("resource_id", body)
+            check_val_equal(body["resource_name"], resource_name)
+            check_val_equal(body["resource_type"], resource_type)
+            check_val_type(body["resource_id"], int)
+
+    @staticmethod
+    def check_ResourceChildren(test_case,           # type: AnyMagpieTestCaseType
+                               resource_children,   # type: JSON
+                               parent_resource_id,  # type: int
+                               root_service_id,     # type: int
+                               ):                   # type: (...) -> None
+        """
+        Crawls through a :paramref:`resource_children` tree (potentially multi-level) to recursively validate data
+        field, types and corresponding values.
+
+        :param resource_children: top-level 'resources' dictionary possibly also containing children resources.
+        :param parent_resource_id: top-level resource/service ID
+        :param root_service_id: top-level service ID
+        :raises AssertionError: any invalid match on expected data field, type or value
+        """
+        check_val_type(resource_children, dict)
+        for resource_id in resource_children:
+            check_val_type(resource_id, six.string_types)
+            resource_int_id = int(resource_id)  # should by an 'int' string, no error raised
+            resource_info = resource_children[resource_id]
+            check_val_is_in("root_service_id", resource_info)
+            check_val_type(resource_info["root_service_id"], int)
+            check_val_equal(resource_info["root_service_id"], root_service_id)
+            check_val_is_in("resource_id", resource_info)
+            check_val_type(resource_info["resource_id"], int)
+            check_val_equal(resource_info["resource_id"], resource_int_id)
+            check_val_is_in("parent_id", resource_info)
+            check_val_type(resource_info["parent_id"], int)
+            check_val_equal(resource_info["parent_id"], parent_resource_id)
+            check_val_is_in("resource_name", resource_info)
+            check_val_type(resource_info["resource_name"], six.string_types)
+            check_val_is_in("resource_display_name", resource_info)
+            check_val_type(resource_info["resource_display_name"], six.string_types)
+            check_val_is_in("permission_names", resource_info)
+            check_val_type(resource_info["permission_names"], list)
+            check_val_is_in("children", resource_info)
+            TestSetup.check_ResourceChildren(test_case, resource_info["children"], resource_int_id, root_service_id)
+
+    @staticmethod
+    def check_ServiceFormat(test_case,                      # type: AnyMagpieTestCaseType
+                            service,                        # type: JSON
+                            override_permissions=null,      # type: Optional[Iterable[Str]]
+                            skip_permissions=False,         # type: bool
+                            has_children_resources=True,    # type: bool
+                            has_private_url=True,           # type: bool
+                            ):                              # type: (...) -> None
+        """Validates the format structure of the :paramref:`service` container details.
+
+        :param test_case: test container
+        :param service: service body to be evaluated
+        :param override_permissions:
+            If not provided, validate permission name values to contain *all* permissions defined by the
+            reference service's implementation in :mod:`magpie.services`.
+            Otherwise, permissions are validated against the provided values.
+        :param skip_permissions:
+            Completely ignore checking the values contained in permissions (field presence and format still validated).
+            Enforced to ``False```if :paramref:`override_permissions` is provided.
+        :param has_children_resources:
+            If ``True`` (default), also recursively validate the children resources of the :paramref:`service` using
+            :meth:`TestSetup.check_ResourceChildren` to validate their expected format. In the case the service has no
+            children resource, only validate the ``resources`` field and empty dictionary.
+        :param has_private_url:
+            If ``True`` (default), validates that the ``service_url`` field is displayed in the body accordingly.
+
+        :raises AssertionError: any invalid match on expected data field, type or value
+        """
+        check_val_type(service, dict)
+        check_val_is_in("resource_id", service)
+        check_val_is_in("service_name", service)
+        check_val_is_in("service_type", service)
+        check_val_is_in("public_url", service)
+        check_val_is_in("permission_names", service)
+        check_val_type(service["resource_id"], int)
+        check_val_type(service["service_name"], six.string_types)
+        check_val_type(service["service_type"], six.string_types)
+        check_val_type(service["public_url"], six.string_types)
+        check_val_type(service["permission_names"], list)
+        svc_res_id = service["resource_id"]
+        if LooseVersion(test_case.version) >= LooseVersion("0.7.0"):
+            check_val_is_in("service_sync_type", service)
+            check_val_type(service["service_sync_type"], OptionalStringType)
+        if has_private_url:
+            check_val_is_in("service_url", service)
+            check_val_type(service["service_url"], six.string_types)
+        elif not has_private_url and LooseVersion(test_case.version) >= LooseVersion("0.7.0"):
+            check_val_not_in("service_url", service,
+                             msg="Services under user routes shouldn't show private url.")
+        if LooseVersion(test_case.version) >= LooseVersion("2.0.0"):
+            if not skip_permissions or override_permissions is not null:
+                if override_permissions is null:
+                    check_val_not_equal(len(service["permission_names"]), 0,
+                                        msg="Service-scoped route must always provide all allowed permissions.")
+                    override_permissions = [p.value for p in SERVICE_TYPE_DICT[service["service_type"]].permissions]
+                check_all_equal(service["permission_names"], list(override_permissions), any_order=True)
+        if has_children_resources:
+            check_val_is_in("resources", service)
+            children = service["resources"]
+            TestSetup.check_ResourceChildren(test_case, children, svc_res_id, svc_res_id)
+        else:
+            check_val_not_in("resources", service)
+            check_val_not_in("children", service)
+
+    @staticmethod
     def get_AnyServiceOfTestServiceType(test_case,                      # type: AnyMagpieTestCaseType
                                         override_service_type=null,     # type: Optional[Str]
                                         override_headers=null,          # type: Optional[HeadersType]
@@ -1022,8 +1118,8 @@ class TestSetup(object):
         :raises AssertionError: if the response correspond to failure to create the test resource.
         """
         app_or_url = get_app_or_url(test_case)
-        TestSetup.create_TestService(test_case)
         svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
+        TestSetup.create_TestService(test_case, override_service_name=svc_name)
         path = "/services/{svc}/resources".format(svc=svc_name)
         data = override_data if override_data is not null else {
             "resource_name": override_resource_name or test_case.test_resource_name,
@@ -1073,6 +1169,46 @@ class TestSetup(object):
         return check_response_basic_info(resp)
 
     @staticmethod
+    def create_TestAnyResourcePermission(test_case,                         # type: AnyMagpieTestCaseType
+                                         item_type,                         # type: Str
+                                         override_item_name=null,           # type: Optional[Str]
+                                         resource_info=null,                # type: Optional[JSON]
+                                         override_resource_id=null,         # type: Optional[int]
+                                         override_permission_name=null,     # type: Optional[Str]
+                                         override_headers=null,             # type: Optional[HeadersType]
+                                         override_cookies=null,             # type: Optional[CookiesType]
+                                         ):                                 # type: (...) -> JSON
+        """
+        See :meth:`create_TestGroupResourcePermission` and :meth:`create_TestUserResourcePermission` for specific uses.
+        """
+        if resource_info is null:
+            resource_info = TestSetup.get_ResourceInfo(test_case, resource_id=override_resource_id, full_detail=True,
+                                                       override_headers=override_headers,
+                                                       override_cookies=override_cookies)
+        else:
+            get_details = "permission_names" not in resource_info and override_permission_name is null
+            resource_info = TestSetup.get_ResourceInfo(test_case, override_body=resource_info, full_detail=get_details,
+                                                       override_headers=override_headers,
+                                                       override_cookies=override_cookies)
+        res_id = resource_info["resource_id"]
+        if override_permission_name is null:
+            override_permission_name = resource_info["permission_names"][0]
+        if item_type == "group":
+            item_name = override_item_name if override_item_name is not null else test_case.test_group_name
+            item_path = "/groups/{}".format(item_name)
+        elif item_type == "user":
+            item_name = override_item_name if override_item_name is not null else test_case.test_user_name
+            item_path = "/users/{}".format(item_name)
+        else:
+            raise ValueError("invalid item-type: [{}]".format(item_type))
+        data = {"permission_name": override_permission_name}
+        path = "{}/resources/{}/permissions".format(item_path, res_id)
+        resp = test_request(test_case, "POST", path, data=data,
+                            headers=override_headers if override_headers is not null else test_case.json_headers,
+                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        return check_response_basic_info(resp, 201, expected_method="POST")
+
+    @staticmethod
     def create_TestUserResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
                                           resource_info=null,               # type: Optional[JSON]
                                           override_resource_id=null,        # type: Optional[int]
@@ -1090,22 +1226,35 @@ class TestSetup(object):
 
         If resource information container is not provided, all desired values must be given as parameter for creation.
         """
-        if resource_info is null:
-            resource_info = TestSetup.get_ResourceInfo(test_case, resource_id=override_resource_id, full_detail=True,
-                                                       override_headers=override_headers,
-                                                       override_cookies=override_cookies)
-        else:
-            resource_info = TestSetup.get_ResourceInfo(test_case, override_body=resource_info, full_detail=False)
-        res_id = resource_info["resource_id"]
-        if override_permission_name is null:
-            override_permission_name = resource_info["permission_names"][0]
-        user = override_user_name if override_user_name is not null else test_case.test_user_name
-        data = {"permission_name": override_permission_name}
-        path = "/users/{}/resources/{}/permissions".format(user, res_id)
-        resp = test_request(test_case, "POST", path, data=data,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
-        return check_response_basic_info(resp, 201, expected_method="POST")
+        return TestSetup.create_TestAnyResourcePermission(
+            test_case, "user", resource_info=resource_info,
+            override_resource_id=override_resource_id, override_permission_name=override_permission_name,
+            override_item_name=override_user_name, override_headers=override_headers, override_cookies=override_cookies
+        )
+
+    @staticmethod
+    def create_TestGroupResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
+                                           resource_info=null,               # type: Optional[JSON]
+                                           override_resource_id=null,        # type: Optional[int]
+                                           override_permission_name=null,    # type: Optional[Str]
+                                           override_group_name=null,         # type: Optional[Str]
+                                           override_headers=null,            # type: Optional[HeadersType]
+                                           override_cookies=null,            # type: Optional[CookiesType]
+                                           ):                                # type: (...) -> JSON
+        """Utility method to create a permission on given resource for the user.
+
+        Employs the resource information returned from one of the creation utilities:
+            - :meth:`create_TestResource`
+            - :meth:`create_TestService`
+            - :meth:`create_TestServiceResource`
+
+        If resource information container is not provided, all desired values must be given as parameter for creation.
+        """
+        return TestSetup.create_TestAnyResourcePermission(
+            test_case, "group", resource_info=resource_info,
+            override_resource_id=override_resource_id, override_permission_name=override_permission_name,
+            override_item_name=override_group_name, override_headers=override_headers, override_cookies=override_cookies
+        )
 
     @staticmethod
     def get_ResourceInfo(test_case,                 # type: AnyMagpieTestCaseType
@@ -1116,8 +1265,8 @@ class TestSetup(object):
                          override_cookies=null,     # type: Optional[CookiesType]
                          ):                         # type: (...) -> JSON
         """
-        Obtains in a backward compatible way the resource details based on resource response body and the tested
-        instance version.
+        Obtains in a backward compatible way the resource details based on resource or service response body and the
+        tested instance version.
 
         Alternatively to :paramref:`body`, one can directly fetch details from provided :paramref:`resource_id`.
         Otherwise, if :paramref:`body` was provided and :paramref:`full_detail` is requested, executes another request
@@ -1128,9 +1277,10 @@ class TestSetup(object):
         body = override_body
         if override_body:
             if LooseVersion(test_case.version) >= LooseVersion("0.6.3"):
-                check_val_is_in("resource", body)
-                check_val_type(body["resource"], dict)
-                body = body["resource"]
+                # skip if sub-element was already extracted and provided as input override_body
+                if "resource_id" not in body:
+                    body = body.get("resource") or body.get("service")
+                    check_val_type(body, dict)
             resource_id = body["resource_id"]
         if resource_id and full_detail:
             resp = test_request(test_case, "GET", "/resources/{}".format(resource_id),

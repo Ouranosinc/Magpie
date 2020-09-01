@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from pyramid.httpexceptions import HTTPInternalServerError
-from pyramid.security import ALL_PERMISSIONS, Allow, Authenticated
+from pyramid.security import ALL_PERMISSIONS, Allow, Authenticated, Everyone
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship
 from ziggurat_foundations import ziggurat_model_init
@@ -137,10 +137,10 @@ class RootFactory(object):
             # default MAGPIE_ADMIN_PERMISSION will be refused access (e.g.: views with MAGPIE_LOGGED_PERMISSION)
             acl += [(Allow, "group:{}".format(admins.id), ALL_PERMISSIONS)]
         if user:
-            # user-specific permissions
+            # user-specific permissions (including group memberships)
             permissions = UserService.permissions(user, self.request.db)
             user_acl = permission_to_pyramid_acls(permissions)
-            # allow views that require minimally to be logged in
+            # allow views that require minimally to be logged in (regardless of who is the user)
             auth_acl = [(Allow, user.id, Authenticated)]
             acl += user_acl + auth_acl
         return acl
@@ -166,13 +166,22 @@ class UserFactory(RootFactory):
     @property
     def __acl__(self):
         """
-        Grant access to authenticated request user if it is the same as referenced user by path parameter
-        (either from explicit name or logged reserved keyword), to allow operations for itself.
+        Grant access to request user according to its relationship to context user (targeted by request path variable).
+
+        If it is the same user (either from explicit name or :py:data:`magpie.constants.MAGPIE_LOGGED_USER` reserved
+        keyword), allow :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION` for itself to access corresponding views.
+
+        If request user is unauthenticated, :py:data:`magpie.constants.MAGPIE_LOGGED_USER` or itself, also grant
+        :py:data:`magpie.constants.MAGPIE_CONTEXT_PERMISSION` to allow access to contextually-available details.
+        (e.g.: user can view his own information and public ones)
         """
-        acl = super(UserFactory, self).__acl__
         user = self.request.user
+        acl = super(UserFactory, self).__acl__
         if user and self.path_user and user.id == self.path_user.id:
-            return acl + [(Allow, user.id, get_constant("MAGPIE_LOGGED_PERMISSION"))]
+            acl += [(Allow, user.id, get_constant("MAGPIE_LOGGED_PERMISSION")),
+                    (Allow, user.id, get_constant("MAGPIE_CONTEXT_PERMISSION"))]
+        elif user is None:
+            acl += [(Allow, Everyone, get_constant("MAGPIE_CONTEXT_PERMISSION"))]
         return acl
 
 

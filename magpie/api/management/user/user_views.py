@@ -9,7 +9,6 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
-from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.settings import asbool
 from pyramid.view import view_config
 from ziggurat_foundations.models.services.group import GroupService
@@ -23,7 +22,7 @@ from magpie.api import schemas as s
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
-from magpie.constants import MAGPIE_LOGGED_PERMISSION, get_constant
+from magpie.constants import MAGPIE_LOGGED_PERMISSION, MAGPIE_CONTEXT_PERMISSION, get_constant
 from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -116,7 +115,7 @@ def update_user_view(request):
 @s.UserAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI, response_schemas=s.User_GET_responses)
 @s.LoggedUserAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
                      response_schemas=s.LoggedUser_GET_responses)
-@view_config(route_name=s.UserAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=s.UserAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_view(request):
     """
     Get user information by name.
@@ -147,7 +146,7 @@ def delete_user_view(request):
 @s.UserGroupsAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI, response_schemas=s.UserGroups_GET_responses)
 @s.LoggedUserGroupsAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
                            response_schemas=s.LoggedUserGroups_GET_responses)
-@view_config(route_name=s.UserGroupsAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=s.UserGroupsAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_groups_view(request):
     """
     List all groups a user belongs to.
@@ -207,7 +206,7 @@ def delete_user_group_view(request):
 @s.LoggedUserResourcesAPI.get(schema=s.UserResources_GET_RequestSchema(),
                               tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
                               response_schemas=s.LoggedUserResources_GET_responses)
-@view_config(route_name=s.UserResourcesAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=s.UserResourcesAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_resources_view(request):
     """
     List all resources a user has permissions on.
@@ -251,7 +250,7 @@ def get_user_resources_view(request):
 @s.LoggedUserResourcePermissionsAPI.get(schema=s.UserResourcePermissions_GET_RequestSchema(),
                                         tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
                                         response_schemas=s.LoggedUserResourcePermissions_GET_responses)
-@view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_resource_permissions_view(request):
     """
     List all permissions a user has on a specific resource.
@@ -300,7 +299,7 @@ def delete_user_resource_permission_view(request):
                        api_security=s.SecurityEveryoneAPI, response_schemas=s.UserServices_GET_responses)
 @s.LoggedUserServicesAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
                              response_schemas=s.LoggedUserServices_GET_responses)
-@view_config(route_name=s.UserServicesAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=s.UserServicesAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_services_view(request):
     """
     List all services a user has permissions on.
@@ -324,7 +323,7 @@ def get_user_services_view(request):
 @s.LoggedUserServicePermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema,
                                        tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
                                        response_schemas=s.LoggedUserServicePermissions_GET_responses)
-@view_config(route_name=s.UserServicePermissionsAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=s.UserServicePermissionsAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_service_permissions_view(request):
     """
     List all permissions a user has on a service.
@@ -377,7 +376,7 @@ def delete_user_service_permission_view(request):
 @s.LoggedUserServiceResourcesAPI.get(schema=s.UserServiceResources_GET_RequestSchema,
                                      tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
                                      response_schemas=s.LoggedUserServiceResources_GET_responses)
-@view_config(route_name=s.UserServiceResourcesAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+@view_config(route_name=s.UserServiceResourcesAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_service_resources_view(request):
     """
     List all resources under a service a user has permission on.
@@ -397,5 +396,5 @@ def get_user_service_resources_view(request):
         show_all_children=False,
         show_private_url=False,
     )
-    return ax.valid_http(http_success=HTTPOk, detail=s.UserServiceResources_GET_OkResponseSchema.description,
-                         content={"service": user_svc_res_json})
+    return ax.valid_http(http_success=HTTPOk, content={"service": user_svc_res_json},
+                         detail=s.UserServiceResources_GET_OkResponseSchema.description)

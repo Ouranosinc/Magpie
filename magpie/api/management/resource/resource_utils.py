@@ -19,13 +19,14 @@ from magpie.api import schemas as s
 from magpie.api.management.resource.resource_formats import format_resource
 from magpie.permissions import Permission
 from magpie.register import sync_services_phoenix
-from magpie.services import SERVICE_TYPE_DICT
+from magpie.services import SERVICE_TYPE_DICT, service_factory
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from pyramid.httpexceptions import HTTPException
+    from pyramid.request import Request
     from sqlalchemy.orm.session import Session
-    from typing import List, Optional, Tuple, Type, Union
+    from typing import List, Optional, Tuple, Type
     from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
     from magpie.typedefs import ChildrenResourceNodes, ServiceOrResourceType, Str
     from magpie.services import ServiceInterface
@@ -191,7 +192,7 @@ def get_resource_children(resource, db_session, tree_service_builder=None):
 
 
 def get_resource_permissions(resource, db_session):
-    # type: (Union[models.Service, models.Resource], Session) -> List[Permission]
+    # type: (ServiceOrResourceType, Session) -> List[Permission]
     """Obtains the applicable permissions on the service or resource, accordingly to what was provided.
 
     When parsing a resource, rewinds the hierarchy up to the top-most service in order to find the context under
@@ -217,20 +218,46 @@ def get_resource_permissions(resource, db_session):
 
 
 def get_resource_root_service(resource, db_session):
-    # type: (Union[models.Service, models.Resource], Session) -> Optional[models.Service]
+    # type: (ServiceOrResourceType, Session) -> Optional[models.Service]
     """
-    Recursively rewinds back through the top of the resource tree up to the top-level service-resource.
+    Retrieves the service-specialized resource corresponding to the top-level resource in the tree hierarchy.
 
-    :param resource: initial resource where to start searching upwards the tree
-    :param db_session:
-    :return: resource-tree root service as a resource object
+    .. seealso::
+        - :func:`get_resource_root_service_by_id` for same operation but using the resource ID
+        - :func:`get_resource_root_service_impl` to retrieve the explicit service's implementation
     """
     if resource is not None:
-        if resource.parent_id is None:
+        if resource.resource_type == models.Service.resource_type_name:
             return resource
-        parent_resource = ResourceService.by_resource_id(resource.parent_id, db_session=db_session)
-        return get_resource_root_service(parent_resource, db_session=db_session)
+        return ResourceService.by_resource_id(resource.root_service_id, db_session=db_session)
     return None
+
+
+def get_resource_root_service_by_id(resource_id, db_session):
+    # type: (ServiceOrResourceType, Session) -> Optional[models.Service]
+    """
+    Retrieves the service-specialized resource corresponding to the top-level resource in the tree hierarchy.
+
+    .. seealso::
+        - :func:`get_resource_root_service` for same operation but directly using the resource
+    """
+    resource = ResourceService.by_resource_id(resource_id, db_session=db_session)
+    if resource is None:
+        return None
+    return get_resource_root_service(resource, db_session=db_session)
+
+
+def get_resource_root_service_impl(resource, request):
+    # type: (ServiceOrResourceType, Request) -> ServiceInterface
+    """
+    Retrieves the root-service from the provided resource's tree hierarchy and generates the corresponding
+    service's implementation from the :func:`service_factory`.
+
+    .. seealso::
+        :func:`get_resource_root_service` to retrieve only the service flavored resource model
+    """
+    service = get_resource_root_service(resource, db_session=request.db)
+    return service_factory(service, request)
 
 
 def create_resource(resource_name, resource_display_name, resource_type, parent_id, db_session):

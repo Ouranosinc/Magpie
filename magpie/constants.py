@@ -126,8 +126,9 @@ MAGPIE_POSTGRES_DB = os.getenv("MAGPIE_POSTGRES_DB", "magpie")
 # ===========================
 # constants
 # ===========================
-MAGPIE_ADMIN_PERMISSION = "admin"   # user must be administrator to access a view (default permission)
-MAGPIE_LOGGED_PERMISSION = "MAGPIE_LOGGED_USER"  # user must MAGPIE_LOGGED_USER (either literally or inferred)
+MAGPIE_ADMIN_PERMISSION = "admin"   # user must be administrator to access a view (default permission, always allowed)
+MAGPIE_LOGGED_PERMISSION = "MAGPIE_LOGGED_USER"  # user must be MAGPIE_LOGGED_USER (either literally or inferred)
+MAGPIE_CONTEXT_PERMISSION = "MAGPIE_CONTEXT_USER"  # path user must be itself, MAGPIE_LOGGED_USER or unauthenticated
 MAGPIE_LOGGED_USER = "current"
 MAGPIE_DEFAULT_PROVIDER = "ziggurat"
 
@@ -135,6 +136,18 @@ MAGPIE_DEFAULT_PROVIDER = "ziggurat"
 # refuse longer username creation
 MAGPIE_USER_NAME_MAX_LENGTH = 64
 MAGPIE_GROUP_NAME_MAX_LENGTH = 64
+
+# ignore matches of settings and environment variables for following cases
+MAGPIE_CONSTANTS = [
+    "MAGPIE_CONSTANTS",
+    "MAGPIE_ADMIN_PERMISSION",
+    "MAGPIE_LOGGED_PERMISSION",
+    "MAGPIE_CONTEXT_PERMISSION",
+    "MAGPIE_LOGGED_USER",
+    "MAGPIE_DEFAULT_PROVIDER",
+    "MAGPIE_USER_NAME_MAX_LENGTH",
+    "MAGPIE_GROUP_NAME_MAX_LENGTH",
+]
 
 # ===========================
 # utilities
@@ -161,10 +174,11 @@ def get_constant(constant_name,             # type: Str
                  ):                         # type: (...) -> SettingValue
     """
     Search in order for matched value of :paramref:`constant_name`:
-      1. search in settings if specified
-      2. search alternative setting names (see below)
-      3. search in :mod:`magpie.constants` definitions
-      4. search in environment variables
+      1. search in :py:data:`MAGPIE_CONSTANTS`
+      2. search in settings if specified
+      3. search alternative setting names (see below)
+      4. search in :mod:`magpie.constants` definitions
+      5. search in environment variables
 
     Parameter :paramref:`constant_name` is expected to have the format ``MAGPIE_[VARIABLE_NAME]`` although any value can
     be passed to retrieve generic settings from all above mentioned search locations.
@@ -187,6 +201,8 @@ def get_constant(constant_name,             # type: Str
     """
     from magpie.utils import get_settings, raise_log, print_log  # pylint: disable=C0415  # avoid circular import error
 
+    if constant_name in MAGPIE_CONSTANTS:
+        return globals()[constant_name]
     missing = True
     magpie_value = None
     settings = get_settings(settings_container) if settings_container else None

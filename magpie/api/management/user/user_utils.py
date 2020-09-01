@@ -18,7 +18,7 @@ from ziggurat_foundations.models.services.user_resource_permission import UserRe
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
-from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
+from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
 from magpie.constants import get_constant
@@ -27,7 +27,6 @@ from magpie.services import service_factory
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.services import ServiceInterface
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
     from sqlalchemy.orm.session import Session
@@ -116,7 +115,7 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
 
     :returns: valid HTTP response on successful operation.
     """
-    check_valid_service_or_resource_permission(permission.value, resource, db_session)
+    ru.check_valid_service_or_resource_permission(permission.value, resource, db_session)
     res_id = resource.resource_id
     existing_perm = UserResourcePermissionService.by_resource_user_and_perm(
         user_id=user.id, resource_id=res_id, perm_name=permission.value, db_session=db_session)
@@ -166,7 +165,7 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
     :returns: valid HTTP response on successful operations.
     :raises HTTPException: error HTTP response of corresponding situation.
     """
-    check_valid_service_or_resource_permission(permission.value, resource, db_session)
+    ru.check_valid_service_or_resource_permission(permission.value, resource, db_session)
     res_id = resource.resource_id
     del_perm = UserResourcePermissionService.get(user.id, res_id, permission.value, db_session)
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
@@ -174,18 +173,6 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
                      msg_on_fail=s.UserResourcePermissions_DELETE_NotFoundResponseSchema.description,
                      content={"resource_id": res_id, "user_id": user.id, "permission_name": permission.value})
     return ax.valid_http(http_success=HTTPOk, detail=s.UserResourcePermissions_DELETE_OkResponseSchema.description)
-
-
-def get_resource_root_service(resource, request):
-    # type: (models.Resource, Request) -> ServiceInterface
-    """
-    Retrieves the service class corresponding to the specified resource's root service-resource.
-    """
-    if resource.resource_type == models.Service.resource_type_name:
-        res_root_svc = resource
-    else:
-        res_root_svc = ResourceService.by_resource_id(resource.root_service_id, db_session=request.db)
-    return service_factory(res_root_svc, request)
 
 
 def filter_user_permission(resource_permission_list, user):
@@ -216,7 +203,7 @@ def get_user_resource_permissions_response(user, resource, request,
             res_perm_list = models.RESOURCE_TYPE_DICT[resource.type].permissions
         else:
             if effective_permissions:
-                svc = get_resource_root_service(resource, request)
+                svc = ru.get_resource_root_service_impl(resource, request)
                 res_perm_list = svc.effective_permissions(resource, user)
             else:
                 if inherit_groups_permissions:
@@ -279,7 +266,7 @@ def get_user_services(user, request, cascade_resources=False,
                 continue
             perms = []
 
-        svc = get_resource_root_service(resource, request)
+        svc = ru.get_resource_root_service_impl(resource, request)
         if svc.service_type not in services:
             services[svc.service_type] = {}
         svc_name = svc.service.resource_name

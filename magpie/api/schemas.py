@@ -1231,10 +1231,13 @@ class ServiceResources_POST_RequestSchema(Resources_POST_RequestSchema):
 
 
 ServiceResources_POST_CreatedResponseSchema = Resources_POST_CreatedResponseSchema
-ServiceResources_POST_BadRequestResponseSchema = Resources_POST_BadRequestResponseSchema
 ServiceResources_POST_ForbiddenResponseSchema = Resources_POST_ForbiddenResponseSchema
 ServiceResources_POST_NotFoundResponseSchema = Resources_POST_NotFoundResponseSchema
 ServiceResources_POST_ConflictResponseSchema = Resources_POST_ConflictResponseSchema
+
+
+class ServiceResources_POST_BadRequestResponseSchema(Resources_POST_BadRequestResponseSchema):
+    description = "Invalid 'parent_id' specified for child resource creation under requested service."
 
 
 # delete service's resource use same method as direct resource delete
