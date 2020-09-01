@@ -764,7 +764,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
             body = utils.check_response_basic_info(resp)
             utils.check_val_is_in("resources", body)
             utils.check_val_equal(len(body["resources"]), len(svc_types)),  # all service types always returned
-            svc_of_type = body["services"][self.test_service_type]
+            svc_of_type = body["resources"][self.test_service_type]
             utils.check_val_is_in(self.test_service_name, svc_of_type)
             service = svc_of_type[self.test_service_name]
             if LooseVersion(self.version) >= LooseVersion("2.0.0"):
@@ -1378,14 +1378,17 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_USERS
     def test_GetUserInheritedResources_format(self):
         utils.warn_version(self, "inherited resource permissions", "0.7.4", skip=True)
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
         svc_perm = SERVICE_TYPE_DICT[self.test_service_type].permissions[-1].value
-        res_perms = SERVICE_TYPE_DICT[self.test_service_type].resource_types_permissions[self.test_resource_type]
+        res_perms = SERVICE_TYPE_DICT[self.test_service_type].get_resource_permissions(self.test_resource_type)
         res_perm1 = res_perms[0].value
         res_perm2 = res_perms[-1].value
         body = utils.TestSetup.create_TestService(self)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc_id = info["resource_id"]
         utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info, override_permission_name=svc_perm)
-        body = utils.TestSetup.create_TestServiceResource(self)
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc_id)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         res1_id = info["resource_id"]
         utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info, override_permission_name=res_perm1)
@@ -1510,7 +1513,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
             test_items["svc_names"].append(svc_name)
             test_items["svc{}_name".format(i)] = svc_name
             utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
-            svc_body = utils.TestSetup.create_TestServiceResource(self, override_service_name=svc_name)
+            svc_body = utils.TestSetup.create_TestService(self, override_service_name=svc_name)
             test_items["svc{}_info".format(i)] = utils.TestSetup.get_ResourceInfo(self, override_body=svc_body)
         svc4_id = test_items["svc4_info"]["resource_id"]
         for i in range(1, 4):
@@ -1530,50 +1533,62 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
         # create permissions directly on services
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
-        test_items["svc1_usr_perms"] = utils.TestSetup.create_TestUserResourcePermission(
+        body = utils.TestSetup.create_TestUserResourcePermission(
             self, resource_info=test_items["svc1_info"], override_permission_name=test_items["svc_perm1"]
         )
-        test_items["svc2_grp_perms"] = utils.TestSetup.create_TestGroupResourcePermission(
+        test_items["svc1_usr_perms"] = [body["permission_name"]]
+        body = utils.TestSetup.create_TestGroupResourcePermission(
             self, resource_info=test_items["svc2_info"], override_permission_name=test_items["svc_perm1"]
         )
-        test_items["svc3_usr_perms"] = utils.TestSetup.create_TestUserResourcePermission(
+        test_items["svc2_grp_perms"] = [body["permission_name"]]
+        body = utils.TestSetup.create_TestUserResourcePermission(
             self, resource_info=test_items["svc3_info"], override_permission_name=test_items["svc_perm1"]
         )
-        test_items["svc3_grp_perms"] = utils.TestSetup.create_TestGroupResourcePermission(
+        test_items["svc3_usr_perms"] = [body["permission_name"]]
+        body = utils.TestSetup.create_TestGroupResourcePermission(
             self, resource_info=test_items["svc3_info"], override_permission_name=test_items["svc_perm2"]
         )
+        test_items["svc3_grp_perms"] = [body["permission_name"]]
         # create permissions on immediate children resources
         test_items["svc4_usr_perms"] = []
         test_items["svc4_grp_perms"] = []
-        test_items["res1_usr_perms"] = utils.TestSetup.create_TestUserResourcePermission(
+        body = utils.TestSetup.create_TestUserResourcePermission(
             self, resource_info=test_items["res1_info"], override_permission_name=test_items["res_perm1"]
         )
-        test_items["res2_grp_perms"] = utils.TestSetup.create_TestGroupResourcePermission(
+        test_items["res1_usr_perms"] = [body["permission_name"]]
+        body = utils.TestSetup.create_TestGroupResourcePermission(
             self, resource_info=test_items["res2_info"], override_permission_name=test_items["res_perm1"]
         )
-        test_items["res3_usr_perms"] = utils.TestSetup.create_TestUserResourcePermission(
+        test_items["res2_grp_perms"] = [body["permission_name"]]
+        body = utils.TestSetup.create_TestUserResourcePermission(
             self, resource_info=test_items["res3_info"], override_permission_name=test_items["res_perm1"]
         )
-        test_items["res3_grp_perms"] = utils.TestSetup.create_TestGroupResourcePermission(
+        test_items["res3_usr_perms"] = [body["permission_name"]]
+        body = utils.TestSetup.create_TestGroupResourcePermission(
             self, resource_info=test_items["res3_info"], override_permission_name=test_items["res_perm2"]
         )
+        test_items["res3_grp_perms"] = [body["permission_name"]]
         # create permission on sub-children resources
         test_items["svc5_usr_perms"] = []
         test_items["svc5_grp_perms"] = []
         test_items["res4_usr_perms"] = []
         test_items["res4_grp_perms"] = []
-        test_items["res5_usr_perms"] = utils.TestSetup.create_TestUserResourcePermission(
+        body = utils.TestSetup.create_TestUserResourcePermission(
             self, resource_info=test_items["res5_info"], override_permission_name=test_items["res_perm1"]
         )
-        test_items["res6_grp_perms"] = utils.TestSetup.create_TestGroupResourcePermission(
+        test_items["res5_usr_perms"] = [body["permission_name"]]
+        body = utils.TestSetup.create_TestGroupResourcePermission(
             self, resource_info=test_items["res6_info"], override_permission_name=test_items["res_perm1"]
         )
-        test_items["res7_usr_perms"] = utils.TestSetup.create_TestUserResourcePermission(
+        test_items["res6_grp_perms"] = [body["permission_name"]]
+        body = utils.TestSetup.create_TestUserResourcePermission(
             self, resource_info=test_items["res7_info"], override_permission_name=test_items["res_perm1"]
         )
-        test_items["res7_grp_perms"] = utils.TestSetup.create_TestGroupResourcePermission(
+        test_items["res7_usr_perms"] = [body["permission_name"]]
+        body = utils.TestSetup.create_TestGroupResourcePermission(
             self, resource_info=test_items["res7_info"], override_permission_name=test_items["res_perm2"]
         )
+        test_items["res7_grp_perms"] = [body["permission_name"]]
         return test_items
 
     @runner.MAGPIE_TEST_USERS
@@ -1618,8 +1633,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
         utils.check_val_type(body["services"], list)
         utils.check_val_equal(len(body["services"]), 2, msg="services with direct user permissions expected")
         for svc in body["services"]:
-            utils.TestSetup.check_ServiceFormat(self, svc, has_children_resources=False, has_private_url=False)
-            utils.check_val_not_in("resources", svc, msg="Full children resource tree should not be listed.")
+            utils.TestSetup.check_ServiceFormat(self, svc, has_children_resources=False, has_private_url=False,
+                                                skip_permissions=True)  # specific permissions validated in other tests
         expected_services = [test_items["svc1_name"], test_items["svc3_name"]]
         utils.check_all_equal([svc["service_name"] for svc in body["services"]], expected_services, any_order=True)
 
@@ -1632,8 +1647,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
         utils.check_val_is_in("services", body)
         utils.check_val_type(body["services"], list)
         for svc in body["services"]:
-            utils.TestSetup.check_ServiceFormat(self, svc, has_children_resources=False, has_private_url=False)
-            utils.check_val_not_in("resources", svc, msg="Full children resource tree should not be listed.")
+            utils.TestSetup.check_ServiceFormat(self, svc, has_children_resources=False, has_private_url=False,
+                                                skip_permissions=True)  # specific permissions validated in other tests
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServices_Cascade(self):
@@ -1669,9 +1684,6 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
             svc = services[svc_name]  # type: JSON
             utils.TestSetup.check_ServiceFormat(self, svc, has_children_resources=False, has_private_url=False,
                                                 override_permissions=expected_service_permissions[svc_name])
-            # no sub resource should be indicated, only that user has permission "somewhere in the hierarchy"
-            utils.check_val_not_in("resources", svc)
-            utils.check_val_not_in("children", svc)
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServices_Inherited(self):
@@ -1687,6 +1699,9 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
             user/group-specific :term:`Applied Permissions`).
         """
         utils.warn_version(self, "user service inheritance", "2.0.0", skip=True)
+        resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        prior_services = body["services"][self.test_service_type]
         test_items = self.setup_GetUserServices()
 
         path = "/users/{}/services?inherited=true".format(self.usr)
@@ -1707,11 +1722,15 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
         }
         for svc_name in services:
             svc = services[svc_name]  # type: JSON
+            # still check format of non-test services, otherwise also check newly created expected permissions
+            if svc_name in prior_services:
+                skip_perm = True
+                perms = utils.null
+            else:
+                skip_perm = False
+                perms = expected_service_permissions[svc_name]
             utils.TestSetup.check_ServiceFormat(self, svc, has_children_resources=False, has_private_url=False,
-                                                override_permissions=expected_service_permissions[svc_name])
-            # no sub resource should be indicated, only that user has permission "somewhere in the hierarchy"
-            utils.check_val_not_in("resources", svc)
-            utils.check_val_not_in("children", svc)
+                                                skip_permissions=skip_perm, override_permissions=perms)
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServices_CascadeAndInherited(self):
@@ -1727,6 +1746,9 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
             user/group-specific :term:`Applied Permissions`).
         """
         utils.warn_version(self, "user service inheritance", "2.0.0", skip=True)
+        resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        prior_services = body["services"][self.test_service_type]
         test_items = self.setup_GetUserServices()
 
         path = "/users/{}/services?inherited=true".format(self.usr)
@@ -1748,8 +1770,15 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
         }
         for svc_name in services:
             svc = services[svc_name]  # type: JSON
+            # still check format of non-test services, otherwise also check newly created expected permissions
+            if svc_name in prior_services:
+                skip_perm = True
+                perms = utils.null
+            else:
+                skip_perm = False
+                perms = expected_service_permissions[svc_name]
             utils.TestSetup.check_ServiceFormat(self, svc, has_children_resources=False, has_private_url=False,
-                                                override_permissions=expected_service_permissions[svc_name])
+                                                skip_permissions=skip_perm, override_permissions=perms)
             # no sub resource should be indicated, only that user has permission "somewhere in the hierarchy"
             utils.check_val_not_in("resources", svc)
             utils.check_val_not_in("children", svc)
@@ -2777,7 +2806,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
         utils.warn_version(self, "request service matches 'parent_id' resource's root-service", "2.0.0", skip=True)
 
         body = utils.TestSetup.create_TestService(self)
-        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        utils.TestSetup.get_ResourceInfo(self, override_body=body)
         other_svc_name = "service-random-other"
         self.extra_service_names.add(other_svc_name)
         body = utils.TestSetup.create_TestServiceResource(self, override_service_name=other_svc_name)
@@ -3312,7 +3341,7 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestC
                                                 method="GET", path=path)
         resp = utils.TestSetup.check_FormSubmit(self, form_match="edit_password", form_submit="save_password",
                                                 form_data=data, previous_response=resp)
-        utils.check_ui_response_basic_info(resp, expected_title="Magpie user Management")
+        utils.check_ui_response_basic_info(resp, expected_title="Magpie User Management")
         # cannot check modified password value directly (because regenerated hash), therefore validate login with it
         utils.check_or_try_logout_user(self)
         resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
@@ -3354,7 +3383,7 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Test
     @runner.MAGPIE_TEST_STATUS
     def test_ViewUsers_Goto_EditUser(self):
         utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.delete_TestUser(self)
+        utils.TestSetup.create_TestUser(self)
         form = {"edit": None, "user_name": self.test_user_name}
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path="/ui/users")
         if LooseVersion(self.version) < "2":

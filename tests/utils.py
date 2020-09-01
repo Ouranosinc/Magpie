@@ -504,9 +504,9 @@ def check_all_equal(iter_val, iter_ref, msg=None, any_order=False):
         If all values in :paramref:`iter_val` are not equal to values within :paramref:`iter_ref`.
         If :paramref:`any_order` is ``False``, also raises if equal items are not in the same order.
     """
-    r_it_val = repr(iter_val)
-    r_it_ref = repr(iter_ref)
-    assert all_equal(iter_val, iter_ref, any_order), format_test_val_ref(r_it_val, r_it_ref, pre="Equal Fail", msg=msg)
+    r_val = repr(iter_val)
+    r_ref = repr(iter_ref)
+    assert all_equal(iter_val, iter_ref, any_order), format_test_val_ref(r_val, r_ref, pre="All Equal Fail", msg=msg)
 
 
 def check_val_equal(val, ref, msg=None):
@@ -518,7 +518,7 @@ def check_val_equal(val, ref, msg=None):
 def check_val_not_equal(val, ref, msg=None):
     # type: (Any, Union[Any, NullType], Optional[Str]) -> None
     """:raises AssertionError: if :paramref:`val` is equal to :paramref:`ref`."""
-    assert is_null(ref) or val != ref, format_test_val_ref(val, ref, pre="Equal Fail", msg=msg)
+    assert is_null(ref) or val != ref, format_test_val_ref(val, ref, pre="Not Equal Fail", msg=msg)
 
 
 def check_val_is_in(val, ref, msg=None):
