@@ -23,7 +23,6 @@ env:
   jobs:
     - TEST_TARGET=test-local    START_TARGET=
     - TEST_TARGET=test-remote   START_TARGET=start
-    - TEST_TARGET=coverage      START_TARGET=
 addons:
   postgresql: "9.6"
 services:
