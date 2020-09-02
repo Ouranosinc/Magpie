@@ -13,8 +13,13 @@ from alembic import op
 from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm import sessionmaker
+from ziggurat_foundations.models.group import GroupMixin
+from ziggurat_foundations.models.group_resource_permission import GroupResourcePermissionMixin
 from ziggurat_foundations.models.services import BaseService
 from ziggurat_foundations.models.services.user import UserService
+from ziggurat_foundations.models.user import UserMixin
+from ziggurat_foundations.models.user_group import UserGroupMixin
+from ziggurat_foundations.models.user_resource_permission import UserResourcePermissionMixin
 
 cur_file = os.path.abspath(__file__)
 root_dir = os.path.dirname(cur_file)    # version
@@ -23,7 +28,7 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-from magpie import models, constants  # isort:skip # noqa: E402
+from magpie.constants import get_constant  # isort:skip # noqa: E402
 
 Session = sessionmaker()
 
@@ -38,12 +43,16 @@ def upgrade():
     context = get_context()
     session = Session(bind=op.get_bind())
     if isinstance(context.connection.engine.dialect, PGDialect):
-        all_users = BaseService.all(models.User, db_session=session)
-        all_groups = BaseService.all(models.Group, db_session=session)
-        all_user_group_refs = BaseService.all(models.UserGroup, db_session=session)
-        all_grp_res_perms = BaseService.all(models.GroupResourcePermission, db_session=session)
+        all_users = BaseService.all(UserMixin, db_session=session)
+        all_groups = BaseService.all(GroupMixin, db_session=session)
+        all_user_group_refs = BaseService.all(UserGroupMixin, db_session=session)
+        all_grp_res_perms = BaseService.all(GroupResourcePermissionMixin, db_session=session)
 
-        ignore_groups = {constants.MAGPIE_ADMIN_GROUP, constants.MAGPIE_USERS_GROUP, constants.MAGPIE_ANONYMOUS_GROUP}
+        ignore_groups = {
+            get_constant("MAGPIE_ADMIN_GROUP"),
+            get_constant("MAGPIE_USERS_GROUP"),
+            get_constant("MAGPIE_ANONYMOUS_GROUP")
+        }
         user_names = {usr.user_name for usr in all_users}
 
         # parse through 'personal' groups matching an existing user
@@ -57,8 +66,8 @@ def upgrade():
                 # transfer permissions from 'personal' group to user
                 user_group_res_perm = [urp for urp in all_grp_res_perms if urp.group_id == group.id]
                 for group_perm in user_group_res_perm:
-                    user_perm = models.UserResourcePermission(resource_id=group_perm.resource_id,
-                                                              user_id=user.id, perm_name=group_perm.perm_name)  # noqa
+                    user_perm = UserResourcePermissionMixin(resource_id=group_perm.resource_id,
+                                                            user_id=user.id, perm_name=group_perm.perm_name)  # noqa
                     session.add(user_perm)
                     session.delete(group_perm)
 

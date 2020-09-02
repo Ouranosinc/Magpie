@@ -11,8 +11,10 @@ from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm import sessionmaker
 from ziggurat_foundations.models.services import BaseService
 from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.user import UserMixin
+from ziggurat_foundations.models.user_group import UserGroupMixin
 
-from magpie import constants, models
+from magpie.constants import get_constant
 from magpie.cli.register_defaults import init_anonymous
 
 Session = sessionmaker()
@@ -37,14 +39,14 @@ def upgrade():
     if isinstance(context.connection.engine.dialect, PGDialect):
         # make sure group exists, then get it
         init_anonymous(db_session=session)
-        anonym_group = GroupService.by_group_name(constants.get_constant("MAGPIE_ANONYMOUS_GROUP"), db_session=session)
+        anonym_group = GroupService.by_group_name(get_constant("MAGPIE_ANONYMOUS_GROUP"), db_session=session)
 
-        all_users = BaseService.all(models.User, db_session=session)
-        all_user_group_refs = BaseService.all(models.UserGroup, db_session=session)
+        all_users = BaseService.all(UserMixin, db_session=session)
+        all_user_group_refs = BaseService.all(UserGroupMixin, db_session=session)
         all_user_group_tups = [(ugr.user_id, ugr.group_id) for ugr in all_user_group_refs]
         for user in all_users:
             if (user.id, anonym_group.id) not in all_user_group_tups:
-                user_group = models.UserGroup(user_id=user.id, group_id=anonym_group.id)  # noqa
+                user_group = UserGroupMixin(user_id=user.id, group_id=anonym_group.id)  # noqa
                 session.add(user_group)
         session.commit()
 

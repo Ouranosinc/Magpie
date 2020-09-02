@@ -202,11 +202,11 @@ def run_database_migration_when_ready(settings, db_session=None):
                 run_database_migration(db_session=db_session, settings=settings)
             except ImportError as exc:
                 print_log("Database migration produced [{!r}] (ignored).".format(exc),
-                          logger=LOGGER, level=logging.WARNING)
+                          logger=LOGGER, level=logging.WARNING, exc_info=exc)
             except Exception as exc:
                 if i <= attempts:
                     print_log("Database migration failed [{!r}]. Retrying... ({}/{})".format(exc, i, attempts),
-                              logger=LOGGER, level=logging.WARNING)
+                              logger=LOGGER, level=logging.WARNING, exc_info=exc)
                     time.sleep(2)
                     continue
                 raise_log("Database migration failed [{!r}]".format(exc), exception=RuntimeError, logger=LOGGER)

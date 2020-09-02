@@ -147,7 +147,7 @@ def init_users_group(db_session, settings=None):
 def register_defaults(db_session=None, settings=None, ini_file_path=None):
     # type: (Optional[Session], Optional[AnySettingsContainer], Optional[AnyStr]) -> None
     """
-    Registers into database every undefined default users and groups matching following variables :
+    Registers into database every undefined default users and groups matching following variables:
 
     - :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`
     - :py:data:`magpie.constants.MAGPIE_USERS_GROUP`

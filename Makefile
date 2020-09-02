@@ -165,9 +165,19 @@ clean-docker: docker-clean	## alias for 'docker-clean' target
 ## --- Database targets --- ##
 
 .PHONY: migrate
-migrate: install conda-env	## run postgres database migration with alembic
+migrate: database-migration		## alias to 'database-migration'
+
+.PHONY: database-migration
+database-migration: conda-env	## run postgres database migration with alembic
+	@bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/alembic" || "$(MAKE)" -C install'
 	@echo "Running database migration..."
 	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" upgrade head'
+
+.PHONY: database-revision
+database-revision: conda-env	## retrieve current database revision
+	@bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/alembic" || "$(MAKE)" -C install'
+	@echo "Fetching database revision..."
+	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" current'
 
 ## --- Documentation targets --- ##
 

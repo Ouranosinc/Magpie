@@ -108,8 +108,8 @@ def set_logger_config(logger, force_stdout=False, message_format=None, datetime_
     return logger
 
 
-def print_log(msg, logger=None, level=logging.INFO):
-    # type: (Str, Optional[LoggerType], int) -> None
+def print_log(msg, logger=None, level=logging.INFO, **kwargs):
+    # type: (Str, Optional[LoggerType], int, Any) -> None
     """
     Logs the requested message to the logger and optionally enforce printing to the console according to configuration
     value defined by ``MAGPIE_LOG_PRINT``.
@@ -123,7 +123,7 @@ def print_log(msg, logger=None, level=logging.INFO):
         set_logger_config(logger, force_stdout=True)
     if logger.disabled:
         logger.disabled = False
-    logger.log(level, msg)
+    logger.log(level, msg, **kwargs)
 
 
 def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
