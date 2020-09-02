@@ -45,7 +45,9 @@ class Group(GroupMixin, Base):
 
     @declared_attr
     def discoverable(self):
-        """Indicates if the group is discoverable for users to self-register to it."""
+        """
+        Indicates if the group is discoverable for users to self-register to it.
+        """
         return sa.Column(sa.Boolean(), default=False)
 
 
@@ -79,7 +81,9 @@ class Resource(ResourceMixin, Base):
 
     @property
     def __acl__(self):
-        """User or group that owns a resource are granted full access to it."""
+        """
+        User or group that owns a resource are granted full access to it.
+        """
         acl = []
         if self.owner_user_id:
             acl.extend([(Allow, self.owner_user_id, ALL_PERMISSIONS,), ])
@@ -106,7 +110,8 @@ class ExternalIdentity(ExternalIdentityMixin, Base):
 
 
 class RootFactory(object):
-    """Used to build base Access Control List (ACL) of the request user.
+    """
+    Used to build base Access Control List (ACL) of the request user.
 
     All API and UI routes will employ this set of effective principals to determine if the user is authorized to access
     the pyramid view according to the ``permission`` value it was configured with.
@@ -127,7 +132,9 @@ class RootFactory(object):
 
     @property
     def __acl__(self):
-        """Administrators have all permissions, user/group-specific permissions added if user is logged in."""
+        """
+        Administrators have all permissions, user/group-specific permissions added if user is logged in.
+        """
         user = self.request.user
         # allow if role MAGPIE_ADMIN_PERMISSION is somehow directly set instead of inferred via members of admin-group
         acl = [(Allow, get_constant("MAGPIE_ADMIN_PERMISSION"), ALL_PERMISSIONS)]

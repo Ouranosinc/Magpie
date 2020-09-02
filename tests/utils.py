@@ -29,18 +29,21 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from tests.interfaces import AnyMagpieTestCaseType
+    import tests.interfaces as ti
     from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union
     from magpie.services import ServiceInterface
     from magpie.typedefs import (
         AnyCookiesType, AnyHeadersType, AnyResponseType, AnyValue, CookiesType, HeadersType, JSON, SettingsType, Str
     )
     # pylint: disable=C0103,invalid-name
+    AnyMagpieTestCaseType = Union[Type[ti.BaseTestCase], ti.BaseTestCase,
+                                  Type[ti.AdminTestCase], ti.AdminTestCase,
+                                  Type[ti.UserTestCase], ti.UserTestCase]
     OptionalHeaderCookiesType = Tuple[Optional[AnyHeadersType], Optional[AnyCookiesType]]
     TestAppOrUrlType = Union[Str, TestApp]
     AnyMagpieTestItemType = Union[AnyMagpieTestCaseType, TestAppOrUrlType]
 
-OptionalStringType = six.string_types + tuple([type(None)])
+OPTIONAL_STRING_TYPES = six.string_types + tuple([type(None)])
 
 
 class RunOption(object):
@@ -171,7 +174,9 @@ def config_setup_from_ini(config_ini_file_path):
 
 def get_test_magpie_app(settings=None):
     # type: (Optional[SettingsType]) -> TestApp
-    """Instantiate a Magpie local test application."""
+    """
+    Instantiate a Magpie local test application.
+    """
     # parse settings from ini file to pass them to the application
     config = config_setup_from_ini(get_constant("MAGPIE_INI_FILE_PATH"))
     config.include("ziggurat_foundations.ext.pyramid.sign_in")
@@ -186,7 +191,9 @@ def get_test_magpie_app(settings=None):
 
 def get_app_or_url(test_item):
     # type: (AnyMagpieTestItemType) -> TestAppOrUrlType
-    """Obtains the referenced Magpie local application or remote URL from `Test Case` implementation."""
+    """
+    Obtains the referenced Magpie local application or remote URL from `Test Case` implementation.
+    """
     if isinstance(test_item, (TestApp, six.string_types)):
         return test_item
     app_or_url = getattr(test_item, "app", None) or getattr(test_item, "url", None)
@@ -197,7 +204,9 @@ def get_app_or_url(test_item):
 
 def get_hostname(test_item):
     # type: (AnyMagpieTestItemType) -> Str
-    """Obtains stored hostname in the class implementation."""
+    """
+    Obtains stored hostname in the class implementation.
+    """
     app_or_url = get_app_or_url(test_item)
     if isinstance(app_or_url, TestApp):
         app_or_url = get_magpie_url(app_or_url.app.registry)
@@ -206,7 +215,9 @@ def get_hostname(test_item):
 
 def get_headers(app_or_url, header_dict):
     # type: (TestAppOrUrlType, AnyHeadersType) -> HeadersType
-    """Obtains stored headers in the class implementation."""
+    """
+    Obtains stored headers in the class implementation.
+    """
     if isinstance(app_or_url, TestApp):
         return header_dict.items()
     return header_dict
@@ -214,7 +225,9 @@ def get_headers(app_or_url, header_dict):
 
 def get_response_content_types_list(response):
     # type: (AnyResponseType) -> List[Str]
-    """Obtains the specified response Content-Type header(s) without additional formatting parameters."""
+    """
+    Obtains the specified response Content-Type header(s) without additional formatting parameters.
+    """
     content_types = []
     known_types = ["application", "audio", "font", "example", "image", "message", "model", "multipart", "text", "video"]
     for part in response.headers["Content-Type"].split(";"):
@@ -226,7 +239,9 @@ def get_response_content_types_list(response):
 
 def get_json_body(response):
     # type: (AnyResponseType) -> JSON
-    """Obtains the JSON payload of the response regardless of its class implementation."""
+    """
+    Obtains the JSON payload of the response regardless of its class implementation.
+    """
     if isinstance(response, TestResponse):
         return response.json
     return response.json()
@@ -266,7 +281,9 @@ def warn_version(test, functionality, version, skip=True, older=False):
 
 def json_msg(json_body, msg=null):
     # type: (JSON, Optional[Str]) -> Str
-    """Generates a message string with formatted JSON body for display with easier readability."""
+    """
+    Generates a message string with formatted JSON body for display with easier readability.
+    """
     json_str = json_pkg.dumps(json_body, indent=4, ensure_ascii=False)
     if msg is not null:
         return "{}\n{}".format(msg, json_str)
@@ -303,7 +320,7 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
         user. Make sure to provide new set of cookies (or logout user explicitly) if different session must be used,
         otherwise they will be picked up automatically. For 'empty' cookies, provide an empty dictionary.
 
-    :param test_item: one of `Base_Magpie_TestCase`, `webtest.TestApp` or remote server URL to call with `requests`
+    :param test_item: one of `BaseTestCase`, `webtest.TestApp` or remote server URL to call with `requests`
     :param method: request method (GET, POST, PATCH, PUT, DELETE)
     :param path: test path starting at base path that will be appended to the application's endpoint.
     :param params: query parameters added to the request path.
@@ -754,11 +771,12 @@ def check_error_param_structure(body,                                   # type: 
 
 
 class TestSetup(object):
-    """Generic setup and validation methods across unittests.
+    """
+    Generic setup and validation methods across unittests.
 
     This class offers a large list of commonly reusable operations to setup or cleanup test cases.
 
-    All methods take as input an instance of a `Test Case` derived from :class:`Base_Magpie_TestCase` (or directly a
+    All methods take as input an instance of a `Test Case` derived from :class:`BaseTestCase` (or directly a
     :class:`TestApp`, see below warning). Using this `Test Case`, common arguments such as JSON headers and user
     session cookies are automatically extracted and passed down to the relevant requests.
 
@@ -775,7 +793,7 @@ class TestSetup(object):
 
     .. note::
         Since these methods are intended to *setup* test data, cookies and headers for admin-level API requests are
-        employed by default. Refer to :attr:`Base_Magpie_TestCase.cookies` and :attr:`Base_Magpie_TestCase.json_headers`
+        employed by default. Refer to :attr:`BaseTestCase.cookies` and :attr:`BaseTestCase.json_headers`
         (N.B.: headers with extended JSON content-type for simplified API response body parsing). Checks that point at
         UI pages could do otherwise (e.g.: method :meth:`check_UpStatus`).
 
@@ -826,12 +844,12 @@ class TestSetup(object):
                        **request_kwargs         # type: Any
                        ):                       # type: (...) -> AnyResponseType
         """
-        Verifies that the Magpie UI page at very least returned an HTTP Ok response with the displayed title.
-        Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
+        Verifies that the Magpie UI page at very least returned an HTTP Ok response with the displayed title. Validates
+        that at the bare minimum, no underlying internal error occurred from the API or UI calls.
 
         .. warning::
-            Because this check is accomplished via the UI interface, :attr:`Base_Magpie_TestCase.test_cookies` and
-            :attr:`Base_Magpie_TestCase.headers` attributes are used instead of admin-level ones as in other methods
+            Because this check is accomplished via the UI interface, :attr:`BaseTestCase.test_cookies` and
+            :attr:`BaseTestCase.headers` attributes are used instead of admin-level ones as in other methods
             of :class:`TestSetup`.
 
         :returns: response from the rendered page for further tests.
@@ -948,6 +966,7 @@ class TestSetup(object):
         # type: (AnyMagpieTestCaseType, Str, Str, Str, Optional[CookiesType]) -> Union[JSON, Str]
         """
         Verifies that Magpie returned an Unauthorized response.
+
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
         app_or_url = get_app_or_url(test_case)
@@ -1047,7 +1066,8 @@ class TestSetup(object):
                             has_children_resources=True,    # type: bool
                             has_private_url=True,           # type: bool
                             ):                              # type: (...) -> None
-        """Validates the format structure of the :paramref:`service` container details.
+        """
+        Validates the format structure of the :paramref:`service` container details.
 
         :param test_case: test container
         :param service: service body to be evaluated
@@ -1081,7 +1101,7 @@ class TestSetup(object):
         svc_res_id = service["resource_id"]
         if LooseVersion(test_case.version) >= LooseVersion("0.7.0"):
             check_val_is_in("service_sync_type", service)
-            check_val_type(service["service_sync_type"], OptionalStringType)
+            check_val_type(service["service_sync_type"], OPTIONAL_STRING_TYPES)
         if has_private_url:
             check_val_is_in("service_url", service)
             check_val_type(service["service_url"], six.string_types)
@@ -1109,7 +1129,8 @@ class TestSetup(object):
                                         override_headers=null,          # type: Optional[HeadersType]
                                         override_cookies=null,          # type: Optional[CookiesType]
                                         ):                              # type: (...) -> JSON
-        """Obtains the first service from all available services that match the test service type.
+        """
+        Obtains the first service from all available services that match the test service type.
 
         :raises AssertionError: if the response could not retrieve the test service-type or any service of such type.
         """
@@ -1136,7 +1157,8 @@ class TestSetup(object):
                                    override_headers=null,           # type: Optional[HeadersType]
                                    override_cookies=null,           # type: Optional[CookiesType]
                                    ):                               # type: (...) -> JSON
-        """Creates the test resource nested *immediately* under the test service. Test service *must* exist beforehand.
+        """
+        Creates the test resource nested *immediately* under the test service. Test service *must* exist beforehand.
 
         :raises AssertionError: if the response correspond to failure to create the test resource.
         """
@@ -1162,7 +1184,9 @@ class TestSetup(object):
                             override_headers=null,          # type: Optional[HeadersType]
                             override_cookies=null,          # type: Optional[CookiesType]
                             ):                              # type: (...) -> JSON
-        """Creates the test resource nested *immediately* under the parent resource id.
+        """
+        Creates the test resource nested *immediately* under the parent resource ID.
+
         Parent resource *must* exist beforehand and *must* support nested children resource.
         For convenience, all details of the successfully created resource are fetched and returned.
 
@@ -1241,7 +1265,8 @@ class TestSetup(object):
                                           override_headers=null,            # type: Optional[HeadersType]
                                           override_cookies=null,            # type: Optional[CookiesType]
                                           ):                                # type: (...) -> JSON
-        """Utility method to create a permission on given resource for the user.
+        """
+        Utility method to create a permission on given resource for the user.
 
         Employs the resource information returned from one of the creation utilities:
             - :meth:`create_TestResource`
@@ -1265,7 +1290,8 @@ class TestSetup(object):
                                            override_headers=null,            # type: Optional[HeadersType]
                                            override_cookies=null,            # type: Optional[CookiesType]
                                            ):                                # type: (...) -> JSON
-        """Utility method to create a permission on given resource for the user.
+        """
+        Utility method to create a permission on given resource for the user.
 
         Employs the resource information returned from one of the creation utilities:
             - :meth:`create_TestResource`
@@ -1320,7 +1346,8 @@ class TestSetup(object):
                                     override_headers=null,          # type: Optional[HeadersType]
                                     override_cookies=null,          # type: Optional[CookiesType]
                                     ):                              # type: (...) -> JSON
-        """Obtains test service details.
+        """
+        Obtains test service details.
 
         :raises AssertionError: if the response correspond to missing service or failure to retrieve it.
         """
@@ -1343,7 +1370,8 @@ class TestSetup(object):
                                        override_headers=null,           # type: Optional[HeadersType]
                                        override_cookies=null,           # type: Optional[CookiesType]
                                        ):                               # type: (...) -> List[JSON]
-        """Obtains test resources nested *immediately* under test service.
+        """
+        Obtains test resources nested *immediately* under test service.
 
         :raises AssertionError: if the response correspond to missing service or resources.
         """
@@ -1363,7 +1391,9 @@ class TestSetup(object):
     @staticmethod
     def check_NonExistingTestServiceResource(test_case, override_service_name=null, override_resource_name=null):
         # type: (AnyMagpieTestCaseType, Optional[Str], Optional[Str]) -> None
-        """Validates that test resource nested *immediately* under test service does not exist.
+        """
+        Validates that test resource nested *immediately* under test service does not exist.
+
         Skips validation if the test service does not exist.
 
         :raises AssertionError: if the response correspond to existing resource under the service.
@@ -1381,7 +1411,10 @@ class TestSetup(object):
                                    override_headers=null,           # type: Optional[HeadersType]
                                    override_cookies=null,           # type: Optional[CookiesType]
                                    ):                               # type: (...) -> None
-        """Deletes the test resource under test service. If it does not exist, skip. Otherwise, delete it and validate.
+        """
+        Deletes the test resource under test service.
+
+        If the resource does not exist, skip. Otherwise, delete it and validate that it was indeed removed.
 
         :raises AssertionError: if any response does not correspond to non existing service's resource after execution.
         """
@@ -1407,7 +1440,10 @@ class TestSetup(object):
                            override_headers=null,       # type: Optional[HeadersType]
                            override_cookies=null,       # type: Optional[CookiesType]
                            ):                           # type: (...) -> JSON
-        """Creates the test service. If already exists, deletes it. Then, attempt creation.
+        """
+        Creates the test service.
+
+        If the service already exists, deletes it. Then, attempts creation.
 
         :raises AssertionError: if any response does not correspond to successful service creation from scratch.
         """
@@ -1440,7 +1476,8 @@ class TestSetup(object):
     @staticmethod
     def check_NonExistingTestService(test_case, override_service_name=null):
         # type: (AnyMagpieTestCaseType, Optional[Str]) -> None
-        """Validates that the test service does not exist.
+        """
+        Validates that the test service does not exist.
 
         :raises AssertionError: if the response does not correspond to missing service.
         """
@@ -1452,7 +1489,10 @@ class TestSetup(object):
     @staticmethod
     def delete_TestService(test_case, override_service_name=null, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, Optional[Str], Optional[HeadersType], Optional[CookiesType]) -> None
-        """Deletes the test service. If non existing, skip. Otherwise, proceed to remove it.
+        """
+        Deletes the test service.
+
+        If the service does not exist, skip operation. Otherwise, proceed to remove it and validate its removal.
 
         :raises AssertionError: if the response does not correspond to successful validation or removal of the service.
         """
@@ -1474,7 +1514,8 @@ class TestSetup(object):
     @staticmethod
     def get_RegisteredServicesList(test_case, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType]) -> List[Str]
-        """Obtains the list of registered services names.
+        """
+        Obtains the list of registered services names.
 
         :raises AssertionError: if the response does not correspond to successful retrieval of user names.
         """
@@ -1494,7 +1535,10 @@ class TestSetup(object):
     @staticmethod
     def delete_TestResource(test_case, resource_id, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, int, Optional[HeadersType], Optional[CookiesType]) -> None
-        """Deletes the test resource directly using its ID. If non existing, skips. Otherwise, delete and validate.
+        """
+        Deletes the test resource directly using its ID.
+
+        If the resource does not exists, skips the operation. Otherwise, delete it and validate its removal.
 
         :raises AssertionError: if the response does not correspond to non existing resource.
         """
@@ -1513,7 +1557,8 @@ class TestSetup(object):
     @staticmethod
     def get_RegisteredUsersList(test_case, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType]) -> List[Str]
-        """Obtains the list of registered users.
+        """
+        Obtains the list of registered users.
 
         :raises AssertionError: if the response does not correspond to successful retrieval of user names.
         """
@@ -1527,7 +1572,8 @@ class TestSetup(object):
     @staticmethod
     def check_NonExistingTestUser(test_case, override_user_name=null, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, Optional[Str], Optional[HeadersType], Optional[CookiesType]) -> None
-        """Ensures that the test user does not exist.
+        """
+        Ensures that the test user does not exist.
 
         :raises AssertionError: if the test user exists.
         """
@@ -1546,7 +1592,8 @@ class TestSetup(object):
                         override_headers=null,      # type: Optional[HeadersType]
                         override_cookies=null,      # type: Optional[CookiesType]
                         ):                          # type: (...) -> JSON
-        """Creates the test user.
+        """
+        Creates the test user.
 
         :raises AssertionError: if the request response does not match successful creation.
         """
@@ -1571,7 +1618,10 @@ class TestSetup(object):
     @staticmethod
     def delete_TestUser(test_case, override_user_name=null, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, Optional[Str], Optional[HeadersType], Optional[CookiesType]) -> None
-        """Ensures that the test user does not exist. If it does, deletes him. Otherwise, skip.
+        """
+        Ensures that the test user does not exist.
+
+        If the user does not exist, skip the operation. Otherwise, delete it and validate its removal.
 
         :raises AssertionError: if any request response does not match successful validation or removal from group.
         """
@@ -1627,7 +1677,8 @@ class TestSetup(object):
                                   override_headers=null,        # type: Optional[HeadersType]
                                   override_cookies=null,        # type: Optional[CookiesType]
                                   ):                            # type: (...) -> None
-        """Ensures that the test user is a member or not of the test group (according to :paramref:`member` value).
+        """
+        Ensures that the test user is a member or not of the test group (according to :paramref:`member` value).
 
         :raises AssertionError: if the request response does not validate of membership status of the user to the group.
         """
@@ -1651,7 +1702,8 @@ class TestSetup(object):
                              override_headers=null,     # type: Optional[HeadersType]
                              override_cookies=null,     # type: Optional[CookiesType]
                              ):                         # type: (...) -> None
-        """Ensures that the test user is a member of the test group. If already a member, skips. Otherwise, adds him.
+        """
+        Ensures that the test user is a member of the test group, adding him to the group as needed.
 
         :raises AssertionError: if any request response does not match successful validation or assignation to group.
         """
@@ -1676,7 +1728,8 @@ class TestSetup(object):
     @staticmethod
     def get_RegisteredGroupsList(test_case, only_discoverable=False, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, bool, Optional[HeadersType], Optional[CookiesType]) -> List[Str]
-        """Obtains existing group names. Optional only return the publicly discoverable ones.
+        """
+        Obtains all existing group names, or optionally, only return the publicly discoverable ones.
 
         :raises AssertionError: if the request response does not match successful groups retrieval.
         """
@@ -1691,7 +1744,8 @@ class TestSetup(object):
     @staticmethod
     def check_NonExistingTestGroup(test_case, override_group_name=null, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, Optional[Str], Optional[HeadersType], Optional[CookiesType]) -> None
-        """Validate that test group does not exist.
+        """
+        Validate that test group does not exist.
 
         :raises AssertionError: if the test group exists
         """
@@ -1709,7 +1763,8 @@ class TestSetup(object):
                          override_headers=null,         # type: Optional[HeadersType]
                          override_cookies=null,         # type: Optional[CookiesType]
                          ):                             # type: (...) -> JSON
-        """Create the test group.
+        """
+        Create the test group.
 
         :raises AssertionError: if the request does not have expected response matching successful creation.
         """
@@ -1731,7 +1786,10 @@ class TestSetup(object):
     @staticmethod
     def delete_TestGroup(test_case, override_group_name=null, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, Optional[Str], Optional[HeadersType], Optional[CookiesType]) -> None
-        """Delete the test group. Skip operation if the group does not exist.
+        """
+        Delete the test group.
+
+        Skip operation if the group does not exist. Otherwise, proceed to delete it and validate its removal.
 
         :raises AssertionError: if the request does not have expected response matching successful deletion.
         :return: nothing. Group is ensured to not exist.

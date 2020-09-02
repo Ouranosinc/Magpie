@@ -127,7 +127,8 @@ def sign_in(request):
 
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
 def login_success_ziggurat(request):
-    """Response from redirect upon successful login with valid user credentials.
+    """
+    Response from redirect upon successful login with valid user credentials.
 
     Header ``Set-Cookie`` from this response will allow creation of the response cookies.
 
@@ -141,7 +142,8 @@ def login_success_ziggurat(request):
 
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
 def login_failure(request, reason=None):
-    """Response from redirect upon login failure, either because of invalid or incorrect user credentials.
+    """
+    Response from redirect upon login failure, either because of invalid or incorrect user credentials.
 
     .. seealso::
         - :func:`sign_in`
@@ -193,7 +195,9 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
 
 def login_success_external(request, external_user_name, external_id, email, provider_name):
     # type: (Request, Str, Str, Str, Str) -> HTTPException
-    """Generates the login response in case of successful external provider identification."""
+    """
+    Generates the login response in case of successful external provider identification.
+    """
     # find possibly already registered user by external_id/provider
     user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name, request.db)
     if user is None:

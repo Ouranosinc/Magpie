@@ -52,8 +52,10 @@ def get_services_view(request):
 
 def get_services_runner(request):
     """
-    Obtains the full or filtered list of services categorized by type, or listed as flat list according to request
-    path and query parameters.
+    Generates services response format from request conditions.
+
+    Obtains the full or filtered list of services categorized by type, or listed as flat list according to request path
+    and query parameters.
     """
     service_type_filter = request.matchdict.get("service_type")  # no check because None/empty is for 'all services'
     services_as_list = asbool(ar.get_query_param(request, "flatten", False))
@@ -74,7 +76,7 @@ def get_services_runner(request):
         for service in services:
             svc_fmt = sf.format_service(service, show_private_url=True)
             if services_as_list:
-                svc_content.append(svc_fmt)
+                svc_content.append(svc_fmt)  # pylint: disable=E1101
             else:
                 svc_content[service_type][service.resource_name] = svc_fmt
 

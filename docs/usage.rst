@@ -44,17 +44,17 @@ API
 When the application is started, the Swagger API should be available under ``/api`` path. This will render the *current*
 version API and applicable requests. Please refer to this documentation to discover all provided API paths and
 operations supported by `Magpie` on a *running* instance (that could be older than latest code base). Alternatively,
-documentation of *all* versions is available on `readthedocs <Magpie REST API>`_.
+documentation of *all* versions is available on `ReadTheDocs`_.
 
 The API allows an administrator-level user to modify services, resources, users and groups references via HTTP requests.
 To do these kind of operations, sufficient access rights must be provided to the corresponding user (either directly or
 through administrative-level group membership).
 
-Some API routes are accessible by *any*-level user access. These are designated by :term:`Logged User` in the documentation.
-When accessing such API paths, the applicable user for which the request is accomplished uses contextual information
-from authentication headers and/or cookies of the request. When no user is authenticated, a minimal subset of paths
-will provide some publicly available details, such as current session user. Other routes will be more verbose according
-to the applicable user permission (or is inherited group memberships).
+Some API routes are accessible by *any*-level user access. These are designated by :term:`Logged User` in the
+documentation. When accessing such API paths, the applicable user for which the request is accomplished uses contextual
+information from authentication headers and/or cookies of the request. When no user is authenticated, a minimal subset
+of paths will provide some publicly available details, such as current session user. Other routes will be more verbose
+according to the applicable user permission (or is inherited group memberships).
 
 .. versionchanged:: 2.0.0
 

@@ -45,8 +45,8 @@ def format_resource(resource, permissions=None, basic_info=False):
 def format_resource_tree(children, db_session, *args, resources_perms_dict=None):
     # type: (ChildrenResourceNodes, Session, Optional[ChildrenResourceNodes], Optional[ChildrenResourceNodes]) -> JSON
     """
-    Generates the formatted resource tree under the provided children resources, with all of their children resources
-    by calling :func:`format_resource` recursively.
+    Generates the formatted resource tree under the provided children resources, with all of their children resources by
+    calling :func:`format_resource` recursively.
 
     Filters resource permissions with ``resources_perms_dict`` if provided.
 

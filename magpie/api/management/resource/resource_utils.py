@@ -85,8 +85,10 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
 def check_unique_child_resource_name(resource_name, parent_id, error_message, db_session):
     # type: (Str, int, Str, Session) -> None
     """
-    Verifies that the provided :paramref:`resource_name` does not already exist amongst other children resources
-    (only level immediately under the parent), for the specified parent resource.
+    Verify that resource will be unique amongst other resources at the same target position.
+
+    Verifies that the provided :paramref:`resource_name` does not already exist amongst other children resources at the
+    level immediately under the parent, for the specified parent resource.
 
     :returns: nothing if no conflict detected
     :raises HTTPConflict: if the :paramref:`resource_name` conflict with another existing resource
@@ -193,10 +195,11 @@ def get_resource_children(resource, db_session, tree_service_builder=None):
 
 def get_resource_permissions(resource, db_session):
     # type: (ServiceOrResourceType, Session) -> List[Permission]
-    """Obtains the applicable permissions on the service or resource, accordingly to what was provided.
+    """
+    Obtains the applicable permissions on the service or resource, accordingly to what was provided.
 
-    When parsing a resource, rewinds the hierarchy up to the top-most service in order to find the context under
-    which the resource resides, and therefore which permissions this resource is allowed to have under that service.
+    When parsing a resource, rewinds the hierarchy up to the top-most service in order to find the context under which
+    the resource resides, and therefore which permissions this resource is allowed to have under that service.
     """
     ax.verify_param(resource, not_none=True, http_error=HTTPBadRequest, param_name="resource",
                     msg_on_fail=s.UserResourcePermissions_GET_BadRequestResourceResponseSchema.description)
@@ -250,8 +253,10 @@ def get_resource_root_service_by_id(resource_id, db_session):
 def get_resource_root_service_impl(resource, request):
     # type: (ServiceOrResourceType, Request) -> ServiceInterface
     """
-    Retrieves the root-service from the provided resource's tree hierarchy and generates the corresponding
-    service's implementation from the :func:`service_factory`.
+    Obtain the root service implementation.
+
+    Retrieves the root-resource from the provided resource within a tree hierarchy and generates the
+    corresponding top-level service's implementation from the :func:`service_factory`.
 
     .. seealso::
         :func:`get_resource_root_service` to retrieve only the service flavored resource model

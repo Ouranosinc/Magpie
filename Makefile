@@ -370,6 +370,10 @@ check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
 
 # FIXME: move parameters to setup.cfg when implemented (https://github.com/myint/docformatter/issues/10)
 # NOTE: docformatter only reports files with errors on stderr, redirect trace stderr & stdout to file with tee
+# NOTE:
+#	Don't employ '--wrap-descriptions 120' since they *enforce* that length and rearranges format if any word can fit
+#	within remaining space, which often cause big diffs of ugly formatting for no important reason. Instead only check
+#	general formatting operations, and let other linter capture docstrings going over 120 (what we really care about).
 .PHONY: check-docf
 check-docf: mkdir-reports install-dev	## run PEP8 code documentation format checks
 	@echo "Checking PEP8 doc formatting problems..."
@@ -377,7 +381,7 @@ check-docf: mkdir-reports install-dev	## run PEP8 code documentation format chec
 	@bash -c '$(CONDA_CMD) \
 		docformatter \
 			--pre-summary-newline \
-			--wrap-descriptions 120 \
+			--wrap-descriptions 0 \
 			--wrap-summaries 120 \
 			--make-summary-multi-line \
 			--check \
@@ -428,7 +432,7 @@ fix-docf: install-dev	## fix some PEP8 code documentation style problems automat
 	@bash -c '$(CONDA_CMD) \
 		docformatter \
 			--pre-summary-newline \
-			--wrap-descriptions 120 \
+			--wrap-descriptions 0 \
 			--wrap-summaries 120 \
 			--make-summary-multi-line \
 			--in-place \

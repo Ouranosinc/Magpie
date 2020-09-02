@@ -11,7 +11,7 @@
 .. _Phoenix: https://github.com/bird-house/pyramid-phoenix
 .. _PostgreSQL: https://www.postgresql.org/
 .. _Pyramid: https://docs.pylonsproject.org/projects/pyramid/
-.. _readthedocs: https://pavics-magpie.readthedocs.io/
+.. _ReadTheDocs: https://pavics-magpie.readthedocs.io/
 .. _SQLAlchemy: https://www.sqlalchemy.org/
 .. _Twitcher: https://github.com/bird-house/twitcher
 .. _Waitress: https://github.com/Pylons/waitress

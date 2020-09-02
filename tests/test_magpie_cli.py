@@ -80,7 +80,8 @@ def test_magpie_batch_update_users_help_directly():
 
 
 def run_batch_update_user_command(test_app, expected_users, create_command_xargs, delete_command_xargs):
-    """Tests batch user creation and deletion of the CLI utility.
+    """
+    Tests batch user creation and deletion of the CLI utility.
 
     Because CLI utility employs requests that cannot be mocked if executed through sub-process, we call it directly.
     """

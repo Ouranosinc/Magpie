@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_REGISTER
-class TestRegister(interfaces.Base_Magpie_TestCase):
+class TestRegister(interfaces.BaseTestCase):
     # pylint: disable=R0914
 
     @classmethod

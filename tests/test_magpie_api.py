@@ -214,7 +214,8 @@ def test_magpie_homepage():
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_STATUS
 def test_response_metadata():
-    """Validate that regardless of response type (success/error) and status-code, metadata details are added.
+    """
+    Validate that regardless of response type (success/error) and status-code, metadata details are added.
 
     note: test only locally to avoid remote server side-effects and because mock cannot be done remotely
     """

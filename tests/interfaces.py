@@ -23,12 +23,12 @@ from tests import runner, utils
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Optional, Set, Type, Union
+    from typing import Optional, Set
     from magpie.typedefs import CookiesType, HeadersType, JSON, Str
     from webtest import TestApp
 
 
-class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
+class BaseTestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     """
     Base definition for all other `Test Case` interfaces.
 
@@ -81,8 +81,8 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
     @classmethod
     def tearDownClass(cls):
         """
-        Cleans up any left-over known object prefixed by ``test_`` as well as any other items added to lists
-        prefixed by ``extra_``, in case some test failed to do so (e.g.: because it raised midway).
+        Cleans up any left-over known object prefixed by ``test_`` as well as any other items added to sets prefixed by
+        ``extra_``, in case some test failed to do so (e.g.: because it raised midway or was simply forgotten).
         """
         utils.check_or_try_logout_user(cls)
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
@@ -121,32 +121,34 @@ class Base_Magpie_TestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
         pass
 
 
-class NoAuth_Magpie_TestCase(Base_Magpie_TestCase):
+class NoAuthTestCase(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
 
     @classmethod
     def tearDownClass(cls):
-        super(NoAuth_Magpie_TestCase, cls).tearDownClass()
+        super(NoAuthTestCase, cls).tearDownClass()
 
     def setUp(self):
         # validate on each new test-case that we are not logged in from invalid operation of some previous test
         utils.check_or_try_logout_user(self, msg="must be anonymous to evaluate this test case")
 
     def tearDown(self):
-        super(NoAuth_Magpie_TestCase, self).tearDown()
+        super(NoAuthTestCase, self).tearDown()
 
 
-class Admin_Magpie_TestCase(Base_Magpie_TestCase):
-    """Extension of :class:`Base_Magpie_TestCase` to handle test preparation/cleanup by administrator-level user."""
+class AdminTestCase(BaseTestCase):
+    """
+    Extension of :class:`BaseTestCase` to handle test preparation/cleanup by administrator-level user.
+    """
     @classmethod
     def setUpClass(cls):
         raise NotImplementedError
 
     @classmethod
     def tearDownClass(cls):
-        super(Admin_Magpie_TestCase, cls).tearDownClass()
+        super(AdminTestCase, cls).tearDownClass()
 
     @classmethod
     def check_requirements(cls):
@@ -170,8 +172,10 @@ class Admin_Magpie_TestCase(Base_Magpie_TestCase):
         utils.TestSetup.delete_TestGroup(self)
 
 
-class User_Magpie_TestCase(Admin_Magpie_TestCase):
-    """Extension of :class:`Base_Magpie_TestCase` to handle another user session than the administrator-level user."""
+class UserTestCase(AdminTestCase):
+    """
+    Extension of :class:`BaseTestCase` to handle another user session than the administrator-level user.
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -179,16 +183,16 @@ class User_Magpie_TestCase(Admin_Magpie_TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        super(User_Magpie_TestCase, cls).tearDownClass()
+        super(UserTestCase, cls).tearDownClass()
 
     def setUp(self):
         """
-        Login as admin to setup test items from fresh start and remain logged in as admin since test cases might need
-        to setup additional items. Each test **MUST** call :meth:`login_test_user` before testing when finished setup.
+        Login as admin to setup test items from fresh start and remain logged in as admin since test cases might need to
+        setup additional items. Each test **MUST** call :meth:`login_test_user` before testing when finished setup.
 
         Ensure that test user will have test group membership but not admin-level access.
         """
-        super(User_Magpie_TestCase, self).setUp()  # admin login and cleanup
+        super(UserTestCase, self).setUp()  # admin login and cleanup
         # setup minimal test user requirements
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
@@ -202,6 +206,8 @@ class User_Magpie_TestCase(Admin_Magpie_TestCase):
     def login_test_user(self):
         # type: () -> utils.OptionalHeaderCookiesType
         """
+        Logs out any current user session and login the ``test_user_name`` instead.
+
         Obtain headers and cookies with session credentials of the test user (non administrator).
         The operation assumes that the test user already exists.
         Only validates that user does not have administrator privileges for integrity.
@@ -225,7 +231,7 @@ class User_Magpie_TestCase(Admin_Magpie_TestCase):
 
 
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuth_Magpie_TestCase, Base_Magpie_TestCase)):
+class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuthTestCase, BaseTestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that do not require user AuthN/AuthZ.
@@ -274,6 +280,7 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuth_Magpie_TestC
     def test_GetLoggedUser_InvalidNotGlobed(self):
         """
         Test that logged user special keyword with more characters doesn't get incorrectly interpreted.
+
         Older version bug would infer the logged user keyword although path variable was not *exactly* equal to it.
         """
         utils.warn_version(self, "validation of complete logged user keyword", "2.0.0", skip=True)
@@ -320,7 +327,9 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuth_Magpie_TestC
     @runner.MAGPIE_TEST_STATUS
     @runner.MAGPIE_TEST_REGISTER
     def test_RegisterDiscoverableGroup_Unauthorized(self):
-        """Not logged-in user cannot update membership to group although group is discoverable."""
+        """
+        Not logged-in user cannot update membership to group although group is discoverable.
+        """
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
         resp = utils.test_request(self, "GET", "/register/groups", headers=self.json_headers, expect_errors=True)
         body = utils.check_response_basic_info(resp, 401)
@@ -330,7 +339,9 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuth_Magpie_TestC
     @runner.MAGPIE_TEST_STATUS
     @runner.MAGPIE_TEST_REGISTER
     def test_UnregisterDiscoverableGroup_Unauthorized(self):
-        """Not logged-in user cannot remove membership to group although group is discoverable."""
+        """
+        Not logged-in user cannot remove membership to group although group is discoverable.
+        """
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
         path = "/register/groups/random-group"
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, expect_errors=True)
@@ -340,7 +351,9 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuth_Magpie_TestC
     @runner.MAGPIE_TEST_STATUS
     @runner.MAGPIE_TEST_REGISTER
     def test_ViewDiscoverableGroup_Unauthorized(self):
-        """Not logged-in user cannot view group although group is discoverable."""
+        """
+        Not logged-in user cannot view group although group is discoverable.
+        """
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
         admin_headers, admin_cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
 
@@ -362,14 +375,16 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuth_Magpie_TestC
     @runner.MAGPIE_TEST_STATUS
     @runner.MAGPIE_TEST_REGISTER
     def test_ListDiscoverableGroup_Unauthorized(self):
-        """Not logged-in user cannot list group names although groups are discoverable."""
+        """
+        Not logged-in user cannot list group names although groups are discoverable.
+        """
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
         resp = utils.test_request(self, "GET", "/register/groups", headers=self.json_headers, expect_errors=True)
         utils.check_response_basic_info(resp, 401)
 
 
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestCase, Base_Magpie_TestCase)):
+class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, BaseTestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that require at least logged user AuthN/AuthZ.
@@ -382,15 +397,19 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
         raise NotImplementedError
 
     def login_test_user(self):
-        """Apply JSON headers on top of login headers for API calls."""
-        User_Magpie_TestCase.login_test_user(self)
+        """
+        Apply JSON headers on top of login headers for API calls.
+        """
+        UserTestCase.login_test_user(self)
         self.test_headers.update(self.json_headers)
         return self.test_headers, self.test_cookies
 
     @runner.MAGPIE_TEST_LOGIN
     def test_PostSignin_EmailAsUsername(self):
-        """User is allowed to use its email as username for login."""
-        User_Magpie_TestCase.login_test_user(self)
+        """
+        User is allowed to use its email as username for login.
+        """
+        UserTestCase.login_test_user(self)
         info = utils.TestSetup.get_UserInfo(self,
                                             override_headers=self.test_headers,
                                             override_cookies=self.test_cookies)
@@ -403,7 +422,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
 
     @runner.MAGPIE_TEST_LOGIN
     def test_PostSignin_MissingCredentials(self):
-        """Signin attempt with missing returns bad request, not internal server error nor """
+        """
+        Signin attempt with missing returns bad request, not internal server error nor.
+        """
         # warn for new check, but don't skip lower version as it should work in previous releases
         utils.warn_version(self, "signin missing credentials field validation", "2.0.0", skip=False)
         utils.check_or_try_logout_user(self)
@@ -416,7 +437,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
 
     @runner.MAGPIE_TEST_LOGIN
     def test_GetSignin_UsingParameters(self):
-        """User is allowed to use its email as username for login."""
+        """
+        User is allowed to use its email as username for login.
+        """
         utils.warn_version(self, "signin using query parameters", "2.0.0", skip=True)
         utils.check_or_try_logout_user(self)
 
@@ -563,7 +586,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_UpdateUsers_username_Forbidden_ReservedKeyword_LoggedUser(self):
-        """Logged user is not allowed to update its user name to reserved keyword."""
+        """
+        Logged user is not allowed to update its user name to reserved keyword.
+        """
         self.login_test_user()
         logged = get_constant("MAGPIE_LOGGED_USER")
         data = {"user_name": logged}
@@ -578,7 +603,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_UpdateUsers_username_Forbidden_AnyNonAdmin(self):
-        """Non-admin level user is not permitted to update its own user name.
+        """
+        Non-admin level user is not permitted to update its own user name.
 
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_UpdateUser_username`
@@ -600,7 +626,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
 
     @runner.MAGPIE_TEST_USERS
     def test_UpdateUsers_username_Forbidden_UpdateOthers(self):
-        """Logged user is not allowed to update any other user's name.
+        """
+        Logged user is not allowed to update any other user's name.
 
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_UpdateUser_username`
@@ -634,7 +661,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     def test_PostUserGroup_Forbidden_SelfAssignMembership(self):
         """
         Non-admin level user cannot change its own group memberships nor any other user's group memberships.
-        (can only change is own discoverable groups memberships through register routes, but not this route)
+
+        Non-admin user should only be able to change is own discoverable groups memberships through register routes,
+        but not through this route which also accesses non-public groups for admin-only management.
 
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_PostUserGroup_AllowAdmin_SelfAssignMembership`
@@ -655,7 +684,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     def test_PostUserResourcesPermissions_Forbidden(self):
-        """Logged user without administrator access is not allowed to add resource permissions for itself."""
+        """
+        Logged user without administrator access is not allowed to add resource permissions for itself.
+        """
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         body = utils.TestSetup.get_ResourceInfo(self, override_body=body)
@@ -677,11 +708,11 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_SERVICES
     def test_GetUserServices_AllowedItself(self):
         """
-        Validate that non-admin user can view services it has access to when referenced to explicitly in path variable
-        instead of via logged user keyword.
+        Validate that non-admin user can view services it has access to.
 
-        Without 'cascade' query, need to have direct service permissions for it to be listed it in response.
-        Otherwise nothing would be returned.
+        Verifies access both when referenced to explicitly (by user-name) in path variable, and by logged user keyword.
+        Without ``cascade`` query, user needs to have direct service permissions for it to be listed it in response.
+        Otherwise nothing would be returned (i.e.: children resources are not searched for further permissions).
 
         .. seealso::
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserServices_ForbiddenOther`
@@ -713,7 +744,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_SERVICES
     def test_GetUserServices_ForbiddenOther(self):
-        """Validate that non-admin user cannot view another user's services.
+        """
+        Validate that non-admin user cannot view another user's services.
 
         .. seealso::
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserServices_AllowedItself`
@@ -733,8 +765,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetUserResources_AllowedItself(self):
         """
-        Validate that non-admin user can view resources it has access to when referenced
-        to explicitly in path variable instead of via logged user keyword.
+        Validate that non-admin user can view resources it has access to when referenced to explicitly in path variable
+        instead of via logged user keyword.
 
         .. seealso::
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResources_ForbiddenOther`
@@ -756,7 +788,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
             resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
             body = utils.check_response_basic_info(resp)
             utils.check_val_is_in("resources", body)
-            utils.check_val_equal(len(body["resources"]), len(svc_types)),  # all service types always returned
+            utils.check_val_equal(len(body["resources"]), len(svc_types))   # all service types always returned
             svc_of_type = body["resources"][self.test_service_type]         # service-level resources
             utils.check_val_is_in(self.test_service_name, svc_of_type)
             service = svc_of_type[self.test_service_name]
@@ -774,7 +806,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetUserResources_ForbiddenOther(self):
-        """Validate that non-admin user cannot view another user's resources.
+        """
+        Validate that non-admin user cannot view another user's resources.
 
         .. seealso::
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResources_AllowedItself`
@@ -793,7 +826,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetUserResources_FilteredIgnoredForNonAdmin(self):
-        """Validate that non-admin user cannot obtain non-filtered resources view.
+        """
+        Validate that non-admin user cannot obtain non-filtered resources view.
 
         .. seealso::
             Use cases for admin-user views covered in:
@@ -826,7 +860,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetUserResources_OnlyServicesWithPermissions(self):
-        """Validate that non-admin user execution the request gets filtered view of listed resources.
+        """
+        Validate that non-admin user execution the request gets filtered view of listed resources.
 
         .. versionadded:: 2.0.0
             Prior to this version, all services-specialized resources and every children resource would be recursively
@@ -908,10 +943,10 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
                     res1 = svc1["resources"][str(res1_id)]
                     utils.check_all_equal(res1["permission_names"], [res1_perm])
                     if not query:
-                        utils.check_val_not_in(str(res2_id), res1["resources"])  # group-permission, not listed here
+                        utils.check_val_not_in(str(res2_id), res1["children"])  # group-permission, not listed here
                     else:
-                        utils.check_val_is_in(str(res2_id), res1["resources"])  # but is listed when inherited here
-                        res2 = res1["resources"][str(res2_id)]
+                        utils.check_val_is_in(str(res2_id), res1["children"])  # but is listed when inherited here
+                        res2 = res1["children"][str(res2_id)]
                         utils.check_all_equal(res2["permission_names"], [res2_perm])
                         svc2 = services[svc2_name]
                         utils.check_all_equal(svc2["permission_names"], [])  # no permission immediately on service
@@ -928,8 +963,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetUserResourcesPermissions_AllowedItself(self):
         """
-        Validate that non-admin user can view its own permissions when referenced to explicitly in path variable
-        instead of via logged user keyword.
+        Validate that non-admin user can view its own permissions when referenced to explicitly in path variable instead
+        of via logged user keyword.
 
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_GetLoggedUserResourcesPermissions`
@@ -951,7 +986,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetUserResourcesPermissions_ForbiddenOther(self):
-        """Validate that non-admin user cannot view another user's permissions.
+        """
+        Validate that non-admin user cannot view another user's permissions.
 
         .. seealso::
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_AllowedItself`
@@ -973,7 +1009,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_REGISTER
     def test_RegisterDiscoverableGroup(self):
-        """Non-admin logged user is allowed to update is membership to register to a discoverable group by itself."""
+        """
+        Non-admin logged user is allowed to update is membership to register to a discoverable group by itself.
+        """
         utils.TestSetup.delete_TestGroup(self)
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         self.login_test_user()
@@ -996,7 +1034,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_REGISTER
     def test_UnregisterDiscoverableGroup(self):
-        """Non-admin logged user is allowed to revoke its membership to leave a discoverable group by itself."""
+        """
+        Non-admin logged user is allowed to revoke its membership to leave a discoverable group by itself.
+        """
         utils.TestSetup.delete_TestGroup(self)
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         utils.TestSetup.assign_TestUserGroup(self)
@@ -1014,7 +1054,11 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
 
     @runner.MAGPIE_TEST_GROUPS
     def test_ViewDiscoverableGroup(self):
-        """Non-admin logged user can view discoverable group information. Critical details are not displayed."""
+        """
+        Non-admin logged user can view discoverable group information.
+
+        Validate that critical details such as user names of members are not displayed.
+        """
         data = {"discoverable": True, "description": "Test Group", "group_name": self.test_group_name}
         utils.TestSetup.delete_TestGroup(self)
         utils.TestSetup.create_TestGroup(self, override_data=data)
@@ -1035,7 +1079,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
 
     @runner.MAGPIE_TEST_GROUPS
     def test_ListDiscoverableGroups_Filtered(self):
-        """Non-admin logged user can view only available discoverable group names."""
+        """
+        Non-admin logged user can view only available discoverable group names.
+        """
         # setup some discoverable groups, but ignore others that *could* exist depending on the reference database
         # test user should have pre-assigned membership to non-discoverable test group (from setUp)
         # but that group must not be returned in the list of discoverable groups
@@ -1061,7 +1107,9 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
 
     @runner.MAGPIE_TEST_GROUPS
     def test_DeleteDiscoverableGroup_Forbidden(self):
-        """Non-admin logged user cannot delete a group although it is discoverable."""
+        """
+        Non-admin logged user cannot delete a group although it is discoverable.
+        """
         utils.TestSetup.delete_TestGroup(self)  # remove auto-created by setup
         utils.TestSetup.create_TestGroup(self, override_discoverable=True)
         self.login_test_user()
@@ -1082,7 +1130,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_Test
 
 
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_TestCase, Base_Magpie_TestCase)):
+class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, BaseTestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that require at least 'administrator' group
@@ -1228,6 +1276,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_LOGGED
     def test_GetLoggedUserResourcesPermissions(self):
         """
+        Check visible permissions of logged user.
+
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_GetLoggedUserResourcesPermissions_Queries`
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_AllowedItself`
@@ -1241,6 +1291,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_USERS
     def test_GetLoggedUserResourcesPermissions_Queries(self):
         """
+        Validate returned logged user permissions with different query parameter modifiers.
+
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_GetLoggedUserResourcesPermissions`
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_AllowedItself`
@@ -1560,7 +1612,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetUserResources_Filtered(self):
-        """Validate that admin-only operation is allowed for admin-user that requests filtered view.
+        """
+        Validate that admin-only operation is allowed for admin-user that requests filtered view.
 
         .. seealso::
             Use cases with non-filtered views covered in:
@@ -1831,8 +1884,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServices_Cascade(self):
         """
-        Verify that all services which the user has :term:`Direct Permissions` on either the services themselves
-        or one of their children resource at any level are returned.
+        Verify that all services which the user has :term:`Direct Permissions` on either the services themselves or one
+        of their children resource at any level are returned.
         """
         utils.warn_version(self, "services with cascading permissions", "0.7.0", skip=True)
         test_items = self.setup_GetUserServices()
@@ -1866,6 +1919,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServices_Inherited(self):
         """
+        Validate user services returned with group inheritance.
+
         .. note::
             Since other permissions could be attributed to anonymous group and that it cannot be removed,
             we cannot explicitly check all services returned when group inheritance is applied.
@@ -1913,6 +1968,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServices_CascadeAndInherited(self):
         """
+        Validate user services returned with group inheritance and cascading search of their children resources.
+
         .. note::
             Since other permissions could be attributed to anonymous group and that it cannot be removed,
             we cannot explicitly check all services returned when group inheritance is applied.
@@ -2114,8 +2171,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers_NoGroupParam_DefaultsAnonymous(self):
         """
-        Validate that user created with non-special keyword group also becomes a member of ``MAGPIE_ANONYMOUS_GROUP``
-        to ensure he will have access to publicly available resources.
+        Validate that user created with non-special keyword group also becomes a member of ``MAGPIE_ANONYMOUS_GROUP`` to
+        ensure he will have access to publicly available resources.
         """
         utils.warn_version(self, "user creation without group parameter", "2.0.0", skip=True)
         utils.TestSetup.delete_TestUser(self)
@@ -2144,11 +2201,13 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_UpdateUser_ReservedKeyword_LoggedUser(self):
-        """Logged user requested by special keyword path variable could not update its own password.
+        """
+        Logged user requested by special keyword path variable could not update its own password.
 
         .. versionchanged:: 2.0.0
-            Logged user is correctly resolved to the corresponding context user. Provided that user has sufficient
-            access rights, the operation is now permitted.
+
+            Logged user is correctly resolved to the corresponding context user.
+            Provided that user has sufficient access rights, the operation is now permitted.
         """
         utils.warn_version(self, "logged user cannot update its own information", "2.0.0", older=True, skip=True)
         utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
@@ -2170,7 +2229,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
 
     @runner.MAGPIE_TEST_USERS
     def test_UpdateUser_username(self):
-        """Administrator level user is allowed to modify the username of another user.
+        """
+        Administrator level user is allowed to modify the username of another user.
 
         .. seealso::
             - :meth:`Interface_MagpieAPI_UsersAuth.test_UpdateUsers_username_Forbidden_AnyNonAdmin`
@@ -2225,7 +2285,9 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_UpdateUser_username_ReservedKeyword_LoggedUser(self):
-        """Even administrator level user is not allowed to update any user name to reserved keyword."""
+        """
+        Even administrator level user is not allowed to update any user name to reserved keyword.
+        """
         utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         data = {"user_name": get_constant("MAGPIE_LOGGED_USER")}
         path = "/users/{usr}".format(usr=self.test_user_name)
@@ -2397,7 +2459,9 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_DEFAULTS
     def test_DeleteUser_forbidden_ReservedKeyword_Anonymous(self):
-        """Even administrator level user is not allowed to remove the special anonymous user."""
+        """
+        Even administrator level user is not allowed to remove the special anonymous user.
+        """
         anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
         users = utils.TestSetup.get_RegisteredUsersList(self)
         utils.check_val_is_in(anonymous, users, msg="Anonymous user pre-requirement missing for test.")
@@ -2497,7 +2561,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
         utils.check_val_is_in("group_id", body["group"])
         utils.check_val_type(body["group"]["group_id"], int)
         utils.check_val_is_in("description", body["group"])
-        utils.check_val_type(body["group"]["description"], utils.OptionalStringType)
+        utils.check_val_type(body["group"]["description"], utils.OPTIONAL_STRING_TYPES)
         utils.check_val_is_in("group_name", body["group"])
         utils.check_val_type(body["group"]["group_name"], six.string_types)
         utils.check_val_is_in("member_count", body["group"])
@@ -2551,7 +2615,9 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_DEFAULTS
     def test_DeleteGroup_forbidden_ReservedKeyword_Anonymous(self):
-        """Even administrator level user is not allowed to remove the special keyword anonymous group."""
+        """
+        Even administrator level user is not allowed to remove the special keyword anonymous group.
+        """
         anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP")
         groups = utils.TestSetup.get_RegisteredGroupsList(self)
         utils.check_val_is_in(anonymous, groups, msg="Anonymous group pre-requirement missing for test.")
@@ -2565,7 +2631,9 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_DEFAULTS
     def test_DeleteGroup_forbidden_ReservedKeyword_Admin(self):
-        """Even administrator level user is not allowed to remove the special keyword admin group."""
+        """
+        Even administrator level user is not allowed to remove the special keyword admin group.
+        """
         admins = get_constant("MAGPIE_ADMIN_GROUP")
         groups = utils.TestSetup.get_RegisteredGroupsList(self)
         utils.check_val_is_in(admins, groups, msg="Admin group pre-requirement missing for test.")
@@ -2625,7 +2693,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
                 utils.check_val_type(svc_dict["permission_names"], list)
                 if LooseVersion(self.version) >= LooseVersion("0.7.0"):
                     utils.check_val_is_in("service_sync_type", svc_dict)
-                    utils.check_val_type(svc_dict["service_sync_type"], utils.OptionalStringType)
+                    utils.check_val_type(svc_dict["service_sync_type"], utils.OPTIONAL_STRING_TYPES)
                     utils.check_val_not_in("service_url", svc_dict)
                 else:
                     utils.check_val_is_in("service_url", svc_dict)
@@ -2794,7 +2862,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
         utils.check_val_type(svc_info["permission_names"], list)
         if LooseVersion(self.version) >= LooseVersion("0.7.0"):
             utils.check_val_is_in("service_sync_type", svc_info)
-            utils.check_val_type(svc_info["service_sync_type"], utils.OptionalStringType)
+            utils.check_val_type(svc_info["service_sync_type"], utils.OPTIONAL_STRING_TYPES)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServiceTypes_ResponseFormat(self):
@@ -2926,8 +2994,10 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_SERVICES
     def test_PostServiceResources_ChildrenResource_ParentID(self):
         """
+        Verify valid use case of children resource created under service's children resource with appropriate parent-ID.
+
         .. seealso::
-            :meth:`Interface_MagpieAPI_AdminAuth.test_PostServiceResources_ChildrenResource_ParentID_InvalidRoot`
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_PostServiceResources_ChildrenResource_ParentID_InvalidRoot`
         """
         # create the direct resource
         body = utils.TestSetup.create_TestServiceResource(self)
@@ -2976,8 +3046,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
     @runner.MAGPIE_TEST_SERVICES
     def test_PostServiceResources_ChildrenResource_ParentID_InvalidRoot(self):
         """
-        Ensure that providing ``parent_id`` corresponding to a resource *not* nested under the service represented
-        by ``service_name`` in request path is validated preemptively to resource creation.
+        Ensure that providing ``parent_id`` corresponding to a resource *not* nested under the service represented by
+        ``service_name`` in request path is validated preemptively to resource creation.
 
         .. seealso::
             :meth:`Interface_MagpieAPI_AdminAuth.test_PostServiceResources_ChildrenResource_ParentID`
@@ -3200,7 +3270,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
 
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetResource_ResponseFormat(self):
-        """Test format of nested resource tree.
+        """
+        Test format of nested resource tree.
 
         Test structure::
 
@@ -3344,7 +3415,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Tes
 
 
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, NoAuth_Magpie_TestCase, Base_Magpie_TestCase)):
+class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, NoAuthTestCase, BaseTestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that do not require user AuthN/AuthZ.
@@ -3430,7 +3501,7 @@ class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, NoAuth_Magpie_TestCa
 
 
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestCase, Base_Magpie_TestCase)):
+class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, BaseTestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that require at least logged user AuthN/AuthZ.
@@ -3441,6 +3512,10 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestC
     def __init__(self, *args, **kwargs):
         super(Interface_MagpieUI_UsersAuth, self).__init__(*args, **kwargs)
         self.magpie_title = "Magpie User Management"
+
+    @classmethod
+    def setUpClass(cls):
+        raise NotImplementedError
 
     @classmethod
     def check_requirements(cls):
@@ -3467,7 +3542,9 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestC
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_UserAccount_ViewDetails(self):
-        """Logged user can view its own details on account page."""
+        """
+        Logged user can view its own details on account page.
+        """
         utils.warn_version(self, "user account page", "2.0.0", skip=True)
         self.login_test_user()
         path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
@@ -3478,7 +3555,9 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestC
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_UserAccount_ViewDiscoverableGroupsMembership(self):
-        """Logged user can view discoverable groups and which ones he has membership on."""
+        """
+        Logged user can view discoverable groups and which ones he has membership on.
+        """
         utils.warn_version(self, "user account page", "2.0.0", skip=True)
         self.login_test_user()
         path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
@@ -3490,7 +3569,9 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestC
     @runner.MAGPIE_TEST_LOGGED
     @runner.MAGPIE_TEST_FUNCTIONAL
     def test_UserAccount_UpdateDetails_email(self):
-        """Logged user can update its own email on account page."""
+        """
+        Logged user can update its own email on account page.
+        """
         utils.warn_version(self, "user account page", "2.0.0", skip=True)
         self.login_test_user()
         data = {"new_user_email": "new-mail@unittest-mail.com"}
@@ -3510,7 +3591,9 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestC
     @runner.MAGPIE_TEST_LOGGED
     @runner.MAGPIE_TEST_FUNCTIONAL
     def test_UserAccount_UpdateDetails_password(self):
-        """Logged user can update its own password on account page."""
+        """
+        Logged user can update its own password on account page.
+        """
         utils.warn_version(self, "user account page", "2.0.0", skip=True)
         self.login_test_user()
         data = {"new_user_password": "12345678987654321"}
@@ -3534,7 +3617,7 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, User_Magpie_TestC
 
 
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_TestCase, Base_Magpie_TestCase)):
+class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, BaseTestCase)):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that require at least 'administrator' group
@@ -3659,9 +3742,3 @@ class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, Admin_Magpie_Test
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
         # empty fields, same page but with 'incorrect' indicator due to invalid form inputs
         utils.TestSetup.check_UpStatus(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
-
-
-if TYPE_CHECKING:
-    AnyMagpieTestCaseType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase,
-                                  Type[Admin_Magpie_TestCase], Admin_Magpie_TestCase,
-                                  Type[User_Magpie_TestCase], User_Magpie_TestCase]

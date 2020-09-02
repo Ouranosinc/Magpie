@@ -338,8 +338,9 @@ def get_user_resources_permissions_dict(user, request, resource_types=None,
 def get_user_service_resources_permissions_dict(user, service, request, inherit_groups_permissions=True):
     # type: (models.User, models.Service, Request, bool) -> Dict[Str, AnyPermissionType]
     """
-    Retrieves all permissions the user has for all resources nested under the service, either including or not
-    group permissions inheritance.
+    Retrieves all permissions the user has for all resources nested under the service.
+
+    The retrieved permissions can either include only direct permissions or also include inherited group permissions.
 
     :returns: dictionary of resource IDs with corresponding permissions.
     """
@@ -355,7 +356,8 @@ def get_user_service_resources_permissions_dict(user, service, request, inherit_
 def check_user_info(user_name=None, email=None, password=None, group_name=None,  # required unless disabled explicitly
                     check_name=True, check_email=True, check_password=True, check_group=True):
     # type: (Str, Str, Str, Str, bool, bool, bool, bool) -> None
-    """Validates provided user information to ensure they are adequate for user creation.
+    """
+    Validates provided user information to ensure they are adequate for user creation.
 
     Using ``check_`` prefixed arguments, individual field checks can be disabled (check all by default).
 
@@ -404,7 +406,9 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
 
 def get_user_groups_checked(user, db_session):
     # type: (models.User, Session) -> List[Str]
-    """Obtains the validated list of group names from a pre-validated user."""
+    """
+    Obtains the validated list of group names from a pre-validated user.
+    """
     ax.verify_param(user, not_none=True, http_error=HTTPNotFound,
                     msg_on_fail=s.Groups_CheckInfo_NotFoundResponseSchema.description)
     group_names = ax.evaluate_call(lambda: [group.group_name for group in user.groups],  # noqa

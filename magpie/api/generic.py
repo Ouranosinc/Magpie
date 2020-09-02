@@ -130,8 +130,8 @@ def guess_target_format(request):
 def validate_accept_header_tween(handler, registry):    # noqa: F811
     # type: (Callable[[Request], Response], Registry) -> Callable[[Request], Response]
     """
-    Tween that validates that the specified request ``Accept`` header or ``format`` query (if any) is a supported one
-    by the application and for the given context.
+    Tween that validates that the specified request ``Accept`` header or ``format`` query (if any) is a supported one by
+    the application and for the given context.
 
     :raises HTTPNotAcceptable: if desired ``Content-Type`` is not supported.
     """
@@ -139,8 +139,8 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
         # type: (Request) -> Response
         """
         Validates the specified request according to its ``Accept`` header or ``format`` query, ignoring UI related
-        routes that require more content-types than the ones supported by the API for display purposes
-        (styles, images, etc.).
+        routes that require more content-types than the ones supported by the API for displaying purposes of other
+        elements (styles, images, etc.).
         """
         if not is_magpie_ui_path(request):
             accept, _ = guess_target_format(request)
@@ -158,8 +158,10 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
     # type: (Callable[[Request], HTTPException], Registry) -> Callable[[Request], Response]
     """
     Tween that obtains the request ``Accept`` header or ``format`` query (if any) to generate the response with the
-    desired ``Content-Type``. The target ``Content-Type`` is expected to have been validated by
-    :func:`validate_accept_header_tween` beforehand to handle not-acceptable errors.
+    desired ``Content-Type``.
+
+    The target ``Content-Type`` is expected to have been validated by :func:`validate_accept_header_tween` beforehand
+    to handle not-acceptable errors.
 
     The tween also ensures that additional request metadata extracted from :func:`get_request_info` is applied to
     the response body if not already provided by a previous operation.
@@ -169,11 +171,12 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
         """
         Validates the specified request according to its ``Accept`` header, ignoring UI related routes that request more
         content-types than the ones supported by the application for display purposes (styles, images etc.).
+
         Alternatively, if no ``Accept`` header is found, look for equivalent value provided via query parameter.
         """
         # all magpie API routes expected to either call 'valid_http' or 'raise_http' of 'magpie.api.exception' module
         # an HTTPException is always returned, and content is a JSON-like string
-        format, is_header = guess_target_format(request)
+        content_type, is_header = guess_target_format(request)
         if not is_header:
             # NOTE:
             # enforce the accept header in case it was specified with format query, since some renderer implementations
@@ -182,7 +185,7 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
             #   - https://github.com/Pylons/webob/issues/204
             #   - https://github.com/Pylons/webob/issues/238
             #   - https://github.com/Pylons/pyramid/issues/1344
-            request.accept = format
+            request.accept = content_type
         resp = handler(request)  # no exception when EXCVIEW tween is placed under this tween
         if is_magpie_ui_path(request):
             if not resp.content_type:
@@ -193,7 +196,8 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
             return resp
         # forward any headers such as session cookies to be applied
         metadata = get_request_info(request)
-        return ax.generate_response_http_format(type(resp), {"headers": resp.headers}, resp.text, format, metadata)
+        resp_kwargs = {"headers": resp.headers}
+        return ax.generate_response_http_format(type(resp), resp_kwargs, resp.text, content_type, metadata)
     return apply_format
 
 

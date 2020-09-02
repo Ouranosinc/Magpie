@@ -18,6 +18,7 @@ More specifically, following distinction can be considered between different kin
 `Magpie`:
 
 .. _`allowed permissions`:
+
 - **Allowed Permissions**:
     Represents the set of valid :term:`Permission` values that *could* be applied to a given :term:`Service` or
     :term:`Resource`, depending on their type's implementation. Every allowed :term:`Permission` is one entry from
@@ -27,6 +28,7 @@ More specifically, following distinction can be considered between different kin
     paths ``/service`` and ``/resources``.
 
 .. _`applied permissions`:
+
 - **Applied Permissions**:
     Represents an active "rule" which defines a combination of ``(User|Group, Service|Resource, Permission)``.
     These entries are validated during requests against the appropriate `Allowed Permissions`_ of the targeted item
@@ -37,6 +39,7 @@ More specifically, following distinction can be considered between different kin
     which access rights will be granted or denied for the respective :term:`User` or :term`Group`.
 
 .. _`direct permissions`:
+
 - **Direct Permissions**:
     Explicitly represents :term:`Applied Permissions` "rules" in the case of :term:`User` context, which is, when
     :term:`Group` membership are **NOT** considered (i.e.: :term:`Inherited Permissions`). Since calling ``/users``
@@ -45,6 +48,7 @@ More specifically, following distinction can be considered between different kin
     without query parameters.
 
 .. _`immediate permissions`:
+
 - **Immediate Permissions**:
     Represents a "rule" combination that was explicitly applied to a :term:`Service`. Rules applied to children
     :term:`Resource` are **NOT** considered :term:`Immediate Permissions` (they are simply `Applied Permissions`_
@@ -54,6 +58,7 @@ More specifically, following distinction can be considered between different kin
     to by requests for `Finding User Permissions`_ as they provide useful and unique properties.
 
 .. _`inherited permissions`:
+
 - **Inherited Permissions**:
     Represents the combined set of `Applied Permissions`_ from the :term:`User` context and every one of its
     :term:`Group` membership contexts. When requesting a :term:`Group`'s permissions, only "rules" explicitly set on
@@ -69,6 +74,7 @@ More specifically, following distinction can be considered between different kin
         ``inherited`` (with ``ed``) is now the *official* parameter. The older variant remains supported and equivalent.
 
 .. _`effective permissions`:
+
 - **Effective Permissions**:
     Represents all `Inherited Permissions`_ of the :term:`User` and all its :term:`Group` membership, as well as the
     extensive resolution of the :term:`Service` and every children :term:`Resource` in its hierarchy for the requested
@@ -77,6 +83,7 @@ More specifically, following distinction can be considered between different kin
     complete comparison.
 
 .. _`access permissions`:
+
 - **Access Permissions**:
     Represents the required level of :term:`Permission` needed to access `Magpie` API routes to request details. These
     can be referred to as "roles", but are inferred by :term:`Group` memberships of the :term:`Logged User` attempting
@@ -84,14 +91,14 @@ More specifically, following distinction can be considered between different kin
     enum :class:`magpie.permissions.Permission`, but rather from a combination of special :term:`Group` and
     :ref:`Configuration` constants. See `Route Access`_ for more details.
 
-.. following are potential but not implemented:
-ownership permissions:
-    user/group that owns the service/resource
-    defined with the id saved directly under that Resource (see Resource.owner_[user|group]_id)
-role permission:
-    (user|group, permission) relationship, within separate tables in database
-    maybe could be combined used with group permissions and 'access permissions' do, but there
-    is still a need to check view access dynamic group with them, might require some GroupFactory?
+.. following are potential but not implemented / unused:
+    ownership permissions:
+        user/group that owns the service/resource
+        defined with the id saved directly under that Resource (see Resource.owner_[user|group]_id)
+    role permission:
+        (user|group, permission) relationship, within separate tables in database
+        maybe could be combined used with group permissions and 'access permissions' do, but there
+        is still a need to check view access dynamic group with them, might require some GroupFactory?
 
 
 Route Access
@@ -181,6 +188,7 @@ to execute `Magpie` application. Effectively, when the active session correspond
 
 .. _perm_example:
 .. |perm_example| replace:: Permission Example
+
 Example to distinguish Applied, Inherited and Effective Permissions
 --------------------------------------------------------------------------------------
 

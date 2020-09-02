@@ -839,7 +839,7 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
 
     def _validate_response(operation, is_create, item_type="Permission"):
         """
-        Validate action/operation applied. Handles raised HTTPException as returned response.
+        Validate action/operation applied and handles raised ``HTTPException`` as returned response.
         """
         if not islambda(operation):
             raise TypeError("invalid use of method")
@@ -930,6 +930,7 @@ def _make_config_registry(config_entries, key):
     # type: (Optional[ConfigList], Str) -> ConfigDict
     """
     Converts a list of configurations entries into a single mapping of configurations based on :paramref:`key`.
+
     First configuration entries have priority over later ones if keys are duplicated.
     """
     config_map = {}

@@ -39,7 +39,8 @@ class UserViews(BaseViews):
 
     @handle_errors
     def join_discoverable_group(self, group_name):
-        """Registers the current user to the discoverable group.
+        """
+        Registers the current user to the discoverable group.
 
         :raises HTTPBadRequest: if the operation is not valid.
         """
@@ -50,7 +51,8 @@ class UserViews(BaseViews):
     @handle_errors
     def leave_discoverable_group(self, group_name):
         # type: (Str) -> None
-        """Unregisters the current user from the discoverable group.
+        """
+        Unregisters the current user from the discoverable group.
 
         :raises HTTPBadRequest: if the operation is not valid.
         """

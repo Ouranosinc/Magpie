@@ -24,7 +24,9 @@ LOGGER = get_logger(__name__)
 
 def get_auth_config(container):
     # type: (AnySettingsContainer) -> Configurator
-    """Generates Magpie application configuration with all utilities required for security and access control."""
+    """
+    Generates Magpie application configuration with all utilities required for security and access control.
+    """
     settings = get_settings(container)
     magpie_secret = get_constant("MAGPIE_SECRET", settings, settings_name="magpie.secret")
     magpie_cookie_expire = get_constant("MAGPIE_COOKIE_EXPIRE", settings,

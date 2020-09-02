@@ -50,7 +50,8 @@ def get_login_session(magpie_url, username, password, return_response=False):
 
 def create_users(user_config, magpie_url, magpie_admin_username, magpie_admin_password, password_length=None):
     # type: (UserConfig, Str, Str, Str, Optional[int]) -> UserConfig
-    """Creates the users using provided configuration.
+    """
+    Creates the users using provided configuration.
 
     :returns: updated configuration with generated user-credentials.
     """
@@ -78,7 +79,8 @@ def create_users(user_config, magpie_url, magpie_admin_username, magpie_admin_pa
 
 def delete_users(user_config, magpie_url, magpie_admin_username, magpie_admin_password, **__):
     # type: (UserConfig, Str, Str, Str, Any) -> UserConfig
-    """Deletes the specified users.
+    """
+    Deletes the specified users.
 
     :returns: details about request success or failure for each user to be deleted.
     """
@@ -99,7 +101,9 @@ def delete_users(user_config, magpie_url, magpie_admin_username, magpie_admin_pa
 
 def make_output(user_results, is_delete, output_location=None):
     # type: (UserConfig, bool, Optional[Str]) -> None
-    """Generates the output from obtained user creation/deletion results."""
+    """
+    Generates the output from obtained user creation/deletion results.
+    """
 
     cols_space = 5
     cols_width = {"username": 8, "password": 8, "result": 8}

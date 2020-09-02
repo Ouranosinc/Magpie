@@ -86,7 +86,9 @@ LOGGER = get_logger(__name__)
 
 def set_logger_config(logger, force_stdout=False, message_format=None, datetime_format=None):
     # type: (LoggerType, bool, Optional[Str], Optional[Str]) -> LoggerType
-    """Applies the provided logging configuration settings to the logger."""
+    """
+    Applies the provided logging configuration settings to the logger.
+    """
     if not logger:
         return logger
     handler = None
@@ -126,7 +128,8 @@ def print_log(msg, logger=None, level=logging.INFO):
 
 def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
     # type: (Str, Type[Exception], Optional[LoggerType], int) -> NoReturn
-    """Logs the provided message to the logger and raises the corresponding exception afterwards.
+    """
+    Logs the provided message to the logger and raises the corresponding exception afterwards.
 
     :raises exception: whichever exception provided is raised systematically after logging.
     """
@@ -149,13 +152,17 @@ def bool2str(value):
 
 def islambda(func):
     # type: (Any) -> bool
-    """Evaluate if argument is a callable :class:`lambda` expression."""
+    """
+    Evaluate if argument is a callable :class:`lambda` expression.
+    """
     return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__  # noqa
 
 
 def isclass(obj):
     # type: (Any) -> bool
-    """Evaluate an object for :class:`class` type (ie: class definition, not an instance nor any other type)."""
+    """
+    Evaluate an object for :class:`class` type (ie: class definition, not an instance nor any other type).
+    """
     return isinstance(obj, (type, six.class_types))
 
 
@@ -226,6 +233,7 @@ def convert_response(response):
     # type: (AnyResponseType) -> Response
     """
     Converts a :class:`requests.Response` object to an equivalent :class:`pyramid.response.Response` object.
+
     Content of the :paramref:`response` is expected to be JSON.
 
     :param response: response to be converted
@@ -360,7 +368,9 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
 
 def is_magpie_ui_path(request):
     # type: (Request) -> bool
-    """Determines if the request path corresponds to any Magpie UI location."""
+    """
+    Determines if the request path corresponds to any Magpie UI location.
+    """
     # server URL could have more prefixes than only /magpie, so start by removing them using explicit URL setting
     # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
     magpie_url = get_magpie_url(request)
@@ -375,7 +385,9 @@ def is_magpie_ui_path(request):
 
 def fully_qualified_name(obj):
     # type: (Union[Any, Type[Any]]) -> str
-    """Obtains the ``'<module>.<name>'`` full path definition of the object to allow finding and importing it."""
+    """
+    Obtains the ``'<module>.<name>'`` full path definition of the object to allow finding and importing it.
+    """
     cls = obj if isclass(obj) or isfunction(obj) else type(obj)
     return ".".join([obj.__module__, cls.__name__])
 

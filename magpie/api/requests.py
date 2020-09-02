@@ -76,8 +76,9 @@ def get_permission_multiformat_body_checked(request, service_or_resource, permis
 def get_value_multiformat_body_checked(request, key, default=None, check_type=six.string_types, pattern=ax.PARAM_REGEX):
     # type: (Request, Str, Any, Any, Optional[Union[Str, bool]]) -> Str
     """
-    Obtains and validates the matched value under :paramref:`key` element from the request body according to
-    `Content-Type` header.
+    Obtains and validates the matched value under :paramref:`key` element from the request body.
+
+    Parsing of the body is accomplished according to ``Content-Type`` header.
 
     :param request: request from which to retrieve the key.
     :param key: body key variable.
@@ -104,7 +105,9 @@ def get_value_multiformat_body_checked(request, key, default=None, check_type=si
 
 def get_principals(request):
     # type: (Request) -> List[AnyAccessPrincipalType]
-    """Obtains the list of effective principals according to detected request session user."""
+    """
+    Obtains the list of effective principals according to detected request session user.
+    """
     authn_policy = request.registry.queryUtility(IAuthenticationPolicy)  # noqa
     principals = authn_policy.effective_principals(request)
     return principals
@@ -180,7 +183,8 @@ def get_user_matchdict_checked_or_logged(request, user_name_key="user_name"):
 
 def get_user_matchdict_checked(request, user_name_key="user_name"):
     # type: (Request, Str) -> models.User
-    """Obtains the user matched against the specified request path variable.
+    """
+    Obtains the user matched against the specified request path variable.
 
     :returns: found user.
     :raises HTTPForbidden: if the requesting user does not have sufficient permission to execute this request.
@@ -196,7 +200,8 @@ def get_user_matchdict_checked(request, user_name_key="user_name"):
 
 def get_group_matchdict_checked(request, group_name_key="group_name"):
     # type: (Request, Str) -> models.Group
-    """Obtains the group matched against the specified request path variable.
+    """
+    Obtains the group matched against the specified request path variable.
 
     :returns: found group.
     :raises HTTPForbidden: if the requesting user does not have sufficient permission to execute this request.
@@ -252,7 +257,8 @@ def get_service_matchdict_checked(request, service_name_key="service_name"):
 def get_permission_matchdict_checked(request, service_or_resource, permission_name_key="permission_name"):
     # type: (Request, models.Resource, Str) -> Permission
     """
-    Obtains the permission specified in the request path variable and validates that it is allowed for the specified
+    Obtains the permission specified in the request path variable and validates that it is allowed for the specified.
+
     :paramref:`service_or_resource` which can be a `service` or a children `resource`.
 
     Allowed permissions correspond to the *direct* `service` permissions or restrained permissions of the `resource`

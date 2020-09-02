@@ -11,7 +11,9 @@ if TYPE_CHECKING:
 
 
 class Permission(with_metaclass(ExtendedEnumMeta, Enum)):
-    """Applicable :term:`Permission` values under certain :term:`Service` and :term:`Resource`."""
+    """
+    Applicable :term:`Permission` values under certain :term:`Service` and :term:`Resource`.
+    """
     # file/dir permissions
     READ = "read"
     READ_MATCH = "read-match"

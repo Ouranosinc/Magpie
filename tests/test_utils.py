@@ -198,7 +198,9 @@ class TestUtils(unittest.TestCase):
         ax.verify_param("abc", matches=True, param_compare=r"[a-z]+")
 
     def test_verify_param_args_incorrect_usage(self):
-        """Invalid usage of function raises internal server error instead of 'normal HTTP error'."""
+        """
+        Invalid usage of function raises internal server error instead of 'normal HTTP error'.
+        """
         utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"]),
                            HTTPInternalServerError, msg="missing any flag specification should be caught")
         utils.check_raises(lambda: ax.verify_param("b", param_compare=["a", "b"], not_in=None),  # noqa
@@ -216,8 +218,8 @@ class TestUtils(unittest.TestCase):
 
     def test_verify_param_compare_types(self):
         """
-        Arguments ``param`` and ``param_compare`` must be of same type for valid comparison,
-        except for ``is_type`` where compare parameter must be the type directly.
+        Arguments ``param`` and ``param_compare`` must be of same type for valid comparison, except for ``is_type``
+        where compare parameter must be the type directly.
 
         .. versionchanged:: 2.0.0
 
@@ -288,7 +290,9 @@ class TestUtils(unittest.TestCase):
         utils.check_all_equal(format_perms, expect_perms, any_order=False)
 
     def test_evaluate_call_callable_incorrect_usage(self):
-        """Verifies that incorrect usage of utility is raised accordingly."""
+        """
+        Verifies that incorrect usage of utility is raised accordingly.
+        """
         utils.check_raises(lambda: ax.evaluate_call(int),
                            HTTPInternalServerError, msg="invalid callable non-lambda 'call' should raise")
         utils.check_raises(lambda: ax.evaluate_call(lambda: int, fallback=int),  # noqa
@@ -297,8 +301,8 @@ class TestUtils(unittest.TestCase):
     def test_evaluate_call_recursive_safeguard(self):
         """
         Validate use case if internal function that handles formatting and generation of a resulting HTTP response
-        raises itself an error (because of implementation issue), while it is processing another pre-raised error,
-        that it does not end up into an endless recursive call stack of raised errors.
+        raises itself an error (because of implementation issue), while it is processing another pre-raised error, that
+        it does not end up into an endless recursive call stack of raised errors.
         """
         mock_calls = {"counter": 0}
 

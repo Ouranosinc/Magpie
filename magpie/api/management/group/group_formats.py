@@ -12,7 +12,9 @@ if TYPE_CHECKING:
 
 def format_group(group, basic_info=False, public_info=False, db_session=None):
     # type: (Group, bool, bool, Optional[Session]) -> JSON
-    """Obtains the JSON formatted group definition according to field selection flags."""
+    """
+    Obtains the JSON formatted group definition according to field selection flags.
+    """
     def fmt_grp(grp, is_basic, is_public):
         info = {"group_name": str(grp.group_name)}
         if not is_public:

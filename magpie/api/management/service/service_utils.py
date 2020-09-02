@@ -82,7 +82,9 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
 
 def get_services_by_type(service_type, db_session):
     # type: (Str, Session) -> Iterable[models.Service]
-    """Obtains all services that correspond to requested service-type."""
+    """
+    Obtains all services that correspond to requested service-type.
+    """
     ax.verify_param(service_type, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                     msg_on_fail="Invalid 'service_type' value '" + str(service_type) + "' specified")
     services = db_session.query(models.Service).filter(models.Service.type == service_type)

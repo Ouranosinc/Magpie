@@ -89,7 +89,8 @@ def request_api(request,            # type: Request
 
 def redirect_error(request, code=None, content=None):
     # type: (Request, int, Optional[JSON]) -> AnyResponseType
-    """Redirects the contents to be rendered by the UI 'error' page.
+    """
+    Redirects the contents to be rendered by the UI 'error' page.
 
     :param request: incoming request that resulted into some kind of error.
     :param code: explicit HTTP status code for the error response, extracted from contents if otherwise available.
@@ -103,8 +104,8 @@ def redirect_error(request, code=None, content=None):
 
 def handle_errors(func):
     """
-    Decorator that encapsulates the operation in a try/except block, and
-    redirects the response to the UI error page with API error contents.
+    Decorator that encapsulates the operation in a try/except block, and redirects the response to the UI error page
+    with API error contents.
 
     In worst case scenario where the operation cannot figure out what to do with the exception response,
     raise the most basic :class:`HTTPInternalServerError` that can be formulated from available details.
@@ -134,7 +135,9 @@ def handle_errors(func):
 
 
 class BaseViews(object):
-    """Base methods for Magpie UI pages."""
+    """
+    Base methods for Magpie UI pages.
+    """
     MAGPIE_FIXED_GROUP_MEMBERSHIPS = []
     MAGPIE_FIXED_GROUP_EDITS = []
 
@@ -151,7 +154,9 @@ class BaseViews(object):
 
     def add_template_data(self, data=None):
         # type: (Optional[Dict[Str, Any]]) -> Dict[Str, Any]
-        """Adds required template data for the 'heading' mako template applied to every UI page."""
+        """
+        Adds required template data for the 'heading' mako template applied to every UI page.
+        """
         all_data = data or {}
         all_data.update({
             "MAGPIE_TITLE": __meta__.__title__,
