@@ -7,6 +7,7 @@ import sys
 import types
 from distutils.dir_util import mkpath
 from enum import EnumMeta  # noqa: W0212
+from inspect import isfunction
 from typing import TYPE_CHECKING
 
 import requests
@@ -27,12 +28,11 @@ from magpie.constants import get_constant
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import NoReturn  # noqa: F401
-    from magpie.typedefs import (  # noqa: F401
-        Any, AnyKey, Str, List, Optional, Type, Union,
-        AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer,
+    from typing import Any, List, NoReturn, Optional, Type, Union
+    from magpie.typedefs import (
+        AnyKey, AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer, Str
     )
-    from pyramid.events import NewRequest   # noqa: F401
+    from pyramid.events import NewRequest
     from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
 
 CONTENT_TYPE_ANY = "*/*"
@@ -40,10 +40,28 @@ CONTENT_TYPE_JSON = "application/json"
 CONTENT_TYPE_FORM = "application/x-www-form-urlencoded"
 CONTENT_TYPE_HTML = "text/html"
 CONTENT_TYPE_PLAIN = "text/plain"
-SUPPORTED_CONTENT_TYPES = [CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PLAIN]
+CONTENT_TYPE_APP_XML = "application/xml"
+CONTENT_TYPE_TXT_XML = "text/xml"
+FORMAT_TYPE_MAPPING = {
+    CONTENT_TYPE_JSON: CONTENT_TYPE_JSON,
+    CONTENT_TYPE_HTML: CONTENT_TYPE_HTML,
+    CONTENT_TYPE_PLAIN: CONTENT_TYPE_PLAIN,
+    CONTENT_TYPE_APP_XML: CONTENT_TYPE_APP_XML,
+    CONTENT_TYPE_TXT_XML: CONTENT_TYPE_TXT_XML,
+    "json": CONTENT_TYPE_JSON,
+    "html": CONTENT_TYPE_HTML,
+    "text": CONTENT_TYPE_PLAIN,
+    "plain": CONTENT_TYPE_PLAIN,
+    "xml": CONTENT_TYPE_TXT_XML,
+}
+SUPPORTED_ACCEPT_TYPES = [
+    CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PLAIN, CONTENT_TYPE_APP_XML, CONTENT_TYPE_TXT_XML
+]
+SUPPORTED_FORMAT_TYPES = list(FORMAT_TYPE_MAPPING.keys())
+KNOWN_CONTENT_TYPES = SUPPORTED_ACCEPT_TYPES + [CONTENT_TYPE_FORM, CONTENT_TYPE_ANY]
 
 
-def get_logger(name, level=None, force_stdout=None, format=None, datetime_format=None):
+def get_logger(name, level=None, force_stdout=None, message_format=None, datetime_format=None):
     # type: (Str, Optional[int], bool, Optional[Str], Optional[Str]) -> LoggerType
     """
     Immediately sets the logger level to avoid duplicate log outputs from the `root logger` and `this logger` when
@@ -58,16 +76,19 @@ def get_logger(name, level=None, force_stdout=None, format=None, datetime_format
             from magpie.constants import MAGPIE_LOG_LEVEL
             level = MAGPIE_LOG_LEVEL
         logger.setLevel(level)
-    if force_stdout or format or datetime_format:
-        set_logger_config(logger, force_stdout, format, datetime_format)
+    if force_stdout or message_format or datetime_format:
+        set_logger_config(logger, force_stdout, message_format, datetime_format)
     return logger
 
 
 LOGGER = get_logger(__name__)
 
 
-def set_logger_config(logger, force_stdout=False, format=None, datetime_format=None):
+def set_logger_config(logger, force_stdout=False, message_format=None, datetime_format=None):
     # type: (LoggerType, bool, Optional[Str], Optional[Str]) -> LoggerType
+    """
+    Applies the provided logging configuration settings to the logger.
+    """
     if not logger:
         return logger
     handler = None
@@ -82,8 +103,8 @@ def set_logger_config(logger, force_stdout=False, format=None, datetime_format=N
         else:
             handler = logging.StreamHandler(sys.stdout)
             logger.addHandler(handler)
-    if format or datetime_format:
-        handler.setFormatter(logging.Formatter(fmt=format, datefmt=datetime_format))
+    if message_format or datetime_format:
+        handler.setFormatter(logging.Formatter(fmt=message_format, datefmt=datetime_format))
     return logger
 
 
@@ -107,7 +128,11 @@ def print_log(msg, logger=None, level=logging.INFO):
 
 def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
     # type: (Str, Type[Exception], Optional[LoggerType], int) -> NoReturn
-    """Logs the provided message to the logger and raises the corresponding exception afterwards."""
+    """
+    Logs the provided message to the logger and raises the corresponding exception afterwards.
+
+    :raises exception: whichever exception provided is raised systematically after logging.
+    """
     if not logger:
         logger = get_logger(__name__)
     logger.log(level, msg)
@@ -118,19 +143,25 @@ def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
 
 def bool2str(value):
     # type: (Any) -> Str
+    """
+    Converts :paramref:`value` to explicit ``"true"`` or ``"false"`` :class:`str` with permissive variants comparison
+    that can represent common falsy or truthy values.
+    """
     return "true" if str(value).lower() in truthy else "false"
 
 
 def islambda(func):
-    return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__
+    # type: (Any) -> bool
+    """
+    Evaluate if argument is a callable :class:`lambda` expression.
+    """
+    return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__  # noqa
 
 
 def isclass(obj):
+    # type: (Any) -> bool
     """
-    Evaluate an object for class type (ie: class definition, not an instance nor any other type).
-
-    :param obj: object to evaluate for class type
-    :return: (bool) indicating if `object` is a class
+    Evaluate an object for :class:`class` type (ie: class definition, not an instance nor any other type).
     """
     return isinstance(obj, (type, six.class_types))
 
@@ -201,8 +232,12 @@ def get_header(header_name, header_container, default=None, split=None):
 def convert_response(response):
     # type: (AnyResponseType) -> Response
     """
-    Converts a ``response`` implementation (e.g.: :class:`requests.Response`) to an equivalent
-    :class:`pyramid.response.Response` object.
+    Converts a :class:`requests.Response` object to an equivalent :class:`pyramid.response.Response` object.
+
+    Content of the :paramref:`response` is expected to be JSON.
+
+    :param response: response to be converted
+    :returns: converted response
     """
     if isinstance(response, Response):
         return response
@@ -331,6 +366,32 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
     return "{0}/{1}".format(twitcher_proxy_url, magpie_service_name)
 
 
+def is_magpie_ui_path(request):
+    # type: (Request) -> bool
+    """
+    Determines if the request path corresponds to any Magpie UI location.
+    """
+    # server URL could have more prefixes than only /magpie, so start by removing them using explicit URL setting
+    # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
+    magpie_url = get_magpie_url(request)
+    magpie_url = request.url.replace(magpie_url, "")
+    magpie_path = urlparse(magpie_url).path
+    magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
+    magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
+    magpie_ui_home = get_constant("MAGPIE_UI_ENABLED", request) and magpie_path in ("", "/")
+    # ignore types defined under UI or static routes to allow rendering
+    return magpie_ui_home or any(magpie_path.startswith(p) for p in ("/api", "/ui", "/static"))
+
+
+def fully_qualified_name(obj):
+    # type: (Union[Any, Type[Any]]) -> str
+    """
+    Obtains the ``'<module>.<name>'`` full path definition of the object to allow finding and importing it.
+    """
+    cls = obj if isclass(obj) or isfunction(obj) else type(obj)
+    return ".".join([obj.__module__, cls.__name__])
+
+
 def log_request_format(request):
     # type: (Request) -> Str
     return "{!s} {!s} {!s}".format(request.method, request.host, request.path)
@@ -351,13 +412,16 @@ def log_request(event):
         params_str = items_str(request.params)
         body_str = str(request.body) or "-"
         LOGGER.debug("Request details:\n"
+                     "URL: %s\n"
+                     "Path: %s\n"
+                     "Method: %s\n"
                      "Headers:\n"
                      "  %s\n"
                      "Parameters:\n"
                      "  %s\n"
                      "Body:\n"
                      "  %s",
-                     header_str, params_str, body_str)
+                     request.url, request.path, request.method, header_str, params_str, body_str)
 
 
 def log_exception_tween(handler, registry):  # noqa: F811

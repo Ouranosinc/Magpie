@@ -1,7 +1,10 @@
+.. _utilities:
+.. include:: references.rst
+
 Utilities
 ============
 
-.. utilities_helpers:
+.. _utilities_helpers:
 
 Magpie CLI Helpers
 ---------------------
@@ -64,7 +67,7 @@ Source code of these helpers can be found `here <https://github.com/Ouranosinc/M
 
 .. _installation: installation.rst
 
-.. utilities_connection:
+.. _utilities_connection:
 
 Magpie Connection
 ---------------------
@@ -73,7 +76,7 @@ The repository `Ouranosinc/requests-magpie`_ offers basic Authentication connect
 similarly to how traditional ``HTTPBasicAuth`` works under the hood. Using this, you can easily plug-and-play `Magpie`
 in order to use it with the standard ``requests`` library by passing ``auth=MagpieAuth(<...>)``.
 
-.. _Ouranosinc/requests-magpie: https://github.com/Ouranosinc/requests-magpie
+.. _utilities_adapter:
 
 Magpie Adapter: Integration with Twitcher
 ----------------------------------------------
@@ -94,4 +97,3 @@ confirm that both instances were adequately configured as both require to share 
 
 .. _docker-compose: https://docs.docker.com/compose/
 .. _source_magpie_adapter: https://github.com/Ouranosinc/Magpie/blob/master/magpie/adapter/__init__.py#L107
-.. _Twitcher: https://github.com/bird-house/twitcher

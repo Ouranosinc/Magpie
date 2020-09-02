@@ -24,23 +24,23 @@ _TEST_MODULES = [os.path.splitext(f)[0] for f in filter(lambda i: filter_test_fi
 
 
 # run test options, correspond to known pytest markers
-MAGPIE_TEST_DEFAULTS = RunOptionDecorator("MAGPIE_TEST_DEFAULTS")   # default users, providers and views
-MAGPIE_TEST_REGISTER = RunOptionDecorator("MAGPIE_TEST_REGISTER")   # methods employed in 'register' module
-MAGPIE_TEST_LOGIN = RunOptionDecorator("MAGPIE_TEST_LOGIN")
-MAGPIE_TEST_SERVICES = RunOptionDecorator("MAGPIE_TEST_SERVICES")
-MAGPIE_TEST_RESOURCES = RunOptionDecorator("MAGPIE_TEST_RESOURCES")
-MAGPIE_TEST_GROUPS = RunOptionDecorator("MAGPIE_TEST_GROUPS")
-MAGPIE_TEST_USERS = RunOptionDecorator("MAGPIE_TEST_USERS")
-MAGPIE_TEST_LOGGED = RunOptionDecorator("MAGPIE_TEST_LOGGED")  # validate 'Logged User' views (i.e.: current)
-MAGPIE_TEST_STATUS = RunOptionDecorator("MAGPIE_TEST_STATUS")  # validate views found/displayed as per permissions
-MAGPIE_TEST_PUBLIC = RunOptionDecorator("MAGPIE_TEST_PUBLIC")  # validate evaluated permission on public resources
-MAGPIE_TEST_REMOTE = RunOptionDecorator("MAGPIE_TEST_REMOTE")
-MAGPIE_TEST_LOCAL = RunOptionDecorator("MAGPIE_TEST_LOCAL")
-MAGPIE_TEST_API = RunOptionDecorator("MAGPIE_TEST_API")
-MAGPIE_TEST_CLI = RunOptionDecorator("MAGPIE_TEST_CLI")
-MAGPIE_TEST_UI = RunOptionDecorator("MAGPIE_TEST_UI")
-MAGPIE_TEST_UTILS = RunOptionDecorator("MAGPIE_TEST_UTILS")
-MAGPIE_TEST_FUNCTIONAL = RunOptionDecorator("MAGPIE_TEST_FUNCTIONAL")   # operations sequence
+MAGPIE_TEST_DEFAULTS = RunOptionDecorator("MAGPIE_TEST_DEFAULTS", "default users, providers and views")
+MAGPIE_TEST_REGISTER = RunOptionDecorator("MAGPIE_TEST_REGISTER", "magpie methods employed in 'register' module")
+MAGPIE_TEST_LOGIN = RunOptionDecorator("MAGPIE_TEST_LOGIN", "magpie login operations")
+MAGPIE_TEST_SERVICES = RunOptionDecorator("MAGPIE_TEST_SERVICES", "magpie services operations")
+MAGPIE_TEST_RESOURCES = RunOptionDecorator("MAGPIE_TEST_RESOURCES", "magpie resources operations")
+MAGPIE_TEST_GROUPS = RunOptionDecorator("MAGPIE_TEST_GROUPS", "magpie groups operations")
+MAGPIE_TEST_USERS = RunOptionDecorator("MAGPIE_TEST_USERS", "magpie groups operations")
+MAGPIE_TEST_LOGGED = RunOptionDecorator("MAGPIE_TEST_LOGGED", "validate 'Logged User' views (i.e.: current)")
+MAGPIE_TEST_STATUS = RunOptionDecorator("MAGPIE_TEST_STATUS", "validate views found/displayed as per permissions")
+MAGPIE_TEST_PUBLIC = RunOptionDecorator("MAGPIE_TEST_PUBLIC", "validate evaluated permission on 'Public' resources")
+MAGPIE_TEST_REMOTE = RunOptionDecorator("MAGPIE_TEST_REMOTE", "tests running on remote instance specified by URL")
+MAGPIE_TEST_LOCAL = RunOptionDecorator("MAGPIE_TEST_LOCAL", "tests running on local instance created by test case")
+MAGPIE_TEST_API = RunOptionDecorator("MAGPIE_TEST_API", "magpie API operations")
+MAGPIE_TEST_CLI = RunOptionDecorator("MAGPIE_TEST_CLI", "magpie CLI operations")
+MAGPIE_TEST_UI = RunOptionDecorator("MAGPIE_TEST_UI", "magpie UI operations")
+MAGPIE_TEST_UTILS = RunOptionDecorator("MAGPIE_TEST_UTILS", "magpie utility functions")
+MAGPIE_TEST_FUNCTIONAL = RunOptionDecorator("MAGPIE_TEST_FUNCTIONAL", "functional operations sequence")
 
 
 def test_suite():

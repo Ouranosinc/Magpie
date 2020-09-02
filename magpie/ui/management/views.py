@@ -16,7 +16,7 @@ from magpie.constants import get_constant
 from magpie.cli import sync_resources
 from magpie.cli.sync_resources import OUT_OF_SYNC
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT  # TODO: remove, implement getters via API
-from magpie.ui.utils import BaseViews, check_response, error_badrequest, request_api
+from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ LOGGER = get_logger(__name__)
 
 
 class ManagementViews(BaseViews):
-    @error_badrequest
+    @handle_errors
     def get_all_groups(self, first_default_group=None):
         resp = request_api(self.request, schemas.GroupsAPI.path, "GET")
         check_response(resp)
@@ -37,48 +37,48 @@ class ManagementViews(BaseViews):
             groups.insert(0, first_default_group)
         return groups
 
-    @error_badrequest
+    @handle_errors
     def get_group_info(self, group_name):
         path = schemas.GroupAPI.path.format(group_name=group_name)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
         return get_json(resp)["group"]
 
-    @error_badrequest
+    @handle_errors
     def get_group_users(self, group_name):
         path = schemas.GroupUsersAPI.path.format(group_name=group_name)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
         return get_json(resp)["user_names"]
 
-    @error_badrequest
+    @handle_errors
     def update_group_info(self, group_name, group_info):
         path = schemas.GroupAPI.path.format(group_name=group_name)
         resp = request_api(self.request, path, "PATCH", data=group_info)
         check_response(resp)
         return self.get_group_info(group_info.get("group_name", group_name))
 
-    @error_badrequest
+    @handle_errors
     def delete_group(self, group_name):
         path = schemas.GroupAPI.path.format(group_name=group_name)
         resp = request_api(self.request, path, "DELETE")
         check_response(resp)
         return get_json(resp)
 
-    @error_badrequest
+    @handle_errors
     def get_user_groups(self, user_name):
         path = schemas.UserGroupsAPI.path.format(user_name=user_name)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
         return get_json(resp)["group_names"]
 
-    @error_badrequest
+    @handle_errors
     def get_user_names(self):
         resp = request_api(self.request, schemas.UsersAPI.path, "GET")
         check_response(resp)
         return get_json(resp)["user_names"]
 
-    @error_badrequest
+    @handle_errors
     def get_user_emails(self):
         user_names = self.get_user_names()
         emails = list()
@@ -102,7 +102,7 @@ class ManagementViews(BaseViews):
         self.flatten_tree_resource(res_dic, res_ids)
         return res_ids
 
-    @error_badrequest
+    @handle_errors
     def get_services(self, cur_svc_type):
         resp = request_api(self.request, schemas.ServicesAPI.path, "GET")
         check_response(resp)
@@ -113,7 +113,7 @@ class ManagementViews(BaseViews):
         services = all_services[cur_svc_type]
         return svc_types, cur_svc_type, services
 
-    @error_badrequest
+    @handle_errors
     def get_service_data(self, service_name):
         path = schemas.ServiceAPI.path.format(service_name=service_name)
         resp = request_api(self.request, path, "GET")
@@ -124,7 +124,7 @@ class ManagementViews(BaseViews):
         svc_types_resp = request_api(self.request, schemas.ServiceTypesAPI.path, "GET")
         return get_json(svc_types_resp)["service_types"]
 
-    @error_badrequest
+    @handle_errors
     def update_service_name(self, old_service_name, new_service_name, service_push):
         svc_data = self.get_service_data(old_service_name)
         svc_data["service_name"] = new_service_name
@@ -135,7 +135,7 @@ class ManagementViews(BaseViews):
         resp = request_api(self.request, path, "PATCH", data=svc_data)
         check_response(resp)
 
-    @error_badrequest
+    @handle_errors
     def update_service_url(self, service_name, new_service_url, service_push):
         svc_data = self.get_service_data(service_name)
         svc_data["service_url"] = new_service_url
@@ -144,7 +144,7 @@ class ManagementViews(BaseViews):
         resp = request_api(self.request, path, "PATCH", data=svc_data)
         check_response(resp)
 
-    @error_badrequest
+    @handle_errors
     def goto_service(self, resource_id):
         path = schemas.ResourceAPI.path.format(resource_id=resource_id)
         resp = request_api(self.request, path, "GET")
@@ -518,7 +518,7 @@ class ManagementViews(BaseViews):
     def get_user_or_group_resources_permissions_dict(self, user_or_group_name, services, service_type,
                                                      is_user=False, is_inherit_groups_permissions=False):
         if is_user:
-            query = "?inherit=true" if is_inherit_groups_permissions else ""
+            query = "?inherited=true" if is_inherit_groups_permissions else ""
             path = schemas.UserResourcesAPI.path.format(user_name=user_or_group_name) + query
         else:
             path = schemas.GroupResourcesAPI.path.format(group_name=user_or_group_name)
@@ -784,7 +784,7 @@ class ManagementViews(BaseViews):
 
         return parent_id
 
-    @error_badrequest
+    @handle_errors
     def get_service_resources(self, service_name):
         resources = {}
         path = schemas.ServiceResourcesAPI.path.format(service_name=service_name)

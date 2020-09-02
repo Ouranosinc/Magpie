@@ -73,7 +73,8 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
 def init_anonymous(db_session, settings=None):
     # type: (Session, Optional[AnySettingsContainer]) -> None
     """
-    Registers into the database the user and group matching configuration values of
+    Registers into the database the user and group matching configuration values of.
+
     :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` and :py:data:`magpie.constants.MAGPIE_ANONYMOUS_GROUP`
     respectively if not defined.
 
@@ -95,7 +96,8 @@ def init_anonymous(db_session, settings=None):
 def init_admin(db_session, settings=None):
     # type: (Session, Optional[AnySettingsContainer]) -> None
     """
-    Registers into the database the user and group matching configuration values of
+    Registers into the database the user and group matching configuration values of.
+
     :py:data:`magpie.constants.MAGPIE_ADMIN_USER` and :py:data:`magpie.constants.MAGPIE_ADMIN_GROUP` respectively if
     not defined.
 

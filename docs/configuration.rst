@@ -1,3 +1,4 @@
+.. include:: references.rst
 .. _configuration_link:
 
 Configuration
@@ -59,22 +60,26 @@ case.
 File: providers.cfg
 ~~~~~~~~~~~~~~~~~~~
 
-This configuration file allows automatically registering service definitions in `Magpie` at startup. When the
+This configuration file allows automatically registering :term:`Service` definitions in `Magpie` at startup. When the
 application starts, it will look for corresponding services and add them to the database as required. It will also
-look for mismatches between the service name and URL with the corresponding entry in the database to update it to
-the desired URL. See ``MAGPIE_PROVIDERS_CONFIG_PATH`` below to setup alternate references to this type of configuration.
-Please refer to the heading of sample file `providers.cfg`_ for specific format and parameter details.
+look for mismatches between the :term:`Service` name and URL with the corresponding entry in the database to update it
+to the desired URL. See ``MAGPIE_PROVIDERS_CONFIG_PATH`` setting below to setup alternate references to this type of
+configuration. Please refer to the comment header of sample file `providers.cfg`_ for specific format and parameter
+details.
 
 File: permissions.cfg
 ~~~~~~~~~~~~~~~~~~~~~~
 
-This configuration file allows automatically registering or cleaning permission definitions in `Magpie` at startup.
-Each specified permission update operation is applied for the corresponding user or group onto the specific service
-or resource. This file is processed after `providers.cfg`_ in order to allow permissions to be applied on freshly
-registered services. Furthermore, sub-resources are automatically created if they can be resolved with provided
-parameters of the corresponding permission entry. See ``MAGPIE_PERMISSIONS_CONFIG_PATH`` below to setup alternate
-references to this type of configuration. Please refer to the heading of sample file `permissions.cfg`_ for specific
-format details as well as specific behaviour of each parameter according to encountered use cases.
+This configuration file allows automatically registering or cleaning :term:`Permission` definitions in `Magpie` at
+startup. Each specified update operation is applied for the corresponding :term:`User` or :term:`Group` onto the
+specific :term:`Service` or :term:`Resource`. This file is processed after `providers.cfg`_ in order to allow
+permissions to be applied on freshly registered services. Furthermore, sub-resources are automatically created if they
+can be iteratively resolved with provided parameters of the corresponding permission entry (resources should be defined
+using tree-path in this case, see format in :func:`magpie.api.management.resources.resources_utils.get_resource_path`).
+
+See ``MAGPIE_PERMISSIONS_CONFIG_PATH`` setting below to setup alternate references to this type of configuration.
+Please refer to the comment header of sample file `permissions.cfg`_ for specific format details as well as specific
+behaviour of each parameter according to encountered use cases.
 
 Combined Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -135,9 +140,11 @@ Settings and Constants
 ----------------------
 
 Environment variables can be used to define all following configurations (unless mentioned otherwise with
-``[constant]`` keyword next to the parameter name).
-These values will be used by `Magpie` on startup unless prior definition is found within `magpie.ini`_.
-All variables (i.e.: non-``constant`` parameters) can also be specified by their ``magpie.[variable_name]``
+``[constant]`` keyword next to the parameter name). Most values are parsed as plain strings, unless they refer to an
+activable setting (e.g.: ``True`` or ``False``), or when specified with more specific ``[<type>]`` notation.
+
+Configuration variables will be used by `Magpie` on startup unless prior definition is found within `magpie.ini`_.
+All variables (i.e.: non-``[constant]`` parameters) can also be specified by their ``magpie.[variable_name]`` setting
 counterpart as described at the start of the `Configuration`_ section.
 
 Loading Settings
@@ -145,65 +152,79 @@ Loading Settings
 
 These settings can be used to specify where to find other settings through custom configuration files.
 
-- | ``MAGPIE_MODULE_DIR`` [constant]
-  | Path to the top level `Magpie` module (ie: source code).
+- ``MAGPIE_MODULE_DIR`` [constant]
 
-- | ``MAGPIE_ROOT`` [constant]
-  | Path to the containing directory of `Magpie`. This corresponds to the directory where the repository was cloned
-    or where the package was installed.
+  Path to the top level `Magpie` module (ie: source code).
+
+- ``MAGPIE_ROOT`` [constant]
+
+  Path to the containing directory of `Magpie`. This corresponds to the directory where the repository was cloned
+  or where the package was installed.
 
 - | ``MAGPIE_CONFIG_DIR``
-  | Configuration directory where to look for ``providers.cfg`` and ``permissions.cfg`` files.
   | (Default: ``${MAGPIE_ROOT}/config``)
 
+  Configuration directory where to look for ``providers.cfg`` and ``permissions.cfg`` files.
+
 - | ``MAGPIE_PROVIDERS_CONFIG_PATH``
-  | Path where to find ``providers.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
-    be considered as `providers` files and will be loaded sequentially.
-  | **Note**:
-  | If a directory path is specified, the order of loaded configuration files is not guaranteed
-    (depending on OS implementation).
-  | Please refer to `providers.cfg`_ for specific format details and loading methodology according to arguments.
   | (Default: ``${MAGPIE_CONFIG_DIR}/providers.cfg``)
 
+  Path where to find ``providers.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
+  be considered as `providers` files and will be loaded sequentially.
+
+  .. note::
+    If a directory path is specified, the order of loaded configuration files is not guaranteed
+    (depending on OS implementation).
+    Please refer to `providers.cfg`_ for specific format details and loading methodology according to arguments.
+
 - | ``MAGPIE_PERMISSIONS_CONFIG_PATH``
-  | Path where to find ``permissions.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
-    be considered as `permissions` files and will be loaded sequentially.
-  | **Note**:
-  | If a directory path is specified, the order of loaded configuration files is not guaranteed
+  | (default: ``${MAGPIE_CONFIG_DIR}/permissions.cfg``)
+
+  Path where to find ``permissions.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
+  be considered as `permissions` files and will be loaded sequentially.
+
+  .. note::
+    If a directory path is specified, the order of loaded configuration files is not guaranteed
     (depending on OS implementation). Therefore, cross-file references to services or resources should be avoided
     to ensure that, for example, any parent resource dependency won't be missing because it was specified in a second
     file loaded after the first. Corresponding references can be duplicated across files and these conflicts will be
     correctly handled according to configuration loading methodology.
-  | Please refer to `permissions.cfg`_ for specific format details and loading methodology according to arguments.
-  | (default: ``${MAGPIE_CONFIG_DIR}/permissions.cfg``)
+    Please refer to `permissions.cfg`_ for specific format details and loading methodology according to arguments.
 
-- | ``MAGPIE_CONFIG_PATH``
-  | Path where to find a combined YAML configuration file which can include ``providers``, ``permissions``, ``users``
-    and ``groups`` sections to sequentially process registration or removal of items at `Magpie` startup.
-  | **Note**:
-  | When provided, all other combinations of ``MAGPIE_CONFIG_DIR``, ``MAGPIE_PERMISSIONS_CONFIG_PATH`` and
+- ``MAGPIE_CONFIG_PATH``
+
+  Path where to find a combined YAML configuration file which can include ``providers``, ``permissions``, ``users``
+  and ``groups`` sections to sequentially process registration or removal of items at `Magpie` startup.
+
+  .. note::
+    When provided, all other combinations of ``MAGPIE_CONFIG_DIR``, ``MAGPIE_PERMISSIONS_CONFIG_PATH`` and
     ``MAGPIE_PROVIDERS_CONFIG_PATH`` are effectively ignored in favour of definitions in this file.
     See `Combined Configuration File`_ for further details and example.
 
-- | ``MAGPIE_INI_FILE_PATH``
-  | Specifies where to find the initialization file to run `Magpie` application.
-  | **Note**:
-  | This variable ignores the setting/env-var resolution order since settings cannot be defined without
+- ``MAGPIE_INI_FILE_PATH``
+
+  Specifies where to find the initialization file to run `Magpie` application.
+
+  .. note::
+    This variable ignores the setting/env-var resolution order since settings cannot be defined without
     firstly loading the file referenced by its value.
 
 - | ``MAGPIE_ENV_DIR``
-  | Directory path where to look for ``.env`` files. This variable can be useful to load specific test environment
-    configurations or to specify a local path while the actual `Magpie` code is located in a Python `site-packages`
-    directory (``.env`` files are not installed to avoid hard-to-resolve settings loaded from an install location).
-  | (Default: ``${MAGPIE_ROOT}/env``)
+  | (Default: ``"${MAGPIE_ROOT}/env"``)
+
+  Directory path where to look for ``.env`` files. This variable can be useful to load specific test environment
+  configurations or to specify a local path while the actual `Magpie` code is located in a Python `site-packages`
+  directory (``.env`` files are not installed to avoid hard-to-resolve settings loaded from an install location).
 
 - | ``MAGPIE_ENV_FILE``
-  | File path to ``magpie.env`` file with additional environment variables to configure the application.
-  | (Default: ``${MAGPIE_ENV_DIR}/magpie.env``)
+  | (Default: ``"${MAGPIE_ENV_DIR}/magpie.env"``)
+
+  File path to ``magpie.env`` file with additional environment variables to configure the application.
 
 - | ``MAGPIE_POSTGRES_ENV_FILE``
-  | File path to ``postgres.env`` file with additional environment variables to configure the `postgres` connection.
-  | (Default: ``${MAGPIE_ENV_DIR}/postgres.env``)
+  | (Default: ``"${MAGPIE_ENV_DIR}/postgres.env"``)
+
+  File path to ``postgres.env`` file with additional environment variables to configure the `postgres` connection.
 
 
 .. _magpie.ini: https://github.com/Ouranosinc/Magpie/tree/master/config/magpie.ini
@@ -218,68 +239,87 @@ the `Loading Settings`_. All ``magpie.[variable_name]`` counterpart definitions 
 at the start of the `Configuration`_ section.
 
 - | ``MAGPIE_URL``
-  | Full hostname URL to use so that `Magpie` can resolve his own running instance location.
-  | **Note:**
-  | If the value is not set, `Magpie` will attempt to retrieve this critical information through other variables such
+  | (Default: ``"http://localhost:2001"``)
+
+  Full hostname URL to use so that `Magpie` can resolve his own running instance location.
+
+  .. note::
+    If the value is not set, `Magpie` will attempt to retrieve this critical information through other variables such
     as ``MAGPIE_HOST``, ``MAGPIE_PORT``, ``MAGPIE_SCHEME`` and ``HOSTNAME``. Modifying any of these variables
     partially is permitted but will force `Magpie` to attempt building the full URL as best as possible from the
     individual parts. The result of these parts (potential using corresponding defaults) will have the following format:
     ``"${MAGPIE_SCHEME}//:${MAGPIE_HOST}:${MAGPIE_PORT}"``.
-  | (Default: ``"http://localhost:2001"``)
 
 - | ``MAGPIE_SCHEME``
-  | Protocol scheme URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
   | (Default: ``"http"``)
 
+  Protocol scheme URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
+
 - | ``MAGPIE_HOST``
-  | Domain host URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
   | (Default: ``"localhost"``)
 
-- | ``MAGPIE_PORT``
-  | Port URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
+  Domain host URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
+
+- | ``MAGPIE_PORT`` [:class:`int`]
   | (Default: ``2001``)
+
+  Port URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
 
 - | ``MAGPIE_SECRET``
-  | Port URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
   | (Default: ``2001``)
 
+  Port URL part of `Magpie` application to rebuild the full ``MAGPIE_URL``.
+
 - | ``MAGPIE_CRON_LOG``
-  | Path that the ``cron`` operation should use for logging.
   | (Default: ``"~/magpie-cron.log"``)
 
+  Path that the ``cron`` operation should use for logging.
+
 - | ``MAGPIE_LOG_LEVEL``
-  | Logging level of operations. `Magpie` will first use the complete logging configuration found in
-    `magpie.ini`_ in order to define logging formatters and handler referencing to the ``logger_magpie``
-    section. If this configuration fail to retrieve an explicit logging level, this variable is used instead to
-    prepare a basic logger, after checking if a corresponding ``magpie.log_level`` setting was instead specified.
   | (Default: ``INFO``)
 
+  Logging level of operations. `Magpie` will first use the complete logging configuration found in
+  `magpie.ini`_ in order to define logging formatters and handler referencing to the ``logger_magpie`` section.
+  If this configuration fail to retrieve an explicit logging level, this configuration variable is used instead to
+  prepare a basic logger, after checking if a corresponding ``magpie.log_level`` setting was instead specified.
+
+  .. warning::
+    When setting ``DEBUG`` level or lower, `Magpie` will potentially dump some sensitive information in logs such
+    as access tokens. It is important to avoid this setting for production systems.
+
 - | ``MAGPIE_LOG_PRINT``
-  | Specifies whether `Magpie` logging should also **enforce** printing the details to the console when using *helpers*.
-    Otherwise, the configured logging methodology in `magpie.ini`_ is used (which can also define a console handler).
   | (Default: ``False``)
 
+  Specifies whether `Magpie` logging should also **enforce** printing the details to the console when using
+  `CLI helpers <utilities_helpers>`_.
+  Otherwise, the configured logging methodology in `magpie.ini`_ is used (which can also define a console handler).
+
 - | ``MAGPIE_LOG_REQUEST``
-  | Specifies whether `Magpie` should log incoming request details.
-  | **Note:**
-  | This can make `Magpie` quite verbose if large quantity of requests are accomplished.
   | (Default: ``True``)
+
+  Specifies whether `Magpie` should log incoming request details.
+
+  .. note::
+    This can make `Magpie` quite verbose if large quantity of requests are accomplished.
 
 - | ``MAGPIE_LOG_EXCEPTION``
-  | Specifies whether `Magpie` should log a raised exception during a process execution.
   | (Default: ``True``)
+
+  Specifies whether `Magpie` should log a raised exception during a process execution.
 
 - | ``MAGPIE_UI_ENABLED``
-  | Specifies whether `Magpie` graphical user interface should be available with the started instance. If disabled,
-    all routes that normally refer to the UI will return ``404``, except the frontpage that will return a simple JSON
-    description as it is normally the default entrypoint of the application.
   | (Default: ``True``)
 
+  Specifies whether `Magpie` graphical user interface should be available with the started instance. If disabled,
+  all routes that normally refer to the UI will return ``404``, except the frontpage that will return a simple JSON
+  description as it is normally the default entrypoint of the application.
+
 - | ``MAGPIE_UI_THEME``
-  | Specifies the adjustable theme to apply `Magpie` UI pages. This theme consist principally of the applied color for
-    generic interface items, but could be extended at a later date. The value must be one of the CSS file names located
-    within the `themes`_ subdirectory.
   | (Default: ``"blue"``)
+
+  Specifies the adjustable theme to apply `Magpie` UI pages. This theme consist principally of the applied color for
+  generic interface items, but could be extended at a later date. The value must be one of the CSS file names located
+  within the `themes`_ subdirectory.
 
 
 .. _themes: https://github.com/Ouranosinc/Magpie/tree/master/magpie/ui/home/static/themes
@@ -292,121 +332,190 @@ Following configuration parameters are used to define specific values that are r
 Again, the `Loading Settings`_ will be processed beforehand and all ``magpie.[variable_name]`` setting definitions
 remain available as described at the start of the `Configuration`_ section.
 
-- | ``MAGPIE_SECRET``
-  | Secret value employed to encrypt user authentication tokens.
-  | **Important Note:**
-  | Changing this value at a later time will cause previously created user tokens to be invalidated.
+- ``MAGPIE_SECRET``
+  .. no default since explicit value is now required
+
+  Secret value employed to encrypt user authentication tokens.
+
+  .. warning::
+    Changing this value at a later time will cause previously created user tokens from passwords to be invalidated.
     This value **MUST** be defined before starting the application in order to move on to user accounts and permissions
     creation in your `Magpie` instance. The application will quit with an error if this value cannot be found.
-  | (Default: None)
+
+  .. versionchanged:: 2.0.0
+    Prior to this version, a default value was employed if this setting not provided. Later `Magpie` version now
+    require an explicit definition of this parameter to avoid weak default configuration making the protected system
+    prone to easier breaches. This also avoids incorrect initial setup of special :term:`User`s with that temporary
+    weak secret that would need recreation to regenerate passwords.
 
 - | ``MAGPIE_COOKIE_NAME``
-  | Identifier of the cookie that will be used for reading and writing in the requests from login and for
-    user authentication operations.
   | (Default: ``"auth_tkt"``)
 
-- | ``MAGPIE_COOKIE_EXPIRE``
-  | Lifetime duration of the cookies. Tokens become invalid after this duration is elapsed.
-  | (Default: ``None`` [infinite])
+  Identifier of the cookie that will be used for reading and writing in the requests from login and for
+  user authentication operations.
 
-- | ``MAGPIE_ADMIN_USER``
-  | Name of the default 'administrator' generated by the application.
-  | **Important Notes:**
-  | This user is required for initial launch of the application to avoid being 'locked out' as routes for creating new
-    users require administrative permissions and access rights. It should be used as a first login method to setup other
-    accounts. It is afterwards recommended to employ other user accounts with ``MAGPIE_ADMIN_GROUP`` membership to
-    accomplish administrative management operations.
-  | This value **MUST** be defined before starting the application in order to move on any other operation in your
-    `Magpie` instance. The application will quit with an error if this value cannot be found. Also, no defaults are
-    applied to motivate the developer to configured new instances with server-specific and strong credentials.
-  | If this user is missing, it is automatically recreated on following start. The best way to invalidate this user's
-    credentials is therefore to completely remove its entry it from the database so it gets regenerated from updated
-    configuration values. Note also that modifying this value without actually updating the user entry in the database
-    could cause other operations to fail drastically since this special user will be employed by other `Magpie` internal
-    operations such as service synchronization and setup during the application startup.
-  | (Default: ``"admin"``)
+- | ``MAGPIE_COOKIE_EXPIRE`` [:class:`int`]
+  | (Default: ``None``)
 
-- | ``MAGPIE_ADMIN_PASSWORD``
-  | Password of the default 'administrator' generated by the application.
-  | **Important Notes:**
-  | This parameter is required in order for the `Magpie` instance to start. See details in above ``MAGPIE_ADMIN_USER``.
-  | (Default: ``"qwerty"``)
+  Lifetime duration in seconds of the cookies. Tokens become invalid after this duration is elapsed.
+
+  When no value is provided, the cookies will have an infinite duration (never expire).
+  When a valid integer value is provided, their reissue time (how long until a new token is regenerated) is a factor
+  of 10 from this expiration time. For example, tokens are reissued after 360 seconds if their expiration is 3600.
+
+- ``MAGPIE_ADMIN_USER``
+  .. no default since explicit value is now required
+
+  Name of the default 'administrator' generated by the application.
+
+  This :term:`User` is required for initial launch of the application to avoid being 'locked out' as routes for creating
+  new users require administrative access rights. It should be used as a first login method to setup other accounts.
+  It is afterwards recommended to employ other user accounts with ``MAGPIE_ADMIN_GROUP`` membership to accomplish
+  administrative management operations.
+
+  If this :term:`User` is missing, it is automatically recreated on following start. The best way to invalidate its
+  credentials is therefore to completely remove its entry from the database so it gets regenerated from updated
+  configuration values. Note also that modifying this value without actually updating the user entry in the database
+  could cause other operations to fail drastically since this special user will be employed by other `Magpie` internal
+  operations such as :ref:`Service Synchronization` and setup during the application startup.
+
+  .. versionchanged:: 2.0.0
+    Prior to this version, a default value was employed if this setting was not provided. Later `Magpie` version now
+    require an explicit definition of this parameter to avoid weak default configuration making the protected system
+    prone to easier breaches. This value **MUST** be defined before starting the application in order to resume to any
+    other operation in your `Magpie` instance. The application will quit with an error if this value cannot be found.
+    It is recommended that the developer configures every new instance with server-specific and strong credentials.
+
+- ``MAGPIE_ADMIN_PASSWORD``
+  .. no default since explicit value is now required
+
+  Password of the default 'administrator' :term:`User` generated by the application (see ``MAGPIE_ADMIN_USER`` details).
+
+  .. versionchanged:: 2.0.0
+    Prior to this version, a default value was employed if this setting was not provided. Later `Magpie` version now
+    require an explicit definition of this parameter to avoid weak default configuration making the protected system
+    prone to easier breaches. This value **MUST** be defined before starting the application in order to resume to any
+    other operation in your `Magpie` instance. The application will quit with an error if this value cannot be found.
+    It is recommended that the developer configures every new instance with server-specific and strong credentials.
 
 - | ``MAGPIE_ADMIN_EMAIL``
-  | Email of the default 'administrator' generated by the application.
   | (Default: ``"${MAGPIE_ADMIN_USER}@mail.com"``)
 
+  Email of the default 'administrator' generated by the application.
+
 - | ``MAGPIE_ADMIN_GROUP``
-  | Group name of the default 'administrator' generated by the application.
-  | **Note:**
-  | To simplify configuration of future administrators of the application, all their inherited permissions are shared
-    through this group instead of setting individual permissions on each user. It is recommended to keep defining such
-    higher level permissions on this group to ease the management process of granted access to all their members.
   | (Default: ``"administrators"``)
 
+  Name of the default 'administrator' :term:`Group` generated by the application.
+
+  .. note::
+    To simplify configuration of future administrators of the application, all their :ref:`Inherited Permissions` are
+    shared through this :term:`Group` instead of setting individual permissions on each :term:`User`. It is recommended
+    to keep defining such higher level permissions on this :term:`Group` to ease the management process of granted
+    access to all their members, or in other words, to allow multiple administrators to manage `Magpie` resources with
+    their respective accounts.
+
 - | ``MAGPIE_ADMIN_PERMISSION`` [constant]
-  | Name of the permission used to represent highest administration privilege in the application.
-  | Except for some public routes, most API and UI paths will require the user to have this permission (either with
-    direct permission or by inherited group permission) to be granted access to view and edit content.
-    The group defined by ``MAGPIE_ADMIN_GROUP`` automatically gets granted this permission.
-  | (Default: ``"admin"``)
+  | (Value: ``"admin"``)
+
+  Name of the :term:`Permission` used to represent highest administration privilege in the application. It is one of
+  the special :term:`Access Permissions` known by the application (see also :ref:`Route Access` section).
+
+- | ``MAGPIE_LOGGED_PERMISSION`` [constant]
+  | (Value: ``"MAGPIE_LOGGED_USER"``)
+
+  .. versionadded:: 2.0.0
+
+  Defines a special condition of :term:`Access Permissions` related to the :term:`Logged User` session and the
+  targeted :term:`User` by the request. See details in :ref:`Route Access` for when it applies.
+
+- | ``MAGPIE_LOGGED_USER`` [constant]
+  | (Value: ``"current"``)
+
+  Keyword used to define route resolution using the currently logged in user. This value allows, for example,
+  retrieving the user details of the logged user with ``GET /users/${MAGPIE_LOGGED_USER}`` instead of having to
+  find explicitly the ``GET /users/<my-user-id>`` variant. User resolution is done using the authentication cookie
+  found in the request. If no cookie can be found, it defaults to the ``MAGPIE_ANONYMOUS_USER`` value.
+
+  .. note::
+    Because the :term:`Logged User` executing the request with this keyword is effectively the authenticated user,
+    the behaviour of some specific paths can be slightly different than their literal ``user_name`` counterpart.
+    For example, :term:`User` details will be accessible to the :term:`Logged User` (he can view his own information)
+    but this same user will receive a forbidden response if using is ID in the path if he doesn't have required
+    privileges.
+
+  .. versionchanged:: 2.0.0
+    Even without administrative access rights, the :term:`Logged User` is allowed to obtain some additional details
+    about the targeted :term:`User` of the request path if it corresponds to itself. See ``MAGPIE_LOGGED_PERMISSION``
+    and :ref:`Route Access` for further details.
 
 - | ``MAGPIE_ANONYMOUS_USER``
-  | Name of the default user that represents a non logged-in user (ie: invalid or no authentication token provided).
-  | This user is used to manage "public" access to service and resources.
   | (Default: ``"anonymous"``)
 
+  Name of the default :term:`User` that represents non logged-in user (ie: invalid or no :term:`Authentication`
+  token provided). This :term:`User` is used to manage :term:`Public` access to :term:`Service` and :term:`Resource`.
+
 - | ``MAGPIE_ANONYMOUS_PASSWORD`` [constant]
-  | Password of the default unauthenticated user.
-  | This value is not modifiable directly and is available only for preparation of the default user on startup.
   | (Default: ``${MAGPIE_ANONYMOUS_USER}``)
 
+  Password of the default unauthenticated :term:`User`.
+  This value is not modifiable directly and is available only for preparation of the default user on startup.
+
 - | ``MAGPIE_ANONYMOUS_EMAIL``
-  | Email of the default unauthenticated user.
+  | Email of the default unauthenticated :term:`User`.
   | (Default: ``"${MAGPIE_ANONYMOUS_USER}@mail.com"``)
 
 - | ``MAGPIE_ANONYMOUS_GROUP`` [constant]
-  | This parameter is preserved for backward compatibility of migration scripts and external libraries.
-  | All users are automatically member of this group to inherit "public" permissions to services and resources.
-  | **Important Note:**
-  | To set "public" permissions, one should always set them on this group instead of directly on
-    ``MAGPIE_ANONYMOUS_USER`` as setting them directly on this user will cause only him to be granted access to the
-    targeted resource. In this situation, all *other* users would "lose" public permissions after they authenticate
-    themselves in `Magpie` as they would not be recognized as ``MAGPIE_ANONYMOUS_USER`` anymore.
   | (Default: ``${MAGPIE_ANONYMOUS_USER}``)
 
+  This parameter is preserved for backward compatibility of migration scripts and external libraries.
+  All users are automatically member of this :term:`Public` :term:`Group` to obtain :ref:`Inherited Permissions`.
+
+  .. warning::
+    To set :term:`Public` permissions, one should always set them on this :term:`Group` instead of directly on
+    ``MAGPIE_ANONYMOUS_USER`` as setting them directly on that :term:`User` will cause unexpected behaviours.
+    See :ref:`Public Access` section for full explanation.
+
 - | ``MAGPIE_EDITOR_GROUP``
-  | *Unused for the moment.*
   | (Default: ``"editors"``)
 
+  *Unused for the moment.*
+
 - | ``MAGPIE_USERS_GROUP``
-  | Name of the default group created to associate all users registered in the application.
-  | New users are created with this group.
   | (Default: ``"users"``)
 
-- | ``MAGPIE_USER_NAME_MAX_LENGTH``
-  | Maximum length to consider as a valid user name. User name specified during creation will be forbidden if longer.
-  | **Note:**
-  | This value should not be greater then the token length used to identify a user to preserve some utility behaviour.
+  Name of a generic :term:`Group` created to associate registered :term:`User` memberships in the application.
+
+  .. versionchanged:: 2.0.0
+    New :term:`User` are **NOT** automatically added to this group anymore. This :term:`Group` remains available
+    for testing purposes, but doesn't have any special connotation and can be modified just as any other normal
+    :term:`Group`.
+
+- | ``MAGPIE_USER_NAME_MAX_LENGTH`` [:class:`int`]
   | (Default: ``64``)
 
-- | ``MAGPIE_LOGGED_USER`` [constant]
-  | Keyword used to define route resolution using the currently logged in user. This value allows, for example,
-    retrieving the user details of the logged user with ``GET /users/${MAGPIE_LOGGED_USER}`` instead of having to
-    find explicitly the ``GET /users/<my-user-id>`` variant. User resolution is done using the authentication cookie
-    found in the request. If no cookie can be found, it defaults to the ``MAGPIE_ANONYMOUS_USER`` value.
-  | **Note:**
-  | Because the user executing the request with this keyword is effectively the authenticated user, the behaviour of
-    some specific paths can be slightly different than their literal user-id counterpart. For example, user details
-    will be accessible to the logged user (he can view his own information) but this same user will receive an
-    unauthorized response if using is ID in the path if he doesn't have administrator privilege.
-  | (Default: ``"current"``)
+  Maximum length to consider a :term:`User` name as valid.
+  The name specified during creation will be forbidden if longer.
+
+  .. warning::
+    This value should not be greater than the token length used to identify a :term:`User` to preserve internal
+    functionalities.
+
+- | ``MAGPIE_PASSWORD_MIN_LENGTH``
+  | (Default: ``12``)
+
+  .. versionadded:: 2.0.0
+    Minimum length of the password for :term:`User` creation or update.
+
+  .. note::
+    Because of backward-compatibility requirements, passwords are not enforced this condition during login procedure
+    as shorter passwords could have been used and not yet updated for older accounts.
 
 - | ``MAGPIE_DEFAULT_PROVIDER`` [constant]
-  | Name of the provider used for local login. This represents the identifier that will be set to define who to
-    differentiate between a local sign-in procedure and a dispatched one to one of the known `External Providers`_.
-  | *The default is the value of the internal package used to manage user permissions.*
-  | (Default: ``"ziggurat"``)
+  | (Value: ``"ziggurat"``)
+
+  Name of the :term:`Provider` used for login. This represents the identifier that is set to define how to
+  differentiate between a local sign-in procedure and a dispatched one some known `Authentication Providers`_.
 
 Phoenix Settings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -414,31 +523,34 @@ Phoenix Settings
 Following settings provide some integration support for `Phoenix`_ in order to synchronize its service definitions with
 `Magpie` services.
 
-| **Note:**
-| Support of `Phoenix`_ is fairly minimal.
-| Please submit an issue if you use it and some unexpected behaviour is encountered.
+.. warning::
+    Support of `Phoenix`_ is fairly minimal. It is preserved for historical and backward compatibility but is
+    not actively tested. Please submit an `issue`_ if you use it and some unexpected behaviour is encountered.
 
 - | ``PHOENIX_USER``
-  | Name of the user to use for authentication in `Phoenix`_.
   | (Default: ``"phoenix"``)
 
+  Name of the user to use for :term:`Authentication` in `Phoenix`_.
+
 - | ``PHOENIX_PASSWORD``
-  | Password of the user to use for authentication in `Phoenix`_.
   | (Default: ``"qwerty"``)
 
+  Password of the user to use for :term:`Authentication` in `Phoenix`_.
+
 - | ``PHOENIX_HOST``
-  | Hostname to use for `Phoenix`_ connection for authentication and service synchronization.
   | (Default: ``${HOSTNAME}"``)
 
-- | ``PHOENIX_PORT``
-  | Port to use for `Phoenix`_ connection for authentication and service synchronization.
+  Hostname to use for `Phoenix`_ connection to accomplish :term:`Authentication` and :ref:`Service Synchronization`.
+
+- | ``PHOENIX_PORT`` [:class:`int`]
   | (Default: ``8443``)
 
+  Port to use for `Phoenix`_ connection to accomplish :term:`Authentication` and :ref:`Service Synchronization`.
+
 - | ``PHOENIX_PUSH``
-  | Whether to push new service synchronization settings to the referenced `Phoenix`_ connection.
   | (Default: ``True``)
 
-.. _Phoenix: https://github.com/bird-house/pyramid-phoenix
+  Whether to push new :ref:`Service Synchronization` settings to the referenced `Phoenix`_ connection.
 
 
 Twitcher Settings
@@ -447,23 +559,34 @@ Twitcher Settings
 Following settings define parameters required by `Twitcher`_ (OWS Security Proxy) in order to interact with
 `Magpie` services.
 
+
 - | ``TWITCHER_PROTECTED_PATH``
-  | HTTP path used to define the protected (public) base path of services registered in `Magpie` that will be served by
-    an existing `Twitcher`_ proxy application after Access Control List (ACL) verification of the authenticated user.
-  | **Note:**
-  | Using this parameter to define `Twitcher`_'s path assumes that it resides under the same server domain as the
-    `Magpie` instance being configured (ie: hostname is inferred from resolved ``MAGPIE_URL`` or equivalent settings).
   | (Default: ``"/ows/proxy"``)
 
-- | ``TWITCHER_PROTECTED_URL``
-  | Defines the protected (public) full base URL of services registered in `Magpie`. This setting is mainly to allow
-    specifying an alternative domain where a remote `Twitcher`_ instance could reside.
-  | **Note:**
-  | `Twitcher`_ instance will still need to have access to `Magpie`'s database in order to allow service resolution
-    with `magpie.adapter.magpieservice.MagpieServiceStore`.
-  | (Default: ``None``, ie: uses ``TWITCHER_PROTECTED_PATH``)
+  HTTP path used to define the protected (public) base path of services registered in `Magpie` that will be served
+  by an existing `Twitcher`_ proxy application after :term:`Access Control List` (ACL) verification of the
+  :term:`Logged User`.
 
-.. _Twitcher: https://github.com/bird-house/twitcher
+  .. note::
+    Using this parameter to define `Twitcher`_'s path assumes that it resides under the same server domain as the
+    `Magpie` instance being configured (ie: hostname is inferred from resolved ``MAGPIE_URL`` or equivalent settings).
+
+- | ``TWITCHER_PROTECTED_URL``
+  | (Default: *see note*)
+
+  Defines the protected (public) full base URL of services registered in `Magpie`. This setting is mainly to allow
+  specifying an alternative domain where a remote `Twitcher`_ instance could reside.
+
+  .. note::
+    When not provided, attempts to infer the value by combining the environment variable ``HOSTNAME``, an optional
+    ``/twitcher`` prefix (as needed to match incoming request) and the value provided by ``TWITCHER_PROTECTED_PATH``.
+
+
+Please note that although `Twitcher`_ URL references are needed to configure interactive parameters with `Magpie`, the
+employed `Twitcher`_ instance will also need to have access to `Magpie`'s database in order to allow proper
+:term:`Service` resolution with `magpie.adapter.magpieservice.MagpieServiceStore`. Appropriate database credentials
+must therefore be shared between the two services, as well as ``MAGPIE_SECRET`` value in order for successful
+completion of the handshake during :term:`Authentication` procedure of the request :term:`User` token.
 
 
 Postgres Settings
@@ -475,69 +598,94 @@ are available as described at the start of the `Configuration`_ section, as well
 configuration names are supported where mentioned.
 
 - | ``MAGPIE_DB_MIGRATION``
-  | Run database migration on startup in order to bring it up to date using `Alembic`_.
   | (Default: ``True``)
 
+  Run database migration on startup in order to bring it up to date using `Alembic`_.
+
 - | ``MAGPIE_DB_MIGRATION_ATTEMPTS``
-  | Number of attempts to re-run database migration on startup in cased it failed (eg: due to connection error).
   | (Default: ``5``)
 
+  Number of attempts to re-run database migration on startup in case it failed (eg: due to connection error).
+
 - | ``MAGPIE_DB_URL``
-  | Full database connection URL formatted as ``<db-type>://<user>:<password>@<host>:<port>/<db-name>``.
-  | Please refer to `SQLAlchemy Engine`_'s documentation for supported database implementations and their corresponding
-    configuration. Only `PostgreSQL`_ has been extensively tested with `Magpie`, but other variants should be applicable.
-  | (Default: infer ``postgresql`` database connection URL formed using below ``MAGPIE_POSTGRES_<>`` parameters if the
-     value was not explicitly provided)
+  | (Default: *see note*)
+
+  Full database connection URL formatted as ``<db-type>://<user>:<password>@<host>:<port>/<db-name>``.
+
+  Please refer to `SQLAlchemy Engine`_'s documentation for supported database implementations and their corresponding
+  configuration.
+
+  .. warning::
+    Only `PostgreSQL`_ has been extensively tested with `Magpie`, but other variants *could* be applicable.
+
+  .. note::
+    By default, ``postgresql`` database connection URL is inferred by combining al below ``MAGPIE_POSTGRES_<>``
+    parameters if the value was not explicitly provided.
 
 - | ``MAGPIE_POSTGRES_USERNAME``
-  | Database connection username to retrieve `Magpie` data stored in `PostgreSQL`_.
-  | On top of ``MAGPIE_POSTGRES_USERNAME``, environment variable ``POSTGRES_USERNAME`` and setting ``postgres.username``
-    are also supported. For backward compatibility, all above variants with ``user`` instead of ``username``
-    (with corresponding lower/upper case) are also verified for potential configuration if no prior parameter was
-    matched. The lookup order of each name variant is as they were presented, while also keeping the setting name
-    priority over an equivalent environment variable name.
   | (Default: ``"magpie"``)
+
+  Database connection username to retrieve `Magpie` data stored in `PostgreSQL`_.
+
+  .. versionchanged:: 1.9.0
+      On top of ``MAGPIE_POSTGRES_USERNAME``, environment variable ``POSTGRES_USERNAME`` and setting
+      ``postgres.username`` are all supported interchangeably. For backward compatibility, all above variants with
+      ``user`` instead of ``username`` (with corresponding lower/upper case) are also verified for potential
+      configuration if no prior parameter was matched. The lookup order of each name variant is as they were presented,
+      while also keeping the setting name priority over an equivalent environment variable name.
 
 - | ``MAGPIE_POSTGRES_PASSWORD``
-  | Database connection password to retrieve `Magpie` data stored in `PostgreSQL`_.
-  | Environment variable ``POSTGRES_PASSWORD`` and setting ``postgres.password`` are also supported if not previously
-    identified by their `Magpie`-prefixed variants.
   | (Default: ``"qwerty"``)
 
-- | ``MAGPIE_POSTGRES_HOST``
-  | Database connection host location to retrieve `Magpie` data stored in `PostgreSQL`_.
-  | Environment variable ``POSTGRES_HOST`` and setting ``postgres.host`` are also supported if not previously
+  Database connection password to retrieve `Magpie` data stored in `PostgreSQL`_.
+
+  .. versionchanged:: 1.9.0
+    Environment variable ``POSTGRES_PASSWORD`` and setting ``postgres.password`` are also supported if not previously
     identified by their `Magpie`-prefixed variants.
+
+- | ``MAGPIE_POSTGRES_HOST``
   | (Default: ``"postgres"``)
 
-- | ``MAGPIE_POSTGRES_PORT``
-  | Database connection port to retrieve `Magpie` data stored in `PostgreSQL`_.
-  | Environment variable ``POSTGRES_PORT`` and setting ``postgres.port`` are also supported if not previously
+  Database connection host location to retrieve `Magpie` data stored in `PostgreSQL`_.
+
+  .. versionchanged:: 1.9.0
+    Environment variable ``POSTGRES_HOST`` and setting ``postgres.host`` are also supported if not previously
     identified by their `Magpie`-prefixed variants.
+
+- | ``MAGPIE_POSTGRES_PORT`` [:class:`int`]
   | (Default: ``5432``)
 
+  Database connection port to retrieve `Magpie` data stored in `PostgreSQL`_.
+
+  .. versionchanged:: 1.9.0
+    Environment variable ``POSTGRES_PORT`` and setting ``postgres.port`` are also supported if not previously
+    identified by their `Magpie`-prefixed variants.
+
 - | ``MAGPIE_POSTGRES_DB``
-  | Name of the database located at the specified connection to retrieve `Magpie` data stored in `PostgreSQL`_.
-  | Environment variable ``POSTGRES_DB`` and setting ``postgres.db``, as well as the same variants with ``database``
-    instead of ``db``, are also supported if not previously identified by their `Magpie`-prefixed variants.
   | (Default: ``"magpie"``)
 
-.. _PostgreSQL: https://www.postgresql.org/
-.. _Alembic: https://alembic.sqlalchemy.org/
+  Name of the database located at the specified connection to retrieve `Magpie` data stored in `PostgreSQL`_.
+
+  .. versionchanged:: 1.9.0
+    Environment variable ``POSTGRES_DB`` and setting ``postgres.db``, as well as the same variants with ``database``
+    instead of ``db``, are also supported if not previously identified by their `Magpie`-prefixed variants.
+
 .. _SQLAlchemy Engine: https://docs.sqlalchemy.org/en/13/core/engines.html
 
 
-External Providers
-----------------------
+Authentication Providers
+---------------------------
 
-In order to perform authentication in `Magpie`, multiple external providers are supported. By default, the 'local'
-provider is ``ziggurat`` which corresponds to the package used to manage users, groups, permissions, etc. internally.
-Supported external providers are presented in the table below, although more could be added later on.
+In order to perform :term:`Authentication` in `Magpie`, multiple :term:`Providers` are supported. By default,
+the :term:`Internal Provider` named ``ziggurat``, which corresponds to the package used to manage all `Magpie` elements
+internally, is employed. Supported :term:`External Providers` are presented in the table below, although more could be
+added later on. To signin using one of these :term:`Providers`, the corresponding identifier must be provided within
+the signin request contents.
 
 Each as different configuration parameters as defined in `MagpieSecurity`_ and use various protocols amongst
-``OpenID``, ``ESGF``-flavored ``OpenID`` and ``OAuth2``. Further external providers can be defined using this module's
-dictionary configuration style following parameter specification of `Authomatic`_ package used for managing this
-authentication procedure.
+``OpenID``, ``ESGF``-flavored ``OpenID`` and ``OAuth2``. Further :term:`External Providers` can be defined using this
+module's dictionary configuration style following parameter specification of `Authomatic`_ package used for managing
+this :term:`Authentication` procedure.
 
 +--------------------------------+-----------------------------------------------------------------------+
 | Category                       | Provider                                                              |
@@ -564,13 +712,11 @@ authentication procedure.
 | :sup:`(2)` formerly identified as *British Atmospheric Data Centre* (`BADC`_)
 | :sup:`(3)` formerly identified as *Program for Climate Model Diagnosis & Intercomparison* (`PCMDI`_)
 
-| **Note:**
-| Please note that due to the constantly changing nature of multiple of these external providers (APIs and moved
-  Websites), rarely used authentication bridges by the developers could break without prior notice. If this is the
-  case and you use one of the broken connectors, summit a new
-  `issue <https://github.com/Ouranosinc/Magpie/issues/new>`_.
+.. note::
+    Please note that due to the constantly changing nature of multiple of these external providers (APIs and moved
+    Websites), rarely used authentication bridges by the developers could break without prior notice. If this is the
+    case and you use one of the broken connectors, summit a new `issue`_.
 
-.. _Authomatic: https://authomatic.github.io/authomatic/
 .. _OpenID: https://openid.net/
 .. _ESGF: https://esgf.llnl.gov/
 .. _DKRZ: https://esgf-data.dkrz.de

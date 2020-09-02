@@ -1,9 +1,12 @@
-===========
+.. _performance:
+.. include:: references.rst
+
+*************
 Performance
-===========
+*************
 
 Requesting permissions for a specific user and service can be demanding if a lot of
-requests are done rapidly. PostgreSQL and sqlalchemy are usually fast enough, but
+requests are done rapidly. `PostgreSQL`_ and `SQLAlchemy`_ are usually fast enough, but
 when more than a couple requests per second are needed, some solutions are possible to
 improve the performance of these requests.
 

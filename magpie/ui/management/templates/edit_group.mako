@@ -5,7 +5,7 @@
     <input type="hidden" value="" name="edit_permissions">
     %for perm in permissions:
         <div class="perm-checkbox">
-            % if perm in value['permission_names']:
+            % if perm in value["permission_names"]:
             <label>
             <input type="checkbox" value="${perm}" name="permission"
                    onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()"

@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 from pyramid.httpexceptions import HTTPInternalServerError
 
 from magpie.api.exception import evaluate_call
-from magpie.api.management.resource.resource_formats import format_resource_tree, get_resource_children
-from magpie.api.management.resource.resource_utils import crop_tree_with_permission
+from magpie.api.management.resource.resource_formats import format_resource_tree
+from magpie.api.management.resource.resource_utils import crop_tree_with_permission, get_resource_children
 from magpie.permissions import format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_twitcher_protected_service_url
@@ -58,25 +58,33 @@ def format_service(service, permissions=None, show_private_url=False, show_resou
 def format_service_resources(service,                       # type: Service
                              db_session,                    # type: Session
                              service_perms=None,            # type: Optional[List[Permission]]
-                             resources_perms_dict=None,     # type: Optional[Dict[Str, List[Str]]]
+                             resources_perms_dict=None,     # type: Optional[Dict[int, List[Permission]]]
                              show_all_children=False,       # type: bool
                              show_private_url=True,         # type: bool
                              ):                             # type: (...) -> JSON
     """
-    Formats the service and its resource tree as a JSON body.
+    Formats the service and its children resource tree as a JSON body.
 
     :param service: service for which to display details with sub-resources
     :param db_session: database session
-    :param service_perms: permissions to display instead of specific ``service``-type ones
-    :param resources_perms_dict: permission(s) of resource(s) id(s) to *preserve* if ``resources_perms_dict = False``
-    :param show_all_children: display all children resources recursively, or only ones matching ``resources_perms_dict``
+    :param service_perms:
+        If provided, sets :term:`Applied Permissions` to display on the formatted :paramref:`service`.
+        Otherwise, sets the :term:`Allowed Permissions` specific to the :paramref:`service`'s type.
+    :param resources_perms_dict:
+        If provided (not ``None``), set the :term:`Applied Permissions` on each specified resource matched by ID.
+        If ``None``, retrieve and set :term:`Allowed Permissions` for the corresponding resources under the service.
+        To set empty :term:`Applied Permissions` (e.g.: :term:`User` doesn't have permissions on that resource), provide
+        an explicit empty dictionary instead.
+    :param show_all_children:
+        Display all children resources recursively, or only ones specified by ID with :paramref:`resources_perms_dict`.
     :param show_private_url: displays the
     :return: JSON body representation of the service resource tree
     """
     def fmt_svc_res(svc, db, svc_perms, res_perms, show_all):
         tree = get_resource_children(svc, db)
         if not show_all:
-            tree, _ = crop_tree_with_permission(tree, list(res_perms.keys()))
+            filter_res_ids = list(res_perms) if res_perms else []
+            tree, _ = crop_tree_with_permission(tree, filter_res_ids)
 
         svc_perms = SERVICE_TYPE_DICT[svc.type].permissions if svc_perms is None else svc_perms
         svc_res = format_service(svc, svc_perms, show_private_url=show_private_url)
@@ -84,7 +92,7 @@ def format_service_resources(service,                       # type: Service
         return svc_res
 
     return evaluate_call(
-        lambda: fmt_svc_res(service, db_session, service_perms, resources_perms_dict or {}, show_all_children),
+        lambda: fmt_svc_res(service, db_session, service_perms, resources_perms_dict, show_all_children),
         fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
         msg_on_fail="Failed to format service resources tree",
         content=format_service(service, service_perms, show_private_url=show_private_url)

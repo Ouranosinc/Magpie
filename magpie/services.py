@@ -2,8 +2,7 @@ from typing import TYPE_CHECKING
 
 from beaker.cache import cache_region, cache_regions
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound, HTTPNotImplemented
-from pyramid.security import Allow as ALLOW
-from pyramid.security import Everyone as EVERYONE  # noqa
+from pyramid.security import Allow, Everyone
 from six import with_metaclass
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -68,8 +67,9 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
     resource_types_permissions = {}     # type: Dict[models.Resource, List[Permission]]
 
     def __init__(self, service, request):
-        self.service = service
-        self.request = request
+        # type: (models.Service, Request) -> None
+        self.service = service          # type: models.Service
+        self.request = request          # type: Request
         self.acl = []                   # type: AccessControlListType
         self.parser = ows_parser_factory(request)
         self.parser.parse(self.params_expected)
@@ -113,7 +113,7 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
                     raise Exception("No Anonymous user in the database")
                 permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
                 for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-                    self.acl.append((outcome, EVERYONE, perm_name,))
+                    self.acl.append((outcome, Everyone, perm_name,))
 
     def permission_requested(self):
         # type: () -> Permission
@@ -130,8 +130,8 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
     def effective_permissions(self, resource, user):
         # type: (models.Resource, models.User) -> List[ResourcePermissionType]
         """
-        Recursively rewind the resource tree from the specified resource up to the topmost parent service resource and
-        retrieve permissions along the way that should be applied to children when using resource inheritance.
+        Recursively rewind the resource tree from the specified resource up to the top-most parent service's resource
+        and retrieve permissions along the way that should be applied to children when using resource inheritance.
         """
         resource_effective_perms = list()
         while resource is not None:
@@ -255,7 +255,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
                 netcdf_file = netcdf_file.rsplit("/", 1)[0]
 
         else:
-            return [(ALLOW, EVERYONE, permission_requested.value,)]
+            return [(Allow, Everyone, permission_requested.value,)]
 
         if netcdf_file:
             ax.verify_param("outputs/", param_compare=netcdf_file, http_error=HTTPNotFound,

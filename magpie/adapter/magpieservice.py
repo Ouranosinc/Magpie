@@ -16,7 +16,7 @@ from twitcher.exceptions import ServiceNotFound     # noqa
 from twitcher.store import ServiceStoreInterface    # noqa
 
 if TYPE_CHECKING:
-    from pyramid.request import Request  # noqa: F401
+    from pyramid.request import Request
 LOGGER = get_logger("TWITCHER")
 
 

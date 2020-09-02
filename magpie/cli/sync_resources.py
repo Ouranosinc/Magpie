@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 import transaction
 
 from magpie import constants, db, models
+from magpie.api.management.resource.resource_utils import get_resource_children
 from magpie.cli.sync_services import SYNC_SERVICES_TYPES, SyncServiceDefault, is_valid_resource_schema
 from magpie.utils import get_logger
 
@@ -214,40 +215,6 @@ def _update_db(remote_resources, service_id, session):
     session.flush()
 
 
-def _get_resource_children(resource, db_session):
-    """
-    Mostly copied from ziggurat_foundations to use RemoteResource instead of Resource.
-
-    :param resource:
-    :param db_session:
-    :return:
-    """
-    query = models.REMOTE_RESOURCE_TREE_SERVICE.from_parent_deeper(resource.resource_id, db_session=db_session)
-
-    def build_subtree_strut(result):
-        """
-        Returns a dictionary in form of.
-
-        {node:Resource, children:{node_id: RemoteResource}}
-        """
-        items = list(result)
-        root_elem = {"node": None, "children": OrderedDict()}
-        if len(items) == 0:
-            return root_elem
-        for node in items:
-            new_elem = {"node": node.RemoteResource, "children": OrderedDict()}
-            path = list(map(int, node.path.split("/")))
-            parent_node = root_elem
-            normalized_path = path[:-1]
-            if normalized_path:
-                for path_part in normalized_path:
-                    parent_node = parent_node["children"][path_part]
-            parent_node["children"][new_elem["node"].resource_id] = new_elem
-        return root_elem
-
-    return build_subtree_strut(query)["children"]
-
-
 def _format_resource_tree(children):
     fmt_res_tree = {}
     for child_dict in children.values():
@@ -273,7 +240,7 @@ def _query_remote_resources_in_database(service_id, session):
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)
     main_resource = session.query(models.RemoteResource).filter_by(
         resource_id=sync_info.remote_resource_id).first()
-    tree = _get_resource_children(main_resource, session)
+    tree = get_resource_children(main_resource, session, models.REMOTE_RESOURCE_TREE_SERVICE)
 
     remote_resources = _format_resource_tree(tree)
     return {service.resource_name: {"children": remote_resources, "remote_id": main_resource.resource_id}}

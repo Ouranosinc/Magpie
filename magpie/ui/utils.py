@@ -1,11 +1,11 @@
 import json
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPBadRequest, exception_response
+from pyramid.httpexceptions import HTTPInternalServerError, exception_response
 from pyramid.request import Request
 
 from magpie import __meta__
-from magpie.api.generic import get_exception_info
+from magpie.api.generic import get_exception_info, get_request_info
 from magpie.api.requests import get_logged_user
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON, get_header, get_logger, get_magpie_url
@@ -87,23 +87,57 @@ def request_api(request,            # type: Request
     return request.invoke_subrequest(subreq, use_tweens=True)
 
 
-def error_badrequest(func):
+def redirect_error(request, code=None, content=None):
+    # type: (Request, int, Optional[JSON]) -> AnyResponseType
     """
-    Decorator that encapsulates the operation in a try/except block, and returns HTTP Bad Request on exception.
+    Redirects the contents to be rendered by the UI 'error' page.
+
+    :param request: incoming request that resulted into some kind of error.
+    :param code: explicit HTTP status code for the error response, extracted from contents if otherwise available.
+    :param content: any body content provided as error response from the API.
+    """
+    path = request.route_path("error")
+    path = path.replace("/magpie/", "/") if path.startswith("/magpie") else path  # avoid glob other 'magpie'
+    data = {"error_request": content, "error_code": code or content.get("code", 500)}
+    return request_api(request, path, "POST", data)  # noqa
+
+
+def handle_errors(func):
+    """
+    Decorator that encapsulates the operation in a try/except block, and redirects the response to the UI error page
+    with API error contents.
+
+    In worst case scenario where the operation cannot figure out what to do with the exception response,
+    raise the most basic :class:`HTTPInternalServerError` that can be formulated from available details.
+
+    .. seealso::
+        :func:`redirect_error`
     """
     def wrap(*args, **kwargs):
+        view_container = None if not args and not isinstance(args[0], BaseViews) else args[0]
         try:
             return func(*args, **kwargs)
         except Exception as exc:
             detail = "{}: {}".format(type(exc).__name__, str(exc))
             exc_info = get_exception_info(exc, exception_details=True) or detail  # noqa
             LOGGER.error("Unexpected API error under UI operation. [%s]", exc_info)
-            raise HTTPBadRequest(detail=str(exc))
+            content = {}
+            if view_container:
+                content = get_request_info(view_container.request, default_message=detail, exception_details=True)
+            if isinstance(exc_info, dict) and "exception" in exc_info and "exception" not in content:
+                content = exc_info
+            if "detail" not in content:
+                content = {"detail": detail}
+            if view_container:
+                return redirect_error(view_container.request, content=content)
+            raise HTTPInternalServerError(detail=str(exc))
     return wrap
 
 
 class BaseViews(object):
-    """Base methods for Magpie UI pages."""
+    """
+    Base methods for Magpie UI pages.
+    """
     MAGPIE_FIXED_GROUP_MEMBERSHIPS = []
     MAGPIE_FIXED_GROUP_EDITS = []
 
@@ -120,7 +154,9 @@ class BaseViews(object):
 
     def add_template_data(self, data=None):
         # type: (Optional[Dict[Str, Any]]) -> Dict[Str, Any]
-        """Adds required template data for the 'heading' mako template applied to every UI page."""
+        """
+        Adds required template data for the 'heading' mako template applied to every UI page.
+        """
         all_data = data or {}
         all_data.update({
             "MAGPIE_TITLE": __meta__.__title__,

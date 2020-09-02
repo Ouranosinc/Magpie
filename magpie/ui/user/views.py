@@ -1,9 +1,9 @@
 from pyramid.authentication import Authenticated
 from pyramid.view import view_config
+from typing import TYPE_CHECKING
 
 from magpie.api import schemas
-from magpie.typedefs import TYPE_CHECKING
-from magpie.ui.utils import BaseViews, check_response, error_badrequest, request_api
+from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import get_json
 
 if TYPE_CHECKING:
@@ -16,41 +16,43 @@ class UserViews(BaseViews):
         data["MAGPIE_SUB_TITLE"] = "User Management"
         return super(UserViews, self).add_template_data(data)
 
-    @error_badrequest
+    @handle_errors
     def get_current_user_groups(self):
         # type: () -> List[str]
         resp = request_api(self.request, schemas.LoggedUserGroupsAPI.path, "GET")
         check_response(resp)
         return get_json(resp)["group_names"]
 
-    @error_badrequest
+    @handle_errors
     def get_current_user_info(self):
         # type: () -> JSON
         user_resp = request_api(self.request, schemas.LoggedUserAPI.path, "GET")
         check_response(user_resp)
         return get_json(user_resp)["user"]
 
-    @error_badrequest
+    @handle_errors
     def get_discoverable_groups(self):
         # type: () -> List[str]
         resp = request_api(self.request, schemas.RegisterGroupsAPI.path, "GET")
         check_response(resp)
         return get_json(resp)["group_names"]
 
-    @error_badrequest
+    @handle_errors
     def join_discoverable_group(self, group_name):
-        """Registers the current user to the discoverable group.
+        """
+        Registers the current user to the discoverable group.
 
         :raises HTTPBadRequest: if the operation is not valid.
         """
-        data = {"group_name": group_name}
-        resp = request_api(self.request, schemas.RegisterGroupsAPI.path, "POST", data=data)
+        path = schemas.RegisterGroupAPI.path.format(group_name=group_name)
+        resp = request_api(self.request, path, "POST", data={})
         check_response(resp)
 
-    @error_badrequest
+    @handle_errors
     def leave_discoverable_group(self, group_name):
         # type: (Str) -> None
-        """Unregisters the current user from the discoverable group.
+        """
+        Unregisters the current user from the discoverable group.
 
         :raises HTTPBadRequest: if the operation is not valid.
         """
@@ -92,7 +94,7 @@ class UserViews(BaseViews):
                 is_save_user_info = True
 
             if is_save_user_info:
-                resp = request_api(self.request, schemas.LoggedUserAPI, "PATCH", data=user_info)
+                resp = request_api(self.request, schemas.LoggedUserAPI.path, "PATCH", data=user_info)
                 check_response(resp)
                 # need to commit updates since we are using the same session
                 # otherwise, updated user doesn't exist yet in the db for next calls

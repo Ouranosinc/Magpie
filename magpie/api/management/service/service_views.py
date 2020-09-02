@@ -1,18 +1,23 @@
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
+from typing import TYPE_CHECKING
 
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import requests as ar
 from magpie.api import schemas as s
-from magpie.api.management.resource.resource_utils import create_resource, delete_resource
+from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service import service_formats as sf
 from magpie.api.management.service import service_utils as su
 from magpie.permissions import Permission, format_permissions
 from magpie.register import SERVICES_PHOENIX_ALLOWED, sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import CONTENT_TYPE_JSON
+
+if TYPE_CHECKING:
+    from typing import List, Union
+    from magpie.typedefs import JSON
 
 
 @s.ServiceTypesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypes_GET_responses)
@@ -25,7 +30,8 @@ def get_service_types_view(request):  # noqa: F811
                          detail=s.ServiceTypes_GET_OkResponseSchema.description)
 
 
-@s.ServiceTypeAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceType_GET_responses)
+@s.ServiceTypeAPI.get(schema=s.ServiceTypes_GET_RequestSchema(), tags=[s.ServicesTag],
+                      response_schemas=s.ServiceType_GET_responses)
 @view_config(route_name=s.ServiceTypeAPI.name, request_method="GET")
 def get_services_by_type_view(request):
     """
@@ -34,7 +40,8 @@ def get_services_by_type_view(request):
     return get_services_runner(request)
 
 
-@s.ServicesAPI.get(tags=[s.ServicesTag], response_schemas=s.Services_GET_responses)
+@s.ServicesAPI.get(schema=s.Services_GET_RequestSchema(), tags=[s.ServicesTag],
+                   response_schemas=s.Services_GET_responses)
 @view_config(route_name=s.ServicesAPI.name, request_method="GET")
 def get_services_view(request):
     """
@@ -44,8 +51,15 @@ def get_services_view(request):
 
 
 def get_services_runner(request):
+    """
+    Generates services response format from request conditions.
+
+    Obtains the full or filtered list of services categorized by type, or listed as flat list according to request path
+    and query parameters.
+    """
     service_type_filter = request.matchdict.get("service_type")  # no check because None/empty is for 'all services'
-    json_response = {}
+    services_as_list = asbool(ar.get_query_param(request, "flatten", False))
+
     if not service_type_filter:
         service_types = SERVICE_TYPE_DICT.keys()
     else:
@@ -54,13 +68,19 @@ def get_services_runner(request):
                         content={"service_type": str(service_type_filter)}, content_type=CONTENT_TYPE_JSON)
         service_types = [service_type_filter]
 
+    svc_content = [] if services_as_list else {}  # type: Union[List[JSON], JSON]
     for service_type in service_types:
         services = su.get_services_by_type(service_type, db_session=request.db)
-        json_response[service_type] = {}
+        if not services_as_list:
+            svc_content[service_type] = {}
         for service in services:
-            json_response[service_type][service.resource_name] = sf.format_service(service, show_private_url=True)
+            svc_fmt = sf.format_service(service, show_private_url=True)
+            if services_as_list:
+                svc_content.append(svc_fmt)  # pylint: disable=E1101
+            else:
+                svc_content[service_type][service.resource_name] = svc_fmt
 
-    return ax.valid_http(http_success=HTTPOk, content={"services": json_response},
+    return ax.valid_http(http_success=HTTPOk, content={"services": svc_content},
                          detail=s.Services_GET_OkResponseSchema.description)
 
 
@@ -80,11 +100,11 @@ def register_service_view(request):
 
 
 @s.ServiceAPI.patch(schema=s.Service_PATCH_RequestBodySchema(), tags=[s.ServicesTag],
-                  response_schemas=s.Service_PATCH_responses)
+                    response_schemas=s.Service_PATCH_responses)
 @view_config(route_name=s.ServiceAPI.name, request_method="PATCH")
 def update_service_view(request):
     """
-    Update a service information.
+    Update service information.
     """
     service = ar.get_service_matchdict_checked(request)
     service_push = asbool(ar.get_multiformat_body(request, "service_push", default=False))
@@ -96,17 +116,15 @@ def update_service_view(request):
     svc_name = select_update(ar.get_multiformat_body(request, "service_name"), service.resource_name)
     svc_url = select_update(ar.get_multiformat_body(request, "service_url"), service.url)
     ax.verify_param(svc_name, param_compare="types", not_equal=True,
-                    param_name="service_name", http_error=HTTPBadRequest,
-                    msg_on_fail=s.Service_PATCH_BadRequestResponseSchema_ReservedKeyword.description)
+                    param_name="service_name", http_error=HTTPForbidden,
+                    msg_on_fail=s.Service_PATCH_ForbiddenResponseSchema_ReservedKeyword.description)
     ax.verify_param(svc_name == service.resource_name and svc_url == service.url, not_equal=True,
                     param_compare=True, param_name="service_name/service_url",
                     http_error=HTTPBadRequest, msg_on_fail=s.Service_PATCH_BadRequestResponseSchema.description)
 
     if svc_name != service.resource_name:
-        all_svc_names = list()
-        for svc_type in SERVICE_TYPE_DICT:
-            for svc in su.get_services_by_type(svc_type, db_session=request.db):
-                all_svc_names.append(svc.resource_name)
+        all_services = request.db.query(models.Service)
+        all_svc_names = [svc.resource_name for svc in all_services]
         ax.verify_param(svc_name, not_in=True, param_compare=all_svc_names, with_param=False,
                         http_error=HTTPConflict, content={"service_name": str(svc_name)},
                         msg_on_fail=s.Service_PATCH_ConflictResponseSchema.description)
@@ -190,7 +208,7 @@ def delete_service_resource_view(request):
     """
     Unregister a resource.
     """
-    return delete_resource(request)
+    return ru.delete_resource(request)
 
 
 @s.ServiceResourcesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceResources_GET_responses)
@@ -209,19 +227,33 @@ def get_service_resources_view(request):
 @s.ServiceResourcesAPI.post(schema=s.ServiceResources_POST_RequestSchema, tags=[s.ServicesTag],
                             response_schemas=s.ServiceResources_POST_responses)
 @view_config(route_name=s.ServiceResourcesAPI.name, request_method="POST")
-def create_service_direct_resource_view(request):
+def create_service_resource_view(request):
     """
-    Register a new resource directly under a service.
+    Register a new resource directly under a service or under one of its children resources.
     """
     service = ar.get_service_matchdict_checked(request)
     resource_name = ar.get_multiformat_body(request, "resource_name")
     resource_display_name = ar.get_multiformat_body(request, "resource_display_name", default=resource_name)
     resource_type = ar.get_multiformat_body(request, "resource_type")
     parent_id = ar.get_multiformat_body(request, "parent_id")  # no check because None/empty is allowed
-    if not parent_id:
+    db_session = request.db
+    if parent_id is None:
         parent_id = service.resource_id
-    return create_resource(resource_name, resource_display_name, resource_type,
-                           parent_id=parent_id, db_session=request.db)
+    else:
+        parent_id = ax.evaluate_call(lambda: int(parent_id),
+                                     http_error=HTTPBadRequest,
+                                     msg_on_fail=s.ServiceResources_POST_BadRequestResponseSchema.description)
+        # validate target service is actually the root service of the provided parent resource ID
+        root_service = ru.get_resource_root_service_by_id(parent_id, db_session=db_session)
+        ax.verify_param(root_service, not_none=True, param_name="parent_id",
+                        msg_on_fail=s.ServiceResources_POST_NotFoundResponseSchema.description,
+                        http_error=HTTPNotFound)
+        ax.verify_param(root_service.resource_id, is_equal=True,
+                        param_compare=service.resource_id, param_name="parent_id",
+                        msg_on_fail=s.ServiceResources_POST_BadRequestResponseSchema.description,
+                        http_error=HTTPBadRequest)
+    return ru.create_resource(resource_name, resource_display_name, resource_type,
+                              parent_id=parent_id, db_session=db_session)
 
 
 @s.ServiceTypeResourcesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypeResources_GET_responses)

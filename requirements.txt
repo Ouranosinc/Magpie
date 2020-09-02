@@ -4,6 +4,7 @@ beaker
 colander
 cornice
 cornice_swagger>=0.7.0
+dicttoxml
 # futures is required for gunicorn threads
 futures; python_version < "3"
 # flag --paste breaks for >20 unless using pserve

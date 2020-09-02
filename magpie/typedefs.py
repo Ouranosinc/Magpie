@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from webob.response import Response as WebobResponse
     from webtest.response import TestResponse
     from requests.cookies import RequestsCookieJar
+    from pyramid.httpexceptions import HTTPException
     from pyramid.response import Response as PyramidResponse
     from pyramid.registry import Registry
     from pyramid.request import Request
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
     from requests.structures import CaseInsensitiveDict
     from logging import Logger as LoggerType  # noqa: F401
     import six
+
+    # pylint: disable=W0611,unused-import  # following definitions provided to be employed elsewhere in the code
 
     if six.PY2:
         # pylint: disable=E0602,undefined-variable  # unicode not recognized by python 3
@@ -41,7 +44,7 @@ if TYPE_CHECKING:
     HeadersType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
     AnyHeadersType = Union[HeadersType, ResponseHeaders, EnvironHeaders, CaseInsensitiveDict]
     AnyCookiesType = Union[CookiesType, RequestsCookieJar]
-    AnyResponseType = Union[WebobResponse, PyramidResponse, TestResponse]
+    AnyResponseType = Union[WebobResponse, PyramidResponse, HTTPException, TestResponse]
     CookiesOrSessionType = Union[RequestsCookieJar, Session]
 
     AnyKey = Union[Str, int]
@@ -49,8 +52,13 @@ if TYPE_CHECKING:
     BaseJSON = Union[AnyValue, List["BaseJSON"], Dict[AnyKey, "BaseJSON"]]
     JSON = Union[Dict[AnyKey, Union[BaseJSON, "JSON"]], List[BaseJSON]]
 
+    # recursive nodes structure employed by functions for listing children resources hierarchy
+    # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
+    ChildrenResourceNodes = Dict[int, Dict[Str, Union[models.Resource, int, "ChildrenResourceNodes"]]]
+
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ServiceOrResourceType = Union[models.Service, models.Resource]
     ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
     AnyPermissionType = Union[Permission, ResourcePermissionType, Str]
+    AnyAccessPrincipalType = Union[Str, Iterable[Str]]
     AccessControlListType = List[Union[Tuple[Str, Str, Str], Str]]

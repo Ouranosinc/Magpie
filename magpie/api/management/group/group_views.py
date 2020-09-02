@@ -69,6 +69,7 @@ def edit_group_view(request):
     update_desc = group.description != new_description and new_description is not None
     update_disc = group.discoverable != new_discoverability and new_discoverability is not None
     ax.verify_param(any([update_name, update_desc, update_disc]), is_true=True,
+                    with_param=False,  # params are not useful in response for this case
                     http_error=HTTPBadRequest, content={"group_name": group.group_name},
                     msg_on_fail=s.Group_PATCH_None_BadRequestResponseSchema.description)
     if update_name:

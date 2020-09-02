@@ -1,5 +1,9 @@
+.. _installation:
+.. include:: references.rst
+
+************
 Installation
-============
+************
 
 At the command line::
 
