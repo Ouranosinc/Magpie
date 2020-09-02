@@ -156,7 +156,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             # with 'is_type', comparison must be made directly with compare as type instead of with instance type
             is_str_cmp = isinstance(param, six.string_types)
             ok_str_cmp = isinstance(param_compare, six.string_types)
-            eq_typ_cmp = type(param) == type(param_compare)
+            eq_typ_cmp = type(param) == type(param_compare)  # noqa: C0123
             if is_type and not (is_str_typ or is_cmp_typ):
                 LOGGER.debug("[param: %s] invalid type compare with [param_compare: %s]", type(param), param_compare)
                 raise TypeError("'param_compare' cannot be of non-type with specified verification flags")

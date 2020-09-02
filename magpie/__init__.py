@@ -66,8 +66,8 @@ class RemoveSlashNotFoundViewFactory(object):
             no_slash_path = no_slash_path.split("/magpie", 1)[-1]
             for route in mapper.get_routes():
                 if route.match(no_slash_path) is not None:
-                    qs = request.query_string
-                    if qs:
-                        no_slash_path += "?" + qs
+                    query = request.query_string
+                    if query:
+                        no_slash_path += "?" + query
                     return HTTPMovedPermanently(location=no_slash_path)
         return self.notfound_view(request)

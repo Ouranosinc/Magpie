@@ -30,7 +30,8 @@ from magpie.utils import (
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from tests.interfaces import AnyMagpieTestCaseType
-    from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
+    from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union
+    from magpie.services import ServiceInterface
     from magpie.typedefs import (
         AnyCookiesType, AnyHeadersType, AnyResponseType, AnyValue, CookiesType, HeadersType, JSON, SettingsType, Str
     )
@@ -139,6 +140,29 @@ class RunOptionDecorator(object):
         return make_run_option_decorator(RunOption(name, description=description))
 
 
+class NullType(six.with_metaclass(SingletonMeta)):
+    """
+    Represents a null value to differentiate from None.
+    """
+
+    def __repr__(self):
+        return "<null>"
+
+    @staticmethod
+    def __nonzero__():
+        return False
+
+    __bool__ = __nonzero__
+    __len__ = __nonzero__
+
+
+null = NullType()  # pylint: disable=C0103,invalid-name
+
+
+def is_null(item):
+    return isinstance(item, NullType) or item is null
+
+
 def config_setup_from_ini(config_ini_file_path):
     settings = get_settings_from_config_ini(config_ini_file_path)
     config = PyramidSetUp(settings=settings)
@@ -209,6 +233,7 @@ def get_json_body(response):
 
 
 def get_service_types_for_version(version):
+    # type: (Str) -> List[ServiceInterface]
     available_service_types = set(services.SERVICE_TYPE_DICT.keys())
     if LooseVersion(version) <= LooseVersion("0.6.1"):
         available_service_types = available_service_types - {ServiceAccess.service_type}
@@ -239,6 +264,15 @@ def warn_version(test, functionality, version, skip=True, older=False):
             test.skipTest(reason=msg)   # noqa: F401
 
 
+def json_msg(json_body, msg=null):
+    # type: (JSON, Optional[Str]) -> Str
+    """Generates a message string with formatted JSON body for display with easier readability."""
+    json_str = json_pkg.dumps(json_body, indent=4, ensure_ascii=False)
+    if msg is not null:
+        return "{}\n{}".format(msg, json_str)
+    return json_str
+
+
 def test_request(test_item,             # type: AnyMagpieTestItemType
                  method,                # type: Str
                  path,                  # type: Str
@@ -246,7 +280,8 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
                  json=None,             # type: Optional[Union[JSON, Str]]
                  body=None,             # type: Optional[Union[JSON, Str]]
                  params=None,           # type: Optional[Dict[Str, Str]]
-                 timeout=5,             # type: int
+                 timeout=10,            # type: int
+                 retries=3,             # type: int
                  allow_redirects=True,  # type: bool
                  content_type=None,     # type: Optional[Str]
                  headers=None,          # type: Optional[HeadersType]
@@ -281,6 +316,7 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
     :param headers: Set of headers to send the request. Header ``Content-Type`` is looked for if not overridden.
     :param cookies: Cookies to provide to the request.
     :param timeout: passed down to :mod:`requests` when using URL, otherwise ignored (unsupported).
+    :param retries: number of retry attempts in case the requested failed due to timeout (only when using URL).
     :param allow_redirects:
         Passed down to :mod:`requests` when using URL, handled manually for same behaviour when using :class:`TestApp`.
     :param kwargs: any additional keywords that will be forwarded to the request call.
@@ -328,19 +364,19 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
             err_msg = str(exc)
         except HTTPException as exc:
             err_code = exc.status_code
-            err_msg = str(exc)
+            err_msg = str(exc) + str(getattr(exc, "exception", ""))
         except Exception as exc:
             err_code = 500
             err_msg = "Unknown: {!s}".format(exc)
         finally:
             if err_code:
-                info = json_pkg.dumps({"path": path, "method": method, "body": _body}, indent=4, ensure_ascii=False)
+                info = json_msg({"path": path, "method": method, "body": _body})
                 result = "Request raised unexpected error: {!s}\nError: {}\nRequest:\n{}"
                 raise AssertionError(result.format(err_code, err_msg, info))
 
         # automatically follow the redirect if any and evaluate its response
         max_redirect = kwargs.get("max_redirects", 5)
-        while 300 <= resp.status_code < 400 and max_redirect > 0:
+        while 300 <= resp.status_code < 400 and max_redirect > 0:  # noqa
             resp = resp.follow()
             max_redirect -= 1
         assert max_redirect >= 0, "Maximum follow redirects reached."
@@ -349,13 +385,20 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
         return resp
 
     kwargs.pop("expect_errors", None)  # remove keyword specific to TestApp
-    if json:
+    content_type = get_header("Content-Type", headers)
+    if json or content_type == CONTENT_TYPE_JSON:
         kwargs["json"] = _body
     elif data or body:
         kwargs["data"] = _body
     url = "{url}{path}".format(url=app_or_url, path=path)
-    return requests.request(method, url, params=params, headers=headers, cookies=cookies,
-                            timeout=timeout, allow_redirects=allow_redirects, **kwargs)
+    while True:
+        try:
+            return requests.request(method, url, params=params, headers=headers, cookies=cookies,
+                                    timeout=timeout, allow_redirects=allow_redirects, **kwargs)
+        except requests.ReadTimeout:
+            if retries <= 0:
+                raise
+            retries -= 1
 
 
 def get_session_user(app_or_url, headers=None):
@@ -377,7 +420,6 @@ def check_or_try_login_user(test_item,                      # type: AnyMagpieTes
                             provider=None,                  # type: Optional[Str]
                             headers=None,                   # type: Optional[Dict[Str, Str]]
                             use_ui_form_submit=False,       # type: bool
-                            version=__meta__.__version__,   # type: Str
                             expect_errors=False,            # type: bool
                             ):                              # type: (...) -> OptionalHeaderCookiesType
     """
@@ -391,7 +433,6 @@ def check_or_try_login_user(test_item,                      # type: AnyMagpieTes
     :param headers: headers to include in the test request
     :param use_ui_form_submit: use Magpie UI login 'form' to obtain cookies
         (required for local :class:`WebTest.TestApp` login, ignored by requests using URL)
-    :param version: server or local app version to evaluate responses with backward compatibility
     :param expect_errors: indicate if the login is expected to fail, used only if using UI form & `webtest.TestApp`
     :return: headers and cookies of the user session or (None, None)
     :raise AssertionError: if login failed or logged user session does not meet specifications (username/password)
@@ -432,7 +473,7 @@ def check_or_try_login_user(test_item,                      # type: AnyMagpieTes
             return resp.headers, resp_cookies
 
     if auth is True:
-        body = TestSetup.get_UserInfo(app_or_url, override_body=body, override_version=version)
+        body = TestSetup.get_UserInfo(app_or_url, override_body=body)
         logged_user = body.get("user_name", "")
         if username != logged_user:
             raise AssertionError("invalid user")
@@ -494,7 +535,7 @@ def all_equal(iter_val, iter_ref, any_order=False):
 
 
 def check_all_equal(iter_val, iter_ref, msg=None, any_order=False):
-    # type: (Iterable[Any], Union[Iterable[Any], NullType], Optional[Str], bool) -> None
+    # type: (Sequence[Any], Union[Sequence[Any], NullType], Optional[Str], bool) -> None
     """
     :param iter_val: tested values.
     :param iter_ref: reference values.
@@ -603,7 +644,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
     code_message = "Response doesn't match expected HTTP status code."
     if expected_type == CONTENT_TYPE_JSON:
         # provide more details about mismatching code since to help debug cause of error
-        code_message += "\nReason:\n{}".format(json_pkg.dumps(get_json_body(response), indent=4, ensure_ascii=False))
+        code_message += "\nReason:\n{}".format(json_msg(get_json_body(response)))
     check_val_equal(response.status_code, expected_code, msg=_(code_message))
 
     if expected_type == CONTENT_TYPE_JSON:
@@ -652,29 +693,6 @@ def check_ui_response_basic_info(response, expected_code=200, expected_type=CONT
     check_val_is_in(expected_type, get_response_content_types_list(response))
     if expected_title:
         check_val_is_in(expected_title, response.text, msg=null)   # don't output big html if failing
-
-
-class NullType(six.with_metaclass(SingletonMeta)):
-    """
-    Represents a null value to differentiate from None.
-    """
-
-    def __repr__(self):
-        return "<null>"
-
-    @staticmethod
-    def __nonzero__():
-        return False
-
-    __bool__ = __nonzero__
-    __len__ = __nonzero__
-
-
-null = NullType()  # pylint: disable=C0103,invalid-name
-
-
-def is_null(item):
-    return isinstance(item, NullType) or item is null
 
 
 def check_error_param_structure(body,                                   # type: JSON
@@ -786,6 +804,9 @@ class TestSetup(object):
 
         :raises AssertionError: if the response cannot successfully retrieve the test instance version.
         """
+        version = getattr(test_case, "version", None)
+        if version:
+            return version
         app_or_url = get_app_or_url(test_case)
         resp = test_request(app_or_url, "GET", "/version",
                             headers=override_headers if override_headers is not null else test_case.json_headers,
@@ -905,7 +926,7 @@ class TestSetup(object):
                     break
         if not form:
             available_forms = {fm: {fk: fv[0].value for fk, fv in f.fields.items()} for fm, f in resp.forms.items()}
-            available_forms = json_pkg.dumps(available_forms, indent=4, ensure_ascii=False)
+            available_forms = json_msg(available_forms)
             test_case.fail("could not find requested form for submission "
                            "[form_match: {!r}, form_submit: {!r}, form_data: {!r}] "
                            .format(form_match, form_submit, form_data) +
@@ -951,6 +972,7 @@ class TestSetup(object):
         """
         Validates :term:`Resource` basic information (not checking children) based on different Magpie version formats.
 
+        :param test_case: test container
         :param body: JSON body of the response to validate.
         :param resource_name: name of the resource to validate.
         :param resource_type: type of the resource to validate.
@@ -988,6 +1010,7 @@ class TestSetup(object):
         Crawls through a :paramref:`resource_children` tree (potentially multi-level) to recursively validate data
         field, types and corresponding values.
 
+        :param test_case: test container
         :param resource_children: top-level 'resources' dictionary possibly also containing children resources.
         :param parent_resource_id: top-level resource/service ID
         :param root_service_id: top-level service ID
@@ -1186,7 +1209,8 @@ class TestSetup(object):
                                                        override_headers=override_headers,
                                                        override_cookies=override_cookies)
         else:
-            get_details = "permission_names" not in resource_info and override_permission_name is null
+            no_perms = "permission_names" not in resource_info or not resource_info.get("permission_names")
+            get_details = no_perms or override_permission_name is null
             resource_info = TestSetup.get_ResourceInfo(test_case, override_body=resource_info, full_detail=get_details,
                                                        override_headers=override_headers,
                                                        override_cookies=override_cookies)
@@ -1395,6 +1419,8 @@ class TestSetup(object):
             "service_type": svc_type,
             "service_url": "http://localhost:9000/{}".format(svc_name)
         }
+        if svc_name:
+            test_case.extra_service_names.add(svc_name)  # indicate potential removal at a later point
         resp = test_request(app_or_url, "POST", "/services", json=data,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies,
@@ -1534,6 +1560,9 @@ class TestSetup(object):
                 "group_name": override_group_name if override_group_name is not null else test_case.test_group_name,
             }
             data["email"] = override_email if override_email is not null else "{}@mail.com".format(data["user_name"])
+        usr_name = (data or {}).get("user_name")
+        if usr_name:
+            test_case.extra_user_names.add(usr_name)  # indicate potential removal at a later point
         resp = test_request(app_or_url, "POST", "/users", json=data,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
@@ -1584,7 +1613,7 @@ class TestSetup(object):
                                 headers=override_headers if override_headers is not null else test_case.json_headers,
                                 cookies=override_cookies if override_cookies is not null else test_case.cookies)
             body = check_response_basic_info(resp)
-        version = override_version if override_version is not null else test_case.version
+        version = override_version if override_version is not null else TestSetup.get_Version(test_case)
         if LooseVersion(version) >= LooseVersion("0.6.3"):
             check_val_is_in("user", body)
             body = body["user"]
@@ -1637,7 +1666,7 @@ class TestSetup(object):
         if usr_name not in body["user_names"]:
             path = "/users/{usr}/groups".format(usr=usr_name)
             data = {"group_name": grp_name}
-            resp = test_request(app_or_url, "POST", path, data=data,
+            resp = test_request(app_or_url, "POST", path, json=data,
                                 headers=override_headers if override_headers is not null else test_case.json_headers,
                                 cookies=override_cookies if override_cookies is not null else test_case.cookies)
             check_response_basic_info(resp, 201, expected_method="POST")
@@ -1691,6 +1720,9 @@ class TestSetup(object):
             # only add 'discoverable' if explicitly provided here to preserve original behaviour of 'no value provided'
             if override_discoverable is not null:
                 data["discoverable"] = override_discoverable
+        grp_name = (data or {}).get("group_name")
+        if grp_name:
+            test_case.extra_group_names.add(grp_name)  # indicate potential removal at a later point
         resp = test_request(app_or_url, "POST", "/groups", json=data,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
@@ -1705,14 +1737,14 @@ class TestSetup(object):
         :return: nothing. Group is ensured to not exist.
         """
         app_or_url = get_app_or_url(test_case)
-        groups = TestSetup.get_RegisteredGroupsList(test_case)
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+        groups = TestSetup.get_RegisteredGroupsList(test_case, override_headers=headers, override_cookies=cookies)
         group_name = override_group_name if override_group_name is not null else test_case.test_group_name
         # delete as required, skip if non-existing
         if group_name in groups:
             path = "/groups/{grp}".format(grp=group_name)
-            resp = test_request(app_or_url, "DELETE", path,
-                                headers=override_headers if override_headers is not null else test_case.json_headers,
-                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
+            resp = test_request(app_or_url, "DELETE", path, headers=headers, cookies=cookies)
             check_response_basic_info(resp, 200, expected_method="DELETE")
         TestSetup.check_NonExistingTestGroup(test_case, override_group_name=group_name,
-                                             override_headers=override_headers, override_cookies=override_cookies)
+                                             override_headers=headers, override_cookies=cookies)

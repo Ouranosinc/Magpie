@@ -1,6 +1,7 @@
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
+from typing import TYPE_CHECKING
 
 from magpie import models
 from magpie.api import exception as ax
@@ -13,6 +14,10 @@ from magpie.permissions import Permission, format_permissions
 from magpie.register import SERVICES_PHOENIX_ALLOWED, sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import CONTENT_TYPE_JSON
+
+if TYPE_CHECKING:
+    from typing import List, Union
+    from magpie.typedefs import JSON
 
 
 @s.ServiceTypesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypes_GET_responses)
@@ -61,7 +66,7 @@ def get_services_runner(request):
                         content={"service_type": str(service_type_filter)}, content_type=CONTENT_TYPE_JSON)
         service_types = [service_type_filter]
 
-    svc_content = [] if services_as_list else {}
+    svc_content = [] if services_as_list else {}  # type: Union[List[JSON], JSON]
     for service_type in service_types:
         services = su.get_services_by_type(service_type, db_session=request.db)
         if not services_as_list:
@@ -230,9 +235,12 @@ def create_service_resource_view(request):
     resource_type = ar.get_multiformat_body(request, "resource_type")
     parent_id = ar.get_multiformat_body(request, "parent_id")  # no check because None/empty is allowed
     db_session = request.db
-    if not parent_id:
+    if parent_id is None:
         parent_id = service.resource_id
     else:
+        parent_id = ax.evaluate_call(lambda: int(parent_id),
+                                     http_error=HTTPBadRequest,
+                                     msg_on_fail=s.ServiceResources_POST_BadRequestResponseSchema.description)
         # validate target service is actually the root service of the provided parent resource ID
         root_service = ru.get_resource_root_service_by_id(parent_id, db_session=db_session)
         ax.verify_param(root_service, not_none=True, param_name="parent_id",

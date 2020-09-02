@@ -212,8 +212,15 @@ def get_user_resources_view(request):
     List all resources a user has permissions on.
     """
     inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
+    filtered_perms = asbool(ar.get_query_param(request, "filter") or ar.get_query_param(request, "filtered"))
     user = ar.get_user_matchdict_checked_or_logged(request)
     db = request.db
+
+    # skip admin-only full listing of resources if filtered view is requested
+    is_admin = False
+    if not filtered_perms and request.user is not None:
+        admin_group = get_constant("MAGPIE_ADMIN_GROUP", settings_container=request)
+        is_admin = admin_group in [group.group_name for group in request.user.groups]
 
     def build_json_user_resource_tree(usr):
         json_res = {}
@@ -225,14 +232,17 @@ def get_user_resources_view(request):
                 json_res[svc.type] = {}
             res_perms_dict = uu.get_user_service_resources_permissions_dict(
                 user=usr, service=svc, request=request, inherit_groups_permissions=inherit_groups_perms)
-            json_res[svc.type][svc.resource_name] = format_service_resources(
-                svc,
-                db_session=db,
-                service_perms=svc_perms,
-                resources_perms_dict=res_perms_dict,
-                show_all_children=False,
-                show_private_url=False,
-            )
+            # always allow admin to view full resource tree, unless explicitly requested to be filtered
+            # otherwise (non-admin), only add details if there is at least one resource permission (any level)
+            if (is_admin and not filtered_perms) or (svc_perms or res_perms_dict):
+                json_res[svc.type][svc.resource_name] = format_service_resources(
+                    svc,
+                    db_session=db,
+                    service_perms=svc_perms,
+                    resources_perms_dict=res_perms_dict,
+                    show_all_children=False,
+                    show_private_url=False,
+                )
         return json_res
 
     usr_res_dict = ax.evaluate_call(lambda: build_json_user_resource_tree(user),

@@ -63,20 +63,18 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
-        cls.json_headers = utils.get_headers(cls.app, {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON})
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd, version=cls.version,
-                                                                 use_ui_form_submit=True)
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         assert cls.headers and cls.cookies, cls.require  # nosec
 
-        cls.test_service_name = "unittest-user-auth_test-service"
+        cls.test_service_name = "unittest-user-auth-local_test-service"
         cls.test_service_type = "api"
-        cls.test_resource_name = "unittest-user-auth_test-resource"
+        cls.test_resource_name = "unittest-user-auth-local_test-resource"
         cls.test_resource_type = "route"
-        cls.test_group_name = "unittest-user-auth_test-group"
-        cls.test_user_name = "unittest-user-auth_test-user-username"
+        cls.test_group_name = "unittest-user-auth-local_test-group"
+        cls.test_user_name = "unittest-user-auth-local_test-user-username"
 
 
 @runner.MAGPIE_TEST_API
@@ -101,8 +99,7 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         cls.version = utils.TestSetup.get_Version(cls)
         # TODO: fix UI views so that they can be "found" directly in the WebTest.TestApp
         # NOTE: localhost magpie has to be running for following login call to work
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd,
-                                                                 use_ui_form_submit=True, version=cls.version)
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()
         cls.setup_test_values()
@@ -124,9 +121,9 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
     def setUpClass(cls):
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
         cls.cookies = None
+        cls.version = utils.TestSetup.get_Version(cls)
         cls.test_user_name = get_constant("MAGPIE_ANONYMOUS_USER")
         cls.test_group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
-        cls.version = utils.TestSetup.get_Version(cls)
         # note: admin credentials to setup data on test instance as needed, but not to be used for these tests
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
@@ -148,6 +145,21 @@ class TestCase_MagpieAPI_UsersAuth_Remote(ti.Interface_MagpieAPI_UsersAuth, unit
     @classmethod
     def setUpClass(cls):
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.cookies = None
+        cls.version = utils.TestSetup.get_Version(cls)
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd, use_ui_form_submit=True)
+        cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
+        assert cls.headers and cls.cookies, cls.require  # nosec
+
+        cls.test_service_name = "unittest-user-auth-remote_test-service"
+        cls.test_service_type = "api"
+        cls.test_resource_name = "unittest-user-auth-remote_test-resource"
+        cls.test_resource_type = "route"
+        cls.test_group_name = "unittest-user-auth-remote_test-group"
+        cls.test_user_name = "unittest-user-auth-remote_test-user-username"
 
 
 @runner.MAGPIE_TEST_API
@@ -168,9 +180,9 @@ class TestCase_MagpieAPI_AdminAuth_Remote(ti.Interface_MagpieAPI_AdminAuth, unit
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
+        cls.version = utils.TestSetup.get_Version(cls)
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
-        cls.version = utils.TestSetup.get_Version(cls)
         cls.check_requirements()
         cls.setup_test_values()
 
@@ -201,7 +213,7 @@ def test_magpie_homepage():
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_STATUS
-def test_ResponseMetadata():
+def test_response_metadata():
     """Validate that regardless of response type (success/error) and status-code, metadata details are added.
 
     note: test only locally to avoid remote server side-effects and because mock cannot be done remotely

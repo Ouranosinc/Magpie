@@ -110,21 +110,21 @@ def guess_target_format(request):
 
     :returns: tuple of matched MIME-type and where it was found (``True``: header, ``False``: query)
     """
-    format = FORMAT_TYPE_MAPPING.get(request.params.get("format"))
+    content_type = FORMAT_TYPE_MAPPING.get(request.params.get("format"))
     is_header = False
-    if not format:
+    if not content_type:
         is_header = True
-        format = get_header("accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
-        if format != CONTENT_TYPE_JSON:
+        content_type = get_header("accept", request.headers, default=CONTENT_TYPE_JSON, split=";,")
+        if content_type != CONTENT_TYPE_JSON:
             # because most browsers enforce some 'visual' list of accept header, revert to JSON if detected
             # explicit request set by other client (e.g.: using 'requests') will have full control over desired content
             user_agent = get_header("user-agent", request.headers)
             if user_agent and any(browser in user_agent for browser in ["Mozilla", "Chrome", "Safari"]):
-                format = CONTENT_TYPE_JSON
-    if not format or format == CONTENT_TYPE_ANY:
+                content_type = CONTENT_TYPE_JSON
+    if not content_type or content_type == CONTENT_TYPE_ANY:
         is_header = True
-        format = CONTENT_TYPE_JSON
-    return format, is_header
+        content_type = CONTENT_TYPE_JSON
+    return content_type, is_header
 
 
 def validate_accept_header_tween(handler, registry):    # noqa: F811

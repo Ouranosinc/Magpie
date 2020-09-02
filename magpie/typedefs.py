@@ -25,6 +25,8 @@ if TYPE_CHECKING:
     from logging import Logger as LoggerType  # noqa: F401
     import six
 
+    # pylint: disable=W0611,unused-import  # following definitions provided to be employed elsewhere in the code
+
     if six.PY2:
         # pylint: disable=E0602,undefined-variable  # unicode not recognized by python 3
         Str = Union[_AnyStr, unicode]  # noqa: E0602,F405,F821

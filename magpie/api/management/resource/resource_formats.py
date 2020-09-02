@@ -42,7 +42,7 @@ def format_resource(resource, permissions=None, basic_info=False):
     )
 
 
-def format_resource_tree(children, db_session, resources_perms_dict=None, *args):
+def format_resource_tree(children, db_session, *args, resources_perms_dict=None):
     # type: (ChildrenResourceNodes, Session, Optional[ChildrenResourceNodes], Optional[ChildrenResourceNodes]) -> JSON
     """
     Generates the formatted resource tree under the provided children resources, with all of their children resources
@@ -99,8 +99,8 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, *args)
         fmt_res_tree[child_id]["children"] = format_resource_tree(
             new_children,
             db_session,
-            resources_perms_dict,
-            __internal_svc_res_perm_dict
+            __internal_svc_res_perm_dict,
+            resources_perms_dict=resources_perms_dict,
         )
 
     return fmt_res_tree

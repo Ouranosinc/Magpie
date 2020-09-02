@@ -616,7 +616,7 @@ def _log_permission(message, permission_index, trail=", skipping...", detail=Non
     """
     Logs a message related to a 'permission' entry.
 
-    Log message format is as follows::
+    Log message format is as follows (detail portion omitted if none provided)::
 
         {message} [permission: #{permission_index}] [{permission}]{trail}
         Detail: [{detail}]
@@ -808,9 +808,10 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
         """
         Creates the user/group profile as required.
         """
+        password = pseudo_random_string(length=get_constant("MAGPIE_PASSWORD_MIN_LENGTH"))
         usr_data = {
             "user_name": _usr_name,
-            "password": users.get(_usr_name, {}).get("password", "12345"),
+            "password": users.get(_usr_name, {}).get("password", password),
             "email": users.get(_usr_name, {}).get("email", "{}@mail.com".format(_usr_name)),
             "group_name": users.get(_usr_name, {}).get("group", get_constant("MAGPIE_ANONYMOUS_GROUP"))
         }

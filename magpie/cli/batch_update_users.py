@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     UserConfig = List[Dict[Str, Str]]
 
 LOGGER = get_logger(__name__,
-                    format="%(asctime)s - %(levelname)s - %(message)s",
+                    message_format="%(asctime)s - %(levelname)s - %(message)s",
                     datetime_format="%d-%b-%y %H:%M:%S", force_stdout=False)
 
 ERROR_PARAMS = 2

@@ -303,18 +303,36 @@ class TestUtils(unittest.TestCase):
         mock_calls = {"counter": 0}
 
         def mock_raise(*_, **__):
+            # avoid raising forever if the real safeguard fails doing its job
             if mock_calls["counter"] >= 2 * ax.RAISE_RECURSIVE_SAFEGUARD_MAX:
                 return TypeError()
             mock_calls["counter"] += 1
             raise TypeError()
 
-        try:
-            with mock.patch("magpie.api.exception.generate_response_http_format", side_effect=mock_raise):
-                ax.evaluate_call(lambda: int("x"))
-        except Exception:
-            pass
+        def mock_lambda_call(*_, **__):
+            ax.evaluate_call(lambda: int("x"))
 
-        utils.check_val_equal(mock_calls["counter"], ax.RAISE_RECURSIVE_SAFEGUARD_MAX)
+        try:
+            app = utils.get_test_magpie_app()
+            with mock.patch("magpie.api.exception.generate_response_http_format", side_effect=mock_raise):
+                with mock.patch("magpie.api.login.login.get_session", side_effect=mock_lambda_call):
+                    # Call request that ends up calling the response formatter via 'evaluate_call' itself raising to
+                    # trigger 'mock_raise' recursively within 'raise_http' function.
+                    # Since tweens are set up to format all response prior to return, the raised error will itself
+                    # call 'raise_http' again each time operation fails, creating recursive raises.
+                    # If recursive safeguard does its job, it should end up raising 'HTTPInternalServerError' directly
+                    # (without further formatting attempt when reaching the MAX value), stopping the endless loop.
+                    utils.test_request(app, "GET", "/session", expect_errors=True)
+        except AssertionError:
+            # Request called with above 'test_request' should catch the final 'HTTPInternalServerError' that is
+            # raised directly instead of usual TestResponse returned. That error is again re-raised as 'AssertionError'
+            pass
+        except Exception as exc:
+            self.fail("unexpected error during request creation should not raise: {}".format(exc))
+
+        # if our counter reached higher than the MAX (i.e.: 2*MAX from mock), the safeguard did not do its job
+        # if it did not get called at least more than once, use cases did not really get tested
+        utils.check_val_is_in(mock_calls["counter"], list(range(2, ax.RAISE_RECURSIVE_SAFEGUARD_MAX + 1)))  # noqa
 
     def test_format_content_json_str_invalid_usage(self):
         non_json_serializable_content = {"key": HTTPInternalServerError()}

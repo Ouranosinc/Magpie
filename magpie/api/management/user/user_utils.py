@@ -30,8 +30,8 @@ if TYPE_CHECKING:
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
     from sqlalchemy.orm.session import Session
-    from typing import Any, Dict, Iterable, List, Optional
-    from magpie.typedefs import Str, ResourcePermissionType, UserServicesType, ServiceOrResourceType
+    from typing import Dict, Iterable, List, Optional
+    from magpie.typedefs import AnyPermissionType, Str, ResourcePermissionType, UserServicesType, ServiceOrResourceType
     from magpie.permissions import Permission
 
 
@@ -256,7 +256,6 @@ def get_user_services(user, request, cascade_resources=False,
     services = {}
     for resource_id, perms in res_perm_dict.items():
         resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
-        service_id = resource.root_service_id or resource.resource_id
         is_service = resource.resource_type == models.Service.resource_type_name
 
         if not is_service:
@@ -301,7 +300,7 @@ def get_user_service_permissions(user, service, request, inherit_groups_permissi
 
 def get_user_resources_permissions_dict(user, request, resource_types=None,
                                         resource_ids=None, inherit_groups_permissions=True):
-    # type: (models.User, Request, Optional[List[Str]], Optional[List[int]], bool) -> Dict[Str, Any]
+    # type: (models.User, Request, Optional[List[Str]], Optional[List[int]], bool) -> Dict[Str, AnyPermissionType]
     """
     Creates a dictionary of resources by id with corresponding permissions of the user.
 
@@ -337,10 +336,18 @@ def get_user_resources_permissions_dict(user, request, resource_types=None,
 
 
 def get_user_service_resources_permissions_dict(user, service, request, inherit_groups_permissions=True):
-    # type: (models.User, models.Service, Request, bool) -> Dict[Str, Any]
+    # type: (models.User, models.Service, Request, bool) -> Dict[Str, AnyPermissionType]
+    """
+    Retrieves all permissions the user has for all resources nested under the service, either including or not
+    group permissions inheritance.
+
+    :returns: dictionary of resource IDs with corresponding permissions.
+    """
     resources_under_service = models.RESOURCE_TREE_SERVICE.from_parent_deeper(parent_id=service.resource_id,
                                                                               db_session=request.db)
     resource_ids = [resource.Resource.resource_id for resource in resources_under_service]
+    if not resource_ids:
+        return {}  # return immediately, otherwise empty list generates dict of all existing resources (i.e. no-filter)
     return get_user_resources_permissions_dict(user, request, resource_types=None, resource_ids=resource_ids,
                                                inherit_groups_permissions=inherit_groups_permissions)
 

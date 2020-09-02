@@ -15,7 +15,6 @@ import tests.interfaces as ti
 from magpie.constants import get_constant
 from magpie.models import Route
 from magpie.services import ServiceAPI, ServiceWPS
-from magpie.utils import CONTENT_TYPE_JSON
 from tests import runner, utils
 
 

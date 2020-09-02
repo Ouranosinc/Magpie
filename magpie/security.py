@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from magpie.typedefs import AnySettingsContainer, JSON  # noqa: F401
 
 AUTHOMATIC_LOGGER = get_logger("magpie.authomatic", level=logging.DEBUG)
-LOGGER = get_logger("magpie.security")
+LOGGER = get_logger(__name__)
 
 
 def get_auth_config(container):

@@ -31,7 +31,6 @@ from magpie.utils import (
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from magpie.typedefs import Dict, List, JSON, Str, Union
-    from pyramid.request import Request
 
 # ignore naming style of tags
 # pylint: disable=C0103,invalid-name
@@ -358,6 +357,12 @@ QueryEffectivePermissions = colander.SchemaNode(
 QueryInheritGroupsPermissions = colander.SchemaNode(
     colander.Boolean(), name="inherited", default=False, missing=colander.drop,
     description="Include the user's groups memberships inheritance to resolve permissions.")
+QueryFilterResources = colander.SchemaNode(
+    colander.Boolean(), name="filtered", default=False, missing=colander.drop,
+    description="Filter returned resources only where user has permissions on, either directly or inherited by groups "
+                "according to other query parameters. Otherwise (default), return all existing resources "
+                "with empty permissions set when user has no permission on them. Filtered view is enforced for "
+                "non-admin requesting user.")
 QueryCascadeResourcesPermissions = colander.SchemaNode(
     colander.Boolean(), name="cascade", default=False, missing=colander.drop,
     description="Display all services that has at least one permission at any level in his hierarchy "
@@ -1633,7 +1638,8 @@ class UserGroup_DELETE_NotFoundResponseSchema(BaseResponseSchemaAPI):
 
 
 class UserResources_GET_QuerySchema(QueryRequestSchemaAPI):
-    inherit = QueryInheritGroupsPermissions
+    inherited = QueryInheritGroupsPermissions
+    filtered = QueryFilterResources
 
 
 class UserResources_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -1655,7 +1661,7 @@ class UserResources_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
 
 
 class UserResourcePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
-    inherit = QueryInheritGroupsPermissions
+    inherited = QueryInheritGroupsPermissions
     effective = QueryEffectivePermissions
 
 
@@ -1797,7 +1803,7 @@ class UserServiceResources_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class UserServiceResources_GET_QuerySchema(QueryRequestSchemaAPI):
-    inherit = QueryInheritGroupsPermissions
+    inherited = QueryInheritGroupsPermissions
 
 
 class UserServiceResources_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -1844,7 +1850,7 @@ class UserServices_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class UserServicePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
-    inherit = QueryInheritGroupsPermissions
+    inherited = QueryInheritGroupsPermissions
 
 
 class UserServicePermissions_GET_RequestSchema(BaseRequestSchemaAPI):

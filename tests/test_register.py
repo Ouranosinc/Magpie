@@ -44,8 +44,7 @@ class TestRegister(interfaces.Base_Magpie_TestCase):
         cls.version = utils.TestSetup.get_Version(cls)
         # TODO: fix UI views so that they can be "found" directly in the WebTest.TestApp
         # NOTE: localhost magpie has to be running for following login call to work
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd,
-                                                                 use_ui_form_submit=True, version=cls.version)
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
 
         cls.test_perm_svc_name = "test-service-perms-config"
@@ -340,7 +339,7 @@ class TestRegister(interfaces.Base_Magpie_TestCase):
             tmp1.seek(0)  # back to start since file still open (auto-delete if closed)
             tmp2.write(json.dumps({"permissions": [{"perm": "permission3"}, {"perm": "permission4"}]}))
             tmp2.seek(0)  # back to start since file still open (auto-delete if closed)
-            perms = register._get_all_configs(tmp_dir, "permissions")  # pylint: disable=W0212
+            perms = register.get_all_configs(tmp_dir, "permissions")  # pylint: disable=W0212
         assert isinstance(perms, list) and len(perms) == 2 and all(isinstance(p, list) and len(p) == 2 for p in perms)
         # NOTE: order of file loading is not guaranteed
         assert ((perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2" and
@@ -354,13 +353,13 @@ class TestRegister(interfaces.Base_Magpie_TestCase):
             # format doesn't matter
             tmp.write(json.dumps({"permissions": [{"perm": "permission1"}, {"perm": "permission2"}]}))
             tmp.seek(0)  # back to start since file still open (auto-delete if closed)
-            perms = register._get_all_configs(tmp.name, "permissions")  # pylint: disable=W0212
+            perms = register.get_all_configs(tmp.name, "permissions")  # pylint: disable=W0212
         assert isinstance(perms, list) and len(perms) == 1 and isinstance(perms[0], list) and len(perms[0]) == 2
         assert perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2"
 
     def test_get_all_config_from_dict(self):
         cfg = {"permissions": [{"perm": "permission1"}, {"perm": "permission2"}]}
-        perms = register._get_all_configs(cfg, "permissions")  # pylint: disable=W0212
+        perms = register.get_all_configs(cfg, "permissions")  # pylint: disable=W0212
         assert isinstance(perms, list) and len(perms) == 1 and isinstance(perms[0], list) and len(perms[0]) == 2
         assert perms[0][0]["perm"] == "permission1" and perms[0][1]["perm"] == "permission2"
 
