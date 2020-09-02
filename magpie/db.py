@@ -136,23 +136,28 @@ def get_db_session_from_config_ini(config_ini_path, ini_main_section_name="app:m
 def run_database_migration(settings=None, db_session=None):
     # type: (Optional[SettingsType], Optional[Session]) -> None
     """
-    Runs db migration operations with alembic, using db session or a new engine connection.
+    Runs database migration operations with :mod:`alembic`, using the provided session or a new engine connection.
     """
     ini_file = get_constant("MAGPIE_INI_FILE_PATH", settings)
     LOGGER.info("Using file '%s' for migration.", ini_file)
     alembic_args = ["-c", ini_file, "upgrade", "heads"]
-    if not isinstance(db_session, Session):
-        alembic.config.main(argv=alembic_args)
-    else:
-        engine = db_session.bind
-        with engine.begin() as connection:
-            alembic_cfg = alembic.config.Config(file_=ini_file)
-            alembic_cfg.attributes["connection"] = connection   # pylint: disable=E1137
-            alembic.command.upgrade(alembic_cfg, "head")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=sa_exc.SAWarning)
+        if not isinstance(db_session, Session):
+            alembic.config.main(argv=alembic_args)
+        else:
+            engine = db_session.bind
+            with engine.begin() as connection:
+                alembic_cfg = alembic.config.Config(file_=ini_file)
+                alembic_cfg.attributes["connection"] = connection   # pylint: disable=E1137
+                alembic.command.upgrade(alembic_cfg, "head")
 
 
 def get_database_revision(db_session):
     # type: (Session) -> Str
+    """
+    Obtains the database revision number employed by :mod:`alembic` for schema migration.
+    """
     query = "SELECT version_num FROM alembic_version"
     result = db_session.execute(query).fetchone()
     return result["version_num"]
@@ -160,6 +165,9 @@ def get_database_revision(db_session):
 
 def is_database_ready(db_session=None, container=None):
     # type: (Optional[Session], Optional[AnySettingsContainer]) -> bool
+    """
+    Obtains the database status against expected table names to ensure it is ready for use.
+    """
     if isinstance(db_session, Session):
         engine = db_session.bind
     else:
@@ -170,7 +178,8 @@ def is_database_ready(db_session=None, container=None):
     for _, obj in inspect.getmembers(models):
         if inspect.isclass(obj) and hasattr(obj, "__tablename__"):
             if obj.__tablename__ not in table_names:
-                LOGGER.error("Database table (or its associated parent) is missing for '%s' object", obj)
+                print_log("Database table (or its associated parent) is missing for '{}' object".format(obj),
+                          logger=LOGGER, level=logging.ERROR)
                 return False
     return True
 
@@ -180,40 +189,40 @@ def run_database_migration_when_ready(settings, db_session=None):
     """
     Runs db migration if requested by config and need from revisions.
     """
-
     db_ready = False
     if asbool(get_constant("MAGPIE_DB_MIGRATION", settings, "magpie.db_migration",
                            default_value=True, raise_missing=False, raise_not_set=False, print_missing=True)):
         attempts = int(get_constant("MAGPIE_DB_MIGRATION_ATTEMPTS", settings, "magpie.db_migration_attempts",
                                     default_value=5, raise_missing=False, raise_not_set=False, print_missing=True))
 
-        print_log("Running database migration (as required)...")
+        print_log("Running database migration (as required)...", logger=LOGGER)
         attempts = max(attempts, 2)     # enforce at least 2 attempts, 1 for db creation and one for actual migration
         for i in range(1, attempts + 1):
             try:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", category=sa_exc.SAWarning)
-                    run_database_migration(db_session=db_session, settings=settings)
+                run_database_migration(db_session=db_session, settings=settings)
             except ImportError as exc:
-                print_log("Database migration produced [{!r}] (ignored).".format(exc), level=logging.WARNING)
+                print_log("Database migration produced [{!r}] (ignored).".format(exc),
+                          logger=LOGGER, level=logging.WARNING)
             except Exception as exc:
                 if i <= attempts:
-                    print_log("Database migration failed [{!r}]. Retrying... ({}/{})".format(exc, i, attempts))
+                    print_log("Database migration failed [{!r}]. Retrying... ({}/{})".format(exc, i, attempts),
+                              logger=LOGGER, level=logging.WARNING)
                     time.sleep(2)
                     continue
-                raise_log("Database migration failed [{!r}]".format(exc), exception=RuntimeError)
+                raise_log("Database migration failed [{!r}]".format(exc), exception=RuntimeError, logger=LOGGER)
 
             db_ready = is_database_ready(db_session)
             if not db_ready:
-                print_log("Database not ready. Retrying... ({}/{})".format(i, attempts))
+                print_log("Database not ready. Retrying... ({}/{})".format(i, attempts),
+                          logger=LOGGER, level=logging.WARNING)
                 time.sleep(2)
                 continue
             break
     else:
+        print_log("Database migration skipped as per 'MAGPIE_DB_MIGRATION' requirement...", logger=LOGGER)
         db_ready = is_database_ready(db_session)
     if not db_ready:
-        time.sleep(2)
-        raise_log("Database not ready", exception=RuntimeError)
+        raise_log("Database not ready", exception=RuntimeError, logger=LOGGER)
 
 
 def set_sqlalchemy_log_level(magpie_log_level):

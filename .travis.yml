@@ -62,6 +62,7 @@ before_script:
   - export CONDA_ENV=magpie-${TRAVIS_PYTHON_VERSION}
   - export CONDA_PREFIX=${HOME}/conda/envs/magpie-${TRAVIS_PYTHON_VERSION}
   - export PATH=${CONDA_HOME}/bin:${PATH}
+  - source ./env/magpie.env
   - hash -r
   - env
 stages:
