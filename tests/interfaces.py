@@ -221,7 +221,7 @@ class UserTestCase(BaseAdminTestCase):
     """
     Extension of :class:`BaseTestCase` to handle another user session than the administrator-level user.
 
-    Employs the admin-base to setup test-data, but afteward allows switching to the non-admin user to test operations.
+    Employs the admin-base to setup test-data, but afterward allows switching to the non-admin user to test operations.
     """
 
     @classmethod
@@ -2002,7 +2002,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         prior_services = body["services"][self.test_service_type]
         test_items = self.setup_GetUserServices()
 
-        path = "/users/{}/services?inherited=true".format(self.usr)
+        path = "/users/{}/services?inherited=true".format(self.test_user_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("services", body)
