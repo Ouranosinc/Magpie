@@ -398,7 +398,8 @@ table.simple-list th:not(:first-child) {
     text-align: center;
 }
 
-table.simple-list input[type="submit"] {
+table.simple-list input[type="button"],
+table.simple-list input[type="submit"]{
     margin: 0 0.5em;
 }
 

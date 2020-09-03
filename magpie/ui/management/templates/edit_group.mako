@@ -19,7 +19,7 @@
             % endif
         </div>
     %endfor
-    % if not value.get('matches_remote', True):
+    % if not value.get("matches_remote", True):
         <div class="tree-button">
             <input type="submit" class="button-warning" value="Clean" name="clean_resource">
         </div>
@@ -56,7 +56,13 @@
             <span class="panel-title">Group: </span>
             <span class="panel-value">[${group_name}]</span>
             <span class="panel-heading-button">
-                <input type="submit" value="Delete" name="delete" class="button delete">
+                <input value="Delete" name="delete"
+                    %if group_name in MAGPIE_FIXED_GROUP_EDITS:
+                        class="button disabled" type="button" disabled
+                    %else:
+                        class="button delete" type="submit"
+                    %endif
+                >
             </span>
         </form>
     </div>

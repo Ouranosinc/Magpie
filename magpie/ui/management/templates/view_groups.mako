@@ -30,10 +30,16 @@
 <tr class="list-row-odd">
 %endif
     <td><input type="hidden" value=${group} name="group_name">${group}</td>
-    <td>${group_names[group]['members']}</td>
+    <td>${group_names[group]["members"]}</td>
     <td style="white-space: nowrap">
         <input type="submit" value="Edit" name="edit" class="button theme">
-        <input type="submit" value="Delete" name="delete" class="button delete">
+        <input value="Delete" name="delete"
+            %if group in MAGPIE_FIXED_GROUP_EDITS:
+                class="button disabled" type="button" disabled
+            %else:
+                class="button delete" type="submit"
+            %endif
+        >
     </td>
 </tr>
 </form>
