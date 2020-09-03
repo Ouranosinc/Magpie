@@ -20,7 +20,7 @@
             <td>
                 <div class="alert-form-error"
                     %if not (too_long_user_name or invalid_user_name or conflict_user_name):
-                        hidden
+                        style="visibility: hidden"
                     %endif
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
@@ -47,7 +47,7 @@
             <td>
                 <div class="alert-form-error"
                     %if not (invalid_user_email or conflict_user_email):
-                        hidden
+                        style="visibility: hidden"
                     %endif
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
@@ -73,7 +73,7 @@
             <td>
                 <div class="alert-form-error"
                     %if not invalid_password:
-                        hidden
+                        style="visibility: hidden"
                     %endif
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
@@ -97,7 +97,7 @@
             <td>
                 <div class="alert-form-error"
                     %if not (mismatch_password or invalid_password):
-                        hidden
+                        style="visibility: hidden"
                     %endif
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"

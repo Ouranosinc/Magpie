@@ -23,7 +23,7 @@ from tests import runner, utils
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Optional, Set
+    from typing import Dict, List, Optional, Set, Union
     from magpie.typedefs import CookiesType, HeadersType, JSON, Str
     from webtest import TestApp
 
@@ -736,7 +736,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Ba
             utils.check_val_is_in(self.test_service_name, body["services"][self.test_service_type])
             utils.check_val_equal(len(body["services"][self.test_service_type]), 1,
                                   msg="Only unique specific service with immediate user permission should be listed.")
-            service = body["services"][self.test_service_type][self.test_service_name]
+            service = body["services"][self.test_service_type][self.test_service_name]  # type: JSON
             utils.check_all_equal(service["permission_names"], [usr_svc_perm],
                                   msg="Only single immediate permission applied on service for user should be listed.")
             utils.check_val_not_in("resources", service)
@@ -791,15 +791,15 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Ba
             utils.check_val_equal(len(body["resources"]), len(svc_types))   # all service types always returned
             svc_of_type = body["resources"][self.test_service_type]         # service-level resources
             utils.check_val_is_in(self.test_service_name, svc_of_type)
-            service = svc_of_type[self.test_service_name]
+            service = svc_of_type[self.test_service_name]  # type: JSON
             utils.check_val_equal(len(service["permission_names"]), 0)
             utils.check_val_is_in(str(child_res_id), service["resources"])  # first level resources
-            child_res = service["resources"][str(child_res_id)]
+            child_res = service["resources"][str(child_res_id)]  # type: JSON
             utils.check_val_equal(len(child_res["permission_names"]), 1)
             utils.check_all_equal(child_res["permission_names"], [child_perm],
                                   msg="Only single direct user permission applied on resource should be listed.")
             utils.check_val_is_in(str(leaf_res_id), child_res["children"])  # sub-level resources
-            leaf_res = child_res["children"][str(leaf_res_id)]
+            leaf_res = child_res["children"][str(leaf_res_id)]  # type: JSON
             utils.check_all_equal(leaf_res["permission_names"], [leaf_perm],
                                   msg="Only single direct user permission applied on resource should be listed.")
 
@@ -926,7 +926,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Ba
             svc_types = utils.get_service_types_for_version(self.version)
             utils.check_all_equal(list(body["resources"]), svc_types, any_order=True)
             for svc_type in svc_types:
-                services = body["resources"][svc_type]
+                services = body["resources"][svc_type]  # type: JSON
                 if svc_type == self.test_service_type:
                     expected_services = [svc0_name, svc1_name]
                     actual_services = set(services)
@@ -934,23 +934,23 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Ba
                         actual_services = actual_services - ignore_public_svc  # ignore inherited public group services
                         expected_services.append(svc2_name)  # but test-group-only resource permission make this listed
                     utils.check_all_equal(actual_services, expected_services, any_order=True)
-                    svc0 = svc1 = services[svc0_name]
+                    svc0 = services[svc0_name]
                     utils.check_all_equal(svc0["permission_names"], [svc0_perm])
                     utils.check_val_equal(svc0["resources"], {})
-                    svc1 = services[svc1_name]
+                    svc1 = services[svc1_name]  # type: JSON
                     utils.check_all_equal(svc1["permission_names"], [])
                     utils.check_val_is_in(str(res1_id), svc1["resources"])
-                    res1 = svc1["resources"][str(res1_id)]
+                    res1 = svc1["resources"][str(res1_id)]  # type: JSON
                     utils.check_all_equal(res1["permission_names"], [res1_perm])
                     if not query:
                         utils.check_val_not_in(str(res2_id), res1["children"])  # group-permission, not listed here
                     else:
                         utils.check_val_is_in(str(res2_id), res1["children"])  # but is listed when inherited here
-                        res2 = res1["children"][str(res2_id)]
+                        res2 = res1["children"][str(res2_id)]  # type: JSON
                         utils.check_all_equal(res2["permission_names"], [res2_perm])
-                        svc2 = services[svc2_name]
+                        svc2 = services[svc2_name]  # type: JSON
                         utils.check_all_equal(svc2["permission_names"], [])  # no permission immediately on service
-                        res3 = svc2["resources"][str(res3_id)]
+                        res3 = svc2["resources"][str(res3_id)]  # type: JSON
                         utils.check_all_equal(res3["permission_names"], [res3_perm])
                 # note:
                 #   if not testing the test-service-type, only evaluate expected empty resources when not inheriting
@@ -1595,18 +1595,18 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         service_types = utils.get_service_types_for_version(self.version)
         utils.check_all_equal(list(body["resources"]), service_types, any_order=True)
         for svc_type in body["resources"]:
-            for svc in body["resources"][svc_type]:
+            for svc in body["resources"][svc_type]:  # type: Str
                 svc_dict = body["resources"][svc_type][svc]  # type: JSON
                 # cannot blindly check permission values for all services since user could receive pre-existing
                 # services inherited permissions from pre-defined anonymous group
                 utils.TestSetup.check_ServiceFormat(self, svc_dict, has_private_url=False, skip_permissions=True)
 
         # validate permissions inherited on new test service/resources (ie: guaranteed no anonymous permissions)
-        svc = body["resources"][self.test_service_type][self.test_service_name]
+        svc = body["resources"][self.test_service_type][self.test_service_name]  # type: JSON
         utils.check_val_equal(svc["permission_names"], [svc_perm])  # direct user permission
-        res1 = svc["resources"][str(res1_id)]
+        res1 = svc["resources"][str(res1_id)]  # type: JSON
         utils.check_all_equal(res1["permission_names"], [res_perm1, res_perm2], any_order=True)  # user+group inherited
-        res2 = res1["children"][str(res2_id)]
+        res2 = res1["children"][str(res2_id)]  # type: JSON
         utils.check_val_equal(res2["permission_names"], [res_perm2])  # only group inherited permission
 
     @runner.MAGPIE_TEST_USERS
@@ -1643,15 +1643,16 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         svc_types = utils.get_service_types_for_version(self.version)
         utils.check_all_equal(list(body["resources"]), svc_types, any_order=True, msg="All service types listed.")
         for svc_type in svc_types:
-            services = body["resources"][svc_type]
+            services = body["resources"][svc_type]  # type: JSON
             if svc_type != self.test_service_type:
                 utils.check_val_equal(services, {})
             else:
                 utils.check_val_equal(list(services), [self.test_service_name], msg="other service must not be listed")
-                svc = services[self.test_service_name]
+                svc = services[self.test_service_name]  # type: JSON
                 utils.check_val_equal(svc["permission_names"], [], msg="No permission directly on service.")
                 utils.check_val_is_in(str(res_id), svc["resources"])
-                utils.check_val_equal(svc["resources"][str(res_id)]["permission_names"], [perm])
+                res = svc["resources"][str(res_id)]  # type: JSON
+                utils.check_val_equal(res["permission_names"], [perm])
 
     @runner.MAGPIE_TEST_USERS
     def test_DeleteUserResourcePermission(self):
@@ -1697,6 +1698,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         utils.check_val_not_in(self.test_service_perm, body["permission_names"])
 
     def setup_GetUserServices(self):
+        # type: () -> Dict[Str, Union[Str, List[Str], JSON]]
         """
         Setup element structure for tests:
 
@@ -1848,8 +1850,10 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         # check values - only services with direct user permissions should be listed
         expected_services = [test_items["svc1_name"], test_items["svc3_name"]]
         utils.check_all_equal(list(services), expected_services, any_order=True)
-        utils.check_all_equal(services[test_items["svc1_name"]]["permission_names"], test_items["svc1_usr_perms"])
-        utils.check_all_equal(services[test_items["svc3_name"]]["permission_names"], test_items["svc3_usr_perms"])
+        svc1 = services[test_items["svc1_name"]]  # type: JSON
+        svc3 = services[test_items["svc3_name"]]  # type: JSON
+        utils.check_all_equal(svc1["permission_names"], test_items["svc1_usr_perms"])
+        utils.check_all_equal(svc3["permission_names"], test_items["svc3_usr_perms"])
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServices_Flatten(self):
@@ -1942,7 +1946,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("services", body)
         utils.check_val_type(body["services"], dict)
-        utils.check_val_is_in(self.test_service_type, body["services"])
+        utils.check_val_is_in(self.test_service_type, body["services"],
+                              msg=utils.json_msg(body, "service type should be visible for service with permissions"))
         services = body["services"][self.test_service_type]
         # services that have children resource permissions are not listed (no cascade flag)
         utils.check_val_not_in(test_items["svc4_name"], services)
@@ -1991,7 +1996,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("services", body)
         utils.check_val_type(body["services"], dict)
-        utils.check_val_is_in(self.test_service_type, body["services"])
+        utils.check_val_is_in(self.test_service_type, body["services"],
+                              msg=utils.json_msg(body, "service type should be visible for service with permissions"))
         services = body["services"][self.test_service_type]
         expected_service_permissions = {
             # permission directly set on service, so services and their permissions should be listed
@@ -2675,7 +2681,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         # as of version 0.7.0, visible services depend on the connected user permissions,
         # so all services types not necessarily returned in the response
         if LooseVersion(self.version) < LooseVersion("0.7.0"):
-            utils.check_all_equal(services.keys(), service_types, any_order=True)
+            utils.check_all_equal(list(services), service_types, any_order=True)
         for svc_type in services:
             utils.check_val_is_in(svc_type, service_types)  # one of valid service types
             for svc in services[svc_type]:
@@ -3298,6 +3304,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         utils.check_val_is_in("resource", body)
 
         def check_resource_node(res_body, res_id, parent_id, root_id, perms, children_id):
+            # type: (JSON, Optional[int], Optional[int], Optional[int], List[Permission], Optional[List[int]]) -> None
             utils.check_val_type(res_body, dict)
             utils.check_val_is_in("resource_name", res_body)
             utils.check_val_type(res_body["resource_name"], six.string_types)

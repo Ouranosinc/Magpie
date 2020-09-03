@@ -13,14 +13,15 @@
     <table class="fields-table">
         <tr>
             <td>Group name:</td>
-            <td><label>
-                <input type="text" name="group_name" value="${form_group_name}" />
+            <td>
+                <label>
+                    <input type="text" name="group_name" value="${form_group_name}" />
                 </label>
             </td>
             <td>
                 <div class="alert-form-error"
                     %if not (invalid_group_name or conflict_group_name):
-                        hidden
+                        style="visibility: hidden"
                     %endif
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
@@ -33,6 +34,31 @@
                             %endif
                     </div>
                 </div>
+            </td>
+        </tr>
+        <tr>
+            <td>Description:</td>
+            <td>
+                <label>
+                    <input type="text" name="description" value="${form_description}" />
+                </label>
+            </td>
+            <td>
+                (optional)
+            </td>
+        </tr>
+        <tr>
+            <td>Discoverable:</td>
+            <td>
+                <label>
+                    <input type="checkbox" name="discoverable" id="input_discoverable"
+                    %if form_discoverable:
+                        checked
+                    %endif
+                    >
+                </label>
+            </td>
+            <td>
             </td>
         </tr>
         <tr>

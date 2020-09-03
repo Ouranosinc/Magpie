@@ -425,16 +425,25 @@ class ManagementViews(BaseViews):
 
     @view_config(route_name="add_group", renderer="templates/add_group.mako")
     def add_group(self):
-        return_data = {"conflict_group_name": False, "invalid_group_name": False, "form_group_name": ""}
+        return_data = {"conflict_group_name": False, "invalid_group_name": False,
+                       "form_group_name": "", "form_discoverable": False, "form_description": ""}
 
         if "create" in self.request.POST:
             group_name = self.request.POST.get("group_name")
+            description = self.request.POST.get("description")
+            discoverable = asbool(self.request.POST.get("discoverable"))
             return_data["form_group_name"] = group_name
-            if group_name == "":
+            return_data["form_description"] = description
+            return_data["form_discoverable"] = discoverable
+            if not group_name:
                 return_data["invalid_group_name"] = True
                 return self.add_template_data(return_data)
 
-            data = {"group_name": group_name}
+            data = {
+                "group_name": group_name,
+                "description": return_data["form_description"],
+                "discoverable": return_data["form_discoverable"],
+            }
             resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
             if resp.status_code == HTTPConflict.code:
                 return_data["conflict_group_name"] = True

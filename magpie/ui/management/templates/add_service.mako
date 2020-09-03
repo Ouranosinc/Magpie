@@ -23,11 +23,14 @@
 <form class="new-item-form" id="add_service_form" action="${request.path}" method="post">
     <table class="fields-table">
         <tr>
-            <td>Service name (unique):</td>
+            <td>Service name:</td>
             <td>
                 <div class="input-container"><label>
                 <input type="text" value="" name="service_name" class="equal-width" placeholder="service">
                 </label></div>
+            </td>
+            <td>
+                (unique)
             </td>
         </tr>
         <tr>
@@ -37,6 +40,8 @@
                     <input type="url" value="" name="service_url" class="equal-width"
                            placeholder="http://localhost:8093">
                 </label></div>
+            </td>
+            <td>
             </td>
         </tr>
         <tr><td>Service type:</td>
@@ -51,6 +56,8 @@
                  </select>
                 </label>
                 </div>
+            </td>
+            <td>
             </td>
         </tr>
         <tr id="service_push_phoenix_section">

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import requests
+import requests.exceptions
 import six
 from pyramid.httpexceptions import HTTPException
 from pyramid.settings import asbool
@@ -30,7 +31,7 @@ from magpie.utils import (
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     import tests.interfaces as ti
-    from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union
+    from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
     from magpie.services import ServiceInterface
     from magpie.typedefs import (
         AnyCookiesType, AnyHeadersType, AnyResponseType, AnyValue, CookiesType, HeadersType, JSON, SettingsType, Str
@@ -412,7 +413,7 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
         try:
             return requests.request(method, url, params=params, headers=headers, cookies=cookies,
                                     timeout=timeout, allow_redirects=allow_redirects, **kwargs)
-        except requests.ReadTimeout:
+        except requests.exceptions.ReadTimeout:
             if retries <= 0:
                 raise
             retries -= 1
@@ -552,7 +553,7 @@ def all_equal(iter_val, iter_ref, any_order=False):
 
 
 def check_all_equal(iter_val, iter_ref, msg=None, any_order=False):
-    # type: (Sequence[Any], Union[Sequence[Any], NullType], Optional[Str], bool) -> None
+    # type: (Collection[Any], Union[Collection[Any], NullType], Optional[Str], bool) -> None
     """
     :param iter_val: tested values.
     :param iter_ref: reference values.
@@ -592,7 +593,7 @@ def check_val_not_in(val, ref, msg=None):
 
 
 def check_val_type(val, ref, msg=None):
-    # type: (Any, Union[Any, NullType], Optional[Str]) -> None
+    # type: (Any, Union[Type[Any], NullType], Optional[Str]) -> None
     """:raises AssertionError: if :paramref:`val` is not an instanced of :paramref:`ref`."""
     assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre="Type Fail", msg=msg)
 

@@ -194,7 +194,7 @@
                 <span class="panel-entry">Last synchronization with remote services: </span>
                 %if sync_implemented:
                     <span class="panel-value">${last_sync} </span>
-                    <input type="submit" value="Sync now" name="force_sync" class="button theme">
+                    <input type="submit" value="Sync now" name="force_sync" class="button-warning">
                 %else:
                     <span class="panel-value">Not implemented for this service type.</span>
                 %endif
