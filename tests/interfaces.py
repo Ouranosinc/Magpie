@@ -85,7 +85,8 @@ class BaseTestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
         ``extra_``, in case some test failed to do so (e.g.: because it raised midway or was simply forgotten).
         """
         utils.check_or_try_logout_user(cls)
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
+        admin_usr, admin_pwd = get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ADMIN_PASSWORD")
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=admin_usr, password=admin_pwd)
         # remove test service/resource if overridden by test-case class implementers
         if cls.test_resource_name:
             utils.TestSetup.delete_TestServiceResource(cls)
@@ -114,6 +115,38 @@ class BaseTestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
             return "PATCH"
         return "PUT"
 
+    @classmethod
+    def setup_admin(cls):
+        """
+        Recreates the admin user employed for test data setup using the default Magpie administrator created at startup.
+
+        Admin user is generated using (:attr:`BaseTestCase.usr`, :attr:`BaseTestCase.pwd`, :attr:`BaseTestCase.grp`).
+        Skip the operation if those details correspond to the default Magpie administrator.
+        """
+        admin_grp = get_constant("MAGPIE_ADMIN_GROUP")
+        admin_usr = get_constant("MAGPIE_ADMIN_USER")
+        admin_pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
+        if not cls.usr:
+            cls.usr = "unittest-admin"
+        if not cls.pwd:
+            cls.pwd = pseudo_random_string(20)
+        if not cls.grp:
+            cls.grp = admin_grp
+        if cls.usr != admin_usr:
+            utils.check_or_try_logout_user(cls)
+            admin_headers, admin_cookies = utils.check_or_try_login_user(cls, username=admin_usr, password=admin_pwd,
+                                                                         use_ui_form_submit=True)
+            admin_headers.update(cls.json_headers)
+            utils.TestSetup.delete_TestUser(cls, override_user_name=cls.usr,
+                                            override_headers=admin_headers, override_cookies=admin_cookies)
+            utils.TestSetup.create_TestUser(cls, override_user_name=cls.usr, override_password=cls.pwd,
+                                            override_group_name=admin_grp,
+                                            override_headers=admin_headers, override_cookies=admin_cookies)
+            if cls.grp != admin_grp:
+                utils.TestSetup.assign_TestUserGroup(cls, override_group_name=cls.grp, override_user_name=cls.usr,
+                                                     override_headers=admin_headers, override_cookies=admin_cookies)
+            utils.check_or_try_logout_user(cls)
+
     def setup(self):
         pass
 
@@ -121,6 +154,7 @@ class BaseTestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
         pass
 
 
+@runner.MAGPIE_TEST_AUTH_PUBLIC
 class NoAuthTestCase(BaseTestCase):
     @classmethod
     def setUpClass(cls):
@@ -138,7 +172,7 @@ class NoAuthTestCase(BaseTestCase):
         super(NoAuthTestCase, self).tearDown()
 
 
-class AdminTestCase(BaseTestCase):
+class BaseAdminTestCase(BaseTestCase):
     """
     Extension of :class:`BaseTestCase` to handle test preparation/cleanup by administrator-level user.
     """
@@ -148,14 +182,14 @@ class AdminTestCase(BaseTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        super(AdminTestCase, cls).tearDownClass()
+        super(BaseAdminTestCase, cls).tearDownClass()
 
     @classmethod
     def check_requirements(cls):
         utils.check_or_try_logout_user(cls)  # in case user changed during another test
-        headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
-        assert headers and cookies, cls.require             # nosec
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
         assert cls.headers and cls.cookies, cls.require     # nosec
+        cls.headers.update(cls.json_headers)
 
     def setUp(self):
         self.check_requirements()
@@ -172,9 +206,22 @@ class AdminTestCase(BaseTestCase):
         utils.TestSetup.delete_TestGroup(self)
 
 
-class UserTestCase(AdminTestCase):
+@runner.MAGPIE_TEST_AUTH_ADMIN
+class AdminTestCase(BaseAdminTestCase):
+    """
+    Extension of :class:`BaseTestCase` for specific requirements to run administrator-level user operations.
+    """
+    @classmethod
+    def setUpClass(cls):
+        raise NotImplementedError
+
+
+@runner.MAGPIE_TEST_AUTH_USERS
+class UserTestCase(BaseAdminTestCase):
     """
     Extension of :class:`BaseTestCase` to handle another user session than the administrator-level user.
+
+    Employs the admin-base to setup test-data, but afteward allows switching to the non-admin user to test operations.
     """
 
     @classmethod
@@ -355,16 +402,16 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuthTestCase, Bas
         Not logged-in user cannot view group although group is discoverable.
         """
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
-        admin_headers, admin_cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.check_or_try_logout_user(self)
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        self.headers.update(self.json_headers)
 
         # setup some actual discoverable group to ensure the error is not caused by some misinterpreted response
         test_group = "unittest-no-auth_test-group"
         self.extra_group_names.add(test_group)
         group_data = {"group_name": test_group, "discoverable": True}
-        utils.TestSetup.delete_TestGroup(self, override_group_name=test_group,
-                                         override_headers=admin_headers, override_cookies=admin_cookies)
-        utils.TestSetup.create_TestGroup(self, override_data=group_data,
-                                         override_headers=admin_headers, override_cookies=admin_cookies)
+        utils.TestSetup.delete_TestGroup(self, override_group_name=test_group)
+        utils.TestSetup.create_TestGroup(self, override_data=group_data)
         utils.check_or_try_logout_user(self)
 
         path = "/register/groups/{}".format(test_group)
@@ -390,6 +437,15 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Ba
     Interface class for unittests of Magpie API. Test any operation that require at least logged user AuthN/AuthZ.
 
     Derived classes must implement :meth:`setUpClass` accordingly to generate the Magpie test application.
+
+    .. warning::
+        After base setup completes, the remembered cookies are admin-level to allow setup of more specific test items
+        per test case. It is necessary to call :meth:`login_test_user` after all setup data is completed in order to
+        actually evaluate non-admin-level operations.
+
+    .. seealso::
+        - :meth:`UserTestCase.setUp`
+        - :meth:`UserTestCase.login_test_user`
     """
 
     @classmethod
@@ -876,7 +932,12 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Ba
             Verify that proper resources are returned in both only direct user and group inherited permissions cases.
         """
         utils.warn_version(self, "filter resource services with user/group permissions", "2.0.0", skip=True)
+        svc_name_template = "{}_other-svc{{}}-resources-only-perms".format(self.test_service_name)
 
+        # clean up edge case where previous execution failed, our test services could still exist
+        # in this situation, they would be incorrectly detected as public services to be ignored!
+        for i in range(3):
+            utils.TestSetup.delete_TestService(self, override_service_name=svc_name_template.format(i))
         # get extra information
         path = "/groups/{}/resources".format(get_constant("MAGPIE_ANONYMOUS_GROUP"))
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
@@ -890,13 +951,13 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Ba
         #       res2    [group perm]
         #   svc2        <none>
         #     res3      [group perm]
-        svc0_name = "{}_other-svc0-resources-only-perms".format(self.test_service_name)
+        svc0_name = svc_name_template.format(0)
         utils.TestSetup.delete_TestService(self, override_service_name=svc0_name)
         body = utils.TestSetup.create_TestService(self, override_service_name=svc0_name)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         body = utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info)
         svc0_perm = body["permission_name"]
-        svc1_name = "{}_other-svc1-resources-only-perms".format(self.test_service_name)
+        svc1_name = svc_name_template.format(1)
         utils.TestSetup.delete_TestService(self, override_service_name=svc1_name)
         body = utils.TestSetup.create_TestServiceResource(self, override_service_name=svc1_name)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
@@ -908,7 +969,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Ba
         res2_id = info["resource_id"]
         body = utils.TestSetup.create_TestGroupResourcePermission(self, resource_info=info)
         res2_perm = body["permission_name"]
-        svc2_name = "{}_other-svc2-resources-only-perms".format(self.test_service_name)
+        svc2_name = svc_name_template.format(2)
         utils.TestSetup.delete_TestService(self, override_service_name=svc2_name)
         body = utils.TestSetup.create_TestServiceResource(self, override_service_name=svc2_name)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
@@ -3063,7 +3124,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         body = utils.TestSetup.create_TestService(self)
         utils.TestSetup.get_ResourceInfo(self, override_body=body)
         other_svc_name = "service-random-other"
-        self.extra_service_names.add(other_svc_name)
+        utils.TestSetup.delete_TestService(self, override_service_name=other_svc_name)
         body = utils.TestSetup.create_TestServiceResource(self, override_service_name=other_svc_name)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
 
@@ -3514,6 +3575,15 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Bas
     Interface class for unittests of Magpie UI. Test any operation that require at least logged user AuthN/AuthZ.
 
     Derived classes must implement :meth:`setUpClass` accordingly to generate the Magpie test application.
+
+    .. warning::
+        After base setup completes, the remembered cookies are admin-level to allow setup of more specific test items
+        per test case. It is necessary to call :meth:`login_test_user` after all setup data is completed in order to
+        actually evaluate non-admin-level operations.
+
+    .. seealso::
+        - :meth:`UserTestCase.setUp`
+        - :meth:`UserTestCase.login_test_user`
     """
 
     def __init__(self, *args, **kwargs):
@@ -3527,9 +3597,9 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Bas
     @classmethod
     def check_requirements(cls):
         utils.check_or_try_logout_user(cls)  # in case user changed during another test
-        headers, cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
-        assert headers and cookies, cls.require             # nosec
-        assert cls.headers and cls.cookies, cls.require     # nosec
+        cls.require = "cannot run tests without logged admin user permissions to setup test data"
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
+        assert cls.headers and cls.cookies, cls.require  # nosec
 
     @runner.MAGPIE_TEST_LOGIN
     def test_FormLogin(self):

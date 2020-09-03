@@ -388,7 +388,7 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
             err_msg = "Unknown: {!s}".format(exc)
         finally:
             if err_code:
-                info = json_msg({"path": path, "method": method, "body": _body})
+                info = json_msg({"path": path, "method": method, "body": _body, "headers": kwargs["headers"]})
                 result = "Request raised unexpected error: {!s}\nError: {}\nRequest:\n{}"
                 raise AssertionError(result.format(err_code, err_msg, info))
 
@@ -1627,18 +1627,17 @@ class TestSetup(object):
         :raises AssertionError: if any request response does not match successful validation or removal from group.
         """
         app_or_url = get_app_or_url(test_case)
-        users = TestSetup.get_RegisteredUsersList(test_case,
-                                                  override_headers=override_headers, override_cookies=override_cookies)
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+        users = TestSetup.get_RegisteredUsersList(test_case, override_headers=headers, override_cookies=cookies)
         user_name = override_user_name if override_user_name is not null else test_case.test_user_name
         # delete as required, skip if non-existing
         if user_name in users:
             path = "/users/{usr}".format(usr=user_name)
-            resp = test_request(app_or_url, "DELETE", path,
-                                headers=override_headers if override_headers is not null else test_case.json_headers,
-                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
+            resp = test_request(app_or_url, "DELETE", path, headers=headers, cookies=cookies)
             check_response_basic_info(resp, 200, expected_method="DELETE")
         TestSetup.check_NonExistingTestUser(test_case, override_user_name=user_name,
-                                            override_headers=override_headers, override_cookies=override_cookies)
+                                            override_headers=headers, override_cookies=cookies)
 
     @staticmethod
     def get_UserInfo(test_case,                 # type: AnyMagpieTestCaseType

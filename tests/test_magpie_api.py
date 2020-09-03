@@ -42,6 +42,7 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+        cls.setup_admin()
 
 
 @runner.MAGPIE_TEST_API
@@ -65,7 +66,8 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd, use_ui_form_submit=True)
+        cls.setup_admin()
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         assert cls.headers and cls.cookies, cls.require  # nosec
 
@@ -97,8 +99,7 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
-        # TODO: fix UI views so that they can be "found" directly in the WebTest.TestApp
-        # NOTE: localhost magpie has to be running for following login call to work
+        cls.setup_admin()
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()
@@ -128,6 +129,7 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+        cls.setup_admin()
 
 
 @runner.MAGPIE_TEST_API
@@ -150,6 +152,7 @@ class TestCase_MagpieAPI_UsersAuth_Remote(ti.Interface_MagpieAPI_UsersAuth, unit
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
+        cls.setup_admin()
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         assert cls.headers and cls.cookies, cls.require  # nosec
@@ -181,6 +184,7 @@ class TestCase_MagpieAPI_AdminAuth_Remote(ti.Interface_MagpieAPI_AdminAuth, unit
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
         cls.version = utils.TestSetup.get_Version(cls)
+        cls.setup_admin()
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()

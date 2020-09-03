@@ -85,8 +85,11 @@ def run_batch_update_user_command(test_app, expected_users, create_command_xargs
 
     Because CLI utility employs requests that cannot be mocked if executed through sub-process, we call it directly.
     """
-    test_admin_usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
-    test_admin_pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+    test_admin_usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME", raise_not_set=False, raise_missing=False)
+    test_admin_pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD", raise_not_set=False, raise_missing=False)
+    if not test_admin_usr or not test_admin_pwd:
+        test_admin_usr = get_constant("MAGPIE_ADMIN_USER")
+        test_admin_pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
     test_url = "http://localhost"
 
     def mock_request(*args, **kwargs):
@@ -114,17 +117,17 @@ def run_batch_update_user_command(test_app, expected_users, create_command_xargs
                         "all users should have been processed and logged in output result file"
 
     # cleanup in case of previous failure
-    utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
+    _, test_admin_cookies = utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
     for user in expected_users:
         utils.TestSetup.delete_TestUser(test_app, override_user_name=user,  # noqa
-                                        override_headers={}, override_cookies=test_app.cookies)
+                                        override_headers={}, override_cookies=test_admin_cookies)
     utils.check_or_try_logout_user(test_app)
 
     # test user creation and validate that users were all created
     run_command("create", create_command_xargs)
     utils.check_or_try_logout_user(test_app)
-    utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
-    resp = utils.test_request(test_app, "GET", "/users")
+    _, test_admin_cookies = utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
+    resp = utils.test_request(test_app, "GET", "/users", cookies=test_admin_cookies)
     body = utils.check_response_basic_info(resp)
     for user in expected_users:
         utils.check_val_is_in(user, body["user_names"])
@@ -132,8 +135,8 @@ def run_batch_update_user_command(test_app, expected_users, create_command_xargs
     # test user deletion and validate users are all deleted
     run_command("delete", ["-d"] + delete_command_xargs)
     utils.check_or_try_logout_user(test_app)
-    utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
-    resp = utils.test_request(test_app, "GET", "/users")
+    _, test_admin_cookies = utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
+    resp = utils.test_request(test_app, "GET", "/users", cookies=test_admin_cookies)
     body = utils.check_response_basic_info(resp)
     for user in expected_users:
         utils.check_val_not_in(user, body["user_names"])

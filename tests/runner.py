@@ -41,6 +41,9 @@ MAGPIE_TEST_CLI = RunOptionDecorator("MAGPIE_TEST_CLI", "magpie CLI operations")
 MAGPIE_TEST_UI = RunOptionDecorator("MAGPIE_TEST_UI", "magpie UI operations")
 MAGPIE_TEST_UTILS = RunOptionDecorator("MAGPIE_TEST_UTILS", "magpie utility functions")
 MAGPIE_TEST_FUNCTIONAL = RunOptionDecorator("MAGPIE_TEST_FUNCTIONAL", "functional operations sequence")
+MAGPIE_TEST_AUTH_ADMIN = RunOptionDecorator("MAGPIE_TEST_AUTH_ADMIN", "operations that require admin-level access")
+MAGPIE_TEST_AUTH_USERS = RunOptionDecorator("MAGPIE_TEST_AUTH_ADMIN", "operations that require user-level access")
+MAGPIE_TEST_AUTH_PUBLIC = RunOptionDecorator("MAGPIE_TEST_AUTH_ADMIN", "operations that are publicly accessible")
 
 
 def test_suite():
