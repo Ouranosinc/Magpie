@@ -41,8 +41,9 @@ def convert_permission(permission):
 
     If the permission cannot be matched to one of the enum's value, ``None`` is returned instead.
     """
-    if permission in Permission:
-        return permission
+    perm = Permission.get(permission)
+    if perm is not None:
+        return perm
     return Permission.get(getattr(permission, "perm_name", None) or permission)
 
 
