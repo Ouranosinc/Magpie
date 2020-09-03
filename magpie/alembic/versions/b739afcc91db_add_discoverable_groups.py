@@ -17,7 +17,8 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("groups", sa.Column("discoverable", sa.Boolean(), server_default=False, nullable=False))
+    op.add_column("groups", sa.Column("discoverable", sa.Boolean, nullable=False,
+                                      server_default=sa.schema.DefaultClause("0")))
 
 
 def downgrade():

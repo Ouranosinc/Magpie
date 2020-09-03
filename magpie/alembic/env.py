@@ -18,8 +18,8 @@ config = context.config
 
 # verify if a connection is already provided
 config_connection = None
-if 'connection' in config.attributes and isinstance(config.attributes['connection'], Connection):
-    config_connection = context.config.attributes['connection']
+if "connection" in config.attributes and isinstance(config.attributes["connection"], Connection):
+    config_connection = context.config.attributes["connection"]
 
 # add your model's MetaData object here
 target_metadata = MetaData(naming_convention={
@@ -57,8 +57,10 @@ def run_migrations_online(connection=None):
 
     In this scenario we need to create an Engine and associate a connection with the context.
     """
-
-    url = get_db_url()
+    if not config_connection:
+        url = get_db_url()
+    else:
+        url = config_connection.engine.url
 
     def connect(c=None):
         if isinstance(c, Connection) and not c.closed:
@@ -68,9 +70,9 @@ def run_migrations_online(connection=None):
         return c.connect()
 
     if not database_exists(url):
-        db_name = get_constant('MAGPIE_POSTGRES_DB')
-        LOGGER.warning('Database [{}] not found, attempting creation...'.format(db_name))
-        connection = create_database(url, encoding='utf8', template='template0')
+        db_name = get_constant("MAGPIE_POSTGRES_DB")
+        LOGGER.warning("Database [{}] not found, attempting creation...".format(db_name))
+        connection = create_database(url, encoding="utf8", template="template0")
 
     # retry connection and run migration
     with connect(connection) as migrate_conn:
@@ -78,7 +80,7 @@ def run_migrations_online(connection=None):
             context.configure(
                 connection=migrate_conn,
                 target_metadata=target_metadata,
-                version_table='alembic_version',
+                version_table="alembic_version",
                 transaction_per_migration=True,
                 render_as_batch=True
             )

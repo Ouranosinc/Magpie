@@ -213,10 +213,14 @@ def run_database_migration_when_ready(settings, db_session=None):
 
             db_ready = is_database_ready(db_session)
             if not db_ready:
-                print_log("Database not ready. Retrying... ({}/{})".format(i, attempts),
-                          logger=LOGGER, level=logging.WARNING)
-                time.sleep(2)
-                continue
+                if i <= attempts:
+                    print_log("Database not ready. Retrying... ({}/{})".format(i, attempts),
+                              logger=LOGGER, level=logging.WARNING)
+                    time.sleep(2)
+                    continue
+                else:
+                    print_log("Database not ready. Maximum attempts reached ({})".format(attempts),
+                              logger=LOGGER, level=logging.WARNING)
             break
     else:
         print_log("Database migration skipped as per 'MAGPIE_DB_MIGRATION' requirement...", logger=LOGGER)
