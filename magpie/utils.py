@@ -477,7 +477,8 @@ class ExtendedEnumMeta(EnumMeta):
 
         Returns the entry directly if it is already a valid enum.
         """
-        if key_or_value in cls:                                                 # pylint: disable=E1135
+        # Python 3.8 disallow direct check of 'str' in 'enum'
+        if key_or_value in [m for m in cls]:                                    # pylint: disable=E1135
             return key_or_value
         for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101
             if key_or_value == m_key or key_or_value == m_val.value:            # pylint: disable=R1714
