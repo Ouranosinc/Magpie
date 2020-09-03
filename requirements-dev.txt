@@ -10,7 +10,8 @@ docformatter
 flake8
 isort
 mock
-pylint
+# FIXME: see https://github.com/PyCQA/astroid/issues/713
+pylint<2.5
 pylint-quotes
 pytest
 tox>=3.0
