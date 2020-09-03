@@ -134,7 +134,7 @@ clean-build:	## remove build artifacts
 .PHONY: clean-docs
 clean-docs:		## remove doc artifacts
 	@echo "Cleaning doc artifacts..."
-	@"$(MAKE)" -C "$(APP_ROOT)/docs" clean || true
+	@-"$(MAKE)" -C "$(APP_ROOT)/docs" clean || true
 	@-find "$(APP_ROOT)/docs/" -type f -name "$(APP_NAME)*.rst" -delete
 	@-rm -f "$(APP_ROOT)/docs/modules.rst"
 	@-rm -f "$(APP_ROOT)/docs/api.json"
@@ -328,7 +328,7 @@ docker-clean: 	## remove any leftover images from docker target operations
 	docker rmi $(docker images -f "reference=$(MAGPIE_DOCKER_REPO)" -q)
 	docker-compose $(DOCKER_TEST_COMPOSES) down
 
-## --- Statoc code check targets ---
+## --- Static code check targets ---
 
 .PHONY: mkdir-reports
 mkdir-reports:
