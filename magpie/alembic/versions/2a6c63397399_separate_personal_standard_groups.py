@@ -5,8 +5,6 @@ Revision ID: 2a6c63397399
 Revises: 9fd4589cc82c
 Create Date: 2018-05-23 17:17:51.205891
 """
-import os
-import sys
 
 import sqlalchemy as sa
 from alembic import op

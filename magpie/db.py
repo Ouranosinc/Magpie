@@ -192,11 +192,14 @@ def run_database_migration_when_ready(settings, db_session=None):
     db_ready = False
     if asbool(get_constant("MAGPIE_DB_MIGRATION", settings, "magpie.db_migration",
                            default_value=True, raise_missing=False, raise_not_set=False, print_missing=True)):
-        attempts = int(get_constant("MAGPIE_DB_MIGRATION_ATTEMPTS", settings, "magpie.db_migration_attempts",
-                                    default_value=5, raise_missing=False, raise_not_set=False, print_missing=True))
+        conf_attempts = int(get_constant("MAGPIE_DB_MIGRATION_ATTEMPTS", settings, "magpie.db_migration_attempts",
+                                         default_value=5, raise_missing=False, raise_not_set=False, print_missing=True))
 
         print_log("Running database migration (as required)...", logger=LOGGER)
-        attempts = max(attempts, 2)     # enforce at least 2 attempts, 1 for db creation and one for actual migration
+        attempts = max(conf_attempts, 1)
+        if attempts != conf_attempts:
+            print_log("Database migration attempts updated to {}".format(attempts),
+                      logger=LOGGER, level=logging.WARNING)
         for i in range(1, attempts + 1):
             try:
                 run_database_migration(db_session=db_session, settings=settings)
@@ -218,9 +221,8 @@ def run_database_migration_when_ready(settings, db_session=None):
                               logger=LOGGER, level=logging.WARNING)
                     time.sleep(2)
                     continue
-                else:
-                    print_log("Database not ready. Maximum attempts reached ({})".format(attempts),
-                              logger=LOGGER, level=logging.WARNING)
+                print_log("Database not ready. Maximum attempts reached ({})".format(attempts),
+                          logger=LOGGER, level=logging.WARNING)
             break
     else:
         print_log("Database migration skipped as per 'MAGPIE_DB_MIGRATION' requirement...", logger=LOGGER)
