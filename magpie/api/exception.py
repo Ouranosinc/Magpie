@@ -49,7 +49,7 @@ INDEX_REGEX = r"^[0-9]+$"
 
 
 def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
-                 # --- verification values ---
+                 # --- verification values ---      # noqa: E126
                  param,                             # type: Any
                  param_compare=None,                # type: Optional[Union[Any, List[Any]]]
                  # --- output options on failure ---
@@ -73,7 +73,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                  is_equal=False,                    # type: bool
                  is_type=False,                     # type: bool
                  matches=False,                     # type: bool
-                ):                                  # type: (...) -> None
+                 ):                                 # type: (...) -> None   # noqa: E123,E126
     # pylint: disable=R0912,R0914
     """
     Evaluate various parameter combinations given the requested verification flags. Given a failing verification,

@@ -22,32 +22,53 @@ APP_NAME    := magpie
 APP_VERSION ?= 2.0.0
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
+# guess OS (Linux, Darwin,...)
+OS_NAME := $(shell uname -s 2>/dev/null || echo "unknown")
+CPU_ARCH := $(shell uname -m 2>/dev/null || uname -p 2>/dev/null || echo "unknown")
+
 # conda
-CONDA_ENV      ?= $(APP_NAME)
+CONDA_ENV_NAME ?= $(APP_NAME)
 CONDA_HOME     ?= $(HOME)/.conda
 CONDA_ENVS_DIR ?= $(CONDA_HOME)/envs
-CONDA_ENV_PATH ?= $(CONDA_ENVS_DIR)/$(CONDA_ENV)
-CONDA_BIN      := $(CONDA_HOME)/bin/conda
+CONDA_ENV_PATH := $(CONDA_ENVS_DIR)/$(CONDA_ENV_NAME)
+# allow pre-installed conda in Windows bash-like shell
+ifeq ($(findstring MINGW,$(OS_NAME)),MINGW)
+	CONDA_BIN_DIR ?= $(CONDA_HOME)/Scripts
+else
+	CONDA_BIN_DIR ?= $(CONDA_HOME)/bin
+endif
+CONDA_BIN := $(CONDA_BIN_DIR)/conda
 CONDA_ENV_REAL_TARGET_PATH := $(realpath $(CONDA_ENV_PATH))
 CONDA_ENV_REAL_ACTIVE_PATH := $(realpath ${CONDA_PREFIX})
-ifeq ("$(CONDA_ENV_REAL_ACTIVE_PATH)","$(CONDA_ENV_REAL_TARGET_PATH)")
-	CONDA_CMD :=
-	CONDA_ENV_MODE := [using active environment]
-else
-	CONDA_CMD := source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)";
-	CONDA_ENV_MODE := [will activate environment]
-endif
-PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
 
+# environment already active - use it directly
+ifneq ("$(CONDA_ENV_REAL_ACTIVE_PATH)", "")
+	CONDA_ENV_MODE := [using active environment]
+	CONDA_ENV_NAME := $(notdir $(CONDA_ENV_REAL_ACTIVE_PATH))
+	CONDA_CMD :=
+endif
+# environment not active but it exists - activate and use it
+ifneq ($(CONDA_ENV_REAL_TARGET_PATH), "")
+	CONDA_ENV_NAME := $(notdir $(CONDA_ENV_REAL_TARGET_PATH))
+endif
+# environment not active and not found - create, activate and use it
+ifeq ("$(CONDA_ENV_NAME)", "")
+	CONDA_ENV_NAME := $(APP_NAME)
+endif
+# update paths for environment activation
+ifeq ("$(CONDA_ENV_REAL_ACTIVE_PATH)", "")
+	CONDA_ENV_MODE := [will activate environment]
+	CONDA_CMD := source "$(CONDA_BIN_DIR)/activate" "$(CONDA_ENV_NAME)";
+endif
 DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
 REPORTS_DIR ?= $(APP_ROOT)/reports
+PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
 
 # choose conda installer depending on your OS
 CONDA_URL = https://repo.continuum.io/miniconda
-OS_NAME := $(shell uname -s || echo "unknown")
-ifeq ("$(OS_NAME)","Linux")
+ifeq ("$(OS_NAME)", "Linux")
 FN := Miniconda3-latest-Linux-x86_64.sh
-else ifeq ("$(OS_NAME)","Darwin")
+else ifeq ("$(OS_NAME)", "Darwin")
 FN := Miniconda3-latest-MacOSX-x86_64.sh
 else
 FN := unknown
@@ -99,18 +120,22 @@ version:	## display current version
 .PHONY: info
 info:		## display make information
 	@echo "Informations about your make execution:"
-	@echo "  OS_NAME             $(OS_NAME)"
-	@echo "  CPU_ARCH            $(CPU_ARCH)"
-	@echo "  Conda Home          $(CONDA_HOME)"
-	@echo "  Conda Environment   $(CONDA_ENV)"
-	@echo "  Conda Prefix        $(CONDA_ENV_PATH)"
-	@echo "  Conda Binary        $(CONDA_BIN)"
-	@echo "  Conda Actication    $(CONDA_ENV_MODE)"
-	@echo "  Conda Command       $(CONDA_CMD)"
-	@echo "  APP_NAME            $(APP_NAME)"
-	@echo "  APP_ROOT            $(APP_ROOT)"
-	@echo "  DOWNLOAD_CACHE      $(DOWNLOAD_CACHE)"
-	@echo "  DOCKER_REPO         $(DOCKER_REPO)"
+	@echo "  OS Name                $(OS_NAME)"
+	@echo "  CPU Architecture       $(CPU_ARCH)"
+	@echo "  Conda Home             $(CONDA_HOME)"
+	@echo "  Conda Prefix           $(CONDA_ENV_PATH)"
+	@echo "  Conda Env Name         $(CONDA_ENV_NAME)"
+	@echo "  Conda Env Path         $(CONDA_ENV_REAL_ACTIVE_PATH)"
+	@echo "  Conda Binary           $(CONDA_BIN)"
+	@echo "  Conda Actication       $(CONDA_ENV_MODE)"
+	@echo "  Conda Command          $(CONDA_CMD)"
+	@echo "  Application Root       $(APP_ROOT)"
+	@echo "  Application Name       $(APP_NAME)"
+	@echo "  Application Version    $(APP_VERSION)"
+	@echo "  Donwload Cache         $(DOWNLOAD_CACHE)"
+	@echo "  Test Reports           $(REPORTS_DIR)"
+	@echo "  Docker Tag (magpie)    $(MAGPIE_DOCKER_TAG)"
+	@echo "  Docker Tag (twitcher)  $(TWITCHER_DOCKER_TAG)"
 
 ## --- Cleanup targets --- ##
 
@@ -528,4 +553,4 @@ conda_config: conda-base	## update conda package configuration
 conda-env: conda-base	## create conda environment if missing and required
 	@test -d "$(CONDA_ENV_PATH)" || \
 		(echo "Creating conda environment at '$(CONDA_ENV_PATH)'..." && \
-		 "$(CONDA_HOME)/bin/conda" create -y -n "$(CONDA_ENV)" python=$(PYTHON_VERSION))
+		 "$(CONDA_HOME)/bin/conda" create -y -n "$(CONDA_ENV_NAME)" python=$(PYTHON_VERSION))
