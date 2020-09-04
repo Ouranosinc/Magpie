@@ -124,5 +124,5 @@ Glossary
         to :term:`Service` and :term:`Resource` elements. Implemented by :py:class:`magpie.models.User`.
 
 
-.. _permissions: permissions.rst
+.. _permissions: ./docs/permissions.rst
 

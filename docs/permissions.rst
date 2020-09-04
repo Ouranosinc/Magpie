@@ -248,10 +248,10 @@ Using ``inherited`` option, we obtain the following:
 .. code-block::
 
     /users/example-user/resources/service-1/permissions?inherited=true      => [write]
-    /users/example-user/resources/service-2/permissions?inherited=true      => [write]  :sup:`(1)`
+    /users/example-user/resources/service-2/permissions?inherited=true      => [write]  (1)
     /users/example-user/resources/resource-A/permissions?inherited=true     => [read]
     /users/example-user/resources/service-3/permissions?inherited=true      => [write]
-    /users/example-user/resources/resource-B1/permissions?inherited=true    => [read]   :sup:`(1)`
+    /users/example-user/resources/resource-B1/permissions?inherited=true    => [read]   (1)
     /users/example-user/resources/resource-B2/permissions?inherited=true    => []
 
 As illustrated, requesting for `Inherited Permissions`_ now also returns :term:`Group`-related :term:`Permission`
@@ -262,11 +262,11 @@ On the other hand, using ``effective`` would result in the following:
 .. code-block::
 
     /users/example-user/resources/service-1/permissions?effective=true      => [write]
-    /users/example-user/resources/service-2/permissions?effective=true      => [write]          :sup:`(2)`
-    /users/example-user/resources/resource-A/permissions?effective=true     => [read, write]    :sup:`(3)`
+    /users/example-user/resources/service-2/permissions?effective=true      => [write]          (2)
+    /users/example-user/resources/resource-A/permissions?effective=true     => [read, write]    (3)
     /users/example-user/resources/service-3/permissions?effective=true      => []
-    /users/example-user/resources/resource-B1/permissions?effective=true    => [read]           :sup:`(2)`
-    /users/example-user/resources/resource-B2/permissions?effective=true    => [read, write]    :sup:`(4)`
+    /users/example-user/resources/resource-B1/permissions?effective=true    => [read]           (2)
+    /users/example-user/resources/resource-B2/permissions?effective=true    => [read, write]    (4)
 
 In this case, :term:`Resource`s that had :term:`Permission` directly set on them :sup:`(2)`, whether through
 :term:`User` or :term:`Group` combination, all return the exact same set of :term:`Permission`. This is because
