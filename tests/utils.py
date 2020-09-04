@@ -304,7 +304,7 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
                  content_type=None,     # type: Optional[Str]
                  headers=None,          # type: Optional[HeadersType]
                  cookies=None,          # type: Optional[CookiesType]
-                 **kwargs,              # type: Any
+                 **kwargs               # type: Any
                  ):                     # type: (...) -> AnyResponseType
     """
     Calls the request using either a :class:`webtest.TestApp` instance or :class:`requests.Request` from a string URL.
