@@ -10,4 +10,5 @@ sphinx-paramlinks>=0.4.1
 sphinx; python_version < "3"
 sphinx>=3.0,<3.1; python_version >= "3"
 sphinxcontrib-redoc>=1.6.0
-sphinx_autodoc_typehints[type_comments]>=1.11.0
+sphinx_autodoc_typehints[type_comments]; python_version < "3.6"
+sphinx_autodoc_typehints[type_comments]>=1.11.0; python_version >= "3.6"
