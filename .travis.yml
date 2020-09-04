@@ -39,9 +39,9 @@ before_install:
   - lsb_release -a
   - hash -r
   # fake conda paths to employ preinstalled virtualenv python
-  - CONDA_ENV_NAME=python${TRAVIS_PYTHON_VERSION}
-  - CONDA_PREFIX=${HOME}/virtualenv/${CONDA_ENV_NAME}
-  - CONDA_HOME=${CONDA_PREFIX}
+  - export CONDA_ENV_NAME=python${TRAVIS_PYTHON_VERSION}
+  - export CONDA_PREFIX=${HOME}/virtualenv/${CONDA_ENV_NAME}
+  - export CONDA_ENV_PATH=${CONDA_PREFIX}
   - env | sort
   - make info
   - make install-sys
