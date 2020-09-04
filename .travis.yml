@@ -40,7 +40,8 @@ before_install:
   - hash -r
   # fake conda paths to employ preinstalled virtualenv python
   - export CONDA_ENV_NAME=python${TRAVIS_PYTHON_VERSION}
-  - export CONDA_PREFIX=${HOME}/virtualenv/${CONDA_ENV_NAME}
+  - export CONDA_ENVS_DIR=${HOME}/virtualenv
+  - export CONDA_PREFIX=${CONDA_ENVS_DIR}/${CONDA_ENV_NAME}
   - export CONDA_ENV_PATH=${CONDA_PREFIX}
   - env | sort
   - make info
@@ -64,6 +65,8 @@ stages:
   - test        # use default stage to run job matrix variations
   - smoke-test  # try running the built/packaged docker image
 jobs:
+  allow_failures:
+    - python: "2.7"  # deprecated support, but leave it while it remains easy to maintain
   include:
     # use stages to quick fail faster tests
     # these are extra to default 'test' stage with auto-matrix/env extension
