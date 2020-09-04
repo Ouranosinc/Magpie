@@ -33,18 +33,16 @@ notifications:
   email: false
 # === pipeline ===
 before_install:
-  # fake all conda paths to employ preinstalled virtualenv python
-  - CONDA_HOME=${VIRTUAL_ENV}
-  - CONDA_ENV=python${TRAVIS_PYTHON_VERSION}
-  - CONDA_ENVS_DIR=~/virtualenv
-  - CONDA_ENV_PATH=${VIRTUAL_ENV}
-  - CONDA_PREFIX=${VIRTUAL_ENV}
   # obtain details about environment
   - python -V
   - uname -a
   - lsb_release -a
   - hash -r
-  - env
+  # fake conda paths to employ preinstalled virtualenv python
+  - CONDA_ENV_NAME=python${TRAVIS_PYTHON_VERSION}
+  - CONDA_PREFIX=${HOME}/virtualenv/${CONDA_ENV_NAME}
+  - CONDA_HOME=${CONDA_PREFIX}
+  - env | sort
   - make info
   - make install-sys
   # load magpie env and constants
@@ -60,7 +58,7 @@ before_script:
   - echo ${CONDA_ENV}
   - source ./env/magpie.env
   - hash -r
-  - env
+  - env | sort
 stages:
   - check       # run linting checks and don't bother with the rest if invalid
   - test        # use default stage to run job matrix variations
