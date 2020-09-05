@@ -292,7 +292,7 @@ class TestUtils(unittest.TestCase):
             Permission.READ.value,
             Permission.WRITE_MATCH.value,
         ]
-        utils.check_all_equal(format_perms, expect_perms, any_order=False)
+        utils.check_all_equal(format_perms["permission_names"], expect_perms, any_order=False)
 
     def test_evaluate_call_callable_incorrect_usage(self):
         """

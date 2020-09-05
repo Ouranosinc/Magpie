@@ -39,8 +39,8 @@ def format_resource(resource, permissions=None, basic_info=False):
                 "parent_id": res.parent_id,
                 "root_service_id": res.root_service_id,
                 "children": {},
-                "permission_names": list() if perms is None else format_permissions(perms)
             })
+            result.update(format_permissions(perms))
         return result
 
     return evaluate_call(

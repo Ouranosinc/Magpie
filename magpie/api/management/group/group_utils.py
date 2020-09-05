@@ -21,7 +21,7 @@ from magpie.api.management.group.group_formats import format_group
 from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
 from magpie.api.management.service.service_formats import format_service, format_service_resources
-from magpie.permissions import convert_permission, format_permissions
+from magpie.permissions import PermissionSet, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 
 if TYPE_CHECKING:
@@ -181,15 +181,15 @@ def get_group_resource_permissions_response(group, resource, db_session):
         perms = db.query(models.GroupResourcePermission) \
                   .filter(models.GroupResourcePermission.resource_id == res.resource_id) \
                   .filter(models.GroupResourcePermission.group_id == grp.id)
-        return [convert_permission(p) for p in perms]
+        return [PermissionSet.convert(p) for p in perms]
 
-    group_perm_names = ax.evaluate_call(
+    group_permissions = ax.evaluate_call(
         lambda: format_permissions(get_grp_res_perms(group, resource, db_session)),
         http_error=HTTPInternalServerError,
         msg_on_fail=s.GroupResourcePermissions_InternalServerErrorResponseSchema.description,
         content={"group": repr(group), "resource": repr(resource)})
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupResourcePermissions_GET_OkResponseSchema.description,
-                         content={"permission_names": group_perm_names})
+                         content=group_permissions)
 
 
 def delete_group_resource_permission_response(group, resource, permission, db_session):
@@ -286,7 +286,7 @@ def get_group_service_permissions_response(group, service, db_session):
         msg_on_fail=s.GroupServicePermissions_GET_InternalServerErrorResponseSchema.description,
         content={"group": format_group(group, basic_info=True), "service": format_service(service)})
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupServicePermissions_GET_OkResponseSchema.description,
-                         content={"permission_names": svc_perms_found})
+                         content=svc_perms_found)
 
 
 def get_group_service_resources_permissions_dict(group, service, db_session):

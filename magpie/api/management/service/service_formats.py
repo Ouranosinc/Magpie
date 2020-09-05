@@ -42,7 +42,7 @@ def format_service(service, permissions=None, show_private_url=False, show_resou
         }
         if perms is None:  # user/group permission specify empty list
             perms = SERVICE_TYPE_DICT[svc.type].permissions
-        svc_info["permission_names"] = format_permissions(perms)
+        svc_info.update(format_permissions(perms))
         if show_private_url:
             svc_info["service_url"] = str(svc.url)
         if show_resources_allowed:
@@ -104,10 +104,10 @@ def format_service_resources(service,                       # type: Service
 
 def format_service_resource_type(resource_class, service_class):
     # type: (Type[Resource], Type[ServiceInterface]) -> JSON
-    return {
+    svc_res_info = {
         "resource_type": resource_class.resource_type_name,
         "resource_child_allowed": resource_class.child_resource_allowed,
-        "permission_names": format_permissions(
-            service_class.get_resource_permissions(resource_class.resource_type_name)
-        ),
     }
+    svc_res_perm = service_class.get_resource_permissions(resource_class.resource_type_name)
+    svc_res_info.update(format_permissions(svc_res_perm))
+    return svc_res_info

@@ -22,7 +22,7 @@ from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
 from magpie.constants import get_constant
-from magpie.permissions import convert_permission, format_permissions
+from magpie.permissions import PermissionSet, format_permissions
 from magpie.services import service_factory
 
 if TYPE_CHECKING:
@@ -221,12 +221,12 @@ def get_user_resource_permissions_response(user, resource, request,
                     res_perm_list = ResourceService.direct_perms_for_user(resource, user, db_session=db_session)
         return format_permissions(res_perm_list)
 
-    perm_names = ax.evaluate_call(
+    permissions = ax.evaluate_call(
         lambda: get_usr_res_perms(),
         fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
         msg_on_fail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
         content={"resource_name": str(resource.resource_name), "user_name": str(user.user_name)})
-    return ax.valid_http(http_success=HTTPOk, content={"permission_names": perm_names},
+    return ax.valid_http(http_success=HTTPOk, content=permissions,
                          detail=s.UserResourcePermissions_GET_OkResponseSchema.description)
 
 
@@ -296,7 +296,7 @@ def get_user_services(user, request, cascade_resources=False,
 
 
 def get_user_service_permissions(user, service, request, inherit_groups_permissions=True):
-    # type: (models.User, models.Service, Request, bool) -> List[Permission]
+    # type: (models.User, models.Service, Request, bool) -> List[PermissionSet]
     if service.owner_user_id == user.id:
         usr_svc_perms = service_factory(service, request).permissions
     else:
@@ -304,7 +304,7 @@ def get_user_service_permissions(user, service, request, inherit_groups_permissi
             usr_svc_perms = ResourceService.perms_for_user(service, user, db_session=request.db)
         else:
             usr_svc_perms = ResourceService.direct_perms_for_user(service, user, db_session=request.db)
-    return [convert_permission(p) for p in usr_svc_perms]
+    return [PermissionSet.convert(p) for p in usr_svc_perms]
 
 
 def get_user_resources_permissions_dict(user, request, resource_types=None,

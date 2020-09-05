@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from webtest.response import TestResponse
 
     from magpie import models
-    from magpie.permissions import Permission
+    from magpie.permissions import Permission, PermissionSet
 
     # pylint: disable=W0611,unused-import  # following definitions provided to be employed elsewhere in the code
 
@@ -61,6 +61,7 @@ if TYPE_CHECKING:
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ServiceOrResourceType = Union[models.Service, models.Resource]
     ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
-    AnyPermissionType = Union[Permission, ResourcePermissionType, Str]
+    PermissionObject = Dict[Str, Str]
+    AnyPermissionType = Union[Permission, PermissionSet, PermissionObject, ResourcePermissionType, Str]
     AnyAccessPrincipalType = Union[Str, Iterable[Str]]
     AccessControlListType = List[Union[Tuple[Str, Str, Str], Str]]
