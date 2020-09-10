@@ -7,23 +7,23 @@
         %if level > 0:
                class="button delete"
         %else:
-               class="button disabled" disabled
+               class="button delete disabled" disabled
         %endif
         >
     </div>
     %if "id" in value.keys():
         <div class="tree-button">
-            <input class="button theme" type="submit" value="Add child" name="add_child"
+            <input type="submit" value="Add child" name="add_child"
             %if int(value["id"]) in resources_id_type.keys():
                 %if not resources_id_type[int(value["id"])] in resources_no_child:
-                    class="button disabled" disabled
+                    class="button theme disabled" disabled
                 %else:
                     class="button theme"
                 %endif
             %elif not service_no_child:
                     class="button theme"
             %else:
-                class="button disabled" disabled
+                class="button theme disabled" disabled
             % endif
             >
         </div>

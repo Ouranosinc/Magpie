@@ -1,6 +1,6 @@
 .theme {
-    border: 1px solid #2c548f;
-    background-color: #4c81af;
+    border: 1px solid #2C548F;
+    background-color: #4C81AF;
     color: white;
 }
 
@@ -11,7 +11,9 @@ a.tab:active,
 .admin-button:hover,
 .admin-button:active,
 input[type="submit"]:hover,
-input[type="submit"]:focus {
-    background-color: #5ca3bf;
+input[type="submit"]:focus,
+input[type="button"]:hover,
+input[type="button"]:focus {
+    background-color: #5CA3BF;
     text-decoration: none;
 }

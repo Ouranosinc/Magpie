@@ -35,7 +35,7 @@
         <input type="submit" value="Edit" name="edit" class="button theme">
         <input value="Delete" name="delete"
             %if group in MAGPIE_FIXED_GROUP_EDITS:
-                class="button disabled" type="button" disabled
+                class="button delete disabled" type="button" disabled
             %else:
                 class="button delete" type="submit"
             %endif

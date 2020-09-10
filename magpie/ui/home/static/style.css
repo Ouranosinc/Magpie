@@ -47,33 +47,25 @@ body {
 }
 
 a {
-    color: #337ab7;
+    color: #337AB7;
     text-decoration: none;
 }
 
 a:focus,
 a:hover {
-    color: #23527c;
+    color: #23527C;
     text-decoration: underline;
 }
 
 input[type="submit"].img-button.disabled,
-input[type="submit"].img-button.disabled:hover,
-input[type="submit"].img-button.disabled:focus,
 input[type="button"].img-button.disabled,
-input[type="button"].img-button.disabled:hover,
-input[type="button"].img-button.disabled:focus,
 input[type="submit"].button.disabled,
-input[type="submit"].button.disabled:hover,
-input[type="submit"].button.disabled:focus,
-input[type="button"].button.disabled,
-input[type="button"].button.disabled:hover,
-input[type="button"].button.disabled:focus {
-    border: 1px solid #808080;
-    background-color: #DDDDDD;
-    color: #808080;
+input[type="button"].button.disabled {
+    color: currentColor;    /* inherit from theme */
+    opacity: 50%;
     vertical-align: center;
-    cursor:not-allowed;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 input[type="button"].img-button.delete,
@@ -84,7 +76,7 @@ input[type="submit"].button.delete {
     background-color: #CD0000;
     color: white;
     vertical-align: center;
-    cursor:pointer;
+    cursor: pointer;
 }
 
 input[type="button"].img-button.delete:hover,
@@ -106,7 +98,7 @@ input[type="submit"].button-warning {
     background-color: #CD6600;
     color: white;
     vertical-align: center;
-    cursor:pointer;
+    cursor: pointer;
 }
 
 input[type="button"].img-button.warning:hover,
@@ -129,6 +121,17 @@ input[type="submit"].button.cancel {
     color: #444444;
 }
 
+input[type="button"].img-button.cancel:focus,
+input[type="button"].img-button.cancel:hover,
+input[type="submit"].img-button.cancel:focus,
+input[type="submit"].img-button.cancel:hover,
+input[type="button"].button.cancel:focus,
+input[type="button"].button.cancel:hover,
+input[type="submit"].button.cancel:focus,
+input[type="submit"].button.cancel:hover {
+    background-color: #8A8A8A;
+}
+
 a.tab:link,
 a.tab:visited,
 .img-button,
@@ -136,7 +139,7 @@ a.tab:visited,
 input[type="submit"],
 input[type="submit"].button.normal {
     vertical-align: center;
-    cursor:pointer;
+    cursor: pointer;
     text-decoration: none;
     color: #FFFFFF;
 }
@@ -425,7 +428,7 @@ table.simple-list input[type="submit"]{
     float: left;
     padding: 5px 100px;
     border: 1px solid #eee;
-    cursor:pointer;
+    cursor: pointer;
 }
 
 div.tree-item {
