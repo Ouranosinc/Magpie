@@ -28,7 +28,7 @@ requests_file
 simplejson
 six>=1.12.0
 sqlalchemy
-sqlalchemy_utils
+sqlalchemy_utils!=0.36.8
 threddsclient==0.4.1; python_version < "3"
 threddsclient>=0.4.1; python_version >= "3"
 transaction
