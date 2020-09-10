@@ -14,6 +14,16 @@ def format_group(group, basic_info=False, public_info=False, db_session=None):
     # type: (Group, bool, bool, Optional[Session]) -> JSON
     """
     Obtains the JSON formatted group definition according to field selection flags.
+
+    :param group: Group for which to provide details.
+    :param basic_info:
+        If ``True``, return only sufficient details to identify the group (useful for routes that refer to a group,
+        but that are not requesting it specifically), or return full details (for routes that specifically request
+        its information, e.g.: ``GET /groups/{grp}``).
+    :param public_info:
+        Indicate if the returned details are intended for public information (``True``) or admin-only (``False``).
+        Only higher level users should be provided additional details to avoid leaking potentially sensitive parameters.
+    :param db_session: Database connection to retrieve additional details (required when ``public_info=False``).
     """
     def fmt_grp(grp, is_basic, is_public):
         info = {"group_name": str(grp.group_name)}
