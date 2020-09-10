@@ -126,7 +126,9 @@
                     <p class="panel-line panel-line-checkbox">
                         <span class="panel-entry">Discoverable: </span>
                         <label>
-                        <input type="checkbox" name="new_discoverable" id="input_discoverable"
+                        <!-- when unchecked but checkbox pressed checkbox 'value' not actually sent -->
+                        <input type="hidden" value="${discoverable}" name="is_discoverable"/>
+                        <input type="checkbox" name="new_discoverable"
                             %if discoverable:
                                checked
                             %endif

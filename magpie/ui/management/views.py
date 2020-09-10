@@ -22,7 +22,8 @@ from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from sqlalchemy.orm.session import Session
-    from magpie.typedefs import List, Optional
+    from typing import Dict, List, Optional, Tuple
+    from magpie.typedefs import JSON, Str
 LOGGER = get_logger(__name__)
 
 
@@ -325,15 +326,8 @@ class ManagementViews(BaseViews):
                 user_info["email"] = self.request.POST.get("new_user_email")
                 is_save_user_info = True
             elif "force_sync" in self.request.POST:
-                errors = []
-                for service_info in services.values():
-                    try:
-                        sync_resources.fetch_single_service(service_info["resource_id"], session)
-                        transaction.commit()
-                    except Exception:  # noqa
-                        errors.append(service_info["service_name"])
-                if errors:
-                    error_message += self.make_sync_error_message(errors)
+                _, errmsg = self.sync_services(services)
+                error_message += errmsg or ""
             elif "clean_all" in self.request.POST:
                 ids_to_clean = self.request.POST.get("ids_to_clean").split(";")
                 for id_ in ids_to_clean:
@@ -630,8 +624,8 @@ class ManagementViews(BaseViews):
             elif "clean_resource" in self.request.POST:
                 # "clean_resource" must be above "edit_permissions" because they"re in the same form.
                 self.delete_resource(res_id)
-            elif "new_discoverable" in self.request.POST:
-                group_info["discoverable"] = self.request.POST.get("new_discoverable")
+            elif "is_discoverable" in self.request.POST:
+                group_info["discoverable"] = not asbool(self.request.POST.get("is_discoverable"))
                 group_info.update(self.update_group_info(group_name, group_info))
             elif "edit_permissions" in self.request.POST:
                 if not res_id or res_id == "None":
@@ -644,16 +638,8 @@ class ManagementViews(BaseViews):
             elif "member" in self.request.POST:
                 self.edit_group_users(group_name)
             elif "force_sync" in self.request.POST:
-                errors = []
-                for service_info in services.values():
-                    try:
-                        sync_resources.fetch_single_service(service_info["resource_id"], session)
-                        transaction.commit()
-                    except Exception:  # noqa: W0703 # nosec: B110
-                        errors.append(service_info["service_name"])
-                if errors:
-                    error_message += self.make_sync_error_message(errors)
-
+                _, errmsg = self.sync_services(services)
+                error_message += errmsg or ""
             elif "clean_all" in self.request.POST:
                 ids_to_clean = self.request.POST.get("ids_to_clean").split(";")
                 for id_ in ids_to_clean:
@@ -702,6 +688,25 @@ class ManagementViews(BaseViews):
         error_message = ("There seems to be an issue synchronizing resources from "
                          "{}: {}".format(this, ", ".join(service_names)))
         return error_message
+
+    def sync_services(self, services):
+        # type: (Dict[Str, JSON]) -> Tuple[List[Str], Optional[Str]]
+        """
+        Syncs specified services.
+
+        :returns: names of services that produced a sync error and corresponding sync message (if any).
+        """
+        errors = []
+        session = self.request.db
+        for service_info in services.values():
+            try:
+                sync_resources.fetch_single_service(service_info["resource_id"], session)
+                transaction.commit()
+            except Exception:  # noqa: W0703 # nosec: B110
+                errors.append(service_info["service_name"])
+        if errors:
+            return errors, self.make_sync_error_message(errors)
+        return errors, None
 
     def get_remote_resources_info(self, res_perms, services, session):
         last_sync_humanized = "Never"

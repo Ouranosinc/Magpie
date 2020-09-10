@@ -5,30 +5,19 @@
 <%def name="render_item(key, value, level)">
     <input type="hidden" value="" name="edit_permissions">
     %for perm in permissions:
-        % if perm in value['permission_names']:
-            <div class="perm-checkbox">
-                <label>
-                <input type="checkbox" value="${perm}" name="permission"
-                       onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()"
-                       checked
-                    %if inherit_groups_permissions:
-                        disabled
-                    %endif
-                >
-                </label>
-           </div>
-        % else:
-            <div class="perm-checkbox">
-                <label>
-                <input type="checkbox" value="${perm}" name="permission"
-                       onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()"
-                    %if inherit_groups_permissions:
-                        disabled
-                    %endif
-                >
-                </label>
-            </div>
-        % endif
+        <div class="perm-checkbox">
+            <label>
+            <input type="checkbox" value="${perm}" name="permission"
+                   onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()"
+                % if perm in value['permission_names']:
+                   checked
+                %endif
+                %if inherit_groups_permissions:
+                    disabled
+                %endif
+            >
+            </label>
+       </div>
     %endfor
     % if not value.get("matches_remote", True):
         <div class="tree-button">
