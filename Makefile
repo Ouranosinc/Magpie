@@ -119,7 +119,7 @@ version:	## display current version
 
 .PHONY: info
 info:		## display make information
-	@echo "Informations about your make execution:"
+	@echo "Information about your make execution:"
 	@echo "  OS Name                $(OS_NAME)"
 	@echo "  CPU Architecture       $(CPU_ARCH)"
 	@echo "  Conda Home             $(CONDA_HOME)"
@@ -127,12 +127,12 @@ info:		## display make information
 	@echo "  Conda Env Name         $(CONDA_ENV_NAME)"
 	@echo "  Conda Env Path         $(CONDA_ENV_REAL_ACTIVE_PATH)"
 	@echo "  Conda Binary           $(CONDA_BIN)"
-	@echo "  Conda Actication       $(CONDA_ENV_MODE)"
+	@echo "  Conda Activation       $(CONDA_ENV_MODE)"
 	@echo "  Conda Command          $(CONDA_CMD)"
 	@echo "  Application Root       $(APP_ROOT)"
 	@echo "  Application Name       $(APP_NAME)"
 	@echo "  Application Version    $(APP_VERSION)"
-	@echo "  Donwload Cache         $(DOWNLOAD_CACHE)"
+	@echo "  Download Cache         $(DOWNLOAD_CACHE)"
 	@echo "  Test Reports           $(REPORTS_DIR)"
 	@echo "  Docker Tag (magpie)    $(MAGPIE_DOCKER_TAG)"
 	@echo "  Docker Tag (twitcher)  $(TWITCHER_DOCKER_TAG)"

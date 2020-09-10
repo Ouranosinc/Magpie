@@ -234,7 +234,7 @@ class ManagementViews(BaseViews):
                 return_data["invalid_password"] = True
             elif compare_digest(password, confirm):
                 return_data["mismatch_password"] = True
-                return_data["reason_password"] = "Mismatch"
+                return_data["reason_password"] = "Mismatch"  # nosec: B105  # avoid false positive
 
             for check_fail in check_data:
                 if return_data.get(check_fail, False):
