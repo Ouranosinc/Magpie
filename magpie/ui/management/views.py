@@ -645,7 +645,7 @@ class ManagementViews(BaseViews):
                 for id_ in ids_to_clean:
                     self.delete_resource(id_)
             elif "no_edit" not in self.request.POST:
-                return HTTPBadRequest(detail="Invalid POST request for group edit.")
+                raise HTTPBadRequest(detail="Invalid POST request for group edit.")
 
         # display resources permissions per service type tab
         try:

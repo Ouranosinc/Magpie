@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 from pyramid.httpexceptions import HTTPInternalServerError, exception_response
 from pyramid.request import Request
+from pyramid.view import view_defaults
 
 from magpie import __meta__
 from magpie.api.generic import get_exception_info, get_request_info
@@ -134,6 +135,7 @@ def handle_errors(func):
     return wrap
 
 
+@view_defaults(decorator=handle_errors)
 class BaseViews(object):
     """
     Base methods for Magpie UI pages.
