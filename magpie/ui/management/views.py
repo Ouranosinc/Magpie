@@ -9,6 +9,7 @@ import transaction
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPFound, HTTPMovedPermanently, HTTPNotFound
 from pyramid.settings import asbool
 from pyramid.view import view_config
+from secrets import compare_digest  # noqa  # python2-secrets employed for Python<=3.5
 
 from magpie import register
 from magpie.api import schemas
@@ -193,17 +194,15 @@ class ManagementViews(BaseViews):
 
     @view_config(route_name="add_user", renderer="templates/add_user.mako")
     def add_user(self):
-        users_group = get_constant("MAGPIE_USERS_GROUP")
-        return_data = {"conflict_group_name": False, "conflict_user_name": False, "conflict_user_email": False,
-                       "invalid_user_name": False, "invalid_user_email": False, "invalid_password": False,
-                       "mismatch_password": False, "too_long_user_name": False,
-                       "form_user_name": "", "form_user_email": "",
-                       "user_groups": self.get_all_groups(first_default_group=users_group)}
-        check_data = ["conflict_group_name", "conflict_user_name", "conflict_email",
-                      "invalid_user_name", "invalid_email", "invalid_password", "mismatch_password"]
+        groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        return_data = {"invalid_user_name": False, "invalid_user_email": False, "invalid_password": False,
+                       # 'Invalid' used as default in case pre-checks did not find anything, but API returned 400
+                       "reason_user_name": "Invalid", "reason_group_name": "Invalid", "reason_user_email": "Invalid",
+                       "reason_password": "Invalid", "form_user_name": "", "form_user_email": "",
+                       "user_groups": groups}
+        check_data = ["invalid_user_name", "invalid_email", "invalid_password"]
 
         if "create" in self.request.POST:
-            groups = self.get_all_groups()
             user_name = self.request.POST.get("user_name")
             group_name = self.request.POST.get("group_name")
             user_email = self.request.POST.get("email")
@@ -216,31 +215,59 @@ class ManagementViews(BaseViews):
                 data = {"group_name": group_name}
                 resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
                 if resp.status_code == HTTPConflict.code:
-                    return_data["conflict_group_name"] = True
+                    return_data["invalid_group_name"] = True
+                    return_data["reason_group_name"] = "Conflict"
             if user_email in self.get_user_emails():
-                return_data["conflict_user_email"] = True
+                return_data["invalid_user_email"] = True
+                return_data["reason_user_email"] = "Conflict"
             if user_email == "":
                 return_data["invalid_user_email"] = True
             if len(user_name) > get_constant("MAGPIE_USER_NAME_MAX_LENGTH"):
-                return_data["too_long_user_name"] = True
+                return_data["invalid_user_name"] = True
+                return_data["reason_user_name"] = "Too Long"
             if user_name in self.get_user_names():
-                return_data["conflict_user_name"] = True
+                return_data["invalid_user_name"] = True
+                return_data["reason_user_name"] = "Conflict"
             if user_name == "":
                 return_data["invalid_user_name"] = True
             if password is None or isinstance(password, six.string_types) and len(password) < 1:
                 return_data["invalid_password"] = True
-            elif password != confirm:
+            elif compare_digest(password, confirm):
                 return_data["mismatch_password"] = True
+                return_data["reason_password"] = "Mismatch"
 
             for check_fail in check_data:
                 if return_data.get(check_fail, False):
                     return self.add_template_data(return_data)
 
-            data = {"user_name": user_name,
-                    "email": user_email,
-                    "password": password,
-                    "group_name": group_name}
+            data = {
+                "user_name": user_name,
+                "email": user_email,
+                "password": password,
+                "group_name": group_name
+            }
             resp = request_api(self.request, schemas.UsersAPI.path, "POST", data=data)
+            if resp.status_code == HTTPBadRequest.code:
+                # attempt to retrieve the API more-specific reason why the operation is invalid
+                body = get_json(resp)
+                param_name = body.get("param", {}).get("name")
+                reason = body.get("detail", "Invalid")
+                if param_name == "password":
+                    return_data["invalid_password"] = True
+                    return_data["reason_password"] = reason
+                    return self.add_template_data(return_data)
+                elif param_name == "user_name":
+                    return_data["invalid_user_name"] = True
+                    return_data["reason_user_name"] = reason
+                    return self.add_template_data(return_data)
+                elif param_name == "user_name":
+                    return_data["invalid_user_email"] = True
+                    return_data["reason_user_email"] = reason
+                    return self.add_template_data(return_data)
+                elif param_name == "group_name":
+                    return_data["invalid_group_name"] = True
+                    return_data["reason_group_name"] = reason
+                    return self.add_template_data(return_data)
             check_response(resp)
             return HTTPFound(self.request.route_url("view_users"))
 
@@ -419,7 +446,8 @@ class ManagementViews(BaseViews):
 
     @view_config(route_name="add_group", renderer="templates/add_group.mako")
     def add_group(self):
-        return_data = {"conflict_group_name": False, "invalid_group_name": False,
+        return_data = {"invalid_group_name": False, "invalid_description": False,
+                       "reason_group_name": "Invalid", "reason_description": "Invalid",
                        "form_group_name": "", "form_discoverable": False, "form_description": ""}
 
         if "create" in self.request.POST:
@@ -440,10 +468,23 @@ class ManagementViews(BaseViews):
             }
             resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
             if resp.status_code == HTTPConflict.code:
-                return_data["conflict_group_name"] = True
+                return_data["invalid_group_name"] = True
+                return_data["reason_group_name"] = "Conflict"
                 return self.add_template_data(return_data)
-
-            check_response(resp)  # check for any other exception than conflict
+            if resp.status_code == HTTPBadRequest.code:
+                # attempt to retrieve the API more-specific reason why the operation is invalid
+                body = get_json(resp)
+                param_name = body.get("param", {}).get("name")
+                reason = body.get("detail", "Invalid")
+                if param_name == "group_name":
+                    return_data["invalid_group_name"] = True
+                    return_data["reason_group_name"] = reason
+                    return self.add_template_data(return_data)
+                elif param_name == "description":
+                    return_data["invalid_description"] = True
+                    return_data["reason_description"] = reason
+                    return self.add_template_data(return_data)
+            check_response(resp)  # check for any other exception than checked use-cases
             return HTTPFound(self.request.route_url("view_groups"))
 
         return self.add_template_data(return_data)

@@ -20,18 +20,14 @@
             </td>
             <td>
                 <div class="alert-form-error"
-                    %if not (invalid_group_name or conflict_group_name):
+                    %if not invalid_group_name:
                         style="visibility: hidden"
                     %endif
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                              alt="ERROR" class="icon-error" />
                     <div class="alert-form-text">
-                            %if conflict_group_name:
-                                Conflict
-                            %elif invalid_group_name:
-                                Invalid
-                            %endif
+                        ${reason_group_name}
                     </div>
                 </div>
             </td>
@@ -44,7 +40,21 @@
                 </label>
             </td>
             <td>
+                %if not invalid_description:
                 (optional)
+                %else:
+                <div class="alert-form-error"
+                    %if not invalid_description:
+                        style="visibility: hidden"
+                    %endif
+                >
+                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                             alt="ERROR" class="icon-error" />
+                    <div class="alert-form-text">
+                        ${reason_description}
+                    </div>
+                </div>
+                %endif
             </td>
         </tr>
         <tr>

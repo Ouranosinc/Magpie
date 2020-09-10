@@ -19,19 +19,15 @@
             </td>
             <td>
                 <div class="alert-form-error"
-                    %if not (too_long_user_name or invalid_user_name or conflict_user_name):
+                    %if not invalid_user_name:
                         style="visibility: hidden"
                     %endif
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
                     <div class="alert-form-text">
-                        %if too_long_user_name:
-                            Too Long
-                        %elif invalid_user_name:
-                            Invalid
-                        %elif conflict_user_name:
-                            Conflict
+                        %if invalid_user_name:
+                            ${reason_user_name}
                         %endif
                     </div>
                 </div>
@@ -46,7 +42,7 @@
             </td>
             <td>
                 <div class="alert-form-error"
-                    %if not (invalid_user_email or conflict_user_email):
+                    %if not invalid_user_email:
                         style="visibility: hidden"
                     %endif
                 >
@@ -54,9 +50,7 @@
                          alt="ERROR" class="icon-error" />
                     <div class="alert-form-text">
                         %if invalid_user_email:
-                            Invalid
-                        %elif conflict_user_email:
-                            Conflict
+                            ${reason_user_email}
                         %endif
                     </div>
                 </div>
@@ -80,7 +74,7 @@
                          alt="ERROR" class="icon-error" />
                     <div class="alert-form-text">
                         %if invalid_password:
-                            Invalid
+                            ${reason_password}
                         %endif
                     </div>
                 </div>
@@ -96,18 +90,14 @@
             </td>
             <td>
                 <div class="alert-form-error"
-                    %if not (mismatch_password or invalid_password):
+                    %if not invalid_password:
                         style="visibility: hidden"
                     %endif
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
                     <div class="alert-form-text">
-                        %if invalid_password:
-                            Mismatch
-                        %elif mismatch_password:
-                            Invalid
-                        %endif
+                        ${reason_password}
                     </div>
                 </div>
             </td>
