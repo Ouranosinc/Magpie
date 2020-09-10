@@ -212,6 +212,7 @@ def get_group_matchdict_checked(request, group_name_key="group_name"):
                              fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                              msg_on_fail=s.Group_MatchDictCheck_ForbiddenResponseSchema.description)
     ax.verify_param(group, not_none=True, http_error=HTTPNotFound,
+                    param_content={"value": group_name}, param_name="group_name",
                     msg_on_fail=s.Group_MatchDictCheck_NotFoundResponseSchema.description)
     return group
 
@@ -232,6 +233,7 @@ def get_resource_matchdict_checked(request, resource_name_key="resource_id"):
                                 fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                 msg_on_fail=s.Resource_MatchDictCheck_ForbiddenResponseSchema.description)
     ax.verify_param(resource, not_none=True, http_error=HTTPNotFound,
+                    param_content={"value": resource_id}, param_name="resource_id",
                     msg_on_fail=s.Resource_MatchDictCheck_NotFoundResponseSchema.description)
     return resource
 
@@ -249,7 +251,8 @@ def get_service_matchdict_checked(request, service_name_key="service_name"):
     service = ax.evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
                                fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                msg_on_fail=s.Service_MatchDictCheck_ForbiddenResponseSchema.description)
-    ax.verify_param(service, not_none=True, http_error=HTTPNotFound, content={"service_name": service_name},
+    ax.verify_param(service, not_none=True, http_error=HTTPNotFound,
+                    param_content={"value": service_name}, param_name="service_name",
                     msg_on_fail=s.Service_MatchDictCheck_NotFoundResponseSchema.description)
     return service
 

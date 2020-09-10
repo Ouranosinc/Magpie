@@ -54,6 +54,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                  param_compare=None,                # type: Optional[Union[Any, List[Any]]]
                  # --- output options on failure ---
                  param_name=None,                   # type: Optional[Str]
+                 param_content=None,                # type: Optional[JSON]
                  with_param=True,                   # type: bool
                  http_error=HTTPBadRequest,         # type: Type[HTTPError]
                  http_kwargs=None,                  # type: Optional[ParamsType]
@@ -86,6 +87,12 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
         Can be an iterable (single value resolved as iterable unless ``None``).
         To test for ``None`` type, use :paramref:`is_none`/:paramref:`not_none` flags instead.
     :param param_name: name of the tested parameter returned in response if specified for debugging purposes
+    :param param_content:
+        Additional JSON content to apply to generated error content on raise when :paramref:`with_param` is ``True``.
+        Must be JSON serializable. Provided content can override generated error parameter if matching fields.
+    :param with_param:
+        On raise, adds values of :paramref:`param`, :paramref:`param_name` and :paramref:`param_compare`, as well as
+        additional failing conditions metadata to the JSON response body for each of the corresponding value.
     :param http_error: derived exception to raise on test failure (default: :class:`HTTPBadRequest`)
     :param http_kwargs: additional keyword arguments to pass to :paramref:`http_error` called in case of HTTP exception
     :param msg_on_fail: message details to return in HTTP exception if flag condition failed
@@ -104,9 +111,6 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
     :param is_equal: test that :paramref:`param` equals :paramref:`param_compare` value
     :param is_type: test that :paramref:`param` is of same type as specified by :paramref:`param_compare` type
     :param matches: test that :paramref:`param` matches the regex specified by :paramref:`param_compare` value
-    :param with_param:
-        On raise, adds values of :paramref:`param`, :paramref:`param_name` and :paramref:`param_compare`
-        to the JSON response for each of the specified value.
     :raises HTTPError: if tests fail, specified exception is raised (default: :class:`HTTPBadRequest`)
     :raises HTTPInternalServerError: for evaluation error
     :return: nothing if all tests passed
@@ -169,7 +173,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                 # when both 'param' and 'param_compare' are values, then the types must match
                 # raise immediately since mismatching param types can make following checks fail uncontrollably
                 LOGGER.debug("[param: %s] != [param_compare: %s]", type(param), type(param_compare))
-                content = apply_param_content(content, param, param_compare, param_name, with_param,
+                content = apply_param_content(content, param, param_compare, param_name, with_param, param_content,
                                               needs_compare, needs_iterable, is_type, {"is_type": False})
                 raise_http(http_error, http_kwargs=http_kwargs, detail=msg_on_fail,
                            content=content, content_type=content_type)
@@ -225,21 +229,22 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
         fail_conditions.update({"matches": bool(re.match(param_compare, param))})
         fail_verify = fail_verify or not fail_conditions["matches"]
     if fail_verify:
-        content = apply_param_content(content, param, param_compare, param_name, with_param,
+        content = apply_param_content(content, param, param_compare, param_name, with_param, param_content,
                                       needs_compare, needs_iterable, is_type, fail_conditions)
         raise_http(http_error, http_kwargs=http_kwargs, detail=msg_on_fail, content=content, content_type=content_type)
 
 
-def apply_param_content(content,            # type: JSON
-                        param,              # type: Any
-                        param_compare,      # type: Any
-                        param_name,         # type: Str
-                        with_param,         # type: bool
-                        needs_compare,      # type: bool
-                        needs_iterable,     # type: bool
-                        is_type,            # type: bool
-                        fail_conditions,    # type: JSON
-                        ):                  # type: (...) -> JSON
+def apply_param_content(content,                # type: JSON
+                        param,                  # type: Any
+                        param_compare,          # type: Any
+                        param_name,             # type: Str
+                        with_param,             # type: bool
+                        param_content,          # type: Optional[JSON]
+                        needs_compare,          # type: bool
+                        needs_iterable,         # type: bool
+                        is_type,                # type: bool
+                        fail_conditions,        # type: JSON
+                        ):                      # type: (...) -> JSON
     """
     Formats and applies the failing parameter conditions and results to returned JSON content according to flags.
 
@@ -247,7 +252,8 @@ def apply_param_content(content,            # type: JSON
         :func:`verify_param`
     """
     if with_param:
-        content["param"] = {"conditions": fail_conditions}
+        content["param"] = {}
+        content["param"]["conditions"] = fail_conditions
         if isinstance(param, six.string_types + (int, float, bool, type(None))):
             content["param"]["value"] = param
         else:
@@ -260,6 +266,8 @@ def apply_param_content(content,            # type: JSON
                 param_compare = getattr(param_compare, "__name__", str(param_compare))
                 param_compare = "Type[{}]".format(param_compare) if is_type else param_compare
             content["param"]["compare"] = str(param_compare)
+        if isinstance(param_content, dict):
+            content["param"].update(param_content)
     return content
 
 
