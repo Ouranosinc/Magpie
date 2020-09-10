@@ -35,6 +35,10 @@
                 </div>
             </label></td>
         </tr>
-        <tr><td class="centered" colspan="2"><input type="submit" value="Add" name="add_child"></td></tr>
+        <tr>
+            <td class="centered" colspan="2">
+                <input type="submit" value="Add" name="add_child" class="button theme">
+            </td>
+        </tr>
     </table>
 </form>

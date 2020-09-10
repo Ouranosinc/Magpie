@@ -583,7 +583,25 @@ Following settings define parameters required by `Twitcher`_ (OWS Security Proxy
 
   .. note::
     Using this parameter to define `Twitcher`_'s path assumes that it resides under the same server domain as the
-    `Magpie` instance being configured (ie: hostname is inferred from resolved ``MAGPIE_URL`` or equivalent settings).
+    `Magpie` instance being configured (ie: hostname is inferred from resolved value amongst ``MAGPIE_URL``,
+    ``MAGPIE_HOST``, ``TWITCHER_HOST`` and ``HOSTNAME`` settings or environment variables).
+
+  .. warning::
+    Path is intended to be employed with `Twitcher`_ residing side-by-side with `Magpie`. Therefore, prefix
+    ``/twitcher`` is added unless already explicitly provided. To employ another path without prefix, consider
+    instead providing it with the full URL using ``TWITCHER_PROTECTED_URL`` parameter.
+
+- | ``TWITCHER_HOST``
+  | (Default: None)
+
+  .. versionadded:: 2.0.0
+
+  Specifies the explicit hostname to employ in combination with ``TWITCHER_PROTECTED_PATH`` to form the complete base
+  service protected URL. Ignored if ``TWITCHER_PROTECTED_URL`` was provided directly.
+
+  .. note::
+    The resulting URL will take the form ``https://{TWITCHER_HOST}[/twitcher]{TWITCHER_PROTECTED_PATH}`` to imitate
+    the resolution of ``TWITCHER_PROTECTED_URL`` considering provided ``TWITCHER_PROTECTED_PATH``.
 
 - | ``TWITCHER_PROTECTED_URL``
   | (Default: *see note*)
@@ -592,8 +610,9 @@ Following settings define parameters required by `Twitcher`_ (OWS Security Proxy
   specifying an alternative domain where a remote `Twitcher`_ instance could reside.
 
   .. note::
-    When not provided, attempts to infer the value by combining the environment variable ``HOSTNAME``, an optional
-    ``/twitcher`` prefix (as needed to match incoming request) and the value provided by ``TWITCHER_PROTECTED_PATH``.
+    When not provided, attempts to infer the value by combining the environment variable ``HOSTNAME`` or
+    ``TWITCHER_HOSTNAME``, and an optional ``/twitcher`` prefix (as needed to match incoming request) and the
+    value provided by ``TWITCHER_PROTECTED_PATH``.
 
 
 Please note that although `Twitcher`_ URL references are needed to configure interactive parameters with `Magpie`, the

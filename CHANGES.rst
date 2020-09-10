@@ -66,6 +66,8 @@ Features / Changes
 * Avoid returning ``Service`` entries where user, group or both (according to request path and query options) does not
   actually have any permission set either directly on them or onto one of their respective children ``Resource``. This
   avoids unnecessarily exposing all ``Service`` for which the user cannot (or should not) be interacting with anyway.
+* Add ``TWITCHER_HOST`` as alternative configuration parameter to define the service public URL, to have a similar
+  naming convention as other use cases covered by ``MAGPIE_HOST`` and ``PHOENIX_HOST``.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

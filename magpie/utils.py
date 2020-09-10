@@ -360,7 +360,11 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
             twitcher_proxy = "/" + twitcher_proxy
         if not twitcher_proxy.startswith("/twitcher"):
             twitcher_proxy = "/twitcher" + twitcher_proxy
-        hostname = hostname or get_constant("HOSTNAME")
+        hostname = (hostname or
+                    get_constant("HOSTNAME", raise_not_set=False, raise_missing=False) or
+                    get_constant("TWITCHER_HOST", raise_not_set=False, raise_missing=False))
+        if not hostname:
+            raise ConfigurationError("Missing or unset TWITCHER_PROTECTED_URL, TWITCHER_HOST or HOSTNAME value.")
         twitcher_proxy_url = "https://{0}{1}".format(hostname, twitcher_proxy)
     twitcher_proxy_url = twitcher_proxy_url.rstrip("/")
     return "{0}/{1}".format(twitcher_proxy_url, magpie_service_name)

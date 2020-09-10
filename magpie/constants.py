@@ -113,6 +113,7 @@ PHOENIX_PORT = int(os.getenv("PHOENIX_PORT", 8443))
 PHOENIX_PUSH = asbool(os.getenv("PHOENIX_PUSH", True))
 TWITCHER_PROTECTED_PATH = os.getenv("TWITCHER_PROTECTED_PATH", "/ows/proxy")
 TWITCHER_PROTECTED_URL = os.getenv("TWITCHER_PROTECTED_URL", None)
+TWITCHER_HOST = os.getenv("TWITCHER_HOST", None)
 
 # ===========================
 # variables from postgres.env
