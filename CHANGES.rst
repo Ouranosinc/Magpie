@@ -83,6 +83,8 @@ Bug Fixes
   (only ``Service`` permissions would be filled), or when requesting ``Resource`` details directly.
 * Fix input check to avoid situations where updating ``Resource`` name could cause involuntary duplicate errors.
 * Fix minor HTML issues in mako templates.
+* Fix invalid generation of default ``postgres.env`` file from ``magpie.env.example``.
+  File ``postgres.env.example`` will now be correctly employed as documented.
 
 `1.11.0 <https://github.com/Ouranosinc/Magpie/tree/1.11.0>`_ (2020-06-19)
 ------------------------------------------------------------------------------------

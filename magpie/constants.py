@@ -49,7 +49,7 @@ MAGPIE_POSTGRES_ENV_FILE = os.path.join(MAGPIE_ENV_DIR, "postgres.env")
 # if files still cannot be found at 'MAGPIE_ENV_DIR' and variables are still not set,
 # default values in following sections will be used instead
 _MAGPIE_ENV_EXAMPLE = MAGPIE_ENV_FILE + ".example"
-_POSTGRES_ENV_EXAMPLE = MAGPIE_ENV_FILE + ".example"
+_POSTGRES_ENV_EXAMPLE = MAGPIE_POSTGRES_ENV_FILE + ".example"
 if not os.path.isfile(MAGPIE_ENV_FILE) and os.path.isfile(_MAGPIE_ENV_EXAMPLE):
     shutil.copyfile(_MAGPIE_ENV_EXAMPLE, MAGPIE_ENV_FILE)
 if not os.path.isfile(MAGPIE_POSTGRES_ENV_FILE) and os.path.isfile(_POSTGRES_ENV_EXAMPLE):
