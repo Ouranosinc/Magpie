@@ -314,27 +314,6 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuthTestCase, Bas
         version_parts = body["version"].split(".")
         utils.check_val_equal(len(version_parts), 3)
 
-    @runner.MAGPIE_TEST_USERS
-    @runner.MAGPIE_TEST_LOGGED
-    def test_GetLoggedUser(self):
-        logged_user = get_constant("MAGPIE_LOGGED_USER")
-        resp = utils.test_request(self, "GET", "/users/{}".format(logged_user), headers=self.json_headers)
-        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        info = utils.TestSetup.get_UserInfo(self, override_body=body)
-        utils.check_val_equal(info["user_name"], self.test_user_name)
-
-    @runner.MAGPIE_TEST_LOGGED
-    def test_GetLoggedUser_InvalidNotGlobed(self):
-        """
-        Test that logged user special keyword with more characters doesn't get incorrectly interpreted.
-
-        Older version bug would infer the logged user keyword although path variable was not *exactly* equal to it.
-        """
-        utils.warn_version(self, "validation of complete logged user keyword", "2.0.0", skip=True)
-        path = "/users/{}{}".format(get_constant("MAGPIE_LOGGED_USER"), "extra")
-        resp = utils.test_request(self, "GET", path, expect_errors=True)
-        utils.check_response_basic_info(resp, 404)
-
     @runner.MAGPIE_TEST_STATUS
     def test_NotAcceptableRequest(self):
         utils.warn_version(self, "Unsupported 'Accept' header returns 406 directly.", "0.10.0", skip=True)
@@ -402,19 +381,19 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuthTestCase, Bas
         Not logged-in user cannot view group although group is discoverable.
         """
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
+        # login to setup test data
         utils.check_or_try_logout_user(self)
         self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
         self.headers.update(self.json_headers)
 
         # setup some actual discoverable group to ensure the error is not caused by some misinterpreted response
-        test_group = "unittest-no-auth_test-group"
-        self.extra_group_names.add(test_group)
-        group_data = {"group_name": test_group, "discoverable": True}
-        utils.TestSetup.delete_TestGroup(self, override_group_name=test_group)
+        self.extra_group_names.add(self.test_group_name)
+        group_data = {"group_name": self.test_group_name, "discoverable": True}
+        utils.TestSetup.delete_TestGroup(self, override_group_name=self.test_group_name)
         utils.TestSetup.create_TestGroup(self, override_data=group_data)
-        utils.check_or_try_logout_user(self)
+        utils.check_or_try_logout_user(self)  # re-logout to test
 
-        path = "/register/groups/{}".format(test_group)
+        path = "/register/groups/{}".format(self.test_group_name)
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, expect_errors=True)
         utils.check_response_basic_info(resp, 401, expected_method="DELETE")
 
@@ -428,6 +407,122 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuthTestCase, Bas
         utils.warn_version(self, "User registration views not yet available.", "2.0.0", skip=True)
         resp = utils.test_request(self, "GET", "/register/groups", headers=self.json_headers, expect_errors=True)
         utils.check_response_basic_info(resp, 401)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_STATUS
+    def test_GetUser_ReservedKeyword_Anonymous_Allowed(self):
+        """
+        Not logged-in user is allowed to get information about unauthenticated user with explicit user-name.
+        """
+        anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
+        path = "/users/{}".format(anonymous)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers)
+        body = utils.check_response_basic_info(resp)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], anonymous)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_STATUS
+    def test_GetUser_ReservedKeyword_LoggedUser_InvalidNotGlobed(self):
+        """
+        Test that logged user special keyword with more characters doesn't get incorrectly interpreted.
+
+        Older version bug would infer the logged user keyword although path variable was not *exactly* equal to it.
+        """
+        utils.warn_version(self, "validation of complete logged user keyword", "2.0.0", skip=True)
+        path = "/users/{}{}".format(get_constant("MAGPIE_LOGGED_USER"), "extra")
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, expect_errors=True)
+        utils.check_response_basic_info(resp, 404)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_STATUS
+    def test_GetUser_ReservedKeyword_LoggedUser_Allowed(self):
+        """
+        Not logged-in user is allowed to get information about unauthenticated user with implicit special keyword.
+        """
+        anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
+        path = "/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers)
+        body = utils.check_response_basic_info(resp)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["user_name"], anonymous)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_STATUS
+    def test_GetUser_OtherUser_Unauthorized(self):
+        """
+        Not logged-in user is not allowed to get information about any other user.
+        """
+        # login to setup test data, then re-logout to test
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        self.headers.update(self.json_headers)
+        utils.TestSetup.delete_TestUser(self)
+        body = utils.TestSetup.create_TestUser(self, override_group_name=None)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_or_try_logout_user(self)
+
+        path = "/users/{}".format(info["user_name"])
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=401)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_STATUS
+    def test_UpdateUser_ReservedKeyword_Anonymous_Unauthorized(self):
+        """
+        Not logged-in user is not allowed to update "own" information as it doesn't represent an actual user account.
+        """
+        anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
+        path = "/users/{}".format(anonymous)
+        data = {"user_name": anonymous + "-updated-name"}
+        resp = utils.test_request(self, self.update_method, path, json=data, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=401, expected_method=self.update_method)
+
+        # login to validate user was not updated
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.get_UserInfo(self, override_username=anonymous)  # if found, no update was applied
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_STATUS
+    def test_UpdateUser_ReservedKeyword_LoggedUser_Unauthorized(self):
+        """
+        Not logged-in user resolved via logged-user special keyword is not allowed to update "own" information as it
+        does not correspond to an actual user account.
+        """
+        anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
+        logged = get_constant("MAGPIE_LOGGED_USER")
+        path = "/users/{}".format(logged)
+        data = {"user_name": logged + "-updated-name"}
+        resp = utils.test_request(self, self.update_method, path, json=data, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=401, expected_method=self.update_method)
+
+        # login to validate user was not updated (check explicit anonymous since logged-user points to it during update)
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.get_UserInfo(self, override_username=anonymous)  # if found, no update was applied
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_STATUS
+    def test_UpdateUser_OtherUser_Unauthorized(self):
+        # login to setup test data, then re-logout to test
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        self.headers.update(self.json_headers)
+        utils.TestSetup.delete_TestUser(self)
+        body = utils.TestSetup.create_TestUser(self, override_group_name=None)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_or_try_logout_user(self)
+
+        path = "/users/{}".format(info["user_name"])
+        new_user_name = "{}-updated-name".format(info["user_name"])
+        self.extra_user_names.add(new_user_name)
+        data = {"user_name": new_user_name}
+        resp = utils.test_request(self, self.update_method, path, json=data, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=401, expected_method=self.update_method)
+
+        # login to validate user was not updated
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.get_UserInfo(self, override_username=self.test_user_name)  # if found, no update was applied
 
 
 @runner.MAGPIE_TEST_API
@@ -981,7 +1076,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Ba
         # run test
         for query in ["", "?inherited=true"]:
             path = "/users/{}/resources{}".format(self.test_user_name, query)
-            resp = utils.test_request(self, "GET", path)
+            resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
             body = utils.check_response_basic_info(resp)
             utils.check_val_is_in("resources", body)
             svc_types = utils.get_service_types_for_version(self.version)
@@ -1699,7 +1794,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         utils.TestSetup.create_TestService(self, override_service_name=other_svc_name)
 
         path = "/users/{}/resources?filtered=true".format(self.test_user_name)
-        resp = utils.test_request(self, "GET", path)
+        resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp)
         svc_types = utils.get_service_types_for_version(self.version)
         utils.check_all_equal(list(body["resources"]), svc_types, any_order=True, msg="All service types listed.")

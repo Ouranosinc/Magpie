@@ -36,13 +36,15 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
         cls.app = utils.get_test_magpie_app()
         cls.cookies = None  # force not logged in
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.test_user_name = get_constant("MAGPIE_ANONYMOUS_USER")
-        cls.test_group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
         # note: admin credentials to setup data on test instance as needed, but not to be used for these tests
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
         cls.setup_admin()
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-no-auth_api-user-local",
+                                          raise_missing=False, raise_not_set=False)
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-no-auth_api-group-local",
+                                           raise_missing=False, raise_not_set=False)
 
 
 @runner.MAGPIE_TEST_API
@@ -123,13 +125,15 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.test_user_name = get_constant("MAGPIE_ANONYMOUS_USER")
-        cls.test_group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
         # note: admin credentials to setup data on test instance as needed, but not to be used for these tests
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
         cls.setup_admin()
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-no-auth_api-user-remote",
+                                          raise_missing=False, raise_not_set=False)
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-no-auth_api-group-remote",
+                                           raise_missing=False, raise_not_set=False)
 
 
 @runner.MAGPIE_TEST_API

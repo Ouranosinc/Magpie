@@ -35,15 +35,17 @@ class TestCase_MagpieUI_NoAuth_Local(ti.Interface_MagpieUI_NoAuth, unittest.Test
         cls.app = utils.get_test_magpie_app()
         cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.cookies = None
-        cls.test_user_name = get_constant("MAGPIE_ANONYMOUS_USER")
-        cls.test_group_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
-        cls.test_service_type = ServiceWPS.service_type
-        cls.test_service_name = "magpie-unittest-service-wps"
         # note: admin credentials to setup data on test instance as needed, but not to be used for these tests
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME", raise_missing=False, raise_not_set=False)
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD", raise_missing=False, raise_not_set=False)
         cls.setup_admin()
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-no-auth_ui-user-local",
+                                          raise_missing=False, raise_not_set=False)
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-no-auth_ui-group-local",
+                                           raise_missing=False, raise_not_set=False)
+        cls.test_service_type = ServiceWPS.service_type
+        cls.test_service_name = "magpie-unittest-service-wps"
 
 
 @runner.MAGPIE_TEST_UI
@@ -68,9 +70,9 @@ class TestCase_MagpieUI_UsersAuth_Local(ti.Interface_MagpieUI_UsersAuth, unittes
         cls.version = utils.TestSetup.get_Version(cls)
         cls.setup_admin()
         cls.check_requirements()
-        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_user-local",
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_ui-user-local",
                                           raise_missing=False, raise_not_set=False)
-        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-user-auth_group-local",
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-user-auth_ui-group-local",
                                            raise_missing=False, raise_not_set=False)
 
 
@@ -100,9 +102,9 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         cls.setup_admin()
         cls.check_requirements()
 
-        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_user-local",
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_ui-user-local",
                                           raise_missing=False, raise_not_set=False)
-        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-admin-auth_group-local",
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-admin-auth_ui-group-local",
                                            raise_missing=False, raise_not_set=False)
         cls.test_service_type = utils.get_service_types_for_version(cls.version)[0]
         cls.test_service_name = utils.TestSetup.get_AnyServiceOfTestServiceType(cls)["service_name"]
@@ -164,15 +166,17 @@ class TestCase_MagpieUI_NoAuth_Remote(ti.Interface_MagpieUI_NoAuth, unittest.Tes
     def setUpClass(cls):
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.test_user = get_constant("MAGPIE_ANONYMOUS_USER")
-        cls.test_group = get_constant("MAGPIE_ANONYMOUS_GROUP")
-        cls.test_service_type = ServiceWPS.service_type
-        cls.test_service_name = "magpie-unittest-service-wps"
         # note: admin credentials to setup data on test instance as needed, but not to be used for these tests
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME", raise_missing=False, raise_not_set=False)
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD", raise_missing=False, raise_not_set=False)
         cls.setup_admin()
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-no-auth_ui-user-remote",
+                                          raise_missing=False, raise_not_set=False)
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-no-auth_ui-group-remote",
+                                           raise_missing=False, raise_not_set=False)
+        cls.test_service_type = ServiceWPS.service_type
+        cls.test_service_name = "magpie-unittest-service-wps"
 
 
 @runner.MAGPIE_TEST_UI
@@ -193,9 +197,9 @@ class TestCase_MagpieUI_UsersAuth_Remote(ti.Interface_MagpieUI_UsersAuth, unitte
         cls.setup_admin()
         cls.check_requirements()
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_user-remote",
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_ui-user-remote",
                                           raise_missing=False, raise_not_set=False)
-        cls.test_group_name = get_constant("MAGPIE_USERS_GROUP", default_value="unittest-user-auth_group-remote",
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-user-auth_ui-group-remote",
                                            raise_missing=False, raise_not_set=False)
 
 
@@ -219,9 +223,9 @@ class TestCase_MagpieUI_AdminAuth_Remote(ti.Interface_MagpieUI_AdminAuth, unitte
         cls.setup_admin()
         cls.check_requirements()
         cls.version = utils.TestSetup.get_Version(cls)
-        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_user-remote",
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_ui-user-remote",
                                           raise_missing=False, raise_not_set=False)
-        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-admin-auth_group-remote",
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-admin-auth_ui-group-remote",
                                            raise_missing=False, raise_not_set=False)
         cls.test_service_type = utils.get_service_types_for_version(cls.version)[0]
         cls.test_service_name = utils.TestSetup.get_AnyServiceOfTestServiceType(cls)["service_name"]

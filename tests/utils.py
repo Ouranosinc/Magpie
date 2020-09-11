@@ -48,6 +48,22 @@ OPTIONAL_STRING_TYPES = six.string_types + tuple([type(None)])
 
 
 class RunOption(object):
+    """
+    Defines a portable marker that can activate/disable tests from environment variable or :mod:`pytest` marker.
+
+    Offers compatibility between :mod:`pytest` conditional markers and :mod:`unittest` skip decorators.
+    With these options, specific tests can be executed equivalently with following methods::
+
+        [env] MAGPIE_TEST_USERS = false
+        pytest tests
+
+        pytest tests -m "not users"
+
+    All ``MAGPIE_TEST_<option>`` variables are *enabled* by default.
+
+    .. seealso::
+        :func:`make_run_option_decorator`
+    """
     __slots__ = ["_name", "_enabled", "_marker", "_description"]
     __name__ = "RunOption"  # backward fix for Python 2 and 'functools.wraps'
 
