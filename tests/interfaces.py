@@ -1794,7 +1794,7 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
         utils.TestSetup.create_TestService(self, override_service_name=other_svc_name)
 
         path = "/users/{}/resources?filtered=true".format(self.test_user_name)
-        resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         svc_types = utils.get_service_types_for_version(self.version)
         utils.check_all_equal(list(body["resources"]), svc_types, any_order=True, msg="All service types listed.")
