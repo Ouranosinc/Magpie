@@ -270,7 +270,7 @@ def get_service_types_for_version(version):
     available_service_types = set(services.SERVICE_TYPE_DICT.keys())
     if LooseVersion(version) <= LooseVersion("0.6.1"):
         available_service_types = available_service_types - {ServiceAccess.service_type}
-    return list(available_service_types)
+    return list(sorted(available_service_types))
 
 
 def warn_version(test, functionality, version, skip=True, older=False):

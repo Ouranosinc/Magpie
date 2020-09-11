@@ -998,7 +998,7 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Ba
                                   headers=self.test_headers, cookies=self.test_cookies)
         body = utils.check_response_basic_info(resp)
         svc_types = utils.get_service_types_for_version(self.version)
-        utils.check_all_equal(svc_types, body["resources"], any_order=True)
+        utils.check_all_equal(svc_types, list(body["resources"]), any_order=True)
         for svc_type in svc_types:
             services = body["resources"][svc_type]
             # only validate expected service-resources are returned and not others

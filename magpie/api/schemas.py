@@ -361,8 +361,8 @@ QueryFilterResources = colander.SchemaNode(
     colander.Boolean(), name="filtered", default=False, missing=colander.drop,
     description="Filter returned resources only where user has permissions on, either directly or inherited by groups "
                 "according to other query parameters. Otherwise (default), return all existing resources "
-                "with empty permissions set when user has no permission on them. Filtered view is enforced for "
-                "non-admin requesting user.")
+                "with empty permission sets when user has no permission on them. Filtered view is enforced for "
+                "non-admin request user.")
 QueryCascadeResourcesPermissions = colander.SchemaNode(
     colander.Boolean(), name="cascade", default=False, missing=colander.drop,
     description="Display all services that has at least one permission at any level in his hierarchy "

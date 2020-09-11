@@ -23,6 +23,7 @@ from magpie.api.management.service.service_formats import format_service_resourc
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.constants import MAGPIE_LOGGED_PERMISSION, MAGPIE_CONTEXT_PERMISSION, get_constant
+from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -225,11 +226,12 @@ def get_user_resources_view(request):
     def build_json_user_resource_tree(usr):
         json_res = {}
         services = ResourceService.all(models.Service, db_session=db)
+        # add service-types so they are ordered and listed if no service of that type was defined
+        for svc_type in sorted(SERVICE_TYPE_DICT):
+            json_res[svc_type] = {}
         for svc in services:
             svc_perms = uu.get_user_service_permissions(
                 user=usr, service=svc, request=request, inherit_groups_permissions=inherit_groups_perms)
-            if svc.type not in json_res:
-                json_res[svc.type] = {}
             res_perms_dict = uu.get_user_service_resources_permissions_dict(
                 user=usr, service=svc, request=request, inherit_groups_permissions=inherit_groups_perms)
             # always allow admin to view full resource tree, unless explicitly requested to be filtered
