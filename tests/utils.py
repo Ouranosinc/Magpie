@@ -49,6 +49,7 @@ OPTIONAL_STRING_TYPES = six.string_types + tuple([type(None)])
 
 class RunOption(object):
     __slots__ = ["_name", "_enabled", "_marker", "_description"]
+    __name__ = "RunOption"  # backward fix for Python 2 and 'functools.wraps'
 
     def __init__(self, name, marker=None, description=None):
         self._name = name
@@ -120,7 +121,7 @@ def make_run_option_decorator(run_option):
     All ``<custom_marker>`` definitions should be added to ``setup.cfg`` to allow :mod:`pytest` to reference them.
     """
     @functools.wraps(run_option)
-    def wrap(test_func, *args, **kwargs):  # noqa: F811
+    def wrap(test_func, *_, **__):
         pytest_marker = pytest.mark.__getattr__(run_option.marker)
         unittest_skip = unittest.skipUnless(*run_option())
         test_func = pytest_marker(test_func)

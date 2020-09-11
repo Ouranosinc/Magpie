@@ -34,6 +34,12 @@ Glossary
         identified through :term:`Authentication` methods. This process typically falls into the hands of a
         :term:`Proxy` application.
 
+    Context User
+        Specific :term:`User` that is being targeted by a request from specified value for the ``{user_name}`` request
+        path variable. The contextual :term:`User` of the request *could* correspond to the :term:`Logged User` if the
+        reference resolves to itself, but this is not necessarily the case. See further details and examples provided
+        in section :ref:`Route Access`.
+
     Cookies
         Set of :term:`Authentication` identifiers primarily employed by `Magpie` HTTP requests to determine the
         :term:`Logged User`.
@@ -75,11 +81,13 @@ Glossary
         :py:data:`magpie.constants.MAGPIE_DEFAULT_PROVIDER` constant.
 
     Logged User
-        Specific :term:`User` that corresponds to the active request session. This :term:`User` can automatically be
-        referenced to (instead of usual ``{user_name}`` path variable) in applicable requests using special value
-        configured with :py:data:`magpie.constants.MAGPIE_LOGGED_USER`. When not logged in, this
-        :term:`User` is considered to be :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`. Otherwise, it is whoever
-        the :term:`Authentication` mechanism identifies.
+        More specific use-case of :term:`Request User` that simultaneously corresponds to the active request session
+        :term:`User` as well at the referenced :term:`Context User` from the path variable. This :term:`User` can be
+        automatically retrieved in applicable requests using in the request path the special constant value defined by
+        :py:data:`magpie.constants.MAGPIE_LOGGED_USER`, or using its literal :term:`User` name.
+        When not logged in, this :term:`User` is considered to be equivalent to explicitly requesting
+        :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`. Otherwise, it is whoever the
+        :term:`Authentication` mechanism identifies with token extracted from request :term:`Cookies`.
 
     Permission
         Element that defines which rules are applicable for a given combination of :term:`User` and/or :term:`Group`
@@ -103,6 +111,14 @@ Glossary
         Refers to a :term:`Permission` applied on a :term:`Service` or :term:`Resource` to special elements in order
         to make them available to anyone including even unauthenticated sessions. See also :ref:`Public Access` section
         for implementation details to achieve this result.
+
+    Request User
+        Active request session :term:`User` that can be retrieved by calling ``request.user`` with resolution of
+        :term:`Authentication` headers within the request (:term:`User` is ``None`` if unauthenticated,
+        i.e.: :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`). This is not the same as the :term:`Context User`
+        extracted from ``{user_name}`` path variable, except for the special case covered by :term:`Logged User`'s
+        definition. The request :term:`User` could send request that work on another :term:`Context User` than itself
+        if sufficient :term:`Access Permission` is granted. See also :ref:`Route Access` for further details.
 
     Resource
         Entity on which :term:`User` and :term:`Group` can be associated to applicable :term:`Permission` respectively

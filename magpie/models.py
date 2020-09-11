@@ -175,20 +175,26 @@ class UserFactory(RootFactory):
         """
         Grant access to request user according to its relationship to context user (targeted by request path variable).
 
-        If it is the same user (either from explicit name or :py:data:`magpie.constants.MAGPIE_LOGGED_USER` reserved
+        If it is the same user (either from explicit name or by :py:data:`magpie.constants.MAGPIE_LOGGED_USER` reserved
         keyword), allow :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION` for itself to access corresponding views.
 
-        If request user is unauthenticated, :py:data:`magpie.constants.MAGPIE_LOGGED_USER` or itself, also grant
-        :py:data:`magpie.constants.MAGPIE_CONTEXT_PERMISSION` to allow access to contextually-available details.
-        (e.g.: user can view his own information and public ones)
+        If request user is unauthenticated (``None``), :py:data:`magpie.constants.MAGPIE_LOGGED_USER` or itself,
+        also grant :py:data:`magpie.constants.MAGPIE_CONTEXT_PERMISSION` to allow access to contextually-available
+        details (e.g.: user can view his own information and public ones).
+
+        All ACL permissions from :class:`RootFactory` are applied on top of user-specific permissions added here.
+
         """
         user = self.request.user
-        acl = super(UserFactory, self).__acl__
+        acl = super(UserFactory, self).__acl__   # inherit default permissions for non user-scoped routes
+        # when user is authenticated and refers to itself, simultaneously fulfill both logged/context conditions
         if user and self.path_user and user.id == self.path_user.id:
             acl += [(Allow, user.id, get_constant("MAGPIE_LOGGED_PERMISSION")),
                     (Allow, user.id, get_constant("MAGPIE_CONTEXT_PERMISSION"))]
+        # unauthenticated context is allowed if and only if referring also to the unauthenticated user
         elif user is None:
-            acl += [(Allow, Everyone, get_constant("MAGPIE_CONTEXT_PERMISSION"))]
+            if self.path_user is None or self.path_user.user_name == get_constant("MAGPIE_ANONYMOUS_USER"):
+                acl += [(Allow, Everyone, get_constant("MAGPIE_CONTEXT_PERMISSION"))]
         return acl
 
 

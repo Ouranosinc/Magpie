@@ -270,6 +270,11 @@ install-pkg: install-sys	## install the package to the active Python's site-pack
 	@echo "Installing Magpie..."
 	@bash -c '$(CONDA_CMD) python setup.py install_egg_info'
 	@bash -c '$(CONDA_CMD) pip install --upgrade -e "$(APP_ROOT)" --no-cache'
+	# TODO: remove when merged
+	# --- ensure fix is applied
+	@bash -c '$(CONDA_CMD) \
+		pip install --force-reinstall "https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic"'
+	# ---
 
 .PHONY: install-req
 install-req: conda-env	 ## install package base requirements without installing main package
