@@ -173,7 +173,7 @@ class UserFactory(RootFactory):
     @property
     def __acl__(self):
         """
-        Grant access to request user according to its relationship to context user (targeted by request path variable).
+        Grant access to :term:`Request User` according to its relationship to :term:`Context User`.
 
         If it is the same user (either from explicit name or by :py:data:`magpie.constants.MAGPIE_LOGGED_USER` reserved
         keyword), allow :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION` for itself to access corresponding views.
@@ -183,7 +183,6 @@ class UserFactory(RootFactory):
         details (e.g.: user can view his own information and public ones).
 
         All ACL permissions from :class:`RootFactory` are applied on top of user-specific permissions added here.
-
         """
         user = self.request.user
         acl = super(UserFactory, self).__acl__   # inherit default permissions for non user-scoped routes
