@@ -138,7 +138,7 @@ def _request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg="Res
     curl_out = subprocess.Popen(params, stdout=subprocess.PIPE)  # nosec
     curl_msg = curl_out.communicate()[0]    # type: Str
     curl_err = curl_out.returncode          # type: int
-    http_code = int(curl_msg.split(msg_sep)[1])
+    http_code = int(six.ensure_text(curl_msg).split(msg_sep)[1])
     print_log("[{url}] {response}".format(response=curl_msg, url=url), logger=LOGGER)
     return curl_err, http_code
 
@@ -199,7 +199,7 @@ def _phoenix_remove_services():
             error, _ = _request_curl(remove_services_url, cookies=phoenix_cookies_file.name,
                                      msg="Phoenix remove services")
     except Exception as exc:
-        print_log("Exception during phoenix remove services: [{!r}]".format(exc), logger=LOGGER)
+        print_log("Exception during phoenix remove services: [{!r}]".format(exc), logger=LOGGER, level=logging.ERROR)
     return error == 0
 
 
