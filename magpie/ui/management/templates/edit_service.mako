@@ -55,7 +55,7 @@
         %if service_push_show:
             <div class="checkbox-align">
                 <label for="push_phoenix_checkbox_warning">
-                    <input type="checkbox" name="service_push" id="push_phoenix_checkbox_warning" checked/>
+                    <input type="checkbox" name="service_push" id="push_phoenix_checkbox_warning" />
                     <span>Push to Phoenix?</span>
                 </label>
             </div>
@@ -80,7 +80,7 @@
 </script>
 
 <!-- since checkbox 'not checked' state is not actually sent,
-     apply 'off' to force return of the checkbox's state on submit -->
+     apply 'off' to force return state of the checkbox on submit -->
 <script type="text/javascript">
     $(document).ready(function() {
         $("#form_edit_service").on('submit', function() {

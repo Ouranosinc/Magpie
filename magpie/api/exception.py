@@ -31,7 +31,7 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Callable, List, Iterable, Optional, Tuple, Type, Union
+    from typing import Any, Callable, List, Iterable, NoReturn, Optional, Tuple, Type, Union
     from magpie.typedefs import AnyResponseType, JSON, ParamsType, Str  # noqa: F401
 
 LOGGER = get_logger(__name__)
@@ -380,7 +380,7 @@ def raise_http(http_error=HTTPInternalServerError,  # type: Type[HTTPError]
                content=None,                        # type: Optional[JSON]
                content_type=CONTENT_TYPE_JSON,      # type: Str
                nothrow=False                        # type: bool
-               ):                                   # type: (...) -> Optional[HTTPException]
+               ):                                   # type: (...) -> NoReturn
     """
     Raises error HTTP with standardized information formatted with content type.
 

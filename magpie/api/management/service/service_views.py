@@ -95,7 +95,7 @@ def register_service_view(request):
     service_name = ar.get_value_multiformat_body_checked(request, "service_name")
     service_url = ar.get_value_multiformat_body_checked(request, "service_url", pattern=ax.PARAM_REGEX)
     service_type = ar.get_value_multiformat_body_checked(request, "service_type")
-    service_push = asbool(ar.get_multiformat_body(request, "service_push"))
+    service_push = asbool(ar.get_multiformat_body(request, "service_push", default=False))
     return su.create_service(service_name, service_type, service_url, service_push, db_session=request.db)
 
 

@@ -270,7 +270,7 @@ HomepageAPI = Service(
 
 TAG_DESCRIPTIONS = {
     APITag: "General information about the API.",
-    SessionTag: "Session user management and available providers for authentification.",
+    SessionTag: "Session user management and available providers for authentication.",
     UsersTag:
         "Users information management and control of their applicable groups, services, resources and permissions.\n\n"
         "Administrator-level permissions are required to access most paths. Depending on context, some paths are "
@@ -373,6 +373,13 @@ QueryFlattenServices = colander.SchemaNode(
     description="Return elements as a flattened list of JSON objects instead of default response format. "
                 "Default is a nested JSON of service-type keys with children service-name keys, each containing "
                 "their respective service definition as JSON object.")
+
+
+class PhoenixServicePushOption(colander.SchemaNode):
+    schema_type = colander.Boolean
+    description = "Push service update to Phoenix if applicable"
+    missing = colander.drop
+    default = False
 
 
 class BaseRequestSchemaAPI(colander.MappingSchema):
@@ -794,11 +801,7 @@ class Resource_PATCH_RequestBodySchema(colander.MappingSchema):
         colander.String(),
         description="New name to apply to the resource to update",
     )
-    service_push = colander.SchemaNode(
-        colander.Boolean(),
-        description="Push service resource update to Phoenix",
-        missing=False,
-    )
+    service_push = PhoenixServicePushOption()
 
 
 class Resource_PATCH_RequestSchema(BaseRequestSchemaAPI):
@@ -846,12 +849,7 @@ class Resource_PATCH_ConflictResponseSchema(BaseResponseSchemaAPI):
 
 
 class Resource_DELETE_RequestBodySchema(colander.MappingSchema):
-    service_push = colander.SchemaNode(
-        colander.Boolean(),
-        description="Push service update to Phoenix if applicable",
-        missing=colander.drop,
-        default=False,
-    )
+    service_push = PhoenixServicePushOption()
 
 
 class Resource_DELETE_RequestSchema(BaseRequestSchemaAPI):
@@ -1156,12 +1154,7 @@ class Service_PATCH_ResponseBodySchema(colander.MappingSchema):
         default=colander.null,
         example="http://localhost:9000/new_service_name"
     )
-    service_push = colander.SchemaNode(
-        colander.Boolean(),
-        description="Push service update to Phoenix if applicable",
-        missing=colander.drop,
-        default=False,
-    )
+    service_push = PhoenixServicePushOption()
 
 
 class Service_PATCH_RequestBodySchema(BaseRequestSchemaAPI):

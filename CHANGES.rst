@@ -68,6 +68,9 @@ Features / Changes
   avoids unnecessarily exposing all ``Service`` for which the user cannot (or should not) be interacting with anyway.
 * Add ``TWITCHER_HOST`` as alternative configuration parameter to define the service public URL, to have a similar
   naming convention as other use cases covered by ``MAGPIE_HOST`` and ``PHOENIX_HOST``.
+* Modify ``PHOENIX_PUSH`` to be *disabled* by default to be consistent across all locations where corresponding
+  feature is referenced (startup registration, CLI utility, API requests and UI checkbox option) and because this
+  option is an advanced extension not to be considered as default behavior.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -87,6 +90,8 @@ Bug Fixes
 * Fix minor HTML issues in mako templates.
 * Fix invalid generation of default ``postgres.env`` file from ``magpie.env.example``.
   File ``postgres.env.example`` will now be correctly employed as documented.
+* Make environment variable ``PHOENIX_PUSH`` refer to ``phoenix.push`` instead of ``magpie.phoenix_push`` to employ
+  same naming schema as all other variables.
 
 `1.11.0 <https://github.com/Ouranosinc/Magpie/tree/1.11.0>`_ (2020-06-19)
 ------------------------------------------------------------------------------------

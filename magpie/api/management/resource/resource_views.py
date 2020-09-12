@@ -79,7 +79,7 @@ def update_resource(request):
     Update a resource information.
     """
     resource = ar.get_resource_matchdict_checked(request, "resource_id")
-    service_push = asbool(ar.get_multiformat_body(request, "service_push"))
+    service_push = asbool(ar.get_multiformat_body(request, "service_push", default=False))
     res_old_name = resource.resource_name
     res_new_name = ar.get_value_multiformat_body_checked(request, "resource_name")
     ax.verify_param(res_new_name, not_equal=True, param_compare=res_old_name, param_name="resource_name",

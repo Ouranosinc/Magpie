@@ -112,11 +112,11 @@ def verify_user(request):
                          headers={"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON})
     if resp.status_code != HTTPOk.code:
         content = {"response": resp.json()}
-        return raise_http(HTTPForbidden, detail="Failed Magpie login.", content=content, nothrow=True)
+        return raise_http(HTTPForbidden, detail="Failed Magpie login.", content=content, nothrow=True)  # noqa
     authn_policy = request.registry.queryUtility(IAuthenticationPolicy)  # noqa
     result = authn_policy.cookie.identify(request)
     if result is None:
-        return raise_http(HTTPForbidden, detail="Twitcher login incompatible with Magpie login.", nothrow=True)
+        return raise_http(HTTPForbidden, detail="Twitcher login incompatible with Magpie login.", nothrow=True)  # noqa
     return valid_http(HTTPOk, detail="Twitcher login verified successfully with Magpie login.")
 
 

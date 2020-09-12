@@ -62,7 +62,7 @@ def main(global_config=None, **settings):  # noqa: F811
     combined_config = get_constant("MAGPIE_CONFIG_PATH", default_value=None,
                                    raise_missing=False, raise_not_set=False, print_missing=True)
     print_log("Register configuration providers...", logger=LOGGER)
-    push_phoenix = asbool(get_constant("PHOENIX_PUSH", settings, settings_name="magpie.phoenix_push",
+    push_phoenix = asbool(get_constant("PHOENIX_PUSH", settings, settings_name="phoenix.push", default_value=False,
                                        raise_missing=False, raise_not_set=False, print_missing=True))
 
     prov_cfg = combined_config or get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", default_value="",

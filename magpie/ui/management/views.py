@@ -926,7 +926,7 @@ class ManagementViews(BaseViews):
         # apply default state if arriving on the page for the first time
         # future editions on the page will transfer the last saved state
         service_push_show = cur_svc_type in register.SERVICES_PHOENIX_ALLOWED
-        service_push = asbool(self.request.POST.get("service_push", service_push_show))
+        service_push = asbool(self.request.POST.get("service_push", False))
 
         service_info = {"edit_mode": "no_edit", "service_name": service_name, "service_url": service_url,
                         "public_url": register.get_twitcher_protected_service_url(service_name),
