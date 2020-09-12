@@ -15,7 +15,7 @@
         <div class="tree-button">
             <input type="submit" value="Add child" name="add_child"
             %if int(value["id"]) in resources_id_type.keys():
-                %if not resources_id_type[int(value["id"])] in resources_no_child:
+                %if resources_id_type[int(value["id"])] in resources_no_child:
                     class="button theme disabled" disabled
                 %else:
                     class="button theme"

@@ -26,10 +26,11 @@ from magpie.services import SERVICE_TYPE_DICT
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from pyramid.httpexceptions import HTTPException  # noqa: F401
+    from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session
-    from magpie.typedefs import Str, Iterable, List, Optional, JSON, ServiceOrResourceType  # noqa: F401
-    from magpie.permissions import Permission  # noqa: F401
+    from typing import Iterable, List, Optional
+    from magpie.typedefs import JSON, ResourcePermissionMap, ServiceOrResourceType, Str
+    from magpie.permissions import Permission
 
 
 def get_all_group_names(db_session):
@@ -287,7 +288,7 @@ def get_group_service_permissions_response(group, service, db_session):
 
 
 def get_group_service_resources_permissions_dict(group, service, db_session):
-    # type: (models.Group, models.Service, Session) -> JSON
+    # type: (models.Group, models.Service, Session) -> ResourcePermissionMap
     """
     Get all permissions the group has on a specific service's children resources.
     """

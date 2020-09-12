@@ -54,7 +54,8 @@ if TYPE_CHECKING:
 
     # recursive nodes structure employed by functions for listing children resources hierarchy
     # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
-    ChildrenResourceNodes = Dict[int, Dict[Str, Union[models.Resource, int, "ChildrenResourceNodes"]]]
+    ChildrenResourceNodes = Dict[int, Dict[Str, Union[models.Resource, "ChildrenResourceNodes"]]]
+    ResourcePermissionMap = Dict[int, List[Str]]  # raw mapping of permission-names applied per resource ID
 
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ServiceOrResourceType = Union[models.Service, models.Resource]

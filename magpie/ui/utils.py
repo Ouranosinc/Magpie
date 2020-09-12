@@ -1,7 +1,7 @@
 import json
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPInternalServerError, exception_response
+from pyramid.httpexceptions import HTTPException, HTTPInternalServerError, exception_response
 from pyramid.request import Request
 from pyramid.view import view_defaults
 
@@ -121,7 +121,8 @@ def handle_errors(func):
         except Exception as exc:
             detail = "{}: {}".format(type(exc).__name__, str(exc))
             exc_info = get_exception_info(exc, exception_details=True) or detail  # noqa
-            LOGGER.error("Unexpected API error under UI operation. [%s]", exc_info)
+            with_tb = not isinstance(exc, HTTPException) or getattr(exc, "status_code", 500) >= 500
+            LOGGER.error("Unexpected API error under UI operation. [%s]", exc_info, exc_info=with_tb)
             content = {}
             if view_container:
                 content = get_request_info(view_container.request, default_message=detail, exception_details=True)

@@ -31,8 +31,10 @@ if TYPE_CHECKING:
     from pyramid.request import Request
     from sqlalchemy.orm.session import Session
     from typing import Dict, Iterable, List, Optional
-    from magpie.typedefs import AnyPermissionType, Str, ResourcePermissionType, UserServicesType, ServiceOrResourceType
     from magpie.permissions import Permission
+    from magpie.typedefs import (
+        AnyPermissionType, ResourcePermissionMap, ResourcePermissionType, Str, UserServicesType, ServiceOrResourceType
+    )
 
 
 def create_user(user_name, password, email, group_name, db_session):
@@ -336,7 +338,7 @@ def get_user_resources_permissions_dict(user, request, resource_types=None,
 
 
 def get_user_service_resources_permissions_dict(user, service, request, inherit_groups_permissions=True):
-    # type: (models.User, models.Service, Request, bool) -> Dict[Str, AnyPermissionType]
+    # type: (models.User, models.Service, Request, bool) -> ResourcePermissionMap
     """
     Retrieves all permissions the user has for all resources nested under the service.
 

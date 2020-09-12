@@ -10,7 +10,9 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
     from typing import Iterable, Optional
     from magpie.models import Resource, Service
-    from magpie.typedefs import AnyPermissionType, ChildrenResourceNodes, JSON, ServiceOrResourceType
+    from magpie.typedefs import (
+        AnyPermissionType, ChildrenResourceNodes, JSON, ResourcePermissionMap, ServiceOrResourceType
+    )
 
 
 def format_resource(resource, permissions=None, basic_info=False):
@@ -42,13 +44,13 @@ def format_resource(resource, permissions=None, basic_info=False):
     )
 
 
-def format_resource_tree(children, db_session, *args, resources_perms_dict=None):
-    # type: (ChildrenResourceNodes, Session, Optional[ChildrenResourceNodes], Optional[ChildrenResourceNodes]) -> JSON
+def format_resource_tree(children, db_session, resources_perms_dict=None):
+    # type: (ChildrenResourceNodes, Session, Optional[ResourcePermissionMap]) -> JSON
     """
     Generates the formatted resource tree under the provided children resources, with all of their children resources by
-    calling :func:`format_resource` recursively.
+    calling :func:`format_resource` recursively on them.
 
-    Filters resource permissions with ``resources_perms_dict`` if provided.
+    Apply specific resource permissions as defined by :paramref:`resources_perms_dict` if provided.
 
     :param children: service or resource for which to generate the formatted resource tree
     :param db_session: connection to db
@@ -56,54 +58,52 @@ def format_resource_tree(children, db_session, *args, resources_perms_dict=None)
         Any pre-established :term:`Applied Permissions` to set to corresponding resources by ID.
         When provided, these will define the :term:`User`, :term:`Group` or both (i.e.: :term:`Inherited Permissions`)
         actual permissions, or even the :term:`Effective Permissions`, according to parent caller function's context.
-        Otherwise (``None``), defaults to extracting :term:`Allowed Permissions`.
+        Otherwise (``None``), defaults to extracting :term:`Allowed Permissions` for the given :term:`Resource` scoped
+        under the corresponding root :term:`Service`.
     :return: formatted resource tree
     """
     # optimization to avoid re-lookup of 'allowed permissions' when already fetched
     # unused when parsing 'applied permissions'
-    __internal_svc_res_perm_dict = {} if not args else args[0]
+    __internal_svc_res_perm_dict = {}
 
-    fmt_res_tree = {}
-    for child_id, child_dict in children.items():
-        resource = child_dict["node"]
-        new_children = child_dict["children"]
-        perms = []
+    def recursive_fmt_res_tree(children_dict):
+        fmt_res_tree = {}
+        for child_id, child_dict in children_dict.items():
+            resource = child_dict["node"]
+            new_children = child_dict["children"]
+            perms = []
 
-        # case of pre-specified user/group-specific permissions
-        if resources_perms_dict is not None:
-            if resource.resource_id in resources_perms_dict.keys():
-                perms = resources_perms_dict[resource.resource_id]
+            # case of pre-specified user/group-specific permissions
+            if resources_perms_dict is not None:
+                if resource.resource_id in resources_perms_dict.keys():
+                    perms = resources_perms_dict[resource.resource_id]
 
-        # case of full fetch (allowed resource permissions)
-        else:
-            # directly access the resource if it is a service
-            service = None  # type: Optional[Service]
-            if resource.root_service_id is None:
-                service = resource
-                service_id = resource.resource_id
-            # obtain corresponding top-level service resource if not already available,
-            # get resource permissions allowed under the top service's scope
+            # case of full fetch (allowed resource permissions)
             else:
-                service_id = resource.root_service_id
-                if service_id not in __internal_svc_res_perm_dict:
-                    service = ResourceService.by_resource_id(service_id, db_session=db_session)
-            # add to dict only if not already added
-            if service is not None and service_id not in __internal_svc_res_perm_dict:
-                __internal_svc_res_perm_dict[service_id] = {
-                    res_type.resource_type_name: res_perms  # use str key to match below 'resource_type' field
-                    for res_type, res_perms in SERVICE_TYPE_DICT[service.type].resource_types_permissions.items()
-                }
-            perms = __internal_svc_res_perm_dict[service_id][resource.resource_type]  # 'resource_type' is str here
+                # directly access the resource if it is a service
+                service = None  # type: Optional[Service]
+                if resource.root_service_id is None:
+                    service = resource
+                    service_id = resource.resource_id
+                # obtain corresponding top-level service resource if not already available,
+                # get resource permissions allowed under the top service's scope
+                else:
+                    service_id = resource.root_service_id
+                    if service_id not in __internal_svc_res_perm_dict:
+                        service = ResourceService.by_resource_id(service_id, db_session=db_session)
+                # add to dict only if not already added
+                if service is not None and service_id not in __internal_svc_res_perm_dict:
+                    __internal_svc_res_perm_dict[service_id] = {
+                        res_type.resource_type_name: res_perms  # use str key to match below 'resource_type' field
+                        for res_type, res_perms in SERVICE_TYPE_DICT[service.type].resource_types_permissions.items()
+                    }
+                perms = __internal_svc_res_perm_dict[service_id][resource.resource_type]  # 'resource_type' is str here
 
-        fmt_res_tree[child_id] = format_resource(resource, perms)
-        fmt_res_tree[child_id]["children"] = format_resource_tree(
-            new_children,
-            db_session,
-            __internal_svc_res_perm_dict,
-            resources_perms_dict=resources_perms_dict,
-        )
+            fmt_res_tree[child_id] = format_resource(resource, perms)
+            fmt_res_tree[child_id]["children"] = recursive_fmt_res_tree(new_children)
+        return fmt_res_tree
 
-    return fmt_res_tree
+    return recursive_fmt_res_tree(children)
 
 
 def format_resource_with_children(resource, db_session):
