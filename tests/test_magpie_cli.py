@@ -11,8 +11,12 @@ Tests for :mod:`magpie.cli` module.
 import json
 import mock
 import os
+import six
 import subprocess
-import tempfile
+if six.PY2:
+    from backports import tempfile
+else:
+    import tempfile
 
 from magpie.constants import get_constant
 from magpie.cli import magpie_helper_cli, batch_update_users
