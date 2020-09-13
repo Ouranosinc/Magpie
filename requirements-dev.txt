@@ -1,6 +1,6 @@
 -r requirements-docs.txt
 autopep8
-backports.tempfile; python < "3"
+backports.tempfile; python_version < "3"
 bandit
 bump2version
 codacy-coverage
