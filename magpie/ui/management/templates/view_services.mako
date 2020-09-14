@@ -8,9 +8,13 @@
 %for i, service in enumerate(service_names):
     <div class="alert alert-danger" id="ViewService_DeleteAlert_Service_${i}">
         <h3 class="alert-title-danger">Danger!</h3>
-        <p>
+        <div class="alert-info">
+            <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                 alt="" class="icon-error icon-color-invert" />
+            <div class="alert-text">
             Delete: [${service}]
-        </p>
+            </div>
+        </div>
         <p>
             This operation will remove the service and all its sub-resources.
             This operation is not reversible.

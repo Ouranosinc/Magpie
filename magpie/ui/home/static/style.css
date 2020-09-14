@@ -335,6 +335,19 @@ table thead {
     color: #FFFFFF;
 }
 
+.alert-info {
+    display: inline-flex;
+    text-align: center;
+}
+
+.alert-info>img {
+    margin: 0.10em 0.25em 0.15em 0;
+}
+
+.alert-text {
+
+}
+
 .alert-button {
     margin-left: 15px;
     color: white;
@@ -353,7 +366,7 @@ table thead {
 .alert-form-error>img {
     width: 1.25em;
     height: 1.25em;
-    margin: -0.1em 0.5em 0.15em 0;
+    margin: -0.05em 0.25em 0.15em 0;
 }
 
 .alert-form-error {
@@ -374,9 +387,18 @@ table thead {
 }
 
 .icon-error {
+    width: 1.25em;
+    height: 1.25em;
 }
 
 .icon-warning {
+    width: 1.25em;
+    height: 1.25em;
+}
+
+.icon-color-invert {
+    filter: saturate(0) invert(100%);
+    -webkit-filter: saturate(0) invert(100%);
 }
 
 /*---View users & groups pages ---*/
