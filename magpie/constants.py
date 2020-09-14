@@ -23,7 +23,9 @@ from pyramid.settings import asbool
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Str, Optional, SettingValue, AnySettingsContainer  # noqa: F401
+    from typing import Optional
+
+    from magpie.typedefs import AnySettingsContainer, SettingValue, Str
 
 # ===========================
 # path variables
@@ -200,7 +202,7 @@ def get_constant(constant_name,             # type: Str
     :raises ValueError: if resulting value is invalid based on options (by default raise missing/``None`` value)
     :raises LookupError: if no appropriate value could be found from all search locations (according to options)
     """
-    from magpie.utils import get_settings, raise_log, print_log  # pylint: disable=C0415  # avoid circular import error
+    from magpie.utils import get_settings, print_log, raise_log  # pylint: disable=C0415  # avoid circular import error
 
     if constant_name in MAGPIE_CONSTANTS:
         return globals()[constant_name]

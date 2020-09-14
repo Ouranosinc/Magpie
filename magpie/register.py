@@ -1,8 +1,8 @@
 import logging
 import os
 import random
-import subprocess   # nosec
 import string
+import subprocess  # nosec
 import time
 from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING
@@ -49,9 +49,10 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import (  # noqa: F401
-        Any, AnyCookiesType, CookiesOrSessionType, Dict, Iterable, List, JSON, Optional, Str, Tuple, Union
-    )
+    from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+
+    from magpie.typedefs import JSON, AnyCookiesType, CookiesOrSessionType, Str
+
     ConfigItem = Dict[Str, Str]
     ConfigList = List[ConfigItem]
     ConfigDict = Dict[Str, Union[ConfigItem, ConfigList]]
@@ -787,8 +788,8 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
         """
         # pylint: disable=C0415     # avoid circular imports
         # pylint: disable=R1705     # aligned methods are easier to read
-        from magpie.api.management.user import user_utils as ut
         from magpie.api.management.group import group_utils as gt
+        from magpie.api.management.user import user_utils as ut
 
         res = ResourceService.by_resource_id(resource_id, db_session=cookies_or_session)
         if _usr_name:

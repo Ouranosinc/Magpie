@@ -12,11 +12,13 @@ from magpie.utils import get_twitcher_protected_service_url
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import List, Optional, Type
+
     from sqlalchemy.orm.session import Session
-    from magpie.typedefs import JSON, ResourcePermissionMap
+
     from magpie.models import Resource, Service
     from magpie.permissions import Permission
     from magpie.services import ServiceInterface
+    from magpie.typedefs import JSON, ResourcePermissionMap
 
 
 def format_service(service, permissions=None, show_private_url=False, show_resources_allowed=False):

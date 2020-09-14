@@ -13,9 +13,9 @@ from magpie.utils import CONTENT_TYPE_JSON, get_header, get_logger, get_magpie_u
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import (  # noqa: F401
-        Any, AnyResponseType, CookiesType, Dict, HeadersType, JSON, Optional, Str, Union
-    )
+    from typing import Any, Dict, Optional, Union
+
+    from magpie.typedefs import JSON, AnyResponseType, CookiesType, HeadersType, Str
 
 LOGGER = get_logger(__name__)
 

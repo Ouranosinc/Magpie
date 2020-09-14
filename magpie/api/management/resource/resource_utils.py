@@ -23,13 +23,15 @@ from magpie.services import SERVICE_TYPE_DICT, service_factory
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
+    from typing import List, Optional, Tuple, Type
+
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
     from sqlalchemy.orm.session import Session
-    from typing import List, Optional, Tuple, Type
     from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
-    from magpie.typedefs import ChildrenResourceNodes, ServiceOrResourceType, Str
+
     from magpie.services import ServiceInterface
+    from magpie.typedefs import ChildrenResourceNodes, ServiceOrResourceType, Str
 
 
 def check_valid_service_or_resource_permission(permission_name, service_or_resource, db_session):

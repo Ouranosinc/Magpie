@@ -26,15 +26,18 @@ from magpie.utils import (
     SUPPORTED_ACCEPT_TYPES,
     get_header,
     get_logger,
-    is_magpie_ui_path,
+    is_magpie_ui_path
 )
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Callable, Optional, Tuple, Union
-    from magpie.typedefs import Str, JSON
+
     from pyramid.registry import Registry
     from pyramid.response import Response
+
+    from magpie.typedefs import JSON, Str
+
 LOGGER = get_logger(__name__)
 
 

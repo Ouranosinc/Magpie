@@ -13,7 +13,7 @@ import unittest
 import mock
 
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
-import tests.interfaces as ti  # noqa: F401
+import tests.interfaces as ti
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON
 from tests import runner, utils

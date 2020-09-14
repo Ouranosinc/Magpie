@@ -6,7 +6,6 @@ import os
 import sys
 import types
 from distutils.dir_util import mkpath
-from enum import EnumMeta  # noqa: W0212
 from inspect import isfunction
 from typing import TYPE_CHECKING
 
@@ -28,12 +27,20 @@ from magpie.constants import get_constant
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, List, NoReturn, Optional, Type, Union
-    from magpie.typedefs import (
-        AnyKey, AnyResponseType, AnyHeadersType, LoggerType, CookiesType, SettingsType, AnySettingsContainer, Str
-    )
-    from pyramid.events import NewRequest
     from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
+    from typing import Any, List, NoReturn, Optional, Type, Union
+
+    from pyramid.events import NewRequest
+
+    from magpie.typedefs import (
+        AnyHeadersType,
+        AnyKey,
+        AnyResponseType,
+        AnySettingsContainer,
+        CookiesType,
+        SettingsType,
+        Str
+    )
 
 CONTENT_TYPE_ANY = "*/*"
 CONTENT_TYPE_JSON = "application/json"
@@ -62,7 +69,7 @@ KNOWN_CONTENT_TYPES = SUPPORTED_ACCEPT_TYPES + [CONTENT_TYPE_FORM, CONTENT_TYPE_
 
 
 def get_logger(name, level=None, force_stdout=None, message_format=None, datetime_format=None):
-    # type: (Str, Optional[int], bool, Optional[Str], Optional[Str]) -> LoggerType
+    # type: (Str, Optional[int], bool, Optional[Str], Optional[Str]) -> logging.Logger
     """
     Immediately sets the logger level to avoid duplicate log outputs from the `root logger` and `this logger` when
     `level` is ``logging.NOTSET``.
@@ -85,7 +92,7 @@ LOGGER = get_logger(__name__)
 
 
 def set_logger_config(logger, force_stdout=False, message_format=None, datetime_format=None):
-    # type: (LoggerType, bool, Optional[Str], Optional[Str]) -> LoggerType
+    # type: (logging.Logger, bool, Optional[Str], Optional[Str]) -> logging.Logger
     """
     Applies the provided logging configuration settings to the logger.
     """
@@ -109,7 +116,7 @@ def set_logger_config(logger, force_stdout=False, message_format=None, datetime_
 
 
 def print_log(msg, logger=None, level=logging.INFO, **kwargs):
-    # type: (Str, Optional[LoggerType], int, Any) -> None
+    # type: (Str, Optional[logging.Logger], int, Any) -> None
     """
     Logs the requested message to the logger and optionally enforce printing to the console according to configuration
     value defined by ``MAGPIE_LOG_PRINT``.
@@ -127,7 +134,7 @@ def print_log(msg, logger=None, level=logging.INFO, **kwargs):
 
 
 def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
-    # type: (Str, Type[Exception], Optional[LoggerType], int) -> NoReturn
+    # type: (Str, Type[Exception], Optional[logging.Logger], int) -> NoReturn
     """
     Logs the provided message to the logger and raises the corresponding exception afterwards.
 
@@ -255,7 +262,7 @@ def convert_response(response):
 
 def get_admin_cookies(container, verify=True, raise_message=None):
     # type: (AnySettingsContainer, bool, Optional[Str]) -> CookiesType
-    from magpie.api.schemas import SigninAPI    # pylint: disable=C0415
+    from magpie.api.schemas import SigninAPI  # pylint: disable=C0415
 
     magpie_url = get_magpie_url(container)
     magpie_login_url = "{}{}".format(magpie_url, SigninAPI.path)
@@ -459,7 +466,20 @@ def is_json_body(body):
     return True
 
 
-class ExtendedEnumMeta(EnumMeta):
+class EnumUtil(object):
+    """
+    Utility :class:`enum.Enum` methods.
+
+    Create an extended enum with these utilities as follows::
+
+        class ExtendedEnum(EnumUtil, enum.Enum):
+            ItemA = "A"
+            ItemB = "B"
+
+    """
+    __members__ = None  # mapping of enum members that should be filled by enum.Enum
+
+    @classmethod
     def names(cls):
         # type: () -> List[Str]
         """
@@ -467,6 +487,7 @@ class ExtendedEnumMeta(EnumMeta):
         """
         return list(cls.__members__)
 
+    @classmethod
     def values(cls):
         # type: () -> List[AnyKey]
         """
@@ -474,6 +495,7 @@ class ExtendedEnumMeta(EnumMeta):
         """
         return [m.value for m in cls.__members__.values()]                      # pylint: disable=E1101
 
+    @classmethod
     def get(cls, key_or_value, default=None):
         # type: (AnyKey, Optional[Any]) -> Optional[_TC]
         """
@@ -482,7 +504,8 @@ class ExtendedEnumMeta(EnumMeta):
         Returns the entry directly if it is already a valid enum.
         """
         # Python 3.8 disallow direct check of 'str' in 'enum'
-        if key_or_value in [m for m in cls]:                                    # pylint: disable=E1133
+        members = [member for member in cls]  # noqa # pylint: disable=E1133
+        if key_or_value in members:                                             # pylint: disable=E1133
             return key_or_value
         for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101
             if key_or_value == m_key or key_or_value == m_val.value:            # pylint: disable=R1714
@@ -498,10 +521,12 @@ class SingletonMeta(type):
 
     Create a class such that::
 
-        class A(six.with_metaclass(SingletonMeta)):
+        @six.add_metaclass(SingletonMeta)
+        class A(object):
             pass
 
-        class B(six.with_metaclass(SingletonMeta)):
+        @six.add_metaclass(SingletonMeta)
+        class B(object):
             pass
 
         a1 = A()

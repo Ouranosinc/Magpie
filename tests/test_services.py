@@ -20,7 +20,9 @@ from tests import runner
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Dict, Optional, Str  # noqa: F401
+    from typing import Dict, Optional
+
+    from magpie.typedefs import Str
 
 
 def make_ows_parser(method="GET", content_type=None, params=None, body=""):

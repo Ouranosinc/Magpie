@@ -1,16 +1,16 @@
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from six import with_metaclass
-
-from magpie.utils import ExtendedEnumMeta
+from magpie.utils import EnumUtil
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Iterable, List, Optional, Str, AnyPermissionType  # noqa: F401
+    from typing import Iterable, List, Optional
+
+    from magpie.typedefs import AnyPermissionType, Str
 
 
-class Permission(with_metaclass(ExtendedEnumMeta, Enum)):
+class Permission(EnumUtil, Enum):
     """
     Applicable :term:`Permission` values under certain :term:`Service` and :term:`Resource`.
     """
@@ -55,8 +55,8 @@ def format_permissions(permissions):
     The returned list is sorted alphabetically and cleaned of any duplicate entries.
     """
     perms = []
-    for p in permissions:
-        p_enum = convert_permission(p)
+    for perm in permissions:
+        p_enum = convert_permission(perm)
         if p_enum:
             perms.append(p_enum)
-    return list(sorted(set([p.value for p in perms])))  # remove any duplicates entries
+    return list(sorted({perm.value for perm in perms}))  # remove any duplicates entries

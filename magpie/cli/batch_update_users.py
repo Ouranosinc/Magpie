@@ -14,11 +14,12 @@ from typing import TYPE_CHECKING
 import requests
 
 from magpie.constants import get_constant
-from magpie.utils import get_json, get_logger
 from magpie.register import get_all_configs, pseudo_random_string
+from magpie.utils import get_json, get_logger
 
 if TYPE_CHECKING:
     from typing import Any, Dict, List, Optional, Sequence
+
     from magpie.typedefs import Str
     UserConfig = List[Dict[Str, Str]]
 
@@ -126,8 +127,9 @@ def make_output(user_results, is_delete, output_location=None):
 
     oper_name = "delete" if is_delete else "create"
     filename = "magpie_" + oper_name + "_users_log__" + datetime.datetime.now().strftime("%Y%m%d__%H%M%S") + ".txt"
-    if output_location and not os.path.exists(output_location):
-        os.makedirs(output_location)
+    if output_location:
+        if not os.path.exists(output_location):
+            os.makedirs(output_location)
         filename = os.path.join(output_location, filename)
     with open(filename, "w") as file:
         file.write(output)

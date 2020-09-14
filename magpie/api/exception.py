@@ -18,10 +18,10 @@ from pyramid.httpexceptions import (
 
 from magpie.utils import (
     CONTENT_TYPE_ANY,
+    CONTENT_TYPE_APP_XML,
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
     CONTENT_TYPE_PLAIN,
-    CONTENT_TYPE_APP_XML,
     CONTENT_TYPE_TXT_XML,
     SUPPORTED_ACCEPT_TYPES,
     get_logger,
@@ -31,8 +31,9 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Callable, List, Iterable, NoReturn, Optional, Tuple, Type, Union
-    from magpie.typedefs import AnyResponseType, JSON, ParamsType, Str  # noqa: F401
+    from typing import Any, Callable, Iterable, List, NoReturn, Optional, Tuple, Type, Union
+
+    from magpie.typedefs import JSON, ParamsType, Str
 
 LOGGER = get_logger(__name__)
 

@@ -13,9 +13,9 @@ from ziggurat_foundations.models.group_permission import GroupPermissionMixin
 from ziggurat_foundations.models.group_resource_permission import GroupResourcePermissionMixin
 from ziggurat_foundations.models.resource import ResourceMixin
 from ziggurat_foundations.models.services import BaseService
+from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
 from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
-from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.user import UserService
 from ziggurat_foundations.models.user import UserMixin
 from ziggurat_foundations.models.user_group import UserGroupMixin
@@ -30,6 +30,7 @@ from magpie.permissions import Permission
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Dict, Type
+
     from magpie.typedefs import Str
 
 Base = declarative_base()   # pylint: disable=C0103,invalid-name
@@ -211,8 +212,10 @@ class Service(Resource):
                             primary_key=True, )
 
     resource_type_name = "service"
-    __mapper_args__ = {"polymorphic_identity": resource_type_name,
-                       "inherit_condition": resource_id == Resource.resource_id}
+    __mapper_args__ = {
+        "polymorphic_identity": resource_type_name,
+        "inherit_condition": resource_id == Resource.resource_id
+    }
 
     @property
     def permissions(self):  # pragma: no cover

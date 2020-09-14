@@ -25,15 +25,15 @@ from magpie.api import exception as ax
 from magpie.api import generic as ag
 from magpie.api import requests as ar
 from magpie.permissions import Permission, format_permissions
-from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnumMeta, get_header
+from magpie.utils import CONTENT_TYPE_JSON, EnumUtil, get_header
 from tests import runner, utils
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Str  # noqa: F401
+    from magpie.typedefs import Str
 
 
-class DummyEnum(six.with_metaclass(ExtendedEnumMeta, Enum)):
+class DummyEnum(EnumUtil, Enum):
     VALUE1 = "value-1"
     VALUE2 = "value-2"
 
@@ -48,8 +48,8 @@ class TestUtils(unittest.TestCase):
         path = parts[0]
         query = dict()
         if len(parts) > 1:
-            for q in parts[1:]:
-                k, v = q.split("=")
+            for part in parts[1:]:
+                k, v = part.split("=")
                 query[k] = v
         return DummyRequest(path=path, params=query)  # noqa
 
@@ -111,36 +111,36 @@ class TestUtils(unittest.TestCase):
                 utils.check_val_equal(get_header(name, headers, split=split), CONTENT_TYPE_JSON)
 
     def test_get_query_param(self):
-        r = self.make_request("/some/path")
-        v = ar.get_query_param(r, "value")
+        resp = self.make_request("/some/path")
+        v = ar.get_query_param(resp, "value")
         utils.check_val_equal(v, None)
 
-        r = self.make_request("/some/path?other=test")
-        v = ar.get_query_param(r, "value")
+        resp = self.make_request("/some/path?other=test")
+        v = ar.get_query_param(resp, "value")
         utils.check_val_equal(v, None)
 
-        r = self.make_request("/some/path?other=test")
-        v = ar.get_query_param(r, "value", True)
+        resp = self.make_request("/some/path?other=test")
+        v = ar.get_query_param(resp, "value", True)
         utils.check_val_equal(v, True)
 
-        r = self.make_request("/some/path?value=test")
-        v = ar.get_query_param(r, "value", True)
+        resp = self.make_request("/some/path?value=test")
+        v = ar.get_query_param(resp, "value", True)
         utils.check_val_equal(v, "test")
 
-        r = self.make_request("/some/path?query=value")
-        v = ar.get_query_param(r, "query")
+        resp = self.make_request("/some/path?query=value")
+        v = ar.get_query_param(resp, "query")
         utils.check_val_equal(v, "value")
 
-        r = self.make_request("/some/path?QUERY=VALUE")
-        v = ar.get_query_param(r, "query")
+        resp = self.make_request("/some/path?QUERY=VALUE")
+        v = ar.get_query_param(resp, "query")
         utils.check_val_equal(v, "VALUE")
 
-        r = self.make_request("/some/path?QUERY=VALUE")
-        v = asbool(ar.get_query_param(r, "query"))
+        resp = self.make_request("/some/path?QUERY=VALUE")
+        v = asbool(ar.get_query_param(resp, "query"))
         utils.check_val_equal(v, False)
 
-        r = self.make_request("/some/path?Query=TRUE")
-        v = asbool(ar.get_query_param(r, "query"))
+        resp = self.make_request("/some/path?Query=TRUE")
+        v = asbool(ar.get_query_param(resp, "query"))
         utils.check_val_equal(v, True)
 
     def test_verify_param_proper_verifications_raised(self):

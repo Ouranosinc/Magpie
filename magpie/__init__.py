@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+
 import sys
 
 # NOTE:
@@ -13,6 +14,7 @@ def includeme(config):
     # pylint: disable=C0415
     from pyramid.events import NewRequest
     from pyramid.tweens import EXCVIEW
+
     from magpie.api import generic as ag
     from magpie.constants import get_constant
     from magpie.utils import fully_qualified_name, get_logger, log_exception_tween, log_request

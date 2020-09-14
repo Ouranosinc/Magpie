@@ -1,6 +1,7 @@
 import json
 from collections import OrderedDict
 from datetime import datetime
+from secrets import compare_digest  # noqa  # python2-secrets employed for Python<=3.5
 from typing import TYPE_CHECKING
 
 import humanize
@@ -9,22 +10,24 @@ import transaction
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPFound, HTTPMovedPermanently, HTTPNotFound
 from pyramid.settings import asbool
 from pyramid.view import view_config
-from secrets import compare_digest  # noqa  # python2-secrets employed for Python<=3.5
 
 from magpie import register
 from magpie.api import schemas
-from magpie.constants import get_constant
 from magpie.cli import sync_resources
 from magpie.cli.sync_resources import OUT_OF_SYNC
+from magpie.constants import get_constant
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT  # TODO: remove, implement getters via API
 from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from sqlalchemy.orm.session import Session
     from typing import Dict, List, Optional, Tuple
+
+    from sqlalchemy.orm.session import Session
+
     from magpie.typedefs import JSON, Str
+
 LOGGER = get_logger(__name__)
 
 
@@ -256,15 +259,15 @@ class ManagementViews(BaseViews):
                     return_data["invalid_password"] = True
                     return_data["reason_password"] = reason
                     return self.add_template_data(return_data)
-                elif param_name == "user_name":
+                if param_name == "user_name":
                     return_data["invalid_user_name"] = True
                     return_data["reason_user_name"] = reason
                     return self.add_template_data(return_data)
-                elif param_name == "user_name":
+                if param_name == "user_name":
                     return_data["invalid_user_email"] = True
                     return_data["reason_user_email"] = reason
                     return self.add_template_data(return_data)
-                elif param_name == "group_name":
+                if param_name == "group_name":
                     return_data["invalid_group_name"] = True
                     return_data["reason_group_name"] = reason
                     return self.add_template_data(return_data)
@@ -480,7 +483,7 @@ class ManagementViews(BaseViews):
                     return_data["invalid_group_name"] = True
                     return_data["reason_group_name"] = reason
                     return self.add_template_data(return_data)
-                elif param_name == "description":
+                if param_name == "description":
                     return_data["invalid_description"] = True
                     return_data["reason_description"] = reason
                     return self.add_template_data(return_data)

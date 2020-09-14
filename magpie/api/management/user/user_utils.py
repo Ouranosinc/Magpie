@@ -1,6 +1,6 @@
-import six
 from typing import TYPE_CHECKING
 
+import six
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
@@ -27,13 +27,20 @@ from magpie.services import service_factory
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
+    from typing import Dict, Iterable, List, Optional
+
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
     from sqlalchemy.orm.session import Session
-    from typing import Dict, Iterable, List, Optional
+
     from magpie.permissions import Permission
     from magpie.typedefs import (
-        AnyPermissionType, ResourcePermissionMap, ResourcePermissionType, Str, UserServicesType, ServiceOrResourceType
+        AnyPermissionType,
+        ResourcePermissionMap,
+        ResourcePermissionType,
+        ServiceOrResourceType,
+        Str,
+        UserServicesType
     )
 
 

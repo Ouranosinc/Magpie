@@ -5,9 +5,8 @@ Revision ID: b739afcc91db
 Revises: 24da162a54f1
 Create Date: 2020-07-23 15:54:22.850077
 """
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "b739afcc91db"

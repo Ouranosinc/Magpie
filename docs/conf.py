@@ -15,10 +15,10 @@
 
 # pylint: disable=C0103,invalid-name
 
+import json
 import os
 import re
 import sys
-import json
 
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is

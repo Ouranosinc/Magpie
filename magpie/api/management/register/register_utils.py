@@ -1,5 +1,6 @@
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from typing import TYPE_CHECKING
+
+from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 from ziggurat_foundations.models.services.group import GroupService
 
 from magpie.api import exception as ax
@@ -8,8 +9,11 @@ from magpie.models import Group
 from magpie.utils import CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
-    from magpie.typedefs import List, Str
+    from typing import List
+
     from sqlalchemy.orm.session import Session
+
+    from magpie.typedefs import Str
 
 
 def get_discoverable_groups(db_session):

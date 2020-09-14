@@ -78,12 +78,14 @@ disable=C0111,missing-docstring,
         R1721,unnecessary-comprehension,
         R1725,super-with-arguments,
         W0108,unnecessary-lambda,
+        W0143,comparison-with-callable,
         W0232,no-init,
         W0235,useless-super-delegation,
         W0613,unused-argument,
         W0640,cell-var-from-loop,
         W0703,broad-except,
         W0706,try-except-raise,
+        W0707,raise-missing-from,
         W1508,invalid-envvar-default
 
 # note: following errors are managed via isort tool, ignore false positives
@@ -468,7 +470,7 @@ valid-metaclass-classmethod-first-arg=cls
 
 # List of modules that can be imported at any level, not just the top level
 # one.
-allow-any-import-level=
+allow-any-import-level=magpie
 
 # Allow wildcard imports from modules that define __all__.
 allow-wildcard-with-all=no

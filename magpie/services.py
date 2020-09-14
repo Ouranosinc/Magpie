@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 
+import six
 from beaker.cache import cache_region, cache_regions
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound, HTTPNotImplemented
 from pyramid.security import Allow, Everyone
-from six import with_metaclass
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
@@ -16,10 +16,11 @@ from magpie.permissions import Permission
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import (  # noqa: F401
-        AccessControlListType, Str, List, Dict, Type, ResourcePermissionType
-    )
+    from typing import Dict, List, Type
+
     from pyramid.request import Request
+
+    from magpie.typedefs import AccessControlListType, ResourcePermissionType, Str
 
 
 class ServiceMeta(type):
@@ -56,7 +57,8 @@ class ServiceMeta(type):
         return []
 
 
-class ServiceInterface(with_metaclass(ServiceMeta)):
+@six.add_metaclass(ServiceMeta)
+class ServiceInterface(object):
     # required service type identifier (unique)
     service_type = None                 # type: Str
     # required request parameters for the service

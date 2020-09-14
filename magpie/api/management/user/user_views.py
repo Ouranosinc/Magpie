@@ -1,14 +1,7 @@
 """
 User Views, both for specific user-name provided as request path variable and special keyword for logged session user.
 """
-from pyramid.httpexceptions import (
-    HTTPBadRequest,
-    HTTPConflict,
-    HTTPCreated,
-    HTTPForbidden,
-    HTTPNotFound,
-    HTTPOk
-)
+from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
 from ziggurat_foundations.models.services.group import GroupService
@@ -22,7 +15,7 @@ from magpie.api import schemas as s
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
-from magpie.constants import MAGPIE_LOGGED_PERMISSION, MAGPIE_CONTEXT_PERMISSION, get_constant
+from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
 

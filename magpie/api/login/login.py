@@ -1,4 +1,6 @@
 import json
+from typing import TYPE_CHECKING
+
 from authomatic.adapters import WebObAdapter
 from authomatic.core import Credentials, LoginResult, resolve_provider_class
 from authomatic.exceptions import OAuth2Error
@@ -14,14 +16,13 @@ from pyramid.httpexceptions import (
     HTTPOk,
     HTTPTemporaryRedirect,
     HTTPUnauthorized,
-    HTTPUnprocessableEntity,
+    HTTPUnprocessableEntity
 )
 from pyramid.request import Request
 from pyramid.response import Response
 from pyramid.security import NO_PERMISSION_REQUIRED, forget, remember
 from pyramid.view import view_config
 from six.moves.urllib.parse import urlparse
-from typing import TYPE_CHECKING
 from ziggurat_foundations.ext.pyramid.sign_in import ZigguratSignInBadAuth, ZigguratSignInSuccess, ZigguratSignOut
 from ziggurat_foundations.models.services.external_identity import ExternalIdentityService
 from ziggurat_foundations.models.services.user import UserService

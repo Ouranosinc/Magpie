@@ -1,4 +1,4 @@
--r requirements-docs.txt
+-r requirements-doc.txt
 autopep8
 backports.tempfile; python_version < "3"
 bandit
@@ -9,12 +9,9 @@ coverage; python_version >= "3"
 doc8
 docformatter
 flake8
-isort
+isort>5
 mock
-# FIXME: wait for implementation
-#   https://github.com/PyCQA/astroid/issues/713
-#   https://github.com/PyCQA/astroid/pull/841
-pylint<2.5
+pylint>=2.5
 pylint-quotes
 pytest
 tox>=3.0

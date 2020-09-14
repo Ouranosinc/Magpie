@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import colander
 import six
 from cornice import Service
@@ -18,19 +20,24 @@ from pyramid.httpexceptions import (
     HTTPUnprocessableEntity
 )
 from pyramid.security import NO_PERMISSION_REQUIRED
-from typing import TYPE_CHECKING
 
 from magpie import __meta__
 from magpie.constants import get_constant
 from magpie.permissions import Permission
 from magpie.security import get_provider_names
 from magpie.utils import (
-    CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, KNOWN_CONTENT_TYPES, SUPPORTED_ACCEPT_TYPES, SUPPORTED_FORMAT_TYPES,
+    CONTENT_TYPE_HTML,
+    CONTENT_TYPE_JSON,
+    KNOWN_CONTENT_TYPES,
+    SUPPORTED_ACCEPT_TYPES,
+    SUPPORTED_FORMAT_TYPES
 )
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Dict, List, JSON, Str, Union
+    from typing import Dict, List, Union
+
+    from magpie.typedefs import JSON, Str
 
 # ignore naming style of tags
 # pylint: disable=C0103,invalid-name

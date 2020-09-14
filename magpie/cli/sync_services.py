@@ -11,14 +11,16 @@ from collections import OrderedDict, defaultdict
 from typing import TYPE_CHECKING
 
 import requests
+import six
 import threddsclient
-from six import with_metaclass
 
 from magpie.utils import CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Dict, JSON, Str, Type  # noqa: F401
+    from typing import Dict, Type
+
+    from magpie.typedefs import JSON, Str
 
 
 def is_valid_resource_schema(resources):
@@ -47,7 +49,8 @@ def is_valid_resource_schema(resources):
     return True
 
 
-class SyncServiceInterface(with_metaclass(abc.ABCMeta)):
+@six.add_metaclass(abc.ABCMeta)
+class SyncServiceInterface(object):
     sync_type = None    # type: Str
 
     def __init__(self, service_name, url):

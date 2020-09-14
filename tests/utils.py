@@ -25,17 +25,27 @@ from magpie.utils import (
     SingletonMeta,
     get_header,
     get_magpie_url,
-    get_settings_from_config_ini,
+    get_settings_from_config_ini
 )
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    import tests.interfaces as ti
     from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
+
+    import tests.interfaces as ti
     from magpie.services import ServiceInterface
     from magpie.typedefs import (
-        AnyCookiesType, AnyHeadersType, AnyResponseType, AnyValue, CookiesType, HeadersType, JSON, SettingsType, Str
+        JSON,
+        AnyCookiesType,
+        AnyHeadersType,
+        AnyResponseType,
+        AnyValue,
+        CookiesType,
+        HeadersType,
+        SettingsType,
+        Str
     )
+
     # pylint: disable=C0103,invalid-name
     AnyMagpieTestCaseType = Union[Type[ti.BaseTestCase], ti.BaseTestCase,
                                   Type[ti.AdminTestCase], ti.AdminTestCase,
@@ -161,7 +171,8 @@ class RunOptionDecorator(object):
         return make_run_option_decorator(RunOption(name, description=description))
 
 
-class NullType(six.with_metaclass(SingletonMeta)):
+@six.add_metaclass(SingletonMeta)
+class NullType(object):
     """
     Represents a null value to differentiate from None.
     """

@@ -26,11 +26,13 @@ from magpie.services import SERVICE_TYPE_DICT
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
+    from typing import Iterable, List, Optional
+
     from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session
-    from typing import Iterable, List, Optional
-    from magpie.typedefs import JSON, ResourcePermissionMap, ServiceOrResourceType, Str
+
     from magpie.permissions import Permission
+    from magpie.typedefs import JSON, ResourcePermissionMap, ServiceOrResourceType, Str
 
 
 def get_all_group_names(db_session):

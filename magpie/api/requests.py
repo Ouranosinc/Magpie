@@ -21,10 +21,12 @@ from magpie.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from pyramid.request import Request
     from typing import Any, List, Optional, Union
-    from magpie.typedefs import AnyAccessPrincipalType, Str, ServiceOrResourceType
+
+    from pyramid.request import Request
+
     from magpie.permissions import Permission
+    from magpie.typedefs import AnyAccessPrincipalType, ServiceOrResourceType, Str
 
 LOGGER = get_logger(__name__)
 

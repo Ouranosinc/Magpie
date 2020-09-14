@@ -18,17 +18,20 @@ from magpie.models import RESOURCE_TYPE_DICT, Route
 from magpie.permissions import Permission
 from magpie.register import pseudo_random_string
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceTHREDDS
-from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_TXT_XML, CONTENT_TYPE_JSON, get_twitcher_protected_service_url
+from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML, get_twitcher_protected_service_url
 from tests import runner, utils
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Dict, List, Optional, Set, Union
-    from magpie.typedefs import CookiesType, HeadersType, JSON, Str
+
     from webtest import TestApp
 
+    from magpie.typedefs import JSON, CookiesType, HeadersType, Str
 
-class BaseTestCase(six.with_metaclass(ABCMeta, unittest.TestCase)):
+
+@six.add_metaclass(ABCMeta)
+class BaseTestCase(unittest.TestCase):
     """
     Base definition for all other `Test Case` interfaces.
 
@@ -278,7 +281,8 @@ class UserTestCase(BaseAdminTestCase):
 
 
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuthTestCase, BaseTestCase)):
+@six.add_metaclass(ABCMeta)
+class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that do not require user AuthN/AuthZ.
@@ -526,7 +530,8 @@ class Interface_MagpieAPI_NoAuth(six.with_metaclass(ABCMeta, NoAuthTestCase, Bas
 
 
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, BaseTestCase)):
+@six.add_metaclass(ABCMeta)
+class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that require at least logged user AuthN/AuthZ.
@@ -1286,7 +1291,8 @@ class Interface_MagpieAPI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Ba
 
 
 @runner.MAGPIE_TEST_API
-class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, BaseTestCase)):
+@six.add_metaclass(ABCMeta)
+class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie API. Test any operation that require at least 'administrator' group
@@ -3578,7 +3584,8 @@ class Interface_MagpieAPI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, B
 
 
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, NoAuthTestCase, BaseTestCase)):
+@six.add_metaclass(ABCMeta)
+class Interface_MagpieUI_NoAuth(NoAuthTestCase, BaseTestCase):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that do not require user AuthN/AuthZ.
@@ -3664,7 +3671,8 @@ class Interface_MagpieUI_NoAuth(six.with_metaclass(ABCMeta, NoAuthTestCase, Base
 
 
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, BaseTestCase)):
+@six.add_metaclass(ABCMeta)
+class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that require at least logged user AuthN/AuthZ.
@@ -3789,7 +3797,8 @@ class Interface_MagpieUI_UsersAuth(six.with_metaclass(ABCMeta, UserTestCase, Bas
 
 
 @runner.MAGPIE_TEST_UI
-class Interface_MagpieUI_AdminAuth(six.with_metaclass(ABCMeta, AdminTestCase, BaseTestCase)):
+@six.add_metaclass(ABCMeta)
+class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
     # pylint: disable=C0103,invalid-name
     """
     Interface class for unittests of Magpie UI. Test any operation that require at least 'administrator' group

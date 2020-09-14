@@ -18,10 +18,12 @@ from magpie.utils import get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Str
+    from typing import Iterable
+
     from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session
-    from typing import Iterable
+
+    from magpie.typedefs import Str
 
 LOGGER = get_logger(__name__)
 

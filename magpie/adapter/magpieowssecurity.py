@@ -13,10 +13,11 @@ from magpie.models import Service
 from magpie.permissions import Permission
 from magpie.services import service_factory
 from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url, get_settings
+
 # twitcher available only when this module is imported from it
-from twitcher.owsexceptions import OWSAccessForbidden   # noqa
-from twitcher.owssecurity import OWSSecurityInterface   # noqa
-from twitcher.utils import parse_service_name           # noqa
+from twitcher.owsexceptions import OWSAccessForbidden  # noqa
+from twitcher.owssecurity import OWSSecurityInterface  # noqa
+from twitcher.utils import parse_service_name  # noqa
 
 LOGGER = get_logger("TWITCHER")
 

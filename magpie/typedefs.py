@@ -6,24 +6,25 @@ Magpie additional typing definitions.
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import (                                                                        # noqa: F401,W0212
-        Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union    # noqa: F401,W0212
-    )
-    from sqlalchemy.orm.session import Session
-    from magpie import models
-    from magpie.permissions import Permission
-    from webob.headers import ResponseHeaders, EnvironHeaders
-    from webob.response import Response as WebobResponse
-    from webtest.response import TestResponse
-    from requests.cookies import RequestsCookieJar
+    from typing import Any
+    from typing import AnyStr as _AnyStr
+    from typing import Dict, Iterable, List, Tuple, Union
+
+    import six
+    from pyramid.config import Configurator
     from pyramid.httpexceptions import HTTPException
-    from pyramid.response import Response as PyramidResponse
     from pyramid.registry import Registry
     from pyramid.request import Request
-    from pyramid.config import Configurator
+    from pyramid.response import Response as PyramidResponse
+    from requests.cookies import RequestsCookieJar
     from requests.structures import CaseInsensitiveDict
-    from logging import Logger as LoggerType  # noqa: F401
-    import six
+    from sqlalchemy.orm.session import Session
+    from webob.headers import EnvironHeaders, ResponseHeaders
+    from webob.response import Response as WebobResponse
+    from webtest.response import TestResponse
+
+    from magpie import models
+    from magpie.permissions import Permission
 
     # pylint: disable=W0611,unused-import  # following definitions provided to be employed elsewhere in the code
 

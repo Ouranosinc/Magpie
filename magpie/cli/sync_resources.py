@@ -26,8 +26,9 @@ from magpie.utils import get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
+    from typing import Any, AnyStr, Optional, Sequence, Union
+
     from sqlalchemy.orm.session import Session
-    from typing import Any, AnyStr, Optional, Sequence, Union  # noqa: F401
 
 LOGGER = get_logger(__name__)
 

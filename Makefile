@@ -286,7 +286,7 @@ install-req: conda-env	 ## install package base requirements without installing 
 
 .PHONY: install-docs
 install-docs: conda-env  ## install package requirements for documentation generation
-	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-docs.txt"'
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-doc.txt"'
 	@echo "Successfully installed docs requirements."
 
 .PHONY: install-dev

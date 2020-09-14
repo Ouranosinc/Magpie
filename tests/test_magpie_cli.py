@@ -9,19 +9,21 @@ Tests for :mod:`magpie.cli` module.
 """
 
 import json
-import mock
 import os
-import six
 import subprocess
 import tempfile
+
+import mock
+import six
+
+from magpie.cli import batch_update_users, magpie_helper_cli
+from magpie.constants import get_constant
+from tests import runner, utils
+
 if six.PY2:
     from backports import tempfile as tempfile2  # noqa  # Python 2
 else:
-    tempfile2 = tempfile
-
-from magpie.constants import get_constant
-from magpie.cli import magpie_helper_cli, batch_update_users
-from tests import runner, utils
+    tempfile2 = tempfile  # pylint: disable=C0103,invalid-name
 
 KNOWN_HELPERS = [
     "batch_update_users",
@@ -35,7 +37,7 @@ KNOWN_HELPERS = [
 def run_and_get_output(command, trim=True):
     if isinstance(command, (list, tuple)):
         command = " ".join(command)
-    proc = subprocess.Popen(command, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+    proc = subprocess.Popen(command, shell=True, universal_newlines=True, stdout=subprocess.PIPE)  # nosec
     out, err = proc.communicate()
     assert not err, "process returned with error code {}".format(err)
     # when no output is present, it is either because CLI was not installed correctly, or caused by some other error

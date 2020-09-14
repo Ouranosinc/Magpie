@@ -17,19 +17,23 @@ from magpie.api.schemas import SigninAPI
 from magpie.db import get_engine, get_session_factory, get_tm_session
 from magpie.security import get_auth_config
 from magpie.utils import CONTENT_TYPE_JSON, SingletonMeta, get_logger, get_magpie_url, get_settings
+
 # twitcher available only when this module is imported from it
-from twitcher.adapter.base import AdapterInterface      # noqa
-from twitcher.owsproxy import owsproxy_defaultconfig    # noqa
+from twitcher.adapter.base import AdapterInterface  # noqa
+from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.models import User  # noqa: F401
-    from magpie.typedefs import AnySettingsContainer, Str, JSON  # noqa: F401
+    from typing import Optional
+
+    from pyramid.config import Configurator
+    from pyramid.httpexceptions import HTTPException
+    from pyramid.request import Request
+
+    from magpie.models import User
+    from magpie.typedefs import JSON, AnySettingsContainer, Str
+
     from twitcher.store import AccessTokenStoreInterface  # noqa
-    from pyramid.config import Configurator  # noqa: F401
-    from pyramid.httpexceptions import HTTPException  # noqa: F401
-    from pyramid.request import Request  # noqa: F401
-    from typing import Optional  # noqa: F401
 
 LOGGER = get_logger("TWITCHER")
 
@@ -120,7 +124,8 @@ def verify_user(request):
     return valid_http(HTTPOk, detail="Twitcher login verified successfully with Magpie login.")
 
 
-class MagpieAdapter(six.with_metaclass(SingletonMeta, AdapterInterface)):
+@six.add_metaclass(SingletonMeta)
+class MagpieAdapter(AdapterInterface):
     # pylint: disable: W0223,W0612
 
     def __init__(self, container):

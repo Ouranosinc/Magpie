@@ -1,13 +1,17 @@
 from typing import TYPE_CHECKING
+
 from pyramid.httpexceptions import HTTPInternalServerError
 
 from magpie.api.exception import evaluate_call
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import JSON, Optional  # noqa: F401
+    from typing import Optional
+
     from sqlalchemy.orm.session import Session
+
     from magpie.models import Group
+    from magpie.typedefs import JSON
 
 
 def format_group(group, basic_info=False, public_info=False, db_session=None):

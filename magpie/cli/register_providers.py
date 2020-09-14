@@ -12,7 +12,7 @@ from magpie.register import magpie_register_services_from_config
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, AnyStr, Optional, Sequence  # noqa: F401
+    from typing import Any, AnyStr, Optional, Sequence
 
 
 def make_parser():

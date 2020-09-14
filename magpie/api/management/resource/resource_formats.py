@@ -1,5 +1,6 @@
-from pyramid.httpexceptions import HTTPInternalServerError
 from typing import TYPE_CHECKING
+
+from pyramid.httpexceptions import HTTPInternalServerError
 from ziggurat_foundations.models.services.resource import ResourceService
 
 from magpie.api.exception import evaluate_call
@@ -7,11 +8,17 @@ from magpie.permissions import format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 
 if TYPE_CHECKING:
-    from sqlalchemy.orm.session import Session
     from typing import Iterable, Optional
+
+    from sqlalchemy.orm.session import Session
+
     from magpie.models import Resource, Service
     from magpie.typedefs import (
-        AnyPermissionType, ChildrenResourceNodes, JSON, ResourcePermissionMap, ServiceOrResourceType
+        JSON,
+        AnyPermissionType,
+        ChildrenResourceNodes,
+        ResourcePermissionMap,
+        ServiceOrResourceType
     )
 
 

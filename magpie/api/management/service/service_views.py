@@ -1,7 +1,8 @@
+from typing import TYPE_CHECKING
+
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
-from typing import TYPE_CHECKING
 
 from magpie import models
 from magpie.api import exception as ax
@@ -17,6 +18,7 @@ from magpie.utils import CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
     from typing import List, Union
+
     from magpie.typedefs import JSON
 
 

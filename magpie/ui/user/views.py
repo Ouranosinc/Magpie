@@ -1,6 +1,7 @@
+from typing import TYPE_CHECKING
+
 from pyramid.authentication import Authenticated
 from pyramid.view import view_config
-from typing import TYPE_CHECKING
 
 from magpie.api import schemas
 from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
