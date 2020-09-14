@@ -63,7 +63,8 @@ endif
 DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
 REPORTS_DIR ?= $(APP_ROOT)/reports
 PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
-PIP_XARGS ?= --use-feature=2020-resolver
+#PIP_XARGS ?= --use-feature=2020-resolver
+PIP_XARGS ?=
 
 # choose conda installer depending on your OS
 CONDA_URL = https://repo.continuum.io/miniconda
