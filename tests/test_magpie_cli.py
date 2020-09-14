@@ -13,10 +13,11 @@ import mock
 import os
 import six
 import subprocess
+import tempfile
 if six.PY2:
-    from backports import tempfile
+    from backports import tempfile as tempfile2  # noqa  # Python 2
 else:
-    import tempfile
+    tempfile2 = tempfile
 
 from magpie.constants import get_constant
 from magpie.cli import magpie_helper_cli, batch_update_users
@@ -106,7 +107,7 @@ def run_batch_update_user_command(test_app, expected_users, create_command_xargs
         return utils.test_request(test_app, method, path, *args, **kwargs)
 
     def run_command(operation_name, operation_args):
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile2.TemporaryDirectory() as tmpdir:
             with mock.patch("requests.Session.request", side_effect=mock_request):
                 with mock.patch("requests.request", side_effect=mock_request):
                     cmd = [test_url, test_admin_usr, test_admin_pwd, "-o", tmpdir] + operation_args

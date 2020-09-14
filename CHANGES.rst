@@ -71,6 +71,8 @@ Features / Changes
 * Modify ``PHOENIX_PUSH`` to be *disabled* by default to be consistent across all locations where corresponding
   feature is referenced (startup registration, CLI utility, API requests and UI checkbox option) and because this
   option is an advanced extension not to be considered as default behavior.
+* Python 2.7 and Python 3.5 marked for deprecation (they remain in CI, but are not required to pass), as both
+  reached their EOL as of January/September 2020.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

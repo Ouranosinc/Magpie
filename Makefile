@@ -63,6 +63,7 @@ endif
 DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
 REPORTS_DIR ?= $(APP_ROOT)/reports
 PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
+PIP_XARGS ?= --use-feature=2020-resolver
 
 # choose conda installer depending on your OS
 CONDA_URL = https://repo.continuum.io/miniconda
@@ -241,7 +242,7 @@ endif
 bump:	## bump version using VERSION specified as user input
 	@-echo "Updating package version ..."
 	@[ "${VERSION}" ] || ( echo ">> 'VERSION' is not set"; exit 1 )
-	@-bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/bump2version" || pip install bump2version'
+	@-bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/bump2version" || pip install $(PIP_XARGS) bump2version'
 	@-bash -c '$(CONDA_CMD) bump2version $(BUMP_XARGS) --new-version "${VERSION}" patch;'
 
 ## --- Installation targets --- ##
@@ -262,33 +263,34 @@ install-all: install-sys install-pkg install-dev install-docs	## install every d
 .PHONY: install-sys
 install-sys: clean conda-env	## install system dependencies and required installers/runners
 	@echo "Installing system dependencies..."
-	@bash -c '$(CONDA_CMD) pip install --upgrade -r "$(APP_ROOT)/requirements-sys.txt"'
-	@bash -c '$(CONDA_CMD) pip install gunicorn'
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) --upgrade -r "$(APP_ROOT)/requirements-sys.txt"'
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) gunicorn'
 
 .PHONY: install-pkg
 install-pkg: install-sys	## install the package to the active Python's site-packages
 	@echo "Installing Magpie..."
 	@bash -c '$(CONDA_CMD) python setup.py install_egg_info'
-	@bash -c '$(CONDA_CMD) pip install --upgrade -e "$(APP_ROOT)" --no-cache'
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) --upgrade -e "$(APP_ROOT)" --no-cache'
 	# TODO: remove when merged
 	# --- ensure fix is applied
 	@bash -c '$(CONDA_CMD) \
-		pip install --force-reinstall "https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic"'
+		pip install $(PIP_XARGS) --force-reinstall \
+			"https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic"'
 	# ---
 
 .PHONY: install-req
 install-req: conda-env	 ## install package base requirements without installing main package
-	@bash -c '$(CONDA_CMD) pip install -r "$(APP_ROOT)/requirements.txt"'
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements.txt"'
 	@echo "Successfully installed base requirements."
 
 .PHONY: install-docs
 install-docs: conda-env  ## install package requirements for documentation generation
-	@bash -c '$(CONDA_CMD) pip install -r "$(APP_ROOT)/requirements-docs.txt"'
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-docs.txt"'
 	@echo "Successfully installed docs requirements."
 
 .PHONY: install-dev
 install-dev: conda-env	## install package requirements for development and testing
-	@bash -c '$(CONDA_CMD) pip install -r "$(APP_ROOT)/requirements-dev.txt"'
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-dev.txt"'
 	@echo "Successfully installed dev requirements."
 
 ## --- Launchers targets --- ##

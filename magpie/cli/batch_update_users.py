@@ -126,8 +126,8 @@ def make_output(user_results, is_delete, output_location=None):
 
     oper_name = "delete" if is_delete else "create"
     filename = "magpie_" + oper_name + "_users_log__" + datetime.datetime.now().strftime("%Y%m%d__%H%M%S") + ".txt"
-    if output_location:
-        os.makedirs(output_location, exist_ok=True)
+    if output_location and not os.path.exists(output_location):
+        os.makedirs(output_location)
         filename = os.path.join(output_location, filename)
     with open(filename, "w") as file:
         file.write(output)

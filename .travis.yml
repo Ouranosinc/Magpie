@@ -66,28 +66,30 @@ stages:
   - smoke-test  # try running the built/packaged docker image
 jobs:
   allow_failures:
-    - python: "2.7"  # deprecated support, but leave it while it remains easy to maintain
+    # leave versions while they remains easy to maintain
+    - python: "2.7"  # deprecated support (January 2020)
+    - python: "3.5"  # deprecated support (September 2020)
   include:
     # use stages to quick fail faster tests
     # these are extra to default 'test' stage with auto-matrix/env extension
     - stage: check
       name: "Linter Checks"
-      python: "3.6"
+      python: "3.7"
       os: linux
       script: make check
     - stage: check
       name: "Documentation Check"   # verify that build works
-      python: "3.6"
+      python: "3.7"
       os: linux
       script: make docs
     - stage: test
       name: "Coverage"
-      python: "3.6"
+      python: "3.7"
       os: linux
       script: make coverage
     - stage: smoke-test
       name: "Smoke Test"
-      python: "3.6"
+      python: "3.7"
       os: linux
       script: make test-docker
 script:
