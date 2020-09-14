@@ -260,10 +260,11 @@ install: install-all	## alias for 'install-all' target
 .PHONY: install-all
 install-all: install-sys install-pkg install-dev install-docs	## install every dependency and package definition
 
+# note: don't use PIP_XARGS for install system package as it could be upgrade of pip that doesn't yet have those options
 .PHONY: install-sys
 install-sys: clean conda-env	## install system dependencies and required installers/runners
 	@echo "Installing system dependencies..."
-	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) --upgrade -r "$(APP_ROOT)/requirements-sys.txt"'
+	@bash -c '$(CONDA_CMD) pip install --upgrade -r "$(APP_ROOT)/requirements-sys.txt"'
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) gunicorn'
 
 .PHONY: install-pkg
