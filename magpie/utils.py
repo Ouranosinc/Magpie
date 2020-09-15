@@ -475,7 +475,6 @@ class EnumUtil(object):
         class ExtendedEnum(EnumUtil, enum.Enum):
             ItemA = "A"
             ItemB = "B"
-
     """
     __members__ = None  # mapping of enum members that should be filled by enum.Enum
 

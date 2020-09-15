@@ -235,8 +235,8 @@ class ManagementViews(BaseViews):
                 return_data["invalid_user_name"] = True
             if password is None or isinstance(password, six.string_types) and len(password) < 1:
                 return_data["invalid_password"] = True
-            elif compare_digest(password, confirm):
-                return_data["mismatch_password"] = True
+            elif not compare_digest(password, confirm):
+                return_data["invalid_password"] = True
                 return_data["reason_password"] = "Mismatch"  # nosec: B105  # avoid false positive
 
             for check_fail in check_data:
