@@ -10,7 +10,6 @@ Tests for the various utility operations employed by magpie.
 
 import unittest
 from distutils.version import LooseVersion
-from enum import Enum
 from typing import TYPE_CHECKING
 
 import mock
