@@ -1,7 +1,6 @@
-from enum import Enum
 from typing import TYPE_CHECKING
 
-from magpie.utils import EnumUtil
+from magpie.utils import ExtendedEnum
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -10,7 +9,7 @@ if TYPE_CHECKING:
     from magpie.typedefs import AnyPermissionType, Str
 
 
-class Permission(EnumUtil, Enum):
+class Permission(ExtendedEnum):
     """
     Applicable :term:`Permission` values under certain :term:`Service` and :term:`Resource`.
     """

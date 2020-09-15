@@ -6,6 +6,7 @@ import os
 import sys
 import types
 from distutils.dir_util import mkpath
+from enum import Enum
 from inspect import isfunction
 from typing import TYPE_CHECKING
 
@@ -466,17 +467,17 @@ def is_json_body(body):
     return True
 
 
-class EnumUtil(object):
+# note: must not define any enum value here to allow inheritance by subclasses
+class ExtendedEnum(Enum):
     """
     Utility :class:`enum.Enum` methods.
 
     Create an extended enum with these utilities as follows::
 
-        class ExtendedEnum(EnumUtil, enum.Enum):
+        class CustomEnum(ExtendedEnum):
             ItemA = "A"
             ItemB = "B"
     """
-    __members__ = None  # mapping of enum members that should be filled by enum.Enum
 
     @classmethod
     def names(cls):
@@ -503,7 +504,7 @@ class EnumUtil(object):
         Returns the entry directly if it is already a valid enum.
         """
         # Python 3.8 disallow direct check of 'str' in 'enum'
-        members = [member for member in cls]  # noqa # pylint: disable=E1133
+        members = [member for member in cls]
         if key_or_value in members:                                             # pylint: disable=E1133
             return key_or_value
         for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101

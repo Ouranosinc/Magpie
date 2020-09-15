@@ -25,7 +25,7 @@ from magpie.api import exception as ax
 from magpie.api import generic as ag
 from magpie.api import requests as ar
 from magpie.permissions import Permission, format_permissions
-from magpie.utils import CONTENT_TYPE_JSON, EnumUtil, get_header
+from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum, get_header
 from tests import runner, utils
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from magpie.typedefs import Str
 
 
-class DummyEnum(EnumUtil, Enum):
+class DummyEnum(ExtendedEnum):
     VALUE1 = "value-1"
     VALUE2 = "value-2"
 
@@ -268,6 +268,12 @@ class TestUtils(unittest.TestCase):
         utils.check_val_equal(DummyEnum.get("VALUE1"), DummyEnum.VALUE1)
         utils.check_val_equal(DummyEnum.get("random"), None)
         utils.check_val_equal(DummyEnum.get("random", "something"), "something")
+
+    def test_enum_other(self):
+        class OtherEnum(ExtendedEnum):
+            VALUE1 = DummyEnum.VALUE1.value  # copy internal string representation
+
+        utils.check_val_not_equal(DummyEnum.VALUE1, OtherEnum.VALUE1, msg="concrete enum elements should be different")
 
     def test_format_permissions(self):
         usr_perm = models.UserPermission()
