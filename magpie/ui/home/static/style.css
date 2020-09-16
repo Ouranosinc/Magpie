@@ -166,12 +166,12 @@ input[type="submit"] {
 table {
     font-family: arial, sans-serif;
     border-collapse: collapse;
-    width: 100%;
+    width: auto;
 }
 
 td, th {
     border: 1px solid #dddddd;
-    padding: 8px;
+    padding: 0.5em;
 }
 
 table thead {
@@ -195,6 +195,10 @@ table thead {
 }
 
 /*---Panel Information Box---*/
+
+.panel-body {
+    padding: 0.5em;
+}
 
 .panel-box {
     background-color: #FFFFFF;
@@ -221,12 +225,27 @@ table thead {
     margin-top: -3px;
 }
 
-.panel-body {
-    padding: 15px;
+.panel-fields {
+    padding: 0.5em;
 }
 
 .panel-line {
     margin: 0.5em;
+}
+
+table.panel-line {
+    margin: 0.25em;
+}
+
+table.panel-line th,
+table.panel-line td {
+    border: 0;
+    white-space: nowrap;
+    padding: 0;  /* override global th/td */
+}
+
+.panel-error {
+    margin-left: 0.5em;
 }
 
 .panel-line input[type="submit"] {
@@ -370,11 +389,11 @@ table thead {
 }
 
 .alert-form-error {
-    width: 100px;
+    width: auto;
     display: inline-flex;
     float: left;
     text-align: center;
-    margin: 0.25em 0 0 0;
+    margin-top: 0.25em;
 }
 
 .alert-form-text {
@@ -402,6 +421,10 @@ table thead {
 }
 
 /*---View users & groups pages ---*/
+
+table.simple-list {
+    width: 100%;
+}
 
 /* note: use explicit row classes instead of 'tr:nth-child(even)' because generated code doesn't handle it well */
 table.simple-list tr.list-row-odd {
@@ -727,6 +750,10 @@ table.service-details {
     margin: auto;
     width: 30%;
     min-width: 500px;
+}
+
+table.fields-table {
+    width: auto;
 }
 
 table.fields-table th,

@@ -107,7 +107,7 @@
             <div class="panel-heading subsection">
                 <div class="panel-title">Details</div>
             </div>
-            <div>
+            <div class="panel-fields">
                 <form action="${request.path}" method="post">
                     <p class="panel-line">
                         <span class="panel-entry">Name: </span>

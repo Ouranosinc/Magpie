@@ -263,7 +263,7 @@ class ManagementViews(BaseViews):
                     return_data["invalid_user_name"] = True
                     return_data["reason_user_name"] = reason
                     return self.add_template_data(return_data)
-                if param_name == "user_name":
+                if param_name == "user_email":
                     return_data["invalid_user_email"] = True
                     return_data["reason_user_email"] = reason
                     return self.add_template_data(return_data)
