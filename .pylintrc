@@ -76,13 +76,16 @@ disable=C0111,missing-docstring,
         R0915,too-many-statements,
         R1710,inconsistent-return-statements,
         R1721,unnecessary-comprehension,
+        R1725,super-with-arguments,
         W0108,unnecessary-lambda,
+        W0143,comparison-with-callable,
         W0232,no-init,
         W0235,useless-super-delegation,
         W0613,unused-argument,
         W0640,cell-var-from-loop,
         W0703,broad-except,
         W0706,try-except-raise,
+        W0707,raise-missing-from,
         W1508,invalid-envvar-default
 
 # note: following errors are managed via isort tool, ignore false positives
@@ -93,7 +96,10 @@ disable=C0111,missing-docstring,
 # either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once). See also the "--disable" option for examples.
-enable=c-extension-no-member
+enable=
+    c-extension-no-member
+    W0122
+    W0123
 
 
 [REPORTS]
@@ -130,7 +136,10 @@ max-nested-blocks=5
 # inconsistent-return-statements if a never returning function is called then
 # it will be considered as an explicit return statement and no message will be
 # printed.
-never-returning-functions=sys.exit
+never-returning-functions=
+    sys.exit
+    magpie.utils.raise_log
+    magpie.api.exception.raise_http
 
 
 [TYPECHECK]
@@ -365,7 +374,7 @@ function-naming-style=snake_case
 #function-rgx=
 
 # Good variable names which should always be accepted, separated by a comma.
-good-names=i,j,k,v,ex,x,y,z,f,h,db,kw,ns,_
+good-names=i,j,k,v,ex,x,y,z,f,fd,h,db,kw,ns,qs,_
 
 # Include a hint for the correct naming format with invalid-name.
 include-naming-hint=no
@@ -461,7 +470,7 @@ valid-metaclass-classmethod-first-arg=cls
 
 # List of modules that can be imported at any level, not just the top level
 # one.
-allow-any-import-level=
+allow-any-import-level=magpie
 
 # Allow wildcard imports from modules that define __all__.
 allow-wildcard-with-all=no

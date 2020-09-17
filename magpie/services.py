@@ -1,10 +1,9 @@
 from typing import TYPE_CHECKING
 
+import six
 from beaker.cache import cache_region, cache_regions
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound, HTTPNotImplemented
-from pyramid.security import Allow as ALLOW
-from pyramid.security import Everyone as EVERYONE  # noqa
-from six import with_metaclass
+from pyramid.security import Allow, Everyone
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
@@ -17,10 +16,11 @@ from magpie.permissions import Permission
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import (  # noqa: F401
-        AccessControlListType, Str, List, Dict, Type, ResourcePermissionType
-    )
+    from typing import Dict, List, Type
+
     from pyramid.request import Request
+
+    from magpie.typedefs import AccessControlListType, ResourcePermissionType, Str
 
 
 class ServiceMeta(type):
@@ -57,7 +57,8 @@ class ServiceMeta(type):
         return []
 
 
-class ServiceInterface(with_metaclass(ServiceMeta)):
+@six.add_metaclass(ServiceMeta)
+class ServiceInterface(object):
     # required service type identifier (unique)
     service_type = None                 # type: Str
     # required request parameters for the service
@@ -68,8 +69,9 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
     resource_types_permissions = {}     # type: Dict[models.Resource, List[Permission]]
 
     def __init__(self, service, request):
-        self.service = service
-        self.request = request
+        # type: (models.Service, Request) -> None
+        self.service = service          # type: models.Service
+        self.request = request          # type: Request
         self.acl = []                   # type: AccessControlListType
         self.parser = ows_parser_factory(request)
         self.parser.parse(self.params_expected)
@@ -113,12 +115,12 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
                     raise Exception("No Anonymous user in the database")
                 permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
                 for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-                    self.acl.append((outcome, EVERYONE, perm_name,))
+                    self.acl.append((outcome, Everyone, perm_name,))
 
     def permission_requested(self):
         # type: () -> Permission
         try:
-            req = self.parser.params[u"request"]
+            req = self.parser.params["request"]
             perm = Permission.get(req)
             if perm is None:
                 raise NotImplementedError("Undefined 'Permission' from 'request' parameter: {!s}".format(req))
@@ -130,8 +132,8 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
     def effective_permissions(self, resource, user):
         # type: (models.Resource, models.User) -> List[ResourcePermissionType]
         """
-        Recursively rewind the resource tree from the specified resource up to the topmost parent service resource and
-        retrieve permissions along the way that should be applied to children when using resource inheritance.
+        Recursively rewind the resource tree from the specified resource up to the top-most parent service's resource
+        and retrieve permissions along the way that should be applied to children when using resource inheritance.
         """
         resource_effective_perms = list()
         while resource is not None:
@@ -145,7 +147,7 @@ class ServiceInterface(with_metaclass(ServiceMeta)):
 
 
 class ServiceWPS(ServiceInterface):
-    service_type = u"wps"
+    service_type = "wps"
 
     permissions = [
         Permission.GET_CAPABILITIES,
@@ -154,9 +156,9 @@ class ServiceWPS(ServiceInterface):
     ]
 
     params_expected = [
-        u"service",
-        u"request",
-        u"version"
+        "service",
+        "request",
+        "version"
     ]
 
     resource_types_permissions = {}
@@ -179,12 +181,12 @@ class ServiceBaseWMS(ServiceInterface):
     ]
 
     params_expected = [
-        u"service",
-        u"request",
-        u"version",
-        u"layers",
-        u"layername",
-        u"dataset"
+        "service",
+        "request",
+        "version",
+        "layers",
+        "layername",
+        "dataset"
     ]
 
     resource_types_permissions = {
@@ -205,7 +207,7 @@ class ServiceBaseWMS(ServiceInterface):
 
 
 class ServiceNCWMS2(ServiceBaseWMS):
-    service_type = u"ncwms"
+    service_type = "ncwms"
 
     resource_types_permissions = {
         models.File: [
@@ -255,7 +257,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
                 netcdf_file = netcdf_file.rsplit("/", 1)[0]
 
         else:
-            return [(ALLOW, EVERYONE, permission_requested.value,)]
+            return [(Allow, Everyone, permission_requested.value,)]
 
         if netcdf_file:
             ax.verify_param("outputs/", param_compare=netcdf_file, http_error=HTTPNotFound,
@@ -276,7 +278,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
 
 
 class ServiceGeoserverWMS(ServiceBaseWMS):
-    service_type = u"geoserverwms"
+    service_type = "geoserverwms"
 
     def __init__(self, service, request):
         super(ServiceGeoserverWMS, self).__init__(service, request)
@@ -314,7 +316,7 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
 
 
 class ServiceAccess(ServiceInterface):
-    service_type = u"access"
+    service_type = "access"
 
     permissions = [Permission.ACCESS]
 
@@ -334,7 +336,7 @@ class ServiceAccess(ServiceInterface):
 
 
 class ServiceAPI(ServiceInterface):
-    service_type = u"api"
+    service_type = "api"
 
     permissions = models.Route.permissions
 
@@ -397,7 +399,7 @@ class ServiceAPI(ServiceInterface):
 
 
 class ServiceWFS(ServiceInterface):
-    service_type = u"wfs"
+    service_type = "wfs"
 
     permissions = [
         Permission.GET_CAPABILITIES,
@@ -408,10 +410,10 @@ class ServiceWFS(ServiceInterface):
     ]
 
     params_expected = [
-        u"service",
-        u"request",
-        u"version",
-        u"typenames"
+        "service",
+        "request",
+        "version",
+        "typenames"
     ]
 
     resource_types_permissions = {}
@@ -443,7 +445,7 @@ class ServiceWFS(ServiceInterface):
 
 
 class ServiceTHREDDS(ServiceInterface):
-    service_type = u"thredds"
+    service_type = "thredds"
 
     permissions = [
         Permission.READ,
@@ -451,7 +453,7 @@ class ServiceTHREDDS(ServiceInterface):
     ]
 
     params_expected = [
-        u"request"
+        "request"
     ]
 
     resource_types_permissions = {
@@ -507,12 +509,12 @@ def service_factory(service, request):
     Retrieve the specific service class from the provided database service entry.
     """
     ax.verify_param(service, param_compare=models.Service, is_type=True,
-                    http_error=HTTPBadRequest, content={u"service": repr(service)},
+                    http_error=HTTPBadRequest, content={"service": repr(service)},
                     msg_on_fail="Cannot process invalid service object")
     service_type = ax.evaluate_call(lambda: service.type, http_error=HTTPInternalServerError,
                                     msg_on_fail="Cannot retrieve service type from object")
     ax.verify_param(service_type, is_in=True, param_compare=SERVICE_TYPE_DICT.keys(),
-                    http_error=HTTPNotImplemented, content={u"service_type": service_type},
+                    http_error=HTTPNotImplemented, content={"service_type": service_type},
                     msg_on_fail="Undefined service type mapping to service object")
     return ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service_type](service, request),
                             http_error=HTTPInternalServerError,

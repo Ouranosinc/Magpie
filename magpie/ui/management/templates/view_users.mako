@@ -7,27 +7,34 @@
 
 <h1>Users</h1>
 
-<button class="img_button" type="button" onclick="location.href='${request.route_url('add_user')}'">
-    <img src="${request.static_url('magpie.ui.home:static/add.png')}">
+<button class="img-button theme" type="button" onclick="location.href='${request.route_url('add_user')}'">
+    <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="">
     Add User
 </button>
 
 
-<table class="simple_list_table">
+<table class="simple-list">
+<thead class="theme">
 <tr>
     <th>User</th>
     <th>Action</th>
 </tr>
-
-%for user in users:
+</thead>
+<tbody>
+%for i, user in enumerate(users):
 <form action="${request.path}" method="post">
-<tr>
-    <td><input type="hidden" value=${user} name="user_name">${user}</td>
+%if i % 2:
+<tr class="list-row-even">
+%else:
+<tr class="list-row-odd">
+%endif
+    <td><input type="hidden" value="${user}" name="user_name">${user}</td>
     <td style="white-space: nowrap">
-        <input type="submit" value="Edit" name="edit">
+        <input type="submit" value="Edit" name="edit" class="button theme">
         <input type="submit" value="Delete" name="delete" class="button delete">
     </td>
 </tr>
 </form>
 %endfor
+</tbody>
 </table>

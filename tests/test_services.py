@@ -20,7 +20,9 @@ from tests import runner
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Dict, Optional, Str  # noqa: F401
+    from typing import Dict, Optional
+
+    from magpie.typedefs import Str
 
 
 def make_ows_parser(method="GET", content_type=None, params=None, body=""):
@@ -93,13 +95,13 @@ class TestServices(unittest.TestCase):
         assert parser.params["test"] == "something"
 
         params = {"test": "something"}
-        parser = make_ows_parser(method="PUT", content_type=None, params=params, body="")
+        parser = make_ows_parser(method="PATCH", content_type=None, params=params, body="")
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.WPSGet)
         assert parser.params["test"] == "something"
 
         body = '{"test": "something"}'  # pylint: disable=C4001
-        parser = make_ows_parser(method="PUT", content_type=CONTENT_TYPE_JSON, params=None, body=body)
+        parser = make_ows_parser(method="PATCH", content_type=CONTENT_TYPE_JSON, params=None, body=body)
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.MultiFormatParser)
         assert parser.params["test"] == "something"

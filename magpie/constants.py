@@ -23,7 +23,9 @@ from pyramid.settings import asbool
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Str, Optional, SettingValue, AnySettingsContainer  # noqa: F401
+    from typing import Optional
+
+    from magpie.typedefs import AnySettingsContainer, SettingValue, Str
 
 # ===========================
 # path variables
@@ -36,6 +38,7 @@ MAGPIE_PROVIDERS_CONFIG_PATH = os.getenv(
     "MAGPIE_PROVIDERS_CONFIG_PATH", "{}/providers.cfg".format(MAGPIE_CONFIG_DIR))
 MAGPIE_PERMISSIONS_CONFIG_PATH = os.getenv(
     "MAGPIE_PERMISSIONS_CONFIG_PATH", "{}/permissions.cfg".format(MAGPIE_CONFIG_DIR))
+MAGPIE_CONFIG_PATH = os.getenv("MAGPIE_CONFIG_PATH")  # default None, require explicit specification
 MAGPIE_INI_FILE_PATH = os.getenv(
     "MAGPIE_INI_FILE_PATH", "{}/magpie.ini".format(MAGPIE_CONFIG_DIR))
 # allow custom location of env files directory to avoid
@@ -48,7 +51,7 @@ MAGPIE_POSTGRES_ENV_FILE = os.path.join(MAGPIE_ENV_DIR, "postgres.env")
 # if files still cannot be found at 'MAGPIE_ENV_DIR' and variables are still not set,
 # default values in following sections will be used instead
 _MAGPIE_ENV_EXAMPLE = MAGPIE_ENV_FILE + ".example"
-_POSTGRES_ENV_EXAMPLE = MAGPIE_ENV_FILE + ".example"
+_POSTGRES_ENV_EXAMPLE = MAGPIE_POSTGRES_ENV_FILE + ".example"
 if not os.path.isfile(MAGPIE_ENV_FILE) and os.path.isfile(_MAGPIE_ENV_EXAMPLE):
     shutil.copyfile(_MAGPIE_ENV_EXAMPLE, MAGPIE_ENV_FILE)
 if not os.path.isfile(MAGPIE_POSTGRES_ENV_FILE) and os.path.isfile(_POSTGRES_ENV_EXAMPLE):
@@ -82,11 +85,12 @@ def _get_default_log_level():
 # variables from magpie.env
 # ===========================
 MAGPIE_URL = os.getenv("MAGPIE_URL", None)
-MAGPIE_SECRET = os.getenv("MAGPIE_SECRET", "seekrit")
+MAGPIE_SECRET = os.getenv("MAGPIE_SECRET", "")
 MAGPIE_COOKIE_NAME = os.getenv("MAGPIE_COOKIE_NAME", "auth_tkt")
 MAGPIE_COOKIE_EXPIRE = os.getenv("MAGPIE_COOKIE_EXPIRE", None)
-MAGPIE_ADMIN_USER = os.getenv("MAGPIE_ADMIN_USER", "admin")
-MAGPIE_ADMIN_PASSWORD = os.getenv("MAGPIE_ADMIN_PASSWORD", "qwerty")
+MAGPIE_PASSWORD_MIN_LENGTH = os.getenv("MAGPIE_PASSWORD_MIN_LENGTH", 12)
+MAGPIE_ADMIN_USER = os.getenv("MAGPIE_ADMIN_USER", "")
+MAGPIE_ADMIN_PASSWORD = os.getenv("MAGPIE_ADMIN_PASSWORD", "")
 MAGPIE_ADMIN_EMAIL = "{}@mail.com".format(MAGPIE_ADMIN_USER)
 MAGPIE_ADMIN_GROUP = os.getenv("MAGPIE_ADMIN_GROUP", "administrators")
 MAGPIE_ANONYMOUS_USER = os.getenv("MAGPIE_ANONYMOUS_USER", "anonymous")
@@ -103,13 +107,15 @@ MAGPIE_LOG_PRINT = asbool(os.getenv("MAGPIE_LOG_PRINT", False))                 
 MAGPIE_LOG_REQUEST = asbool(os.getenv("MAGPIE_LOG_REQUEST", True))              # log detail of every incoming request
 MAGPIE_LOG_EXCEPTION = asbool(os.getenv("MAGPIE_LOG_EXCEPTION", True))          # log detail of generated exceptions
 MAGPIE_UI_ENABLED = asbool(os.getenv("MAGPIE_UI_ENABLED", True))
+MAGPIE_UI_THEME = os.getenv("MAGPIE_UI_THEME", "blue")
 PHOENIX_USER = os.getenv("PHOENIX_USER", "phoenix")
 PHOENIX_PASSWORD = os.getenv("PHOENIX_PASSWORD", "qwerty")
 PHOENIX_HOST = os.getenv("PHOENIX_HOST")  # default None to use HOSTNAME
 PHOENIX_PORT = int(os.getenv("PHOENIX_PORT", 8443))
-PHOENIX_PUSH = asbool(os.getenv("PHOENIX_PUSH", True))
+PHOENIX_PUSH = asbool(os.getenv("PHOENIX_PUSH", False))
 TWITCHER_PROTECTED_PATH = os.getenv("TWITCHER_PROTECTED_PATH", "/ows/proxy")
 TWITCHER_PROTECTED_URL = os.getenv("TWITCHER_PROTECTED_URL", None)
+TWITCHER_HOST = os.getenv("TWITCHER_HOST", None)
 
 # ===========================
 # variables from postgres.env
@@ -121,16 +127,30 @@ MAGPIE_POSTGRES_PORT = int(os.getenv("MAGPIE_POSTGRES_PORT", 5432))
 MAGPIE_POSTGRES_DB = os.getenv("MAGPIE_POSTGRES_DB", "magpie")
 
 # ===========================
-# other constants
+# constants
 # ===========================
-MAGPIE_ADMIN_PERMISSION = "admin"
-# MAGPIE_ADMIN_PERMISSION = NO_PERMISSION_REQUIRED
+MAGPIE_ADMIN_PERMISSION = "admin"   # user must be administrator to access a view (default permission, always allowed)
+MAGPIE_LOGGED_PERMISSION = "MAGPIE_LOGGED_USER"  # user must be MAGPIE_LOGGED_USER (either literally or inferred)
+MAGPIE_CONTEXT_PERMISSION = "MAGPIE_CONTEXT_USER"  # path user must be itself, MAGPIE_LOGGED_USER or unauthenticated
 MAGPIE_LOGGED_USER = "current"
 MAGPIE_DEFAULT_PROVIDER = "ziggurat"
 
 # above this length is considered a token,
 # refuse longer username creation
 MAGPIE_USER_NAME_MAX_LENGTH = 64
+MAGPIE_GROUP_NAME_MAX_LENGTH = 64
+
+# ignore matches of settings and environment variables for following cases
+MAGPIE_CONSTANTS = [
+    "MAGPIE_CONSTANTS",
+    "MAGPIE_ADMIN_PERMISSION",
+    "MAGPIE_LOGGED_PERMISSION",
+    "MAGPIE_CONTEXT_PERMISSION",
+    "MAGPIE_LOGGED_USER",
+    "MAGPIE_DEFAULT_PROVIDER",
+    "MAGPIE_USER_NAME_MAX_LENGTH",
+    "MAGPIE_GROUP_NAME_MAX_LENGTH",
+]
 
 # ===========================
 # utilities
@@ -156,32 +176,36 @@ def get_constant(constant_name,             # type: Str
                  raise_not_set=True         # type: bool
                  ):                         # type: (...) -> SettingValue
     """
-    Search in order for matched value of ``constant_name``:
-      1. search in settings if specified
-      2. search alternative setting names
-      3. search in ``magpie.constants`` definitions
-      4. search in environment variables
+    Search in order for matched value of :paramref:`constant_name`:
+      1. search in :py:data:`MAGPIE_CONSTANTS`
+      2. search in settings if specified
+      3. search alternative setting names (see below)
+      4. search in :mod:`magpie.constants` definitions
+      5. search in environment variables
 
-    Parameter ``constant_name`` is expected to have the format ``MAGPIE_[VARIABLE_NAME]`` although any value can
+    Parameter :paramref:`constant_name` is expected to have the format ``MAGPIE_[VARIABLE_NAME]`` although any value can
     be passed to retrieve generic settings from all above mentioned search locations.
 
-    If ``settings_name`` is provided as alternative name, it is used as is to search for results if ``constant_name``
-    was not found. Otherwise, ``magpie.[variable_name]`` is used for additional search when the format
-    ``MAGPIE_[VARIABLE_NAME]`` was used for ``constant_name``
-    (ie: ``MAGPIE_ADMIN_USER`` will also search for ``magpie.admin_user`` and so on for corresponding constants).
+    If :paramref:`settings_name` is provided as alternative name, it is used as is to search for results if
+    :paramref:`constant_name` was not found. Otherwise, ``magpie.[variable_name]`` is used for additional search when
+    the format ``MAGPIE_[VARIABLE_NAME]`` was used for :paramref:`constant_name`
+    (i.e.: ``MAGPIE_ADMIN_USER`` will also search for ``magpie.admin_user`` and so on for corresponding constants).
 
     :param constant_name: key to search for a value
     :param settings_container: wsgi app settings container
     :param settings_name: alternative name for `settings` if specified
     :param default_value: default value to be returned if not found anywhere, and exception raises are disabled.
     :param raise_missing: raise exception if key is not found anywhere
-    :param print_missing: print message if key is not found anywhere, return `None`
-    :param raise_not_set: raise an exception if the found key is None, search until last case if previous are `None`
+    :param print_missing: print message if key is not found anywhere, return ``None``
+    :param raise_not_set: raise an exception if the found key is ``None``, search until last case if others are ``None``
     :returns: found value or `default_value`
-    :raises: according message based on options (by default raise missing/`None` value)
+    :raises ValueError: if resulting value is invalid based on options (by default raise missing/``None`` value)
+    :raises LookupError: if no appropriate value could be found from all search locations (according to options)
     """
-    from magpie.utils import get_settings, raise_log, print_log  # pylint: disable=C0415  # avoid circular import error
+    from magpie.utils import get_settings, print_log, raise_log  # pylint: disable=C0415  # avoid circular import error
 
+    if constant_name in MAGPIE_CONSTANTS:
+        return globals()[constant_name]
     missing = True
     magpie_value = None
     settings = get_settings(settings_container) if settings_container else None

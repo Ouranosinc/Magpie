@@ -1,1 +1,1 @@
-0 * * * * /bin/bash -c "set -a ; source <($MAGPIE_ENV_DIR/*.env) ; set +a ; python -c 'from magpie.helpers.sync_resources import main; main()'"
+0 * * * * /bin/bash -c "set -a ; source <($MAGPIE_ENV_DIR/*.env) ; set +a ; magpie_sync_resources"

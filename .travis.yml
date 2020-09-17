@@ -5,25 +5,21 @@ dist: xenial
 os:
   - linux
 python:
-  - "3.6"
-  - "3.5"
   - "2.7"
+  - "3.5"
+  - "3.6"
+  - "3.7"
+  - "3.8"
 cache:
   - pip
-  - directories:
-      - $HOME/conda
-      - $HOME/downloads
 # includes PR when base branch = master
 if: branch = master OR tag IS present
 env:
   global:
-    - CONDA_HOME=$HOME/conda
-    - DOWNLOAD_CACHE=$HOME/downloads
     - secure: lzPPXuRTlqLHl2MCAUuy7ROrewSwPFGGKqbADo7npQ4jqVMAb/TQ5PTzIi4IAIvsv817dNj5WSAd39hsp1zSlE1R2jLtbxGEVqwcjTqSv9VStGascRQnCW1hcoSKYqESweEhtdIcH+uXpV8qnDsUWB6YIIP2VjgWPMfSPZPynFKC0IqZm2sFsqDEJJHr3QM5iN3i3Z9GrEIrBEEpoaf0yak5u8LjqoGSaY8ISPGWipBJYn7i/r/+sZpirFXbZRJmI4ljsaHi0tysNWdANOIf7S2+Dy/oGNn/3Br0OMJ5snFe/n6Uf4GcmPGDc1c86oN0FpGcoNSA+lCUPMASghOGwVqBhMjX+qAZZfzEbCGtr2j/MhcpETMO3S9oqelw4CcbZRXxP2Y20L+KGNOCSt3SC4/HdKj5MWRQGUnIZbT9C2Tpn2wTffpVRoKvhik/6UU8/KT12LSwDhjjrfqLgCEFLqH1nBL2Mopkj/eOwQbZ66nZmthrAF7/c+vaB38LWoqBIZi/fOwo6+kt947d1bW6UX6Z1KnCNLN2KO064Hjn+SHb1gAes0JIXIZE7af1Gti2dKmUL4a5eoYyU5vCLlp2nq5yxEtTUdJKZ1UVnkDqRtSaT0F3FgLypbFqi+qZ6AtygxKqplMjeAGhvVSqZTPqRupP1ac/KBBCvMzG8pkfXWs=
   jobs:
     - TEST_TARGET=test-local    START_TARGET=
     - TEST_TARGET=test-remote   START_TARGET=start
-    - TEST_TARGET=coverage      START_TARGET=
 addons:
   postgresql: "9.6"
 services:
@@ -37,18 +33,20 @@ notifications:
   email: false
 # === pipeline ===
 before_install:
+  # obtain details about environment
   - python -V
   - uname -a
   - lsb_release -a
-  - export PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
-  - export CONDA_ENV=magpie-${TRAVIS_PYTHON_VERSION}
-  - export CONDA_PREFIX=$HOME/conda/envs/magpie-${TRAVIS_PYTHON_VERSION}
-  - export PATH=${CONDA_HOME}/bin:$PATH
   - hash -r
-  - env
-  - make conda-base
+  # fake conda paths to employ preinstalled virtualenv python
+  - export CONDA_ENV_NAME=python${TRAVIS_PYTHON_VERSION}
+  - export CONDA_ENVS_DIR=${HOME}/virtualenv
+  - export CONDA_PREFIX=${CONDA_ENVS_DIR}/${CONDA_ENV_NAME}
+  - export CONDA_ENV_PATH=${CONDA_PREFIX}
+  - env | sort
+  - make info
   - make install-sys
-  #==== magpie env and constants ===
+  # load magpie env and constants
   - mkdir -p ./env
   - cp -f ./ci/magpie.env ./env/magpie.env
 install:
@@ -59,38 +57,39 @@ before_script:
   - psql -c 'create database magpie;' -U postgres
   - echo ${CONDA_PREFIX}
   - echo ${CONDA_ENV}
-  - export PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
-  - export CONDA_ENV=magpie-${TRAVIS_PYTHON_VERSION}
-  - export CONDA_PREFIX=${HOME}/conda/envs/magpie-${TRAVIS_PYTHON_VERSION}
-  - export PATH=${CONDA_HOME}/bin:${PATH}
+  - source ./env/magpie.env
   - hash -r
-  - env
+  - env | sort
 stages:
   - check       # run linting checks and don't bother with the rest if invalid
   - test        # use default stage to run job matrix variations
   - smoke-test  # try running the built/packaged docker image
 jobs:
+  allow_failures:
+    # leave versions while they remains easy to maintain
+    - python: "2.7"  # deprecated support (January 2020)
+    - python: "3.5"  # deprecated support (September 2020)
   include:
     # use stages to quick fail faster tests
     # these are extra to default 'test' stage with auto-matrix/env extension
     - stage: check
       name: "Linter Checks"
-      python: "3.6"
+      python: "3.7"
       os: linux
       script: make check
     - stage: check
       name: "Documentation Check"   # verify that build works
-      python: "3.6"
+      python: "3.7"
       os: linux
       script: make docs
     - stage: test
       name: "Coverage"
-      python: "3.6"
+      python: "3.7"
       os: linux
       script: make coverage
     - stage: smoke-test
       name: "Smoke Test"
-      python: "3.6"
+      python: "3.7"
       os: linux
       script: make test-docker
 script:
@@ -101,4 +100,4 @@ script:
 after_success:
   # coverage report
   - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
-  - source ${CONDA_PREFIX}/bin/activate ${CONDA_ENV} && python-codacy-coverage -r reports/coverage.xml
+  - source ${VIRTUAL_ENV}/bin/activate && python-codacy-coverage -r reports/coverage.xml

@@ -1,5 +1,6 @@
--r requirements-docs.txt
+-r requirements-doc.txt
 autopep8
+backports.tempfile; python_version < "3"
 bandit
 bump2version
 codacy-coverage
@@ -8,9 +9,9 @@ coverage; python_version >= "3"
 doc8
 docformatter
 flake8
-isort
+isort>5
 mock
-pylint
+pylint>=2.5
 pylint-quotes
 pytest
 tox>=3.0

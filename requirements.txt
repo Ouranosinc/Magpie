@@ -2,8 +2,10 @@ alembic>=1.3.0
 bcrypt>=3.1.6
 beaker
 colander
-cornice
+cornice<5; python_version < "3"
+cornice; python_version >= "3"
 cornice_swagger>=0.7.0
+dicttoxml
 # futures is required for gunicorn threads
 futures; python_version < "3"
 # flag --paste breaks for >20 unless using pserve
@@ -20,17 +22,19 @@ pyramid_chameleon>=0.3
 pyramid_mako>=1.0.2
 pyramid_tm>=2.2.1
 python-dotenv
+python2-secrets; python_version <= "3.5"
 pyyaml>=5.1
 requests
 requests_file
 simplejson
-six
+six>=1.12.0
 sqlalchemy
-sqlalchemy_utils
+sqlalchemy_utils<0.36.4; python_version < "3"
+sqlalchemy_utils!=0.36.8; python_version >= "3"
 threddsclient==0.4.1; python_version < "3"
 threddsclient>=0.4.1; python_version >= "3"
 transaction
-typing
+typing; python_version < "3"
 wheel
 webob
 ziggurat-foundations>=0.8.3

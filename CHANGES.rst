@@ -1,12 +1,99 @@
+.. explicit references must be used in this file (not references.rst) to ensure they are directly rendered on Github
 .. :changelog:
 
-History
-=======
+Changes
+*******
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
 * Nothing yet.
+
+`2.0.0 <https://github.com/Ouranosinc/Magpie/tree/2.0.0>`_ (2020-07-31)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``/ui`` route redirect to frontpage when UI is enabled.
+* Add ``/json`` route information into generated Swagger API documentation.
+* Add tag description into generated Swagger API documentation.
+* Add more usage details to start `Magpie` web application in documentation.
+* Add database migration for new ``discoverable`` column of groups.
+* Allow logged user to update its own information both via API and UI
+  (relates to `#170 <https://github.com/Ouranosinc/Magpie/issues/170>`_).
+* Allow logged user of any access-level to register by itself to ``discoverable`` groups.
+* Change some UI CSS for certain pages to improve table readability.
+* Add UI page to render error details from API responses (instead of default server-side HTML error rendering).
+* Add ``MAGPIE_UI_THEME`` with new default *blue* theme and legacy *green* theme (with few improvements).
+* Add more validation and inputs parameters to update ``Group`` information.
+* Add UI input fields to allow administrator to update group description and group discoverability.
+* Allow combined configuration files (``providers``, ``permissions``, ``users`` and ``groups`` sections) with
+  resolution of inter-references between them. File can be specified with ``MAGPIE_CONFIG_PATH`` environment variable
+  or ``magpie.config_path`` setting (example in ``configs``).
+* Add configurable ``User`` creation parameters upon `Magpie` application startup through configuration files
+  (fixes `#47 <https://github.com/Ouranosinc/Magpie/issues/47>`_ and
+  `#204 <https://github.com/Ouranosinc/Magpie/issues/204>`_).
+* Add disabled checkboxes for UI rendering of non-editable items to avoid user doing operations that will always be
+  blocked by corresponding API validation (relates to `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_).
+* Add more tests to validate forbidden operations such as update or delete of reserved ``User`` and ``Group`` details.
+* Add active version tag at bottom of UI pages (same version as returned by API ``/version`` route).
+* Enforce configuration parameters ``MAGPIE_SECRET``, ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` by explicitly
+  defined values (either by environment variable or INI settings) to avoid using defaults for security purposes.
+* Change CLI helper ``create_users`` to ``batch_update_users`` to better represent provided functionalities.
+* Change CLI helper ``register_default_users`` to ``register_defaults`` to avoid confusion on groups also created.
+* Extend CLI ``batch_update_users`` functionality with additional options and corresponding tests.
+* Move all CLI helpers under ``magpie.cli`` and provide more details about them in documentation.
+* Allow unspecified ``group_name`` during user creation request to employ ``MAGPIE_ANONYMOUS_GROUP`` by default
+  (i.e.: created user will have no other apparent group membership since it is always attributed for public access).
+* Change all ``PUT`` requests to ``PATCH`` to better reflect their actual behaviour according to RESTful best practices
+  (partial field updates instead of complete resource replacement and conflict responses on duplicate identifiers).
+* Add support of ``Accept`` header and ``format`` query parameter for all API responses, for content-types variations
+  in either plain text, HTML, XML or JSON (default), and include applicable values in schemas for Swagger generation.
+* Add support of new response content-type as XML (must request using ``Accept`` header or ``format`` query parameter).
+* Add documentation details about different types of ``Permission``, interaction between various `Magpie` models,
+  glossary and other general improvements (relates to `#332 <https://github.com/Ouranosinc/Magpie/issues/332>`_ and
+  `#341 <https://github.com/Ouranosinc/Magpie/issues/341>`_).
+* Add alternative response format for service and service-type paths using ``flatten`` query parameter to obtain a flat
+  list of services instead of nested dictionaries (fixes `#345 <https://github.com/Ouranosinc/Magpie/issues/345>`_).
+* Change pre-existing ``list`` query parameter of user-scoped views to ``flatten`` response format to match new query
+  of service-scoped views.
+* Add ``filtered`` query parameter for user-scoped resources permission listing when request user is an administrator.
+* Obsolete all API routes using ``inherited_permission`` format (deprecated since ``0.7.4``) in favor of equivalent
+  ``permissions?inherited=true`` query parameter modifier.
+* Replace ``inherit`` query parameter wherever applicable by ``inherited`` to match documentation names, but preserve
+  backward compatibility support of old name.
+* Add ``MAGPIE_PASSWORD_MIN_LENGTH`` setting with corresponding validation of field during ``User`` creation and update.
+* Avoid returning ``Service`` entries where user, group or both (according to request path and query options) does not
+  actually have any permission set either directly on them or onto one of their respective children ``Resource``. This
+  avoids unnecessarily exposing all ``Service`` for which the user cannot (or should not) be interacting with anyway.
+* Add ``TWITCHER_HOST`` as alternative configuration parameter to define the service public URL, to have a similar
+  naming convention as other use cases covered by ``MAGPIE_HOST`` and ``PHOENIX_HOST``.
+* Modify ``PHOENIX_PUSH`` to be *disabled* by default to be consistent across all locations where corresponding
+  feature is referenced (startup registration, CLI utility, API requests and UI checkbox option) and because this
+  option is an advanced extension not to be considered as default behavior.
+* Python 2.7 and Python 3.5 marked for deprecation (they remain in CI, but are not required to pass), as both
+  reached their EOL as of January/September 2020.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix invalid API documentation of request body for ``POST /users/{user_name}/groups``.
+* Fix `#164 <https://github.com/Ouranosinc/Magpie/issues/164>`_ (forbid *special* users and groups update and delete).
+* Fix `#84 <https://github.com/Ouranosinc/Magpie/issues/84>`_ and
+  `#171 <https://github.com/Ouranosinc/Magpie/issues/171>`_ with additional input validation.
+* Fix `#194 <https://github.com/Ouranosinc/Magpie/issues/194>`_ to render API error responses according to content-type.
+* Fix `#337 <https://github.com/Ouranosinc/Magpie/issues/337>`_ documentation mismatch with previously denied request
+  users since they are now allowed to run these requests with new user-scoped functionalities
+  (`#340 <https://github.com/Ouranosinc/Magpie/issues/340>`_).
+* Fix bug introduced in `0.9.4 <https://github.com/Ouranosinc/Magpie/tree/0.9.4>`_
+  (`4a23a49 <https://github.com/Ouranosinc/Magpie/commit/4a23a497e3ce1dc39ccaf31ba1857fc199d399db>`_) where some
+  API routes would not return the `Allowed Permissions` for children ``Resource`` under ``Service``
+  (only ``Service`` permissions would be filled), or when requesting ``Resource`` details directly.
+* Fix input check to avoid situations where updating ``Resource`` name could cause involuntary duplicate errors.
+* Fix minor HTML issues in mako templates.
+* Fix invalid generation of default ``postgres.env`` file from ``magpie.env.example``.
+  File ``postgres.env.example`` will now be correctly employed as documented.
+* Make environment variable ``PHOENIX_PUSH`` refer to ``phoenix.push`` instead of ``magpie.phoenix_push`` to employ
+  same naming schema as all other variables.
 
 `1.11.0 <https://github.com/Ouranosinc/Magpie/tree/1.11.0>`_ (2020-06-19)
 ------------------------------------------------------------------------------------
@@ -213,14 +300,14 @@ Bug Fixes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix a bug in ows_parser_factory that caused query parameters for wps services to be case sensitive.
+* Fix a bug in ``ows_parser_factory`` that caused query parameters for wps services to be case sensitive.
 
 `1.6.1 <https://github.com/Ouranosinc/Magpie/tree/1.6.1>`_ (2019-10-01)
 ------------------------------------------------------------------------------------
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix migration script for project-api service type.
+* Fix migration script for ``project-api`` service type.
 
 `1.6.0 <https://github.com/Ouranosinc/Magpie/tree/1.6.0>`_ (2019-09-20)
 ------------------------------------------------------------------------------------

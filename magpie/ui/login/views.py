@@ -5,16 +5,11 @@ from pyramid.security import NO_PERMISSION_REQUIRED, forget
 from pyramid.view import view_config
 
 from magpie.api import schemas
-from magpie.ui.home import add_template_data
-from magpie.ui.utils import check_response, request_api
-from magpie.utils import get_json, get_magpie_url
+from magpie.ui.utils import BaseViews, check_response, request_api
+from magpie.utils import get_json
 
 
-class LoginViews(object):
-    def __init__(self, request):
-        self.request = request
-        self.magpie_url = get_magpie_url(request.registry)
-
+class LoginViews(BaseViews):
     def request_providers_json(self):
         resp = request_api(self.request, schemas.ProvidersAPI.path, "GET")
         check_response(resp)
@@ -24,11 +19,11 @@ class LoginViews(object):
     def login(self):
         external_providers = self.request_providers_json()["external"]
         return_data = {
-            u"external_providers": external_providers,
-            u"user_name_external": self.request.POST.get("user_name", u""),
-            u"user_name_internal": self.request.POST.get("user_name", u""),
-            u"invalid_credentials": False,
-            u"error": False,
+            "external_providers": external_providers,
+            "user_name_external": self.request.POST.get("user_name", ""),
+            "user_name_internal": self.request.POST.get("user_name", ""),
+            "invalid_credentials": False,
+            "error": False,
         }
 
         try:
@@ -37,12 +32,12 @@ class LoginViews(object):
                 for key in self.request.POST:
                     data[key] = self.request.POST.get(key)
 
-                return_data[u"provider_name"] = data.get("provider_name", "").lower()
-                is_external = return_data[u"provider_name"] in [p.lower() for p in external_providers]
+                return_data["provider_name"] = data.get("provider_name", "").lower()
+                is_external = return_data["provider_name"] in [p.lower() for p in external_providers]
                 if is_external:
-                    return_data[u"user_name_internal"] = u""
+                    return_data["user_name_internal"] = ""
                 else:
-                    return_data[u"user_name_external"] = u""
+                    return_data["user_name_external"] = ""
 
                 # keep using the external requests for external providers
                 if is_external:
@@ -61,18 +56,18 @@ class LoginViews(object):
                     return HTTPFound(location=self.request.route_url("home"), headers=response.headers)
 
                 if response.status_code == HTTPUnauthorized.code:
-                    return_data[u"invalid_credentials"] = True
+                    return_data["invalid_credentials"] = True
                 else:
-                    return_data[u"error"] = True
+                    return_data["error"] = True
         except HTTPException as exc:
             if exc.status_code == HTTPUnauthorized.code:
-                return_data[u"invalid_credentials"] = True
+                return_data["invalid_credentials"] = True
             else:
-                return_data[u"error"] = True
+                return_data["error"] = True
         except Exception as exc:
             return HTTPInternalServerError(detail=repr(exc))
 
-        return add_template_data(self.request, data=return_data)
+        return self.add_template_data(data=return_data)
 
     @view_config(route_name="logout", renderer="templates/login.mako", permission=NO_PERMISSION_REQUIRED)
     def logout(self):

@@ -70,3 +70,11 @@ def test_constant_prioritize_setting_before_env_when_specified():
         assert var == settings["magpie.some_existing_var"]
         var = c.get_constant("MAGPIE_SOME_EXISTING_VAR")
         assert var == override["MAGPIE_SOME_EXISTING_VAR"]
+
+
+@runner.MAGPIE_TEST_UTILS
+def test_constant_protected_no_override():
+    for const_name in c.MAGPIE_CONSTANTS:
+        with mock.patch.dict("os.environ", {const_name: "override-value"}):
+            const = c.get_constant(const_name)
+            assert const != "override-value"

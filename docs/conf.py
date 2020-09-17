@@ -15,10 +15,10 @@
 
 # pylint: disable=C0103,invalid-name
 
+import json
 import os
 import re
 import sys
-import json
 
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
@@ -94,7 +94,7 @@ with open(api_spec_file, "w") as f:
 
 redoc = [{
     "name": __meta__.__title__,
-    "page": "api",  # rendered under '{root}/api.html'
+    "page": "api",  # rendered under "{root}/api.html"
     "spec": api_spec_file,
     "embed": True,
     "opts": {
@@ -138,7 +138,7 @@ master_doc = "index"
 
 # General information about the project.
 project = __meta__.__title__
-copyright = u"2017, {}".format(__meta__.__author__)  # pylint: disable=W0622,redefined-builtin
+copyright = "2017, {}".format(__meta__.__author__)  # pylint: disable=W0622,redefined-builtin
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -161,7 +161,7 @@ language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build"]
+exclude_patterns = []
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -198,7 +198,9 @@ html_theme = "nature"
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.  For a list of options available for each theme, see the
 # documentation.
-# html_theme_options = {}
+html_theme_options = {
+    "navigation_depth": 3,  # TOC, RTD theme
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -224,15 +226,16 @@ html_logo = "../magpie/ui/home/static/magpie-logo.png"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
 # directly to the root of the documentation.
 # html_extra_path = []
 
-# If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
+# If not "", a "Last updated on:" timestamp is inserted at every page bottom,
 # using the given strftime format.
-# html_last_updated_fmt = '%b %d, %Y'
+html_last_updated_fmt = "%Y-%m-%d"
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
@@ -297,7 +300,7 @@ doc_title = "{} Documentation".format(__meta__.__title__)
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    ("index", "{}.tex".format(__meta__.__package__), doc_title, __meta__.__author__, "manual"),
+    (master_doc, "{}.tex".format(__meta__.__package__), doc_title, __meta__.__author__, "manual"),
 ]
 
 # The name of an image file (relative to this directory) to place at
@@ -326,7 +329,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ("index", __meta__.__package__, doc_title, [__meta__.__author__], 1)
+    (master_doc, __meta__.__package__, doc_title, [__meta__.__author__], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -339,7 +342,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    ("index", __meta__.__package__,
+    (master_doc, __meta__.__package__,
      doc_title,
      __meta__.__author__,
      __meta__.__package__,

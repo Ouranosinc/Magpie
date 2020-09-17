@@ -1,7 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Synchronize local and remote resources.
 
-To implement a new service, see :class:`magpie.helpers.sync_services.SyncServiceInterface`.
+To implement a new service, see :class:`magpie.cli.sync_services.SyncServiceInterface`.
+
+.. seealso::
+    - :py:mod:`magpie.cli.sync_services`
 """
 import argparse
 import copy
@@ -15,13 +20,15 @@ from typing import TYPE_CHECKING
 import transaction
 
 from magpie import constants, db, models
-from magpie.helpers.sync_services import SYNC_SERVICES_TYPES, SyncServiceDefault, is_valid_resource_schema
+from magpie.api.management.resource.resource_utils import get_resource_children
+from magpie.cli.sync_services import SYNC_SERVICES_TYPES, SyncServiceDefault, is_valid_resource_schema
 from magpie.utils import get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
+    from typing import Any, AnyStr, Optional, Sequence, Union
+
     from sqlalchemy.orm.session import Session
-    from typing import Any, AnyStr, Optional, Sequence, Union  # noqa: F401
 
 LOGGER = get_logger(__name__)
 
@@ -55,7 +62,7 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
         - remote_id: id of the RemoteResource
         - matches_remote: True or False depending if the resource is present on the remote server
 
-    :returns: dictionary of the form validated by `magpie.helpers.sync_services.is_valid_resource_schema`.
+    :returns: dictionary of the form validated by `magpie.cli.sync_services.is_valid_resource_schema`.
     """
     if not resources_remote:
         return resources_local
@@ -170,7 +177,7 @@ def _create_main_resource(service_id, session):
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)
     main_resource = models.RemoteResource(service_id=service_id,
                                           resource_name=str(sync_info.service.resource_name),
-                                          resource_type=u"directory")  # noqa
+                                          resource_type="directory")  # noqa
     session.add(main_resource)
     session.flush()
     sync_info.remote_resource_id = main_resource.resource_id
@@ -209,45 +216,11 @@ def _update_db(remote_resources, service_id, session):
     session.flush()
 
 
-def _get_resource_children(resource, db_session):
-    """
-    Mostly copied from ziggurat_foundations to use RemoteResource instead of Resource.
-
-    :param resource:
-    :param db_session:
-    :return:
-    """
-    query = models.REMOTE_RESOURCE_TREE_SERVICE.from_parent_deeper(resource.resource_id, db_session=db_session)
-
-    def build_subtree_strut(result):
-        """
-        Returns a dictionary in form of.
-
-        {node:Resource, children:{node_id: RemoteResource}}
-        """
-        items = list(result)
-        root_elem = {"node": None, "children": OrderedDict()}
-        if len(items) == 0:
-            return root_elem
-        for node in items:
-            new_elem = {"node": node.RemoteResource, "children": OrderedDict()}
-            path = list(map(int, node.path.split("/")))
-            parent_node = root_elem
-            normalized_path = path[:-1]
-            if normalized_path:
-                for path_part in normalized_path:
-                    parent_node = parent_node["children"][path_part]
-            parent_node["children"][new_elem["node"].resource_id] = new_elem
-        return root_elem
-
-    return build_subtree_strut(query)["children"]
-
-
 def _format_resource_tree(children):
     fmt_res_tree = {}
     for child_dict in children.values():
-        resource = child_dict[u"node"]
-        new_children = child_dict[u"children"]
+        resource = child_dict["node"]
+        new_children = child_dict["children"]
         resource_display_name = resource.resource_display_name or resource.resource_name
         resource_dict = {"children": _format_resource_tree(new_children),
                          "remote_id": resource.resource_id,
@@ -268,7 +241,7 @@ def _query_remote_resources_in_database(service_id, session):
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)
     main_resource = session.query(models.RemoteResource).filter_by(
         resource_id=sync_info.remote_resource_id).first()
-    tree = _get_resource_children(main_resource, session)
+    tree = get_resource_children(main_resource, session, models.REMOTE_RESOURCE_TREE_SERVICE)
 
     remote_resources = _format_resource_tree(tree)
     return {service.resource_name: {"children": remote_resources, "remote_id": main_resource.resource_id}}

@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 from pyramid.httpexceptions import (
+    HTTPBadRequest,
     HTTPConflict,
     HTTPCreated,
     HTTPForbidden,
@@ -8,6 +9,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
+from pyramid.settings import asbool
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.group_resource_permission import GroupResourcePermissionService
 from ziggurat_foundations.models.services.resource import ResourceService
@@ -24,10 +26,13 @@ from magpie.services import SERVICE_TYPE_DICT
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from pyramid.httpexceptions import HTTPException  # noqa: F401
+    from typing import Iterable, List, Optional
+
+    from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session
-    from magpie.typedefs import Str, Iterable, List, Optional, JSON, ServiceOrResourceType  # noqa: F401
-    from magpie.permissions import Permission  # noqa: F401
+
+    from magpie.permissions import Permission
+    from magpie.typedefs import JSON, ResourcePermissionMap, ServiceOrResourceType, Str
 
 
 def get_all_group_names(db_session):
@@ -65,27 +70,42 @@ def get_group_resources(group, db_session):
     return json_response
 
 
-def create_group(group_name, db_session):
-    # type: (Str, Session) -> HTTPException
+def create_group(group_name, description, discoverable, db_session):
+    # type: (Str, Str, bool, Session) -> HTTPException
     """
     Creates a group if it is permitted and not conflicting.
 
     :returns: valid HTTP response on successful operations.
     :raises HTTPException: error HTTP response of corresponding situation.
     """
+    description = str(description) if description else None
+    discoverable = asbool(discoverable)
+    group_content_error = {
+        "group_name": str(group_name),
+        "description": description,
+        "discoverable": discoverable
+    }
+    ax.verify_param(group_name, matches=True, param_compare=ax.PARAM_REGEX, param_name="group_name",
+                    http_error=HTTPBadRequest, content=group_content_error,
+                    msg_on_fail=s.Groups_POST_BadRequestResponseSchema.description)
+    if description:
+        ax.verify_param(description, matches=True, param_compare=ax.PARAM_REGEX, param_name="description",
+                        http_error=HTTPBadRequest, content=group_content_error,
+                        msg_on_fail=s.Groups_POST_BadRequestResponseSchema.description)
+
     group = GroupService.by_group_name(group_name, db_session=db_session)
-    group_content_error = {u"group_name": str(group_name)}
-    ax.verify_param(group, is_none=True, http_error=HTTPConflict, with_param=False,
-                    msg_on_fail=s.Groups_POST_ConflictResponseSchema.description, content=group_content_error)
-    new_group = ax.evaluate_call(lambda: models.Group(group_name=group_name),  # noqa
-                                 fallback=lambda: db_session.rollback(),
-                                 http_error=HTTPForbidden, content=group_content_error,
-                                 msg_on_fail=s.Groups_POST_ForbiddenCreateResponseSchema.description)
+    ax.verify_param(group, is_none=True, param_name="group_name", with_param=False,  # don't return group as value
+                    http_error=HTTPConflict, content=group_content_error,
+                    msg_on_fail=s.Groups_POST_ConflictResponseSchema.description)
+    new_group = ax.evaluate_call(
+        lambda: models.Group(group_name=group_name, description=description, discoverable=discoverable),  # noqa
+        fallback=lambda: db_session.rollback(), http_error=HTTPForbidden, content=group_content_error,
+        msg_on_fail=s.Groups_POST_ForbiddenCreateResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_group), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=group_content_error,
                      msg_on_fail=s.Groups_POST_ForbiddenAddResponseSchema.description)
     return ax.valid_http(http_success=HTTPCreated, detail=s.Groups_POST_CreatedResponseSchema.description,
-                         content={u"group": format_group(new_group, basic_info=True)})
+                         content={"group": format_group(new_group, basic_info=True)})
 
 
 def create_group_resource_permission_response(group, resource, permission, db_session):
@@ -98,9 +118,9 @@ def create_group_resource_permission_response(group, resource, permission, db_se
     """
     resource_id = resource.resource_id
     check_valid_service_or_resource_permission(permission.value, resource, db_session)
-    perm_content = {u"permission_name": str(permission.value),
-                    u"resource": format_resource(resource, basic_info=True),
-                    u"group": format_group(group, basic_info=True)}
+    perm_content = {"permission_name": str(permission.value),
+                    "resource": format_resource(resource, basic_info=True),
+                    "group": format_group(group, basic_info=True)}
     existing_perm = ax.evaluate_call(
         lambda: GroupResourcePermissionService.get(group.id, resource_id, permission.value, db_session=db_session),
         fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
@@ -142,8 +162,8 @@ def get_group_resources_permissions_dict(group, db_session, resource_ids=None, r
                             fallback=lambda: db_session.rollback(),
                             http_error=HTTPInternalServerError,
                             msg_on_fail=s.GroupResourcesPermissions_InternalServerErrorResponseSchema.description,
-                            content={u"group": repr(group), u"resource_ids": repr(resource_ids),
-                                     u"resource_types": repr(resource_types)})
+                            content={"group": repr(group), "resource_ids": repr(resource_ids),
+                                     "resource_types": repr(resource_types)})
 
 
 def get_group_resource_permissions_response(group, resource, db_session):
@@ -156,6 +176,7 @@ def get_group_resource_permissions_response(group, resource, db_session):
     """
     def get_grp_res_perms(grp, res, db):
         if res.owner_group_id == grp.id:
+            # FIXME: no 'magpie.models.Resource.permissions' - ok for now because no owner handling...
             return models.RESOURCE_TYPE_DICT[res.type].permissions
         perms = db.query(models.GroupResourcePermission) \
                   .filter(models.GroupResourcePermission.resource_id == res.resource_id) \
@@ -166,9 +187,9 @@ def get_group_resource_permissions_response(group, resource, db_session):
         lambda: format_permissions(get_grp_res_perms(group, resource, db_session)),
         http_error=HTTPInternalServerError,
         msg_on_fail=s.GroupResourcePermissions_InternalServerErrorResponseSchema.description,
-        content={u"group": repr(group), u"resource": repr(resource)})
+        content={"group": repr(group), "resource": repr(resource)})
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupResourcePermissions_GET_OkResponseSchema.description,
-                         content={u"permission_names": group_perm_names})
+                         content={"permission_names": group_perm_names})
 
 
 def delete_group_resource_permission_response(group, resource, permission, db_session):
@@ -181,9 +202,9 @@ def delete_group_resource_permission_response(group, resource, permission, db_se
     """
     resource_id = resource.resource_id
     check_valid_service_or_resource_permission(permission.value, resource, db_session)
-    perm_content = {u"permission_name": permission.value,
-                    u"resource": format_resource(resource, basic_info=True),
-                    u"group": format_group(group, basic_info=True)}
+    perm_content = {"permission_name": permission.value,
+                    "resource": format_resource(resource, basic_info=True),
+                    "group": format_group(group, basic_info=True)}
     del_perm = ax.evaluate_call(
         lambda: GroupResourcePermissionService.get(group.id, resource_id, permission.value, db_session=db_session),
         fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
@@ -227,9 +248,9 @@ def get_group_services_response(group, db_session):
     grp_svc_json = ax.evaluate_call(lambda: get_group_services(res_perm_dict, db_session),
                                     http_error=HTTPInternalServerError,
                                     msg_on_fail=s.GroupServices_InternalServerErrorResponseSchema.description,
-                                    content={u"group": format_group(group, basic_info=True)})
+                                    content={"group": format_group(group, basic_info=True)})
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupServices_GET_OkResponseSchema.description,
-                         content={u"services": grp_svc_json})
+                         content={"services": grp_svc_json})
 
 
 def get_group_service_permissions(group, service, db_session):
@@ -248,7 +269,7 @@ def get_group_service_permissions(group, service, db_session):
     return ax.evaluate_call(lambda: get_grp_svc_perms(group, service, db_session),
                             http_error=HTTPInternalServerError,
                             msg_on_fail="Failed to obtain group service permissions",
-                            content={u"group": repr(group), u"service": repr(service)})
+                            content={"group": repr(group), "service": repr(service)})
 
 
 def get_group_service_permissions_response(group, service, db_session):
@@ -263,13 +284,13 @@ def get_group_service_permissions_response(group, service, db_session):
         lambda: format_permissions(get_group_service_permissions(group, service, db_session)),
         http_error=HTTPInternalServerError,
         msg_on_fail=s.GroupServicePermissions_GET_InternalServerErrorResponseSchema.description,
-        content={u"group": format_group(group, basic_info=True), u"service": format_service(service)})
+        content={"group": format_group(group, basic_info=True), "service": format_service(service)})
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupServicePermissions_GET_OkResponseSchema.description,
-                         content={u"permission_names": svc_perms_found})
+                         content={"permission_names": svc_perms_found})
 
 
 def get_group_service_resources_permissions_dict(group, service, db_session):
-    # type: (models.Group, models.Service, Session) -> JSON
+    # type: (models.Group, models.Service, Session) -> ResourcePermissionMap
     """
     Get all permissions the group has on a specific service's children resources.
     """
@@ -298,4 +319,4 @@ def get_group_service_resources_response(group, service, db_session):
         show_private_url=False,
     )
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupServiceResources_GET_OkResponseSchema.description,
-                         content={u"service": svc_res_json})
+                         content={"service": svc_res_json})

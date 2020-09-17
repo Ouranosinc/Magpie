@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPCreated, HTTPForbidden, HTTPInternalServerError
+import six
+from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPInternalServerError
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 
@@ -17,9 +18,13 @@ from magpie.utils import get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Str  # noqa: F401
-    from sqlalchemy.orm.session import Session
+    from typing import Iterable
+
     from pyramid.httpexceptions import HTTPException
+    from sqlalchemy.orm.session import Session
+
+    from magpie.typedefs import Str
+
 LOGGER = get_logger(__name__)
 
 
@@ -39,32 +44,49 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
             svc = ax.evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=db_session),
                                    fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
                                    msg_on_fail=s.Services_POST_InternalServerErrorResponseSchema.description,
-                                   content={u"service_name": str(service_name), u"resource_id": svc.resource_id})
+                                   content={"service_name": str(service_name), "resource_id": svc.resource_id})
             ax.verify_param(svc.resource_id, not_none=True, param_compare=int, is_type=True,
                             http_error=HTTPInternalServerError,
                             msg_on_fail=s.Services_POST_InternalServerErrorResponseSchema.description,
-                            content={u"service_name": str(service_name), u"resource_id": svc.resource_id},
-                            param_name=u"service_name")
+                            content={"service_name": str(service_name), "resource_id": svc.resource_id},
+                            param_name="service_name")
         return svc
 
+    ax.verify_param(service_type, not_none=True, not_empty=True, is_type=True,
+                    param_name="service_type", param_compare=six.string_types,
+                    http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_BadRequestResponseSchema.description)
+    ax.verify_param(service_type, is_in=True, param_compare=SERVICE_TYPE_DICT.keys(), param_name="service_type",
+                    http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_BadRequestResponseSchema.description)
+    ax.verify_param(service_url, matches=True, param_compare=ax.URL_REGEX, param_name="service_url",
+                    http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_Params_BadRequestResponseSchema.description)
+    ax.verify_param(service_name, not_empty=True, not_none=True, matches=True,
+                    param_name="service_name", param_compare=ax.PARAM_REGEX,
+                    http_error=HTTPBadRequest, msg_on_fail=s.Services_POST_Params_BadRequestResponseSchema.description)
+    ax.verify_param(models.Service.by_service_name(service_name, db_session=db_session), is_none=True,
+                    param_name="service_name", with_param=False, content={"service_name": str(service_name)},
+                    http_error=HTTPConflict, msg_on_fail=s.Services_POST_ConflictResponseSchema.description)
     service = ax.evaluate_call(lambda: models.Service(resource_name=str(service_name),
                                                       resource_type=models.Service.resource_type_name,
                                                       url=str(service_url), type=str(service_type)),  # noqa
                                fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
                                msg_on_fail=s.Services_POST_UnprocessableEntityResponseSchema.description,
-                               content={u"service_name": str(service_name),
-                                        u"resource_type": models.Service.resource_type_name,
-                                        u"service_url": str(service_url), u"service_type": str(service_type)})
+                               content={"service_name": str(service_name),
+                                        "resource_type": models.Service.resource_type_name,
+                                        "service_url": str(service_url), "service_type": str(service_type)})
 
     service = ax.evaluate_call(lambda: _add_service_magpie_and_phoenix(service, service_push, db_session),
                                fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
                                msg_on_fail=s.Services_POST_ForbiddenResponseSchema.description,
                                content=format_service(service, show_private_url=True))
     return ax.valid_http(http_success=HTTPCreated, detail=s.Services_POST_CreatedResponseSchema.description,
-                         content={u"service": format_service(service, show_private_url=True)})
+                         content={"service": format_service(service, show_private_url=True)})
 
 
 def get_services_by_type(service_type, db_session):
+    # type: (Str, Session) -> Iterable[models.Service]
+    """
+    Obtains all services that correspond to requested service-type.
+    """
     ax.verify_param(service_type, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                     msg_on_fail="Invalid 'service_type' value '" + str(service_type) + "' specified")
     services = db_session.query(models.Service).filter(models.Service.type == service_type)

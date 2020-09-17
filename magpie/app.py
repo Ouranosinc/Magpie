@@ -8,9 +8,9 @@ Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 from pyramid.settings import asbool
 from pyramid_beaker import set_cache_regions_from_settings
 
+from magpie.cli.register_defaults import register_defaults
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
-from magpie.helpers.register_default_users import register_default_users
 from magpie.register import magpie_register_permissions_from_config, magpie_register_services_from_config
 from magpie.security import get_auth_config
 from magpie.utils import get_logger, patch_magpie_url, print_log
@@ -52,20 +52,27 @@ def main(global_config=None, **settings):  # noqa: F811
     # with a new engine class and logging settings don't get re-evaluated/applied
     db_session = get_db_session_from_config_ini(config_ini, settings_override=sa_settings)
 
-    print_log("Register default users...", LOGGER)
-    register_default_users(db_session=db_session, settings=settings)
+    print_log("Validate settings that require explicit definitions...", LOGGER)
+    for req_config in ["MAGPIE_SECRET", "MAGPIE_ADMIN_USER", "MAGPIE_ADMIN_PASSWORD"]:
+        get_constant(req_config, settings_container=settings, raise_missing=True, raise_not_set=True)
 
+    print_log("Register default users...", LOGGER)
+    register_defaults(db_session=db_session, settings=settings)
+
+    combined_config = get_constant("MAGPIE_CONFIG_PATH", default_value=None,
+                                   raise_missing=False, raise_not_set=False, print_missing=True)
     print_log("Register configuration providers...", logger=LOGGER)
-    push_phoenix = asbool(get_constant("PHOENIX_PUSH", settings, settings_name="magpie.phoenix_push",
+    push_phoenix = asbool(get_constant("PHOENIX_PUSH", settings, settings_name="phoenix.push", default_value=False,
                                        raise_missing=False, raise_not_set=False, print_missing=True))
-    prov_cfg = get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", default_value="",
-                            raise_missing=False, raise_not_set=False, print_missing=True)
+
+    prov_cfg = combined_config or get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", default_value="",
+                                               raise_missing=False, raise_not_set=False, print_missing=True)
     magpie_register_services_from_config(prov_cfg, push_to_phoenix=push_phoenix,
                                          force_update=True, disable_getcapabilities=False, db_session=db_session)
 
     print_log("Register configuration permissions...", LOGGER)
-    perm_cfg = get_constant("MAGPIE_PERMISSIONS_CONFIG_PATH", default_value="",
-                            raise_missing=False, raise_not_set=False, print_missing=True)
+    perm_cfg = combined_config or get_constant("MAGPIE_PERMISSIONS_CONFIG_PATH", default_value="",
+                                               raise_missing=False, raise_not_set=False, print_missing=True)
     magpie_register_permissions_from_config(perm_cfg, db_session=db_session)
 
     print_log("Running configurations setup...", LOGGER)

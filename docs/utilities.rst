@@ -1,7 +1,10 @@
+.. _utilities:
+.. include:: references.rst
+
 Utilities
 ============
 
-.. utilities_helpers:
+.. _utilities_helpers:
 
 Magpie CLI Helpers
 ---------------------
@@ -13,18 +16,36 @@ configuration file or creating basic user accounts. Please refer to their corres
 
 Available helpers:
 
-- ``magpie_create_users``
-- ``magpie_register_default_users``
-- ``magpie_register_providers``
-- ``magpie_run_database_migration``
-- ``magpie_sync_resources``
+.. list-table::
+    :header-rows: 1
+
+    * - Command
+      - Description
+    * - ``magpie_batch_update_users``
+      - Register or unregister users using entries provided by batch file or arguments.
+    * - ``magpie_register_defaults``
+      - | Register default users and groups for `Magpie` internal operation.
+        | See `Configuration`_ for details on applicable parameters definitions.
+    * - ``magpie_register_providers``
+      - | Register service providers from a configuration file.
+        | This is the same command executed at `Magpie` startup using files defined through configuration settings.
+    * - ``magpie_run_database_migration``
+      - | Run any required database migration operation, according to detected database state and required one by
+          the current `Magpie` version.
+        | This operation is the same command that is executed at `Magpie` startup to ensure data integrity.
+    * - ``magpie_sync_resources``
+      - | Synchronizes local and remote resources based on `Magpie` service's ``sync-type`` methodology.
+        | See also `magpie-con`_.
+
+.. _configuration: configuration.rst
+.. _magpie-con: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
 
 For convenience, a generic CLI ``magpie_helper`` is also provided which allows calling each of the other helper
 operations as *mode*. You can therefore do as follows.
 
 .. code-block:: console
 
-    # list of available 'helper'
+    # list of available 'helper' commands
     magpie_helper --help
     # arguments of the given helper
     magpie_helper [helper] --help
@@ -34,19 +55,19 @@ For example, the two statements below are equivalent.
 
 .. code-block:: console
 
-    magpie_helper create_users [...]
+    magpie_helper register_providers [...]
     # OR
-    magpie_create_users [...]
+    magpie_register_providers [...]
 
 
 When using an ``conda`` environment, you should be able to directly call the ``magpie_helper`` CLI as above if you
 previously installed the package (see `installation`_).
 
-Source code of these helpers can be found `here <https://github.com/Ouranosinc/Magpie/tree/master/magpie/helpers>`_.
+Source code of these helpers can be found `here <https://github.com/Ouranosinc/Magpie/tree/master/magpie/cli>`_.
 
 .. _installation: installation.rst
 
-.. utilities_connection:
+.. _utilities_connection:
 
 Magpie Connection
 ---------------------
@@ -55,7 +76,7 @@ The repository `Ouranosinc/requests-magpie`_ offers basic Authentication connect
 similarly to how traditional ``HTTPBasicAuth`` works under the hood. Using this, you can easily plug-and-play `Magpie`
 in order to use it with the standard ``requests`` library by passing ``auth=MagpieAuth(<...>)``.
 
-.. _Ouranosinc/requests-magpie: https://github.com/Ouranosinc/requests-magpie
+.. _utilities_adapter:
 
 Magpie Adapter: Integration with Twitcher
 ----------------------------------------------
@@ -76,4 +97,3 @@ confirm that both instances were adequately configured as both require to share 
 
 .. _docker-compose: https://docs.docker.com/compose/
 .. _source_magpie_adapter: https://github.com/Ouranosinc/Magpie/blob/master/magpie/adapter/__init__.py#L107
-.. _Twitcher: https://github.com/bird-house/twitcher

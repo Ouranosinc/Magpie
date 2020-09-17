@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Magpie helpers for service providers registration.
+"""
 import argparse
 from typing import TYPE_CHECKING
 
@@ -7,7 +12,7 @@ from magpie.register import magpie_register_services_from_config
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, AnyStr, Optional, Sequence  # noqa: F401
+    from typing import Any, AnyStr, Optional, Sequence
 
 
 def make_parser():

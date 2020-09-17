@@ -10,9 +10,9 @@
 
 <script>
     function updatePushPhoenixOption() {
-        var arraySevicesPhoenix = ${services_phoenix_indices};
-        var selectedIndex = $("select[id='service_type_select'] option:selected").index();
-        var selectedEnable = (arraySevicesPhoenix[selectedIndex] == 1);
+        let arrayServicesPhoenix = ${services_phoenix_indices};
+        let selectedIndex = $("select[id='service_type_select'] option:selected").index();
+        let selectedEnable = (arrayServicesPhoenix[selectedIndex] == 1);
         document.getElementById("service_push_phoenix_section").hidden = !selectedEnable;
     }
     $( document ).ready(function() {
@@ -20,36 +20,58 @@
     });
 </script>
 
-<form class="new_item_form" id="add_service_form" action="${request.path}" method="post">
-    <table class="fields_table">
+<form class="new-item-form" id="add_service_form" action="${request.path}" method="post">
+    <table class="fields-table">
         <tr>
-            <td>Service name (unique):</td>
-            <div class="input_container">
-                <td><input type="text" value="" name="service_name" class="equal_width" placeholder="emu"></td>
-            </div>
+            <td>Service name:</td>
+            <td>
+                <div class="input-container"><label>
+                <input type="text" value="" name="service_name" class="equal-width" placeholder="service">
+                </label></div>
+            </td>
+            <td>
+                (unique)
+            </td>
         </tr>
         <tr>
             <td>Service url:</td>
-            <div class="input_container">
-                <td><input type="text" value="" name="service_url" class="equal_width" placeholder="http://localhost:8093"></td>
-            </div>
+            <td>
+                <div class="input-container"><label>
+                    <input type="url" value="" name="service_url" class="equal-width"
+                           placeholder="http://localhost:8093">
+                </label></div>
+            </td>
+            <td>
+            </td>
         </tr>
         <tr><td>Service type:</td>
-            <div class="input_container">
-                <td><select name="service_type" class="equal_width" id="service_type_select"
+            <td>
+                <div class="input-container">
+                <label>
+                <select name="service_type" class="equal-width" id="service_type_select"
                             onchange="updatePushPhoenixOption()">
                     %for service_type in service_types:
                         <option value="${service_type}">${service_type}</option>
                     %endfor
-                </td>
-            </div>
+                 </select>
+                </label>
+                </div>
+            </td>
+            <td>
+            </td>
         </tr>
         <tr id="service_push_phoenix_section">
             <td>Push to Phoenix:</td>
-            <div class="input_container">
-                <td><input type="checkbox" name="service_push" checked id="service_push_phoenix_checkbox"></td>
-            </div>
+            <td>
+                <div class="input-container"><label>
+                    <input type="checkbox" name="service_push" checked id="service_push_phoenix_checkbox">
+                </label></div>
+            </td>
         </tr>
-        <tr><td class="centered" colspan="2"><input type="submit" value="Register" name="register"></td></tr>
+        <tr>
+            <td class="centered" colspan="2">
+                <input type="submit" value="Add Service" name="register" class="button theme">
+            </td>
+        </tr>
     </table>
 </form>

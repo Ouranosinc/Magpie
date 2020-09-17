@@ -8,70 +8,118 @@
 
 <h1>Add User</h1>
 
-<form class="new_item_form" id="add_user_form" action="${request.path}" method="post">
-    <table class="fields_table">
+<form class="new-item-form" id="add_user_form" action="${request.path}" method="post">
+    <table class="fields-table">
         <tr>
             <td>User name:</td>
-            <div class="input_container">
-                <td><input type="text" name="user_name" value="${form_user_name}" class="equal_width"></td>
-            </div>
-            %if too_long_user_name:
-                <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Too long </p>
-                </td>
-            %elif invalid_user_name:
-                <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </p>
-                </td>
-            %elif conflict_user_name:
-                <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Conflict </p>
-                </td>
-            %else:
-                <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
-            %endif
+            <td><div class="input-container"><label>
+                <input type="text" name="user_name" placeholder="username"
+                       value="${form_user_name}" class="equal-width">
+                </label></div>
+            </td>
+            <td>
+                <div class="alert-form-error"
+                    %if not invalid_user_name:
+                        style="visibility: hidden"
+                    %endif
+                >
+                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                         alt="ERROR" class="icon-error" />
+                    <div class="alert-form-text">
+                        %if invalid_user_name:
+                            ${reason_user_name}
+                        %endif
+                    </div>
+                </div>
+            </td>
         </tr>
         <tr>
             <td>Email:</td>
-            <div class="input_container">
-                <td><input type="text" name="email" value="${form_user_email}" class="equal_width"></td>
-            </div>
-            %if invalid_user_email:
-                <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </p>
-                </td>
-            %elif conflict_user_email:
-                <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Conflict </p>
-                </td>
-            %else:
-                <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
-            %endif
+            <td><div class="input-container"><label>
+                <input type="email" name="email" placeholder="email"
+                       value="${form_user_email}" class="equal-width">
+                </label></div>
+            </td>
+            <td>
+                <div class="alert-form-error"
+                    %if not invalid_user_email:
+                        style="visibility: hidden"
+                    %endif
+                >
+                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                         alt="ERROR" class="icon-error" />
+                    <div class="alert-form-text">
+                        %if invalid_user_email:
+                            ${reason_user_email}
+                        %endif
+                    </div>
+                </div>
+            </td>
         </tr>
         <tr>
             <td>Password:</td>
-            <div class="input_container">
-                <td><input type="password" name="password" value="" class="equal_width"></td>
-            </div>
-            %if invalid_password:
-                <td><p class="alert_form_error">
-                    <img src="${request.static_url('magpie.ui.home:static/warning_exclamation.png')}" /> Invalid </p>
-                </td>
-            %else:
-                <td><p class="alert_form_error">&nbsp;</p></td> <!-- empty cell to keep table shape consistent -->
-            %endif
+            <td>
+                <div class="input-container"><label>
+                <input type="password" placeholder="password"
+                       name="password" value="" class="equal-width">
+                </label></div>
+            </td>
+            <td>
+                <div class="alert-form-error"
+                    %if not invalid_password:
+                        style="visibility: hidden"
+                    %endif
+                >
+                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                         alt="ERROR" class="icon-error" />
+                    <div class="alert-form-text">
+                        %if invalid_password:
+                            ${reason_password}
+                        %endif
+                    </div>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>Confirm:</td>
+            <td>
+                <div class="input-container"><label>
+                <input type="password" placeholder="confirm"
+                       name="confirm" value="" class="equal-width">
+                </label></div>
+            </td>
+            <td>
+                <div class="alert-form-error"
+                    %if not invalid_password:
+                        style="visibility: hidden"
+                    %endif
+                >
+                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                         alt="ERROR" class="icon-error" />
+                    <div class="alert-form-text">
+                        ${reason_password}
+                    </div>
+                </div>
+            </td>
         </tr>
         <tr>
             <td>User group:</td>
-            <div class="input_container">
-                <td class="centered" colspan="2">
-                <select name="group_name" class="equal_width">
+            <td class="centered" colspan="2">
+                <div class="input-container">
+                <label>
+                <select name="group_name" class="equal-width">
                     %for group in user_groups:
                         <option value="${group}">${group}</option>
                     %endfor
-                </select></td>
-            </div>
+                </select>
+                </label>
+                </div>
+            </td>
         </tr>
-        <tr><td class="centered" colspan="2"><input type="submit" value="Add User" name="create"></td></tr>
+        <tr>
+            <td class="centered" colspan="2">
+                <input type="submit" value="Add User" name="create" class="button theme">
+            </td>
+        </tr>
     </table>
 </form>

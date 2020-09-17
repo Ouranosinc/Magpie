@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import lxml.etree  # nosec: B410 # module safe but bandit flags it : https://github.com/tiran/defusedxml/issues/38
 
-from magpie.api.requests import get_multiformat_any
+from magpie.api.requests import get_multiformat_body
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, get_header, get_logger, is_json_body
 
 if TYPE_CHECKING:
@@ -108,4 +108,4 @@ class WPSPost(OWSParser):
 
 class MultiFormatParser(OWSParser):
     def _get_param_value(self, param):
-        return get_multiformat_any(self.request, param, None)
+        return get_multiformat_body(self.request, param, None)

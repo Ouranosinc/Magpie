@@ -21,9 +21,9 @@ def get_homepage(request):  # noqa: W0212
     """
     body = deepcopy(s.InfoAPI)
     body.update({
-        u"title": s.TitleAPI,
-        u"name": __meta__.__package__,
-        u"documentation": get_magpie_url() + s.SwaggerAPI.path
+        "title": s.TitleAPI,
+        "name": __meta__.__package__,
+        "documentation": get_magpie_url() + s.SwaggerAPI.path
     })
     return ax.valid_http(http_success=HTTPOk, content=body, content_type=CONTENT_TYPE_JSON,
                          detail=s.Version_GET_OkResponseSchema.description)
@@ -41,8 +41,8 @@ def get_version(request):
     except Exception as exc:
         print_log("Failed to retrieve database revision: [{!r}]".format(exc), LOGGER, logging.WARNING)
     version = {
-        u"version": __meta__.__version__,
-        u"db_version": version_db
+        "version": __meta__.__version__,
+        "db_version": version_db
     }
     return ax.valid_http(http_success=HTTPOk, content=version, content_type=CONTENT_TYPE_JSON,
                          detail=s.Version_GET_OkResponseSchema.description)

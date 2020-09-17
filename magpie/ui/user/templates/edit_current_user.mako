@@ -1,0 +1,166 @@
+<%inherit file="ui.home:templates/template.mako"/>
+
+<%block name="breadcrumb">
+<li><a href="${request.route_url('home')}">Home</a></li>
+<li><a href="${request.route_url('edit_current_user', user_name=user_name)}">User [${user_name}]</a></li>
+</%block>
+
+%if invalid_password or invalid_user_email:
+<div class="alert alert-warning alert-visible" id="UpdateUser_WarningFailureAlert">
+    <h3 class="alert-title-warning">Warning</h3>
+    <div class="alert-info">
+        <img src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"
+             alt="" class="icon-warning icon-color-invert" />
+        <div class="alert-text">
+        Update User Information Failed
+        </div>
+    </div>
+    <p>
+        The user details could not be updated due to invalid format.
+        Please refer to corresponding field error.
+    </p>
+    <form action="${request.path}" method="post">
+        <input type="submit" class="button cancel" name="close" value="Close"
+               onclick="this.parentElement.style.display='none';">
+    </form>
+</div>
+%endif
+
+<h1>Account User: [${user_name}]</h1>
+
+<h3>User Information</h3>
+
+
+<div class="panel-box">
+    <!-- # FIXME: implement with better warning (alert), API route supports operation
+        (admin is immediate delete, but we should confirm user self-delete beforehand just in case)
+    -->
+    <div class="panel-heading theme">
+    <!--
+    <form id="delete_user" action="${request.path}" method="post">
+    -->
+        <span class="panel-title">User: </span>
+        <span class="panel-value">[${user_name}]</span>
+    <!--
+        <span class="panel-heading-button">
+            <input type="submit" value="Delete Account" name="delete" class="button delete">
+        </span>
+    </form>
+    -->
+    </div>
+    <div class="panel-body">
+        <div class="panel-box">
+            <div class="panel-heading subsection">
+                <div class="panel-title">Details</div>
+            </div>
+            <!-- new table for each row to ensure long field doesn't dictate first column width -->
+            <div class="panel-fields">
+                <table class="panel-line">
+                    <tr>
+                        <td>
+                            <!-- username fixed -->
+                            <label>
+                                <span class="panel-entry">Username: </span>
+                                ${user_name}
+                            </label>
+                        </td>
+                    </tr>
+                </table>
+                <table class="panel-line">
+                    <tr>
+                        <td>
+                            <form id="edit_password" action="${request.path}" method="post">
+                            <span class="panel-entry">Password: </span>
+                            %if edit_mode == "edit_password":
+                                <label>
+                                    <input type="password" placeholder="new password" value="" name="new_user_password"
+                                           id="input_password" onkeyup="adjustWidth('input_password')">
+                                    <input type="submit" value="Save" name="save_password" class="button theme">
+                                    <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                                </label>
+                            %else:
+                                <label>
+                                    <span class="panel-value">***</span>
+                                    <input type="submit" value="Edit" name="edit_password" class="button theme">
+                                </label>
+                            %endif
+                            </form>
+                        </td>
+                        <td>
+                        %if invalid_password:
+                            <div class="alert-form-error panel-error">
+                                <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                                     alt="ERROR" class="icon-error" />
+                                <div class="alert-form-text">
+                                    ${reason_password}
+                                </div>
+                            </div>
+                        %endif
+                        </td>
+                    </tr>
+                </table>
+                <table class="panel-line">
+                    <tr>
+                        <td>
+                            <form id="edit_email" action="${request.path}" method="post">
+                            <span class="panel-entry">Email: </span>
+                            %if edit_mode == "edit_email":
+                                <label>
+                                    <input type="email" placeholder="new email" value="${email}" name="new_user_email"
+                                           id="input_email" onkeyup="adjustWidth('input_url')">
+                                    <input type="submit" value="Save" name="save_email" class="button theme">
+                                    <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                                </label>
+                            %else:
+                                <label>
+                                    <span class="panel-value">${email}</span>
+                                    <input type="submit" value="Edit" name="edit_email" class="button theme">
+                                </label>
+                            %endif
+                            </form>
+                        </td>
+                        <td>
+                        %if invalid_user_email:
+                            <div class="alert-form-error panel-error">
+                                <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                                     alt="ERROR" class="icon-error" />
+                                <div class="alert-form-text">
+                                    ${reason_user_email}
+                                </div>
+                            </div>
+                        %endif
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<h3>Public Groups Membership</h3>
+
+<form id="edit_membership" action="${request.path}" method="post">
+    <input type="hidden" value="True" name="edit_group_membership"/>
+    <table class="simple-list">
+    %for group in groups:
+    <tr>
+        <td>
+            <label>
+            <input type="checkbox" value="${group}" name="member"
+               % if group in joined_groups:
+                   checked
+               %endif
+               %if group in MAGPIE_FIXED_GROUP_MEMBERSHIPS:
+                   disabled
+               %else:
+                   onchange="document.getElementById('edit_membership').submit()"
+               %endif
+            >
+            ${group}
+            </label>
+        </td>
+    </tr>
+    %endfor
+    </table>
+</form>

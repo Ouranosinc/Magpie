@@ -1,16 +1,26 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Sync registered services in Magpie with resources retrieved from actual service.
+
+.. seealso::
+    - :py:mod:`magpie.cli.sync_resources`
+"""
 import abc
 from collections import OrderedDict, defaultdict
 from typing import TYPE_CHECKING
 
 import requests
+import six
 import threddsclient
-from six import with_metaclass
 
 from magpie.utils import CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Dict, JSON, Str, Type  # noqa: F401
+    from typing import Dict, Type
+
+    from magpie.typedefs import JSON, Str
 
 
 def is_valid_resource_schema(resources):
@@ -39,7 +49,8 @@ def is_valid_resource_schema(resources):
     return True
 
 
-class SyncServiceInterface(with_metaclass(abc.ABCMeta)):
+@six.add_metaclass(abc.ABCMeta)
+class SyncServiceInterface(object):
     sync_type = None    # type: Str
 
     def __init__(self, service_name, url):
@@ -65,7 +76,7 @@ class SyncServiceInterface(with_metaclass(abc.ABCMeta)):
 
 
 class SyncServiceGeoserver(SyncServiceInterface):
-    sync_type = u"geoserver-api"
+    sync_type = "geoserver-api"
 
     @property
     def max_depth(self):
@@ -93,7 +104,7 @@ class SyncServiceGeoserver(SyncServiceInterface):
 
 
 class SyncServiceProjectAPI(SyncServiceInterface):
-    sync_type = u"project-api"
+    sync_type = "project-api"
 
     @property
     def max_depth(self):
@@ -118,7 +129,7 @@ class SyncServiceProjectAPI(SyncServiceInterface):
 
 
 class SyncServiceThredds(SyncServiceInterface):
-    sync_type = u"thredds"
+    sync_type = "thredds"
 
     @property
     def max_depth(self):

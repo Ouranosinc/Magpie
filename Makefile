@@ -19,35 +19,57 @@ MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := magpie
-APP_VERSION ?= 1.11.0
+APP_VERSION ?= 2.0.0
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
+# guess OS (Linux, Darwin,...)
+OS_NAME := $(shell uname -s 2>/dev/null || echo "unknown")
+CPU_ARCH := $(shell uname -m 2>/dev/null || uname -p 2>/dev/null || echo "unknown")
+
 # conda
-CONDA_ENV      ?= $(APP_NAME)
+CONDA_ENV_NAME ?= $(APP_NAME)
 CONDA_HOME     ?= $(HOME)/.conda
 CONDA_ENVS_DIR ?= $(CONDA_HOME)/envs
-CONDA_ENV_PATH := $(CONDA_ENVS_DIR)/$(CONDA_ENV)
-CONDA_BIN      := $(CONDA_HOME)/bin/conda
+CONDA_ENV_PATH := $(CONDA_ENVS_DIR)/$(CONDA_ENV_NAME)
+# allow pre-installed conda in Windows bash-like shell
+ifeq ($(findstring MINGW,$(OS_NAME)),MINGW)
+	CONDA_BIN_DIR ?= $(CONDA_HOME)/Scripts
+else
+	CONDA_BIN_DIR ?= $(CONDA_HOME)/bin
+endif
+CONDA_BIN := $(CONDA_BIN_DIR)/conda
 CONDA_ENV_REAL_TARGET_PATH := $(realpath $(CONDA_ENV_PATH))
 CONDA_ENV_REAL_ACTIVE_PATH := $(realpath ${CONDA_PREFIX})
-ifeq ("$(CONDA_ENV_REAL_ACTIVE_PATH)","$(CONDA_ENV_REAL_TARGET_PATH)")
-	CONDA_CMD :=
-	CONDA_ENV_MODE := [using active environment]
-else
-	CONDA_CMD := source "$(CONDA_HOME)/bin/activate" "$(CONDA_ENV)";
-	CONDA_ENV_MODE := [will activate environment]
-endif
-PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
 
+# environment already active - use it directly
+ifneq ("$(CONDA_ENV_REAL_ACTIVE_PATH)", "")
+	CONDA_ENV_MODE := [using active environment]
+	CONDA_ENV_NAME := $(notdir $(CONDA_ENV_REAL_ACTIVE_PATH))
+	CONDA_CMD :=
+endif
+# environment not active but it exists - activate and use it
+ifneq ($(CONDA_ENV_REAL_TARGET_PATH), "")
+	CONDA_ENV_NAME := $(notdir $(CONDA_ENV_REAL_TARGET_PATH))
+endif
+# environment not active and not found - create, activate and use it
+ifeq ("$(CONDA_ENV_NAME)", "")
+	CONDA_ENV_NAME := $(APP_NAME)
+endif
+# update paths for environment activation
+ifeq ("$(CONDA_ENV_REAL_ACTIVE_PATH)", "")
+	CONDA_ENV_MODE := [will activate environment]
+	CONDA_CMD := source "$(CONDA_BIN_DIR)/activate" "$(CONDA_ENV_NAME)";
+endif
 DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
 REPORTS_DIR ?= $(APP_ROOT)/reports
+PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
+PIP_XARGS ?= --use-feature=2020-resolver
 
 # choose conda installer depending on your OS
 CONDA_URL = https://repo.continuum.io/miniconda
-OS_NAME := $(shell uname -s || echo "unknown")
-ifeq ("$(OS_NAME)","Linux")
+ifeq ("$(OS_NAME)", "Linux")
 FN := Miniconda3-latest-Linux-x86_64.sh
-else ifeq ("$(OS_NAME)","Darwin")
+else ifeq ("$(OS_NAME)", "Darwin")
 FN := Miniconda3-latest-MacOSX-x86_64.sh
 else
 FN := unknown
@@ -98,19 +120,23 @@ version:	## display current version
 
 .PHONY: info
 info:		## display make information
-	@echo "Informations about your make execution:"
-	@echo "  OS_NAME             $(OS_NAME)"
-	@echo "  CPU_ARCH            $(CPU_ARCH)"
-	@echo "  Conda Home          $(CONDA_HOME)"
-	@echo "  Conda Environment   $(CONDA_ENV)"
-	@echo "  Conda Prefix        $(CONDA_ENV_PATH)"
-	@echo "  Conda Binary        $(CONDA_BIN)"
-	@echo "  Conda Actication    $(CONDA_ENV_MODE)"
-	@echo "  Conda Command       $(CONDA_CMD)"
-	@echo "  APP_NAME            $(APP_NAME)"
-	@echo "  APP_ROOT            $(APP_ROOT)"
-	@echo "  DOWNLOAD_CACHE      $(DOWNLOAD_CACHE)"
-	@echo "  DOCKER_REPO         $(DOCKER_REPO)"
+	@echo "Information about your make execution:"
+	@echo "  OS Name                $(OS_NAME)"
+	@echo "  CPU Architecture       $(CPU_ARCH)"
+	@echo "  Conda Home             $(CONDA_HOME)"
+	@echo "  Conda Prefix           $(CONDA_ENV_PATH)"
+	@echo "  Conda Env Name         $(CONDA_ENV_NAME)"
+	@echo "  Conda Env Path         $(CONDA_ENV_REAL_ACTIVE_PATH)"
+	@echo "  Conda Binary           $(CONDA_BIN)"
+	@echo "  Conda Activation       $(CONDA_ENV_MODE)"
+	@echo "  Conda Command          $(CONDA_CMD)"
+	@echo "  Application Root       $(APP_ROOT)"
+	@echo "  Application Name       $(APP_NAME)"
+	@echo "  Application Version    $(APP_VERSION)"
+	@echo "  Download Cache         $(DOWNLOAD_CACHE)"
+	@echo "  Test Reports           $(REPORTS_DIR)"
+	@echo "  Docker Tag (magpie)    $(MAGPIE_DOCKER_TAG)"
+	@echo "  Docker Tag (twitcher)  $(TWITCHER_DOCKER_TAG)"
 
 ## --- Cleanup targets --- ##
 
@@ -134,7 +160,6 @@ clean-build:	## remove build artifacts
 .PHONY: clean-docs
 clean-docs:		## remove doc artifacts
 	@echo "Cleaning doc artifacts..."
-	@"$(MAKE)" -C "$(APP_ROOT)/docs" clean || true
 	@-find "$(APP_ROOT)/docs/" -type f -name "$(APP_NAME)*.rst" -delete
 	@-rm -f "$(APP_ROOT)/docs/modules.rst"
 	@-rm -f "$(APP_ROOT)/docs/api.json"
@@ -165,9 +190,19 @@ clean-docker: docker-clean	## alias for 'docker-clean' target
 ## --- Database targets --- ##
 
 .PHONY: migrate
-migrate: install conda-env	## run postgres database migration with alembic
+migrate: database-migration		## alias to 'database-migration'
+
+.PHONY: database-migration
+database-migration: conda-env	## run postgres database migration with alembic
+	@bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/alembic" || "$(MAKE)" -C install'
 	@echo "Running database migration..."
 	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" upgrade head'
+
+.PHONY: database-revision
+database-revision: conda-env	## retrieve current database revision
+	@bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/alembic" || "$(MAKE)" -C install'
+	@echo "Fetching database revision..."
+	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" current'
 
 ## --- Documentation targets --- ##
 
@@ -188,7 +223,7 @@ docs-show: $(DOC_LOCATION)	## display HTML webpage of generated documentation (b
 	@-test -f "$(DOC_LOCATION)" || $(MAKE) -C "$(APP_ROOT)" docs
 	$(BROWSER) "$(DOC_LOCATION)"
 
-## --- Versionning targets --- ##
+## --- Versioning targets --- ##
 
 # Bumpversion 'dry' config
 # if 'dry' is specified as target, any bumpversion call using 'BUMP_XARGS' will not apply changes
@@ -207,7 +242,7 @@ endif
 bump:	## bump version using VERSION specified as user input
 	@-echo "Updating package version ..."
 	@[ "${VERSION}" ] || ( echo ">> 'VERSION' is not set"; exit 1 )
-	@-bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/bump2version" || pip install bump2version'
+	@-bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/bump2version" || pip install $(PIP_XARGS) bump2version'
 	@-bash -c '$(CONDA_CMD) bump2version $(BUMP_XARGS) --new-version "${VERSION}" patch;'
 
 ## --- Installation targets --- ##
@@ -225,31 +260,38 @@ install: install-all	## alias for 'install-all' target
 .PHONY: install-all
 install-all: install-sys install-pkg install-dev install-docs	## install every dependency and package definition
 
+# note: don't use PIP_XARGS for install system package as it could be upgrade of pip that doesn't yet have those options
 .PHONY: install-sys
 install-sys: clean conda-env	## install system dependencies and required installers/runners
 	@echo "Installing system dependencies..."
 	@bash -c '$(CONDA_CMD) pip install --upgrade -r "$(APP_ROOT)/requirements-sys.txt"'
-	@bash -c '$(CONDA_CMD) pip install gunicorn'
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) gunicorn'
 
 .PHONY: install-pkg
 install-pkg: install-sys	## install the package to the active Python's site-packages
 	@echo "Installing Magpie..."
+	@bash -c '$(CONDA_CMD) python setup.py install_egg_info'
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) --upgrade -e "$(APP_ROOT)" --no-cache'
 	# TODO: remove when merged
 	# --- ensure fix is applied
 	@bash -c '$(CONDA_CMD) \
-		pip install --force-reinstall "https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic"'
+		pip install $(PIP_XARGS) --force-reinstall \
+			"https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic"'
 	# ---
-	@bash -c '$(CONDA_CMD) python setup.py install_egg_info'
-	@bash -c '$(CONDA_CMD) pip install --upgrade -e "$(APP_ROOT)" --no-cache'
+
+.PHONY: install-req
+install-req: conda-env	 ## install package base requirements without installing main package
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements.txt"'
+	@echo "Successfully installed base requirements."
 
 .PHONY: install-docs
 install-docs: conda-env  ## install package requirements for documentation generation
-	@bash -c '$(CONDA_CMD) pip install -r "$(APP_ROOT)/requirements-docs.txt"'
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-doc.txt"'
 	@echo "Successfully installed docs requirements."
 
 .PHONY: install-dev
 install-dev: conda-env	## install package requirements for development and testing
-	@bash -c '$(CONDA_CMD) pip install -r "$(APP_ROOT)/requirements-dev.txt"'
+	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-dev.txt"'
 	@echo "Successfully installed dev requirements."
 
 ## --- Launchers targets --- ##
@@ -318,7 +360,7 @@ docker-clean: 	## remove any leftover images from docker target operations
 	docker rmi $(docker images -f "reference=$(MAGPIE_DOCKER_REPO)" -q)
 	docker-compose $(DOCKER_TEST_COMPOSES) down
 
-## --- Statoc code check targets ---
+## --- Static code check targets ---
 
 .PHONY: mkdir-reports
 mkdir-reports:
@@ -370,6 +412,10 @@ check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
 
 # FIXME: move parameters to setup.cfg when implemented (https://github.com/myint/docformatter/issues/10)
 # NOTE: docformatter only reports files with errors on stderr, redirect trace stderr & stdout to file with tee
+# NOTE:
+#	Don't employ '--wrap-descriptions 120' since they *enforce* that length and rearranges format if any word can fit
+#	within remaining space, which often cause big diffs of ugly formatting for no important reason. Instead only check
+#	general formatting operations, and let other linter capture docstrings going over 120 (what we really care about).
 .PHONY: check-docf
 check-docf: mkdir-reports install-dev	## run PEP8 code documentation format checks
 	@echo "Checking PEP8 doc formatting problems..."
@@ -377,7 +423,7 @@ check-docf: mkdir-reports install-dev	## run PEP8 code documentation format chec
 	@bash -c '$(CONDA_CMD) \
 		docformatter \
 			--pre-summary-newline \
-			--wrap-descriptions 120 \
+			--wrap-descriptions 0 \
 			--wrap-summaries 120 \
 			--make-summary-multi-line \
 			--check \
@@ -428,7 +474,7 @@ fix-docf: install-dev	## fix some PEP8 code documentation style problems automat
 	@bash -c '$(CONDA_CMD) \
 		docformatter \
 			--pre-summary-newline \
-			--wrap-descriptions 120 \
+			--wrap-descriptions 0 \
 			--wrap-summaries 120 \
 			--make-summary-multi-line \
 			--in-place \
@@ -446,14 +492,19 @@ test-all: install-dev install		## run all tests combinations
 	@echo "Running tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+.PHONY: test-cli
+test-cli: install-dev install		## run only CLI tests with the environment Python
+	@echo "Running local tests..."
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
 # note: use 'not remote' instead of 'local' to capture other low-level tests like 'utils' unittests
 .PHONY: test-local
-test-local: install-dev install		## run only local tests with the default Python
+test-local: install-dev install		## run only local tests with the environment Python
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-remote
-test-remote: install-dev install	## run only remote tests with the default Python
+test-remote: install-dev install	## run only remote tests with the environment Python
 	@echo "Running remote tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
@@ -509,4 +560,4 @@ conda_config: conda-base	## update conda package configuration
 conda-env: conda-base	## create conda environment if missing and required
 	@test -d "$(CONDA_ENV_PATH)" || \
 		(echo "Creating conda environment at '$(CONDA_ENV_PATH)'..." && \
-		 "$(CONDA_HOME)/bin/conda" create -y -n "$(CONDA_ENV)" python=$(PYTHON_VERSION))
+		 "$(CONDA_HOME)/bin/conda" create -y -n "$(CONDA_ENV_NAME)" python=$(PYTHON_VERSION))

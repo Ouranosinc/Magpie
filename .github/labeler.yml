@@ -3,6 +3,9 @@
 api:
   - magpie/api/**/*
 
+cli:
+  - magpie/cli/**/*
+
 # label 'ci' all automation-related steps and files
 ci:
   - .*  # all '.<>' files

@@ -1,6 +1,7 @@
 import json
 from collections import OrderedDict
 from datetime import datetime
+from secrets import compare_digest  # noqa  # python2-secrets employed for Python<=3.5
 from typing import TYPE_CHECKING
 
 import humanize
@@ -12,26 +13,26 @@ from pyramid.view import view_config
 
 from magpie import register
 from magpie.api import schemas
+from magpie.cli import sync_resources
+from magpie.cli.sync_resources import OUT_OF_SYNC
 from magpie.constants import get_constant
-from magpie.helpers import sync_resources
-from magpie.helpers.sync_resources import OUT_OF_SYNC
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT  # TODO: remove, implement getters via API
-from magpie.ui.home import add_template_data
-from magpie.ui.utils import check_response, error_badrequest, request_api
+from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
+    from typing import Dict, List, Optional, Tuple
+
     from sqlalchemy.orm.session import Session
-    from magpie.typedefs import List, Optional  # noqa: F401
+
+    from magpie.typedefs import JSON, Str
+
 LOGGER = get_logger(__name__)
 
 
-class ManagementViews(object):
-    def __init__(self, request):
-        self.request = request
-
-    @error_badrequest
+class ManagementViews(BaseViews):
+    @handle_errors
     def get_all_groups(self, first_default_group=None):
         resp = request_api(self.request, schemas.GroupsAPI.path, "GET")
         check_response(resp)
@@ -41,27 +42,48 @@ class ManagementViews(object):
             groups.insert(0, first_default_group)
         return groups
 
-    @error_badrequest
+    @handle_errors
+    def get_group_info(self, group_name):
+        path = schemas.GroupAPI.path.format(group_name=group_name)
+        resp = request_api(self.request, path, "GET")
+        check_response(resp)
+        return get_json(resp)["group"]
+
+    @handle_errors
     def get_group_users(self, group_name):
         path = schemas.GroupUsersAPI.path.format(group_name=group_name)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
         return get_json(resp)["user_names"]
 
-    @error_badrequest
+    @handle_errors
+    def update_group_info(self, group_name, group_info):
+        path = schemas.GroupAPI.path.format(group_name=group_name)
+        resp = request_api(self.request, path, "PATCH", data=group_info)
+        check_response(resp)
+        return self.get_group_info(group_info.get("group_name", group_name))
+
+    @handle_errors
+    def delete_group(self, group_name):
+        path = schemas.GroupAPI.path.format(group_name=group_name)
+        resp = request_api(self.request, path, "DELETE")
+        check_response(resp)
+        return get_json(resp)
+
+    @handle_errors
     def get_user_groups(self, user_name):
         path = schemas.UserGroupsAPI.path.format(user_name=user_name)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
         return get_json(resp)["group_names"]
 
-    @error_badrequest
+    @handle_errors
     def get_user_names(self):
         resp = request_api(self.request, schemas.UsersAPI.path, "GET")
         check_response(resp)
         return get_json(resp)["user_names"]
 
-    @error_badrequest
+    @handle_errors
     def get_user_emails(self):
         user_names = self.get_user_names()
         emails = list()
@@ -85,7 +107,7 @@ class ManagementViews(object):
         self.flatten_tree_resource(res_dic, res_ids)
         return res_ids
 
-    @error_badrequest
+    @handle_errors
     def get_services(self, cur_svc_type):
         resp = request_api(self.request, schemas.ServicesAPI.path, "GET")
         check_response(resp)
@@ -96,7 +118,7 @@ class ManagementViews(object):
         services = all_services[cur_svc_type]
         return svc_types, cur_svc_type, services
 
-    @error_badrequest
+    @handle_errors
     def get_service_data(self, service_name):
         path = schemas.ServiceAPI.path.format(service_name=service_name)
         resp = request_api(self.request, path, "GET")
@@ -107,7 +129,7 @@ class ManagementViews(object):
         svc_types_resp = request_api(self.request, schemas.ServiceTypesAPI.path, "GET")
         return get_json(svc_types_resp)["service_types"]
 
-    @error_badrequest
+    @handle_errors
     def update_service_name(self, old_service_name, new_service_name, service_push):
         svc_data = self.get_service_data(old_service_name)
         svc_data["service_name"] = new_service_name
@@ -115,19 +137,19 @@ class ManagementViews(object):
         svc_data["service_push"] = service_push
         svc_id = str(svc_data["resource_id"])
         path = schemas.ResourceAPI.path.format(resource_id=svc_id)
-        resp = request_api(self.request, path, "PUT", data=svc_data)
+        resp = request_api(self.request, path, "PATCH", data=svc_data)
         check_response(resp)
 
-    @error_badrequest
+    @handle_errors
     def update_service_url(self, service_name, new_service_url, service_push):
         svc_data = self.get_service_data(service_name)
         svc_data["service_url"] = new_service_url
         svc_data["service_push"] = service_push
         path = schemas.ServiceAPI.path.format(service_name=service_name)
-        resp = request_api(self.request, path, "PUT", data=svc_data)
+        resp = request_api(self.request, path, "PATCH", data=svc_data)
         check_response(resp)
 
-    @error_badrequest
+    @handle_errors
     def goto_service(self, resource_id):
         path = schemas.ResourceAPI.path.format(resource_id=resource_id)
         resp = request_api(self.request, path, "GET")
@@ -171,58 +193,88 @@ class ManagementViews(object):
             user_name = self.request.POST.get("user_name")
             return HTTPFound(self.request.route_url("edit_user", user_name=user_name, cur_svc_type="default"))
 
-        return add_template_data(self.request, {"users": self.get_user_names()})
+        return self.add_template_data({"users": self.get_user_names()})
 
     @view_config(route_name="add_user", renderer="templates/add_user.mako")
     def add_user(self):
-        users_group = get_constant("MAGPIE_USERS_GROUP")
-        return_data = {u"conflict_group_name": False, u"conflict_user_name": False, u"conflict_user_email": False,
-                       u"invalid_user_name": False, u"invalid_user_email": False, u"invalid_password": False,
-                       u"too_long_user_name": False, u"form_user_name": u"", u"form_user_email": u"",
-                       u"user_groups": self.get_all_groups(first_default_group=users_group)}
-        check_data = [u"conflict_group_name", u"conflict_user_name", u"conflict_email",
-                      u"invalid_user_name", u"invalid_email", u"invalid_password"]
+        groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        return_data = {"invalid_user_name": False, "invalid_user_email": False, "invalid_password": False,
+                       # 'Invalid' used as default in case pre-checks did not find anything, but API returned 400
+                       "reason_user_name": "Invalid", "reason_group_name": "Invalid", "reason_user_email": "Invalid",
+                       "reason_password": "Invalid", "form_user_name": "", "form_user_email": "",
+                       "user_groups": groups}
+        check_data = ["invalid_user_name", "invalid_email", "invalid_password"]
 
         if "create" in self.request.POST:
-            groups = self.get_all_groups()
             user_name = self.request.POST.get("user_name")
             group_name = self.request.POST.get("group_name")
             user_email = self.request.POST.get("email")
             password = self.request.POST.get("password")
-            return_data[u"form_user_name"] = user_name
-            return_data[u"form_user_email"] = user_email
+            confirm = self.request.POST.get("confirm")
+            return_data["form_user_name"] = user_name
+            return_data["form_user_email"] = user_email
 
             if group_name not in groups:
-                data = {u"group_name": group_name}
+                data = {"group_name": group_name}
                 resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
                 if resp.status_code == HTTPConflict.code:
-                    return_data[u"conflict_group_name"] = True
+                    return_data["invalid_group_name"] = True
+                    return_data["reason_group_name"] = "Conflict"
             if user_email in self.get_user_emails():
-                return_data[u"conflict_user_email"] = True
+                return_data["invalid_user_email"] = True
+                return_data["reason_user_email"] = "Conflict"
             if user_email == "":
-                return_data[u"invalid_user_email"] = True
+                return_data["invalid_user_email"] = True
             if len(user_name) > get_constant("MAGPIE_USER_NAME_MAX_LENGTH"):
-                return_data[u"too_long_user_name"] = True
+                return_data["invalid_user_name"] = True
+                return_data["reason_user_name"] = "Too Long"
             if user_name in self.get_user_names():
-                return_data[u"conflict_user_name"] = True
+                return_data["invalid_user_name"] = True
+                return_data["reason_user_name"] = "Conflict"
             if user_name == "":
-                return_data[u"invalid_user_name"] = True
+                return_data["invalid_user_name"] = True
             if password is None or isinstance(password, six.string_types) and len(password) < 1:
-                return_data[u"invalid_password"] = True
+                return_data["invalid_password"] = True
+            elif not compare_digest(password, confirm):
+                return_data["invalid_password"] = True
+                return_data["reason_password"] = "Mismatch"  # nosec: B105  # avoid false positive
 
             for check_fail in check_data:
                 if return_data.get(check_fail, False):
-                    return add_template_data(self.request, return_data)
+                    return self.add_template_data(return_data)
 
-            data = {u"user_name": user_name,
-                    u"email": user_email,
-                    u"password": password,
-                    u"group_name": group_name}
+            data = {
+                "user_name": user_name,
+                "email": user_email,
+                "password": password,
+                "group_name": group_name
+            }
             resp = request_api(self.request, schemas.UsersAPI.path, "POST", data=data)
+            if resp.status_code == HTTPBadRequest.code:
+                # attempt to retrieve the API more-specific reason why the operation is invalid
+                body = get_json(resp)
+                param_name = body.get("param", {}).get("name")
+                reason = body.get("detail", "Invalid")
+                if param_name == "password":
+                    return_data["invalid_password"] = True
+                    return_data["reason_password"] = reason
+                    return self.add_template_data(return_data)
+                if param_name == "user_name":
+                    return_data["invalid_user_name"] = True
+                    return_data["reason_user_name"] = reason
+                    return self.add_template_data(return_data)
+                if param_name == "user_email":
+                    return_data["invalid_user_email"] = True
+                    return_data["reason_user_email"] = reason
+                    return self.add_template_data(return_data)
+                if param_name == "group_name":
+                    return_data["invalid_group_name"] = True
+                    return_data["reason_group_name"] = reason
+                    return self.add_template_data(return_data)
             check_response(resp)
             return HTTPFound(self.request.route_url("view_users"))
 
-        return add_template_data(self.request, return_data)
+        return self.add_template_data(return_data)
 
     @view_config(route_name="edit_user", renderer="templates/edit_user.mako")
     def edit_user(self):
@@ -238,20 +290,16 @@ class ManagementViews(object):
         #   we have to access the database directly here
         session = self.request.db
 
-        try:
-            # The service type is "default". This function replaces cur_svc_type with the first service type.
-            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-        except Exception as exc:
-            raise HTTPBadRequest(detail=repr(exc))
+        svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
 
         user_path = schemas.UserAPI.path.format(user_name=user_name)
         user_resp = request_api(self.request, user_path, "GET")
         check_response(user_resp)
         user_info = get_json(user_resp)["user"]
-        user_info[u"edit_mode"] = u"no_edit"
-        user_info[u"own_groups"] = own_groups
-        user_info[u"groups"] = all_groups
-        user_info[u"inherit_groups_permissions"] = inherit_grp_perms
+        user_info["edit_mode"] = "no_edit"
+        user_info["own_groups"] = own_groups
+        user_info["groups"] = all_groups
+        user_info["inherit_groups_permissions"] = inherit_grp_perms
         error_message = ""
 
         # In case of update, changes are not reflected when calling
@@ -262,26 +310,26 @@ class ManagementViews(object):
         new_perms = None
 
         if self.request.method == "POST":
-            res_id = self.request.POST.get(u"resource_id")
+            res_id = self.request.POST.get("resource_id")
             is_edit_group_membership = False
             is_save_user_info = False
             requires_update_name = False
 
-            if u"inherit_groups_permissions" in self.request.POST:
-                inherit_grp_perms = asbool(self.request.POST[u"inherit_groups_permissions"])
-                user_info[u"inherit_groups_permissions"] = inherit_grp_perms
+            if "inherit_groups_permissions" in self.request.POST:
+                inherit_grp_perms = asbool(self.request.POST["inherit_groups_permissions"])
+                user_info["inherit_groups_permissions"] = inherit_grp_perms
 
-            if u"delete" in self.request.POST:
+            if "delete" in self.request.POST:
                 resp = request_api(self.request, user_path, "DELETE")
                 check_response(resp)
                 return HTTPFound(self.request.route_url("view_users"))
-            if u"goto_service" in self.request.POST:
+            if "goto_service" in self.request.POST:
                 return self.goto_service(res_id)
 
-            if u"clean_resource" in self.request.POST:
+            if "clean_resource" in self.request.POST:
                 # "clean_resource" must be above "edit_permissions" because they"re in the same form.
                 self.delete_resource(res_id)
-            elif u"edit_permissions" in self.request.POST:
+            elif "edit_permissions" in self.request.POST:
                 if not res_id or res_id == "None":
                     remote_id = int(self.request.POST.get("remote_id"))
                     services_names = [s["service_name"] for s in services.values()]
@@ -289,53 +337,46 @@ class ManagementViews(object):
 
                 removed_perms, new_perms = \
                     self.edit_user_or_group_resource_permissions(user_name, res_id, is_user=True)
-            elif u"edit_group_membership" in self.request.POST:
+            elif "edit_group_membership" in self.request.POST:
                 is_edit_group_membership = True
-            elif u"edit_username" in self.request.POST:
-                user_info[u"edit_mode"] = u"edit_username"
-            elif u"edit_password" in self.request.POST:
-                user_info[u"edit_mode"] = u"edit_password"
-            elif u"edit_email" in self.request.POST:
-                user_info[u"edit_mode"] = u"edit_email"
-            elif u"save_username" in self.request.POST:
-                user_info[u"user_name"] = self.request.POST.get(u"new_user_name")
+            elif "edit_username" in self.request.POST:
+                user_info["edit_mode"] = "edit_username"
+            elif "edit_password" in self.request.POST:
+                user_info["edit_mode"] = "edit_password"
+            elif "edit_email" in self.request.POST:
+                user_info["edit_mode"] = "edit_email"
+            elif "save_username" in self.request.POST:
+                user_info["user_name"] = self.request.POST.get("new_user_name")
                 is_save_user_info = True
                 requires_update_name = True
-            elif u"save_password" in self.request.POST:
-                user_info[u"password"] = self.request.POST.get(u"new_user_password")
+            elif "save_password" in self.request.POST:
+                user_info["password"] = self.request.POST.get("new_user_password")
                 is_save_user_info = True
-            elif u"save_email" in self.request.POST:
-                user_info[u"email"] = self.request.POST.get(u"new_user_email")
+            elif "save_email" in self.request.POST:
+                user_info["email"] = self.request.POST.get("new_user_email")
                 is_save_user_info = True
-            elif u"force_sync" in self.request.POST:
-                errors = []
-                for service_info in services.values():
-                    try:
-                        sync_resources.fetch_single_service(service_info["resource_id"], session)
-                        transaction.commit()
-                    except Exception:  # noqa
-                        errors.append(service_info["service_name"])
-                if errors:
-                    error_message += self.make_sync_error_message(errors)
-            elif u"clean_all" in self.request.POST:
+            elif "force_sync" in self.request.POST:
+                _, errmsg = self.sync_services(services)
+                error_message += errmsg or ""
+            elif "clean_all" in self.request.POST:
                 ids_to_clean = self.request.POST.get("ids_to_clean").split(";")
                 for id_ in ids_to_clean:
                     self.delete_resource(id_)
 
             if is_save_user_info:
-                resp = request_api(self.request, user_path, "PUT", data=user_info)
+                resp = request_api(self.request, user_path, "PATCH", data=user_info)
                 check_response(resp)
-                # need to commit updates since we are using the same session
-                # otherwise, updated user doesn't exist yet in the db for next calls
+                # FIXME: need to commit updates since we are using the same session
+                #        otherwise, updated user doesn't exist yet in the db for next calls
                 self.request.tm.commit()
 
             # always remove password from output
-            user_info.pop(u"password", None)
+            user_info.pop("password", None)
 
             if requires_update_name:
                 # re-fetch user groups as current user-group will have changed on new user_name
-                user_name = user_info[u"user_name"]
-                user_info[u"own_groups"] = self.get_user_groups(user_name)
+                user_name = user_info["user_name"]
+                user_info["own_groups"] = self.get_user_groups(user_name)
                 # return immediately with updated URL to user with new name
                 users_url = self.request.route_url("edit_user", user_name=user_name, cur_svc_type=cur_svc_type)
                 return HTTPMovedPermanently(location=users_url)
@@ -354,7 +395,7 @@ class ManagementViews(object):
                     data = {"group_name": group}
                     resp = request_api(self.request, path, "POST", data=data)
                     check_response(resp)
-                user_info[u"own_groups"] = self.get_user_groups(user_name)
+                user_info["own_groups"] = self.get_user_groups(user_name)
 
         # display resources permissions per service type tab
         try:
@@ -376,16 +417,16 @@ class ManagementViews(object):
         if out_of_sync:
             error_message = self.make_sync_error_message(out_of_sync)
 
-        user_info[u"error_message"] = error_message
-        user_info[u"ids_to_clean"] = ";".join(ids_to_clean)
-        user_info[u"last_sync"] = last_sync_humanized
-        user_info[u"sync_implemented"] = sync_implemented
-        user_info[u"out_of_sync"] = out_of_sync
-        user_info[u"cur_svc_type"] = cur_svc_type
-        user_info[u"svc_types"] = svc_types
-        user_info[u"resources"] = res_perms
-        user_info[u"permissions"] = res_perm_names
-        return add_template_data(self.request, data=user_info)
+        user_info["error_message"] = error_message
+        user_info["ids_to_clean"] = ";".join(ids_to_clean)
+        user_info["last_sync"] = last_sync_humanized
+        user_info["sync_implemented"] = sync_implemented
+        user_info["out_of_sync"] = out_of_sync
+        user_info["cur_svc_type"] = cur_svc_type
+        user_info["svc_types"] = svc_types
+        user_info["resources"] = res_perms
+        user_info["permissions"] = res_perm_names
+        return self.add_template_data(data=user_info)
 
     @view_config(route_name="view_groups", renderer="templates/view_groups.mako")
     def view_groups(self):
@@ -402,31 +443,54 @@ class ManagementViews(object):
         groups_info = {}
         groups = sorted(self.get_all_groups())
         for grp in groups:
-            if grp != u"":
-                groups_info.setdefault(grp, {u"members": len(self.get_group_users(grp))})
-        return add_template_data(self.request, {u"group_names": groups_info})
+            if grp != "":
+                groups_info.setdefault(grp, {"members": len(self.get_group_users(grp))})
+        return self.add_template_data({"group_names": groups_info})
 
     @view_config(route_name="add_group", renderer="templates/add_group.mako")
     def add_group(self):
-        return_data = {u"conflict_group_name": False, u"invalid_group_name": False, u"form_group_name": u""}
+        return_data = {"invalid_group_name": False, "invalid_description": False,
+                       "reason_group_name": "Invalid", "reason_description": "Invalid",
+                       "form_group_name": "", "form_discoverable": False, "form_description": ""}
 
         if "create" in self.request.POST:
             group_name = self.request.POST.get("group_name")
-            return_data[u"form_group_name"] = group_name
-            if group_name == "":
-                return_data[u"invalid_group_name"] = True
-                return add_template_data(self.request, return_data)
+            description = self.request.POST.get("description")
+            discoverable = asbool(self.request.POST.get("discoverable"))
+            return_data["form_group_name"] = group_name
+            return_data["form_description"] = description
+            return_data["form_discoverable"] = discoverable
+            if not group_name:
+                return_data["invalid_group_name"] = True
+                return self.add_template_data(return_data)
 
-            data = {u"group_name": group_name}
+            data = {
+                "group_name": group_name,
+                "description": return_data["form_description"],
+                "discoverable": return_data["form_discoverable"],
+            }
             resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
             if resp.status_code == HTTPConflict.code:
-                return_data[u"conflict_group_name"] = True
-                return add_template_data(self.request, return_data)
-
-            check_response(resp)  # check for any other exception than conflict
+                return_data["invalid_group_name"] = True
+                return_data["reason_group_name"] = "Conflict"
+                return self.add_template_data(return_data)
+            if resp.status_code == HTTPBadRequest.code:
+                # attempt to retrieve the API more-specific reason why the operation is invalid
+                body = get_json(resp)
+                param_name = body.get("param", {}).get("name")
+                reason = body.get("detail", "Invalid")
+                if param_name == "group_name":
+                    return_data["invalid_group_name"] = True
+                    return_data["reason_group_name"] = reason
+                    return self.add_template_data(return_data)
+                if param_name == "description":
+                    return_data["invalid_description"] = True
+                    return_data["reason_description"] = reason
+                    return self.add_template_data(return_data)
+            check_response(resp)  # check for any other exception than checked use-cases
             return HTTPFound(self.request.route_url("view_groups"))
 
-        return add_template_data(self.request, return_data)
+        return self.add_template_data(return_data)
 
     def resource_tree_parser(self, raw_resources_tree, permission):
         resources_tree = {}
@@ -493,7 +557,7 @@ class ManagementViews(object):
             resp = request_api(self.request, path, "DELETE")
             check_response(resp)
         for perm in new_perms:
-            data = {u"permission_name": perm}
+            data = {"permission_name": perm}
             resp = request_api(self.request, res_perms_path, "POST", data=data)
             check_response(resp)
         return removed_perms, new_perms
@@ -501,7 +565,7 @@ class ManagementViews(object):
     def get_user_or_group_resources_permissions_dict(self, user_or_group_name, services, service_type,
                                                      is_user=False, is_inherit_groups_permissions=False):
         if is_user:
-            query = "?inherit=true" if is_inherit_groups_permissions else ""
+            query = "?inherited=true" if is_inherit_groups_permissions else ""
             path = schemas.UserResourcesAPI.path.format(user_name=user_or_group_name) + query
         else:
             path = schemas.GroupResourcesAPI.path.format(group_name=user_or_group_name)
@@ -559,8 +623,7 @@ class ManagementViews(object):
     def edit_group(self):
         group_name = self.request.matchdict["group_name"]
         cur_svc_type = self.request.matchdict["cur_svc_type"]
-        group_info = {u"edit_mode": u"no_edit", u"group_name": group_name, u"cur_svc_type": cur_svc_type}
-
+        group_info = {"edit_mode": "no_edit", "group_name": group_name, "cur_svc_type": cur_svc_type}
         error_message = ""
 
         # TODO:
@@ -568,11 +631,8 @@ class ManagementViews(object):
         #   we have to access the database directly here
         session = self.request.db
 
-        try:
-            # The service type is 'default'. This function replaces cur_svc_type with the first service type.
-            svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-        except Exception as exc:
-            raise HTTPBadRequest(detail=repr(exc))
+        # when service type is 'default', this function replaces 'cur_svc_type' with the first one available
+        svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
 
         # In case of update, changes are not reflected when calling
         # get_user_or_group_resources_permissions_dict so we must take care
@@ -584,29 +644,34 @@ class ManagementViews(object):
         # move to service or edit requested group/permission changes
         if self.request.method == "POST":
             res_id = self.request.POST.get("resource_id")
-            group_path = schemas.GroupAPI.path.format(group_name=group_name)
 
-            if u"delete" in self.request.POST:
-                resp = request_api(self.request, group_path, "DELETE")
-                check_response(resp)
+            if "delete" in self.request.POST:
+                self.delete_group(group_name)
                 return HTTPFound(self.request.route_url("view_groups"))
 
-            if u"edit_group_name" in self.request.POST:
-                group_info[u"edit_mode"] = u"edit_group_name"
-            elif u"save_group_name" in self.request.POST:
-                group_info[u"group_name"] = self.request.POST.get(u"new_group_name")
-                resp = request_api(self.request, group_path, "PUT", data=group_info)
-                check_response(resp)
-                # return immediately with updated URL to group with new name
-                return HTTPFound(self.request.route_url("edit_group", **group_info))
-
-            if u"goto_service" in self.request.POST:
+            if "goto_service" in self.request.POST:
                 return self.goto_service(res_id)
 
-            if u"clean_resource" in self.request.POST:
+            if "edit_group_name" in self.request.POST:
+                group_info["edit_mode"] = "edit_group_name"
+            elif "save_group_name" in self.request.POST:
+                group_info["group_name"] = self.request.POST.get("new_group_name")
+                group_info = self.update_group_info(group_name, group_info)
+                # return immediately with updated URL to group with new name (reprocess this template from scratch)
+                return HTTPFound(self.request.route_url("edit_group", **group_info))
+
+            if "edit_description" in self.request.POST:
+                group_info["edit_mode"] = "edit_description"
+            elif "save_description" in self.request.POST:
+                group_info["description"] = self.request.POST.get("new_description")
+                group_info.update(self.update_group_info(group_name, group_info))
+            elif "clean_resource" in self.request.POST:
                 # "clean_resource" must be above "edit_permissions" because they"re in the same form.
                 self.delete_resource(res_id)
-            elif u"edit_permissions" in self.request.POST:
+            elif "is_discoverable" in self.request.POST:
+                group_info["discoverable"] = not asbool(self.request.POST.get("is_discoverable"))
+                group_info.update(self.update_group_info(group_name, group_info))
+            elif "edit_permissions" in self.request.POST:
                 if not res_id or res_id == "None":
                     remote_id = int(self.request.POST.get("remote_id"))
                     services_names = [s["service_name"] for s in services.values()]
@@ -614,25 +679,17 @@ class ManagementViews(object):
                                                       remote_id, is_user=False)
                 removed_perms, new_perms = \
                     self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
-            elif u"member" in self.request.POST:
+            elif "member" in self.request.POST:
                 self.edit_group_users(group_name)
-            elif u"force_sync" in self.request.POST:
-                errors = []
-                for service_info in services.values():
-                    try:
-                        sync_resources.fetch_single_service(service_info["resource_id"], session)
-                        transaction.commit()
-                    except Exception:  # noqa: W0703 # nosec: B110
-                        errors.append(service_info["service_name"])
-                if errors:
-                    error_message += self.make_sync_error_message(errors)
-
-            elif u"clean_all" in self.request.POST:
+            elif "force_sync" in self.request.POST:
+                _, errmsg = self.sync_services(services)
+                error_message += errmsg or ""
+            elif "clean_all" in self.request.POST:
                 ids_to_clean = self.request.POST.get("ids_to_clean").split(";")
                 for id_ in ids_to_clean:
                     self.delete_resource(id_)
-            else:
-                return HTTPBadRequest(detail="Invalid POST request.")
+            elif "no_edit" not in self.request.POST:
+                raise HTTPBadRequest(detail="Invalid POST request for group edit.")
 
         # display resources permissions per service type tab
         try:
@@ -654,20 +711,20 @@ class ManagementViews(object):
         if out_of_sync:
             error_message = self.make_sync_error_message(out_of_sync)
 
-        group_info[u"error_message"] = error_message
-        group_info[u"ids_to_clean"] = ";".join(ids_to_clean)
-        group_info[u"last_sync"] = last_sync_humanized
-        group_info[u"sync_implemented"] = sync_implemented
-        group_info[u"out_of_sync"] = out_of_sync
-        group_info[u"group_name"] = group_name
-        group_info[u"cur_svc_type"] = cur_svc_type
-        group_info[u"users"] = self.get_user_names()
-        group_info[u"members"] = self.get_group_users(group_name)
-        group_info[u"svc_types"] = svc_types
-        group_info[u"cur_svc_type"] = cur_svc_type
-        group_info[u"resources"] = res_perms
-        group_info[u"permissions"] = res_perm_names
-        return add_template_data(self.request, data=group_info)
+        group_info.update(self.get_group_info(group_name))
+        group_info["members"] = group_info.pop("user_names")
+        group_info["error_message"] = error_message
+        group_info["ids_to_clean"] = ";".join(ids_to_clean)
+        group_info["last_sync"] = last_sync_humanized
+        group_info["sync_implemented"] = sync_implemented
+        group_info["out_of_sync"] = out_of_sync
+        group_info["cur_svc_type"] = cur_svc_type
+        group_info["users"] = self.get_user_names()
+        group_info["svc_types"] = svc_types
+        group_info["cur_svc_type"] = cur_svc_type
+        group_info["resources"] = res_perms
+        group_info["permissions"] = res_perm_names
+        return self.add_template_data(data=group_info)
 
     @staticmethod
     def make_sync_error_message(service_names):
@@ -675,6 +732,25 @@ class ManagementViews(object):
         error_message = ("There seems to be an issue synchronizing resources from "
                          "{}: {}".format(this, ", ".join(service_names)))
         return error_message
+
+    def sync_services(self, services):
+        # type: (Dict[Str, JSON]) -> Tuple[List[Str], Optional[Str]]
+        """
+        Syncs specified services.
+
+        :returns: names of services that produced a sync error and corresponding sync message (if any).
+        """
+        errors = []
+        session = self.request.db
+        for service_info in services.values():
+            try:
+                sync_resources.fetch_single_service(service_info["resource_id"], session)
+                transaction.commit()
+            except Exception:  # noqa: W0703 # nosec: B110
+                errors.append(service_info["service_name"])
+        if errors:
+            return errors, self.make_sync_error_message(errors)
+        return errors, None
 
     def get_remote_resources_info(self, res_perms, services, session):
         last_sync_humanized = "Never"
@@ -766,7 +842,7 @@ class ManagementViews(object):
 
         return parent_id
 
-    @error_badrequest
+    @handle_errors
     def get_service_resources(self, service_name):
         resources = {}
         path = schemas.ServiceResourcesAPI.path.format(service_name=service_name)
@@ -784,9 +860,10 @@ class ManagementViews(object):
     def view_services(self):
         if "delete" in self.request.POST:
             service_name = self.request.POST.get("service_name")
-            service_data = {u"service_push": self.request.POST.get("service_push")}
+            service_data = {"service_push": self.request.POST.get("service_push")}
             path = schemas.ServiceAPI.path.format(service_name=service_name)
-            resp = request_api(self.request, path, "DELETE", data=json.dumps(service_data))
+            data = json.dumps(service_data)
+            resp = request_api(self.request, path, "DELETE", data=data)
             check_response(resp)
 
         cur_svc_type = self.request.matchdict["cur_svc_type"]
@@ -803,12 +880,14 @@ class ManagementViews(object):
             return HTTPFound(self.request.route_url("edit_service",
                                                     service_name=service_name, cur_svc_type=cur_svc_type))
 
-        return add_template_data(self.request,
-                                 {u"cur_svc_type": cur_svc_type,
-                                  u"svc_types": svc_types,
-                                  u"service_names": service_names,
-                                  u"service_push_show": cur_svc_type in register.SERVICES_PHOENIX_ALLOWED,
-                                  u"service_push_success": success_sync})
+        data = {
+            "cur_svc_type": cur_svc_type,
+            "svc_types": svc_types,
+            "service_names": service_names,
+            "service_push_show": cur_svc_type in register.SERVICES_PHOENIX_ALLOWED,
+            "service_push_success": success_sync
+        }
+        return self.add_template_data(data)
 
     @view_config(route_name="add_service", renderer="templates/add_service.mako")
     def add_service(self):
@@ -820,10 +899,10 @@ class ManagementViews(object):
             service_url = self.request.POST.get("service_url")
             service_type = self.request.POST.get("service_type")
             service_push = self.request.POST.get("service_push")
-            data = {u"service_name": service_name,
-                    u"service_url": service_url,
-                    u"service_type": service_type,
-                    u"service_push": service_push}
+            data = {"service_name": service_name,
+                    "service_url": service_url,
+                    "service_type": service_type,
+                    "service_push": service_push}
             resp = request_api(self.request, schemas.ServicesAPI.path, "POST", data=data)
             check_response(resp)
             return HTTPFound(self.request.route_url("view_services", cur_svc_type=service_type))
@@ -831,11 +910,13 @@ class ManagementViews(object):
         services_keys_sorted = self.get_service_types()
         services_phoenix_indices = [(1 if services_keys_sorted[i] in register.SERVICES_PHOENIX_ALLOWED else 0)
                                     for i in range(len(services_keys_sorted))]
-        return add_template_data(self.request,
-                                 {u"cur_svc_type": cur_svc_type,
-                                  u"service_types": svc_types,
-                                  u"services_phoenix": register.SERVICES_PHOENIX_ALLOWED,
-                                  u"services_phoenix_indices": services_phoenix_indices})
+        data = {
+            "cur_svc_type": cur_svc_type,
+            "service_types": svc_types,
+            "services_phoenix": register.SERVICES_PHOENIX_ALLOWED,
+            "services_phoenix_indices": services_phoenix_indices
+        }
+        return self.add_template_data(data)
 
     @view_config(route_name="edit_service", renderer="templates/edit_service.mako")
     def edit_service(self):
@@ -848,15 +929,15 @@ class ManagementViews(object):
         # apply default state if arriving on the page for the first time
         # future editions on the page will transfer the last saved state
         service_push_show = cur_svc_type in register.SERVICES_PHOENIX_ALLOWED
-        service_push = asbool(self.request.POST.get("service_push", service_push_show))
+        service_push = asbool(self.request.POST.get("service_push", False))
 
-        service_info = {u"edit_mode": u"no_edit", u"service_name": service_name, u"service_url": service_url,
-                        u"public_url": register.get_twitcher_protected_service_url(service_name),
-                        u"service_perm": service_perm, u"service_id": service_id, u"service_push": service_push,
-                        u"service_push_show": service_push_show, u"cur_svc_type": cur_svc_type}
+        service_info = {"edit_mode": "no_edit", "service_name": service_name, "service_url": service_url,
+                        "public_url": register.get_twitcher_protected_service_url(service_name),
+                        "service_perm": service_perm, "service_id": service_id, "service_push": service_push,
+                        "service_push_show": service_push_show, "cur_svc_type": cur_svc_type}
 
         if "edit_name" in self.request.POST:
-            service_info["edit_mode"] = u"edit_name"
+            service_info["edit_mode"] = "edit_name"
 
         if "save_name" in self.request.POST:
             new_svc_name = self.request.POST.get("new_svc_name")
@@ -864,22 +945,22 @@ class ManagementViews(object):
                 self.update_service_name(service_name, new_svc_name, service_push)
                 service_info["service_name"] = new_svc_name
                 service_info["public_url"] = register.get_twitcher_protected_service_url(new_svc_name)
-            service_info["edit_mode"] = u"no_edit"
+            service_info["edit_mode"] = "no_edit"
             # return directly to "regenerate" the URL with the modified name
             return HTTPFound(self.request.route_url("edit_service", **service_info))
 
         if "edit_url" in self.request.POST:
-            service_info["edit_mode"] = u"edit_url"
+            service_info["edit_mode"] = "edit_url"
 
         if "save_url" in self.request.POST:
             new_svc_url = self.request.POST.get("new_svc_url")
             if service_url not in (new_svc_url, ""):
                 self.update_service_url(service_name, new_svc_url, service_push)
                 service_info["service_url"] = new_svc_url
-            service_info["edit_mode"] = u"no_edit"
+            service_info["edit_mode"] = "no_edit"
 
         if "delete" in self.request.POST:
-            service_data = json.dumps({u"service_push": service_push})
+            service_data = json.dumps({"service_push": service_push})
             path = schemas.ServiceAPI.path.format(service_name=service_name)
             resp = request_api(self.request, path, "DELETE", data=service_data)
             check_response(resp)
@@ -907,7 +988,7 @@ class ManagementViews(object):
         service_info["resources_no_child"] = [res for res in RESOURCE_TYPE_DICT
                                               if not RESOURCE_TYPE_DICT[res].child_resource_allowed]
         service_info["service_no_child"] = not svc_body["resource_child_allowed"]
-        return add_template_data(self.request, service_info)
+        return self.add_template_data(service_info)
 
     @view_config(route_name="add_resource", renderer="templates/add_resource.mako")
     def add_resource(self):
@@ -919,9 +1000,9 @@ class ManagementViews(object):
             resource_name = self.request.POST.get("resource_name")
             resource_type = self.request.POST.get("resource_type")
 
-            data = {u"resource_name": resource_name,
-                    u"resource_type": resource_type,
-                    u"parent_id": int(resource_id) if resource_id else None}
+            data = {"resource_name": resource_name,
+                    "resource_type": resource_type,
+                    "parent_id": int(resource_id) if resource_id else None}
             resp = request_api(self.request, schemas.ResourcesAPI.path, "POST", data=data,
                                headers={"Content-Type": CONTENT_TYPE_JSON})
             check_response(resp)
@@ -935,9 +1016,9 @@ class ManagementViews(object):
         check_response(resp)
         svc_res_types = get_json(resp)["resource_types"]
         data = {
-            u"service_name": service_name,
-            u"cur_svc_type": cur_svc_type,
-            u"resource_id": resource_id,
-            u"cur_svc_res": svc_res_types,
+            "service_name": service_name,
+            "cur_svc_type": cur_svc_type,
+            "resource_id": resource_id,
+            "cur_svc_res": svc_res_types,
         }
-        return add_template_data(self.request, data)
+        return self.add_template_data(data)

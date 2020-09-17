@@ -5,7 +5,7 @@ LOGGER = get_logger(__name__)
 
 def includeme(config):
     from magpie.ui.management.views import ManagementViews
-    LOGGER.info("Adding management...")
+    LOGGER.info("Adding UI management...")
     config.add_route(ManagementViews.view_groups.__name__,
                      "/ui/groups")
     config.add_route(ManagementViews.add_group.__name__,

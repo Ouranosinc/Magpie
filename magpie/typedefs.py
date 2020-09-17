@@ -6,25 +6,27 @@ Magpie additional typing definitions.
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import (                                                                        # noqa: F401,W0212
-        Any, AnyStr as _AnyStr, Callable, Dict, List, Iterable, Optional, Tuple, Type, Union    # noqa: F401,W0212
-    )
-    from sqlalchemy.orm.session import Session
-    from magpie import models
-    from magpie.permissions import Permission
-    from webob.headers import ResponseHeaders, EnvironHeaders
-    from webob.response import Response as WebobResponse
-    from webtest.response import TestResponse
-    from webtest.app import TestApp
-    from requests.cookies import RequestsCookieJar
-    from pyramid.response import Response as PyramidResponse
+    from typing import Any
+    from typing import AnyStr as _AnyStr
+    from typing import Dict, Iterable, List, Tuple, Union
+
+    import six
+    from pyramid.config import Configurator
+    from pyramid.httpexceptions import HTTPException
     from pyramid.registry import Registry
     from pyramid.request import Request
-    from pyramid.config import Configurator
+    from pyramid.response import Response as PyramidResponse
+    from requests.cookies import RequestsCookieJar
     from requests.structures import CaseInsensitiveDict
-    from logging import Logger as LoggerType  # noqa: F401
-    from tests.interfaces import Base_Magpie_TestCase
-    import six
+    from sqlalchemy.orm.session import Session
+    from webob.headers import EnvironHeaders, ResponseHeaders
+    from webob.response import Response as WebobResponse
+    from webtest.response import TestResponse
+
+    from magpie import models
+    from magpie.permissions import Permission
+
+    # pylint: disable=W0611,unused-import  # following definitions provided to be employed elsewhere in the code
 
     if six.PY2:
         # pylint: disable=E0602,undefined-variable  # unicode not recognized by python 3
@@ -41,21 +43,24 @@ if TYPE_CHECKING:
     ParamsType = Dict[Str, Any]
     CookiesType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
     HeadersType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
-    OptionalHeaderCookiesType = Union[Tuple[None, None], Tuple[HeadersType, CookiesType]]
     AnyHeadersType = Union[HeadersType, ResponseHeaders, EnvironHeaders, CaseInsensitiveDict]
-    AnyResponseType = Union[WebobResponse, PyramidResponse, TestResponse]
+    AnyCookiesType = Union[CookiesType, RequestsCookieJar]
+    AnyResponseType = Union[WebobResponse, PyramidResponse, HTTPException, TestResponse]
     CookiesOrSessionType = Union[RequestsCookieJar, Session]
 
     AnyKey = Union[Str, int]
     AnyValue = Union[Str, Number, bool, None]
     BaseJSON = Union[AnyValue, List["BaseJSON"], Dict[AnyKey, "BaseJSON"]]
-    JSON = Dict[AnyKey, BaseJSON]
+    JSON = Union[Dict[AnyKey, Union[BaseJSON, "JSON"]], List[BaseJSON]]
+
+    # recursive nodes structure employed by functions for listing children resources hierarchy
+    # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
+    ChildrenResourceNodes = Dict[int, Dict[Str, Union[models.Resource, "ChildrenResourceNodes"]]]
+    ResourcePermissionMap = Dict[int, List[Str]]  # raw mapping of permission-names applied per resource ID
 
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ServiceOrResourceType = Union[models.Service, models.Resource]
     ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
     AnyPermissionType = Union[Permission, ResourcePermissionType, Str]
-    AccessControlListType = List[Tuple[Str, Str, Str]]
-
-    TestAppOrUrlType = Union[Str, TestApp]
-    AnyMagpieTestType = Union[Type[Base_Magpie_TestCase], Base_Magpie_TestCase, TestAppOrUrlType]
+    AnyAccessPrincipalType = Union[Str, Iterable[Str]]
+    AccessControlListType = List[Union[Tuple[Str, Str, Str], Str]]

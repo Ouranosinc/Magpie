@@ -5,25 +5,13 @@ Revision ID: ae1a3c8c7860
 Revises: 5e7b5346c330
 Create Date: 2018-05-30 15:15:33.008614
 """
-import os
-import sys
 
+import sqlalchemy as sa
 from alembic import op
 from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm.session import sessionmaker
-from ziggurat_foundations.models.services import BaseService
 from ziggurat_foundations.models.services.group import GroupService
-from ziggurat_foundations.models.services.user import UserService
-
-cur_file = os.path.abspath(__file__)
-root_dir = os.path.dirname(cur_file)    # version
-root_dir = os.path.dirname(root_dir)    # alembic
-root_dir = os.path.dirname(root_dir)    # magpie
-root_dir = os.path.dirname(root_dir)    # root
-sys.path.insert(0, root_dir)
-
-from magpie import models  # isort:skip # noqa: E402
 
 Session = sessionmaker()
 
@@ -39,6 +27,23 @@ down_revision = "5e7b5346c330"
 branch_labels = None
 depends_on = None
 
+users = sa.table(
+    "users",
+    sa.column("id", sa.Integer),
+    sa.column("user_name", sa.String),
+)
+groups = sa.table(
+    "groups",
+    sa.column("id", sa.Integer),
+    sa.column("group_name", sa.String),
+    sa.column("member_count", sa.Integer)
+)
+users_groups = sa.table(
+    "users_groups",
+    sa.column("user_id", sa.Integer),
+    sa.column("group_id", sa.Integer),
+)
+
 
 def upgrade():
     context = get_context()
@@ -50,20 +55,22 @@ def upgrade():
     context.connection.engine.dialect.supports_sane_multi_rowcount = False
 
     if isinstance(context.connection.engine.dialect, PGDialect):
-        all_groups = session.query(models.Group)
-        all_user_group_refs = BaseService.all(models.UserGroup, db_session=session)
+        all_groups = session.execute(sa.select([groups]))
+        all_user_group_refs = session.execute(sa.select([users_groups]))
         map_groups = {OLD_GROUP_ADMIN: NEW_GROUP_ADMIN, OLD_GROUP_USERS: NEW_GROUP_USERS}
 
         for group in all_groups:
             if group.group_name in map_groups.keys():
                 new_group_name = map_groups[group.group_name]
-                new_group = GroupService.by_group_name(new_group_name, db_session=session)
+                query = sa.select([groups]).where(groups.c.group_name == new_group_name)
+                new_group = session.execute(query).fetchone()
 
                 # create new group if missing
                 if not new_group:
-                    new_group = models.Group(group_name=new_group_name)  # noqa
-                    session.add(new_group)
-                    new_group = GroupService.by_group_name(new_group_name, db_session=session)
+                    new_group = Group(group_name=new_group_name)  # noqa
+                    session.execute(groups.insert().value(group_name=new_group_name, member_count=0))
+                    query = sa.select([groups]).where(groups.c.group_name == new_group_name)
+                    new_group = session.execute(query).fetchone()
 
                 old_group_perms = GroupService.resources_with_possible_perms(group, db_session=session)
                 new_group_perms = GroupService.resources_with_possible_perms(new_group, db_session=session)
@@ -81,9 +88,8 @@ def upgrade():
                 diff_group_users = set(old_group_users) - set(new_group_users)
 
                 for user_name in diff_group_users:
-                    user = UserService.by_user_name(user_name=user_name, db_session=session)
-                    user_group = models.UserGroup(group_id=new_group.id, user_id=user.id)  # noqa
-                    session.add(user_group)
+                    user = session.execute(sa.select([users]).where(users.c.user_name == user_name)).fetchone()
+                    session.execute(users_groups.insert().values(group_id=new_group.id, user_id=user.id))
 
                 session.delete(group)
                 for user_group in all_user_group_refs:

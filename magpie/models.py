@@ -2,8 +2,7 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from pyramid.httpexceptions import HTTPInternalServerError
-from pyramid.security import ALL_PERMISSIONS
-from pyramid.security import Allow as ALLOW  # noqa
+from pyramid.security import ALL_PERMISSIONS, Allow, Authenticated, Everyone
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship
 from ziggurat_foundations import ziggurat_model_init
@@ -14,6 +13,7 @@ from ziggurat_foundations.models.group_permission import GroupPermissionMixin
 from ziggurat_foundations.models.group_resource_permission import GroupResourcePermissionMixin
 from ziggurat_foundations.models.resource import ResourceMixin
 from ziggurat_foundations.models.services import BaseService
+from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
 from ziggurat_foundations.models.services.resource_tree_postgres import ResourceTreeServicePostgreSQL
 from ziggurat_foundations.models.services.user import UserService
@@ -24,11 +24,14 @@ from ziggurat_foundations.models.user_resource_permission import UserResourcePer
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
 
 from magpie.api.exception import evaluate_call
+from magpie.constants import get_constant
 from magpie.permissions import Permission
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Str  # noqa: F401
+    from typing import Dict, Type
+
+    from magpie.typedefs import Str
 
 Base = declarative_base()   # pylint: disable=C0103,invalid-name
 
@@ -40,6 +43,13 @@ def get_session_callable(request):
 class Group(GroupMixin, Base):
     def get_member_count(self, db_session=None):
         return BaseService.all(UserGroup, db_session=db_session).filter(UserGroup.group_id == self.id).count()
+
+    @declared_attr
+    def discoverable(self):
+        """
+        Indicates if the group is discoverable for users to self-register to it.
+        """
+        return sa.Column(sa.Boolean(), default=False)
 
 
 class GroupPermission(GroupPermissionMixin, Base):
@@ -72,13 +82,14 @@ class Resource(ResourceMixin, Base):
 
     @property
     def __acl__(self):
+        """
+        User or group that owns a resource are granted full access to it.
+        """
         acl = []
-
         if self.owner_user_id:
-            acl.extend([(ALLOW, self.owner_user_id, ALL_PERMISSIONS,), ])
-
+            acl.extend([(Allow, self.owner_user_id, ALL_PERMISSIONS,), ])
         if self.owner_group_id:
-            acl.extend([(ALLOW, "group:%s" % self.owner_group_id, ALL_PERMISSIONS,), ])
+            acl.extend([(Allow, "group:%s" % self.owner_group_id, ALL_PERMISSIONS,), ])
         return acl
 
 
@@ -100,11 +111,91 @@ class ExternalIdentity(ExternalIdentityMixin, Base):
 
 
 class RootFactory(object):
+    """
+    Used to build base Access Control List (ACL) of the request user.
+
+    All API and UI routes will employ this set of effective principals to determine if the user is authorized to access
+    the pyramid view according to the ``permission`` value it was configured with.
+
+    .. note::
+        Keep in mind that `Magpie` is configured with default permission
+        :py:data:`magpie.constants.MAGPIE_ADMIN_PERMISSION`.
+        Views that require more permissive authorization must be overridden with ``permission`` argument.
+
+    .. seealso::
+        - ``set_default_permission`` within :func:`magpie.includeme` initialization steps
+    """
+    __name__ = None
+    __parent__ = ""
+
     def __init__(self, request):
-        self.__acl__ = []
-        if request.user:
-            permissions = UserService.permissions(request.user, request.db)
-            self.__acl__.extend(permission_to_pyramid_acls(permissions))
+        self.request = request
+
+    @property
+    def __acl__(self):
+        """
+        Administrators have all permissions, user/group-specific permissions added if user is logged in.
+        """
+        user = self.request.user
+        # allow if role MAGPIE_ADMIN_PERMISSION is somehow directly set instead of inferred via members of admin-group
+        acl = [(Allow, get_constant("MAGPIE_ADMIN_PERMISSION"), ALL_PERMISSIONS)]
+        admins = GroupService.by_group_name(get_constant("MAGPIE_ADMIN_GROUP"), db_session=self.request.db)
+        if admins:
+            # need to add explicit admin-group ALL_PERMISSIONS otherwise views with other permissions than the
+            # default MAGPIE_ADMIN_PERMISSION will be refused access (e.g.: views with MAGPIE_LOGGED_PERMISSION)
+            acl += [(Allow, "group:{}".format(admins.id), ALL_PERMISSIONS)]
+        if user:
+            # user-specific permissions (including group memberships)
+            permissions = UserService.permissions(user, self.request.db)
+            user_acl = permission_to_pyramid_acls(permissions)
+            # allow views that require minimally to be logged in (regardless of who is the user)
+            auth_acl = [(Allow, user.id, Authenticated)]
+            acl += user_acl + auth_acl
+        return acl
+
+
+class UserFactory(RootFactory):
+    def __init__(self, request):
+        super(UserFactory, self).__init__(request)
+        self.path_user = None
+
+    def __getitem__(self, user_name):
+        context = UserFactory(self.request)
+        if user_name == get_constant("MAGPIE_LOGGED_USER", self.request):
+            self.path_user = self.request.user
+        else:
+            self.path_user = UserService.by_user_name(user_name, self.request.db)
+        if self.path_user is not None:
+            self.path_user.__parent__ = self
+            self.path_user.__name__ = user_name
+        context.path_user = self.path_user
+        return context
+
+    @property
+    def __acl__(self):
+        """
+        Grant access to :term:`Request User` according to its relationship to :term:`Context User`.
+
+        If it is the same user (either from explicit name or by :py:data:`magpie.constants.MAGPIE_LOGGED_USER` reserved
+        keyword), allow :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION` for itself to access corresponding views.
+
+        If request user is unauthenticated (``None``), :py:data:`magpie.constants.MAGPIE_LOGGED_USER` or itself,
+        also grant :py:data:`magpie.constants.MAGPIE_CONTEXT_PERMISSION` to allow access to contextually-available
+        details (e.g.: user can view his own information and public ones).
+
+        All ACL permissions from :class:`RootFactory` are applied on top of user-specific permissions added here.
+        """
+        user = self.request.user
+        acl = super(UserFactory, self).__acl__   # inherit default permissions for non user-scoped routes
+        # when user is authenticated and refers to itself, simultaneously fulfill both logged/context conditions
+        if user and self.path_user and user.id == self.path_user.id:
+            acl += [(Allow, user.id, get_constant("MAGPIE_LOGGED_PERMISSION")),
+                    (Allow, user.id, get_constant("MAGPIE_CONTEXT_PERMISSION"))]
+        # unauthenticated context is allowed if and only if referring also to the unauthenticated user
+        elif user is None:
+            if self.path_user is None or self.path_user.user_name == get_constant("MAGPIE_ANONYMOUS_USER"):
+                acl += [(Allow, Everyone, get_constant("MAGPIE_CONTEXT_PERMISSION"))]
+        return acl
 
 
 class Service(Resource):
@@ -112,7 +203,7 @@ class Service(Resource):
     Resource of `service` type.
     """
 
-    __tablename__ = u"services"
+    __tablename__ = "services"
 
     resource_id = sa.Column(sa.Integer(),
                             sa.ForeignKey("resources.resource_id",
@@ -120,12 +211,14 @@ class Service(Resource):
                                           ondelete="CASCADE", ),
                             primary_key=True, )
 
-    resource_type_name = u"service"
-    __mapper_args__ = {u"polymorphic_identity": resource_type_name,
-                       u"inherit_condition": resource_id == Resource.resource_id}
+    resource_type_name = "service"
+    __mapper_args__ = {
+        "polymorphic_identity": resource_type_name,
+        "inherit_condition": resource_id == Resource.resource_id
+    }
 
     @property
-    def permissions(self):
+    def permissions(self):  # pragma: no cover
         raise TypeError("Service permissions must be accessed by 'magpie.services.ServiceInterface' "
                         "instead of 'magpie.models.Service'.")
 
@@ -145,7 +238,7 @@ class Service(Resource):
     @declared_attr
     def sync_type(self):
         """
-        Identifier matching ``magpie.helpers.SyncServiceInterface.sync_type``.
+        Identifier matching ``magpie.cli.SyncServiceInterface.sync_type``.
         """
         # project-api, geoserver-api,...
         return sa.Column(sa.UnicodeText(), nullable=True)
@@ -171,18 +264,18 @@ class PathBase(object):
 
 class File(Resource, PathBase):
     child_resource_allowed = False
-    resource_type_name = u"file"
-    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
+    resource_type_name = "file"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
 
 class Directory(Resource, PathBase):
-    resource_type_name = u"directory"
-    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
+    resource_type_name = "directory"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
 
 class Workspace(Resource):
-    resource_type_name = u"workspace"
-    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
+    resource_type_name = "workspace"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
     permissions = [
         Permission.GET_CAPABILITIES,
@@ -198,8 +291,8 @@ class Workspace(Resource):
 
 
 class Route(Resource):
-    resource_type_name = u"route"
-    __mapper_args__ = {u"polymorphic_identity": resource_type_name}
+    resource_type_name = "route"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
     permissions = [
         Permission.READ,            # access with inheritance (this route and all under it)
@@ -287,9 +380,9 @@ ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
 RESOURCE_TREE_SERVICE = ResourceTreeService(ResourceTreeServicePostgreSQL)
 REMOTE_RESOURCE_TREE_SERVICE = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
-RESOURCE_TYPE_DICT = dict()
+RESOURCE_TYPE_DICT = dict()  # type: Dict[Str, Type[Resource]]
 for res in [Service, Directory, File, Workspace, Route]:
-    if res.resource_type_name in RESOURCE_TYPE_DICT:
+    if res.resource_type_name in RESOURCE_TYPE_DICT:  # pragma: no cover
         raise KeyError("Duplicate resource type identifiers not allowed")
     RESOURCE_TYPE_DICT[res.resource_type_name] = res
 
@@ -297,10 +390,11 @@ for res in [Service, Directory, File, Workspace, Route]:
 def resource_factory(**kwargs):
     resource_type = evaluate_call(lambda: kwargs["resource_type"], http_error=HTTPInternalServerError,
                                   msg_on_fail="kwargs do not contain required 'resource_type'",
-                                  content={u"kwargs": repr(kwargs)})
-    return evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs), http_error=HTTPInternalServerError,
+                                  content={"kwargs": repr(kwargs)})
+    return evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs),  # noqa
+                         http_error=HTTPInternalServerError,
                          msg_on_fail="kwargs unpacking failed from specified 'resource_type' and 'RESOURCE_TYPE_DICT'",
-                         content={u"kwargs": repr(kwargs), u"RESOURCE_TYPE_DICT": repr(RESOURCE_TYPE_DICT)})
+                         content={"kwargs": repr(kwargs), "RESOURCE_TYPE_DICT": repr(RESOURCE_TYPE_DICT)})
 
 
 def find_children_by_name(child_name, parent_id, db_session):

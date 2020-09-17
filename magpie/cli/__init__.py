@@ -10,9 +10,9 @@ if TYPE_CHECKING:
     from typing import Callable
 
 
-def magpie_helper_cli():
+def magpie_helper_cli(args=None):
     """
-    Groups all sub-helper CLI listed in :py:mod:`magpie.helpers` as a common ``magpie_helper``.
+    Groups all sub-helper CLI listed in :py:mod:`magpie.cli` as a common ``magpie_helper``.
 
     Dispatches the provided arguments to the appropriate sub-helper CLI as requested. Each sub-helper CLI must implement
     functions ``make_parser`` and ``main`` to generate the arguments and dispatch them to the corresponding caller.
@@ -28,7 +28,7 @@ def magpie_helper_cli():
         helper_path = os.path.join(helpers_dir, module_item)
         if os.path.isfile(helper_path) and "__init__" not in module_item and module_item.endswith(".py"):
             helper_name = module_item.replace(".py", "")
-            helper_root = "magpie.helpers"
+            helper_root = "magpie.cli"
             helper_module = importlib.import_module("{}.{}".format(helper_root, helper_name), helper_root)
             parser_maker = getattr(helper_module, "make_parser", None)  # type: Callable[[], argparse.ArgumentParser]
             helper_caller = getattr(helper_module, "main", None)
@@ -39,8 +39,8 @@ def magpie_helper_cli():
                                       add_help=False, help=helper_parser.description,
                                       description=helper_parser.description, usage=helper_parser.usage)
                 helpers[helper_name] = {"caller": helper_caller, "parser": helper_parser}
-    args = sys.argv[1:]       # save as was parse args does, but we must provide them to subparser
-    ns = parser.parse_args()  # if 'helper' is unknown, auto prints the help message with exit(2)
+    args = args or sys.argv[1:]         # same as was parse args does, but we must provide them to subparser
+    ns = parser.parse_args(args=args)   # if 'helper' is unknown, auto prints the help message with exit(2)
     helper_name = vars(ns).pop("helper")
     if not helper_name:
         parser.print_help()

@@ -4,16 +4,21 @@ import logging
 import os
 import sys
 from distutils.version import LooseVersion
-from typing import TYPE_CHECKING
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Iterable, Set, Tuple, Union  # noqa: F401
+try:
+    # typing only available builtin starting with Python3
+    # cannot employ it during setup, but will be installed afterwards with backport
+    from typing import TYPE_CHECKING  # noqa
+    if TYPE_CHECKING:
+        # pylint: disable=W0611,unused-import
+        from typing import Iterable, Set, Tuple, Union  # noqa: F401
+except ImportError:
+    pass
 
 MAGPIE_ROOT = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_MODULE_DIR = os.path.join(MAGPIE_ROOT, "magpie")
@@ -31,12 +36,12 @@ LOGGER.info("starting setup")
 with open("README.rst") as readme_file:
     README = readme_file.read()
 
-with open("HISTORY.rst") as history_file:
-    HISTORY = history_file.read().replace(".. :changelog:", "")
+with open("CHANGES.rst") as changes_file:
+    CHANGES = changes_file.read().replace(".. :changelog:", "")
 
 
-def _split_requirement(requirement, version=False, python=False):
-    # type: (str, bool, bool) -> Union[str, Tuple[str, str]]
+def _split_requirement(requirement, version=False, python=False, merge=False):
+    # type: (str, bool, bool, bool) -> Union[str, Tuple[str, str]]
     """
     Splits a requirement package definition into it's name and version specification.
 
@@ -49,23 +54,51 @@ def _split_requirement(requirement, version=False, python=False):
 
         package [<|<=|==|>|>=|!= x.y.z][; python_version <|<=|==|>|>=|!= "x.y.z"]
 
+    Returned values with provided arguments::
+
+        default:                                "<package>"
+        python=True                             n/a
+        version=True:                           ([pkg-op], [pkg-ver])
+        version=True,python=True:               ([py-op], [py-ver])
+        version=True,merge=True:                "<package> [pkg-op] [pkg-ver]"
+        version=True,python=True,merge=True:    "[python_version] [py-op] [py-ver]"
+
     :param requirement: full package string requirement.
-    :param version: retrieve version operator and version instead of package's name.
-    :param python: retrieve python operator and version instead of the package's version.
-    :return: extracted requirement part(s).
+    :param version:
+        Retrieves the version operator and version number instead of only the package's name (without specifications).
+    :param python:
+        Retrieves the python operator and python version instead of the package's version.
+        Must be combined with :paramref:`version`, otherwise doesn't do anything.
+    :param merge:
+        Nothing done if ``False`` (other arguments behave normally).
+        If only :paramref:`version` is ``True``, merges the package name back with the version operator and number into
+        a single string (if any version part), but without the python version part (if any).
+        If both :paramref:`version` and :paramref:`python` are ``True`` combines back the part after ``;`` to form
+        the python version specifier.
+    :return: Extracted requirement part(s). Emtpy strings if parts cannot be found.
     """
-    idx_pkg = -1 if version else 0
     idx_pyv = -1 if python else 0
     if python and "python_version" not in requirement:
-        return ("", "") if version else ""
+        return ("", "") if version and not merge else ""
     requirement = requirement.split("python_version")[idx_pyv].replace(";", "").replace("\"", "")
     op_str = ""
+    pkg_name = requirement
     for operator in [">=", ">", "<=", "<", "!=", "==", "="]:
         if operator in requirement:
             op_str = operator
-            requirement = requirement.split(operator)[idx_pkg]
+            pkg_name, requirement = requirement.split(operator, 1)
             break
-    return requirement.strip() if not version else (op_str.strip(), requirement.strip())
+    if not version:
+        return pkg_name.strip()
+    if op_str == "":
+        pkg_name = requirement
+        requirement = ""
+    parts = (op_str, requirement.strip())
+    if merge and python:
+        return "python_version {} \"{}\"".format(parts[0], parts[1])
+    if merge and version:
+        return "{}{}{}".format(pkg_name, parts[0], parts[1])
+    return parts
 
 
 def _parse_requirements(file_path, requirements, links):
@@ -95,9 +128,11 @@ def _parse_requirements(file_path, requirements, links):
                     ">": LooseVersion(sys.version) > LooseVersion(py_ver),
                     "<": LooseVersion(sys.version) < LooseVersion(py_ver),
                 }
+                # skip requirement if not fulfilling python version
                 if not op_map[operator]:
                     continue
-                line = _split_requirement(line)  # remove the python part
+                # remove only python part if any present
+                line = _split_requirement(line, version=True, merge=True)
             if "git+https" in line:
                 pkg = line.split("#")[-1]
                 links.add(line.strip())
@@ -118,11 +153,11 @@ def _extra_requirements(base_requirements, other_requirements):
     """
     raw_requirements = set()
     for req in base_requirements:
-        raw_req = _split_requirement(req)
+        raw_req = _split_requirement(req, version=True, merge=True)
         raw_requirements.add(raw_req)
     filtered_requirements = set()
     for req in other_requirements:
-        raw_req = _split_requirement(req)
+        raw_req = _split_requirement(req, version=True, merge=True)
         if raw_req and raw_req not in raw_requirements:
             filtered_requirements.add(req)
     return filtered_requirements
@@ -137,7 +172,7 @@ REQUIREMENTS = set()
 DOCS_REQUIREMENTS = set()
 TEST_REQUIREMENTS = set()
 _parse_requirements("requirements.txt", REQUIREMENTS, LINKS)
-_parse_requirements("requirements-docs.txt", DOCS_REQUIREMENTS, LINKS)
+_parse_requirements("requirements-doc.txt", DOCS_REQUIREMENTS, LINKS)
 _parse_requirements("requirements-dev.txt", TEST_REQUIREMENTS, LINKS)
 LINKS = list(LINKS)
 REQUIREMENTS = list(REQUIREMENTS)
@@ -154,7 +189,7 @@ setup(
     name=__meta__.__package__,
     version=__meta__.__version__,
     description=__meta__.__description__,
-    long_description=README + "\n\n" + HISTORY,
+    long_description=README + "\n\n" + CHANGES,
     author=__meta__.__author__,
     maintainer=__meta__.__maintainer__,
     maintainer_email=__meta__.__email__,
@@ -172,7 +207,10 @@ setup(
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
+    python_requires=">2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, <4",
 
     # -- Package structure -------------------------------------------------
     packages=[__meta__.__package__],
@@ -200,12 +238,13 @@ setup(
             "main = magpie.app:main"
         ],
         "console_scripts": [
-            "magpie_helper = magpie.helpers:magpie_helper_cli",  # redirect to others below
-            "magpie_create_users = magpie.helpers.create_users:main",
-            "magpie_register_default_users = magpie.helpers.register_default_users:main",
-            "magpie_register_providers = magpie.helpers.register_providers:main",
-            "magpie_run_db_migration = magpie.helpers.run_db_migration:main",
-            "magpie_sync_resources = magpie.helpers.sync_resources:main",
+            "magpie_cli = magpie.cli:magpie_helper_cli",     # redirect to others below
+            "magpie_helper = magpie.cli:magpie_helper_cli",  # alias to helper
+            "magpie_batch_update_users = magpie.cli.batch_update_users:main",
+            "magpie_register_defaults = magpie.cli.register_defaults:main",
+            "magpie_register_providers = magpie.cli.register_providers:main",
+            "magpie_run_db_migration = magpie.cli.run_db_migration:main",
+            "magpie_sync_resources = magpie.cli.sync_resources:main",
         ],
     }
 )

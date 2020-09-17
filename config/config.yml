@@ -1,0 +1,33 @@
+## Combined configuration definition to setup objects at Magpie startup
+## See documentation 'Configuration'
+# All following sections are optional
+
+# all providers are defined first
+providers:
+  # see full format details in 'providers.cfg'
+
+# permissions are loaded after providers
+permissions:
+  # see full format details in 'permissions.cfg'
+  # for each definition:
+  #   can refer to users and groups that will be created dynamically as needed with corresponding information
+  #   plain user or group name not matched against below entry will create it with defaults for other fields
+
+# extended definitions for users to create
+# default values will be used for missing optional fields
+#   not providing an entry referenced somewhere else (e.g.: in permissions)
+#   will default to only using the user name and defaults for every other field
+user:
+  - username: username  # required if entry provided
+    password:           # optional
+    email:              # optional
+    group: <groupname>  # optional (either one of the groups, or plain string to generate it with defaults)
+
+# extended definitions for groups to create
+# default values will be used for missing optional fields
+#   not providing an entry referenced somewhere else (e.g.: in permissions or users)
+#   will default to only using the group name and defaults for every other field
+groups:
+  - name: <groupname>                 # required if entry provided
+    description: <some description>   # optional
+    discoverable: True                # optional

@@ -17,7 +17,7 @@ RUN chmod 0644 $CRON_DIR/magpie-cron
 
 # install dependencies
 COPY magpie/__init__.py magpie/__meta__.py $MAGPIE_DIR/magpie/
-COPY requirements* setup.py README.rst HISTORY.rst $MAGPIE_DIR/
+COPY requirements* setup.py README.rst CHANGES.rst $MAGPIE_DIR/
 RUN apk update \
     && apk add \
     bash \

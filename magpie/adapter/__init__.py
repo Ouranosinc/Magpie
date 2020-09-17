@@ -17,19 +17,23 @@ from magpie.api.schemas import SigninAPI
 from magpie.db import get_engine, get_session_factory, get_tm_session
 from magpie.security import get_auth_config
 from magpie.utils import CONTENT_TYPE_JSON, SingletonMeta, get_logger, get_magpie_url, get_settings
+
 # twitcher available only when this module is imported from it
-from twitcher.adapter.base import AdapterInterface      # noqa
-from twitcher.owsproxy import owsproxy_defaultconfig    # noqa
+from twitcher.adapter.base import AdapterInterface  # noqa
+from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.models import User  # noqa: F401
-    from magpie.typedefs import AnySettingsContainer, Str, JSON  # noqa: F401
+    from typing import Optional
+
+    from pyramid.config import Configurator
+    from pyramid.httpexceptions import HTTPException
+    from pyramid.request import Request
+
+    from magpie.models import User
+    from magpie.typedefs import JSON, AnySettingsContainer, Str
+
     from twitcher.store import AccessTokenStoreInterface  # noqa
-    from pyramid.config import Configurator  # noqa: F401
-    from pyramid.httpexceptions import HTTPException  # noqa: F401
-    from pyramid.request import Request  # noqa: F401
-    from typing import Optional  # noqa: F401
 
 LOGGER = get_logger("TWITCHER")
 
@@ -112,15 +116,16 @@ def verify_user(request):
                          headers={"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON})
     if resp.status_code != HTTPOk.code:
         content = {"response": resp.json()}
-        return raise_http(HTTPForbidden, detail="Failed Magpie login.", content=content, nothrow=True)
-    authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
+        return raise_http(HTTPForbidden, detail="Failed Magpie login.", content=content, nothrow=True)  # noqa
+    authn_policy = request.registry.queryUtility(IAuthenticationPolicy)  # noqa
     result = authn_policy.cookie.identify(request)
     if result is None:
-        return raise_http(HTTPForbidden, detail="Twitcher login incompatible with Magpie login.", nothrow=True)
+        return raise_http(HTTPForbidden, detail="Twitcher login incompatible with Magpie login.", nothrow=True)  # noqa
     return valid_http(HTTPOk, detail="Twitcher login verified successfully with Magpie login.")
 
 
-class MagpieAdapter(six.with_metaclass(SingletonMeta, AdapterInterface)):
+@six.add_metaclass(SingletonMeta)
+class MagpieAdapter(AdapterInterface):
     # pylint: disable: W0223,W0612
 
     def __init__(self, container):
@@ -160,7 +165,7 @@ class MagpieAdapter(six.with_metaclass(SingletonMeta, AdapterInterface)):
         config = self.configurator_factory(container)
         owsproxy_defaultconfig(config)  # let Twitcher configure the rest normally
 
-    def configurator_factory(self, container):  # noqa: N805
+    def configurator_factory(self, container):  # noqa: N805, R0201
         # type: (AnySettingsContainer) -> Configurator
         settings = get_settings(container)
         set_cache_regions_from_settings(settings)
