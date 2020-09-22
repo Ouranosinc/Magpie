@@ -295,10 +295,8 @@ class Route(Resource):
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
     permissions = [
-        Permission.READ,            # access with inheritance (this route and all under it)
-        Permission.WRITE,           # access with inheritance (this route and all under it)
-        Permission.READ_MATCH,      # access without inheritance (only on this specific route)
-        Permission.WRITE_MATCH,     # access without inheritance (only on this specific route)
+        Permission.READ,
+        Permission.WRITE,
     ]
 
 

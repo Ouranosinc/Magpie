@@ -12,7 +12,7 @@ from magpie import models
 from magpie.api import exception as ax
 from magpie.constants import get_constant
 from magpie.owsrequest import ows_parser_factory
-from magpie.permissions import Permission
+from magpie.permissions import Permission, PermissionSet, Scope
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -372,13 +372,13 @@ class ServiceAPI(ServiceInterface):
                     match_index = len(self.acl)
                     self.expand_acl(route_child, self.request.user)
 
+        # FIXME: method to be made generic for any service-type, and for any permission-name
         # process read/write-match specific permission access
         # (convert exact route 'match' to read/write counterparts only if matching last item's permissions)
         for i in range(match_index, len(self.acl)):
-            if Permission.get(self.acl[i][2]) == Permission.READ_MATCH:
-                self.acl[i] = (self.acl[i][0], self.acl[i][1], Permission.READ.value)
-            if Permission.get(self.acl[i][2]) == Permission.WRITE_MATCH:
-                self.acl[i] = (self.acl[i][0], self.acl[i][1], Permission.WRITE.value)
+            perm = PermissionSet(self.acl[i][2])
+            if perm.scope == Scope.MATCH:
+                self.acl[i] = (self.acl[i][0], self.acl[i][1], perm.name.value)
         return self.acl
 
     def permission_requested(self):
@@ -387,15 +387,19 @@ class ServiceAPI(ServiceInterface):
             return Permission.READ
         return Permission.WRITE
 
+    # FIXME: method to be made generic for any service-type, and for any permission-name
     def effective_permissions(self, resource, user):
-        # if 'match' permissions are on the specified 'resource', keep them
+        # if 'match' permissions are on the specified 'resource', keep the corresponding recursive one
         # otherwise, keep only the non 'match' variations from inherited parent resources permissions
         resource_effective_perms = super(ServiceAPI, self).effective_permissions(resource, user)
-        return filter(lambda perm:
-                      (perm.perm_name in [Permission.READ.value, Permission.WRITE.value]) or
-                      (perm.perm_name in [Permission.READ_MATCH.value, Permission.WRITE_MATCH.value] and
-                       perm.resource.resource_id == resource.resource_id),
-                      resource_effective_perms)
+
+        def resolve_recursive(res_perm):
+            perm = PermissionSet(res_perm.perm_name)
+            if perm.scope == Scope.MATCH:
+                return res_perm.resource.resource_id == resource.resource_id
+            return perm.scope == Scope.RECURSIVE
+
+        return filter(resolve_recursive, resource_effective_perms)
 
 
 class ServiceWFS(ServiceInterface):

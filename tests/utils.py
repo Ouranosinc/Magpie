@@ -285,7 +285,7 @@ def get_service_types_for_version(version):
 
 
 def warn_version(test, functionality, version, skip=True, older=False):
-    # type: (AnyMagpieTestCaseType, Str, Str, bool, bool) -> None
+    # type: (Union[AnyMagpieTestCaseType, Str], Str, Str, bool, bool) -> None
     """
     Verifies that ``test.version`` value *minimally* has :paramref:`version` requirement to execute a test.
     (ie: ``test.version >= version``).
@@ -294,15 +294,21 @@ def warn_version(test, functionality, version, skip=True, older=False):
     (ie: ``test.version < version``).
 
     If version condition is not met, a warning is emitted and the test is skipped according to ``skip`` value.
+
+    Optionally, the reference version can be directly provided as string using :paramref:`test` instead of `Test Case`.
     """
-    min_req = LooseVersion(test.version) < LooseVersion(version)
+    if isinstance(test, six.string_types):
+        test_version = test
+    else:
+        test_version = TestSetup.get_Version(test)
+    min_req = LooseVersion(test_version) < LooseVersion(version)
     if min_req or (not min_req and older):
         if min_req:
             msg = "Functionality [{}] not yet implemented in version [{}], upgrade [>={}] required to test." \
-                  .format(functionality, test.version, version)
+                  .format(functionality, test_version, version)
         else:
             msg = "Functionality [{}] was deprecated in version [{}], downgrade [<{}] required to test." \
-                  .format(functionality, test.version, version)
+                  .format(functionality, test_version, version)
         warnings.warn(msg, FutureWarning)
         if skip:
             test.skipTest(reason=msg)   # noqa: F401

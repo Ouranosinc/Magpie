@@ -19,7 +19,7 @@ MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := magpie
-APP_VERSION ?= 2.0.1
+APP_VERSION ?= 2.1.0
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
 # guess OS (Linux, Darwin,...)
@@ -202,8 +202,7 @@ database-migration: conda-env _alembic 	## run postgres database migration with 
 	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" upgrade head'
 
 .PHONY: database-history
-database-revision: conda-env _alembic   ## create a new database revision
-	@[ "${DOC}" ] || ( echo ">> 'DOC' is not set. Provide description to set revision file name."; exit 1 )
+database-history: conda-env _alembic    ## obtain database revision history
 	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" history'
 
 .PHONY: database-revision

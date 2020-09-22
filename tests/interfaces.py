@@ -1485,7 +1485,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         anonym_grp = get_constant("MAGPIE_ANONYMOUS_GROUP")
 
         perm_recur = Permission.READ.value
-        perm_match = Permission.READ_MATCH.value
+        perm_match = "read-match"  # backward compatibility
         data_recur = {"permission_name": perm_recur}
         data_match = {"permission_name": perm_match}
         path = "/users/{usr}/resources/{res}/permissions".format(res=test_svc_res_id, usr=self.usr)
@@ -3075,7 +3075,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             (ServiceAPI.service_type,
                 {"route": {
                     "perms": [Permission.READ.value, Permission.WRITE.value,
-                              Permission.READ_MATCH.value, Permission.WRITE_MATCH.value],
+                              "read-match", "write-match"],  # backward compatibility
                     "child": True}}),
             # child resource allowed only for specific types
             (ServiceTHREDDS.service_type,

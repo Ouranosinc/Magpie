@@ -70,7 +70,7 @@ class TestRegister(interfaces.BaseTestCase):
         utils.TestSetup.delete_TestGroup(self, override_group_name=self.test_perm_grp_name)
         session = get_db_session_from_settings(self.app.app.registry.settings)
 
-        svc_perm = Permission.READ_MATCH
+        svc_perm = "read-match"  # using string for backward compatibility
         res1_perm = Permission.READ
         res2_perm = Permission.WRITE
         res1_name = "test-resource"
@@ -79,7 +79,7 @@ class TestRegister(interfaces.BaseTestCase):
             "permissions": [
                 {
                     "service": self.test_perm_svc_name,
-                    "permission": svc_perm.value,
+                    "permission": svc_perm,
                     "action": "create",
                     "group": self.test_perm_grp_name,
                 },
@@ -137,10 +137,10 @@ class TestRegister(interfaces.BaseTestCase):
         utils.TestSetup.create_TestGroup(self, override_group_name=self.test_perm_grp_name)
         session = get_db_session_from_settings(self.app.app.registry.settings)
 
-        svc_perm = Permission.READ_MATCH
+        svc_perm = "read-match"  # using string for backward compatibility
         res1_perm = Permission.READ
         res2_perm = Permission.WRITE
-        res3_perm = Permission.WRITE_MATCH
+        res3_perm = "write-match"  # using string for backward compatibility
         res1_name = "test-resource"
         res2_name = "sub-test-resource"
         res3_name = "sub-sub-test-resource"
@@ -148,7 +148,7 @@ class TestRegister(interfaces.BaseTestCase):
             "permissions": [
                 {
                     "service": self.test_perm_svc_name,
-                    "permission": svc_perm.value,
+                    "permission": svc_perm,
                     "action": "create",
                     "group": self.test_perm_grp_name,
                 },
@@ -223,13 +223,13 @@ class TestRegister(interfaces.BaseTestCase):
         res1_name = "test-resource"
         res2_name = "sub-test-resource"
         res3_name = "sub-sub-test-resource"
-        res3_perm = Permission.WRITE_MATCH
+        res3_perm = "write-match"  # using string for backward compatibility
         perm_config = {
             "permissions": [
                 {
                     "service": self.test_perm_svc_name,                         # exists
                     "resource": res1_name + "/" + res2_name + "/" + res3_name,  # none exist, all created for perm
-                    "permission": res3_perm.value,                              # perm only to lowest child
+                    "permission": res3_perm,                                    # perm only on lowest child
                     "action": "create",
                     "group": self.test_perm_grp_name,
                 },

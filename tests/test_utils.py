@@ -19,11 +19,10 @@ from pyramid.request import Request
 from pyramid.settings import asbool
 from pyramid.testing import DummyRequest
 
-from magpie import __meta__, models
+from magpie import __meta__
 from magpie.api import exception as ax
 from magpie.api import generic as ag
 from magpie.api import requests as ar
-from magpie.permissions import Permission, format_permissions
 from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum, get_header
 from tests import runner, utils
 
@@ -37,8 +36,8 @@ class DummyEnum(ExtendedEnum):
     VALUE2 = "value-2"
 
 
-@runner.MAGPIE_TEST_UTILS
 @runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_UTILS
 class TestUtils(unittest.TestCase):
     @staticmethod
     def make_request(request_path_query):
@@ -273,26 +272,6 @@ class TestUtils(unittest.TestCase):
             VALUE1 = DummyEnum.VALUE1.value  # copy internal string representation
 
         utils.check_val_not_equal(DummyEnum.VALUE1, OtherEnum.VALUE1, msg="concrete enum elements should be different")
-
-    def test_format_permissions(self):
-        usr_perm = models.UserPermission()
-        usr_perm.perm_name = Permission.GET_FEATURE.value
-        grp_perm = models.GroupPermission()
-        grp_perm.perm_name = Permission.WRITE_MATCH.value
-        dup_perm = Permission.READ.value        # only one should remain in result
-        dup_usr_perm = models.UserPermission()
-        dup_usr_perm.perm_name = dup_perm       # also only one remains although different type
-        rand_perm = "random"                    # should be filtered out of result
-        any_perms = [dup_perm, Permission.GET_CAPABILITIES, usr_perm, dup_perm, grp_perm, rand_perm]
-
-        format_perms = format_permissions(any_perms)
-        expect_perms = [
-            Permission.GET_CAPABILITIES.value,
-            Permission.GET_FEATURE.value,
-            Permission.READ.value,
-            Permission.WRITE_MATCH.value,
-        ]
-        utils.check_all_equal(format_perms["permission_names"], expect_perms, any_order=False)
 
     def test_evaluate_call_callable_incorrect_usage(self):
         """
