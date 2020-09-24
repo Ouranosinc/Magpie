@@ -31,7 +31,7 @@ from magpie.api.schemas import (
     UsersAPI
 )
 from magpie.constants import get_constant
-from magpie.permissions import Permission
+from magpie.permissions import Permission, PermissionSet
 from magpie.services import SERVICE_TYPE_DICT, ServiceWPS
 from magpie.utils import (
     bool2str,
@@ -765,20 +765,14 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
         """
         action_oper = None
         if usr_name:
-            action_oper = UserResourcePermissionsAPI.path.replace("{user_name}", _usr_name)
+            action_oper = UserResourcePermissionsAPI.format(user_name=_usr_name, resource_id=resource_id)
         if grp_name:
-            action_oper = GroupResourcePermissionsAPI.path.replace("{group_name}", _grp_name)
+            action_oper = GroupResourcePermissionsAPI.format(group_name=_grp_name, resource_id=resource_id)
         if not action_oper:
             return None
-        if create_perm:
-            action_func = requests.post
-            action_path = "{url}{path}".format(url=magpie_url, path=action_oper)
-            action_body = {"permission_name": perm_name}
-        else:
-            action_func = requests.delete
-            action_path = "{url}{path}/{perm_name}".format(url=magpie_url, path=action_oper, perm_name=perm_name)
-            action_body = {}
-        action_path = action_path.format(resource_id=resource_id)
+        action_func = requests.post if create_perm else requests.delete
+        action_body = {"permission": perm.json()}
+        action_path = "{url}{path}".format(url=magpie_url, path=action_oper)
         action_resp = action_func(action_path, json=action_body, cookies=cookies_or_session)
         return action_resp
 
@@ -872,10 +866,10 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
                                 permission=permission_config_entry, level=logging.ERROR)
 
     create_perm = permission_config_entry["action"] == "create"
-    perm_name = permission_config_entry["permission"]
+    perm_def = permission_config_entry["permission"]  # name or object
     usr_name = permission_config_entry.get("user")
     grp_name = permission_config_entry.get("group")
-    perm = Permission.get(perm_name)
+    perm = PermissionSet(perm_def)
 
     # process groups first as they can be referenced by user definitions
     _validate_response(lambda: _apply_profile(None, grp_name), is_create=True)

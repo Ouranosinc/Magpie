@@ -28,6 +28,11 @@ Features / Changes
   *explicit* string representations (see above) combined with the older *implicit* representation still returned
   in ``permission_names`` field for backward compatibility
   (note: ``DENY`` elements are only represented as *explicit* as there was no such *implicit* permissions before).
+* Add ``DELETE`` request views with ``permission`` object provided in body to allow deletion using ``PermissionSet``
+  JSON representation instead of literal string by path variable.
+  Still support ``permission_name`` path variable requests for backward compatibility for equivalent names.
+* Add ``POST`` request support of ``permission`` JSON representation of ``PermissionSet`` provided in request body.
+  Fallback to ``permission_name`` field for backward compatibility if equivalent ``permission`` is not found.
 * | Upgrade migration script is added to convert existing implicit names to new explicit permission names.
   |
   | **WARNING**:

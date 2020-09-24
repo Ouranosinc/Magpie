@@ -23,7 +23,7 @@ from magpie.services import SERVICE_TYPE_DICT, service_factory
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import List, Optional, Tuple, Type
+    from typing import List, Optional, Tuple, Type, Union
 
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 
 def check_valid_service_or_resource_permission(permission_name, service_or_resource, db_session):
-    # type: (Str, ServiceOrResourceType, Session) -> Optional[Permission]
+    # type: (Union[Str, Permission], ServiceOrResourceType, Session) -> Optional[Permission]
     """
     Checks if a permission is valid to be applied to a specific `service` or a `resource` under a root service.
 
@@ -43,6 +43,7 @@ def check_valid_service_or_resource_permission(permission_name, service_or_resou
     :param service_or_resource: resource item corresponding to either a Service or a Resource
     :param db_session: db connection
     :return: valid Permission if allowed by the service/resource
+    :raises HTTPBadRequest: if the permission is not valid for the targeted service/resource
     """
     svc_res_permissions = get_resource_permissions(service_or_resource, db_session=db_session)
     svc_res_type = service_or_resource.resource_type

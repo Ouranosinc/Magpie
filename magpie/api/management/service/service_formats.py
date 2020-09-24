@@ -16,14 +16,14 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
     from magpie.models import Resource, Service
-    from magpie.permissions import Permission
+    from magpie.permissions import PermissionSet
     from magpie.services import ServiceInterface
     from magpie.typedefs import JSON, ResourcePermissionMap
 
 
 def format_service(service, permissions=None, permission_type=PermissionType.ALLOWED,
                    show_private_url=False, show_resources_allowed=False):
-    # type: (Service, Optional[List[Permission]], Optional[PermissionType], bool, bool) -> JSON
+    # type: (Service, Optional[List[PermissionSet]], Optional[PermissionType], bool, bool) -> JSON
     """
     Formats the ``service`` information into JSON.
 
@@ -61,7 +61,7 @@ def format_service(service, permissions=None, permission_type=PermissionType.ALL
 
 def format_service_resources(service,                       # type: Service
                              db_session,                    # type: Session
-                             service_perms=None,            # type: Optional[List[Permission]]
+                             service_perms=None,            # type: Optional[List[PermissionSet]]
                              resources_perms_dict=None,     # type: Optional[ResourcePermissionMap]
                              show_all_children=False,       # type: bool
                              show_private_url=True,         # type: bool

@@ -25,10 +25,30 @@ if TYPE_CHECKING:
 
     from pyramid.request import Request
 
-    from magpie.permissions import Permission
+    from magpie.permissions import PermissionSet
     from magpie.typedefs import AnyAccessPrincipalType, ServiceOrResourceType, Str
 
 LOGGER = get_logger(__name__)
+
+
+def check_value(value, param_name, check_type=six.string_types, pattern=ax.PARAM_REGEX):
+    # type: (Any, Str, Any, Optional[Union[Str, bool]]) -> None
+    """
+    Validates the value against specified type and pattern.
+
+    :param value: value to validate.
+    :param check_type: verify that parameter value is of specified type. Set to ``None`` to disable check.
+    :param pattern: regex pattern to validate the input with.
+        If value evaluates to ``False``, skip this kind of validation (default: :py:data:`ax.PARAM_REGEX`).
+    :param param_name: path variable key.
+    :return: None.
+    :raises HTTPUnprocessableEntity: if the key is not an applicable path variable for this request.
+    """
+    ax.verify_param(value, not_none=True, is_type=bool(check_type), param_compare=check_type, param_name=param_name,
+                    http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    if bool(pattern) and (check_type in six.string_types or check_type == six.string_types):
+        ax.verify_param(value, not_empty=True, matches=True, param_name=param_name, param_compare=pattern,
+                        http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
 
 
 def get_request_method_content(request):
@@ -59,20 +79,39 @@ def get_multiformat_body(request, key, default=None):
                             http_error=HTTPInternalServerError, msg_on_fail=msg)
 
 
-def get_permission_multiformat_body_checked(request, service_or_resource, permission_name_key="permission_name"):
-    # type: (Request, ServiceOrResourceType, Str) -> Permission
+def get_permission_multiformat_body_checked(request, service_or_resource):
+    # type: (Request, ServiceOrResourceType) -> PermissionSet
     """
     Retrieves the permission from the body and validates that it is allowed for the specified `service` or `resource`.
 
     Validation combines basic field checks followed by contextual values applicable for the `service` or `resource`.
+    The permission can be provided either by literal string name (explicit or implicit format) or JSON object.
 
     .. seealso::
         - :func:`get_value_multiformat_body_checked`
     """
     # import here to avoid circular import error with undefined functions between (api_request, resource_utils)
     from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
-    perm_name = get_value_multiformat_body_checked(request, permission_name_key)
-    return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
+
+    perm_key = "permission"
+    permission = get_multiformat_body(request, perm_key)
+    if not permission:
+        perm_key = "permission_name"
+        permission = get_multiformat_body(request, perm_key)
+    if isinstance(permission, six.string_types):
+        check_value(permission, perm_key)
+    elif isinstance(permission, dict) and len(permission):
+        for perm_sub_key, perm_sub_val in permission.items():
+            if perm_sub_val is not None:
+                check_value(perm_sub_val, "{}.{}".format(perm_key, perm_sub_key))
+    else:
+        ax.raise_http(http_error=HTTPBadRequest, content={perm_key: str(permission)},
+                      detail=s.Permission_Check_BadRequestResponseSchema.description)
+    perm = ax.evaluate_call(lambda: PermissionSet(permission),
+                            http_error=HTTPUnprocessableEntity, content={perm_key: str(permission)},
+                            msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    check_valid_service_or_resource_permission(perm.name, service_or_resource, request.db)
+    return perm
 
 
 def get_value_multiformat_body_checked(request, key, default=None, check_type=six.string_types, pattern=ax.PARAM_REGEX):
@@ -97,11 +136,7 @@ def get_value_multiformat_body_checked(request, key, default=None, check_type=si
         - :func:`get_multiformat_body`
     """
     val = get_multiformat_body(request, key, default=default)
-    ax.verify_param(val, not_none=True, is_type=bool(check_type), param_compare=check_type, param_name=key,
-                    http_error=HTTPBadRequest, msg_on_fail=s.BadRequestResponseSchema.description)
-    if bool(pattern) and check_type in six.string_types:
-        ax.verify_param(val, not_empty=True, matches=True, param_compare=pattern, param_name=key,
-                        http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    check_value(val, key, check_type, pattern)
     return val
 
 
@@ -259,22 +294,27 @@ def get_service_matchdict_checked(request, service_name_key="service_name"):
     return service
 
 
-def get_permission_matchdict_checked(request, service_or_resource, permission_name_key="permission_name"):
-    # type: (Request, models.Resource, Str) -> Permission
+def get_permission_matchdict_checked(request, service_or_resource):
+    # type: (Request, models.Resource) -> PermissionSet
     """
-    Obtains the permission specified in the request path variable and validates that it is allowed for the specified.
+    Obtains the permission specified in the request path variable and validates that :paramref:`service_or_resource`
+    allows it.
 
-    :paramref:`service_or_resource` which can be a `service` or a children `resource`.
+    The :paramref:`service_or_resource` can be top-level `service` or a children `resource`.
 
     Allowed permissions correspond to the *direct* `service` permissions or restrained permissions of the `resource`
-    under its root `service`.
+    under its root `service`. The permission name can be provided either by implicit or explicit string representation.
 
     :returns: found permission name if valid for the service/resource
     """
     # pylint: disable=C0415  # avoid circular import
     from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
-    perm_name = get_value_matchdict_checked(request, permission_name_key)
-    return check_valid_service_or_resource_permission(perm_name, service_or_resource, request.db)
+    perm_name = get_value_matchdict_checked(request, "permission_name")
+    perm = ax.evaluate_call(lambda: PermissionSet(perm_name), http_error=HTTPUnprocessableEntity,
+                            content={"permission_name": str(perm_name)},
+                            msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    check_valid_service_or_resource_permission(perm.name, service_or_resource, request.db)
+    return perm
 
 
 def get_value_matchdict_checked(request, key, check_type=six.string_types, pattern=ax.PARAM_REGEX):
@@ -291,11 +331,7 @@ def get_value_matchdict_checked(request, key, check_type=six.string_types, patte
     :raises HTTPUnprocessableEntity: if the key is not an applicable path variable for this request.
     """
     val = request.matchdict.get(key)
-    ax.verify_param(val, not_none=True, is_type=bool(check_type), param_compare=check_type, param_name=key,
-                    http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
-    if bool(pattern) and (check_type in six.string_types or check_type == six.string_types):
-        ax.verify_param(val, not_empty=True, matches=True, param_name=key, param_compare=pattern,
-                        http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    check_value(val, key, check_type, pattern)
     return val
 
 

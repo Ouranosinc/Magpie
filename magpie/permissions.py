@@ -87,6 +87,7 @@ class PermissionSet(object):
                  ):             # type: (...) -> None
         """
         Initializes the permission definition, possibly using required conversion from other implementations.
+
         :param permission: Name of the permission, or any other implementation from which the name can be inferred.
         :param access: Effective behaviour of the permissions. Generally, grant or deny the specified permission.
         :param scope: Scope for which the permission affects hierarchical resources. Important for effective resolution.
@@ -136,7 +137,7 @@ class PermissionSet(object):
 
     def __hash__(self):
         # type: () -> int
-        return hash((self.permission, self.access, self.scope))
+        return hash((self.name, self.access, self.scope))
 
     def __str__(self):
         # type: () -> Str
@@ -145,7 +146,7 @@ class PermissionSet(object):
 
         Employed for database storage supporting ``ziggurat`` format.
         """
-        return "{}-{}-{}".format(self.permission.value, self.access.value, self.scope.value)
+        return "{}-{}-{}".format(self.name.value, self.access.value, self.scope.value)
 
     def __repr__(self):
         # type: () -> Str
@@ -154,7 +155,7 @@ class PermissionSet(object):
         """
         perm_repr_template = "PermissionSet(name={}, access={}, scope={}, type={})"
         perm_type = self.type.value if self.type is not None else None,
-        return perm_repr_template.format(self.permission.value, self.access.value, self.scope.value, perm_type)
+        return perm_repr_template.format(self.name.value, self.access.value, self.scope.value, perm_type)
 
     def json(self):
         # type: () -> PermissionObject
@@ -162,7 +163,7 @@ class PermissionSet(object):
         Obtains the JSON representation of this :class:`PermissionSet`.
         """
         return {
-            "name": self.permission.value,
+            "name": self.name.value,
             "access": self.access.value,
             "scope": self.scope.value,
             "type": self.type.value if self.type is not None else None,
@@ -178,7 +179,7 @@ class PermissionSet(object):
         permission names in the database did not exist.
 
         If the contained modifiers of the :class:`PermissionSet` (notably the :attr:`Access.DENY`) result in a string
-        representation that is *not possible* according to non existing permissions fpr older `Magpie` instances, the
+        representation that is *not possible* according to non existing permissions for older `Magpie` instances, the
         returned value will be ``None``.
 
         .. seealso::
@@ -196,6 +197,8 @@ class PermissionSet(object):
         # type: () -> Str
         """
         Obtain the explicit string representation of the :class:`PermissionSet`.
+
+        This format is always guaranteed to be completely defined contrary to :meth:`implicit_permission`.
 
         .. seealso::
             - :meth:`__str__` (default string value).
@@ -215,7 +218,7 @@ class PermissionSet(object):
         if self._name is None:
             raise TypeError("Invalid permission: {!s}".format(permission))
 
-    permission = name  # synonym
+    permission = name  # synonym to match init parameters
 
     @property
     def access(self):

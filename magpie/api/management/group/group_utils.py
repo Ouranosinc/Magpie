@@ -109,7 +109,7 @@ def create_group(group_name, description, discoverable, db_session):
 
 
 def create_group_resource_permission_response(group, resource, permission, db_session):
-    # type: (models.Group, ServiceOrResourceType, Permission, Session) -> HTTPException
+    # type: (models.Group, ServiceOrResourceType, PermissionSet, Session) -> HTTPException
     """
     Creates a permission on a group/resource combination if it is permitted and not conflicting.
 
@@ -117,20 +117,19 @@ def create_group_resource_permission_response(group, resource, permission, db_se
     :raises HTTPException: error HTTP response of corresponding situation.
     """
     resource_id = resource.resource_id
-    check_valid_service_or_resource_permission(permission.value, resource, db_session)
-    perm_content = {"permission_name": str(permission.value),
+    check_valid_service_or_resource_permission(permission.name, resource, db_session)
+    perm_content = {"permission_name": str(permission), "permission": permission.json(),
                     "resource": format_resource(resource, basic_info=True),
                     "group": format_group(group, basic_info=True)}
     existing_perm = ax.evaluate_call(
-        lambda: GroupResourcePermissionService.get(group.id, resource_id, permission.value, db_session=db_session),
+        lambda: GroupResourcePermissionService.get(group.id, resource_id, str(permission), db_session=db_session),
         fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
         msg_on_fail=s.GroupResourcePermissions_POST_ForbiddenGetResponseSchema.description, content=perm_content
     )
     ax.verify_param(existing_perm, is_none=True, http_error=HTTPConflict, content=perm_content,
                     msg_on_fail=s.GroupResourcePermissions_POST_ConflictResponseSchema.description)
     new_perm = ax.evaluate_call(
-        lambda: models.GroupResourcePermission(
-            resource_id=resource_id, group_id=group.id, perm_name=permission.value),  # noqa
+        lambda: models.GroupResourcePermission(resource_id=resource_id, group_id=group.id, perm_name=str(permission)),
         fallback=lambda: db_session.rollback(), http_error=HTTPForbidden, content=perm_content,
         msg_on_fail=s.GroupResourcePermissions_POST_ForbiddenCreateResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
@@ -193,7 +192,7 @@ def get_group_resource_permissions_response(group, resource, db_session):
 
 
 def delete_group_resource_permission_response(group, resource, permission, db_session):
-    # type: (models.Group, ServiceOrResourceType, Permission, Session) -> HTTPException
+    # type: (models.Group, ServiceOrResourceType, PermissionSet, Session) -> HTTPException
     """
     Get validated response on deleted group resource permission.
 
@@ -201,12 +200,12 @@ def delete_group_resource_permission_response(group, resource, permission, db_se
     :raises HTTPException: error HTTP response of corresponding situation.
     """
     resource_id = resource.resource_id
-    check_valid_service_or_resource_permission(permission.value, resource, db_session)
-    perm_content = {"permission_name": permission.value,
+    check_valid_service_or_resource_permission(permission.name, resource, db_session)
+    perm_content = {"permission_name": str(permission), "permission": permission.json(),
                     "resource": format_resource(resource, basic_info=True),
                     "group": format_group(group, basic_info=True)}
     del_perm = ax.evaluate_call(
-        lambda: GroupResourcePermissionService.get(group.id, resource_id, permission.value, db_session=db_session),
+        lambda: GroupResourcePermissionService.get(group.id, resource_id, str(permission), db_session=db_session),
         fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
         msg_on_fail=s.GroupServicePermission_DELETE_ForbiddenGetResponseSchema.description, content=perm_content
     )
@@ -254,7 +253,7 @@ def get_group_services_response(group, db_session):
 
 
 def get_group_service_permissions(group, service, db_session):
-    # type: (models.Group, models.Service, Session) -> List[Permission]
+    # type: (models.Group, models.Service, Session) -> List[PermissionSet]
     """
     Get all permissions the group has on a specific service.
     """

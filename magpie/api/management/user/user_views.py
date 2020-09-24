@@ -274,7 +274,7 @@ def get_user_resource_permissions_view(request):
 @s.LoggedUserResourcePermissionsAPI.post(schema=s.UserResourcePermissions_POST_RequestSchema(), tags=[s.LoggedUserTag],
                                          response_schemas=s.LoggedUserResourcePermissions_POST_responses)
 @view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="POST")
-def create_user_resource_permission_view(request):
+def create_user_resource_permissions_view(request):
     """
     Create a permission on specific resource for a user.
     """
@@ -284,15 +284,31 @@ def create_user_resource_permission_view(request):
     return uu.create_user_resource_permission_response(user, resource, permission, request.db)
 
 
-@s.UserResourcePermissionAPI.delete(schema=s.UserResourcePermission_DELETE_RequestSchema(), tags=[s.UsersTag],
-                                    response_schemas=s.UserResourcePermission_DELETE_responses)
-@s.LoggedUserResourcePermissionAPI.delete(schema=s.UserResourcePermission_DELETE_RequestSchema(),
-                                          tags=[s.LoggedUserTag],
-                                          response_schemas=s.LoggedUserResourcePermission_DELETE_responses)
-@view_config(route_name=s.UserResourcePermissionAPI.name, request_method="DELETE")
-def delete_user_resource_permission_view(request):
+@s.UserResourcePermissionsAPI.delete(schema=s.UserResourcePermissions_DELETE_RequestSchema(), tags=[s.UsersTag],
+                                     response_schemas=s.UserResourcePermissions_DELETE_responses)
+@s.LoggedUserResourcePermissionsAPI.delete(schema=s.UserResourcePermissions_DELETE_RequestSchema(),
+                                           tags=[s.LoggedUserTag],
+                                           response_schemas=s.LoggedUserResourcePermissions_DELETE_responses)
+@view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="DELETE")
+def delete_user_resource_permissions_view(request):
     """
-    Delete an applied permission on a resource for a user (not including his groups permissions).
+    Delete a permission from a specific resource for a user (not including his groups permissions).
+    """
+    user = ar.get_user_matchdict_checked_or_logged(request)
+    resource = ar.get_resource_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, resource)
+    return uu.delete_user_resource_permission_response(user, resource, permission, request.db)
+
+
+@s.UserResourcePermissionAPI.delete(schema=s.UserResourcePermissionName_DELETE_RequestSchema(), tags=[s.UsersTag],
+                                    response_schemas=s.UserResourcePermissionName_DELETE_responses)
+@s.LoggedUserResourcePermissionAPI.delete(schema=s.UserResourcePermissionName_DELETE_RequestSchema(),
+                                          tags=[s.LoggedUserTag],
+                                          response_schemas=s.LoggedUserResourcePermissionName_DELETE_responses)
+@view_config(route_name=s.UserResourcePermissionAPI.name, request_method="DELETE")
+def delete_user_resource_permission_name_view(request):
+    """
+    Delete a permission by name from a resource for a user (not including his groups permissions).
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request)
@@ -350,7 +366,7 @@ def get_user_service_permissions_view(request):
 @s.LoggedUserServicePermissionsAPI.post(schema=s.UserServicePermissions_POST_RequestSchema, tags=[s.LoggedUserTag],
                                         response_schemas=s.LoggedUserServicePermissions_POST_responses)
 @view_config(route_name=s.UserServicePermissionsAPI.name, request_method="POST")
-def create_user_service_permission_view(request):
+def create_user_service_permissions_view(request):
     """
     Create a permission on a service for a user.
     """
@@ -360,14 +376,30 @@ def create_user_service_permission_view(request):
     return uu.create_user_resource_permission_response(user, service, permission, request.db)
 
 
-@s.UserServicePermissionAPI.delete(schema=s.UserServicePermission_DELETE_RequestSchema, tags=[s.UsersTag],
-                                   response_schemas=s.UserServicePermission_DELETE_responses)
-@s.LoggedUserServicePermissionAPI.delete(schema=s.UserServicePermission_DELETE_RequestSchema, tags=[s.LoggedUserTag],
-                                         response_schemas=s.LoggedUserServicePermission_DELETE_responses)
-@view_config(route_name=s.UserServicePermissionAPI.name, request_method="DELETE")
-def delete_user_service_permission_view(request):
+@s.UserServicePermissionsAPI.delete(schema=s.UserServicePermissions_DELETE_RequestSchema, tags=[s.UsersTag],
+                                    response_schemas=s.UserServicePermissions_DELETE_responses)
+@s.LoggedUserServicePermissionsAPI.delete(schema=s.UserServicePermissions_DELETE_RequestSchema, tags=[s.LoggedUserTag],
+                                          response_schemas=s.LoggedUserServicePermissions_DELETE_responses)
+@view_config(route_name=s.UserServicePermissionsAPI.name, request_method="DELETE")
+def delete_user_service_permissions_view(request):
     """
-    Delete an applied permission on a service for a user (not including his groups permissions).
+    Delete a permission from a service for a user (not including his groups permissions).
+    """
+    user = ar.get_user_matchdict_checked_or_logged(request)
+    service = ar.get_service_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, service)
+    return uu.delete_user_resource_permission_response(user, service, permission, request.db)
+
+
+@s.UserServicePermissionAPI.delete(schema=s.UserServicePermissionName_DELETE_RequestSchema, tags=[s.UsersTag],
+                                   response_schemas=s.UserServicePermissionName_DELETE_responses)
+@s.LoggedUserServicePermissionAPI.delete(schema=s.UserServicePermissionName_DELETE_RequestSchema,
+                                         tags=[s.LoggedUserTag],
+                                         response_schemas=s.LoggedUserServicePermissionName_DELETE_responses)
+@view_config(route_name=s.UserServicePermissionAPI.name, request_method="DELETE")
+def delete_user_service_permission_name_view(request):
+    """
+    Delete a permission by name from a service for a user (not including his groups permissions).
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)

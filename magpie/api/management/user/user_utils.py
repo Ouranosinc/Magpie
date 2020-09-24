@@ -118,29 +118,29 @@ def create_user(user_name, password, email, group_name, db_session):
 
 
 def create_user_resource_permission_response(user, resource, permission, db_session):
-    # type: (models.User, ServiceOrResourceType, Permission, Session) -> HTTPException
+    # type: (models.User, ServiceOrResourceType, PermissionSet, Session) -> HTTPException
     """
     Creates a permission on a user/resource combination if it is permitted and not conflicting.
 
     :returns: valid HTTP response on successful operation.
     """
-    ru.check_valid_service_or_resource_permission(permission.value, resource, db_session)
+    ru.check_valid_service_or_resource_permission(permission.name, resource, db_session)
     res_id = resource.resource_id
     existing_perm = UserResourcePermissionService.by_resource_user_and_perm(
-        user_id=user.id, resource_id=res_id, perm_name=permission.value, db_session=db_session)
-    ax.verify_param(existing_perm, is_none=True, with_param=False, http_error=HTTPConflict,
-                    content={"resource_id": res_id, "user_id": user.id, "permission_name": permission.value},
+        user_id=user.id, resource_id=res_id, perm_name=str(permission), db_session=db_session)
+    err_content = {"resource_id": res_id, "user_id": user.id,
+                   "permission_name": str(permission), "permission": permission.json()}
+    ax.verify_param(existing_perm, is_none=True, with_param=False, http_error=HTTPConflict, content=err_content,
                     msg_on_fail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
 
     new_perm = models.UserResourcePermission(resource_id=res_id, user_id=user.id, perm_name=permission.value)  # noqa
-    usr_res_data = {"resource_id": res_id, "user_id": user.id, "permission_name": permission.value}
     ax.verify_param(new_perm, not_none=True, http_error=HTTPForbidden,
                     content={"resource_id": res_id, "user_id": user.id},
                     msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
-                     http_error=HTTPForbidden, content=usr_res_data,
+                     http_error=HTTPForbidden, content=err_content,
                      msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
-    return ax.valid_http(http_success=HTTPCreated, content=usr_res_data,
+    return ax.valid_http(http_success=HTTPCreated, content=err_content,
                          detail=s.UserResourcePermissions_POST_CreatedResponseSchema.description)
 
 
@@ -167,21 +167,22 @@ def delete_user_group(user, group, db_session):
 
 
 def delete_user_resource_permission_response(user, resource, permission, db_session):
-    # type: (models.User, ServiceOrResourceType, Permission, Session) -> HTTPException
+    # type: (models.User, ServiceOrResourceType, PermissionSet, Session) -> HTTPException
     """
     Get validated response on deleted user resource permission.
 
     :returns: valid HTTP response on successful operations.
     :raises HTTPException: error HTTP response of corresponding situation.
     """
-    ru.check_valid_service_or_resource_permission(permission.value, resource, db_session)
+    ru.check_valid_service_or_resource_permission(permission.name, resource, db_session)
     res_id = resource.resource_id
-    del_perm = UserResourcePermissionService.get(user.id, res_id, permission.value, db_session)
+    del_perm = UserResourcePermissionService.get(user.id, res_id, str(permission), db_session)
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPNotFound,
-                     msg_on_fail=s.UserResourcePermissions_DELETE_NotFoundResponseSchema.description,
-                     content={"resource_id": res_id, "user_id": user.id, "permission_name": permission.value})
-    return ax.valid_http(http_success=HTTPOk, detail=s.UserResourcePermissions_DELETE_OkResponseSchema.description)
+                     msg_on_fail=s.UserResourcePermissionName_DELETE_NotFoundResponseSchema.description,
+                     content={"resource_id": res_id, "user_id": user.id,
+                              "permission_name": str(permission), "permission": permission.json()})
+    return ax.valid_http(http_success=HTTPOk, detail=s.UserResourcePermissionName_DELETE_OkResponseSchema.description)
 
 
 def filter_user_permission(resource_permission_list, user):
