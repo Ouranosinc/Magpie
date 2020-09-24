@@ -9,13 +9,17 @@ Types of Permissions
 -----------------------
 
 Across the documentation and the code, term :term:`Permission` is often employed interchangeably to represent different
-more subtle contextual functionalities. This is mostly an abuse of language, but is preserved regardless in order to
-maintain backward compatibility of features and API response content with older systems that could employ `Magpie`.
+and more subtle contextual functionalities. This is mostly an abuse of language, but is preserved regardless in order
+to maintain backward compatibility of features and API response content with older systems that could employ `Magpie`.
 Therefore, care must be taken to consider under which context this term is observed to ensure correct interpretation
 of observed results.
 
-More specifically, following distinction can be considered between different kind of :term:`Permission` used by
-`Magpie`:
+.. versionchanged:: 2.1
+    Following introduced :term:`Permission` representations as JSON objects with this version, an new
+    :class:`magpie.permissions.PermissionType` was added to make following types more explicit. The responses will
+    include a field that indicates precisely the type of :term:`Permission` returned, for each specific item.
+
+More specifically, following distinctions can be observed between different kind of :term:`Permission` used by `Magpie`:
 
 .. _`allowed permissions`:
 
@@ -67,7 +71,7 @@ More specifically, following distinction can be considered between different kin
     `Applied Permissions`_ for that :term:`User` and all his :term:`Group` membership simultaneously.
     See `perm_example`_ for complete comparison.
 
-    .. versionchanged:: 2.0.0
+    .. versionchanged:: 2.0
         Prior to this version, ``inherit`` (without ``ed``) was employed as query parameter name. This often lead to
         confusion between expected and returned results due to mistakenly employed adjective. Because they are referred
         to as :term:`Inherited Permissions` in the documentation and naturally from a linguistic standpoint, query
@@ -111,7 +115,7 @@ details (e.g.: obtaining information about what ``MAGPIE_ANONYMOUS_GROUP`` membe
 API routes that are granted :ref:`Public Access` to anyone such as the `Magpie REST API`_ documentation served under
 a running `Magpie` instance or the instance's version route.
 
-.. versionchanged:: 2.0.0
+.. versionchanged:: 2.0
 
     Some routes under ``/users/{user_name}`` are also granted more *contextual access* than the default admin-only
     access requirement to allow self-referencing user operations. Using a combination of view configurations with

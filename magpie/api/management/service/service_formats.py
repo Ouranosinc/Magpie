@@ -5,7 +5,7 @@ from pyramid.httpexceptions import HTTPInternalServerError
 from magpie.api.exception import evaluate_call
 from magpie.api.management.resource.resource_formats import format_resource_tree
 from magpie.api.management.resource.resource_utils import crop_tree_with_permission, get_resource_children
-from magpie.permissions import format_permissions
+from magpie.permissions import PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_twitcher_protected_service_url
 
@@ -21,8 +21,9 @@ if TYPE_CHECKING:
     from magpie.typedefs import JSON, ResourcePermissionMap
 
 
-def format_service(service, permissions=None, show_private_url=False, show_resources_allowed=False):
-    # type: (Service, Optional[List[Permission]], bool, bool) -> JSON
+def format_service(service, permissions=None, permission_type=PermissionType.ALLOWED,
+                   show_private_url=False, show_resources_allowed=False):
+    # type: (Service, Optional[List[Permission]], Optional[PermissionType], bool, bool) -> JSON
     """
     Formats the ``service`` information into JSON.
 
@@ -42,7 +43,7 @@ def format_service(service, permissions=None, show_private_url=False, show_resou
         }
         if perms is None:  # user/group permission specify empty list
             perms = SERVICE_TYPE_DICT[svc.type].permissions
-        svc_info.update(format_permissions(perms))
+        svc_info.update(format_permissions(perms, permission_type))
         if show_private_url:
             svc_info["service_url"] = str(svc.url)
         if show_resources_allowed:
@@ -109,5 +110,5 @@ def format_service_resource_type(resource_class, service_class):
         "resource_child_allowed": resource_class.child_resource_allowed,
     }
     svc_res_perm = service_class.get_resource_permissions(resource_class.resource_type_name)
-    svc_res_info.update(format_permissions(svc_res_perm))
+    svc_res_info.update(format_permissions(svc_res_perm, PermissionType.ALLOWED))
     return svc_res_info

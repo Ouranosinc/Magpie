@@ -1019,7 +1019,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Validate that non-admin user execution the request gets filtered view of listed resources.
 
-        .. versionadded:: 2.0.0
+        .. versionadded:: 2.0
             Prior to this version, all services-specialized resources and every children resource would be recursively
             listed from this response, with empty permissions if none applied to user or inherited group permissions
             (accordingly to request queries).
@@ -2372,7 +2372,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Logged user requested by special keyword path variable could not update its own password.
 
-        .. versionchanged:: 2.0.0
+        .. versionchanged:: 2.0
 
             Logged user is correctly resolved to the corresponding context user.
             Provided that user has sufficient access rights, the operation is now permitted.

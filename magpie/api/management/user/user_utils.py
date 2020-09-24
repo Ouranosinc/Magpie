@@ -22,7 +22,7 @@ from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
 from magpie.constants import get_constant
-from magpie.permissions import PermissionSet, format_permissions
+from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory
 
 if TYPE_CHECKING:
@@ -207,6 +207,7 @@ def get_user_resource_permissions_response(user, resource, request,
     db_session = request.db
 
     def get_usr_res_perms():
+        perm_type = None
         if resource.owner_user_id == user.id:
             # FIXME: no 'magpie.models.Resource.permissions' - ok for now because no owner handling...
             res_perm_list = models.RESOURCE_TYPE_DICT[resource.type].permissions
@@ -214,12 +215,15 @@ def get_user_resource_permissions_response(user, resource, request,
             if effective_permissions:
                 svc = ru.get_resource_root_service_impl(resource, request)
                 res_perm_list = svc.effective_permissions(resource, user)
+                perm_type = PermissionType.EFFECTIVE
             else:
                 if inherit_groups_permissions:
                     res_perm_list = ResourceService.perms_for_user(resource, user, db_session=db_session)
+                    perm_type = PermissionType.INHERITED
                 else:
                     res_perm_list = ResourceService.direct_perms_for_user(resource, user, db_session=db_session)
-        return format_permissions(res_perm_list)
+                    perm_type = PermissionType.DIRECT
+        return format_permissions(res_perm_list, perm_type)
 
     permissions = ax.evaluate_call(
         lambda: get_usr_res_perms(),

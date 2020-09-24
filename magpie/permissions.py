@@ -1,3 +1,4 @@
+from itertools import product
 from typing import TYPE_CHECKING
 
 from magpie.utils import ExtendedEnum
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 
 class Permission(ExtendedEnum):
     """
-    Applicable :term:`Permission` values under certain :term:`Service` and :term:`Resource`.
+    Applicable :term:`Permission` values (names) under certain :term:`Service` and :term:`Resource`.
     """
     # file/dir permissions
     READ = "read"
@@ -29,6 +30,18 @@ class Permission(ExtendedEnum):
     EXECUTE = "execute"
     LOCK_FEATURE = "lockfeature"
     TRANSACTION = "transaction"
+
+
+class PermissionType(ExtendedEnum):
+    """
+    Applicable types of :term:`Permission` according to context.
+    """
+    ACCESS = "access"           # role based, accessible views
+    ALLOWED = "allowed"         # available for given service / resource (under service-type)
+    APPLIED = "applied"         # defined (user|group, service|resource, permission)
+    DIRECT = "direct"           # applied, only for user situation
+    INHERITED = "inherited"     # applied, combined for user+group, relative to user member
+    EFFECTIVE = "effective"     # resolved user+group for resource hierarchy, with access and scope
 
 
 class Access(ExtendedEnum):
@@ -51,18 +64,37 @@ class PermissionSet(object):
     """
     Explicit definition of a :class:`Permission` with applicable :class:`Access` and :class:`Scope` to resolve it.
 
-    The :class:`Permission` is the name of the applicable permission on the :class:`magpie.models.Resource`.
+    The :class:`Permission` is the *name* of the applicable permission on the :class:`magpie.models.Resource`.
     The :class:`Scope` defines how the :class:`Permission` should impact the resolution of the perceived
     :term:`Effective Permission over a :class:`magpie.models.Resource` tree hierarchy.
-    Finally, the :class:`Access` defines how the :class:`Permission` access should be interpreted (granted or denied).
+    The :class:`Access` defines how the :class:`Permission` access should be interpreted (granted or denied).
+
+    Optionally, a :class:`PermissionType` can be provided to specifically indicate which kind of permission this set
+    represents. This type is only for informative purposes, and is not saved to database nor displayed by the explicit
+    string representation. It is returned within JSON representation and can be employed by :term:`Effective Permission`
+    resolution to be more verbose about returned results.
 
     On missing :class:`Access` or :class:`Scope` specifications, they default to :attr:`Access.ALLOW` and
     :attr:`Scope.RECURSIVE` to handle backward compatible naming convention of plain ``permission_name``.
     """
-    __slots__ = ["_name", "_access", "_scope"]
+    __slots__ = ["_name", "_access", "_scope", "_type"]
 
-    def __init__(self, permission, access=None, scope=None):
-        # type: (Union[Permission, Str], Optional[Union[Access, Str]], Optional[Union[Scope, Str]]) -> None
+    def __init__(self,
+                 permission,    # type: Union[Permission, Str]
+                 access=None,   # type: Optional[Union[Access, Str]]
+                 scope=None,    # type: Optional[Union[Scope, Str]]
+                 typ=None,      # type: Optional[PermissionType]
+                 ):             # type: (...) -> None
+        """
+        Initializes the permission definition, possibly using required conversion from other implementations.
+        :param permission: Name of the permission, or any other implementation from which the name can be inferred.
+        :param access: Effective behaviour of the permissions. Generally, grant or deny the specified permission.
+        :param scope: Scope for which the permission affects hierarchical resources. Important for effective resolution.
+        :param typ: Type of permission being represented. Informative only, does not impact behavior if omitted.
+
+        .. seealso::
+            :meth:`PermissionSet.convert`
+        """
         if not isinstance(permission, Permission):
             perm_set = PermissionSet.convert(permission)
             permission = perm_set.name
@@ -71,12 +103,13 @@ class PermissionSet(object):
         self.name = permission
         self.access = access
         self.scope = scope
+        self.type = typ
 
     def __eq__(self, other):
         # type: (Any) -> bool
         if not isinstance(other, PermissionSet):
             other = PermissionSet.convert(other)
-        return self.permission == other.permission and self.access == other.access and self.scope == other.scope
+        return self.json() == other.json()
 
     def __ne__(self, other):
         # type: (Any) -> bool
@@ -84,9 +117,22 @@ class PermissionSet(object):
 
     def __lt__(self, other):
         # type: (Any) -> bool
+        """
+        Sort by permission name, followed by *more permissive access* and *more generic scope*.
+
+        Using this sorting methodology, similar permissions by name are grouped together first, and permissions of same
+        name with modifiers are then ordered from ``allow-recursive`` to ``deny-match``, the first having less priority
+        in the :term:`Effective Permission` resolution than the later. Respecting :attr:`Access.DENY` is more important
+        than :attr:`Access.ALLOW` (to protect the :term:`Resource`), and :attr:`Scope.MATCH` is *closer* to the actual
+        :term:`Resource` than :attr:`Scope.RECURSIVE` permission received from a *farther* parent in the hierarchy.
+        """
         if not isinstance(other, PermissionSet):
             other = PermissionSet(other)
-        return str(self) < str(other)
+        if self.name != other.name:
+            return self.name.value < other.name.value
+        if self.access != other.access:
+            return self.access == Access.ALLOW
+        return self.scope == Scope.RECURSIVE
 
     def __hash__(self):
         # type: () -> int
@@ -106,15 +152,21 @@ class PermissionSet(object):
         """
         Obtains the visual representation of the :class:`PermissionSet`.
         """
-        perm_repr_template = "PermissionSet(name={}, access={}, scope={})"
-        return perm_repr_template.format(self.permission.value, self.access.value, self.scope.value)
+        perm_repr_template = "PermissionSet(name={}, access={}, scope={}, type={})"
+        perm_type = self.type.value if self.type is not None else None,
+        return perm_repr_template.format(self.permission.value, self.access.value, self.scope.value, perm_type)
 
     def json(self):
         # type: () -> PermissionObject
         """
         Obtains the JSON representation of this :class:`PermissionSet`.
         """
-        return {"name": self.permission.value, "access": self.access.value, "scope": self.scope.value}
+        return {
+            "name": self.permission.value,
+            "access": self.access.value,
+            "scope": self.scope.value,
+            "type": self.type.value if self.type is not None else None,
+        }
 
     @property
     def implicit_permission(self):
@@ -185,6 +237,15 @@ class PermissionSet(object):
         # type: (Optional[Union[Scope, Str]]) -> None
         self._scope = Scope.get(scope, default=Scope.RECURSIVE)
 
+    @property
+    def type(self):
+        # type: () -> Optional[PermissionType]
+        return self._type
+
+    @type.setter
+    def type(self, typ):
+        self._type = PermissionType.get(typ)
+
     @classmethod
     def convert(cls, permission):
         # type: (AnyPermissionType) -> Optional[PermissionSet]
@@ -233,13 +294,15 @@ class PermissionSet(object):
         return PermissionSet(perm, access, scope)
 
 
-def format_permissions(permissions):
-    # type: (Collection[AnyPermissionType]) -> Dict[Str, Union[List[Str], PermissionObject]]
+def format_permissions(permissions,         # type: Optional[Collection[AnyPermissionType]]
+                       permission_type,     # type: PermissionType
+                       ):                   # type: (...) -> Dict[Str, Union[List[Str], PermissionObject, Str]]
     """
-    Obtains the formatted permission representations after validation that the name is a known member of
+    Obtains the formatted permission representations after validation that each of their name is a known member of
     :class:`Permission` enum, and optionally with modifiers as defined by :class:`PermissionSet`.
 
     The returned lists are sorted alphabetically by permission *name* and cleaned of any duplicate entries.
+    If no or empty :paramref:`permissions` is provided, empty lists are returned.
 
     .. note::
         Field ``permission_names`` provides both the *older* implicit permission names and the *newer* explicit name
@@ -247,20 +310,42 @@ def format_permissions(permissions):
         will not be any literal string duplicates. Implicit names are immediately followed by their explicit name,
         unless implicit names do not apply for the given permission (e.g.: when :attr:`Access.DENY`).
         Only the detailed and explicit JSON representations are provided in the ``permissions`` list.
+
+    When :paramref:`permission_type` is equal to :attr:`PermissionType.ALLOWED`, the collection of every applicable
+    :class:`PermissionSet` is automatically generated by expanding all combinations of :class:`Access` and
+    :class:`Scope` with every provided :class:`Permission` name in :paramref:`permissions`. This allows more concise
+    definition of allowed permissions under :class:`magpie.services.Services` and their children :term:`Resources` by
+    only defining :class:`Permission` names without manually listing all variations of :class:`PermissionSet`.
+
+    For other :paramref:`permission_type` values, which represent :term:`Applied Permissions` only specifically
+    provided :paramref:`permissions` are returned, to effectively return the collection of *active* permissions.
+
+    :param permissions: multiple permissions of any implementation and type, to be rendered both as names and JSON.
+    :param permission_type: indication of the represented permissions to be formatted, for informative indication.
+    :returns: JSON with the permissions listed as implicit+explicit names, as permission set objects, and their type.
     """
-    unique_perms = sorted({PermissionSet.convert(perm) for perm in permissions})  # remove any duplicates entries
-    bw_perm_names = []      # to preserve insert order
-    bw_perm_unique = set()  # for quick remove of duplicates
-    for perm in unique_perms:
-        implicit_perm = perm.implicit_permission
-        explicit_perm = perm.explicit_permission
-        if implicit_perm is not None and implicit_perm not in bw_perm_unique:
-            bw_perm_names.append(implicit_perm)
-            bw_perm_unique.add(implicit_perm)
-        if explicit_perm not in bw_perm_names:
-            bw_perm_names.append(explicit_perm)
-            bw_perm_unique.add(explicit_perm)
+    json_perms = []
+    bw_perm_names = []  # to preserve insert order
+    if permissions:
+        bw_perm_unique = set()  # for quick remove of duplicates
+        unique_perms = sorted({PermissionSet(perm, typ=permission_type) for perm in permissions})
+        if permission_type == PermissionType.ALLOWED:
+            unique_names = {perm.name for perm in unique_perms}  # trim out any extra variations, then build full list
+            unique_perms = sorted([PermissionSet(name, access, scope, PermissionType.ALLOWED)
+                                   for name, access, scope in product(unique_names, Access, Scope)])
+        for perm in unique_perms:
+            implicit_perm = perm.implicit_permission
+            explicit_perm = perm.explicit_permission
+            if implicit_perm is not None and implicit_perm not in bw_perm_unique:
+                bw_perm_names.append(implicit_perm)
+                bw_perm_unique.add(implicit_perm)
+            if explicit_perm not in bw_perm_names:
+                bw_perm_names.append(explicit_perm)
+                bw_perm_unique.add(explicit_perm)
+        json_perms = [perm.json() for perm in unique_perms]
+    for perm in json_perms:
+        perm["type"] = permission_type.value
     return {
         "permission_names": bw_perm_names,  # backward compatible + explicit names
-        "permissions": [perm.json() for perm in unique_perms]  # explicit objects
+        "permissions": json_perms           # explicit objects with types
     }

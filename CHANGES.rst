@@ -16,15 +16,19 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
 * Adjust ``alembic`` migration scripts to employ date-ordered naming convention to help searching features within them.
-* Add ``DENY`` permission-access concept with new ``PermissionSet`` object, ``Access`` and ``Scope`` enums.
-* Remove ``-match`` suffixed entries from ``Permission`` enum in favor of new ``PermissionSet`` definition.
-* Update permission entries to employ explicit representation as ``[name]-[access]-[scope]`` in the database
+* Add ``DENY`` permission access concept with new ``PermissionSet`` object and ``Access`` enum.
+* Remove ``-match`` suffixed entries from ``Permission`` enum in favor of new ``Scope`` enum employed by
+  new ``PermissionSet`` definition.
+* Update permission entries to employ explicit string representation as ``[name]-[access]-[scope]`` in the database
   (`#342 <https://github.com/Ouranosinc/Magpie/issues/342>`_).
-* Provide new ``permissions`` list in applicable API responses, with explicit ``name``, ``access`` and ``scope`` fields
-  for each ``PermissionSet``. Responses will also return the concatenated *explicit* string representations (see above)
-  on top of older *implicit*  representation still returned in ``permission_names`` field for backward compatibility
-  (note: ``DENY`` elements will only be represented as *explicit* as there was no *implicit* permissions of this type).
-* | Upgrade migration script is added to convert the implicit names to new explicit permission names.
+* Add ``PermissionType`` enum that details the type of permission being represented in any given response
+  (values correspond to types detailed in documentation).
+* Provide new ``permissions`` list in applicable API responses, with explicit ``name``, ``access``, ``scope`` and
+  ``type`` fields for each ``PermissionSet`` represented as individual JSON object. Responses will also return the
+  *explicit* string representations (see above) combined with the older *implicit* representation still returned
+  in ``permission_names`` field for backward compatibility
+  (note: ``DENY`` elements are only represented as *explicit* as there was no such *implicit* permissions before).
+* | Upgrade migration script is added to convert existing implicit names to new explicit permission names.
   |
   | **WARNING**:
   | Downgrade migration drops any ``DENY`` permission that would be added in future versions,

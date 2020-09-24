@@ -11,7 +11,7 @@ from magpie.api import schemas as s
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service import service_formats as sf
 from magpie.api.management.service import service_utils as su
-from magpie.permissions import Permission, format_permissions
+from magpie.permissions import Permission, PermissionType, format_permissions
 from magpie.register import SERVICES_PHOENIX_ALLOWED, sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import CONTENT_TYPE_JSON
@@ -200,7 +200,7 @@ def get_service_permissions_view(request):
                                  fallback=request.db.rollback(), http_error=HTTPBadRequest, content=svc_content,
                                  msg_on_fail=s.ServicePermissions_GET_BadRequestResponseSchema.description)
     return ax.valid_http(http_success=HTTPOk, detail=s.ServicePermissions_GET_OkResponseSchema.description,
-                         content=format_permissions(svc_perms))
+                         content=format_permissions(svc_perms, PermissionType.ALLOWED))
 
 
 @s.ServiceResourceAPI.delete(schema=s.ServiceResource_DELETE_RequestSchema(), tags=[s.ServicesTag],

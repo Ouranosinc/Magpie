@@ -219,7 +219,7 @@ class TestUtils(unittest.TestCase):
         Arguments ``param`` and ``param_compare`` must be of same type for valid comparison, except for ``is_type``
         where compare parameter must be the type directly.
 
-        .. versionchanged:: 2.0.0
+        .. versionchanged:: 2.0
 
             Since ``param`` can come from user input, we should **NOT** raise ``HTTPInternalServerError`` because the
             whole point of the method is to ensure that values are compared accordingly in a controlled fashion.

@@ -1,14 +1,18 @@
 import unittest
 
 from magpie import __meta__, models
-from magpie.permissions import Access, Permission, PermissionSet, Scope, format_permissions
+from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope, format_permissions
 from tests import runner, utils
 
 
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_UTILS
 class TestPermissions(unittest.TestCase):
-    def test_format_permissions(self):
+    def test_format_permissions_applied(self):
+        """
+        Validate that provided permission sets are formatted as intended, with both implicit and explicit variants,
+        and with both name strings and detailed JSON objects.
+        """
         utils.warn_version(__meta__.__version__, "permission format validation", "2.1", skip=True)
 
         usr_perm = models.UserPermission()
@@ -26,7 +30,8 @@ class TestPermissions(unittest.TestCase):
         any_perms = [deny_match_perm, dup_perm, only_perm, usr_perm, dup_usr_perm, grp_perm,
                      deny_str_perm, deny_recur_perm, deny_recur_perm]
 
-        format_perms = format_permissions(any_perms)
+        perm_type = PermissionType.DIRECT  # anything else than 'allowed' to only get 'applied' permissions
+        format_perms = format_permissions(any_perms, perm_type)
         expect_names = [
             # both implicit/explicit variants added for backward compatibility and new format for each applicable case
             only_perm.value,
@@ -43,13 +48,65 @@ class TestPermissions(unittest.TestCase):
             str(PermissionSet(grp_perm.perm_name, Access.ALLOW, Scope.MATCH)),
         ]
         expect_perms = [
-            PermissionSet(Permission.GET_CAPABILITIES, Access.ALLOW, Scope.RECURSIVE).json(),
-            PermissionSet(Permission.GET_FEATURE, Access.ALLOW, Scope.RECURSIVE).json(),
-            PermissionSet(Permission.GET_LEGEND_GRAPHIC, Access.DENY, Scope.MATCH).json(),
-            PermissionSet(Permission.GET_MAP, Access.DENY, Scope.RECURSIVE).json(),
-            PermissionSet(Permission.GET_METADATA, Access.DENY, Scope.RECURSIVE).json(),
-            PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE).json(),
-            PermissionSet(Permission.WRITE, Access.ALLOW, Scope.MATCH).json(),
+            PermissionSet(Permission.GET_CAPABILITIES, Access.ALLOW, Scope.RECURSIVE, perm_type).json(),
+            PermissionSet(Permission.GET_FEATURE, Access.ALLOW, Scope.RECURSIVE, perm_type).json(),
+            PermissionSet(Permission.GET_LEGEND_GRAPHIC, Access.DENY, Scope.MATCH, perm_type).json(),
+            PermissionSet(Permission.GET_MAP, Access.DENY, Scope.RECURSIVE, perm_type).json(),
+            PermissionSet(Permission.GET_METADATA, Access.DENY, Scope.RECURSIVE, perm_type).json(),
+            PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE, perm_type).json(),
+            PermissionSet(Permission.WRITE, Access.ALLOW, Scope.MATCH, perm_type).json(),
+        ]
+        utils.check_all_equal(format_perms["permission_names"], expect_names, any_order=False)
+        utils.check_all_equal(format_perms["permissions"], expect_perms, any_order=False)
+
+    def test_format_permissions_allowed(self):
+        """
+        Validate that formats are also respected, but with additional auto-expansion of all *modifier* combinations
+        on permission names when requesting :attr:`PermissionType.ALLOWED` permissions.
+
+        .. seealso::
+            :meth:`test_format_permissions_applied`
+        """
+        utils.warn_version(__meta__.__version__, "permission format validation", "2.1", skip=True)
+
+        # add duplicates with extra modifiers only to test removal
+        # provide in random order to validate proper sorting
+        # use multiple permission implementation to validate they are still handled
+        test_perms = [
+            PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE),
+            PermissionSet(Permission.READ, Access.DENY, Scope.MATCH),
+            PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE),
+            PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH),
+            Permission.READ,
+            "write-match",  # old implicit format
+            Permission.WRITE,
+        ]
+        format_perms = format_permissions(test_perms, PermissionType.ALLOWED)
+        expect_names = [
+            Permission.READ.value,
+            str(PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)),
+            Permission.READ.value + "-" + Scope.MATCH.value,
+            str(PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)),
+            # no implicit name for denied
+            str(PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)),
+            str(PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)),
+            Permission.WRITE.value,
+            str(PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)),
+            Permission.WRITE.value + "-" + Scope.MATCH.value,
+            str(PermissionSet(Permission.WRITE, Access.ALLOW, Scope.MATCH)),
+            # no implicit name for denied
+            str(PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)),
+            str(PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)),
+        ]
+        expect_perms = [
+            PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
+            PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH, PermissionType.ALLOWED).json(),
+            PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
+            PermissionSet(Permission.READ, Access.DENY, Scope.MATCH, PermissionType.ALLOWED).json(),
+            PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
+            PermissionSet(Permission.WRITE, Access.ALLOW, Scope.MATCH, PermissionType.ALLOWED).json(),
+            PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
+            PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH, PermissionType.ALLOWED).json(),
         ]
         utils.check_all_equal(format_perms["permission_names"], expect_names, any_order=False)
         utils.check_all_equal(format_perms["permissions"], expect_perms, any_order=False)
