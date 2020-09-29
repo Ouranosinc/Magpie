@@ -14,6 +14,9 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix ``users`` typo in example ``config/config.yml`` (fixes `#354 <https://github.com/Ouranosinc/Magpie/issues/354>`_).
+* Fix CLI operation ``batch_update_users`` to employ provided ``password`` from input file ``config/config.yml``
+  instead of overriding it by random value. Omitted information will still auto-generate a random user password.
+  (fixes `#355 <https://github.com/Ouranosinc/Magpie/issues/355>`_).
 
 `2.0.0 <https://github.com/Ouranosinc/Magpie/tree/2.0.0>`_ (2020-07-31)
 ------------------------------------------------------------------------------------

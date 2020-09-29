@@ -62,7 +62,9 @@ def create_users(user_config, magpie_url, magpie_admin_username, magpie_admin_pa
 
     password_length = password_length or get_constant("MAGPIE_PASSWORD_MIN_LENGTH")
     for usr_cfg in user_config:
-        usr_cfg["password"] = pseudo_random_string(length=password_length)
+        if not usr_cfg.get("password"):
+            LOGGER.warning("No password provided for user: '%s'. Will auto-generate random value.")
+            usr_cfg["password"] = pseudo_random_string(length=password_length)
         data = {"user_name": usr_cfg["username"], "password": usr_cfg["password"],
                 "group_name": usr_cfg["group"], "email": usr_cfg["email"]}
         response = session.post(magpie_url + "/users", json=data)
