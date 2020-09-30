@@ -1382,7 +1382,7 @@ class User_Check_ForbiddenResponseSchema(BaseResponseSchemaAPI):
 
 class User_Check_ConflictResponseSchema(BaseResponseSchemaAPI):
     description = "User name matches an already existing user name."
-    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
 class User_POST_RequestBodySchema(colander.MappingSchema):
