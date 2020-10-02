@@ -28,11 +28,17 @@ Features / Changes
   *explicit* string representations (see above) combined with the older *implicit* representation still returned
   in ``permission_names`` field for backward compatibility
   (note: ``DENY`` elements are only represented as *explicit* as there was no such *implicit* permissions before).
+* Add more documentation details and examples about new permission concepts introduced.
 * Add ``DELETE`` request views with ``permission`` object provided in body to allow deletion using ``PermissionSet``
   JSON representation instead of literal string by path variable.
   Still support ``permission_name`` path variable requests for backward compatibility for equivalent names.
 * Add ``POST`` request support of ``permission`` JSON representation of ``PermissionSet`` provided in request body.
   Fallback to ``permission_name`` field for backward compatibility if equivalent ``permission`` is not found.
+* Add new ``PUT`` request that updates a *possibly* existing ``permission`` (or create it if missing) without needing
+  to execute any prior ``GET`` and/or ``DELETE`` requests that would normally be required to validate the existence or
+  not of previously defined ``permission`` to avoid HTTP Conflict on ``POST``. This allows quicker changes of ``access``
+  and ``scope`` modifiers applied on a given ``permission`` with a single operation
+  (see details in issue `#342 <https://github.com/Ouranosinc/Magpie/issues/342>`_).
 * | Upgrade migration script is added to convert existing implicit names to new explicit permission names.
   |
   | **WARNING**:

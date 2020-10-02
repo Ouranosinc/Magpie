@@ -44,13 +44,39 @@ def upgrade():
     usr_res_perms = UserResourcePermissionService.base_query(db_session=session)
 
     for perm_list in [grp_res_perms, usr_res_perms]:
-        for perm in perm_list:
+        perm_map = [(perm, PermissionSet(perm.perm_name)) for perm in perm_list]
+        perm_rm = set()
+        perm_keep = set()
+        # find any user/group-resource that has both recursive and match permissions simultaneously
+        # this is not allowed anymore, so remove the match access that is redundant anyway
+        for perm_db, perm_set in perm_map:
+            perm_dup = False
+            for other_db, other_set in perm_map:
+                if perm_set is other_set:
+                    continue
+                if perm_db.resource_id == other_db.resource_id and perm_set.like(other_set):
+                    if perm_set.scope == Scope.RECURSIVE:
+                        perm_keep.add(perm_db)
+                        perm_rm.add(other_db)
+                    else:
+                        perm_keep.add(other_db)
+                        perm_rm.add(perm_db)
+                    perm_dup = True
+                    break
+            if not perm_dup:
+                perm_keep.add(perm_db)
+
+        # apply changes
+        for perm in perm_keep:
             perm_name_raw = perm.perm_name
             perm_scope = Scope.RECURSIVE
             if perm_name_raw.endswith("-" + Scope.MATCH.value):
                 perm_name_raw = perm_name_raw.rsplit("-", 1)[0]
                 perm_scope = Scope.MATCH
             perm.perm_name = str(PermissionSet(perm_name_raw, scope=perm_scope))
+        for perm in perm_rm:
+            session.delete(perm)
+
     session.commit()
 
 

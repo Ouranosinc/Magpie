@@ -66,13 +66,13 @@ class PermissionSet(object):
 
     The :class:`Permission` is the *name* of the applicable permission on the :class:`magpie.models.Resource`.
     The :class:`Scope` defines how the :class:`Permission` should impact the resolution of the perceived
-    :term:`Effective Permission over a :class:`magpie.models.Resource` tree hierarchy.
+    :term:`Effective Permissions` over a :class:`magpie.models.Resource` tree hierarchy.
     The :class:`Access` defines how the :class:`Permission` access should be interpreted (granted or denied).
 
     Optionally, a :class:`PermissionType` can be provided to specifically indicate which kind of permission this set
     represents. This type is only for informative purposes, and is not saved to database nor displayed by the explicit
-    string representation. It is returned within JSON representation and can be employed by :term:`Effective Permission`
-    resolution to be more verbose about returned results.
+    string representation. It is returned within JSON representation and can be employed by
+    :term:`Effective Permissions` resolution to be more verbose about returned results.
 
     On missing :class:`Access` or :class:`Scope` specifications, they default to :attr:`Access.ALLOW` and
     :attr:`Scope.RECURSIVE` to handle backward compatible naming convention of plain ``permission_name``.
@@ -123,7 +123,7 @@ class PermissionSet(object):
 
         Using this sorting methodology, similar permissions by name are grouped together first, and permissions of same
         name with modifiers are then ordered from ``allow-recursive`` to ``deny-match``, the first having less priority
-        in the :term:`Effective Permission` resolution than the later. Respecting :attr:`Access.DENY` is more important
+        in the :term:`Effective Permissions` resolution than the later. Respecting :attr:`Access.DENY` is more important
         than :attr:`Access.ALLOW` (to protect the :term:`Resource`), and :attr:`Scope.MATCH` is *closer* to the actual
         :term:`Resource` than :attr:`Scope.RECURSIVE` permission received from a *farther* parent in the hierarchy.
         """
@@ -156,6 +156,16 @@ class PermissionSet(object):
         perm_repr_template = "PermissionSet(name={}, access={}, scope={}, type={})"
         perm_type = self.type.value if self.type is not None else None,
         return perm_repr_template.format(self.name.value, self.access.value, self.scope.value, perm_type)
+
+    def like(self, other):
+        """
+        Evaluates if one permission is *similar* to another permission definition regardless of *modifiers*.
+
+        This is different than ``==`` operator which will evaluate *exactly* equal permission definitions.
+        """
+        if not isinstance(other, PermissionSet):
+            other = PermissionSet(other)
+        return self.name == other.name
 
     def json(self):
         # type: () -> PermissionObject

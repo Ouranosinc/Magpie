@@ -17,6 +17,7 @@ from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.constants import get_constant
+from magpie.permissions import PermissionSet
 from magpie.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
@@ -25,7 +26,6 @@ if TYPE_CHECKING:
 
     from pyramid.request import Request
 
-    from magpie.permissions import PermissionSet
     from magpie.typedefs import AnyAccessPrincipalType, ServiceOrResourceType, Str
 
 LOGGER = get_logger(__name__)

@@ -284,8 +284,8 @@ TAG_DESCRIPTIONS = {
         "permitted additional access if the logged session user corresponds to the path variable user.",
     LoggedUserTag:
         "Utility paths that correspond to their {} counterparts, but that automatically ".format(UserAPI.path) +
-        "determine the applicable user from the logged session. If there is no active session, the public anonymous "
-        "access is employed.\n\nNOTE: Value '{}' depends on Magpie configuration.".format(_LOGGED_USER_VALUE),
+        "determine the applicable user from the logged session. If there is no active session, the public "
+        "unauthenticated access is employed.",
     GroupsTag:
         "Groups management and control of their applicable users, services, resources and permissions.\n\n"
         "Administrator-level permissions are required to access most paths. ",
@@ -1716,6 +1716,26 @@ class UserResources_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
+class UserResourcePermissions_Check_ParamResponseBodySchema(colander.MappingSchema):
+    name = colander.SchemaNode(colander.String(), description="Specified parameter.", example="permission_name")
+    value = colander.SchemaNode(colander.String(), description="Specified parameter value.")
+
+
+class UserResourcePermissions_Check_ErrorResponseBodySchema(ErrorResponseBodySchema):
+    user_name = colander.SchemaNode(colander.String(), description="Specified user name.")
+    resource_id = colander.SchemaNode(colander.String(), description="Specified service/resource id.")
+    permission_name = colander.SchemaNode(colander.String(), description="Specified permission name.")
+    permission = PermissionObjectTypeSchema(description="Specific permission extended definition.")
+    param = UserResourcePermissions_Check_ParamResponseBodySchema(missing=colander.drop)
+
+
+class UserResourcePermissions_Check_ErrorResponseSchema(BaseResponseSchemaAPI):
+    description = "Lookup of similar permission on service/resource for user refused by db."
+    body = UserResourcePermissions_Check_ErrorResponseBodySchema(
+        code=HTTPInternalServerError.code, description=description
+    )
+
+
 class UserResourcePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
     effective = QueryEffectivePermissions
@@ -1792,6 +1812,9 @@ class UserResourcePermissions_POST_RequestSchema(BaseRequestSchemaAPI):
     user_name = UserNameParameter
 
 
+UserResourcePermissions_PUT_RequestSchema = UserResourcePermissions_POST_RequestSchema
+
+
 class UserResourcePermissions_POST_ResponseBodySchema(BaseResponseBodySchema):
     resource_id = colander.SchemaNode(
         colander.Integer(),
@@ -1817,36 +1840,23 @@ class UserResourcePermissions_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
     body = UserResourcePermissions_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
 
 
-class UserResourcePermissions_POST_ParamResponseBodySchema(colander.MappingSchema):
-    name = colander.SchemaNode(colander.String(), description="Specified parameter.", example="permission_name")
-    value = colander.SchemaNode(colander.String(), description="Specified parameter value.")
-
-
-class UserResourcePermissions_POST_ErrorResponseBodySchema(ErrorResponseBodySchema):
-    user_name = colander.SchemaNode(colander.String(), description="Specified user name.")
-    resource_id = colander.SchemaNode(colander.String(), description="Specified resource id.")
-    permission_name = colander.SchemaNode(colander.String(), description="Specified permission name.")
-    permission = PermissionObjectTypeSchema(description="Specific permission definition.")
-    param = UserResourcePermissions_POST_ParamResponseBodySchema(missing=colander.drop)
-
-
 class UserResourcePermissions_POST_BadRequestResponseSchema(BaseResponseSchemaAPI):
     description = "Permission not allowed for specified 'resource_type'."
-    body = UserResourcePermissions_POST_ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+    body = UserResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class UserResourcePermissions_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     description = "Creation of permission on resource for user refused by db."
-    body = UserResourcePermissions_POST_ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = UserResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class UserResourcePermissions_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
-    description = "Permission already exist on resource for user."
-    body = UserResourcePermissions_POST_ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+    description = "Similar permission already exist on resource for user."
+    body = UserResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
 # using same definitions
-UserResourcePermissionName_DELETE_ErrorResponseBodySchema = UserResourcePermissions_POST_ErrorResponseBodySchema
+UserResourcePermissionName_DELETE_ErrorResponseBodySchema = UserResourcePermissions_Check_ErrorResponseBodySchema
 UserResourcePermissionName_DELETE_BadRequestResponseSchema = UserResourcePermissions_POST_BadRequestResponseSchema
 
 
@@ -1917,6 +1927,9 @@ class UserServicePermissions_POST_RequestSchema(BaseRequestSchemaAPI):
     body = UserServicePermissions_POST_RequestBodySchema()
     user_name = UserNameParameter
     service_name = ServiceNameParameter
+
+
+UserServicePermissions_PUT_RequestSchema = UserServicePermissions_POST_RequestSchema
 
 
 class UserServicePermissions_DELETE_RequestBodySchema(colander.MappingSchema):
@@ -2223,36 +2236,47 @@ class GroupResourcePermissions_POST_RequestSchema(BaseRequestSchemaAPI):
     resource_id = ResourceIdParameter
 
 
-class GroupResourcePermissions_POST_ResponseBodySchema(BaseResponseBodySchema):
+class GroupResourcePermissions_Check_ResponseBodySchema(BaseResponseBodySchema):
     permission_name = colander.SchemaNode(colander.String(), description="Name of the permission requested.")
     permission = PermissionObjectTypeSchema(description="Detailed permission definition.")
     resource = ResourceBodySchema()
     group = GroupInfoBodySchema()
 
 
+class GroupResourcePermissions_Check_ErrorResponseBodySchema(ErrorResponseBodySchema):
+    pass
+
+
+class GroupResourcePermissions_Check_ErrorResponseSchema(BaseResponseSchemaAPI):
+    description = "Lookup of similar permission on service/resource for group refused by db."
+    body = GroupResourcePermissions_Check_ErrorResponseBodySchema(
+        code=HTTPInternalServerError.code, description=description
+    )
+
+
 class GroupResourcePermissions_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
     description = "Create group resource permission successful."
-    body = GroupResourcePermissions_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
+    body = GroupResourcePermissions_Check_ResponseBodySchema(code=HTTPCreated.code, description=description)
 
 
 class GroupResourcePermissions_POST_ForbiddenAddResponseSchema(BaseResponseSchemaAPI):
     description = "Add group resource permission refused by db."
-    body = GroupResourcePermissions_POST_ResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = GroupResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class GroupResourcePermissions_POST_ForbiddenCreateResponseSchema(BaseResponseSchemaAPI):
     description = "Create group resource permission failed."
-    body = GroupResourcePermissions_POST_ResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = GroupResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class GroupResourcePermissions_POST_ForbiddenGetResponseSchema(BaseResponseSchemaAPI):
     description = "Get group resource permission failed."
-    body = GroupResourcePermissions_POST_ResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = GroupResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class GroupResourcePermissions_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
-    description = "Group resource permission already exists."
-    body = GroupResourcePermissions_POST_ResponseBodySchema(code=HTTPConflict.code, description=description)
+    description = "Similar permission already exists on resource for group."
+    body = GroupResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
 class GroupResourcePermissionName_DELETE_RequestSchema(BaseRequestSchemaAPI):
@@ -2926,6 +2950,20 @@ UserResourcePermissions_POST_responses = {
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
+# same method handles operations/results/messages, but conflict will not occur
+UserResourcePermissions_PUT_CreatedResponseSchema = UserResourcePermissions_POST_CreatedResponseSchema
+UserResourcePermissions_PUT_BadRequestResponseSchema = UserResourcePermissions_POST_BadRequestResponseSchema
+UserResourcePermissions_PUT_ForbiddenResponseSchema = UserResourcePermissions_POST_ForbiddenResponseSchema
+UserResourcePermissions_PUT_responses = {
+    "201": UserResourcePermissions_PUT_CreatedResponseSchema(),
+    "400": UserResourcePermissions_PUT_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": UserResourcePermissions_PUT_ForbiddenResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
+    # 409: not applicable
+    "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
 UserResourcePermissions_DELETE_responses = {
     "200": UserResourcePermissions_DELETE_OkResponseSchema(),
     "400": UserResourcePermissions_DELETE_BadRequestResponseSchema(),
@@ -2972,6 +3010,7 @@ UserServiceResources_GET_responses = {
     "500": InternalServerErrorResponseSchema(),
 }
 UserServicePermissions_POST_responses = UserResourcePermissions_POST_responses
+UserServicePermissions_PUT_responses = UserResourcePermissions_PUT_responses
 UserServicePermissions_DELETE_responses = UserResourcePermissions_DELETE_responses
 UserServicePermissionName_DELETE_responses = UserResourcePermissionName_DELETE_responses
 LoggedUser_GET_responses = {
@@ -3053,6 +3092,16 @@ LoggedUserResourcePermissions_POST_responses = {
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
+# same method handles operations/results/messages, but conflict will not occur
+LoggedUserResourcePermissions_PUT_responses = {
+    "201": UserResourcePermissions_PUT_CreatedResponseSchema(),
+    "400": UserResourcePermissions_PUT_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
+    # 409: not applicable
+    "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
 LoggedUserResourcePermissions_DELETE_responses = {
     "200": UserResourcePermissions_DELETE_OkResponseSchema(),
     "400": UserResourcePermissions_DELETE_BadRequestResponseSchema(),
@@ -3096,6 +3145,7 @@ LoggedUserServiceResources_GET_responses = {
     "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserServicePermissions_POST_responses = LoggedUserResourcePermissions_POST_responses
+LoggedUserServicePermissions_PUT_responses = LoggedUserResourcePermissions_PUT_responses
 LoggedUserServicePermissions_DELETE_responses = LoggedUserResourcePermissions_DELETE_responses
 LoggedUserServicePermissionName_DELETE_responses = LoggedUserResourcePermissionName_DELETE_responses
 Groups_GET_responses = {

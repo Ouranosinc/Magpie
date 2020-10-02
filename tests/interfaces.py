@@ -15,7 +15,7 @@ from six.moves.urllib.parse import urlparse
 from magpie.api import schemas as s
 from magpie.constants import MAGPIE_ROOT, get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Route
-from magpie.permissions import Permission
+from magpie.permissions import Access, Permission, PermissionSet, Scope
 from magpie.register import pseudo_random_string
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceTHREDDS
 from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML, get_twitcher_protected_service_url
@@ -1451,6 +1451,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         self.check_GetUserResourcesPermissions(get_constant("MAGPIE_LOGGED_USER"), res_id)
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_PERMISSIONS
     def test_GetLoggedUserResourcesPermissions_Queries(self):
         """
         Validate returned logged user permissions with different query parameter modifiers.
@@ -1541,12 +1544,16 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(body["permission_names"], [perm_recur])
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_PERMISSIONS
     def test_GetUserResourcesPermissions(self):
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         self.check_GetUserResourcesPermissions(self.usr, body["resource"]["resource_id"])
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_PERMISSIONS
     def test_PostUserResourcesPermissions_Created(self):
         resource_name = "post_res_perm_created"
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
@@ -1569,6 +1576,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_PERMISSIONS
     def test_PostUserResourcesPermissions_Conflict(self):
         resource_name = "post_res_perm_conflict"
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
@@ -1594,6 +1603,38 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         # cleanup (delete sub resource should remove child permission)
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_PutUserResourcePermissions(self):
+        utils.warn_version(self, "update user permissions", "2.1", skip=True)
+
+        resource_name = "test-user-resource-update-no-conflict"
+        utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
+        body = utils.TestSetup.create_TestServiceResource(self, override_resource_name=resource_name)
+        test_res_id = body["resource"]["resource_id"]
+
+        path = "/users/{usr}/resources/{res}/permissions".format(res=test_res_id, usr=self.usr)
+        data = {
+            "permission": {
+                "name": self.test_resource_perm_name,
+                "access": Access.ALLOW.value,
+                "scope": Scope.MATCH.value,
+            }
+        }
+        utils.test_request(self, "POST", path, data=data, headers=self.json_headers, cookies=self.cookies)
+        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_res_id)
+        perm = PermissionSet(data["permission"])
+        utils.check_val_is_in(str(perm), body["permission_names"],
+                              msg="Can't test for conflicting permissions if it doesn't exist first.")
+
+        data["permission"]["access"] = Access.DENY.value
+        data["permission"]["scope"] = Scope.RECURSIVE.value
+        resp = utils.test_request(self, "PUT", path, data=data, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 201, expected_method="PUT")
+        perm = PermissionSet(data["permission"])
+        utils.check_val_is_in(str(perm), body["permission_names"], msg="Permission should have been modified.")
 
     @runner.MAGPIE_TEST_USERS
     def test_GetLoggedUserGroups(self):

@@ -789,15 +789,19 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
         if _usr_name:
             usr = UserService.by_user_name(_usr_name, db_session=cookies_or_session)
             if create_perm:
-                return ut.create_user_resource_permission_response(usr, res, perm, db_session=cookies_or_session)
+                return ut.create_user_resource_permission_response(usr, res, perm, overwrite=True,
+                                                                   db_session=cookies_or_session)
             else:
-                return ut.delete_user_resource_permission_response(usr, res, perm, db_session=cookies_or_session)
+                return ut.delete_user_resource_permission_response(usr, res, perm,
+                                                                   db_session=cookies_or_session)
         if _grp_name:
             grp = GroupService.by_group_name(_grp_name, db_session=cookies_or_session)
             if create_perm:
-                return gt.create_group_resource_permission_response(grp, res, perm, db_session=cookies_or_session)
+                return gt.create_group_resource_permission_response(grp, res, perm, overwrite=True,
+                                                                    db_session=cookies_or_session)
             else:
-                return gt.delete_group_resource_permission_response(grp, res, perm, db_session=cookies_or_session)
+                return gt.delete_group_resource_permission_response(grp, res, perm,
+                                                                    db_session=cookies_or_session)
 
     def _apply_profile(_usr_name=None, _grp_name=None):
         """

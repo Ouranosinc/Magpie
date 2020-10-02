@@ -108,26 +108,65 @@ def create_group(group_name, description, discoverable, db_session):
                          content={"group": format_group(new_group, basic_info=True)})
 
 
-def create_group_resource_permission_response(group, resource, permission, db_session):
-    # type: (models.Group, ServiceOrResourceType, PermissionSet, Session) -> HTTPException
+def get_similar_group_resource_permission(group, resource, permission, db_session):
+    # type: (Group, ServiceOrResourceType, PermissionSet, Session) -> Optional[PermissionSet]
+    """
+    Obtains the group service/resource permission that corresponds to the provided one.
+
+    Lookup considers only *similar* applied permission such that other permission modifiers don't affect comparison.
+    """
+    permission.type = PermissionType.APPLIED
+    res_id = resource.resource_id
+    err_content = {"group": format_group(group, basic_info=True),
+                   "resource": format_resource(resource, basic_info=True),
+                   "permission_name": str(permission), "permission": permission.json()}
+
+    def is_similar_permission():
+        perms_dict = get_group_resources_permissions_dict(group, resource_ids=[res_id], db_session=db_session)
+        perms_list = [PermissionSet(perms_dict[res]) for res in perms_dict]
+        return [perm for perm in perms_list if perm.like(permission)]
+
+    similar_perms = ax.evaluate_call(lambda: is_similar_permission(),
+                                     http_error=HTTPForbidden, content=err_content,
+                                     msg_on_fail=s.GroupResourcePermissions_Check_ErrorResponseSchema.description)
+    if not similar_perms:
+        return None
+    found_perm = similar_perms[0]
+    found_perm.type = PermissionType.APPLIED
+    return found_perm
+
+
+def create_group_resource_permission_response(group, resource, permission, db_session, overwrite=False):
+    # type: (models.Group, ServiceOrResourceType, PermissionSet, Session, bool) -> HTTPException
     """
     Creates a permission on a group/resource combination if it is permitted and not conflicting.
 
+    :param group: group for which to create/update the permission.
+    :param resource: service or resource for which to create the permission.
+    :param permission: permission with modifiers to be applied.
+    :param db_session: database connection.
+    :param overwrite:
+        If the corresponding `(group, resource, permission[name])` exists, there is a conflict.
+        Conflict is considered only by permission-name regardless of other modifiers.
+        If overwrite is ``False``, the conflict will be raised and not be applied.
+        If overwrite is ``True``, the permission modifiers will be replaced by the new ones, or created if missing.
     :returns: valid HTTP response on successful operations.
     :raises HTTPException: error HTTP response of corresponding situation.
     """
     resource_id = resource.resource_id
     check_valid_service_or_resource_permission(permission.name, resource, db_session)
+    exist_perm = get_similar_group_resource_permission(group, resource, permission, db_session=db_session)
     perm_content = {"permission_name": str(permission), "permission": permission.json(),
                     "resource": format_resource(resource, basic_info=True),
                     "group": format_group(group, basic_info=True)}
-    existing_perm = ax.evaluate_call(
-        lambda: GroupResourcePermissionService.get(group.id, resource_id, str(permission), db_session=db_session),
-        fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
-        msg_on_fail=s.GroupResourcePermissions_POST_ForbiddenGetResponseSchema.description, content=perm_content
-    )
-    ax.verify_param(existing_perm, is_none=True, http_error=HTTPConflict, content=perm_content,
-                    msg_on_fail=s.GroupResourcePermissions_POST_ConflictResponseSchema.description)
+    if overwrite and exist_perm:
+        if exist_perm:
+            # skip similar permission lookup since we already did it
+            delete_group_resource_permission_response(group, resource, exist_perm, db_session=db_session, similar=False)
+    else:
+        ax.verify_param(exist_perm, is_none=True, http_error=HTTPConflict, content=perm_content,
+                        msg_on_fail=s.GroupResourcePermissions_POST_ConflictResponseSchema.description)
+
     new_perm = ax.evaluate_call(
         lambda: models.GroupResourcePermission(resource_id=resource_id, group_id=group.id, perm_name=str(permission)),
         fallback=lambda: db_session.rollback(), http_error=HTTPForbidden, content=perm_content,
@@ -191,24 +230,30 @@ def get_group_resource_permissions_response(group, resource, db_session):
                          content=group_permissions)
 
 
-def delete_group_resource_permission_response(group, resource, permission, db_session):
-    # type: (models.Group, ServiceOrResourceType, PermissionSet, Session) -> HTTPException
+def delete_group_resource_permission_response(group, resource, permission, db_session, similar=True):
+    # type: (models.Group, ServiceOrResourceType, PermissionSet, Session, bool) -> HTTPException
     """
     Get validated response on deleted group resource permission.
 
+    :param group: group for which to delete the permission.
+    :param resource: service or resource for which to delete the permission.
+    :param permission: permission with modifiers to be deleted.
+    :param db_session: database connection.
+    :param similar:
+        Allow matching provided permission against any similar database permission. Otherwise, must match exactly.
     :returns: valid HTTP response on successful operations.
     :raises HTTPException: error HTTP response of corresponding situation.
     """
-    resource_id = resource.resource_id
     check_valid_service_or_resource_permission(permission.name, resource, db_session)
+    if similar:
+        del_perm = get_similar_group_resource_permission(group, resource, permission, db_session=db_session)
+    else:
+        res_id = resource.resource_id
+        del_perm = GroupResourcePermissionService.get(group.id, res_id, str(permission), db_session=db_session)
+    permission.type = PermissionType.APPLIED
     perm_content = {"permission_name": str(permission), "permission": permission.json(),
                     "resource": format_resource(resource, basic_info=True),
                     "group": format_group(group, basic_info=True)}
-    del_perm = ax.evaluate_call(
-        lambda: GroupResourcePermissionService.get(group.id, resource_id, str(permission), db_session=db_session),
-        fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
-        msg_on_fail=s.GroupServicePermission_DELETE_ForbiddenGetResponseSchema.description, content=perm_content
-    )
     ax.verify_param(del_perm, not_none=True, http_error=HTTPNotFound, content=perm_content,
                     msg_on_fail=s.GroupServicePermission_DELETE_NotFoundResponseSchema.description)
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),

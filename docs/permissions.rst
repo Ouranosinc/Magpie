@@ -16,8 +16,9 @@ of observed results.
 
 .. versionchanged:: 2.1
     Following introduced :term:`Permission` representations as JSON objects with this version, an new
-    :class:`magpie.permissions.PermissionType` was added to make following types more explicit. The responses will
-    include a field that indicates precisely the type of :term:`Permission` returned, for each specific item.
+    :class:`magpie.permissions.PermissionType` enum was added to make following types more explicit. Responses from
+    the API will include a ``type`` field that indicates precisely the type of :term:`Permission` returned, for each
+    specific item presented below.
 
 More specifically, following distinctions can be observed between different kind of :term:`Permission` used by `Magpie`:
 
@@ -357,3 +358,91 @@ This query can be extremely useful to quickly answer *"does the user have any pe
 without needing to manually execute multiple successive lookup requests with all combinations of :term:`Resource`
 identifiers in the hierarchy.
 
+
+Permissions Definition and Modifiers
+--------------------------------------
+
+.. versionadded:: 2.1
+    Previous versions of `Magpie` employed literal ``[permission_name]`` and ``[permission_name]-match`` to
+    respectively represent recursive and match ``scope`` over the hierarchy of :term:`Resource`.
+    All ``-match`` suffixed :term:`Permission` names are now deprecated in favor of modifiers presented in this section.
+    Furthermore, the `Deny` concept is introduced via ``access`` field, which did not exist at all in previous versions.
+
+When applying a :term:`Permission` on a :term:`Service` or :term:`Resource` for a :term:`User` or :term:`Group`, there
+are 3 components considered to interpret its definition:
+
+1. ``name``
+2. ``access``
+3. ``scope``
+
+These concepts are implemented using :class:`magpie.permissions.PermissionSet`.
+
+The ``name`` represents the actual operation that is being attributed. For example, ``read`` and ``write`` would be
+different ``name`` that could be applied on a :term:`Resource` that represents a file. All allowed ``name`` values
+are defined by :class:`magpie.permissions.Permission` enum, but the subset of :term:`Allowed Permissions` are controlled
+per specific :term:`Service` and children :term:`Resource` implementations.
+
+The ``access`` component is defined by :class:`magpie.permissions.Access` enum. This specifies whether the
+:term:`Permission` should be *allowed* or *denied*. More specifically, it provides flexibility to administrators to
+correspondingly grant or remove the :term:`Permission` for previously denied or allowed :term:`User` or :term:`Group`
+when resolving the :term:`Resource` tree hierarchy. This helps solving special use cases where different inheritance
+conditions must be applied at different hierarchy levels. By default, if no ``access`` indication is provided when
+creating a new :term:`Permission`, `Allow` is employed since `Magpie` resolves all ``access`` to a :term:`Resource`
+as `Deny` unless explicitly granted. In other words, `Magpie` assumes that administrators adding new :term:`Permission`
+entries indent to grant :term:`Service` or :term:`Resource` access for the targeted :term:`User` or :term:`Group`.
+Any :term:`Permission` specifically created using `Deny` should be involved only to revert a previously resolved
+`Allow`, as they are otherwise redundant to default :term:`Effective Permissions` resolution.
+
+The ``scope`` concept is defined by :class:`magpie.permissions.Scope` enum. This tells `Magpie` whether the
+:term:`Applied Permission` should impact only the immediate :term:`Resource` (i.e.: when ``match``) or should instead
+be applied recursively for it and all its children. By applying a recursive :term:`Permission` on a higher-level
+:term:`Resource`, this modifier avoids having to manually set the same :term:`Permission` on every sub-:term:`Resource`
+when access as to be provided over a large hierarchy. Also, when combined with the ``access`` component, the ``scope``
+modifier can provide advanced control over granted or denied access.
+
+Below are examples of :term:`Permission` definitions that can help better understand the different concepts.
+The definitions employ the ``[name]-[access]-[scope]`` convention to illustrate the applied :term:`Permission`.
+
+.. code-block::
+
+    ServiceA                (UserA, read-allow-recursive)
+        Resource1           (UserA, write-allow-match)
+            Resource2       (UserA, read-deny-match)
+                Resource3
+    ServiceB
+        Resource4           (UserA, write-allow-match)
+            Resource5
+                Resource6   (UserA, read-allow-match) (UserA, write-allow-match)
+
+
+In this example, ``UserA`` is granted ``read`` access to ``ServiceA``, ``Resource1`` and ``Resource3`` because of the
+``recursive`` scope applied on ``ServiceA``. Access ``deny`` is explicitly applied on ``Resource2`` with ``match``
+scope, meaning that only that resource is specifically blocked by overriding (or reverting) the granted higher level
+``read-allow-recursive``. If ``recursive`` was instead used on ``Resource2``, ``Resource3`` would also have been
+blocked. The ``write`` permission is also granted to ``UserA`` for ``Resource2``, but no other item in the ``ServiceA``
+branch can be *written* by ``UserA`` since ``match`` scope was used and ``deny`` is the default resolution method.
+Similarly, only ``Resource4`` and ``Resource6`` will ``allow`` the ``write`` permission under branch ``ServiceB``.
+Note that different permission ``names`` can be applied simultaneously, such as for the case of ``Resource6``.
+This will effectively grant ``UserA`` both of these permissions on ``Resource6``. Other ``access`` and ``scope``
+concepts can only have one occurrence over same ``name`` combination on a given hierarchy item, as they would define
+conflicting interpretation of :term:`Effective Permissions`.
+
+The above example presents only the resolution of :term:`User` permissions. When actually resolving
+:term:`Effective Permissions`, all :term:`Inherited Permissions` from its :term:`Group` memberships are also considered
+in the same fashion. The :term:`Group` permissions complement definitions specifically applied to a :term:`User`.
+In case of conflicting situations, such as when ``allow`` is applied via :term:`Direct Permissions`
+and ``deny`` is defined via :term:`Inherited Permissions` for same :term:`Resource`, :term:`Direct Permissions` have
+priority over any :term:`Group` :term:`Permission`. Also, ``deny`` access is prioritized over ``allow`` to preserve
+the default interpretation of protected access control defined by `Magpie`. When ``match`` and ``recursive`` scopes
+cause ambiguous resolution, the ``match`` :term:`Permission` is prioritized over inherited access via parent ``scope``.
+
+As a general of thumb, all :term:`Permission` are resolved such that more restrictive access applied *closer* to
+the actual :term:`Resource` for the targeted :term:`User` will have priority, both in terms of inheritance by tree
+hierarchy and by :term:`Group` memberships.
+
+Permissions Representations
+--------------------------------------
+
+.. todo::
+    implicit vs explicit
+    string vs JSON

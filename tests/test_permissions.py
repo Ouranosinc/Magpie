@@ -7,6 +7,7 @@ from tests import runner, utils
 
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_UTILS
+@runner.MAGPIE_TEST_PERMISSIONS
 class TestPermissions(unittest.TestCase):
     def test_format_permissions_applied(self):
         """

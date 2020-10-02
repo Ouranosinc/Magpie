@@ -281,7 +281,22 @@ def create_user_resource_permissions_view(request):
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request)
     permission = ar.get_permission_multiformat_body_checked(request, resource)
-    return uu.create_user_resource_permission_response(user, resource, permission, request.db)
+    return uu.create_user_resource_permission_response(user, resource, permission, request.db, overwrite=False)
+
+
+@s.UserResourcePermissionsAPI.put(schema=s.UserResourcePermissions_PUT_RequestSchema(), tags=[s.UsersTag],
+                                  response_schemas=s.UserResourcePermissions_PUT_responses)
+@s.LoggedUserResourcePermissionsAPI.put(schema=s.UserResourcePermissions_PUT_RequestSchema(), tags=[s.LoggedUserTag],
+                                        response_schemas=s.LoggedUserResourcePermissions_PUT_responses)
+@view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="PUT")
+def replace_user_resource_permissions_view(request):
+    """
+    Create or modify an existing permission on a resource for a user. Can be used to adjust permission modifiers.
+    """
+    user = ar.get_user_matchdict_checked_or_logged(request)
+    resource = ar.get_resource_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, resource)
+    return uu.create_user_resource_permission_response(user, resource, permission, request.db, overwrite=True)
 
 
 @s.UserResourcePermissionsAPI.delete(schema=s.UserResourcePermissions_DELETE_RequestSchema(), tags=[s.UsersTag],
@@ -373,7 +388,22 @@ def create_user_service_permissions_view(request):
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
     permission = ar.get_permission_multiformat_body_checked(request, service)
-    return uu.create_user_resource_permission_response(user, service, permission, request.db)
+    return uu.create_user_resource_permission_response(user, service, permission, request.db, overwrite=False)
+
+
+@s.UserServicePermissionsAPI.put(schema=s.UserServicePermissions_PUT_RequestSchema, tags=[s.UsersTag],
+                                 response_schemas=s.UserServicePermissions_PUT_responses)
+@s.LoggedUserServicePermissionsAPI.put(schema=s.UserServicePermissions_PUT_RequestSchema, tags=[s.LoggedUserTag],
+                                       response_schemas=s.LoggedUserServicePermissions_PUT_responses)
+@view_config(route_name=s.UserServicePermissionsAPI.name, request_method="PUT")
+def replace_user_service_permissions_view(request):
+    """
+    Create or modify an existing permission on a service for a user. Can be used to adjust permission modifiers.
+    """
+    user = ar.get_user_matchdict_checked_or_logged(request)
+    service = ar.get_service_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, service)
+    return uu.create_user_resource_permission_response(user, service, permission, request.db, overwrite=True)
 
 
 @s.UserServicePermissionsAPI.delete(schema=s.UserServicePermissions_DELETE_RequestSchema, tags=[s.UsersTag],
