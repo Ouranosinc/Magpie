@@ -106,8 +106,8 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                                           raise_missing=False, raise_not_set=False)
         cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-admin-auth_ui-group-local",
                                            raise_missing=False, raise_not_set=False)
-        cls.test_service_type = utils.get_service_types_for_version(cls.version)[0]
-        cls.test_service_name = utils.TestSetup.get_AnyServiceOfTestServiceType(cls)["service_name"]
+        cls.test_service_type = ServiceAPI.service_type
+        cls.test_service_name = "magpie-unittest-ui-admin-local-service"
 
         cls.test_service_parent_resource_type = ServiceAPI.service_type
         cls.test_service_parent_resource_name = "magpie-unittest-ui-tree-parent"
@@ -227,5 +227,5 @@ class TestCase_MagpieUI_AdminAuth_Remote(ti.Interface_MagpieUI_AdminAuth, unitte
                                           raise_missing=False, raise_not_set=False)
         cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-admin-auth_ui-group-remote",
                                            raise_missing=False, raise_not_set=False)
-        cls.test_service_type = utils.get_service_types_for_version(cls.version)[0]
-        cls.test_service_name = utils.TestSetup.get_AnyServiceOfTestServiceType(cls)["service_name"]
+        cls.test_service_type = ServiceAPI.service_type
+        cls.test_service_name = "magpie-unittest-ui-admin-remote-service"

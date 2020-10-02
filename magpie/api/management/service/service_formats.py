@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from magpie.typedefs import JSON, ResourcePermissionMap
 
 
-def format_service(service, permissions=None, permission_type=PermissionType.ALLOWED,
+def format_service(service, permissions=None, permission_type=None,
                    show_private_url=False, show_resources_allowed=False):
     # type: (Service, Optional[List[PermissionSet]], Optional[PermissionType], bool, bool) -> JSON
     """
@@ -63,6 +63,7 @@ def format_service_resources(service,                       # type: Service
                              db_session,                    # type: Session
                              service_perms=None,            # type: Optional[List[PermissionSet]]
                              resources_perms_dict=None,     # type: Optional[ResourcePermissionMap]
+                             permission_type=None,          # type: Optional[PermissionType]
                              show_all_children=False,       # type: bool
                              show_private_url=True,         # type: bool
                              ):                             # type: (...) -> JSON
@@ -91,15 +92,16 @@ def format_service_resources(service,                       # type: Service
             tree, _ = crop_tree_with_permission(tree, filter_res_ids)
 
         svc_perms = SERVICE_TYPE_DICT[svc.type].permissions if svc_perms is None else svc_perms
-        svc_res = format_service(svc, svc_perms, show_private_url=show_private_url)
-        svc_res["resources"] = format_resource_tree(tree, resources_perms_dict=res_perms, db_session=db)
+        svc_res = format_service(svc, svc_perms, permission_type, show_private_url=show_private_url)
+        svc_res["resources"] = format_resource_tree(tree, resources_perms_dict=res_perms,
+                                                    permission_type=permission_type, db_session=db)
         return svc_res
 
     return evaluate_call(
         lambda: fmt_svc_res(service, db_session, service_perms, resources_perms_dict, show_all_children),
         fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
         msg_on_fail="Failed to format service resources tree",
-        content=format_service(service, service_perms, show_private_url=show_private_url)
+        content=format_service(service, service_perms, permission_type, show_private_url=show_private_url)
     )
 
 

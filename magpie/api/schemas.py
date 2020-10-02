@@ -1011,12 +1011,12 @@ class ServiceType_access_SchemaNode(colander.MappingSchema):
 
 class ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
     name = "geoserver-api"
-    title = "Services typed for GeoServer API"
+    title = "Services typed for GeoServer-API"
     geoserver_api = ServiceBodySchema(missing=colander.drop, name="geoserver-api")
 
 
 class ServiceType_geoserverwms_SchemaNode(colander.MappingSchema):
-    title = "Services typed for GeoServer WMS"
+    title = "Services typed for GeoServer-WMS"
     geoserverwms = ServiceBodySchema(missing=colander.drop)
 
 
@@ -1037,7 +1037,7 @@ class ServiceType_thredds_SchemaNode(colander.MappingSchema):
 
 
 class ServiceType_wfs_SchemaNode(colander.MappingSchema):
-    title = "Services typed for GeoServer WFS"
+    title = "Services typed for WFS"
     geoserver = ServiceBodySchema(missing=colander.drop)
 
 

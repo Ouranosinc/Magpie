@@ -588,7 +588,12 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         data = {"user_name": self.usr}  # missing required password
         resp = utils.test_request(self, "POST", "/signin", data=data, expect_errors=True,
                                   headers=self.json_headers, cookies={})
-        code = 400 if LooseVersion(self.version) >= "2.0.0" else 401
+        if LooseVersion(self.version) >= LooseVersion("2.1"):
+            code = 422
+        elif LooseVersion(self.version) >= LooseVersion("2.0"):
+            code = 400
+        else:
+            code = 401
         utils.check_response_basic_info(resp, expected_method="POST", expected_code=code)
 
     @runner.MAGPIE_TEST_LOGIN
@@ -881,6 +886,12 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         usr_svc_perm = info["permission_name"]
         self.login_test_user()
 
+        if LooseVersion(self.version) >= LooseVersion("2.1"):
+            perm_set = PermissionSet(usr_svc_perm)
+            expected_usr_svc_perms = [perm_set.implicit_permission, perm_set.explicit_permission]
+        else:
+            expected_usr_svc_perms = [usr_svc_perm]
+
         for user_path in [self.test_user_name, get_constant("MAGPIE_LOGGED_USER")]:
             path = "/users/{}/services".format(user_path)
             resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
@@ -893,7 +904,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
             utils.check_val_equal(len(body["services"][self.test_service_type]), 1,
                                   msg="Only unique specific service with immediate user permission should be listed.")
             service = body["services"][self.test_service_type][self.test_service_name]  # type: JSON
-            utils.check_all_equal(service["permission_names"], [usr_svc_perm],
+            utils.check_all_equal(service["permission_names"], expected_usr_svc_perms,
                                   msg="Only single immediate permission applied on service for user should be listed.")
             utils.check_val_not_in("resources", service)
 
@@ -938,6 +949,15 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info)
         self.login_test_user()
 
+        if LooseVersion(self.version) >= LooseVersion("2.1"):
+            child_perm = PermissionSet(child_perm)
+            expect_child_perms = [child_perm.implicit_permission, child_perm.explicit_permission]
+            leaf_perm = PermissionSet(leaf_perm)
+            expect_leaf_perms = [leaf_perm.implicit_permission, leaf_perm.explicit_permission]
+        else:
+            expect_child_perms = [child_perm]
+            expect_leaf_perms = [leaf_perm]
+
         svc_types = utils.get_service_types_for_version(self.version)
         for user_path in [self.test_user_name, get_constant("MAGPIE_LOGGED_USER")]:
             path = "/users/{}/resources".format(user_path)
@@ -952,11 +972,11 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
             utils.check_val_is_in(str(child_res_id), service["resources"])  # first level resources
             child_res = service["resources"][str(child_res_id)]  # type: JSON
             utils.check_val_equal(len(child_res["permission_names"]), 1)
-            utils.check_all_equal(child_res["permission_names"], [child_perm],
+            utils.check_all_equal(child_res["permission_names"], expect_child_perms,
                                   msg="Only single direct user permission applied on resource should be listed.")
             utils.check_val_is_in(str(leaf_res_id), child_res["children"])  # sub-level resources
             leaf_res = child_res["children"][str(leaf_res_id)]  # type: JSON
-            utils.check_all_equal(leaf_res["permission_names"], [leaf_perm],
+            utils.check_all_equal(leaf_res["permission_names"], expect_leaf_perms,
                                   msg="Only single direct user permission applied on resource should be listed.")
 
     @runner.MAGPIE_TEST_USERS
@@ -1136,12 +1156,18 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         res_id, res_perm = info["resource_id"], info["permission_name"]
         self.login_test_user()
 
+        if LooseVersion(self.version) >= LooseVersion("2.1"):
+            res_perm_set = PermissionSet(res_perm)
+            expected_perms = [res_perm_set.implicit_permission, res_perm_set.explicit_permission]
+        else:
+            expected_perms = [res_perm]
+
         for path_user in [self.test_user_name, get_constant("MAGPIE_LOGGED_USER")]:
             path = "/users/{}/resources/{}/permissions".format(path_user, res_id)
             resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
             body = utils.check_response_basic_info(resp)
             utils.check_val_is_in("permission_names", body)
-            utils.check_all_equal(body["permission_names"], [res_perm],
+            utils.check_all_equal(body["permission_names"], expected_perms,
                                   msg="Only single direct resource permission should be listed.")
 
     @runner.MAGPIE_TEST_USERS

@@ -32,12 +32,12 @@ if TYPE_CHECKING:
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
     from sqlalchemy.orm.session import Session
+    from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
     from magpie.permissions import Permission
     from magpie.typedefs import (
         AnyPermissionType,
         ResourcePermissionMap,
-        ResourcePermissionType,
         ServiceOrResourceType,
         Str,
         UserServicesType
@@ -213,7 +213,7 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
 
 
 def filter_user_permission(resource_permission_list, user):
-    # type: (List[ResourcePermissionType], models.User) -> Iterable[ResourcePermissionType]
+    # type: (List[PermissionTuple], models.User) -> Iterable[PermissionTuple]
     """
     Retrieves only direct user permissions on resources amongst a list of user/group resource/service permissions.
     """
@@ -312,14 +312,14 @@ def get_user_services(user, request, cascade_resources=False,
         and for each case, either considering only user permissions or every :term:`Inherited Permissions`,
         according to provided options.
     :rtype:
-        Dict of services by type with corresponding services by name containing sub-dict information,
-        unless :paramref:`format_as_list` is ``True``
+        Mapping of services by type to corresponding services by name containing each sub-mapping of their information,
+        unless :paramref:`format_as_list` is ``True``, in which case a flat list of service information is returned.
     """
     db_session = request.db
     resource_type = None if cascade_resources else [models.Service.resource_type]
     res_perm_dict = get_user_resources_permissions_dict(user, resource_types=resource_type, request=request,
                                                         inherit_groups_permissions=inherit_groups_permissions)
-
+    perm_type = PermissionType.INHERITED if inherit_groups_permissions else PermissionType.DIRECT
     services = {}
     for resource_id, perms in res_perm_dict.items():
         resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
@@ -341,7 +341,8 @@ def get_user_services(user, request, cascade_resources=False,
         # if service was not already added, add it (could be directly its permissions, or empty via children resource)
         # otherwise, set explicit immediate permissions on service instead of empty children resource permissions
         if svc_name not in services[svc_type] or is_service:
-            services[svc_type][svc_name] = format_service(svc.service, perms, show_private_url=False)
+            svc_json = format_service(svc.service, perms, perm_type, show_private_url=False)
+            services[svc_type][svc_name] = svc_json
 
     if not format_as_list:
         return services
@@ -356,18 +357,21 @@ def get_user_services(user, request, cascade_resources=False,
 def get_user_service_permissions(user, service, request, inherit_groups_permissions=True):
     # type: (models.User, models.Service, Request, bool) -> List[PermissionSet]
     if service.owner_user_id == user.id:
+        perm_type = PermissionType.ALLOWED
         usr_svc_perms = service_factory(service, request).permissions
     else:
         if inherit_groups_permissions:
+            perm_type = PermissionType.INHERITED
             usr_svc_perms = ResourceService.perms_for_user(service, user, db_session=request.db)
         else:
+            perm_type = PermissionType.DIRECT
             usr_svc_perms = ResourceService.direct_perms_for_user(service, user, db_session=request.db)
-    return [PermissionSet.convert(p) for p in usr_svc_perms]
+    return [PermissionSet(p, typ=perm_type) for p in usr_svc_perms]
 
 
 def get_user_resources_permissions_dict(user, request, resource_types=None,
                                         resource_ids=None, inherit_groups_permissions=True):
-    # type: (models.User, Request, Optional[List[Str]], Optional[List[int]], bool) -> Dict[Str, AnyPermissionType]
+    # type: (models.User, Request, Optional[List[Str]], Optional[List[int]], bool) -> Dict[Str, PermissionSet]
     """
     Creates a dictionary of resources by id with corresponding permissions of the user.
 
@@ -391,9 +395,9 @@ def get_user_resources_permissions_dict(user, request, resource_types=None,
     resources_permissions_dict = {}
     for res_perm in res_perm_tuple_list:
         if res_perm.resource.resource_id not in resources_permissions_dict:
-            resources_permissions_dict[res_perm.resource.resource_id] = [res_perm.perm_name]
+            resources_permissions_dict[res_perm.resource.resource_id] = [PermissionSet(res_perm)]
         else:
-            resources_permissions_dict[res_perm.resource.resource_id].append(res_perm.perm_name)
+            resources_permissions_dict[res_perm.resource.resource_id].append(PermissionSet(res_perm))
 
     # remove any duplicates that could be incorporated by multiple groups
     for res_id in resources_permissions_dict:

@@ -14,7 +14,6 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-
 * Adjust ``alembic`` migration scripts to employ date-ordered naming convention to help searching features within them.
 * Add ``DENY`` permission access concept with new ``PermissionSet`` object and ``Access`` enum.
 * Remove ``-match`` suffixed entries from ``Permission`` enum in favor of new ``Scope`` enum employed by
@@ -44,6 +43,10 @@ Features / Changes
   | **WARNING**:
   | Downgrade migration drops any ``DENY`` permission that would be added in future versions,
     as they do not exist prior to this introduced version.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix incorrect regex employed for validation of service URL during registration.
 
 `2.0.1 <https://github.com/Ouranosinc/Magpie/tree/2.0.1>`_ (2020-09-30)
 ------------------------------------------------------------------------------------

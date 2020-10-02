@@ -16,6 +16,7 @@ from magpie.api.management.service.service_formats import format_service_resourc
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
+from magpie.permissions import PermissionType
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
 
@@ -218,6 +219,7 @@ def get_user_resources_view(request):
 
     def build_json_user_resource_tree(usr):
         json_res = {}
+        perm_type = PermissionType.INHERITED if inherit_groups_perms else PermissionType.DIRECT
         services = ResourceService.all(models.Service, db_session=db)
         # add service-types so they are ordered and listed if no service of that type was defined
         for svc_type in sorted(SERVICE_TYPE_DICT):
@@ -235,6 +237,7 @@ def get_user_resources_view(request):
                     db_session=db,
                     service_perms=svc_perms,
                     resources_perms_dict=res_perms_dict,
+                    permission_type=perm_type,
                     show_all_children=False,
                     show_private_url=False,
                 )
@@ -460,6 +463,7 @@ def get_user_service_resources_view(request):
         db_session=request.db,
         service_perms=service_perms,
         resources_perms_dict=resources_perms_dict,
+        permission_type=PermissionType.INHERITED if inherit_groups_perms else PermissionType.DIRECT,
         show_all_children=False,
         show_private_url=False,
     )

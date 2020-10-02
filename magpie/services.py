@@ -19,8 +19,9 @@ if TYPE_CHECKING:
     from typing import Dict, List, Type
 
     from pyramid.request import Request
+    from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
-    from magpie.typedefs import AccessControlListType, ResourcePermissionType, Str
+    from magpie.typedefs import AccessControlListType, Str
 
 
 class ServiceMeta(type):
@@ -130,7 +131,7 @@ class ServiceInterface(object):
             raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(exc, type(self)))
 
     def effective_permissions(self, resource, user):
-        # type: (models.Resource, models.User) -> List[ResourcePermissionType]
+        # type: (models.Resource, models.User) -> List[PermissionTuple]
         """
         Recursively rewind the resource tree from the specified resource up to the top-most parent service's resource
         and retrieve permissions along the way that should be applied to children when using resource inheritance.

@@ -179,7 +179,7 @@ def create_group_resource_permission_response(group, resource, permission, db_se
 
 
 def get_group_resources_permissions_dict(group, db_session, resource_ids=None, resource_types=None):
-    # type: (models.Group, Session, Optional[Iterable[int]], Optional[Iterable[Str]]) -> JSON
+    # type: (models.Group, Session, Optional[Iterable[int]], Optional[Iterable[Str]]) -> ResourcePermissionMap
     """
     Get a dictionary of resources and corresponding permissions that a group has on the resources.
 
@@ -191,9 +191,9 @@ def get_group_resources_permissions_dict(group, db_session, resource_ids=None, r
         res_perms_dict = {}
         for res_perm in res_perms_tup:
             if res_perm.resource.resource_id not in res_perms_dict:
-                res_perms_dict[res_perm.resource.resource_id] = [res_perm.perm_name]
+                res_perms_dict[res_perm.resource.resource_id] = [PermissionSet(res_perm)]
             else:
-                res_perms_dict[res_perm.resource.resource_id].append(res_perm.perm_name)
+                res_perms_dict[res_perm.resource.resource_id].append(PermissionSet(res_perm))
         return res_perms_dict
 
     return ax.evaluate_call(lambda: get_grp_res_perm(group, db_session, resource_ids, resource_types),

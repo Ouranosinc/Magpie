@@ -80,7 +80,7 @@ class PermissionSet(object):
     __slots__ = ["_name", "_access", "_scope", "_type"]
 
     def __init__(self,
-                 permission,    # type: Union[Permission, Str]
+                 permission,    # type: AnyPermissionType
                  access=None,   # type: Optional[Union[Access, Str]]
                  scope=None,    # type: Optional[Union[Scope, Str]]
                  typ=None,      # type: Optional[PermissionType]
@@ -101,6 +101,7 @@ class PermissionSet(object):
             permission = perm_set.name
             access = perm_set.access if access is None else access
             scope = perm_set.scope if scope is None else scope
+            typ = perm_set.type if perm_set.type is not None else typ
         self.name = permission
         self.access = access
         self.scope = scope
@@ -282,11 +283,16 @@ class PermissionSet(object):
             if perm is None:
                 raise ValueError("Unknown permission name could not be identified: {}".format(name))
             return PermissionSet(perm, Access.get(permission.get("access")), Scope.get("scope"))
-        name = getattr(permission, "perm_name", None) or permission  # ziggurat permission or plain string
+        name = getattr(permission, "perm_name", None) or permission  # any ziggurat permission or plain string
         perm = Permission.get(name)
+        perm_type = getattr(permission, "type", None)     # ziggurat permission tuple
+        if perm_type == "user":
+            perm_type = PermissionType.DIRECT
+        elif perm_type == "group":
+            perm_type = PermissionType.INHERITED
         if perm is not None:
             # when matched, a plain string or Permission enum was directly passed, infer the rest
-            return PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE)
+            return PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE, perm_type)
         # note: old '-match' variants are not entries within 'Permission' enum anymore, so they are not found above
         if "-" not in name:
             raise ValueError("Unknown permission name could not be parsed: {}".format(name))
@@ -308,7 +314,7 @@ class PermissionSet(object):
 
 
 def format_permissions(permissions,         # type: Optional[Collection[AnyPermissionType]]
-                       permission_type,     # type: PermissionType
+                       permission_type,     # type: Optional[PermissionType]
                        ):                   # type: (...) -> Dict[Str, Union[List[Str], PermissionObject, Str]]
     """
     Obtains the formatted permission representations after validation that each of their name is a known member of
@@ -339,6 +345,8 @@ def format_permissions(permissions,         # type: Optional[Collection[AnyPermi
     """
     json_perms = []
     bw_perm_names = []  # to preserve insert order
+    if permission_type is None:
+        permission_type = PermissionType.ALLOWED
     if permissions:
         bw_perm_unique = set()  # for quick remove of duplicates
         unique_perms = sorted({PermissionSet(perm, typ=permission_type) for perm in permissions})

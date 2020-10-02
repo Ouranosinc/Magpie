@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     )
 
 
-def format_resource(resource, permissions=None, permission_type=PermissionType.ALLOWED, basic_info=False):
+def format_resource(resource, permissions=None, permission_type=None, basic_info=False):
     # type: (Resource, Optional[Collection[AnyPermissionType]], Optional[PermissionType], bool) -> JSON
     """
     Formats the :paramref:`resource` information into JSON.
@@ -51,8 +51,8 @@ def format_resource(resource, permissions=None, permission_type=PermissionType.A
     )
 
 
-def format_resource_tree(children, db_session, resources_perms_dict=None):
-    # type: (ChildrenResourceNodes, Session, Optional[ResourcePermissionMap]) -> JSON
+def format_resource_tree(children, db_session, resources_perms_dict=None, permission_type=None):
+    # type: (ChildrenResourceNodes, Session, Optional[ResourcePermissionMap], Optional[PermissionType]) -> JSON
     """
     Generates the formatted resource tree under the provided children resources, with all of their children resources by
     calling :func:`format_resource` recursively on them.
@@ -106,7 +106,7 @@ def format_resource_tree(children, db_session, resources_perms_dict=None):
                     }
                 perms = __internal_svc_res_perm_dict[service_id][resource.resource_type]  # 'resource_type' is str here
 
-            fmt_res_tree[child_id] = format_resource(resource, perms)
+            fmt_res_tree[child_id] = format_resource(resource, perms, permission_type)
             fmt_res_tree[child_id]["children"] = recursive_fmt_res_tree(new_children)
         return fmt_res_tree
 
