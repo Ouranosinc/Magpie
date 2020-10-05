@@ -199,8 +199,7 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
     res_id = resource.resource_id
     if similar:
         del_perm = get_similar_user_resource_permission(user, resource, permission, db_session)
-    else:
-        del_perm = UserResourcePermissionService.get(user.id, res_id, str(permission), db_session)
+    del_perm = UserResourcePermissionService.get(user.id, res_id, str(permission), db_session)
     permission.type = PermissionType.APPLIED
     err_content = {"resource_id": res_id, "user_id": user.id,
                    "permission_name": str(permission), "permission": permission.json()}
@@ -264,6 +263,7 @@ def get_user_resource_permissions_response(user, resource, request,
         perm_type = None
         if resource.owner_user_id == user.id:
             # FIXME: no 'magpie.models.Resource.permissions' - ok for now because no owner handling...
+            perm_type = PermissionType.OWNED
             res_perm_list = models.RESOURCE_TYPE_DICT[resource.type].permissions
         else:
             if effective_permissions:
@@ -357,7 +357,7 @@ def get_user_services(user, request, cascade_resources=False,
 def get_user_service_permissions(user, service, request, inherit_groups_permissions=True):
     # type: (models.User, models.Service, Request, bool) -> List[PermissionSet]
     if service.owner_user_id == user.id:
-        perm_type = PermissionType.ALLOWED
+        perm_type = PermissionType.OWNED
         usr_svc_perms = service_factory(service, request).permissions
     else:
         if inherit_groups_permissions:

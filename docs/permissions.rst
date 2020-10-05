@@ -419,7 +419,7 @@ In this example, ``UserA`` is granted ``read`` access to ``ServiceA``, ``Resourc
 ``recursive`` scope applied on ``ServiceA``. Access ``deny`` is explicitly applied on ``Resource2`` with ``match``
 scope, meaning that only that resource is specifically blocked by overriding (or reverting) the granted higher level
 ``read-allow-recursive``. If ``recursive`` was instead used on ``Resource2``, ``Resource3`` would also have been
-blocked. The ``write`` permission is also granted to ``UserA`` for ``Resource2``, but no other item in the ``ServiceA``
+blocked. The ``write`` permission is also granted to ``UserA`` for ``Resource1``, but no other item in the ``ServiceA``
 branch can be *written* by ``UserA`` since ``match`` scope was used and ``deny`` is the default resolution method.
 Similarly, only ``Resource4`` and ``Resource6`` will ``allow`` the ``write`` permission under branch ``ServiceB``.
 Note that different permission ``names`` can be applied simultaneously, such as for the case of ``Resource6``.

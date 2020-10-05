@@ -14,10 +14,10 @@ from six.moves.urllib.parse import urlparse
 
 from magpie.api import schemas as s
 from magpie.constants import MAGPIE_ROOT, get_constant
-from magpie.models import RESOURCE_TYPE_DICT, Route
-from magpie.permissions import Access, Permission, PermissionSet, Scope
+from magpie.models import RESOURCE_TYPE_DICT, Directory, Route
+from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
 from magpie.register import pseudo_random_string
-from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceTHREDDS
+from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceNCWMS2, ServiceTHREDDS
 from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML, get_twitcher_protected_service_url
 from tests import runner, utils
 
@@ -885,12 +885,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         info = utils.TestSetup.create_TestUserResourcePermission(self, resource_info=body)
         usr_svc_perm = info["permission_name"]
         self.login_test_user()
-
-        if LooseVersion(self.version) >= LooseVersion("2.1"):
-            perm_set = PermissionSet(usr_svc_perm)
-            expected_usr_svc_perms = [perm_set.implicit_permission, perm_set.explicit_permission]
-        else:
-            expected_usr_svc_perms = [usr_svc_perm]
+        expected_usr_svc_perms = utils.TestSetup.get_PermissionNames(self, usr_svc_perm)
 
         for user_path in [self.test_user_name, get_constant("MAGPIE_LOGGED_USER")]:
             path = "/users/{}/services".format(user_path)
@@ -904,7 +899,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
             utils.check_val_equal(len(body["services"][self.test_service_type]), 1,
                                   msg="Only unique specific service with immediate user permission should be listed.")
             service = body["services"][self.test_service_type][self.test_service_name]  # type: JSON
-            utils.check_all_equal(service["permission_names"], expected_usr_svc_perms,
+            utils.check_all_equal(service["permission_names"], expected_usr_svc_perms, any_order=True,
                                   msg="Only single immediate permission applied on service for user should be listed.")
             utils.check_val_not_in("resources", service)
 
@@ -948,15 +943,8 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         leaf_perm, leaf_res_id = info["permission_names"][0], info["resource_id"]
         utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info)
         self.login_test_user()
-
-        if LooseVersion(self.version) >= LooseVersion("2.1"):
-            child_perm = PermissionSet(child_perm)
-            expect_child_perms = [child_perm.implicit_permission, child_perm.explicit_permission]
-            leaf_perm = PermissionSet(leaf_perm)
-            expect_leaf_perms = [leaf_perm.implicit_permission, leaf_perm.explicit_permission]
-        else:
-            expect_child_perms = [child_perm]
-            expect_leaf_perms = [leaf_perm]
+        expect_child_perms = utils.TestSetup.get_PermissionNames(self, child_perm)
+        expect_leaf_perms = utils.TestSetup.get_PermissionNames(self, leaf_perm)
 
         svc_types = utils.get_service_types_for_version(self.version)
         for user_path in [self.test_user_name, get_constant("MAGPIE_LOGGED_USER")]:
@@ -971,12 +959,12 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
             utils.check_val_equal(len(service["permission_names"]), 0)
             utils.check_val_is_in(str(child_res_id), service["resources"])  # first level resources
             child_res = service["resources"][str(child_res_id)]  # type: JSON
-            utils.check_val_equal(len(child_res["permission_names"]), 1)
-            utils.check_all_equal(child_res["permission_names"], expect_child_perms,
+            utils.check_val_equal(len(child_res["permission_names"]), len(expect_child_perms))
+            utils.check_all_equal(child_res["permission_names"], expect_child_perms, any_order=True,
                                   msg="Only single direct user permission applied on resource should be listed.")
             utils.check_val_is_in(str(leaf_res_id), child_res["children"])  # sub-level resources
             leaf_res = child_res["children"][str(leaf_res_id)]  # type: JSON
-            utils.check_all_equal(leaf_res["permission_names"], expect_leaf_perms,
+            utils.check_all_equal(leaf_res["permission_names"], expect_leaf_perms, any_order=True,
                                   msg="Only single direct user permission applied on resource should be listed.")
 
     @runner.MAGPIE_TEST_USERS
@@ -1098,6 +1086,11 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         res3_perm = body["permission_name"]
         self.login_test_user()
 
+        expect_svc0_perms = utils.TestSetup.get_PermissionNames(self, svc0_perm)
+        expect_res1_perms = utils.TestSetup.get_PermissionNames(self, res1_perm)
+        expect_res2_perms = utils.TestSetup.get_PermissionNames(self, res2_perm)
+        expect_res3_perms = utils.TestSetup.get_PermissionNames(self, res3_perm)
+
         # run test
         for query in ["", "?inherited=true"]:
             path = "/users/{}/resources{}".format(self.test_user_name, query)
@@ -1116,23 +1109,23 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
                         expected_services.append(svc2_name)  # but test-group-only resource permission make this listed
                     utils.check_all_equal(actual_services, expected_services, any_order=True)
                     svc0 = services[svc0_name]
-                    utils.check_all_equal(svc0["permission_names"], [svc0_perm])
+                    utils.check_all_equal(svc0["permission_names"], expect_svc0_perms, any_order=True)
                     utils.check_val_equal(svc0["resources"], {})
                     svc1 = services[svc1_name]  # type: JSON
                     utils.check_all_equal(svc1["permission_names"], [])
                     utils.check_val_is_in(str(res1_id), svc1["resources"])
                     res1 = svc1["resources"][str(res1_id)]  # type: JSON
-                    utils.check_all_equal(res1["permission_names"], [res1_perm])
+                    utils.check_all_equal(res1["permission_names"], expect_res1_perms, any_order=True)
                     if not query:
                         utils.check_val_not_in(str(res2_id), res1["children"])  # group-permission, not listed here
                     else:
                         utils.check_val_is_in(str(res2_id), res1["children"])  # but is listed when inherited here
                         res2 = res1["children"][str(res2_id)]  # type: JSON
-                        utils.check_all_equal(res2["permission_names"], [res2_perm])
+                        utils.check_all_equal(res2["permission_names"], expect_res2_perms, any_order=True)
                         svc2 = services[svc2_name]  # type: JSON
                         utils.check_all_equal(svc2["permission_names"], [])  # no permission immediately on service
                         res3 = svc2["resources"][str(res3_id)]  # type: JSON
-                        utils.check_all_equal(res3["permission_names"], [res3_perm])
+                        utils.check_all_equal(res3["permission_names"], expect_res3_perms, any_order=True)
                 # note:
                 #   if not testing the test-service-type, only evaluate expected empty resources when not inheriting
                 #   from public group because that makes it much harder if some public permissions did already exist
@@ -1155,19 +1148,14 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         info = utils.TestSetup.create_TestUserResourcePermission(self, resource_info=body)
         res_id, res_perm = info["resource_id"], info["permission_name"]
         self.login_test_user()
-
-        if LooseVersion(self.version) >= LooseVersion("2.1"):
-            res_perm_set = PermissionSet(res_perm)
-            expected_perms = [res_perm_set.implicit_permission, res_perm_set.explicit_permission]
-        else:
-            expected_perms = [res_perm]
+        expected_perms = utils.TestSetup.get_PermissionNames(self, res_perm)
 
         for path_user in [self.test_user_name, get_constant("MAGPIE_LOGGED_USER")]:
             path = "/users/{}/resources/{}/permissions".format(path_user, res_id)
             resp = utils.test_request(self, "GET", path, headers=self.test_headers, cookies=self.test_cookies)
             body = utils.check_response_basic_info(resp)
             utils.check_val_is_in("permission_names", body)
-            utils.check_all_equal(body["permission_names"], expected_perms,
+            utils.check_all_equal(body["permission_names"], expected_perms, any_order=True,
                                   msg="Only single direct resource permission should be listed.")
 
     @runner.MAGPIE_TEST_USERS
@@ -1528,6 +1516,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/groups/{grp}/resources/{res}/permissions".format(res=test_svc_res_id, grp=anonym_grp)
         utils.test_request(self, "POST", path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
 
+        expect_perm_match = utils.TestSetup.get_PermissionNames(self, perm_match)
+        expect_perm_recur = utils.TestSetup.get_PermissionNames(self, perm_recur)
+
         # tests
         q_groups = "inherit=true"
         q_effect = "effective=true"
@@ -1536,38 +1527,38 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=q_groups)
         utils.check_val_equal(body["permission_names"], [])
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=q_effect)
-        utils.check_val_equal(body["permission_names"], [perm_recur])
+        utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=q_groups)
-        utils.check_val_equal(body["permission_names"], [perm_match])
+        utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=q_effect)
-        utils.check_all_equal(body["permission_names"], [perm_recur, perm_match], any_order=True)
+        utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=None)
-        utils.check_val_equal(body["permission_names"], [perm_recur])
+        utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=q_groups)
-        utils.check_all_equal(body["permission_names"], [perm_recur, perm_match], any_order=True)
+        utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=q_effect)
-        utils.check_all_equal(body["permission_names"], [perm_recur, perm_match], any_order=True)
+        utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
 
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=None)
-        utils.check_val_equal(body["permission_names"], [perm_match])
+        utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=q_groups)
-        utils.check_val_equal(body["permission_names"], [perm_match])
+        utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=q_effect)
-        utils.check_all_equal(body["permission_names"], [perm_recur, perm_match], any_order=True)
+        utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=q_groups)
         utils.check_val_equal(body["permission_names"], [])
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=q_effect)
-        utils.check_val_equal(body["permission_names"], [perm_recur])
+        utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=q_groups)
-        utils.check_val_equal(body["permission_names"], [perm_recur])
+        utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=q_effect)
-        utils.check_val_equal(body["permission_names"], [perm_recur])
+        utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
@@ -1652,6 +1643,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.test_request(self, "POST", path, data=data, headers=self.json_headers, cookies=self.cookies)
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_res_id)
         perm = PermissionSet(data["permission"])
+        utils.check_val_is_in("permission_names", body)
         utils.check_val_is_in(str(perm), body["permission_names"],
                               msg="Can't test for conflicting permissions if it doesn't exist first.")
 
@@ -1659,8 +1651,11 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         data["permission"]["scope"] = Scope.RECURSIVE.value
         resp = utils.test_request(self, "PUT", path, data=data, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 201, expected_method="PUT")
-        perm = PermissionSet(data["permission"])
-        utils.check_val_is_in(str(perm), body["permission_names"], msg="Permission should have been modified.")
+        perm = PermissionSet(data["permission"], typ=PermissionType.APPLIED)
+        utils.check_val_is_in("permission_name", body)
+        utils.check_val_is_in(str(perm), body["permission_name"], msg="Permission should have been modified.")
+        utils.check_val_is_in("permission", body)
+        utils.check_val_equal(perm.json(), body["permission"])
 
     @runner.MAGPIE_TEST_USERS
     def test_GetLoggedUserGroups(self):
@@ -1683,10 +1678,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
-        utils.TestSetup.create_TestService(self)
-        body = utils.TestSetup.create_TestServiceResource(self)
+        svc_type = ServiceNCWMS2.service_type
+        res_type = Directory.resource_type_name
+        utils.TestSetup.create_TestService(self, override_service_type=svc_type)
+        body = utils.TestSetup.create_TestServiceResource(self, override_resource_type=res_type)
         res_id = body["resource"]["resource_id"]
-        all_perms = deepcopy(self.test_service_resource_perms)
+        all_perms = deepcopy(SERVICE_TYPE_DICT[svc_type].permissions)
         # different permissions on each resource to ensure proper resolution occurs
         perm_svc_usr = all_perms.pop().value
         perm_svc_grp = all_perms.pop().value
@@ -1720,7 +1717,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 201, expected_method="POST")
 
         return (perm_svc_usr, perm_svc_grp, perm_res_usr, perm_res_grp,
-                self.test_user_name, self.test_group_name, self.test_service_name, self.test_service_type, res_id)
+                self.test_user_name, self.test_group_name, self.test_service_name, svc_type, res_id)
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserResources_OnlyUserAndInheritedGroupPermissions(self):
@@ -1775,7 +1772,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies, timeout=20)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         test_service = body["resources"][svc_type][svc_name]  # type: JSON
-        utils.check_val_equal(test_service["permission_names"], [perm_svc_usr])
+        usr_svc_perms = utils.TestSetup.get_PermissionNames(self, perm_svc_usr)
+        utils.check_all_equal(test_service["permission_names"], usr_svc_perms, any_order=True)
         utils.check_val_is_in(str(res_id), test_service["resources"])
         test_perms = test_service["resources"][str(res_id)]["permission_names"]  # noqa
         utils.check_val_equal(test_perms, [perm_res_usr])
@@ -1785,7 +1783,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies, timeout=20)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         test_service = body["resources"][svc_type][svc_name]
-        utils.check_all_equal(test_service["permission_names"], [perm_svc_usr, perm_svc_grp], any_order=True)
+        usr_grp_svc_perms = utils.TestSetup.get_PermissionNames(self, [perm_svc_usr, perm_svc_grp])
+        utils.check_all_equal(test_service["permission_names"], usr_grp_svc_perms, any_order=True)
         utils.check_val_is_in(str(res_id), test_service["resources"])
         utils.check_all_equal(test_service["resources"][str(res_id)]["permission_names"],  # noqa
                               [perm_res_usr, perm_res_grp], any_order=True)
@@ -1832,11 +1831,14 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         # validate permissions inherited on new test service/resources (ie: guaranteed no anonymous permissions)
         svc = body["resources"][self.test_service_type][self.test_service_name]  # type: JSON
-        utils.check_val_equal(svc["permission_names"], [svc_perm])  # direct user permission
+        svc_perms = utils.TestSetup.get_PermissionNames(self, svc_perm)
+        utils.check_all_equal(svc["permission_names"], svc_perms, any_order=True)  # direct user permission
         res1 = svc["resources"][str(res1_id)]  # type: JSON
-        utils.check_all_equal(res1["permission_names"], [res_perm1, res_perm2], any_order=True)  # user+group inherited
+        res1_perms = utils.TestSetup.get_PermissionNames(self, [res_perm1, res_perm2])  # user+group inherited
+        utils.check_all_equal(res1["permission_names"], res1_perms, any_order=True)
         res2 = res1["children"][str(res2_id)]  # type: JSON
-        utils.check_val_equal(res2["permission_names"], [res_perm2])  # only group inherited permission
+        res2_perms = utils.TestSetup.get_PermissionNames(self, res_perm2)  # only group inherited permission
+        utils.check_all_equal(res2["permission_names"], res2_perms, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
@@ -1860,7 +1862,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         res_id = info["resource_id"]
         perm = utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info)
-        perm = perm["permission_name"]
+        res_perms = utils.TestSetup.get_PermissionNames(self, perm["permission_name"])
         # create another service without permission just to make sure it is not returned
         other_svc_name = "{}_service-filtered-user-resources".format(self.test_service_name)
         utils.TestSetup.delete_TestService(self, override_service_name=other_svc_name)
@@ -1881,7 +1883,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 utils.check_val_equal(svc["permission_names"], [], msg="No permission directly on service.")
                 utils.check_val_is_in(str(res_id), svc["resources"])
                 res = svc["resources"][str(res_id)]  # type: JSON
-                utils.check_val_equal(res["permission_names"], [perm])
+                utils.check_all_equal(res["permission_names"], res_perms, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     def test_DeleteUserResourcePermission(self):
@@ -2081,8 +2083,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_all_equal(list(services), expected_services, any_order=True)
         svc1 = services[test_items["svc1_name"]]  # type: JSON
         svc3 = services[test_items["svc3_name"]]  # type: JSON
-        utils.check_all_equal(svc1["permission_names"], test_items["svc1_usr_perms"])
-        utils.check_all_equal(svc3["permission_names"], test_items["svc3_usr_perms"])
+        svc1_perms = utils.TestSetup.get_PermissionNames(self, test_items["svc1_usr_perms"])
+        svc3_perms = utils.TestSetup.get_PermissionNames(self, test_items["svc3_usr_perms"])
+        utils.check_all_equal(svc1["permission_names"], svc1_perms, any_order=True)
+        utils.check_all_equal(svc3["permission_names"], svc3_perms, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServices_Flatten(self):
@@ -2275,7 +2279,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["service"]["service_name"], svc_name)
         utils.check_val_equal(body["service"]["service_type"], svc_type)
-        utils.check_val_equal(body["service"]["permission_names"], [perm_svc_usr])
+        usr_svc_perms = utils.TestSetup.get_PermissionNames(self, perm_svc_usr)
+        utils.check_all_equal(body["service"]["permission_names"], usr_svc_perms, any_order=True)
         utils.check_val_is_in(str(res_id), body["service"]["resources"])
         utils.check_val_equal(body["service"]["resources"][str(res_id)]["permission_names"], [perm_res_usr])  # noqa
 
@@ -2285,10 +2290,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(body["service"]["service_name"], svc_name)
         utils.check_val_equal(body["service"]["service_type"], svc_type)
-        utils.check_all_equal(body["service"]["permission_names"], [perm_svc_usr, perm_svc_grp], any_order=True)
+        usr_grp_svc_perms = utils.TestSetup.get_PermissionNames(self, [perm_svc_usr, perm_svc_grp])
+        utils.check_all_equal(body["service"]["permission_names"], usr_grp_svc_perms, any_order=True)
         utils.check_val_is_in(str(res_id), body["service"]["resources"])
-        utils.check_all_equal(body["service"]["resources"][str(res_id)]["permission_names"],  # noqa
-                              [perm_res_usr, perm_res_grp], any_order=True)
+        res_perms = body["service"]["resources"][str(res_id)]["permission_names"]  # noqa
+        usr_grp_res_perms = utils.TestSetup.get_PermissionNames(self, [perm_res_usr, perm_res_grp])
+        utils.check_all_equal(res_perms, usr_grp_res_perms, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
@@ -3165,7 +3172,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 utils.check_val_is_in(r["resource_type"], svc_res_info)
                 r_type = svc_res_info[r["resource_type"]]
                 utils.check_val_equal(r["resource_child_allowed"], r_type["child"])
-                utils.check_all_equal(r["permission_names"], r_type["perms"], any_order=True)
+                r_perms = utils.TestSetup.get_PermissionNames(self, r_type["perms"], combinations=True)
+                utils.check_all_equal(r["permission_names"], r_perms, any_order=True)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServiceResources(self):
@@ -3185,6 +3193,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         for svc in services_list:
             svc_name = svc["service_name"]
             service_perms = [p.value for p in SERVICE_TYPE_DICT[svc["service_type"]].permissions]
+            service_perms = utils.TestSetup.get_PermissionNames(self, service_perms, combinations=True)
             path = "/services/{svc}/permissions".format(svc=svc_name)
             resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
             body = utils.check_response_basic_info(resp, 200, expected_method="GET")
@@ -3393,6 +3402,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                     utils.check_val_not_equal(len(resource["permission_names"]), 0,
                                               msg="Resource route must always provide its applicable permissions.")
                     service_perms = [p.value for p in SERVICE_TYPE_DICT[resource["service_type"]].permissions]
+                    service_perms = utils.TestSetup.get_PermissionNames(self, service_perms, combinations=True)
                     utils.check_all_equal(resource["permission_names"], service_perms, any_order=True)
                 # children resources
                 utils.check_val_is_in("resources", resource)
@@ -3480,12 +3490,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "POST", "/resources",
                                   headers=self.json_headers, cookies=self.cookies, data=data, expect_errors=True)
         # pre-check of existing parameter in request added for 400, then value gets validated for processing 422
+        code = 422
+        none = repr(None)
         if LooseVersion(self.version) >= LooseVersion("2.0.0"):
-            code = 400
+            if LooseVersion(self.version) < LooseVersion("2.1"):
+                code = 400
             none = None
-        else:
-            code = 422
-            none = repr(None)
         body = utils.check_response_basic_info(resp, code, expected_method="POST")
         utils.check_error_param_structure(body, version=self.version, param_name="parent_id", param_value=none)
 
@@ -3550,7 +3560,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 utils.check_val_equal(res_body["root_service_id"], root_id)
             utils.check_val_is_in("permission_names", res_body)
             utils.check_val_type(res_body["permission_names"], list)
-            utils.check_all_equal(res_body["permission_names"], [perm.value for perm in perms], any_order=True)
+            expect_perms = utils.TestSetup.get_PermissionNames(self, perms, combinations=True)
+            utils.check_all_equal(res_body["permission_names"], expect_perms, any_order=True)
             utils.check_val_is_in("children", res_body)
             utils.check_val_type(res_body["children"], dict)
             if children_id is None:
@@ -3598,7 +3609,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/resources/{res_id}".format(res_id=res_id)
         resp = utils.test_request(self, self.update_method, path, data={}, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
+        code = 422 if LooseVersion(self.version) >= LooseVersion("2.1") else 400
+        utils.check_response_basic_info(resp, code, expected_method=self.update_method)
 
     @runner.MAGPIE_TEST_RESOURCES
     def test_UpdateResource_SameName(self):
@@ -3634,20 +3646,22 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         res_id = info["resource_id"]
 
         svc_perms = SERVICE_TYPE_DICT[self.test_service_type].permissions
+        expect_svc_perms = utils.TestSetup.get_PermissionNames(self, svc_perms, combinations=True)
         path = "/resources/{}/permissions".format(svc_id)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in("permission_names", body)
         utils.check_val_type(body["permission_names"], list)
-        utils.check_all_equal(body["permission_names"], [perm.value for perm in svc_perms], any_order=True)
+        utils.check_all_equal(body["permission_names"], expect_svc_perms, any_order=True)
 
         res_perms = SERVICE_TYPE_DICT[self.test_service_type].get_resource_permissions(self.test_resource_type)
+        expect_res_perms = utils.TestSetup.get_PermissionNames(self, res_perms, combinations=True)
         path = "/resources/{}/permissions".format(res_id)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in("permission_names", body)
         utils.check_val_type(body["permission_names"], list)
-        utils.check_all_equal(body["permission_names"], [perm.value for perm in res_perms], any_order=True)
+        utils.check_all_equal(body["permission_names"], expect_res_perms, any_order=True)
 
 
 @runner.MAGPIE_TEST_UI

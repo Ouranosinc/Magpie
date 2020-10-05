@@ -1,4 +1,5 @@
 import functools
+import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import unittest
 import warnings
@@ -18,6 +19,7 @@ from webtest.response import TestResponse
 
 from magpie import __meta__, app, services
 from magpie.constants import get_constant
+from magpie.permissions import Access, PermissionSet, Scope
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess
 from magpie.utils import (
     CONTENT_TYPE_HTML,
@@ -38,6 +40,7 @@ if TYPE_CHECKING:
         JSON,
         AnyCookiesType,
         AnyHeadersType,
+        AnyPermissionType,
         AnyResponseType,
         AnyValue,
         CookiesType,
@@ -1148,8 +1151,14 @@ class TestSetup(object):
                 if override_permissions is null:
                     check_val_not_equal(len(service["permission_names"]), 0,
                                         msg="Service-scoped route must always provide all allowed permissions.")
-                    override_permissions = [p.value for p in SERVICE_TYPE_DICT[service["service_type"]].permissions]
-                check_all_equal(service["permission_names"], list(override_permissions), any_order=True)
+                    permissions = SERVICE_TYPE_DICT[service["service_type"]].permissions
+                    if LooseVersion(test_case.version) < LooseVersion("2.1"):
+                        override_permissions = [perm.value for perm in permissions]
+                    else:
+                        override_permissions = TestSetup.get_PermissionNames(test_case, permissions, combinations=True)
+                else:
+                    override_permissions = TestSetup.get_PermissionNames(test_case, override_permissions)
+                check_all_equal(service["permission_names"], override_permissions, any_order=True)
         if has_children_resources:
             check_val_is_in("resources", service)
             children = service["resources"]
@@ -1340,6 +1349,34 @@ class TestSetup(object):
             override_resource_id=override_resource_id, override_permission_name=override_permission_name,
             override_item_name=override_group_name, override_headers=override_headers, override_cookies=override_cookies
         )
+
+    @staticmethod
+    def get_PermissionNames(test_case,              # type: AnyMagpieTestCaseType
+                            permissions,            # type: Union[AnyPermissionType, Collection[AnyPermissionType]]
+                            combinations=False,     # type: bool
+                            ):                      # type: (...) -> List[Str]
+        """
+        Obtains all applicable permission names for the given version and specified permission(s).
+
+        :param test_case: test case
+        :param permissions: one or many permission(s) for which to generate the list of applicable permission names.
+        :param combinations: extend permissions with all possible modifiers, applicable only if version allows it.
+        """
+        version = TestSetup.get_Version(test_case)
+        if not isinstance(permissions, (list, set, tuple)):
+            permissions = [permissions]
+        if combinations and LooseVersion(version) >= LooseVersion("2.1"):
+            permissions = [PermissionSet(*perm_combo) for perm_combo in itertools.product(permissions, Access, Scope)]
+        else:
+            permissions = [PermissionSet(perm) for perm in permissions]
+        perm_names = set()
+        for permission in permissions:
+            perm_impl = permission.implicit_permission
+            if perm_impl is not None:
+                perm_names.add(perm_impl)
+            if LooseVersion(version) >= LooseVersion("2.1"):
+                perm_names.add(permission.explicit_permission)
+        return list(perm_names)
 
     @staticmethod
     def get_ResourceInfo(test_case,                 # type: AnyMagpieTestCaseType

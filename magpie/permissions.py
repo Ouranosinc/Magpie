@@ -42,6 +42,7 @@ class PermissionType(ExtendedEnum):
     DIRECT = "direct"           # applied, only for user situation
     INHERITED = "inherited"     # applied, combined for user+group, relative to user member
     EFFECTIVE = "effective"     # resolved user+group for resource hierarchy, with access and scope
+    OWNED = "owned"             # user/group explicitly owns the permission
 
 
 class Access(ExtendedEnum):
@@ -155,7 +156,7 @@ class PermissionSet(object):
         Obtains the visual representation of the :class:`PermissionSet`.
         """
         perm_repr_template = "PermissionSet(name={}, access={}, scope={}, type={})"
-        perm_type = self.type.value if self.type is not None else None,
+        perm_type = self.type.value if self.type is not None else None
         return perm_repr_template.format(self.name.value, self.access.value, self.scope.value, perm_type)
 
     def like(self, other):
@@ -313,9 +314,9 @@ class PermissionSet(object):
         return PermissionSet(perm, access, scope)
 
 
-def format_permissions(permissions,         # type: Optional[Collection[AnyPermissionType]]
-                       permission_type,     # type: Optional[PermissionType]
-                       ):                   # type: (...) -> Dict[Str, Union[List[Str], PermissionObject, Str]]
+def format_permissions(permissions,             # type: Optional[Collection[AnyPermissionType]]
+                       permission_type=None,    # type: Optional[PermissionType]
+                       ):                       # type: (...) -> Dict[Str, Union[List[Str], PermissionObject, Str]]
     """
     Obtains the formatted permission representations after validation that each of their name is a known member of
     :class:`Permission` enum, and optionally with modifiers as defined by :class:`PermissionSet`.

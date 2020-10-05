@@ -80,6 +80,7 @@ def format_service_resources(service,                       # type: Service
         If ``None``, retrieve and set :term:`Allowed Permissions` for the corresponding resources under the service.
         To set empty :term:`Applied Permissions` (e.g.: :term:`User` doesn't have permissions on that resource), provide
         an explicit empty dictionary instead.
+    :param permission_type: Provide permission type being rendered.
     :param show_all_children:
         Display all children resources recursively, or only ones specified by ID with :paramref:`resources_perms_dict`.
     :param show_private_url: displays the

@@ -302,15 +302,18 @@ def get_group_service_permissions(group, service, db_session):
     """
     Get all permissions the group has on a specific service.
     """
-    def get_grp_svc_perms(grp, svc, db):
-        if svc.owner_group_id == grp.id:
-            return SERVICE_TYPE_DICT[svc.type].permissions
-        perms = db.query(models.GroupResourcePermission) \
-                  .filter(models.GroupResourcePermission.resource_id == svc.resource_id) \
-                  .filter(models.GroupResourcePermission.group_id == grp.id)
-        return format_permissions(perms, PermissionType.ALLOWED)
+    def get_grp_svc_perms():
+        if service.owner_group_id == group.id:
+            perm_type = PermissionType.OWNED
+            perms = SERVICE_TYPE_DICT[service.type].permissions
+        else:
+            perm_type = PermissionType.INHERITED
+            perms = db_session.query(models.GroupResourcePermission) \
+                              .filter(models.GroupResourcePermission.resource_id == service.resource_id) \
+                              .filter(models.GroupResourcePermission.group_id == group.id)
+        return [PermissionSet(perm, perm_type) for perm in perms]
 
-    return ax.evaluate_call(lambda: get_grp_svc_perms(group, service, db_session),
+    return ax.evaluate_call(lambda: get_grp_svc_perms(),
                             http_error=HTTPInternalServerError,
                             msg_on_fail="Failed to obtain group service permissions",
                             content={"group": repr(group), "service": repr(service)})

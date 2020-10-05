@@ -16,7 +16,7 @@ from magpie.api.management.service.service_formats import format_service_resourc
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
-from magpie.permissions import PermissionType
+from magpie.permissions import PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
 
@@ -370,13 +370,14 @@ def get_user_service_permissions_view(request):
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
     inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
+    perm_type = PermissionType.INHERITED if inherit_groups_perms else PermissionType.DIRECT
     perms = ax.evaluate_call(lambda: uu.get_user_service_permissions(service=service, user=user, request=request,
                                                                      inherit_groups_permissions=inherit_groups_perms),
                              fallback=lambda: request.db.rollback(), http_error=HTTPNotFound,
                              msg_on_fail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
                              content={"service_name": str(service.resource_name), "user_name": str(user.user_name)})
-    return ax.valid_http(http_success=HTTPOk, detail=s.UserServicePermissions_GET_OkResponseSchema.description,
-                         content={"permission_names": sorted(p.value for p in perms)})
+    return ax.valid_http(http_success=HTTPOk, content=format_permissions(perms, perm_type),
+                         detail=s.UserServicePermissions_GET_OkResponseSchema.description)
 
 
 @s.UserServicePermissionsAPI.post(schema=s.UserServicePermissions_POST_RequestSchema, tags=[s.UsersTag],
