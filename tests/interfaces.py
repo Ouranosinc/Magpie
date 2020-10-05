@@ -1718,11 +1718,146 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_PERMISSIONS
-    @unittest.skip
+    @unittest.skip  # FIXME: remove when implemented
     def test_UserResourcePermissions_EffectiveResolution(self):
-        raise NotImplementedError()
+        """
+        Test effective resolution of permissions.
 
-    @runner.MAGPIE_TEST_USERS
+        Validates combinations of user/group inheritance combined with allow/deny and match/recursive modifiers.
+
+        Legend::
+
+            r: read
+            w: write
+            A: allow
+            D: deny
+            M: match
+            R: recursive
+
+        Permissions Applied::
+                                        user            group           effective (reason/importance)
+
+            Service1                    (r-A-M)                         r-A, w-D  (default)
+                Resource1               (w-A-M)         (r-A-R)         r-A, w-A
+                    Resource2           (r-D-M)         (r-D-R)         r-D, w-D  (default + group-res2)
+                        Resource3       (w-A-M)                         r-D, w-A  (group-res2)
+            Service2                                                    r-D, w-D  (default)
+                Resource4               (w-A-M)         (w-D-R)         r-D, w-A  (user > group)
+                    Resource5           (r-A-R)         (r-D-M)         r-A, w-D  (user > group)
+                        Resource6       (w-A-M)                         r-A. w-A  (user > group)
+            Service3                    (w-D-M)         (w-A-R)         r-D, w-D  (user > group)
+                Resource7                                               r-D, w-A  (group-svc3)
+                    Resource8                           (w-D-R)         r-D, w-D  (revert group-svc3)
+                        Resource9       (w-A-R)                         r-D, w-A  (user > group, revert group-res8)
+        """
+        utils.warn_version(self, "effective permissions resolution with deny", "2.1", skip=True)
+
+        # create user/group and services/resources
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+        body = utils.TestSetup.create_TestService(self, override_service_name="Service1-unittest-effective-permssions")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc1_id, svc1_name = info["resource_id"], info["resource_name"]
+        body = utils.TestSetup.create_TestService(self, override_service_name="Service2-unittest-effective-permssions")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc2_id, svc2_name = info["resource_id"], info["resource_name"]
+        body = utils.TestSetup.create_TestService(self, override_service_name="Service3-unittest-effective-permssions")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc3_id, svc3_name = info["resource_id"], info["resource_name"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc1_id, override_resource_name="Resource1")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res1_id, res1_name = info["resource_id"], info["resource_name"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=res1_id, override_resource_name="Resource2")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res2_id, res2_name = info["resource_id"], info["resource_name"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=res2_id, override_resource_name="Resource3")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res3_id, res3_name = info["resource_id"], info["resource_name"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc2_id, override_resource_name="Resource4")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res4_id, res4_name = info["resource_id"], info["resource_name"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=res4_id, override_resource_name="Resource5")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res5_id, res5_name = info["resource_id"], info["resource_name"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=res5_id, override_resource_name="Resource6")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res6_id, res6_name = info["resource_id"], info["resource_name"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc3_id, override_resource_name="Resource7")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res7_id, res7_name = info["resource_id"], info["resource_name"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=res7_id, override_resource_name="Resource8")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res8_id, res8_name = info["resource_id"], info["resource_name"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=res8_id, override_resource_name="Resource9")
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res9_id, res9_name = info["resource_id"], info["resource_name"]
+
+        # apply permissions
+        rAR = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)     # noqa
+        rAM = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)         # noqa
+        rDR = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)      # noqa
+        rDM = PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)          # noqa
+        wAR = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)     # noqa
+        wAM = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)         # noqa
+        wDR = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)      # noqa
+        wDM = PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)          # noqa
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc1_id, override_permission=rAM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res1_id, override_permission=wAM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res1_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res2_id, override_permission=rDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res2_id, override_permission=rDR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res3_id, override_permission=wAM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res4_id, override_permission=wAM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res4_id, override_permission=wDR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res5_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res5_id, override_permission=rDM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res6_id, override_permission=wAM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc3_id, override_permission=wDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc3_id, override_permission=wAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res8_id, override_permission=wDR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res9_id, override_permission=wAR)
+
+        def eval_perm_effective(res_name, res_id, perm, access):  # type: (str, int, Permission, Access) -> None
+            path = "/users/{}/resources/{}/permissions?effective=true".format(self.test_user_name, res_id)
+            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+            body = utils.check_response_basic_info(resp, 200)  # noqa
+            permissions = body["permissions"]
+            utils.check_val_not_equal(len(permissions), 0)
+            for obj in permissions:
+                if Access.get(obj["access"]) == access and Permission.get(obj["name"]) == perm:
+                    return
+            raise AssertionError(
+                "Permission '{}' for resource '{}' expected to be '{}'".format(perm.value, res_name, access.value)
+            )
+
+        # test
+        eval_perm_effective(svc1_name, svc1_id, Permission.READ, Access.ALLOW)
+        eval_perm_effective(svc1_name, svc1_id, Permission.WRITE, Access.DENY)
+        eval_perm_effective(res1_name, res1_id, Permission.READ, Access.ALLOW)
+        eval_perm_effective(res1_name, res1_id, Permission.WRITE, Access.ALLOW)
+        eval_perm_effective(res2_name, res2_id, Permission.READ, Access.DENY)
+        eval_perm_effective(res2_name, res2_id, Permission.WRITE, Access.DENY)
+        eval_perm_effective(res3_name, res3_id, Permission.READ, Access.DENY)
+        eval_perm_effective(res3_name, res3_id, Permission.WRITE, Access.ALLOW)
+        eval_perm_effective(svc2_name, svc2_id, Permission.READ, Access.DENY)
+        eval_perm_effective(svc2_name, svc2_id, Permission.WRITE, Access.DENY)
+        eval_perm_effective(res4_name, res4_id, Permission.READ, Access.DENY)
+        eval_perm_effective(res4_name, res4_id, Permission.WRITE, Access.ALLOW)
+        eval_perm_effective(res5_name, res5_id, Permission.READ, Access.ALLOW)
+        eval_perm_effective(res5_name, res5_id, Permission.WRITE, Access.DENY)
+        eval_perm_effective(res6_name, res6_id, Permission.READ, Access.ALLOW)
+        eval_perm_effective(res6_name, res6_id, Permission.WRITE, Access.ALLOW)
+        eval_perm_effective(svc3_name, svc3_id, Permission.READ, Access.DENY)
+        eval_perm_effective(svc3_name, svc3_id, Permission.WRITE, Access.DENY)
+        eval_perm_effective(res7_name, res7_id, Permission.READ, Access.DENY)
+        eval_perm_effective(res7_name, res7_id, Permission.WRITE, Access.ALLOW)
+        eval_perm_effective(res8_name, res8_id, Permission.READ, Access.DENY)
+        eval_perm_effective(res8_name, res8_id, Permission.WRITE, Access.DENY)
+        eval_perm_effective(res9_name, res9_id, Permission.READ, Access.DENY)
+        eval_perm_effective(res9_name, res9_id, Permission.WRITE, Access.ALLOW)
+
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_GROUPS
     def test_GetLoggedUserGroups(self):
         path = "/users/{}/groups".format(get_constant("MAGPIE_LOGGED_USER"))
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
@@ -1868,16 +2003,16 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         body = utils.TestSetup.create_TestService(self)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         svc_id = info["resource_id"]
-        utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info, override_permission_name=svc_perm)
+        utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info, override_permission=svc_perm)
         body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc_id)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         res1_id = info["resource_id"]
-        utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info, override_permission_name=res_perm1)
-        utils.TestSetup.create_TestGroupResourcePermission(self, resource_info=info, override_permission_name=res_perm2)
+        utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info, override_permission=res_perm1)
+        utils.TestSetup.create_TestGroupResourcePermission(self, resource_info=info, override_permission=res_perm2)
         body = utils.TestSetup.create_TestResource(self, parent_resource_id=res1_id)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         res2_id = info["resource_id"]
-        utils.TestSetup.create_TestGroupResourcePermission(self, resource_info=info, override_permission_name=res_perm2)
+        utils.TestSetup.create_TestGroupResourcePermission(self, resource_info=info, override_permission=res_perm2)
         if LooseVersion(self.version) >= LooseVersion("0.7.4"):
             path = "/users/{}/resources?inherit=true".format(self.test_user_name)
         else:
@@ -2022,38 +2157,38 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
         body = utils.TestSetup.create_TestUserResourcePermission(
-            self, resource_info=test_items["svc1_info"], override_permission_name=test_items["svc_perm1"]
+            self, resource_info=test_items["svc1_info"], override_permission=test_items["svc_perm1"]
         )
         test_items["svc1_usr_perms"] = [body["permission_name"]]
         body = utils.TestSetup.create_TestGroupResourcePermission(
-            self, resource_info=test_items["svc2_info"], override_permission_name=test_items["svc_perm1"]
+            self, resource_info=test_items["svc2_info"], override_permission=test_items["svc_perm1"]
         )
         test_items["svc2_grp_perms"] = [body["permission_name"]]
         body = utils.TestSetup.create_TestUserResourcePermission(
-            self, resource_info=test_items["svc3_info"], override_permission_name=test_items["svc_perm1"]
+            self, resource_info=test_items["svc3_info"], override_permission=test_items["svc_perm1"]
         )
         test_items["svc3_usr_perms"] = [body["permission_name"]]
         body = utils.TestSetup.create_TestGroupResourcePermission(
-            self, resource_info=test_items["svc3_info"], override_permission_name=test_items["svc_perm2"]
+            self, resource_info=test_items["svc3_info"], override_permission=test_items["svc_perm2"]
         )
         test_items["svc3_grp_perms"] = [body["permission_name"]]
         # create permissions on immediate children resources
         test_items["svc4_usr_perms"] = []
         test_items["svc4_grp_perms"] = []
         body = utils.TestSetup.create_TestUserResourcePermission(
-            self, resource_info=test_items["res1_info"], override_permission_name=test_items["res_perm1"]
+            self, resource_info=test_items["res1_info"], override_permission=test_items["res_perm1"]
         )
         test_items["res1_usr_perms"] = [body["permission_name"]]
         body = utils.TestSetup.create_TestGroupResourcePermission(
-            self, resource_info=test_items["res2_info"], override_permission_name=test_items["res_perm1"]
+            self, resource_info=test_items["res2_info"], override_permission=test_items["res_perm1"]
         )
         test_items["res2_grp_perms"] = [body["permission_name"]]
         body = utils.TestSetup.create_TestUserResourcePermission(
-            self, resource_info=test_items["res3_info"], override_permission_name=test_items["res_perm1"]
+            self, resource_info=test_items["res3_info"], override_permission=test_items["res_perm1"]
         )
         test_items["res3_usr_perms"] = [body["permission_name"]]
         body = utils.TestSetup.create_TestGroupResourcePermission(
-            self, resource_info=test_items["res3_info"], override_permission_name=test_items["res_perm2"]
+            self, resource_info=test_items["res3_info"], override_permission=test_items["res_perm2"]
         )
         test_items["res3_grp_perms"] = [body["permission_name"]]
         # create permission on sub-children resources
@@ -2062,19 +2197,19 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         test_items["res4_usr_perms"] = []
         test_items["res4_grp_perms"] = []
         body = utils.TestSetup.create_TestUserResourcePermission(
-            self, resource_info=test_items["res5_info"], override_permission_name=test_items["res_perm1"]
+            self, resource_info=test_items["res5_info"], override_permission=test_items["res_perm1"]
         )
         test_items["res5_usr_perms"] = [body["permission_name"]]
         body = utils.TestSetup.create_TestGroupResourcePermission(
-            self, resource_info=test_items["res6_info"], override_permission_name=test_items["res_perm1"]
+            self, resource_info=test_items["res6_info"], override_permission=test_items["res_perm1"]
         )
         test_items["res6_grp_perms"] = [body["permission_name"]]
         body = utils.TestSetup.create_TestUserResourcePermission(
-            self, resource_info=test_items["res7_info"], override_permission_name=test_items["res_perm1"]
+            self, resource_info=test_items["res7_info"], override_permission=test_items["res_perm1"]
         )
         test_items["res7_usr_perms"] = [body["permission_name"]]
         body = utils.TestSetup.create_TestGroupResourcePermission(
-            self, resource_info=test_items["res7_info"], override_permission_name=test_items["res_perm2"]
+            self, resource_info=test_items["res7_info"], override_permission=test_items["res_perm2"]
         )
         test_items["res7_grp_perms"] = [body["permission_name"]]
         return test_items

@@ -1265,7 +1265,7 @@ class TestSetup(object):
                                          override_item_name=null,           # type: Optional[Str]
                                          resource_info=null,                # type: Optional[JSON]
                                          override_resource_id=null,         # type: Optional[int]
-                                         override_permission_name=null,     # type: Optional[Str]
+                                         override_permission=null,          # type: Optional[AnyPermissionType]
                                          override_headers=null,             # type: Optional[HeadersType]
                                          override_cookies=null,             # type: Optional[CookiesType]
                                          ):                                 # type: (...) -> JSON
@@ -1278,13 +1278,13 @@ class TestSetup(object):
                                                        override_cookies=override_cookies)
         else:
             no_perms = "permission_names" not in resource_info or not resource_info.get("permission_names")
-            get_details = no_perms or override_permission_name is null
+            get_details = no_perms or override_permission is null
             resource_info = TestSetup.get_ResourceInfo(test_case, override_body=resource_info, full_detail=get_details,
                                                        override_headers=override_headers,
                                                        override_cookies=override_cookies)
         res_id = resource_info["resource_id"]
-        if override_permission_name is null:
-            override_permission_name = resource_info["permission_names"][0]
+        if override_permission is null:
+            override_permission = resource_info["permission_names"][0]
         if item_type == "group":
             item_name = override_item_name if override_item_name is not null else test_case.test_group_name
             item_path = "/groups/{}".format(item_name)
@@ -1293,7 +1293,7 @@ class TestSetup(object):
             item_path = "/users/{}".format(item_name)
         else:
             raise ValueError("invalid item-type: [{}]".format(item_type))
-        data = {"permission_name": override_permission_name}
+        data = {"permission": PermissionSet(override_permission).json()}
         path = "{}/resources/{}/permissions".format(item_path, res_id)
         resp = test_request(test_case, "POST", path, data=data,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
@@ -1304,7 +1304,7 @@ class TestSetup(object):
     def create_TestUserResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
                                           resource_info=null,               # type: Optional[JSON]
                                           override_resource_id=null,        # type: Optional[int]
-                                          override_permission_name=null,    # type: Optional[Str]
+                                          override_permission=null,         # type: Optional[PermissionSet]
                                           override_user_name=null,          # type: Optional[Str]
                                           override_headers=null,            # type: Optional[HeadersType]
                                           override_cookies=null,            # type: Optional[CookiesType]
@@ -1321,7 +1321,7 @@ class TestSetup(object):
         """
         return TestSetup.create_TestAnyResourcePermission(
             test_case, "user", resource_info=resource_info,
-            override_resource_id=override_resource_id, override_permission_name=override_permission_name,
+            override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_user_name, override_headers=override_headers, override_cookies=override_cookies
         )
 
@@ -1329,7 +1329,7 @@ class TestSetup(object):
     def create_TestGroupResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
                                            resource_info=null,               # type: Optional[JSON]
                                            override_resource_id=null,        # type: Optional[int]
-                                           override_permission_name=null,    # type: Optional[Str]
+                                           override_permission=null,         # type: Optional[PermissionSet]
                                            override_group_name=null,         # type: Optional[Str]
                                            override_headers=null,            # type: Optional[HeadersType]
                                            override_cookies=null,            # type: Optional[CookiesType]
@@ -1346,7 +1346,7 @@ class TestSetup(object):
         """
         return TestSetup.create_TestAnyResourcePermission(
             test_case, "group", resource_info=resource_info,
-            override_resource_id=override_resource_id, override_permission_name=override_permission_name,
+            override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_group_name, override_headers=override_headers, override_cookies=override_cookies
         )
 
