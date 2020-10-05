@@ -7,7 +7,14 @@ from typing import TYPE_CHECKING
 import humanize
 import six
 import transaction
-from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPFound, HTTPMovedPermanently, HTTPNotFound
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPFound,
+    HTTPMovedPermanently,
+    HTTPNotFound,
+    HTTPUnprocessableEntity
+)
 from pyramid.settings import asbool
 from pyramid.view import view_config
 
@@ -250,7 +257,7 @@ class ManagementViews(BaseViews):
                 "group_name": group_name
             }
             resp = request_api(self.request, schemas.UsersAPI.path, "POST", data=data)
-            if resp.status_code == HTTPBadRequest.code:
+            if resp.status_code in (HTTPBadRequest.code, HTTPUnprocessableEntity.code):
                 # attempt to retrieve the API more-specific reason why the operation is invalid
                 body = get_json(resp)
                 param_name = body.get("param", {}).get("name")

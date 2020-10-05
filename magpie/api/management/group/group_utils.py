@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session
 
-    from magpie.permissions import Permission
     from magpie.typedefs import JSON, ResourcePermissionMap, ServiceOrResourceType, Str
 
 
@@ -109,7 +108,7 @@ def create_group(group_name, description, discoverable, db_session):
 
 
 def get_similar_group_resource_permission(group, resource, permission, db_session):
-    # type: (Group, ServiceOrResourceType, PermissionSet, Session) -> Optional[PermissionSet]
+    # type: (models.Group, ServiceOrResourceType, PermissionSet, Session) -> Optional[PermissionSet]
     """
     Obtains the group service/resource permission that corresponds to the provided one.
 

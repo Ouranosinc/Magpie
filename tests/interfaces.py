@@ -1776,7 +1776,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_all_equal(test_service["permission_names"], usr_svc_perms, any_order=True)
         utils.check_val_is_in(str(res_id), test_service["resources"])
         test_perms = test_service["resources"][str(res_id)]["permission_names"]  # noqa
-        utils.check_val_equal(test_perms, [perm_res_usr])
+        usr_res_perms = utils.TestSetup.get_PermissionNames(self, perm_res_usr)
+        utils.check_all_equal(test_perms, usr_res_perms, any_order=True)
 
         # with inherit flag, both user and group permissions are visible on service and resource
         path = "/users/{usr}/resources?inherit=true".format(usr=usr_name)
@@ -1786,8 +1787,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         usr_grp_svc_perms = utils.TestSetup.get_PermissionNames(self, [perm_svc_usr, perm_svc_grp])
         utils.check_all_equal(test_service["permission_names"], usr_grp_svc_perms, any_order=True)
         utils.check_val_is_in(str(res_id), test_service["resources"])
-        utils.check_all_equal(test_service["resources"][str(res_id)]["permission_names"],  # noqa
-                              [perm_res_usr, perm_res_grp], any_order=True)
+        usr_res_perms = test_service["resources"][str(res_id)]["permission_names"]  # noqa
+        expect_perms = utils.TestSetup.get_PermissionNames(self, [perm_res_usr, perm_res_grp])
+        utils.check_all_equal(usr_res_perms, expect_perms, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserResources_Inherited_format(self):
@@ -2282,7 +2284,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         usr_svc_perms = utils.TestSetup.get_PermissionNames(self, perm_svc_usr)
         utils.check_all_equal(body["service"]["permission_names"], usr_svc_perms, any_order=True)
         utils.check_val_is_in(str(res_id), body["service"]["resources"])
-        utils.check_val_equal(body["service"]["resources"][str(res_id)]["permission_names"], [perm_res_usr])  # noqa
+        usr_svc_res_perms = body["service"]["resources"][str(res_id)]["permission_names"]  # noqa
+        expect_perms = utils.TestSetup.get_PermissionNames(self, perm_res_usr)
+        utils.check_all_equal(usr_svc_res_perms, expect_perms, any_order=True)
 
         # with inherit flag, both user and group permissions are visible on service and resource
         path = "/users/{usr}/services/{svc}/resources?inherit=true".format(usr=usr_name, svc=svc_name)

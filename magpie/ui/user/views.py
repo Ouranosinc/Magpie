@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from pyramid.authentication import Authenticated
-from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPBadRequest, HTTPUnprocessableEntity
 from pyramid.view import view_config
 
 from magpie.api import schemas
@@ -101,7 +101,7 @@ class UserViews(BaseViews):
 
             if is_save_user_info:
                 resp = request_api(self.request, schemas.LoggedUserAPI.path, "PATCH", data=user_info)
-                if resp.status_code == HTTPBadRequest.code:
+                if resp.status_code in (HTTPBadRequest.code, HTTPUnprocessableEntity.code):
                     # attempt to retrieve the API specific reason why the operation is invalid
                     body = get_json(resp)
                     param_name = body.get("param", {}).get("name")

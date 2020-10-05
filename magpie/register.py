@@ -59,8 +59,8 @@ if TYPE_CHECKING:
 
 LOGGER = get_logger(__name__)
 
-LOGIN_ATTEMPT = 10              # max attempts for login
-LOGIN_TIMEOUT = 10              # delay (s) between each login attempt
+LOGIN_ATTEMPT = 5               # max attempts for login
+LOGIN_TIMEOUT = 2               # delay (s) between each login attempt
 CREATE_SERVICE_INTERVAL = 2     # delay (s) between creations to allow server to respond/process
 GETCAPABILITIES_INTERVAL = 10   # delay (s) between 'GetCapabilities' Phoenix calls to validate service registration
 GETCAPABILITIES_ATTEMPTS = 12   # max attempts for 'GetCapabilities' validations
@@ -108,8 +108,9 @@ def _login_loop(login_url, cookies_file, data=None, message="Login response"):
         err, http = _request_curl(login_url, cookie_jar=cookies_file, form_params=data_str, msg=message)
         if not err and http == 200:
             break
-        time.sleep(LOGIN_TIMEOUT)
         attempt += 1
+        LOGGER.warning("Login failed, retrying in %ss (%s/%s)", LOGIN_TIMEOUT, attempt, LOGIN_ATTEMPT)
+        time.sleep(LOGIN_TIMEOUT)
         if attempt >= LOGIN_ATTEMPT:
             raise RegistrationLoginError("Cannot log in to {0}".format(login_url))
 

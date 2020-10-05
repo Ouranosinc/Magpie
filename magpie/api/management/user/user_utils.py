@@ -34,14 +34,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
-    from magpie.permissions import Permission
-    from magpie.typedefs import (
-        AnyPermissionType,
-        ResourcePermissionMap,
-        ServiceOrResourceType,
-        Str,
-        UserServicesType
-    )
+    from magpie.typedefs import ResourcePermissionMap, ServiceOrResourceType, Str, UserServicesType
 
 
 def create_user(user_name, password, email, group_name, db_session):
