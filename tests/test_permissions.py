@@ -11,8 +11,8 @@ from tests import runner, utils
 class TestPermissions(unittest.TestCase):
     def test_format_permissions_applied(self):
         """
-        Validate that provided permission sets are formatted as intended, with both implicit and explicit variants,
-        and with both name strings and detailed JSON objects.
+        Validate that provided permission sets are formatted as intended, with both implicit and explicit variants, and
+        with both name strings and detailed JSON objects.
         """
         utils.warn_version(__meta__.__version__, "permission format validation", "2.1", skip=True)
 
@@ -62,8 +62,8 @@ class TestPermissions(unittest.TestCase):
 
     def test_format_permissions_allowed(self):
         """
-        Validate that formats are also respected, but with additional auto-expansion of all *modifier* combinations
-        on permission names when requesting :attr:`PermissionType.ALLOWED` permissions.
+        Validate that formats are also respected, but with additional auto-expansion of all *modifier* combinations on
+        permission names when requesting :attr:`PermissionType.ALLOWED` permissions.
 
         .. seealso::
             :meth:`test_format_permissions_applied`

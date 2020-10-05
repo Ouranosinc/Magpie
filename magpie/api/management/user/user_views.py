@@ -294,7 +294,9 @@ def create_user_resource_permissions_view(request):
 @view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="PUT")
 def replace_user_resource_permissions_view(request):
     """
-    Create or modify an existing permission on a resource for a user. Can be used to adjust permission modifiers.
+    Create or modify an existing permission on a resource for a user.
+
+    Can be used to adjust permission modifiers.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request)
@@ -402,7 +404,9 @@ def create_user_service_permissions_view(request):
 @view_config(route_name=s.UserServicePermissionsAPI.name, request_method="PUT")
 def replace_user_service_permissions_view(request):
     """
-    Create or modify an existing permission on a service for a user. Can be used to adjust permission modifiers.
+    Create or modify an existing permission on a service for a user.
+
+    Can be used to adjust permission modifiers.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
