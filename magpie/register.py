@@ -854,7 +854,7 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
 
         # validation according to status code returned
         if is_create:
-            if _resp.status_code == 201:
+            if _resp.status_code in [200, 201]:  # update/create
                 _log_permission("{} successfully created.".format(item_type), entry_index, level=logging.INFO, trail="")
             elif _resp.status_code == 409:
                 _log_permission("{} already exists.".format(item_type), entry_index, level=logging.INFO)

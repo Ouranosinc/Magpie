@@ -1,4 +1,5 @@
-from itertools import product
+import functools
+import itertools
 from typing import TYPE_CHECKING
 
 from magpie.utils import ExtendedEnum
@@ -61,6 +62,7 @@ class Scope(ExtendedEnum):
     RECURSIVE = "recursive"
 
 
+@functools.total_ordering
 class PermissionSet(object):
     """
     Explicit definition of a :class:`Permission` with applicable :class:`Access` and :class:`Scope` to resolve it.
@@ -135,7 +137,9 @@ class PermissionSet(object):
             return self.name.value < other.name.value
         if self.access != other.access:
             return self.access == Access.ALLOW
-        return self.scope == Scope.RECURSIVE
+        if self.scope != other.scope:
+            return self.scope == Scope.RECURSIVE
+        return False
 
     def __hash__(self):
         # type: () -> int
@@ -283,7 +287,7 @@ class PermissionSet(object):
             perm = Permission.get(name)
             if perm is None:
                 raise ValueError("Unknown permission name could not be identified: {}".format(name))
-            return PermissionSet(perm, Access.get(permission.get("access")), Scope.get("scope"))
+            return PermissionSet(perm, Access.get(permission.get("access")), Scope.get(permission.get("scope")))
         name = getattr(permission, "perm_name", None) or permission  # any ziggurat permission or plain string
         perm = Permission.get(name)
         perm_type = getattr(permission, "type", None)     # ziggurat permission tuple
@@ -354,7 +358,7 @@ def format_permissions(permissions,             # type: Optional[Collection[AnyP
         if permission_type == PermissionType.ALLOWED:
             unique_names = {perm.name for perm in unique_perms}  # trim out any extra variations, then build full list
             unique_perms = sorted([PermissionSet(name, access, scope, PermissionType.ALLOWED)
-                                   for name, access, scope in product(unique_names, Access, Scope)])
+                                   for name, access, scope in itertools.product(unique_names, Access, Scope)])
         for perm in unique_perms:
             implicit_perm = perm.implicit_permission
             explicit_perm = perm.explicit_permission

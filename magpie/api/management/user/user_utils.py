@@ -133,10 +133,13 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     permission.type = PermissionType.APPLIED
     err_content = {"resource_id": res_id, "user_id": user.id,
                    "permission_name": str(permission), "permission": permission.json()}
+    http_success = HTTPCreated
+    http_detail = s.UserResourcePermissions_POST_CreatedResponseSchema.description
     if overwrite and exist_perm:
-        if exist_perm:
-            # skip similar permission lookup since we already did it
-            delete_user_resource_permission_response(user, resource, exist_perm, db_session=db_session, similar=False)
+        # skip similar permission lookup since we already did it
+        http_success = HTTPOk
+        http_detail = s.UserResourcePermissions_PUT_OkResponseSchema.description
+        delete_user_resource_permission_response(user, resource, exist_perm, db_session=db_session, similar=False)
     else:
         ax.verify_param(exist_perm, is_none=True, with_param=False, http_error=HTTPConflict, content=err_content,
                         msg_on_fail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
@@ -148,8 +151,7 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=err_content,
                      msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
-    return ax.valid_http(http_success=HTTPCreated, content=err_content,
-                         detail=s.UserResourcePermissions_POST_CreatedResponseSchema.description)
+    return ax.valid_http(http_success=http_success, content=err_content, detail=http_detail)
 
 
 def delete_user_group(user, group, db_session):
@@ -191,8 +193,10 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
     ru.check_valid_service_or_resource_permission(permission.name, resource, db_session)
     res_id = resource.resource_id
     if similar:
-        del_perm = get_similar_user_resource_permission(user, resource, permission, db_session)
-    del_perm = UserResourcePermissionService.get(user.id, res_id, str(permission), db_session)
+        found_perm = get_similar_user_resource_permission(user, resource, permission, db_session)
+    else:
+        found_perm = permission
+    del_perm = UserResourcePermissionService.get(user.id, res_id, str(found_perm), db_session)
     permission.type = PermissionType.APPLIED
     err_content = {"resource_id": res_id, "user_id": user.id,
                    "permission_name": str(permission), "permission": permission.json()}

@@ -1304,7 +1304,7 @@ class TestSetup(object):
     def create_TestUserResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
                                           resource_info=null,               # type: Optional[JSON]
                                           override_resource_id=null,        # type: Optional[int]
-                                          override_permission=null,         # type: Optional[PermissionSet]
+                                          override_permission=null,         # type: Optional[AnyPermissionType]
                                           override_user_name=null,          # type: Optional[Str]
                                           override_headers=null,            # type: Optional[HeadersType]
                                           override_cookies=null,            # type: Optional[CookiesType]
@@ -1329,7 +1329,7 @@ class TestSetup(object):
     def create_TestGroupResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
                                            resource_info=null,               # type: Optional[JSON]
                                            override_resource_id=null,        # type: Optional[int]
-                                           override_permission=null,         # type: Optional[PermissionSet]
+                                           override_permission=null,         # type: Optional[AnyPermissionType]
                                            override_group_name=null,         # type: Optional[Str]
                                            override_headers=null,            # type: Optional[HeadersType]
                                            override_cookies=null,            # type: Optional[CookiesType]

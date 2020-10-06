@@ -1,3 +1,4 @@
+import itertools
 import unittest
 
 from magpie import __meta__, models
@@ -112,7 +113,7 @@ class TestPermissions(unittest.TestCase):
         utils.check_all_equal(format_perms["permission_names"], expect_names, any_order=False)
         utils.check_all_equal(format_perms["permissions"], expect_perms, any_order=False)
 
-    def test_permission_set_convert(self):
+    def test_permission_convert(self):
         """
         Validate various implicit conversion of permission name string to explicit definition.
         """
@@ -146,3 +147,39 @@ class TestPermissions(unittest.TestCase):
         utils.check_val_equal(perm.name, Permission.WRITE)
         utils.check_val_equal(perm.access, Access.DENY)
         utils.check_val_equal(perm.scope, Scope.RECURSIVE)
+
+    def test_compare_and_sort_operations(self):
+        perm_rar = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)
+        perm_ram = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)
+        perm_rdr = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)
+        perm_rdm = PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)
+        perm_war = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)
+        perm_wam = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.MATCH)
+        perm_wdr = PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)
+        perm_wdm = PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)
+        perm_sorted = [perm_rar, perm_ram, perm_rdr, perm_rdm, perm_war, perm_wam, perm_wdr, perm_wdm]
+        perm_random = [perm_rdr, perm_wam, perm_wdm, perm_rar, perm_war, perm_ram, perm_wdr, perm_rdm]
+
+        utils.check_val_equal(perm_rar, Permission.READ, msg="Should be equal because of defaults and name conversion")
+        utils.check_val_not_equal(perm_rar, Permission.WRITE, msg="Not equal because of mismatch name")
+        utils.check_val_equal(perm_rar, perm_rar.json(), msg="Pre-convert any known representation before equal check")
+
+        utils.check_all_equal(list(sorted(perm_random)), perm_sorted, any_order=False)
+
+        # cannot sort elements with other type representations although 'PermissionSet' can, because they don't know it
+        # (ie: str.__lt__ and dict.__ls__ could call with 'other' being a 'PermissionSet' depending on random order)
+        # can still do the individual compares though if the reference object is 'PermissionSet' and other is anything
+        utils.check_val_equal(perm_sorted[0] < perm_sorted[1], True)
+        utils.check_val_equal(perm_sorted[0] < perm_sorted[1].json(), True)
+        utils.check_val_equal(perm_sorted[0] < perm_sorted[1].implicit_permission, True)
+        utils.check_val_equal(perm_sorted[0] < perm_sorted[1].explicit_permission, True)
+        utils.check_val_equal(perm_sorted[0] > perm_sorted[1], False)
+        utils.check_val_equal(perm_sorted[0] > perm_sorted[1].json(), False)
+        utils.check_val_equal(perm_sorted[0] > perm_sorted[1].implicit_permission, False)
+        utils.check_val_equal(perm_sorted[0] > perm_sorted[1].explicit_permission, False)
+
+        # validate similarity comparison with inplace conversion at the same time
+        for perm_1, perm_2 in itertools.product(perm_sorted[0:4], perm_sorted[0:4]):
+            utils.check_val_equal(perm_1.like(perm_2.json()), True, msg="Expected {!r} ~ {!r}".format(perm_1, perm_2))
+        for perm_1, perm_2 in itertools.product(perm_sorted[0:4], perm_sorted[4:8]):
+            utils.check_val_equal(perm_1.like(perm_2.json()), False, msg="Expected {!r} !~ {!r}".format(perm_1, perm_2))

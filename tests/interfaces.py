@@ -1624,7 +1624,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_PERMISSIONS
-    def test_PutUserResourcePermissions(self):
+    def test_UpdateUserResourcePermissions(self):
         utils.warn_version(self, "update user permissions", "2.1", skip=True)
 
         resource_name = "test-user-resource-update-no-conflict"
@@ -1641,7 +1641,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             }
         }
         # first request creates the permission when it doesn't exist, PUT works exactly as POST does without problem
-        utils.test_request(self, "PUT", path, data=data, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, "PUT", path, data=data, headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 201, expected_method="PUT")  # created, http code indicates new entity
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_res_id)
         perm = PermissionSet(data["permission"])
         utils.check_val_is_in("permission_names", body)
@@ -1652,7 +1653,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         data["permission"]["access"] = Access.DENY.value
         data["permission"]["scope"] = Scope.RECURSIVE.value
         resp = utils.test_request(self, "PUT", path, data=data, headers=self.json_headers, cookies=self.cookies)
-        body = utils.check_response_basic_info(resp, 201, expected_method="PUT")
+        body = utils.check_response_basic_info(resp, 200, expected_method="PUT")  # updated, http code is different
         perm = PermissionSet(data["permission"], typ=PermissionType.APPLIED)
         utils.check_val_is_in("permission_name", body)
         utils.check_val_is_in(str(perm), body["permission_name"], msg="Permission should have been modified.")
@@ -1672,6 +1673,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_DeleteUserResourcePermission(self):
+        utils.warn_version(self, "delete user permissions with body", "2.1", skip=True)
+
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestService(self)
@@ -1696,7 +1699,52 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_SERVICES
     @runner.MAGPIE_TEST_PERMISSIONS
+    def test_UpdateUserServicePermissions(self):
+        utils.warn_version(self, "update user permissions", "2.1", skip=True)
+
+        # setup initial permission on service
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+        body = utils.TestSetup.create_TestService(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=info["resource_id"])
+        path = "/users/{}/services/{}/permissions".format(self.test_user_name, self.test_service_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(len(body["permissions"]), 1)
+        perm = body["permissions"][0]
+        utils.check_val_equal(perm["access"], Access.ALLOW.value)
+        utils.check_val_equal(perm["scope"], Scope.RECURSIVE.value)
+
+        # update existing permission
+        perm = {"name": perm["name"], "access": Access.DENY.value, "scope": Scope.MATCH.value}
+        data = {"permission": perm}
+        resp = utils.test_request(self, "PUT", path, json=data)
+        utils.check_response_basic_info(resp, 200, expected_method="PUT")
+        perm.update({"type": PermissionType.DIRECT.value})
+        expect_perms = [perm]
+
+        # create new permission
+        perm = {"name": Permission.WRITE.value}
+        data = {"permission": perm}  # only name, others should use defaults
+        resp = utils.test_request(self, "PUT", path, json=data)
+        utils.check_response_basic_info(resp, 201, expected_method="PUT")
+        perm.update({"access": Access.ALLOW.value, "scope": Scope.RECURSIVE.value, "type": PermissionType.DIRECT.value})
+        expect_perms.append(perm)
+
+        # validate both permissions exist
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        perms = body["permissions"]
+        utils.check_val_equal(len(perms), 2, msg="New permission of different name should leave other intact.")
+        utils.check_all_equal(perms, expect_perms, any_order=True)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_PERMISSIONS
     def test_DeleteUserServicePermission(self):
+        utils.warn_version(self, "delete user permissions with body", "2.1", skip=True)
+
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestService(self)
@@ -3016,6 +3064,64 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 409, expected_method="POST")
 
     @runner.MAGPIE_TEST_GROUPS
+    def test_UpdateGroup_Name(self):
+        new_group_name = "{}-new-name".format(self.test_group_name)
+        self.extra_group_names.add(new_group_name)
+        utils.TestSetup.delete_TestGroup(self, override_group_name=new_group_name)
+        utils.TestSetup.create_TestGroup(self)
+
+        path = "/groups/{}".format(self.test_group_name)
+        data = {"group_name": new_group_name}
+        resp = utils.test_request(self, self.update_method, path, json=data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        resp = utils.test_request(self, "GET", path, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 404)
+
+        path = "/groups/{}".format(new_group_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(body["group"]["group_name"], new_group_name)
+        path = "/groups/{}".format(new_group_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200)
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_UpdateGroup_Discoverable(self):
+        utils.TestSetup.create_TestGroup(self, override_discoverable=False)
+
+        path = "/groups/{}".format(self.test_group_name)
+        data = {"discoverable": True}
+        resp = utils.test_request(self, self.update_method, path, json=data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(body["group"]["discoverable"], True)
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_UpdateGroup_MultipleFields(self):
+        data = {"group_name": self.test_group_name, "discoverable": True, "description": "test-group"}
+        new_group_name = "{}-new-name".format(self.test_group_name)
+        self.extra_group_names.add(new_group_name)
+        utils.TestSetup.delete_TestGroup(self, override_group_name=new_group_name)
+        utils.TestSetup.create_TestGroup(self, override_data=data)
+
+        path = "/groups/{}".format(self.test_group_name)
+        desc = "new-test-group"
+        data = {"group_name": new_group_name, "discoverable": False, "description": desc}
+        resp = utils.test_request(self, self.update_method, path, json=data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        path = "/groups/{}".format(new_group_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(body["group"]["group_name"], new_group_name)
+        utils.check_val_equal(body["group"]["discoverable"], False)
+        utils.check_val_equal(body["group"]["description"], desc)
+
+    @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_DEFAULTS
     def test_DeleteGroup_forbidden_ReservedKeyword_Anonymous(self):
         """
@@ -3062,8 +3168,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         fake_group = "magpie-unittest-random-group"
         utils.TestSetup.delete_TestGroup(self, override_group_name=fake_group)
         path = "/groups/{}/users".format(fake_group)
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies,
-                                  expect_errors=True)
+        resp = utils.test_request(self, "GET", path, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 404, expected_method="GET")
 
     @runner.MAGPIE_TEST_GROUPS
@@ -3112,6 +3218,232 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("service", body)
         svc_dict = body["service"]
         utils.TestSetup.check_ServiceFormat(self, svc_dict, has_private_url=False, override_permissions=[])
+
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_GetGroupServicePermissions(self):
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestService(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=info["resource_id"])
+
+        path = "/groups/{}/services/{}/permissions".format(self.test_group_name, self.test_service_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        perm_names = utils.TestSetup.get_PermissionNames(self, self.test_service_perm)
+        perm = PermissionSet(perm_names[-1], typ=PermissionType.APPLIED)
+        utils.check_all_equal(body["permission_names"], perm_names, any_order=True)
+        utils.check_val_equal(body["permissions"], [perm.json()])
+
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_UpdateGroupServicePermissions(self):
+        utils.warn_version(self, "update group permissions", "2.1", skip=True)
+
+        # setup initial permission on service
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestService(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=info["resource_id"])
+
+        path = "/groups/{}/services/{}/permissions".format(self.test_group_name, self.test_service_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(len(body["permissions"]), 1)
+        perm = body["permissions"][0]
+        utils.check_val_equal(perm["access"], Access.ALLOW.value)
+        utils.check_val_equal(perm["scope"], Scope.RECURSIVE.value)
+
+        # update existing permission
+        perm = {"name": perm["name"], "access": Access.DENY.value, "scope": Scope.MATCH.value}
+        data = {"permission": perm}
+        resp = utils.test_request(self, "PUT", path, json=data)
+        utils.check_response_basic_info(resp, 200, expected_method="PUT")
+        perm.update({"type": PermissionType.APPLIED.value})
+        expect_perms = [perm]
+
+        # create new permission
+        perm = {"name": Permission.WRITE.value}
+        data = {"permission": perm}  # only name, others should use defaults
+        resp = utils.test_request(self, "PUT", path, json=data)
+        utils.check_response_basic_info(resp, 201, expected_method="PUT")
+        perm.update({"access": Access.ALLOW.value,
+                     "scope": Scope.RECURSIVE.value,
+                     "type": PermissionType.APPLIED.value})
+        expect_perms.append(perm)
+
+        # validate both permissions exist
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        perms = body["permissions"]
+        utils.check_val_equal(len(perms), 2, msg="New permission of different name should leave other intact.")
+        utils.check_all_equal(perms, expect_perms, any_order=True)
+
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_DeleteGroupServicePermissions(self):
+        utils.warn_version(self, "delete group permissions with body", "2.1", skip=True)
+
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestService(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res_id = info["resource_id"]
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res_id)
+
+        # create 2 permissions to validate DELETE is only applied on targeted 'similar' permission by name
+        other_perm = Permission.WRITE.value
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res_id,
+                                                           override_permission=other_perm)
+
+        path = "/groups/{}/services/{}/permissions".format(self.test_group_name, self.test_service_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(len(body["permissions"]), 2)
+        perm = body["permissions"][0]
+        data = {"permission": perm}  # submit with JSON object
+        resp = utils.test_request(self, "DELETE", path, json=data, headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+
+        # validate with GET because DELETE body does not have permission
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(len(body["permissions"]), 1)
+        perm = body["permissions"][0]  # type: JSON
+        utils.check_val_equal(perm["name"], other_perm)
+
+        data = {"permission": other_perm}  # submit with name, should still find similar permission
+        resp = utils.test_request(self, "DELETE", path, json=data, headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(len(body["permission_names"]), 0)
+        utils.check_val_equal(len(body["permissions"]), 0)
+
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_DeleteGroupServicePermissionName(self):
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestService(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        body = utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=info["resource_id"])
+        perm = body["permission_name"]
+
+        path = "/groups/{}/services/{}/permissions/{}".format(self.test_group_name, self.test_service_name, perm)
+        resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+
+        # validate with GET because DELETE body does not have permission
+        path = "/groups/{}/services/{}/permissions".format(self.test_group_name, self.test_service_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(len(body["permission_names"]), 0)
+        utils.check_val_equal(len(body["permissions"]), 0)
+
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_GetGroupResourcePermissions(self):
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res_id = info["resource_id"]
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res_id)
+
+        path = "/groups/{}/resources/{}/permissions".format(self.test_group_name, res_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        perm_names = utils.TestSetup.get_PermissionNames(self, self.test_resource_perm_name)
+        perm = PermissionSet(perm_names[-1], typ=PermissionType.APPLIED)
+        utils.check_all_equal(body["permission_names"], perm_names, any_order=True)
+        utils.check_val_equal(body["permissions"], [perm.json()])
+
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_UpdateGroupResourcePermissions(self):
+        utils.warn_version(self, "update group permissions", "2.1", skip=True)
+
+        # setup initial permission on service
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=info["resource_id"])
+
+        path = "/groups/{}/resources/{}/permissions".format(self.test_group_name, info["resource_id"])
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(len(body["permissions"]), 1)
+        perm = body["permissions"][0]
+        utils.check_val_equal(perm["access"], Access.ALLOW.value)
+        utils.check_val_equal(perm["scope"], Scope.RECURSIVE.value)
+
+        # update existing permission
+        perm = {"name": perm["name"], "access": Access.DENY.value, "scope": Scope.MATCH.value}
+        data = {"permission": perm}
+        resp = utils.test_request(self, "PUT", path, json=data)
+        utils.check_response_basic_info(resp, 200, expected_method="PUT")
+        perm.update({"type": PermissionType.APPLIED.value})
+        expect_perms = [perm]
+
+        # create new permission
+        perm = {"name": Permission.WRITE.value}
+        data = {"permission": perm}  # only name, others should use defaults
+        resp = utils.test_request(self, "PUT", path, json=data)
+        utils.check_response_basic_info(resp, 201, expected_method="PUT")
+        perm.update({"access": Access.ALLOW.value,
+                     "scope": Scope.RECURSIVE.value,
+                     "type": PermissionType.APPLIED.value})
+        expect_perms.append(perm)
+
+        # validate both permissions exist
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        perms = body["permissions"]
+        utils.check_val_equal(len(perms), 2, msg="New permission of different name should leave other intact.")
+        utils.check_all_equal(perms, expect_perms, any_order=True)
+
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_DeleteGroupResourcePermissions(self):
+        utils.warn_version(self, "delete group permissions with body", "2.1", skip=True)
+
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=info["resource_id"])
+
+        path = "/groups/{}/resources/{}/permissions".format(self.test_group_name, info["resource_id"])
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(len(body["permissions"]), 1)
+        perm = body["permissions"][0]
+        data = {"permission": perm}
+        resp = utils.test_request(self, "DELETE", path, json=data, headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(len(body["permission_names"]), 0)
+        utils.check_val_equal(len(body["permissions"]), 0)
+
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_DeleteGroupResourcePermissionName(self):
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        body = utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=info["resource_id"])
+        perm = body["permission_name"]
+
+        path = "/groups/{}/resources/{}/permissions/{}".format(self.test_group_name, info["resource_id"], perm)
+        resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+
+        # validate with GET since no name returned in DELETE response
+        path = "/groups/{}/resources/{}/permissions".format(self.test_group_name, info["resource_id"])
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(len(body["permission_names"]), 0)
+        utils.check_val_equal(len(body["permissions"]), 0)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_GetServices_ResponseFormat_Default(self):
