@@ -1,6 +1,8 @@
 import itertools
 import unittest
 
+from ziggurat_foundations.permissions import PermissionTuple  # noqa
+
 from magpie import __meta__, models
 from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope, format_permissions
 from tests import runner, utils
@@ -147,6 +149,26 @@ class TestPermissions(unittest.TestCase):
         utils.check_val_equal(perm.name, Permission.WRITE)
         utils.check_val_equal(perm.access, Access.DENY)
         utils.check_val_equal(perm.scope, Scope.RECURSIVE)
+        perm = PermissionSet({"name": Permission.WRITE, "access": Access.DENY, "scope": Scope.MATCH})
+        utils.check_val_equal(perm.name, Permission.WRITE)
+        utils.check_val_equal(perm.access, Access.DENY)
+        utils.check_val_equal(perm.scope, Scope.MATCH)
+        perm = PermissionSet({"name": Permission.WRITE.value, "access": Access.DENY.value, "scope": Scope.MATCH.value})
+        utils.check_val_equal(perm.name, Permission.WRITE)
+        utils.check_val_equal(perm.access, Access.DENY)
+        utils.check_val_equal(perm.scope, Scope.MATCH)
+        perm = PermissionSet(PermissionTuple("user-name", "write-deny-match", "user",  # important: perm-name & type
+                                             "group_id", "resource_id", "owner", "allowed"))  # these doesn't matter
+        utils.check_val_equal(perm.name, Permission.WRITE)
+        utils.check_val_equal(perm.access, Access.DENY)
+        utils.check_val_equal(perm.scope, Scope.MATCH)
+        utils.check_val_equal(perm.type, PermissionType.DIRECT, msg="PermissionTuple should also help identify type")
+        perm = PermissionSet(PermissionTuple("user-name", "write-deny-match", "group",  # important: perm-name & type
+                                             "group_id", "resource_id", "owner", "allowed"))  # these doesn't matter
+        utils.check_val_equal(perm.name, Permission.WRITE)
+        utils.check_val_equal(perm.access, Access.DENY)
+        utils.check_val_equal(perm.scope, Scope.MATCH)
+        utils.check_val_equal(perm.type, PermissionType.INHERITED, msg="PermissionTuple should also help identify type")
 
     def test_compare_and_sort_operations(self):
         perm_rar = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)

@@ -287,7 +287,10 @@ class PermissionSet(object):
             perm = Permission.get(name)
             if perm is None:
                 raise ValueError("Unknown permission name could not be identified: {}".format(name))
-            return PermissionSet(perm, Access.get(permission.get("access")), Scope.get(permission.get("scope")))
+            access = Access.get(permission.get("access"))
+            scope = Scope.get(permission.get("scope"))
+            typ = PermissionType.get(permission.get("type"))
+            return PermissionSet(perm, access, scope, typ)
         name = getattr(permission, "perm_name", None) or permission  # any ziggurat permission or plain string
         perm = Permission.get(name)
         perm_type = getattr(permission, "type", None)     # ziggurat permission tuple
@@ -315,7 +318,7 @@ class PermissionSet(object):
             if access is not None:
                 perm = name
         perm = Permission.get(perm)
-        return PermissionSet(perm, access, scope)
+        return PermissionSet(perm, access, scope, perm_type)
 
 
 def format_permissions(permissions,             # type: Optional[Collection[AnyPermissionType]]

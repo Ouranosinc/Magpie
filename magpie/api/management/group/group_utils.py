@@ -313,7 +313,7 @@ def get_group_service_permissions(group, service, db_session):
             perms = db_session.query(models.GroupResourcePermission) \
                               .filter(models.GroupResourcePermission.resource_id == service.resource_id) \
                               .filter(models.GroupResourcePermission.group_id == group.id)
-        return [PermissionSet(perm, perm_type) for perm in perms]
+        return [PermissionSet(perm, typ=perm_type) for perm in perms]
 
     return ax.evaluate_call(lambda: get_grp_svc_perms(),
                             http_error=HTTPInternalServerError,
@@ -334,8 +334,8 @@ def get_group_service_permissions_response(group, service, db_session):
         http_error=HTTPInternalServerError,
         msg_on_fail=s.GroupServicePermissions_GET_InternalServerErrorResponseSchema.description,
         content={"group": format_group(group, basic_info=True), "service": format_service(service)})
-    return ax.valid_http(http_success=HTTPOk, detail=s.GroupServicePermissions_GET_OkResponseSchema.description,
-                         content=svc_perms_found)
+    return ax.valid_http(http_success=HTTPOk, content=svc_perms_found,
+                         detail=s.GroupServicePermissions_GET_OkResponseSchema.description)
 
 
 def get_group_service_resources_permissions_dict(group, service, db_session):
