@@ -13,6 +13,8 @@ isort>5
 mock
 pylint>=2.5
 pylint-quotes
+# bird-house/twticher, must match version in Dockerfile.adapater
+pyramid-twitcher==0.5.3
 pytest
 tox>=3.0
 webtest

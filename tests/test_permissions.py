@@ -1,6 +1,7 @@
 import itertools
 import unittest
 
+from pyramid.security import ALL_PERMISSIONS, Allow, Deny
 from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
 from magpie import __meta__, models
@@ -115,11 +116,13 @@ class TestPermissions(unittest.TestCase):
         utils.check_all_equal(format_perms["permission_names"], expect_names, any_order=False)
         utils.check_all_equal(format_perms["permissions"], expect_perms, any_order=False)
 
-    def test_permission_convert(self):
+    def test_permission_convert_from_string(self):
         """
+        Conversion by implicit/explicit name.
+
         Validate various implicit conversion of permission name string to explicit definition.
         """
-        utils.warn_version(__meta__.__version__, "permission implicit/explicit conversion", "2.1", skip=True)
+        utils.warn_version(__meta__.__version__, "permission set conversion", "2.1", skip=True)
 
         perm = PermissionSet("read")  # old implicit format
         utils.check_val_equal(perm.name, Permission.READ)
@@ -141,6 +144,15 @@ class TestPermissions(unittest.TestCase):
         utils.check_val_equal(perm.name, Permission.READ)
         utils.check_val_equal(perm.access, Access.DENY)
         utils.check_val_equal(perm.scope, Scope.MATCH)
+
+    def test_permission_convert_from_enum(self):
+        """
+        Conversion by enum values.
+
+        Validate various implicit conversion of permission name string to explicit definition.
+        """
+        utils.warn_version(__meta__.__version__, "permission set conversion", "2.1", skip=True)
+
         perm = PermissionSet(Permission.READ)
         utils.check_val_equal(perm.name, Permission.READ)
         utils.check_val_equal(perm.access, Access.ALLOW)
@@ -149,6 +161,15 @@ class TestPermissions(unittest.TestCase):
         utils.check_val_equal(perm.name, Permission.WRITE)
         utils.check_val_equal(perm.access, Access.DENY)
         utils.check_val_equal(perm.scope, Scope.RECURSIVE)
+
+    def test_permission_convert_from_json(self):
+        """
+        Conversion by JSON definition.
+
+        Validate various implicit conversion of permission JSON definition.
+        """
+        utils.warn_version(__meta__.__version__, "permission set conversion", "2.1", skip=True)
+
         perm = PermissionSet({"name": Permission.WRITE, "access": Access.DENY, "scope": Scope.MATCH})
         utils.check_val_equal(perm.name, Permission.WRITE)
         utils.check_val_equal(perm.access, Access.DENY)
@@ -157,6 +178,15 @@ class TestPermissions(unittest.TestCase):
         utils.check_val_equal(perm.name, Permission.WRITE)
         utils.check_val_equal(perm.access, Access.DENY)
         utils.check_val_equal(perm.scope, Scope.MATCH)
+
+    def test_permission_convert_from_tuple(self):
+        """
+        Conversion from Ziggurat :class:`PermissionTuple` object.
+
+        Validate various implicit conversion of permission elements to explicit definition.
+        """
+        utils.warn_version(__meta__.__version__, "permission set conversion", "2.1", skip=True)
+
         perm = PermissionSet(PermissionTuple("user-name", "write-deny-match", "user",  # important: perm-name & type
                                              "group_id", "resource_id", "owner", "allowed"))  # these doesn't matter
         utils.check_val_equal(perm.name, Permission.WRITE)
@@ -169,6 +199,30 @@ class TestPermissions(unittest.TestCase):
         utils.check_val_equal(perm.access, Access.DENY)
         utils.check_val_equal(perm.scope, Scope.MATCH)
         utils.check_val_equal(perm.type, PermissionType.INHERITED, msg="PermissionTuple should also help identify type")
+
+    def test_permission_convert_from_acl(self):
+        """
+        Conversion from Pyramid ACL definition.
+
+        Validate various implicit conversion of permission elements to explicit definition.
+        """
+        utils.warn_version(__meta__.__version__, "permission set conversion", "2.1", skip=True)
+
+        perm = PermissionSet((Allow, 1, "write-deny-match"))
+        utils.check_val_equal(perm.name, Permission.WRITE)
+        utils.check_val_equal(perm.access, Access.ALLOW)
+        utils.check_val_equal(perm.scope, Scope.MATCH)
+        utils.check_val_equal(perm.type, PermissionType.DIRECT, msg="Should infer direct from user ID.")
+        perm = PermissionSet((Deny, "group:1", "read"))
+        utils.check_val_equal(perm.name, Permission.READ)
+        utils.check_val_equal(perm.access, Access.DENY)
+        utils.check_val_equal(perm.scope, Scope.RECURSIVE)
+        utils.check_val_equal(perm.type, PermissionType.INHERITED, msg="Should infer inherited from group specifier.")
+        perm = PermissionSet((Allow, "group:1", ALL_PERMISSIONS))
+        utils.check_val_equal(perm.name, ALL_PERMISSIONS, msg="Should remain generic ALL_PERMISSION as name.")
+        utils.check_val_equal(perm.access, Access.ALLOW)
+        utils.check_val_equal(perm.scope, Scope.RECURSIVE, msg="Should be enforced to recursive for generic name.")
+        utils.check_val_equal(perm.type, PermissionType.INHERITED, msg="Should infer inherited from group specifier.")
 
     def test_compare_and_sort_operations(self):
         perm_rar = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)

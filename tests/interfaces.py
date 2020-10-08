@@ -1766,7 +1766,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_PERMISSIONS
-    @unittest.skip  # FIXME: remove when implemented
+    @runner.MAGPIE_TEST_FUNCTIONAL
     def test_UserResourcePermissions_EffectiveResolution(self):
         """
         Test effective resolution of permissions.
@@ -1782,7 +1782,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             M: match
             R: recursive
 
-        Permissions Applied::
+        Permissions::
                                         user            group           effective (reason/importance)
 
             Service1                    (r-A-M)                         r-A, w-D  (default)
@@ -1803,13 +1803,13 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # create user/group and services/resources
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
-        body = utils.TestSetup.create_TestService(self, override_service_name="Service1-unittest-effective-permssions")
+        body = utils.TestSetup.create_TestService(self, override_service_name="Service1-unittest-effective-permissions")
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         svc1_id, svc1_name = info["resource_id"], info["resource_name"]
-        body = utils.TestSetup.create_TestService(self, override_service_name="Service2-unittest-effective-permssions")
+        body = utils.TestSetup.create_TestService(self, override_service_name="Service2-unittest-effective-permissions")
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         svc2_id, svc2_name = info["resource_id"], info["resource_name"]
-        body = utils.TestSetup.create_TestService(self, override_service_name="Service3-unittest-effective-permssions")
+        body = utils.TestSetup.create_TestService(self, override_service_name="Service3-unittest-effective-permissions")
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         svc3_id, svc3_name = info["resource_id"], info["resource_name"]
         body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc1_id, override_resource_name="Resource1")
@@ -1871,12 +1871,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             body = utils.check_response_basic_info(resp, 200)  # noqa
             permissions = body["permissions"]
             utils.check_val_not_equal(len(permissions), 0)
+            msg = "Effective permission '{}' on resource '{}' expected '{}'".format(perm.value, res_name, access.value)
             for obj in permissions:
-                if Access.get(obj["access"]) == access and Permission.get(obj["name"]) == perm:
-                    return
-            raise AssertionError(
-                "Permission '{}' for resource '{}' expected to be '{}'".format(perm.value, res_name, access.value)
-            )
+                utils.check_val_equal(Permission.get(obj["name"]), perm, msg=msg)
+                utils.check_val_equal(Access.get(obj["access"]), access, msg=msg)
+                utils.check_val_equal(obj["scope"], None, msg=msg)
+                utils.check_val_equal(PermissionType.get(obj["type"]), PermissionType.EFFECTIVE, msg=msg)
 
         # test
         eval_perm_effective(svc1_name, svc1_id, Permission.READ, Access.ALLOW)

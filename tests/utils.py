@@ -6,13 +6,14 @@ import warnings
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
+import mock
 import pytest
 import requests
 import requests.exceptions
 import six
 from pyramid.httpexceptions import HTTPException
 from pyramid.settings import asbool
-from pyramid.testing import setUp as PyramidSetUp
+from pyramid.testing import DummyRequest, setUp as PyramidSetUp
 from six.moves.urllib.parse import urlparse
 from webtest.app import AppError, TestApp  # noqa
 from webtest.response import TestResponse
@@ -326,6 +327,48 @@ def json_msg(json_body, msg=null):
     if msg is not null:
         return "{}\n{}".format(msg, json_str)
     return json_str
+
+
+def mock_request(request_path_query="",     # type: Str
+                 method="GET",              # type: Str
+                 params=None,               # type: Optional[Dict[Str, Str]]
+                 body="",                   # type: Union[Str, JSON]
+                 content_type=None,         # type: Optional[Str]
+                 headers=None,              # type: Optional[AnyHeadersType]
+                 cookies=None,              # type: Optional[AnyCookiesType]
+                 settings=None,             # type: SettingsType
+                 ):                         # type: (...) -> Request
+    """
+    Generates a fake request with provided arguments.
+
+    Can be employed by functions that expect a request object as input to retrieve details such as body content, the
+    request path, or internal settings, but that no actual request needs to be accomplished.
+    """
+    parts = request_path_query.split("?")
+    path = parts[0]
+    query = dict()
+    if len(parts) > 1:
+        for part in parts[1:]:
+            k, v = part.split("=")
+            query[k] = v
+    elif params:
+        query = params
+    request = DummyRequest(path=path, params=query)
+    request.method = method
+    request.content_type = content_type
+    request.headers = headers or {}
+    request.cookies = cookies or {}
+    if content_type:
+        request.headers["Content-Type"] = content_type
+    request.body = body
+    try:
+        if body:
+            # set missing DummyRequest.json attribute
+            request.json = json_pkg.loads(body)
+    except (TypeError, ValueError):
+        pass
+    request.registry.settings = settings or {}
+    return request  # noqa  # fake type of what is normally expected just to avoid many 'noqa'
 
 
 def test_request(test_item,             # type: AnyMagpieTestItemType
@@ -655,14 +698,14 @@ def check_raises(func, exception_type, msg=None):
 
 
 def check_no_raise(func, msg=None):
-    # type: (Callable[[], None], Optional[Str]) -> None
+    # type: (Callable[[], Any], Optional[Str]) -> Any
     """
     Calls the callable and verifies that no exception was raised.
 
     :raise AssertionError: on any raised exception.
     """
     try:
-        func()
+        return func()
     except Exception as exc:  # pylint: disable=W0703
         msg = ": {}".format(msg) if msg else "."
         raise AssertionError("Exception [{!r}] was raised when none is expected{}".format(type(exc).__name__, msg))

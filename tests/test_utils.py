@@ -10,14 +10,11 @@ Tests for the various utility operations employed by magpie.
 
 import unittest
 from distutils.version import LooseVersion
-from typing import TYPE_CHECKING
 
 import mock
 import six
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPInternalServerError, HTTPOk
-from pyramid.request import Request
 from pyramid.settings import asbool
-from pyramid.testing import DummyRequest
 
 from magpie import __meta__
 from magpie.api import exception as ax
@@ -25,10 +22,6 @@ from magpie.api import generic as ag
 from magpie.api import requests as ar
 from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum, get_header
 from tests import runner, utils
-
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Str
 
 
 class DummyEnum(ExtendedEnum):
@@ -39,18 +32,6 @@ class DummyEnum(ExtendedEnum):
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_UTILS
 class TestUtils(unittest.TestCase):
-    @staticmethod
-    def make_request(request_path_query):
-        # type: (Str) -> Request
-        parts = request_path_query.split("?")
-        path = parts[0]
-        query = dict()
-        if len(parts) > 1:
-            for part in parts[1:]:
-                k, v = part.split("=")
-                query[k] = v
-        return DummyRequest(path=path, params=query)  # noqa
-
     @classmethod
     def setUpClass(cls):
         cls.version = __meta__.__version__  # only local test
@@ -109,35 +90,35 @@ class TestUtils(unittest.TestCase):
                 utils.check_val_equal(get_header(name, headers, split=split), CONTENT_TYPE_JSON)
 
     def test_get_query_param(self):
-        resp = self.make_request("/some/path")
+        resp = utils.mock_request("/some/path")
         v = ar.get_query_param(resp, "value")
         utils.check_val_equal(v, None)
 
-        resp = self.make_request("/some/path?other=test")
+        resp = utils.mock_request("/some/path?other=test")
         v = ar.get_query_param(resp, "value")
         utils.check_val_equal(v, None)
 
-        resp = self.make_request("/some/path?other=test")
+        resp = utils.mock_request("/some/path?other=test")
         v = ar.get_query_param(resp, "value", True)
         utils.check_val_equal(v, True)
 
-        resp = self.make_request("/some/path?value=test")
+        resp = utils.mock_request("/some/path?value=test")
         v = ar.get_query_param(resp, "value", True)
         utils.check_val_equal(v, "test")
 
-        resp = self.make_request("/some/path?query=value")
+        resp = utils.mock_request("/some/path?query=value")
         v = ar.get_query_param(resp, "query")
         utils.check_val_equal(v, "value")
 
-        resp = self.make_request("/some/path?QUERY=VALUE")
+        resp = utils.mock_request("/some/path?QUERY=VALUE")
         v = ar.get_query_param(resp, "query")
         utils.check_val_equal(v, "VALUE")
 
-        resp = self.make_request("/some/path?QUERY=VALUE")
+        resp = utils.mock_request("/some/path?QUERY=VALUE")
         v = asbool(ar.get_query_param(resp, "query"))
         utils.check_val_equal(v, False)
 
-        resp = self.make_request("/some/path?Query=TRUE")
+        resp = utils.mock_request("/some/path?Query=TRUE")
         v = asbool(ar.get_query_param(resp, "query"))
         utils.check_val_equal(v, True)
 
@@ -336,7 +317,7 @@ class TestUtils(unittest.TestCase):
         )
 
     def test_guess_target_format_default(self):
-        request = DummyRequest()
-        content_type, where = ag.guess_target_format(request)  # noqa
+        request = utils.mock_request()
+        content_type, where = ag.guess_target_format(request)
         utils.check_val_equal(content_type, CONTENT_TYPE_JSON)
         utils.check_val_equal(where, True)

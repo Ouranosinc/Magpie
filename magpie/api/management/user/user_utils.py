@@ -265,7 +265,7 @@ def get_user_resource_permissions_response(user, resource, request,
         else:
             if effective_permissions:
                 svc = ru.get_resource_root_service_impl(resource, request)
-                res_perm_list = svc.effective_permissions(resource, user)
+                res_perm_list = svc.effective_permissions(user, resource)
                 perm_type = PermissionType.EFFECTIVE
             else:
                 if inherit_groups_permissions:

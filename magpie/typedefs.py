@@ -71,4 +71,5 @@ if TYPE_CHECKING:
     ]
     AnyPermissionType = Union[Permission, PermissionSet, PermissionObject, AnyZigguratPermissionType, Str]
     AnyAccessPrincipalType = Union[Str, Iterable[Str]]
-    AccessControlListType = List[Union[Tuple[Str, Str, Str], Str]]
+    AccessControlEntryType = Union[Tuple[Str, Str, Str], Str]
+    AccessControlListType = List[AccessControlEntryType]

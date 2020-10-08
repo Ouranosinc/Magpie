@@ -2,13 +2,17 @@ import functools
 import itertools
 from typing import TYPE_CHECKING
 
+from pyramid.security import ALL_PERMISSIONS
+
 from magpie.utils import ExtendedEnum
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Collection, Dict, List, Optional, Union
 
-    from magpie.typedefs import AnyPermissionType, PermissionObject, Str
+    from pyramid.security import AllPermissionsList
+
+    from magpie.typedefs import AccessControlListType, AnyPermissionType, PermissionObject, Str
 
 
 class Permission(ExtendedEnum):
@@ -83,7 +87,7 @@ class PermissionSet(object):
     __slots__ = ["_name", "_access", "_scope", "_type"]
 
     def __init__(self,
-                 permission,    # type: AnyPermissionType
+                 permission,    # type: Union[AnyPermissionType, AllPermissionsList]
                  access=None,   # type: Optional[Union[Access, Str]]
                  scope=None,    # type: Optional[Union[Scope, Str]]
                  typ=None,      # type: Optional[PermissionType]
@@ -280,6 +284,8 @@ class PermissionSet(object):
         """
         if isinstance(permission, PermissionSet):
             return permission
+
+        # JSON representation
         if isinstance(permission, dict):
             name = permission.get(
                 "name", permission.get("permission_name", permission.get("permission", permission.get("perm_name")))
@@ -291,17 +297,31 @@ class PermissionSet(object):
             scope = Scope.get(permission.get("scope"))
             typ = PermissionType.get(permission.get("type"))
             return PermissionSet(perm, access, scope, typ)
-        name = getattr(permission, "perm_name", None) or permission  # any ziggurat permission or plain string
-        perm = Permission.get(name)
-        perm_type = getattr(permission, "type", None)     # ziggurat permission tuple
+
+        # pyramid ACE representation
+        if isinstance(permission, tuple) and len(permission) == 3:
+            access = Access.get(permission[0].lower())
+            perm_type = PermissionType.INHERITED if "group" in str(permission[1]) else PermissionType.DIRECT
+            return PermissionSet(permission[2], access, Scope.RECURSIVE, perm_type)
+
+        # ziggurat PermissionTuple or plain string representation
+        name = getattr(permission, "perm_name", None) or permission
+        perm = Permission.get(name)  # old '-match' variants are not in enum anymore, so they are not found here
+        perm_type = getattr(permission, "type", None)  # ziggurat PermissionTuple
         if perm_type == "user":
             perm_type = PermissionType.DIRECT
         elif perm_type == "group":
             perm_type = PermissionType.INHERITED
+        if name == ALL_PERMISSIONS:
+            # ziggurat PermissionTuple resolves owner user/group of the resource with all permission as name
+            perm = ALL_PERMISSIONS
+            perm_type = PermissionType.OWNED
         if perm is not None:
-            # when matched, a plain string or Permission enum was directly passed, infer the rest
+            # when matched, either plain permission-name string or Permission enum, or AllPermissionList was passed
+            # infer the rest of the parameters
             return PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE, perm_type)
-        # note: old '-match' variants are not entries within 'Permission' enum anymore, so they are not found above
+
+        # plain string representation, either implicit or explicit, but not only permission-name already matched above
         if "-" not in name:
             raise ValueError("Unknown permission name could not be parsed: {}".format(name))
         perm, modifier = name.rsplit("-", 1)

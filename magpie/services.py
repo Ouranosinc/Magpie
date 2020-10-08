@@ -1,27 +1,27 @@
 from typing import TYPE_CHECKING
 
+import abc
 import six
 from beaker.cache import cache_region, cache_regions
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound, HTTPNotImplemented
-from pyramid.security import Allow, Everyone
+from pyramid.security import ALL_PERMISSIONS, DENY_ALL, Allow, Everyone
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
-from ziggurat_foundations.permissions import permission_to_pyramid_acls
 
 from magpie import models
 from magpie.api import exception as ax
 from magpie.constants import get_constant
 from magpie.owsrequest import ows_parser_factory
-from magpie.permissions import Permission, PermissionSet, Scope
+from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, List, Type
+    from typing import Collection, Dict, List, Optional, Set, Tuple, Type, Union
 
     from pyramid.request import Request
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
-    from magpie.typedefs import AccessControlListType, Str
+    from magpie.typedefs import AccessControlEntryType, AccessControlListType, ServiceOrResourceType, Str
 
 
 class ServiceMeta(type):
@@ -31,7 +31,7 @@ class ServiceMeta(type):
         """
         Allowed resources type classes under the service.
         """
-        return list(cls.resource_types_permissions.keys())
+        return list(cls.resource_types_permissions)
 
     @property
     def resource_type_names(cls):
@@ -73,50 +73,202 @@ class ServiceInterface(object):
         # type: (models.Service, Request) -> None
         self.service = service          # type: models.Service
         self.request = request          # type: Request
-        self.acl = []                   # type: AccessControlListType
-        self.parser = ows_parser_factory(request)
-        self.parser.parse(self.params_expected)
+
+    @abc.abstractmethod
+    def permission_requested(self):
+        # type: () -> Optional[Union[Permission, Collection[Permission]]]
+        """
+        Defines how to interpret the incoming request into :class:`Permission` definitions for the given service.
+
+        Each service must implement its own definition.
+        If ``None`` is returned, the ACL will effectively be resolved to denied access.
+
+        Otherwise, one or more :class:`Permission` define which of these permissions should be allowed provided the
+        user or its groups also resolve to have them.
+        """
+        raise NotImplementedError("missing implementation of request permission converter")
+
+    @abc.abstractmethod
+    def resource_requested(self):
+        # type: () -> Optional[ServiceOrResourceType]
+        """
+        Defines how to interpret the incoming request into the targeted :class:`model.Resource` for the given service.
+
+        Each service must implement its own definition.
+        If ``None`` is returned, the ACL will effectively be resolved to denied access.
+
+        Otherwise, this definition should convert any request path, query parameters, etc. into an existing resource.
+        """
+        raise NotImplementedError
+
+    def user_requested(self):
+        user = self.request.user
+        if not user:
+            user = UserService.by_user_name(get_constant("MAGPIE_ANONYMOUS_USER"), db_session=self.request.db)
+            if user is None:
+                raise RuntimeError("No Anonymous user in the database")
+        return user
 
     @property
     def __acl__(self):
         # type: () -> AccessControlListType
         """
-        List of access control rules defining (outcome, user/group, permission) combinations.
+        List (ACL) of access control entries (ACE) defining ``(outcome, user/group, permission)`` combinations.
+
+        Called by the configured Pyramid :class:`pyramid.authorization.ACLAuthorizationPolicy`.
         """
         if "acl" not in cache_regions:
             cache_regions["acl"] = {"enabled": False}
-        return self._get_acl_cached(self.service.resource_id, self.request.user)
+        user_id = None if self.request.user is None else self.request.user.id
+        return self._get_acl_cached(self.request.path_qs, user_id)
 
-    # parameters required to preserve caching of corresponding resource-id/user called
+    # NOTE:
+    #   Function arguments are required to generate caching keys by which cached elements will be retrieved.
+    #   Actual arguments are not needed as we employ stored objects in the instance.
     @cache_region("acl")
-    def _get_acl_cached(self, service_id, user):  # noqa: F811
+    def _get_acl_cached(self, request_path, user_id):  # noqa: F811
+        # type: (Str, Optional[int]) -> AccessControlListType
         """
-        Cache this method with :py:mod:`beaker` based on the service id and the user.
+        Cache this method with :py:mod:`beaker` based on the provided caching key parameters.
 
         If the cache is not hit, call :meth:`get_acl`.
         """
-        return self.get_acl()
+        permissions = self.permission_requested()
+        if permissions is None:
+            return [DENY_ALL]
+        resource = self.resource_requested()
+        if not resource:
+            return [DENY_ALL]
+        if not isinstance(permissions, (list, set, tuple)):
+            permissions = {permissions}
+        permissions = set(permissions)
+        user = self.user_requested()
+        return self._get_acl(user, resource, permissions)
 
-    def get_acl(self):
-        raise NotImplementedError
+    def _get_acl(self, user, resource, permissions):
+        # type: (models.User, ServiceOrResourceType, Collection[Permission]) -> AccessControlListType
+        """
+        Resolves the resource-tree and the user/group inherited permissions into a simplified ACL for this resource.
 
-    def expand_acl(self, resource, user):
-        # type: (models.Resource, models.User) -> None
-        if resource:
-            for ace in resource.__acl__:
-                self.acl.append(ace)
+        .. seealso::
+            - :meth:`effective_permissions`
+        """
+        permissions = self.effective_permissions(user, resource, permissions)
+        return [self._perm_to_ace(perm, self.request.user)[0] for perm in permissions]
 
-            if user:
-                permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
-                for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-                    self.acl.append((outcome, perm_user, perm_name,))
+    @staticmethod
+    def _perm_to_ace(permission, user):
+        # type: (PermissionTuple, Optional[models.User]) -> Union[AccessControlEntryType, PermissionSet]
+        perm_set = PermissionSet(permission)
+        outcome = perm_set.access.value.capitalize()  # pyramid: Access/Deny
+        if user is None:
+            target = Everyone
+        elif permission.type == "group":
+            target = "group:%s" % permission.group.id
+        else:
+            target = user.id
+        ace = (outcome, target, perm_set.name.value)
+        return ace, perm_set
+
+    def allowed_permissions(self, resource):
+        # type: (ServiceOrResourceType) -> List[Permission]
+        """
+        Obtains the allowed permissions for or under the service according to provided service or resource.
+        """
+        if resource.resource_type == "service" and resource.type == self.service_type:
+            return self.permissions
+        return self.get_resource_permissions(resource.resource_type)
+
+    def effective_permissions(self, user, resource, permissions):
+        # type: (models.User, ServiceOrResourceType, Optional[Collection[Permission]]) -> List[PermissionSet]
+        """
+        Obtains the effective permissions the user for the specified resource.
+
+        Recursively rewinds the resource tree from the specified resource up to the top-most parent service the
+        resource resides under (or directly if the resource is the service) and retrieve permissions along the way
+        that should be applied to children when using scoped-resource inheritance.
+
+        Both user and group permission inheritance are also resolved with corresponding allow and deny conditions.
+
+        All applicable permissions on the resource (as defined by :meth:`allowed_permissions`) will have their
+        resolution (Allow/Deny) provided, unless a specific set of permissions is requested using
+        :paramref:`permissions`. For example, this parameter can be used to request only ACL resolution from specific
+        permissions applicable for a given request, as obtained by :meth:`permission_requested`.
+        """
+        if not permissions:
+            permissions = self.allowed_permissions(resource)
+        requested_perms = set(permissions)  # type: Set[Permission]
+        effective_perms = dict()            # type: Dict[Permission, PermissionSet]
+
+        # current and parent resource(s) recursive-scope
+        match = True
+        while resource is not None:  # bottom-up until service is reached
+            cur_res_perms = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
+            for perm_name in requested_perms:
+                for perm_tup in cur_res_perms:
+                    perm_set = PermissionSet(perm_tup)
+
+                    # if user is owner (directly or via groups), all permissions are set,
+                    # but continue processing this resource until end in case user explicit deny reverts it
+                    if perm_tup.perm_name == ALL_PERMISSIONS:
+                        for perm in requested_perms:
+                            all_perm = PermissionSet(perm, perm_set.access, perm.scope, perm.type)
+                            if perm_set.access == Access.DENY:
+                                effective_perms[perm] = all_perm
+                            else:
+                                effective_perms.setdefault(perm, all_perm)
+                    elif perm_set.name not in requested_perms:
+                        continue
+                    # only first resource can use match, parents are recursive-only
+                    if not match and perm_set.scope == Scope.MATCH:
+                        continue
+
+                    # user direct permissions have priority over inherited ones from groups
+                    if perm_set.type == PermissionType.DIRECT:
+                        effect_perm = effective_perms.get(perm_name)
+                        # explicit deny overrides allow if any already found
+                        if effect_perm is None or perm_set.access == Access.DENY:
+                            effective_perms[perm_name] = perm_set
+                        continue  # final decision for this user, skip any group permissions
+
+                    # otherwise check if for another group permission and yet no user permission
+                    effect_perm = effective_perms.get(perm_name)
+                    if effect_perm is None or effect_perm.type == PermissionType.INHERITED:
+                        # explicit deny overrides allow if any already found
+                        if effect_perm is None or perm_set.access == Access.DENY:
+                            effective_perms[perm_name] = perm_set
+
+            # don't bother moving to parent if everything is resolved already
+            if len(effective_perms) == len(requested_perms):
+                break
+            # otherwise, move to parent if any available, since we are not done rewinding the resource tree
+            match = False
+            if resource.parent_id:
+                resource = ResourceService.by_resource_id(resource.parent_id, db_session=self.request.db)
             else:
-                user = UserService.by_user_name(get_constant("MAGPIE_ANONYMOUS_USER"), db_session=self.request.db)
-                if user is None:
-                    raise Exception("No Anonymous user in the database")
-                permissions = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
-                for outcome, perm_user, perm_name in permission_to_pyramid_acls(permissions):
-                    self.acl.append((outcome, Everyone, perm_name,))
+                resource = None
+
+        # set deny for all still unresolved permissions from requested ones
+        resolved_perms = set(effective_perms)
+        missing_perms = set(permissions) - resolved_perms
+        effective_perms = set(effective_perms.values())
+        for perm_name in missing_perms:
+            effective_perms.add((PermissionSet(perm_name, Access.DENY, None, PermissionType.EFFECTIVE)))
+        for perm in effective_perms:
+            perm.type = PermissionType.EFFECTIVE
+            perm.scope = None
+        return list(effective_perms)
+
+
+class ServiceOWS(ServiceInterface):
+    """
+    Generic request-to-permission interpretation method of various ``OGC Web Service`` (OWS) implementations.
+    """
+    def __init__(self, service, request):
+        # type: (models.Service, Request) -> None
+        super(ServiceOWS, self).__init__(service, request)
+        self.parser = ows_parser_factory(request)
+        self.parser.parse(self.params_expected)
 
     def permission_requested(self):
         # type: () -> Permission
@@ -127,27 +279,13 @@ class ServiceInterface(object):
                 raise NotImplementedError("Undefined 'Permission' from 'request' parameter: {!s}".format(req))
             return perm
         except KeyError as exc:
-            # if 'ServiceInterface', 'params_expected' is empty and will raise a KeyError
             raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(exc, type(self)))
 
-    def effective_permissions(self, resource, user):
-        # type: (models.Resource, models.User) -> List[PermissionTuple]
-        """
-        Recursively rewind the resource tree from the specified resource up to the top-most parent service's resource
-        and retrieve permissions along the way that should be applied to children when using resource inheritance.
-        """
-        resource_effective_perms = list()
-        while resource is not None:
-            current_resource_perms = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
-            resource_effective_perms.extend(current_resource_perms)
-            if resource.parent_id:
-                resource = ResourceService.by_resource_id(resource.parent_id, db_session=self.request.db)
-            else:
-                resource = None
-        return resource_effective_perms
 
-
-class ServiceWPS(ServiceInterface):
+class ServiceWPS(ServiceOWS):
+    """
+    Service that represents a ``Web Processing Service`` endpoint.
+    """
     service_type = "wps"
 
     permissions = [
@@ -164,15 +302,11 @@ class ServiceWPS(ServiceInterface):
 
     resource_types_permissions = {}
 
-    def __init__(self, service, request):
-        super(ServiceWPS, self).__init__(service, request)
 
-    def get_acl(self):
-        self.expand_acl(self.service, self.request.user)
-        return self.acl
-
-
-class ServiceBaseWMS(ServiceInterface):
+class ServiceBaseWMS(ServiceOWS):
+    """
+    Service that represents basic capabilities of a ``Web Map Service`` endpoint.
+    """
     permissions = [
         Permission.GET_CAPABILITIES,
         Permission.GET_MAP,
@@ -200,14 +334,11 @@ class ServiceBaseWMS(ServiceInterface):
         ]
     }
 
-    def __init__(self, service, request):
-        super(ServiceBaseWMS, self).__init__(service, request)
-
-    def get_acl(self):
-        raise NotImplementedError
-
 
 class ServiceNCWMS2(ServiceBaseWMS):
+    """
+    Service that represents a ``Web Map Service`` endpoint with functionalities specific to ``ncWMS2`` .
+    """
     service_type = "ncwms"
 
     resource_types_permissions = {
@@ -226,9 +357,6 @@ class ServiceNCWMS2(ServiceBaseWMS):
             Permission.GET_METADATA,
         ]
     }
-
-    def __init__(self, service, request):
-        super(ServiceNCWMS2, self).__init__(service, request)
 
     def get_acl(self):
         self.expand_acl(self.service, self.request.user)
@@ -279,10 +407,10 @@ class ServiceNCWMS2(ServiceBaseWMS):
 
 
 class ServiceGeoserverWMS(ServiceBaseWMS):
+    """
+    Service that represents a ``Web Map Service`` endpoint with functionalities specific to ``geoserver``.
+    """
     service_type = "geoserverwms"
-
-    def __init__(self, service, request):
-        super(ServiceGeoserverWMS, self).__init__(service, request)
 
     def get_acl(self):
         self.expand_acl(self.service, self.request.user)
@@ -337,6 +465,9 @@ class ServiceAccess(ServiceInterface):
 
 
 class ServiceAPI(ServiceInterface):
+    """
+    Service that provides resources per individual request path segments.
+    """
     service_type = "api"
 
     permissions = models.Route.permissions
@@ -347,13 +478,11 @@ class ServiceAPI(ServiceInterface):
         models.Route: models.Route.permissions
     }
 
-    def __init__(self, service, request):
-        super(ServiceAPI, self).__init__(service, request)
-
-    def get_acl(self):
-        self.expand_acl(self.service, self.request.user)
+    def resource_requested(self):
+        # type: () -> Optional[ServiceOrResourceType]
 
         match_index = 0
+        route_child = None
         route_parts = self.request.path.rstrip("/").split("/")
         route_api_base = self.service.resource_name
 
@@ -372,15 +501,7 @@ class ServiceAPI(ServiceInterface):
                                                                db_session=self.request.db)
                     match_index = len(self.acl)
                     self.expand_acl(route_child, self.request.user)
-
-        # FIXME: method to be made generic for any service-type, and for any permission-name
-        # process read/write-match specific permission access
-        # (convert exact route 'match' to read/write counterparts only if matching last item's permissions)
-        for i in range(match_index, len(self.acl)):
-            perm = PermissionSet(self.acl[i][2])
-            if perm.scope == Scope.MATCH:
-                self.acl[i] = (self.acl[i][0], self.acl[i][1], perm.name.value)
-        return self.acl
+        return route_child
 
     def permission_requested(self):
         # only read/write are used for 'real' access control, 'match' permissions must be updated accordingly
@@ -388,22 +509,11 @@ class ServiceAPI(ServiceInterface):
             return Permission.READ
         return Permission.WRITE
 
-    # FIXME: method to be made generic for any service-type, and for any permission-name
-    def effective_permissions(self, resource, user):
-        # if 'match' permissions are on the specified 'resource', keep the corresponding recursive one
-        # otherwise, keep only the non 'match' variations from inherited parent resources permissions
-        resource_effective_perms = super(ServiceAPI, self).effective_permissions(resource, user)
 
-        def resolve_recursive(res_perm):
-            perm = PermissionSet(res_perm.perm_name)
-            if perm.scope == Scope.MATCH:
-                return res_perm.resource.resource_id == resource.resource_id
-            return perm.scope == Scope.RECURSIVE
-
-        return filter(resolve_recursive, resource_effective_perms)
-
-
-class ServiceWFS(ServiceInterface):
+class ServiceWFS(ServiceOWS):
+    """
+    Service that represents a ``Web Feature Service`` endpoint.
+    """
     service_type = "wfs"
 
     permissions = [
@@ -423,11 +533,8 @@ class ServiceWFS(ServiceInterface):
 
     resource_types_permissions = {}
 
-    def __init__(self, service, request):
-        super(ServiceWFS, self).__init__(service, request)
-
     def get_acl(self):
-        self.expand_acl(self.service, self.request.user)
+        acl = self.expand_acl(self.service, self.request.user)
         request_type = self.permission_requested()
         if request_type == Permission.GET_CAPABILITIES:
             path_elem = self.request.path.split("/")
@@ -445,11 +552,14 @@ class ServiceWFS(ServiceInterface):
                                                  parent_id=self.service.resource_id,
                                                  db_session=self.request.db)
         if workspace:
-            self.expand_acl(workspace, self.request.user)
-        return self.acl
+            acl.extend(self.expand_acl(workspace, self.request.user))
+        return acl
 
 
 class ServiceTHREDDS(ServiceInterface):
+    """
+    Service that represents a ``THREDDS Data Server`` endpoint.
+    """
     service_type = "thredds"
 
     permissions = [
@@ -466,11 +576,8 @@ class ServiceTHREDDS(ServiceInterface):
         models.File: permissions,
     }
 
-    def __init__(self, service, request):
-        super(ServiceTHREDDS, self).__init__(service, request)
-
     def get_acl(self):
-        self.expand_acl(self.service, self.request.user)
+        acl = self.expand_acl(self.service, self.request.user)
         elems = self.request.path.split("/")
 
         if "fileServer" in elems:
@@ -483,7 +590,7 @@ class ServiceTHREDDS(ServiceInterface):
         elif elems[-1] == "catalog.html":
             first_idx = elems.index(self.service.resource_name) - 1
         else:
-            return self.acl
+            return acl
 
         elems = elems[first_idx + 1::]
         new_child = self.service
@@ -493,9 +600,9 @@ class ServiceTHREDDS(ServiceInterface):
                 elem_name = elem_name.split(".nc")[0] + ".nc"  # in case there is more extension to discard such as .dds
             parent_id = new_child.resource_id
             new_child = models.find_children_by_name(elem_name, parent_id=parent_id, db_session=self.request.db)
-            self.expand_acl(new_child, self.request.user)
+            acl.extend(self.expand_acl(new_child, self.request.user))
 
-        return self.acl
+        return acl
 
     def permission_requested(self):
         return Permission.READ

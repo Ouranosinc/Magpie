@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Dict, Type
 
-    from magpie.typedefs import Str
+    from magpie.typedefs import AccessControlListType, Str
 
 Base = declarative_base()   # pylint: disable=C0103,invalid-name
 
@@ -82,14 +82,15 @@ class Resource(ResourceMixin, Base):
 
     @property
     def __acl__(self):
+        # type: () -> AccessControlListType
         """
         User or group that owns a resource are granted full access to it.
         """
         acl = []
         if self.owner_user_id:
-            acl.extend([(Allow, self.owner_user_id, ALL_PERMISSIONS,), ])
+            acl.append((Allow, self.owner_user_id, ALL_PERMISSIONS))
         if self.owner_group_id:
-            acl.extend([(Allow, "group:%s" % self.owner_group_id, ALL_PERMISSIONS,), ])
+            acl.append((Allow, "group:%s" % self.owner_group_id, ALL_PERMISSIONS))
         return acl
 
 
@@ -133,6 +134,7 @@ class RootFactory(object):
 
     @property
     def __acl__(self):
+        # type: () -> AccessControlListType
         """
         Administrators have all permissions, user/group-specific permissions added if user is logged in.
         """
@@ -173,6 +175,7 @@ class UserFactory(RootFactory):
 
     @property
     def __acl__(self):
+        # type: () -> AccessControlListType
         """
         Grant access to :term:`Request User` according to its relationship to :term:`Context User`.
 
