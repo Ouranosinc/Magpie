@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from pyramid.request import Request
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
-    from magpie.typedefs import AccessControlEntryType, AccessControlListType, ServiceOrResourceType, Str
+    from magpie.typedefs import AccessControlListType, ServiceOrResourceType, Str
 
 
 class ServiceMeta(type):
@@ -81,23 +81,54 @@ class ServiceInterface(object):
         Defines how to interpret the incoming request into :class:`Permission` definitions for the given service.
 
         Each service must implement its own definition.
-        If ``None`` is returned, the ACL will effectively be resolved to denied access.
+        The method must specifically define how to convert generic request path, query, etc. elements into permissions
+        that match the service and its children resources.
 
-        Otherwise, one or more :class:`Permission` define which of these permissions should be allowed provided the
-        user or its groups also resolve to have them.
+        If ``None`` is returned, the ACL will effectively be resolved to denied access.
+        Otherwise, one or more returned :class:`Permission` will indicate which permissions should be looked for to
+        resolve the ACL of the authenticated user and its groups.
         """
         raise NotImplementedError("missing implementation of request permission converter")
 
     @abc.abstractmethod
     def resource_requested(self):
-        # type: () -> Optional[ServiceOrResourceType]
+        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
         """
         Defines how to interpret the incoming request into the targeted :class:`model.Resource` for the given service.
 
         Each service must implement its own definition.
-        If ``None`` is returned, the ACL will effectively be resolved to denied access.
 
+        The expected return value must be either of the following:
+            - ``(target-resource, True)``
+            - ``(parent-resource, False)``
+
+        The `parent-resource` indicates the *closest* higher-level resource in the hierarchy that would nest the
+        otherwise desired `target-resource`. The idea behind this is that `Magpie` will be able to resolve the effective
+        recursive permission even if not all corresponding resources were explicitly defined in the database.
+
+        For example, if the request *would* be interpreted with the following hierarchy after service-specific
+        resolution::
+
+            ServiceA
+                Resource1         <== closest *existing* parent resource
+                    [Resource2]   <== target (according to service/request resolution), but not existing in database
+
+        A permission defined as Allow/Recursive on ``Resource1`` should normally allow access to ``Resource2``. If
+        ``Resource2`` is not present in the database though, it cannot be looked for, and the corresponding ACL cannot
+        be generated. Because the (real) protected service using `Magpie` can have a large and dynamic hierarchy, it
+        is not convenient to enforce perpetual sync between it and its resource representation in `Magpie`. Using the
+        ``(parent-resource, False)`` will allow resolution of permission from the closest available parent.
+
+        .. note::
+            In case of `parent-resource` returned, only `recursive`-scoped permissions will be considered, since the
+            missing `target-resource` is the only one that should be checked for `match`-scoped permissions. For this
+            reason, the service-specific implementation should preferably return the explicit `target` resource whenever
+            possible.
+
+        If the returned resource is ``None``, the ACL will effectively be resolved to denied access.
         Otherwise, this definition should convert any request path, query parameters, etc. into an existing resource.
+
+        :returns: tuple of reference resource (target/parent), and enabled status of match permissions (True/False)
         """
         raise NotImplementedError
 
@@ -113,8 +144,9 @@ class ServiceInterface(object):
     def __acl__(self):
         # type: () -> AccessControlListType
         """
-        List (ACL) of access control entries (ACE) defining ``(outcome, user/group, permission)`` combinations.
+        Access Control List (:term:`ACL`) formed of :term:`ACE` defining combinations rules to grant or refuse access.
 
+        Each :term:`ACE` is defined as ``(outcome, user/group, permission)`` tuples.
         Called by the configured Pyramid :class:`pyramid.authorization.ACLAuthorizationPolicy`.
         """
         if "acl" not in cache_regions:
@@ -139,36 +171,26 @@ class ServiceInterface(object):
         resource = self.resource_requested()
         if not resource:
             return [DENY_ALL]
+        if not isinstance(resource, tuple):
+            is_target = False
+        else:
+            resource, is_target = resource[0], resource[1]
         if not isinstance(permissions, (list, set, tuple)):
             permissions = {permissions}
         permissions = set(permissions)
         user = self.user_requested()
-        return self._get_acl(user, resource, permissions)
+        return self._get_acl(user, resource, permissions, allow_match=is_target)
 
-    def _get_acl(self, user, resource, permissions):
-        # type: (models.User, ServiceOrResourceType, Collection[Permission]) -> AccessControlListType
+    def _get_acl(self, user, resource, permissions, allow_match=True):
+        # type: (models.User, ServiceOrResourceType, Collection[Permission], bool) -> AccessControlListType
         """
         Resolves the resource-tree and the user/group inherited permissions into a simplified ACL for this resource.
 
         .. seealso::
             - :meth:`effective_permissions`
         """
-        permissions = self.effective_permissions(user, resource, permissions)
-        return [self._perm_to_ace(perm, self.request.user)[0] for perm in permissions]
-
-    @staticmethod
-    def _perm_to_ace(permission, user):
-        # type: (PermissionTuple, Optional[models.User]) -> Union[AccessControlEntryType, PermissionSet]
-        perm_set = PermissionSet(permission)
-        outcome = perm_set.access.value.capitalize()  # pyramid: Access/Deny
-        if user is None:
-            target = Everyone
-        elif permission.type == "group":
-            target = "group:%s" % permission.group.id
-        else:
-            target = user.id
-        ace = (outcome, target, perm_set.name.value)
-        return ace, perm_set
+        permissions = self.effective_permissions(user, resource, permissions, allow_match)
+        return [perm.ace(self.request.user) for perm in permissions]
 
     def allowed_permissions(self, resource):
         # type: (ServiceOrResourceType) -> List[Permission]
@@ -179,8 +201,8 @@ class ServiceInterface(object):
             return self.permissions
         return self.get_resource_permissions(resource.resource_type)
 
-    def effective_permissions(self, user, resource, permissions):
-        # type: (models.User, ServiceOrResourceType, Optional[Collection[Permission]]) -> List[PermissionSet]
+    def effective_permissions(self, user, resource, permissions, allow_match=True):
+        # type: (models.User, ServiceOrResourceType, Optional[Collection[Permission]], bool) -> List[PermissionSet]
         """
         Obtains the effective permissions the user for the specified resource.
 
@@ -201,7 +223,7 @@ class ServiceInterface(object):
         effective_perms = dict()            # type: Dict[Permission, PermissionSet]
 
         # current and parent resource(s) recursive-scope
-        match = True
+        match = allow_match
         while resource is not None:  # bottom-up until service is reached
             cur_res_perms = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
             for perm_name in requested_perms:
@@ -251,13 +273,13 @@ class ServiceInterface(object):
         # set deny for all still unresolved permissions from requested ones
         resolved_perms = set(effective_perms)
         missing_perms = set(permissions) - resolved_perms
-        effective_perms = set(effective_perms.values())
+        final_perms = set(effective_perms.values())  # type: Set[PermissionSet]
         for perm_name in missing_perms:
-            effective_perms.add((PermissionSet(perm_name, Access.DENY, None, PermissionType.EFFECTIVE)))
-        for perm in effective_perms:
+            final_perms.add(PermissionSet(perm_name, Access.DENY, None, PermissionType.EFFECTIVE))
+        for perm in final_perms:
             perm.type = PermissionType.EFFECTIVE
             perm.scope = None
-        return list(effective_perms)
+        return list(final_perms)
 
 
 class ServiceOWS(ServiceInterface):
@@ -479,32 +501,32 @@ class ServiceAPI(ServiceInterface):
     }
 
     def resource_requested(self):
-        # type: () -> Optional[ServiceOrResourceType]
+        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
 
-        match_index = 0
-        route_child = None
         route_parts = self.request.path.rstrip("/").split("/")
         route_api_base = self.service.resource_name
 
-        if self.service.resource_name in route_parts and route_api_base in route_parts:
-            api_idx = route_parts.index(route_api_base)
-            # keep only parts after api base route to process it
-            if len(route_parts) - 1 > api_idx:
-                route_parts = route_parts[api_idx + 1::]
-                route_child = self.service
+        if not (self.service.resource_name in route_parts and route_api_base in route_parts):
+            return None
 
-                # process read/write inheritance permission access
-                while route_child and route_parts:
-                    part_name = route_parts.pop(0)
-                    route_res_id = route_child.resource_id
-                    route_child = models.find_children_by_name(part_name, parent_id=route_res_id,
-                                                               db_session=self.request.db)
-                    match_index = len(self.acl)
-                    self.expand_acl(route_child, self.request.user)
-        return route_child
+        route_child = None
+        db = self.request.db
+        api_idx = route_parts.index(route_api_base)
+        # keep only parts after api base route to process it
+        if len(route_parts) - 1 > api_idx:
+            route_parts = route_parts[api_idx + 1::]
+            route_child = self.service
+
+            # find deepest possible route
+            while route_child and route_parts:
+                part_name = route_parts.pop(0)
+                route_res_id = route_child.resource_id
+                route_child = models.find_children_by_name(part_name, parent_id=route_res_id, db_session=db)
+
+        route_target = not len(route_parts)  # target reached if no more parts to process
+        return route_child, route_target
 
     def permission_requested(self):
-        # only read/write are used for 'real' access control, 'match' permissions must be updated accordingly
         if self.request.method.upper() in ["GET", "HEAD"]:
             return Permission.READ
         return Permission.WRITE

@@ -2,7 +2,7 @@ import functools
 import itertools
 from typing import TYPE_CHECKING
 
-from pyramid.security import ALL_PERMISSIONS
+from pyramid.security import ALL_PERMISSIONS, Everyone
 
 from magpie.utils import ExtendedEnum
 
@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 
     from pyramid.security import AllPermissionsList
 
-    from magpie.typedefs import AccessControlListType, AnyPermissionType, PermissionObject, Str
+    from magpie import models
+    from magpie.typedefs import AccessControlEntryType, AnyPermissionType, PermissionObject, Str
 
 
 class Permission(ExtendedEnum):
@@ -188,6 +189,20 @@ class PermissionSet(object):
             "scope": self.scope.value,
             "type": self.type.value if self.type is not None else None,
         }
+
+    def ace(self, user_or_group):
+        # type: (Optional[Union[models.User, models.Group]]) -> AccessControlEntryType
+        """
+        Converts the :class:`PermissionSet` into an :term:`ACE` that :mod:`pyramid` can understand.
+        """
+        outcome = self.access.value.capitalize()  # pyramid: Access/Deny
+        if user_or_group is None:
+            target = Everyone
+        elif self.type == PermissionType.INHERITED:
+            target = "group:{}".format(user_or_group.id)
+        else:  # both DIRECT and EFFECTIVE (effective is pre-computed with inherited permissions for the user)
+            target = user_or_group.id
+        return (outcome, target, self.name.value)
 
     @property
     def implicit_permission(self):

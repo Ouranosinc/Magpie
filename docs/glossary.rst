@@ -12,11 +12,19 @@ Glossary
         Required :term:`Group` membership to obtain sufficient privileges in order to be permitted the execution of
         a given request. Requests under different scopes require variable access levels depending on context.
 
+    ACE
+        Access Control Entry.
+
+        Definition of an access control rule as Allow/Deny condition for a given :term:`User` or :term:`Group` to
+        act according to a certain :term:`Permission` name. Multiple :term:`ACE` form the effective :term:`ACL`
+        conditions to be evaluated to either grant or refuse access.
+
     ACL
         Access Control List.
 
         Set of :term:`User` and :term:`Group` scopes, provided session :term:`Authentication` elements, that either
-        grants or denies access to the applicable :term:`User` to the targeted HTTP request.
+        grants or denies :term:`Permission` access to the applicable :term:`User` for the targeted :term:`Resource`.
+        Formed of multiple :term:`ACE`.
 
     Allowed Permissions
         Set of applicable :term:`Permission` values onto an element. See :ref:`Allowed Permissions` section.

@@ -6,7 +6,6 @@ import warnings
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
-import mock
 import pytest
 import requests
 import requests.exceptions
@@ -34,6 +33,8 @@ from magpie.utils import (
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
+
+    from pyramid.request import Request
 
     import tests.interfaces as ti
     from magpie.services import ServiceInterface
