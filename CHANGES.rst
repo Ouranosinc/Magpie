@@ -41,6 +41,8 @@ Features / Changes
 * Add many omitted tests regarding validation of operations on user/group service/resource permissions API routes.
 * Add functional tests that evaluate ``MagpieAdapter`` behaviour and access control of service/resource from resolution
   of effective permissions upon incoming requests as they would be received by `Twitcher` proxy.
+* Add ``Cache-Control: no-cache`` header support during ACL resolution of effective permissions on service/resource to
+  ignore any caching optimization provided by ``beaker``.
 * | Upgrade migration script is added to convert existing implicit names to new explicit permission names.
   |
   | **WARNING**:

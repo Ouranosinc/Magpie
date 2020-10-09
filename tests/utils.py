@@ -6,6 +6,7 @@ import warnings
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
+import mock
 import pytest
 import requests
 import requests.exceptions
@@ -328,6 +329,21 @@ def json_msg(json_body, msg=null):
     if msg is not null:
         return "{}\n{}".format(msg, json_str)
     return json_str
+
+
+def mock_get_settings(test):
+    from magpie.utils import get_settings as real_get_settings
+
+    def mocked(container):
+        if isinstance(container, DummyRequest):
+            return container.registry.settings
+        return real_get_settings(container)
+
+    @functools.wraps(test)
+    def wrapped():
+        with mock.patch("magpie.utils.get_settings", side_effect=mocked):
+            return test()
+    return wrapped
 
 
 def mock_request(request_path_query="",     # type: Str

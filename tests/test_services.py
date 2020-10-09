@@ -97,6 +97,7 @@ class TestOWSParser(unittest.TestCase):
         assert parser.params["test"] == "something"
 
 
+@utils.mock_get_settings
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_SERVICES
 @runner.MAGPIE_TEST_FUNCTIONAL

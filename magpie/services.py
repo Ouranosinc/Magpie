@@ -2,9 +2,11 @@ from typing import TYPE_CHECKING
 
 import abc
 import six
-from beaker.cache import cache_region, cache_regions
+from beaker.cache import cache_region, cache_regions, region_invalidate
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound, HTTPNotImplemented
 from pyramid.security import ALL_PERMISSIONS, DENY_ALL, Allow, Everyone
+from ziggurat_foundations.permissions import permission_to_pyramid_acls
+from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
 
@@ -40,7 +42,7 @@ class ServiceMeta(type):
         Allowed resources type names under the service.
         """
         # pylint: disable=E1133     # is iterable but detected as not like one
-        return [r.resource_type_name for r in cls.resource_types]
+        return [res.resource_type_name for res in cls.resource_types]
 
     @property
     def child_resource_allowed(cls):
@@ -135,7 +137,8 @@ class ServiceInterface(object):
     def user_requested(self):
         user = self.request.user
         if not user:
-            user = UserService.by_user_name(get_constant("MAGPIE_ANONYMOUS_USER"), db_session=self.request.db)
+            anonymous = get_constant("MAGPIE_ANONYMOUS_USER", self.request)
+            user = UserService.by_user_name(anonymous, db_session=self.request.db)
             if user is None:
                 raise RuntimeError("No Anonymous user in the database")
         return user
@@ -152,7 +155,10 @@ class ServiceInterface(object):
         if "acl" not in cache_regions:
             cache_regions["acl"] = {"enabled": False}
         user_id = None if self.request.user is None else self.request.user.id
-        return self._get_acl_cached(self.request.method, self.request.path_qs, user_id)
+        cache_keys = (self.request.method, self.request.path_qs, user_id)
+        if self.request.headers.get("Cache-Control") == "no-cache":
+            region_invalidate(self._get_acl_cached, "acl", *cache_keys)
+        return self._get_acl_cached(*cache_keys)
 
     # NOTE:
     #   Function arguments are required to generate caching keys by which cached elements will be retrieved.
@@ -232,10 +238,21 @@ class ServiceInterface(object):
         requested_perms = set(permissions)  # type: Set[Permission]
         effective_perms = dict()            # type: Dict[Permission, PermissionSet]
 
+        # immediately return all permissions if user is an admin
+        db_session = self.request.db
+        admin_group = get_constant("MAGPIE_ADMIN_GROUP", self.request)
+        admin_group = GroupService.by_group_name(admin_group, db_session=db_session)
+        if admin_group in user.groups:  # noqa
+            return [PermissionSet(perm, Access.ALLOW, None, PermissionType.EFFECTIVE) for perm in permissions]
+
         # current and parent resource(s) recursive-scope
         match = allow_match
         while resource is not None:  # bottom-up until service is reached
-            cur_res_perms = ResourceService.perms_for_user(resource, user, db_session=self.request.db)
+
+            # include both permissions set in database as well as defined directly on resource
+            cur_res_perms = ResourceService.perms_for_user(resource, user, db_session=db_session)
+            cur_res_perms.extend(permission_to_pyramid_acls(resource.__acl__))
+
             for perm_name in requested_perms:
                 for perm_tup in cur_res_perms:
                     perm_set = PermissionSet(perm_tup)
@@ -257,17 +274,17 @@ class ServiceInterface(object):
 
                     # user direct permissions have priority over inherited ones from groups
                     if perm_set.type == PermissionType.DIRECT:
-                        effect_perm = effective_perms.get(perm_name)
-                        # explicit deny overrides allow if any already found
-                        if effect_perm is None or perm_set.access == Access.DENY:
+                        perm = effective_perms.get(perm_name)
+                        # explicit user deny overrides user allow if any already found
+                        if perm is None or perm.type == PermissionType.INHERITED or perm_set.access == Access.DENY:
                             effective_perms[perm_name] = perm_set
                         continue  # final decision for this user, skip any group permissions
 
                     # otherwise check if for another group permission and yet no user permission
-                    effect_perm = effective_perms.get(perm_name)
-                    if effect_perm is None or effect_perm.type == PermissionType.INHERITED:
+                    perm = effective_perms.get(perm_name)
+                    if perm is None or perm.type == PermissionType.INHERITED:
                         # explicit deny overrides allow if any already found
-                        if effect_perm is None or perm_set.access == Access.DENY:
+                        if perm is None or perm_set.access == Access.DENY:
                             effective_perms[perm_name] = perm_set
 
             # don't bother moving to parent if everything is resolved already
@@ -276,7 +293,7 @@ class ServiceInterface(object):
             # otherwise, move to parent if any available, since we are not done rewinding the resource tree
             match = False
             if resource.parent_id:
-                resource = ResourceService.by_resource_id(resource.parent_id, db_session=self.request.db)
+                resource = ResourceService.by_resource_id(resource.parent_id, db_session=db_session)
             else:
                 resource = None
 
