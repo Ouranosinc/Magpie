@@ -157,7 +157,7 @@ class MagpieAdapter(AdapterInterface):
         raise NotImplementedError
 
     def owssecurity_factory(self, request):
-        # type: (Request) -> MagpieOWSSecurity
+        # type: (AnySettingsContainer) -> MagpieOWSSecurity
         if self._owssecurity is None:
             self._owssecurity = MagpieOWSSecurity(request)
         return self._owssecurity

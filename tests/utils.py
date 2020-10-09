@@ -355,6 +355,7 @@ def mock_request(request_path_query="",     # type: Str
     elif params:
         query = params
     request = DummyRequest(path=path, params=query)
+    request.path_qs = request_path_query
     request.method = method
     request.content_type = content_type
     request.headers = headers or {}

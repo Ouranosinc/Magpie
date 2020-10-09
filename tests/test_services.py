@@ -10,17 +10,16 @@ Tests for the services implementations magpie.
 import unittest
 from typing import TYPE_CHECKING
 
+import pytest
 import six
 
 from magpie import __meta__, owsrequest
-from magpie.adapter import get_user
-from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden
-from magpie.db import get_db_session_from_settings
+from magpie.adapter.magpieowssecurity import OWSAccessForbidden
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, Scope
 from magpie.services import ServiceAPI
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
-from tests import interfaces, runner, utils
+from tests import interfaces as ti, runner, utils
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -101,25 +100,25 @@ class TestOWSParser(unittest.TestCase):
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_SERVICES
 @runner.MAGPIE_TEST_FUNCTIONAL
-class TestServices(interfaces.AdminTestCase, interfaces.BaseTestCase):
+class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
     __test__ = True
 
     @classmethod
     def setUpClass(cls):
         cls.version = __meta__.__version__
-        cls.app = utils.get_test_magpie_app()
+        cls.app = utils.get_test_magpie_app(cls.settings)
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
         cls.settings = cls.app.app.registry.settings
+        ti.SetupMagpieAdapter.setup(cls.settings)
+
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)
         cls.setup_admin()
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()
-
-        cls.ows = MagpieOWSSecurity(cls.settings)
 
         # following will be wiped on setup
         cls.test_user_name = "unittest-service-user"
@@ -130,32 +129,45 @@ class TestServices(interfaces.AdminTestCase, interfaces.BaseTestCase):
         super(TestServices, self).setUp()
         utils.TestSetup.delete_TestService(self, override_service_name=self.test_service_name_api)
 
-    @classmethod
-    def mock_request(cls, *args, **kwargs):
-        """
-        Set getters that are normally defined when running the full application.
-        """
-        kwargs.setdefault("cookies", cls.cookies)
-        kwargs.setdefault("headers", cls.json_headers)
-        request = utils.mock_request(*args, **kwargs)
-        request.db = get_db_session_from_settings(cls.settings)
-        request.user = get_user(request)
-        return request
+    def mock_request(self, *args, **kwargs):
+        kwargs.update({"cookies": self.test_cookies, "headers": self.test_headers})
+        return super(TestServices, self).mock_request(*args, **kwargs)
 
-    @unittest.skip
+    @unittest.skip("impl")
+    @pytest.mark.skip
     def test_unauthenticated_service_blocked(self):
+        """
+        Validate missing authentication token blocks access to the service if not publicly accessible.
+        """
         raise NotImplementedError  # FIXME
 
-    @unittest.skip
+    @unittest.skip("impl")
+    @pytest.mark.skip
     def test_unauthenticated_resource_allowed(self):
+        """
+        Validate granted access to a resource specified as publicly accessible even without any authentication token.
+        """
         raise NotImplementedError  # FIXME
 
-    @unittest.skip
+    @unittest.skip("impl")
+    @pytest.mark.skip
     def test_unknown_service(self):
+        """
+        Validate that unknown service-name is handled correctly.
+        """
         raise NotImplementedError  # FIXME
 
-    @unittest.skip
+    @unittest.skip("impl")
+    @pytest.mark.skip
     def test_unknown_resource_under_service(self):
+        """
+        Evaluate use-case where requested resource when parsing the request corresponds to non-existing element.
+
+        If the targeted resource does not exist in database, `Magpie` should still allow access if its closest
+        available parent permission results into Allow/Recursive.
+
+        If the closest parent permission permission is either Match-scoped or explicit Deny, access should be refused.
+        """
         raise NotImplementedError  # FIXME
 
     def test_ServiceAPI_effective_permissions(self):
@@ -164,8 +176,8 @@ class TestServices(interfaces.AdminTestCase, interfaces.BaseTestCase):
 
         Legend::
 
-            r: read
-            w: write
+            r: read     (HTTP HEAD/GET for ServiceAPI)
+            w: write    (all other HTTP methods)
             A: allow
             D: deny
             M: match
@@ -203,14 +215,15 @@ class TestServices(interfaces.AdminTestCase, interfaces.BaseTestCase):
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         res4_id = info["resource_id"]
 
+        # setup permissions
         rAR = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)     # noqa
         rAM = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)         # noqa
         rDR = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)      # noqa
         rDM = PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)          # noqa
-        wAR = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)     # noqa
-        wAM = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)         # noqa
-        wDR = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)      # noqa
-        wDM = PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)          # noqa
+        wAR = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)    # noqa
+        wAM = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.MATCH)        # noqa
+        wDR = PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)     # noqa
+        wDM = PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)         # noqa
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc_id, override_permission=wDM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc_id, override_permission=wAR)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res1_id, override_permission=rAR)
@@ -219,32 +232,52 @@ class TestServices(interfaces.AdminTestCase, interfaces.BaseTestCase):
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res3_id, override_permission=wDM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res4_id, override_permission=wDM)
 
+        # login test user for which the permissions were set
+        utils.check_or_try_logout_user(self)
+        cred = utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name)
+        self.test_headers, self.test_cookies = cred
+
+        # Service1 direct call
         path = "/ows/proxy/{}".format(svc_name)
         req = self.mock_request(path, method="GET")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
         req = self.mock_request(path, method="POST")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
+        # Service1/Resource1
         path = "/ows/proxy/{}/{}".format(svc_name, res_name)
         req = self.mock_request(path, method="GET")
         utils.check_no_raise(lambda: self.ows.check_request(req))
         req = self.mock_request(path, method="POST")
         utils.check_no_raise(lambda: self.ows.check_request(req))
 
+        # Service1/Resource1/Resource2
         path = "/ows/proxy/{}/{}/{}".format(svc_name, res_name, res_name)
         req = self.mock_request(path, method="GET")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
         req = self.mock_request(path, method="POST")
         utils.check_no_raise(lambda: self.ows.check_request(req))
 
+        # Service1/Resource1/Resource2/Resource3
         path = "/ows/proxy/{}/{}/{}/{}".format(svc_name, res_name, res_name, res_name)
         req = self.mock_request(path, method="GET")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
         req = self.mock_request(path, method="POST")
         utils.check_no_raise(lambda: self.ows.check_request(req))
 
+        # Service1/Resource1/Resource2/Resource3/Resource4
         path = "/ows/proxy/{}/{}/{}/{}/{}".format(svc_name, res_name, res_name, res_name, res_name)
         req = self.mock_request(path, method="GET")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
         req = self.mock_request(path, method="POST")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+
+        # login with admin user, validate full access granted even if no explicit permissions was set admins
+        utils.check_or_try_logout_user(self)
+        cred = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        self.test_headers, self.test_cookies = cred
+        for res_count in range(0, 5):
+            path = "/ows/proxy/{}".format(svc_name) + res_count * "/{}".format(res_name)
+            for method in ["GET", "POST", "PUT", "DELETE"]:
+                req = self.mock_request(path, method=method)
+                utils.check_no_raise(lambda: self.ows.check_request(req))

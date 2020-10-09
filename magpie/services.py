@@ -152,14 +152,14 @@ class ServiceInterface(object):
         if "acl" not in cache_regions:
             cache_regions["acl"] = {"enabled": False}
         user_id = None if self.request.user is None else self.request.user.id
-        return self._get_acl_cached(self.request.path_qs, user_id)
+        return self._get_acl_cached(self.request.method, self.request.path_qs, user_id)
 
     # NOTE:
     #   Function arguments are required to generate caching keys by which cached elements will be retrieved.
     #   Actual arguments are not needed as we employ stored objects in the instance.
     @cache_region("acl")
-    def _get_acl_cached(self, request_path, user_id):  # noqa: F811
-        # type: (Str, Optional[int]) -> AccessControlListType
+    def _get_acl_cached(self, request_method, request_path, user_id):  # noqa: F811
+        # type: (Str, Str, Optional[int]) -> AccessControlListType
         """
         Cache this method with :py:mod:`beaker` based on the provided caching key parameters.
 
@@ -174,7 +174,7 @@ class ServiceInterface(object):
         if not isinstance(resource, tuple):
             is_target = False
         else:
-            resource, is_target = resource[0], resource[1]
+            resource, is_target = resource
         if not isinstance(permissions, (list, set, tuple)):
             permissions = {permissions}
         permissions = set(permissions)
@@ -201,21 +201,31 @@ class ServiceInterface(object):
             return self.permissions
         return self.get_resource_permissions(resource.resource_type)
 
-    def effective_permissions(self, user, resource, permissions, allow_match=True):
+    def effective_permissions(self, user, resource, permissions=None, allow_match=True):
         # type: (models.User, ServiceOrResourceType, Optional[Collection[Permission]], bool) -> List[PermissionSet]
         """
-        Obtains the effective permissions the user for the specified resource.
+        Obtains the effective permissions the user has over the specified resource.
 
-        Recursively rewinds the resource tree from the specified resource up to the top-most parent service the
-        resource resides under (or directly if the resource is the service) and retrieve permissions along the way
-        that should be applied to children when using scoped-resource inheritance.
+        Recursively rewinds the resource tree from the specified resource up to the top-most parent service the resource
+        resides under (or directly if the resource is the service) and retrieve permissions along the way that should be
+        applied to children when using scoped-resource inheritance. Rewinding of the tree can terminate earlier when
+        permissions can be immediately resolved such as when more restrictive conditions enforce denied access.
 
-        Both user and group permission inheritance are also resolved with corresponding allow and deny conditions.
+        Both user and group permission inheritance is resolved simultaneously to tree hierarchy with corresponding
+        allow and deny conditions. User :term:`Direct Permissions` have priority over all its groups
+        :term:`Inherited Permissions`, and denied permissions have priority over allowed access ones.
 
         All applicable permissions on the resource (as defined by :meth:`allowed_permissions`) will have their
-        resolution (Allow/Deny) provided, unless a specific set of permissions is requested using
-        :paramref:`permissions`. For example, this parameter can be used to request only ACL resolution from specific
-        permissions applicable for a given request, as obtained by :meth:`permission_requested`.
+        resolution (Allow/Deny) provided as output, unless a specific subset of permissions is requested using
+        :paramref:`permissions`. Other permissions are ignored in this case to only resolve requested ones.
+        For example, this parameter can be used to request only ACL resolution from specific permissions applicable
+        for a given request, as obtained by :meth:`permission_requested`.
+
+        Permissions scoped as `match` can be ignored using :paramref:`allow_match`, such as when the targeted resource
+        does not exist.
+
+        .. seealso::
+            - :meth:`ServiceInterface.resource_requested`
         """
         if not permissions:
             permissions = self.allowed_permissions(resource)
@@ -478,9 +488,8 @@ class ServiceAccess(ServiceInterface):
     def __init__(self, service, request):
         super(ServiceAccess, self).__init__(service, request)
 
-    def get_acl(self):
-        self.expand_acl(self.service, self.request.user)
-        return self.acl
+    def resource_requested(self):
+        return self.service, True
 
     def permission_requested(self):
         return Permission.ACCESS
@@ -509,21 +518,19 @@ class ServiceAPI(ServiceInterface):
         if not (self.service.resource_name in route_parts and route_api_base in route_parts):
             return None
 
-        route_child = None
-        db = self.request.db
+        # keep only parts after api base route to process them
+        route_child = self.service
         api_idx = route_parts.index(route_api_base)
-        # keep only parts after api base route to process it
-        if len(route_parts) - 1 > api_idx:
-            route_parts = route_parts[api_idx + 1::]
-            route_child = self.service
+        route_parts = route_parts[api_idx + 1::]
 
-            # find deepest possible route
-            while route_child and route_parts:
-                part_name = route_parts.pop(0)
-                route_res_id = route_child.resource_id
-                route_child = models.find_children_by_name(part_name, parent_id=route_res_id, db_session=db)
+        # find deepest possible resource matching sub-route name
+        while route_child and route_parts:
+            part_name = route_parts.pop(0)
+            route_res_id = route_child.resource_id
+            route_child = models.find_children_by_name(part_name, parent_id=route_res_id, db_session=self.request.db)
 
-        route_target = not len(route_parts)  # target reached if no more parts to process
+        # target reached if no more parts to process, otherwise we have some parent (minimally the service)
+        route_target = not len(route_parts)
         return route_child, route_target
 
     def permission_requested(self):

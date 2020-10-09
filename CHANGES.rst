@@ -38,7 +38,9 @@ Features / Changes
   not of previously defined ``permission`` to avoid HTTP Conflict on ``POST``. This allows quicker changes of ``access``
   and ``scope`` modifiers applied on a given ``permission`` with a single operation
   (see details in issue `#342 <https://github.com/Ouranosinc/Magpie/issues/342>`_).
-* Add many omitted tests regarding validation of operations on user/group service/resource permissions.
+* Add many omitted tests regarding validation of operations on user/group service/resource permissions API routes.
+* Add functional tests that evaluate ``MagpieAdapter`` behaviour and access control of service/resource from resolution
+  of effective permissions upon incoming requests as they would be received by `Twitcher` proxy.
 * | Upgrade migration script is added to convert existing implicit names to new explicit permission names.
   |
   | **WARNING**:
