@@ -1,4 +1,5 @@
 import functools
+import inspect
 import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import unittest
@@ -332,6 +333,12 @@ def json_msg(json_body, msg=null):
 
 
 def mock_get_settings(test):
+    """
+    Decorator to mock :func:`magpie.utils.get_settings` to allow retrieval of settings from :class:`DummyRequest`.
+
+    .. warning::
+        Only apply on test methods (not on class TestCase) to ensure that :mod:`pytest` can collect them correctly.
+    """
     from magpie.utils import get_settings as real_get_settings
 
     def mocked(container):
@@ -340,9 +347,9 @@ def mock_get_settings(test):
         return real_get_settings(container)
 
     @functools.wraps(test)
-    def wrapped():
+    def wrapped(*_, **__):
         with mock.patch("magpie.utils.get_settings", side_effect=mocked):
-            return test()
+            return test(*_, **__)
     return wrapped
 
 

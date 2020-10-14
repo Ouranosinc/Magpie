@@ -43,11 +43,15 @@ Features / Changes
   of effective permissions upon incoming requests as they would be received by `Twitcher` proxy.
 * Add ``Cache-Control: no-cache`` header support during ACL resolution of effective permissions on service/resource to
   ignore any caching optimization provided by ``beaker``.
+* Add resource of type ``Process`` for ``ServiceWPS`` which can take advantage of new effective permission resolution
+  method shared across service types to apply ``DescribeProcess`` and ``Execute`` permission on per-``Process`` basis
+  (``match`` scope) or globally for all processes using permission on the parent WPS service (``recursive`` scope).
+  (resolves `#266 <https://github.com/Ouranosinc/Magpie/issues/266>`_).
 * | Upgrade migration script is added to convert existing implicit names to new explicit permission names.
   |
   | **WARNING**:
   | Downgrade migration drops any ``DENY`` permission that would be added in future versions,
-    as they do not exist prior to this introduced version.
+    as they do not exist prior to this introduced version. The same applies for ``Process`` resources.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

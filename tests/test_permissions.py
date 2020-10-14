@@ -210,7 +210,7 @@ class TestPermissions(unittest.TestCase):
 
         perm = PermissionSet((Allow, 1, "write-deny-match"))
         utils.check_val_equal(perm.name, Permission.WRITE)
-        utils.check_val_equal(perm.access, Access.ALLOW)
+        utils.check_val_equal(perm.access, Access.DENY, msg="Explicit permission name prioritized over ACL access")
         utils.check_val_equal(perm.scope, Scope.MATCH)
         utils.check_val_equal(perm.type, PermissionType.DIRECT, msg="Should infer direct from user ID.")
         perm = PermissionSet((Deny, "group:1", "read"))

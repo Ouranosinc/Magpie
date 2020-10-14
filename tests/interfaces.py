@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from typing import Dict, List, Optional, Set, Union
 
     from pyramid.registry import Registry
+    from sqlalchemy.orm.session import Session
     from webtest.app import TestApp
 
     from magpie.typedefs import JSON, CookiesType, HeadersType, SettingsType, Str
@@ -1667,10 +1668,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_equal(len(body["permissions"]), 1)
-        perm = body["permissions"][0]  # type: JSON
-        utils.check_val_equal(perm["access"], data["permission"]["access"])
-        utils.check_val_equal(perm["name"], data["permission"]["name"])
-        utils.check_val_equal(perm["scope"], data["permission"]["scope"])
+        perm_body = body["permissions"][0]  # type: JSON
+        utils.check_val_equal(perm_body["access"], data["permission"]["access"])
+        utils.check_val_equal(perm_body["name"], data["permission"]["name"])
+        utils.check_val_equal(perm_body["scope"], data["permission"]["scope"])
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
@@ -1806,15 +1807,20 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # create user/group and services/resources
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
-        body = utils.TestSetup.create_TestService(self, override_service_name="Service1-unittest-effective-permissions")
-        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        svc1_id, svc1_name = info["resource_id"], info["resource_name"]
-        body = utils.TestSetup.create_TestService(self, override_service_name="Service2-unittest-effective-permissions")
-        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        svc2_id, svc2_name = info["resource_id"], info["resource_name"]
-        body = utils.TestSetup.create_TestService(self, override_service_name="Service3-unittest-effective-permissions")
-        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        svc3_id, svc3_name = info["resource_id"], info["resource_name"]
+        svc1_name = "Service1-unittest-effective-permissions"
+        svc2_name = "Service2-unittest-effective-permissions"
+        svc3_name = "Service3-unittest-effective-permissions"
+        for svc_name in [svc1_name, svc2_name, svc3_name]:
+            utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc1_name)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
+        svc1_id = info["resource_id"]
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc2_name)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
+        svc2_id = info["resource_id"]
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc3_name)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
+        svc3_id = info["resource_id"]
         body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc1_id, override_resource_name="Resource1")
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         res1_id, res1_name = info["resource_id"], info["resource_name"]
@@ -1874,12 +1880,16 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             body = utils.check_response_basic_info(resp, 200)  # noqa
             permissions = body["permissions"]
             utils.check_val_not_equal(len(permissions), 0)
-            msg = "Effective permission '{}' on resource '{}' expected '{}'".format(perm.value, res_name, access.value)
+            scope = Scope.MATCH.value
+            msg = "Effective permission '{}' on resource '{}' expected '{}'.".format(perm.value, res_name, access.value)
             for obj in permissions:
-                utils.check_val_equal(Permission.get(obj["name"]), perm, msg=msg)
+                if Permission.get(obj["name"]) != perm:
+                    continue
                 utils.check_val_equal(Access.get(obj["access"]), access, msg=msg)
-                utils.check_val_equal(obj["scope"], None, msg=msg)
+                utils.check_val_equal(obj["scope"], scope, msg="Resolved effective permission is always 'match'.")
                 utils.check_val_equal(PermissionType.get(obj["type"]), PermissionType.EFFECTIVE, msg=msg)
+                return  # validated
+            raise AssertionError("{} Could not find it within response permissions: {}.".format(msg, perm, permissions))
 
         # test
         eval_perm_effective(svc1_name, svc1_id, Permission.READ, Access.ALLOW)
@@ -2553,20 +2563,34 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         parent_id = info["resource_id"]
         body = utils.TestSetup.create_TestResource(self, parent_resource_id=parent_id)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        applicable_perm = info["permission_names"][0]
+        applicable_perms = info["permission_names"]
+        applied_perm = applicable_perms[0]
         child_res_id = info["resource_id"]
         path = "/groups/{}/resources/{}/permissions".format(get_constant("MAGPIE_ANONYMOUS_GROUP"), parent_id)
-        data = {"permission_name": applicable_perm}
+        data = {"permission_name": applied_perm}
         resp = utils.test_request(self, "POST", path, json=data, headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 201, expected_method="POST")
+
+        # older API only returned existing permissions as allowed (missing ones being denied)
+        # newer API always returns all applicable permissions during effective resolution, with Allow/Deny accordingly
+        # furthermore, effective permissions are always 'MATCH' as they define access specifically for that item, with
+        # all recursive parent resource inheritance pre-computed
+        effective_perm = PermissionSet(applied_perm)
+        if LooseVersion(self.version) >= LooseVersion("2.1"):
+            effective_perm = PermissionSet(applied_perm, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE)
 
         # test
         path = "/users/{}/resources/{}/permissions?effective=true".format(self.test_user_name, child_res_id)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in("permission_names", body)
-        utils.check_val_is_in(applicable_perm, body["permission_names"],
+        utils.check_val_is_in(effective_perm.implicit_permission, body["permission_names"],
                               msg="Permission applied to anonymous group which user is member of should be effective")
+        if LooseVersion(self.version) >= LooseVersion("2.1"):
+            effective_permissions = [PermissionSet(perm, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
+                                     for perm in (set(applicable_perms) - set(applied_perm))] + [effective_perm]
+            utils.check_val_is_in("permissions", body)
+            utils.check_all_equal([perm.json() for perm in effective_permissions], body["permissions"])
 
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers(self):
@@ -4510,6 +4534,7 @@ class SetupMagpieAdapter(object):
     to the ones that would be received by the proxy. This allows to test handling of the requests be the various
     components defined in the adapter.
     """
+    session = None      # type: Optional[Session]
     settings = None     # type: Optional[SettingsType]
     registry = None     # type: Optional[Registry]
 
@@ -4539,5 +4564,11 @@ class SetupMagpieAdapter(object):
         # process the reify request methods as they would normally be generated by pyramid app
         # this ensures they become available as properties from the request (eg: request.db, request.user, etc.)
         for meth, reify in methods.items():
-            setattr(request, meth, reify.wrapped(request))
+            # handle DB session manually, otherwise it gets duplicated and QueuePool limit gets reached
+            if meth == "db":
+                if not cls.session:
+                    cls.session = reify.wrapped(request)
+                setattr(request, meth, cls.session)
+            else:
+                setattr(request, meth, reify.wrapped(request))
         return request

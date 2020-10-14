@@ -49,16 +49,6 @@ class ServiceMeta(type):
         # type: (Type[ServiceInterface]) -> bool
         return len(cls.resource_types) > 0
 
-    def get_resource_permissions(cls, resource_type_name):
-        # type: (Type[ServiceInterface], Str) -> List[Permission]
-        """
-        Obtains the allowed permissions of the service's child resource fetched by resource type name.
-        """
-        for res in cls.resource_types_permissions:  # type: models.Resource
-            if res.resource_type_name == resource_type_name:
-                return cls.resource_types_permissions[res]
-        return []
-
 
 @six.add_metaclass(ServiceMeta)
 class ServiceInterface(object):
@@ -100,9 +90,11 @@ class ServiceInterface(object):
 
         Each service must implement its own definition.
 
-        The expected return value must be either of the following:
-            - ``(target-resource, True)``
-            - ``(parent-resource, False)``
+        The expected return value must be either of the following::
+
+            - (target-resource, True)     when the exact resource is found
+            - (parent-resource, False)    when any parent of the resource is found
+            - None                        when invalid request or not found resource
 
         The `parent-resource` indicates the *closest* higher-level resource in the hierarchy that would nest the
         otherwise desired `target-resource`. The idea behind this is that `Magpie` will be able to resolve the effective
@@ -127,8 +119,9 @@ class ServiceInterface(object):
             reason, the service-specific implementation should preferably return the explicit `target` resource whenever
             possible.
 
-        If the returned resource is ``None``, the ACL will effectively be resolved to denied access.
-        Otherwise, this definition should convert any request path, query parameters, etc. into an existing resource.
+        If the returned resource is ``None``, the ACL will effectively be resolved to denied access. This can be used
+        to indicate failure to retrieve the expected resource or that corresponding resource does not exist. Otherwise,
+        this method implementation should convert any request path, query parameters, etc. into an existing resource.
 
         :returns: tuple of reference resource (target/parent), and enabled status of match permissions (True/False)
         """
@@ -151,6 +144,9 @@ class ServiceInterface(object):
 
         Each :term:`ACE` is defined as ``(outcome, user/group, permission)`` tuples.
         Called by the configured Pyramid :class:`pyramid.authorization.ACLAuthorizationPolicy`.
+
+        Caching is automatically handled according to configured application settings and whether the specific ACL
+        combination being requested was already processed recently.
         """
         if "acl" not in cache_regions:
             cache_regions["acl"] = {"enabled": False}
@@ -169,7 +165,14 @@ class ServiceInterface(object):
         """
         Cache this method with :py:mod:`beaker` based on the provided caching key parameters.
 
-        If the cache is not hit, call :meth:`get_acl`.
+        If the cache is not hit (expired timeout or new key entry), calls :meth:`ServiceInterface.get_acl` to retrieve
+        effective permissions of the requested resource and specific permission for the applicable service and user
+        executing the request.
+
+        .. seealso::
+            - :meth:`ServiceInterface.permission_requested`
+            - :meth:`ServiceInterface.resource_requested`
+            - :meth:`ServiceInterface.user_requested`
         """
         permissions = self.permission_requested()
         if permissions is None:
@@ -197,6 +200,17 @@ class ServiceInterface(object):
         """
         permissions = self.effective_permissions(user, resource, permissions, allow_match)
         return [perm.ace(self.request.user) for perm in permissions]
+
+    @classmethod
+    def get_resource_permissions(cls, resource_type_name):
+        # type: (Str) -> List[Permission]
+        """
+        Obtains the allowed permissions of the service's child resource fetched by resource type name.
+        """
+        for res in cls.resource_types_permissions:  # type: models.Resource
+            if res.resource_type_name == resource_type_name:
+                return cls.resource_types_permissions[res]
+        return []
 
     def allowed_permissions(self, resource):
         # type: (ServiceOrResourceType) -> List[Permission]
@@ -243,7 +257,7 @@ class ServiceInterface(object):
         admin_group = get_constant("MAGPIE_ADMIN_GROUP", self.request)
         admin_group = GroupService.by_group_name(admin_group, db_session=db_session)
         if admin_group in user.groups:  # noqa
-            return [PermissionSet(perm, Access.ALLOW, None, PermissionType.EFFECTIVE) for perm in permissions]
+            return [PermissionSet(perm, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE) for perm in permissions]
 
         # current and parent resource(s) recursive-scope
         match = allow_match
@@ -266,7 +280,8 @@ class ServiceInterface(object):
                                 effective_perms[perm] = all_perm
                             else:
                                 effective_perms.setdefault(perm, all_perm)
-                    elif perm_set.name not in requested_perms:
+                    # skip if the current permission must not be processed (at all or for the moment until next iter)
+                    elif perm_set.name not in requested_perms or perm_set.name != perm_name:
                         continue
                     # only first resource can use match, parents are recursive-only
                     if not match and perm_set.scope == Scope.MATCH:
@@ -302,10 +317,11 @@ class ServiceInterface(object):
         missing_perms = set(permissions) - resolved_perms
         final_perms = set(effective_perms.values())  # type: Set[PermissionSet]
         for perm_name in missing_perms:
-            final_perms.add(PermissionSet(perm_name, Access.DENY, None, PermissionType.EFFECTIVE))
+            final_perms.add(PermissionSet(perm_name, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE))
+        # enforce type and scope (use MATCH to make it explicit that it applies specifically for this resource)
         for perm in final_perms:
             perm.type = PermissionType.EFFECTIVE
-            perm.scope = None
+            perm.scope = Scope.MATCH
         return list(final_perms)
 
 
@@ -313,16 +329,21 @@ class ServiceOWS(ServiceInterface):
     """
     Generic request-to-permission interpretation method of various ``OGC Web Service`` (OWS) implementations.
     """
+
     def __init__(self, service, request):
         # type: (models.Service, Request) -> None
         super(ServiceOWS, self).__init__(service, request)
         self.parser = ows_parser_factory(request)
         self.parser.parse(self.params_expected)
 
+    @abc.abstractmethod
+    def resource_requested(self):
+        raise NotImplementedError
+
     def permission_requested(self):
         # type: () -> Permission
         try:
-            req = self.parser.params["request"]
+            req = str(self.parser.params["request"]).lower()
             perm = Permission.get(req)
             if perm is None:
                 raise NotImplementedError("Undefined 'Permission' from 'request' parameter: {!s}".format(req))
@@ -335,10 +356,13 @@ class ServiceWPS(ServiceOWS):
     """
     Service that represents a ``Web Processing Service`` endpoint.
     """
+
     service_type = "wps"
 
     permissions = [
         Permission.GET_CAPABILITIES,
+        # following don't make sense if 'MATCH' directly on Service,
+        # but can be set with 'RECURSIVE' for all Process children resources
         Permission.DESCRIBE_PROCESS,
         Permission.EXECUTE,
     ]
@@ -347,15 +371,41 @@ class ServiceWPS(ServiceOWS):
         "service",
         "request",
         "version"
+        # "identifier" not used because not required when requesting capabilities
     ]
 
-    resource_types_permissions = {}
+    resource_types_permissions = {
+        models.Process: [
+            Permission.DESCRIBE_PROCESS,
+            Permission.EXECUTE,
+        ]
+    }
+
+    def resource_requested(self):
+        wps_request = self.permission_requested()
+        if wps_request == Permission.GET_CAPABILITIES:
+            return self.service, True
+        if wps_request in [Permission.DESCRIBE_PROCESS, Permission.EXECUTE]:
+            wps_id = self.service.resource_id
+            proc_id = self.request.params.get("identifier")
+            if not proc_id:
+                return self.service, False
+            proc = models.find_children_by_name(proc_id, parent_id=wps_id, db_session=self.request.db)
+            if proc:
+                return proc, True
+            return self.service, False
+        raise NotImplementedError("Unknown WPS operation for permission: {}".format(wps_request))
 
 
 class ServiceBaseWMS(ServiceOWS):
     """
     Service that represents basic capabilities of a ``Web Map Service`` endpoint.
     """
+
+    @abc.abstractmethod
+    def resource_requested(self):
+        raise NotImplementedError
+
     permissions = [
         Permission.GET_CAPABILITIES,
         Permission.GET_MAP,
@@ -501,9 +551,6 @@ class ServiceAccess(ServiceInterface):
     params_expected = []
 
     resource_types_permissions = {}
-
-    def __init__(self, service, request):
-        super(ServiceAccess, self).__init__(service, request)
 
     def resource_requested(self):
         return self.service, True

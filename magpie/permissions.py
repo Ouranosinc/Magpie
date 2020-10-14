@@ -315,9 +315,14 @@ class PermissionSet(object):
 
         # pyramid ACE representation
         if isinstance(permission, tuple) and len(permission) == 3:
-            access = Access.get(permission[0].lower())
             perm_type = PermissionType.INHERITED if "group" in str(permission[1]) else PermissionType.DIRECT
-            return PermissionSet(permission[2], access, Scope.RECURSIVE, perm_type)
+            perm_name = permission[2]
+            # if permission name represents explicit definition, use it directly and drop Allow/Deny from ACE
+            # otherwise, use the provided access
+            access = None
+            if len(perm_name.split("-")) != 3:
+                access = Access.get(permission[0].lower())
+            return PermissionSet(perm_name, access=access, scope=None, typ=perm_type)
 
         # ziggurat PermissionTuple or plain string representation
         name = getattr(permission, "perm_name", None) or permission

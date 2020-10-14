@@ -303,6 +303,16 @@ class Route(Resource):
     ]
 
 
+class Process(Resource):
+    resource_type_name = "process"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name}
+
+    permissions = [
+        Permission.DESCRIBE_PROCESS,
+        Permission.EXECUTE,
+    ]
+
+
 class RemoteResource(BaseModel, Base):
     __tablename__ = "remote_resources"
 
@@ -382,7 +392,7 @@ RESOURCE_TREE_SERVICE = ResourceTreeService(ResourceTreeServicePostgreSQL)
 REMOTE_RESOURCE_TREE_SERVICE = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
 RESOURCE_TYPE_DICT = dict()  # type: Dict[Str, Type[Resource]]
-for res in [Service, Directory, File, Workspace, Route]:
+for res in [Service, Directory, File, Workspace, Route, Process]:
     if res.resource_type_name in RESOURCE_TYPE_DICT:  # pragma: no cover
         raise KeyError("Duplicate resource type identifiers not allowed")
     RESOURCE_TYPE_DICT[res.resource_type_name] = res
