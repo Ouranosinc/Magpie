@@ -1854,10 +1854,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         rAM = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)         # noqa
         rDR = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)      # noqa
         rDM = PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)          # noqa
-        wAR = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)     # noqa
-        wAM = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)         # noqa
-        wDR = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)      # noqa
-        wDM = PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)          # noqa
+        wAR = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)    # noqa
+        wAM = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.MATCH)        # noqa
+        wDR = PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)     # noqa
+        wDM = PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)         # noqa
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc1_id, override_permission=rAM)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res1_id, override_permission=wAM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res1_id, override_permission=rAR)
