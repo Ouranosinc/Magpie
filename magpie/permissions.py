@@ -2,6 +2,7 @@ import functools
 import itertools
 from typing import TYPE_CHECKING
 
+import six
 from pyramid.security import ALL_PERMISSIONS, Everyone
 
 from magpie.utils import ExtendedEnum
@@ -320,7 +321,7 @@ class PermissionSet(object):
             # if permission name represents explicit definition, use it directly and drop Allow/Deny from ACE
             # otherwise, use the provided access
             access = None
-            if len(perm_name.split("-")) != 3:
+            if isinstance(perm_name, six.string_types) and len(perm_name.split("-")) != 3:
                 access = Access.get(permission[0].lower())
             return PermissionSet(perm_name, access=access, scope=None, typ=perm_type)
 

@@ -17,7 +17,7 @@ from magpie import __meta__, owsrequest
 from magpie.adapter.magpieowssecurity import OWSAccessForbidden
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, Scope
-from magpie.services import ServiceAPI, ServiceWPS
+from magpie.services import ServiceAccess, ServiceAPI, ServiceWPS
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
 from tests import interfaces as ti, runner, utils
 
@@ -421,13 +421,103 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         req = self.mock_request(path, method="GET", params=params)
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
-    @unittest.skip("impl")
-    @pytest.mark.skip
+    @utils.mock_get_settings
     def test_ServiceAccess_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceAccess` against a mocked `Magpie` adapter for `Twitcher`.
+
+        The :class:`ServiceAccess` implementation works as an all-or-nothing endpoint (similar to `Twitcher`'s default
+        proxy behaviour when :class:`magpie.adapter.MagpieAdapter` is not employed).
+
+        Validate that the service does not allow creation of children resource and that access is granted or refused
+        according to :class:`Access` modifiers of the resolved permission. The :class:`Scope` modifier has no effect
+        due to forbidden creation of children resources.
+
+        Legend::
+
+            a: access       (permission `name`, not to be confused with `access` permission modifier)
+            A: allow
+            D: deny
+            M: match        (doesn't matter because service always directly referenced)
+            R: recursive    (doesn't matter because service always directly referenced)
+
+        Permissions Applied::
+                                        user        group               effective (reason)
+            Service1                    (a-A-R)                         a-A
+            Service2                                (a-A-M)             a-A
+            Service3                    (a-D-M)                         a-D
+            Service4                                (a-D-R)             a-D
+            Service5                    (a-A-R)     (a-D-M)             a-A (user > group)
+            Service6                                                    a-D (nothing defaults like explicit deny)
         """
-        raise NotImplementedError  # FIXME
+
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+
+        # create services
+        svc_type = ServiceAccess.service_type
+        svc1_name = "unittest-service-access-1"
+        svc2_name = "unittest-service-access-2"
+        svc3_name = "unittest-service-access-3"
+        svc4_name = "unittest-service-access-4"
+        svc5_name = "unittest-service-access-5"
+        svc6_name = "unittest-service-access-6"
+        for svc_name in [svc1_name, svc2_name, svc3_name, svc4_name, svc5_name, svc6_name]:
+            utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc1_name, override_service_type=svc_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc1_id = info["resource_id"]
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc2_name, override_service_type=svc_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc2_id = info["resource_id"]
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc3_name, override_service_type=svc_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc3_id = info["resource_id"]
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc4_name, override_service_type=svc_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc4_id = info["resource_id"]
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc5_name, override_service_type=svc_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc5_id = info["resource_id"]
+        utils.TestSetup.create_TestService(self, override_service_name=svc6_name, override_service_type=svc_type)
+
+        # validate forbidden child resource creation
+        path = "/services/{}/resources".format(svc1_name)
+        data = {"resource_type": "route", "resource_name": "unittest-service-access-forbidden-child-resource"}
+        resp = utils.test_request(self, "POST", path=path, json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 403, expected_method="POST")
+
+        # assign permissions on service
+        aAR = PermissionSet(Permission.ACCESS, Access.ALLOW, Scope.RECURSIVE)   # noqa
+        aAM = PermissionSet(Permission.ACCESS, Access.ALLOW, Scope.MATCH)       # noqa
+        aDR = PermissionSet(Permission.ACCESS, Access.DENY, Scope.RECURSIVE)    # noqa
+        aDM = PermissionSet(Permission.ACCESS, Access.DENY, Scope.MATCH)        # noqa
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc1_id, override_permission=aAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc2_id, override_permission=aAM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc3_id, override_permission=aDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc4_id, override_permission=aDR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc5_id, override_permission=aAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc5_id, override_permission=aDM)
+
+        # login test user for which the permissions were set
+        utils.check_or_try_logout_user(self)
+        cred = utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name)
+        self.test_headers, self.test_cookies = cred
+
+        # services calls
+        req = self.mock_request("/ows/proxy/{}".format(svc1_name), method="GET")
+        utils.check_no_raise(lambda: self.ows.check_request(req))
+        req = self.mock_request("/ows/proxy/{}".format(svc2_name), method="GET")
+        utils.check_no_raise(lambda: self.ows.check_request(req))
+        req = self.mock_request("/ows/proxy/{}".format(svc3_name), method="GET")
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+        req = self.mock_request("/ows/proxy/{}".format(svc4_name), method="GET")
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+        req = self.mock_request("/ows/proxy/{}".format(svc5_name), method="GET")
+        utils.check_no_raise(lambda: self.ows.check_request(req))
+        req = self.mock_request("/ows/proxy/{}".format(svc6_name), method="GET")
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
     @unittest.skip("impl")
     @pytest.mark.skip

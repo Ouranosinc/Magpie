@@ -304,6 +304,7 @@ class Route(Resource):
 
 
 class Process(Resource):
+    child_resource_allowed = False
     resource_type_name = "process"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 

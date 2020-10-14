@@ -1289,12 +1289,11 @@ class ServiceResources_POST_RequestSchema(Resources_POST_RequestSchema):
 
 
 ServiceResources_POST_CreatedResponseSchema = Resources_POST_CreatedResponseSchema
-ServiceResources_POST_ForbiddenResponseSchema = Resources_POST_ForbiddenResponseSchema
 ServiceResources_POST_NotFoundResponseSchema = Resources_POST_NotFoundResponseSchema
 ServiceResources_POST_ConflictResponseSchema = Resources_POST_ConflictResponseSchema
 
 
-class ServiceResources_POST_BadRequestResponseSchema(Resources_POST_BadRequestResponseSchema):
+class ServiceResources_POST_ForbiddenResponseSchema(Resources_POST_ForbiddenResponseSchema):
     description = "Invalid 'parent_id' specified for child resource creation under requested service."
 
 
@@ -2727,9 +2726,8 @@ Resources_GET_responses = {
 }
 Resources_POST_responses = {
     "201": Resources_POST_CreatedResponseSchema(),
-    "400": Resources_POST_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": Resources_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "403": Resources_POST_ForbiddenResponseSchema(),
     "404": Resources_POST_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "409": Resources_POST_ConflictResponseSchema(),
@@ -2832,9 +2830,8 @@ ServiceResources_GET_responses = {
 }
 ServiceResources_POST_responses = {
     "201": ServiceResources_POST_CreatedResponseSchema(),
-    "400": ServiceResources_POST_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": ServiceResources_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "403": ServiceResources_POST_ForbiddenResponseSchema(),
     "404": ServiceResources_POST_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "409": ServiceResources_POST_ConflictResponseSchema(),

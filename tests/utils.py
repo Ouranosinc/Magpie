@@ -1,5 +1,4 @@
 import functools
-import inspect
 import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import unittest

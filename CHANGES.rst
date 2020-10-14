@@ -56,6 +56,8 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix incorrect regex employed for validation of service URL during registration.
+* Replace HTTP status code ``400`` by ``403`` and ``422`` where applicable for invalid resource creation due to failing
+  validations against reference parent service (relates to `#359 <https://github.com/Ouranosinc/Magpie/issues/359>`_).
 
 `2.0.1 <https://github.com/Ouranosinc/Magpie/tree/2.0.1>`_ (2020-09-30)
 ------------------------------------------------------------------------------------

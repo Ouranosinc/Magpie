@@ -1476,12 +1476,18 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Validate returned logged user permissions with different query parameter modifiers.
 
+        .. note::
+            With later versions, effective permissions are evaluated by
+            :meth:`test_GetUserResourcePermissions_EffectiveResolution` instead of within this test as rules require
+            more advanced validations and conditions with the addition of :class:`Access` and :class:`Scope` concepts.
+
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_GetLoggedUserResourcesPermissions`
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_GetUserResourcePermissions_EffectiveResolution`
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_AllowedItself`
             - :meth:`Interface_MagpieAPI_UsersAuth.test_GetUserResourcesPermissions_ForbiddenOther`
         """
-        utils.warn_version(self, "permission effect queries", "0.7.0", skip=True)
+        utils.warn_version(self, "permission queries modifiers", "0.7.0", skip=True)
 
         # setup test resources under service with permissions
         # Service/Resources              | Admin-User | Admin-Group | Anonym-User | Anonym-Group
@@ -1526,43 +1532,50 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # tests
         q_groups = "inherit=true"
         q_effect = "effective=true"
+        test_effective = LooseVersion(self.version) < LooseVersion("2.1")
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=q_groups)
         utils.check_val_equal(body["permission_names"], [])
-        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=q_effect)
-        utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
+        if test_effective:
+            body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=q_effect)
+            utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=q_groups)
         utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
-        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=q_effect)
-        utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
+        if test_effective:
+            body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=q_effect)
+            utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=None)
         utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=q_groups)
         utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
-        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=q_effect)
-        utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
+        if test_effective:
+            body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=q_effect)
+            utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
 
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=None)
         utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=q_groups)
         utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
-        body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=q_effect)
-        utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
+        if test_effective:
+            body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=q_effect)
+            utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=q_groups)
         utils.check_val_equal(body["permission_names"], [])
-        body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=q_effect)
-        utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
+        if test_effective:
+            body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=q_effect)
+            utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
         body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=q_groups)
         utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
-        body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=q_effect)
-        utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
+        if test_effective:
+            body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=q_effect)
+            utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
@@ -1771,11 +1784,15 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_PERMISSIONS
     @runner.MAGPIE_TEST_FUNCTIONAL
-    def test_UserResourcePermissions_EffectiveResolution(self):
+    def test_GetUserResourcePermissions_EffectiveResolution(self):
         """
         Test effective resolution of permissions.
 
         Validates combinations of user/group inheritance combined with allow/deny and match/recursive modifiers.
+
+        All resolved effective permissions are scoped as :attr:`Scope.MATCH` since they target a specific resource
+        with pre-computed recursive resource tree inheritance. They should also have :attr:`PermissionType.EFFECTIVE`
+        and the corresponding :class:`Scope` value whether the permission was set or not for the resolved groups/user.
 
         Legend::
 
@@ -2532,19 +2549,29 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
-        applicable_perm = info["permission_names"][0]
+        applicable_perms = info["permission_names"]
+        applied_perm = applicable_perms[0]
         res_id = info["resource_id"]
         path = "/groups/{}/resources/{}/permissions".format(get_constant("MAGPIE_ANONYMOUS_GROUP"), res_id)
-        data = {"permission_name": applicable_perm}
+        data = {"permission_name": applied_perm}
         resp = utils.test_request(self, "POST", path, json=data, headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 201, expected_method="POST")
+
+        effective_perm_names = [applied_perm]
+        if LooseVersion(self.version) >= LooseVersion("2.1"):
+            effective_perm = PermissionSet(applied_perm, scope=Scope.MATCH)
+            allowed_perm_names = utils.TestSetup.get_PermissionNames(self, effective_perm)
+            denied_perm_names = {PermissionSet(perm).name for perm in applicable_perms} - {effective_perm.name}
+            denied_perms = [PermissionSet(perm, access=Access.DENY, scope=Scope.MATCH) for perm in denied_perm_names]
+            denied_perm_names = utils.TestSetup.get_PermissionNames(self, denied_perms)
+            effective_perm_names = allowed_perm_names + denied_perm_names
 
         # test
         path = "/users/{}/resources/{}/permissions?effective=true".format(self.test_user_name, res_id)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in("permission_names", body)
-        utils.check_val_is_in(applicable_perm, body["permission_names"],
+        utils.check_all_equal(effective_perm_names, body["permission_names"], any_order=True,
                               msg="Permission applied to anonymous group which user is member of should be effective")
 
     @runner.MAGPIE_TEST_USERS
@@ -2587,10 +2614,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in(effective_perm.implicit_permission, body["permission_names"],
                               msg="Permission applied to anonymous group which user is member of should be effective")
         if LooseVersion(self.version) >= LooseVersion("2.1"):
-            effective_permissions = [PermissionSet(perm, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
-                                     for perm in (set(applicable_perms) - set(applied_perm))] + [effective_perm]
+            perms_names = {PermissionSet(perm).name for perm in applicable_perms}
+            perms_denied = [PermissionSet(perm, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
+                            for perm in perms_names if perm != PermissionSet(applied_perm).name]
+            effective_permissions = [effective_perm] + perms_denied
             utils.check_val_is_in("permissions", body)
-            utils.check_all_equal([perm.json() for perm in effective_permissions], body["permissions"])
+            utils.check_all_equal([perm.json() for perm in effective_permissions], body["permissions"], any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers(self):
@@ -3833,7 +3862,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         }
         resp = utils.test_request(self, "POST", path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        body = utils.check_response_basic_info(resp, 400, expected_method="POST")
+        code = 403 if LooseVersion(self.version) >= LooseVersion("2.1") else 400
+        body = utils.check_response_basic_info(resp, code, expected_method="POST")
         utils.check_error_param_structure(body, version=self.version, param_compare_exists=True, param_name="parent_id")
 
     @runner.MAGPIE_TEST_SERVICES
