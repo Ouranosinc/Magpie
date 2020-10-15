@@ -370,10 +370,11 @@ def mock_request(request_path_query="",     # type: Str
     parts = request_path_query.split("?")
     path = parts[0]
     query = dict()
-    if len(parts) > 1:
+    if len(parts) > 1 and parts[1]:
         for part in parts[1].split("&"):
-            k, v = part.split("=")
-            query[k] = v
+            kv = part.split("=")  # handle trailing keyword query arguments without values
+            if kv[0]:  # handle invalid keyword missing
+                query[kv[0]] = kv[1] if len(kv) > 1 else None
     elif params:
         query = params
     request = DummyRequest(path=path, params=query)

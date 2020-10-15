@@ -7,6 +7,7 @@ test_services
 
 Tests for the services implementations magpie.
 """
+import itertools
 import unittest
 from typing import TYPE_CHECKING
 
@@ -269,8 +270,6 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
                 msg = "Using combination [{}, {}]".format(method, path)
                 utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
 
-    @unittest.skip("impl")
-    @pytest.mark.skip
     @utils.mock_get_settings
     def test_ServiceTHREDDS_effective_permissions(self):
         """
@@ -279,6 +278,11 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         Validate that both :class:`model.Directory` and :class:`model.File` can be created under :class:`ServiceTHREDDS`
         but that only :class:`model.Directory` then allows nested sub-resources. Resource of type :class:`model.File`
         must correctly indicate a leaf resource.
+
+        Validate access of created resources. All :class:`model.File` resources refer to a common data representation
+        of a file with ``.nc`` extension, where any additional extension refer to the same element (eg: ``.nc.dds``).
+        When the final element is ``catalog.html``, it must be parsed as the parent :class:`model.Directory` since that
+        path refers to the HTML page with UI rendering of the contents of the directory.
 
         Legend::
 
@@ -297,9 +301,17 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
                         Directory3      (w-A-R)         (w-D-M)         r-D, w-A  (user > group)
                             File1                       (w-D-M)         r-D, w-D  (match > recursive)
                 Directory4                              (r-A-R)         r-A, w-A
-                    File2               (w-D-M)                         r-A, w-D
-                    Directory5                                          r-A, w-A
-                        File3           (r-D-M)                         r-D, w-A
+                    File2               (r-D-M)         (w-D-R)         r-D, w-W
+                    Directory5                                          r-A, w-W
+                        File3                                           r-A, w-W
+
+        .. note::
+            Permission :attr:`Permission.WRITE` can be created, but they don't actually have any use for the moment
+            according to :class:`ServiceTHREDDS` implementation.
+
+        .. seealso::
+            Reference test server to explore supported formats by THREDDS service (many files available):
+            https://remotetest.unidata.ucar.edu/thredds/dodsC/testdods/rtofs.nc.html
         """
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
@@ -319,15 +331,26 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         dir3_id, dir3_name = self.make_resource(dir_type, dir2_id, 3)
         dir4_id, dir4_name = self.make_resource(dir_type, svc_id, 4)
         dir5_id, dir5_name = self.make_resource(dir_type, dir4_id, 5)
-        file1_id, file1_name = self.make_resource(file_type, dir3_id, 1)
-        file2_id, file2_name = self.make_resource(file_type, dir4_id, 2)
-        file3_id, file3_name = self.make_resource(file_type, dir5_id, 3)
+        # files must have '.nc' extension
+        file1_id, file1_name = self.make_resource(file_type, dir3_id, "1.nc")
+        file2_id, file2_name = self.make_resource(file_type, dir4_id, "2.nc")
+        file3_id, file3_name = self.make_resource(file_type, dir5_id, "3.nc")  # pylint: disable=W0612
+
+        # validate refused creation of invalid Directory or File under a leaf File resource
+        path = "/services/{}/resources".format(svc_name)
+        for child_res_type in [dir_type, file_type]:
+            data = {"resource_type": child_res_type, "parent_id": file1_id,
+                    "resource_name": "unittest-service-thredds-forbidden-child-resource"}
+            resp = utils.test_request(self, "POST", path=path, json=data, expect_errors=True,
+                                      headers=self.json_headers, cookies=self.cookies)
+            utils.check_response_basic_info(resp, 403, expected_method="POST")
 
         # assign permissions
         rAR = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)     # noqa
         rDR = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)      # noqa
         rDM = PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)          # noqa
         wAR = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)    # noqa
+        wDR = PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)     # noqa
         wDM = PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)         # noqa
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc_id, override_permission=wDM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc_id, override_permission=wAR)
@@ -337,13 +360,50 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir3_id, override_permission=wDM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=file1_id, override_permission=wDM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir4_id, override_permission=rAR)
-        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file2_id, override_permission=wDM)
-        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file3_id, override_permission=rDM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file2_id, override_permission=rDM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file2_id, override_permission=wDR)
 
         # login test user for which the permissions were set
         self.login_test_user()
 
-        raise NotImplementedError  # FIXME validation of ACL
+        # directory access with various path formats
+        dir_prefixes = [svc_name + "/catalog", svc_name + "/thredds/catalog", svc_name + "/thredds/dodsC"]
+        dir_suffixes = ["", "/catalog.html"]
+        test_sub_dir = [
+            (False, ""),
+            (True, "/" + dir1_name),
+            (False, "/{}/{}".format(dir1_name, dir2_name)),
+            (False, "/{}/{}/{}".format(dir1_name, dir2_name, dir3_name)),
+        ]
+        for prefix, test_subdir, suffix in itertools.product(dir_prefixes, test_sub_dir, dir_suffixes):
+            expect_allowed, subdir = test_subdir
+            path = "/ows/proxy/{}{}{}".format(prefix, subdir, suffix)
+            req = self.mock_request(path, method="GET")
+            msg = "Using combination [GET, {}]".format(path)
+            if expect_allowed:
+                utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
+            else:
+                utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
+
+        # file access with various formats, locations and accessors
+        test_files = [
+            (False, "{}/{}/{}/{}".format(dir1_name, dir2_name, dir3_name, file1_name)),
+            (False, "{}/{}".format(dir4_name, file2_name)),
+            (True, "{}/{}/{}".format(dir4_name, dir5_name, file3_name)),
+        ]
+        for expect_allowed, file_path in test_files:
+            file_prefixes = ["", "/thredds"]
+            file_formats = ["dap4", "dodsC", "fileServer"]  # format of files accessors (anything else than 'catalog')
+            file_suffixes = [file_path, "{}.dds".format(file_path), "{}.dmr.xml".format(file_path),
+                             "{}.html".format(file_path), "{}.ascii?".format(file_path)]  # different representations
+            for prefix, fmt, suffix in itertools.product(file_prefixes, file_formats, file_suffixes):
+                path = "/ows/proxy/{}{}/{}/{}".format(svc_name, prefix, fmt, suffix)
+                req = self.mock_request(path, method="GET")
+                msg = "Using combination [GET, {}]".format(path)
+                if expect_allowed:
+                    utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
+                else:
+                    utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
 
     @unittest.skip("impl")
     @pytest.mark.skip

@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 import abc
 import six
 from beaker.cache import cache_region, cache_regions, region_invalidate
-from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound, HTTPNotImplemented
-from pyramid.security import ALL_PERMISSIONS, DENY_ALL, Allow, Everyone
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotImplemented
+from pyramid.security import ALL_PERMISSIONS, DENY_ALL
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
@@ -468,16 +468,14 @@ class ServiceNCWMS2(ServiceBaseWMS):
         ]
     }
 
-    def get_acl(self):
-        self.expand_acl(self.service, self.request.user)
-
+    def resource_requested(self):
         # According to the permission, the resource we want to authorize is not formatted the same way
         permission_requested = self.permission_requested()
         netcdf_file = None
         if permission_requested == Permission.GET_CAPABILITIES:
             # https://colibri.crim.ca/twitcher/ows/proxy/ncWMS2/wms?SERVICE=WMS&REQUEST=GetCapabilities&
             #   VERSION=1.3.0&DATASET=outputs/ouranos/subdaily/aet/pcp/aet_pcp_1961.nc
-            if "dataset" in self.parser.params.keys():
+            if "dataset" in self.parser.params:
                 netcdf_file = self.parser.params["dataset"]
 
         elif permission_requested == Permission.GET_MAP:
@@ -496,24 +494,25 @@ class ServiceNCWMS2(ServiceBaseWMS):
                 netcdf_file = netcdf_file.rsplit("/", 1)[0]
 
         else:
-            return [(Allow, Everyone, permission_requested.value,)]
+            return self.service, False
 
+        found_child = self.service
+        target = False
         if netcdf_file:
-            ax.verify_param("outputs/", param_compare=netcdf_file, http_error=HTTPNotFound,
-                            msg_on_fail="'outputs/' is not in path", not_in=True)
+            if "output/" not in netcdf_file:
+                return self.service, False
+            # FIXME: this is probably too specific to birdhouse... leave as is for bw-compat, adjust as needed
             netcdf_file = netcdf_file.replace("outputs/", "birdhouse/")
 
             db_session = self.request.db
-            path_elems = netcdf_file.split("/")
-            new_child = self.service
-            while new_child and path_elems:
-                elem_name = path_elems.pop(0)
-                new_child = models.find_children_by_name(
-                    elem_name, parent_id=new_child.resource_id, db_session=db_session
-                )
-                self.expand_acl(new_child, self.request.user)
-
-        return self.acl
+            file_parts = netcdf_file.split("/")
+            while found_child and file_parts:
+                part = file_parts.pop(0)
+                res_id = found_child.resource_id
+                found_child = models.find_children_by_name(part, parent_id=res_id, db_session=db_session)
+            # target resource reached if no more parts to process, otherwise we have some parent (minimally the service)
+            target = not len(file_parts)
+        return found_child, target
 
 
 class ServiceGeoserverWMS(ServiceBaseWMS):
@@ -635,27 +634,8 @@ class ServiceWFS(ServiceOWS):
 
     resource_types_permissions = {}
 
-    def get_acl(self):
-        acl = self.expand_acl(self.service, self.request.user)
-        request_type = self.permission_requested()
-        if request_type == Permission.GET_CAPABILITIES:
-            path_elem = self.request.path.split("/")
-            wms_idx = path_elem.index("wfs")
-            if path_elem[wms_idx - 1] != "geoserver":
-                workspace_name = path_elem[wms_idx - 1]
-            else:
-                workspace_name = ""
-        else:
-            layer_name = self.parser.params["typenames"]
-            workspace_name = layer_name.split(":")[0]
-
-        # load workspace resource from the database
-        workspace = models.find_children_by_name(child_name=workspace_name,
-                                                 parent_id=self.service.resource_id,
-                                                 db_session=self.request.db)
-        if workspace:
-            acl.extend(self.expand_acl(workspace, self.request.user))
-        return acl
+    def resource_requested(self):
+        return self.service, True   # no children resource, so can only be the service
 
 
 class ServiceTHREDDS(ServiceInterface):
@@ -698,9 +678,17 @@ class ServiceTHREDDS(ServiceInterface):
         if path_parts[-1].lower() == "catalog.html":
             path_parts = path_parts[:-1]
         # convert file name to common value representing the same NetCDF resource accessed
-        # remove any extra extension whenever applicable (eg: discard '.dds' from '.nc.dds')
         if ".nc" in path_parts[-1].lower():
-            path_parts[-1] = path_parts[-1].split(".nc")[0] + ".nc"
+            # same as 'catalog.html' when 'catalog' is in path, even if '.nc' file is specified
+            # (THREDDS redirects to HTML view of parent directory)
+            if path_parts[0] == "catalog":
+                path_parts = path_parts[:-1]
+            # otherwise it is the specific representation of the NetCDF
+            # remove any extra extension whenever applicable (eg: discard '.dds' from '.nc.dds')
+            else:
+                path_parts[-1] = path_parts[-1].split(".nc")[0] + ".nc"
+        # remove the 'serviceType' prefix (dodsC, catalog, etc.)
+        path_parts = path_parts[1:]
 
         # find deepest possible resource matching either Directory or File by name
         found_resource = self.service
