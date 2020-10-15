@@ -703,7 +703,7 @@ def check_val_type(val, ref, msg=None):
 
 
 def check_raises(func, exception_type, msg=None):
-    # type: (Callable[[], None], Type[Exception], Optional[Str]) -> Exception
+    # type: (Callable[[], Any], Type[Exception], Optional[Str]) -> Exception
     """
     Calls the callable and verifies that the specific exception was raised.
 

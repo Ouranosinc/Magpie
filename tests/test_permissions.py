@@ -218,11 +218,8 @@ class TestPermissions(unittest.TestCase):
         utils.check_val_equal(perm.access, Access.DENY)
         utils.check_val_equal(perm.scope, Scope.RECURSIVE)
         utils.check_val_equal(perm.type, PermissionType.INHERITED, msg="Should infer inherited from group specifier.")
-        perm = PermissionSet((Allow, "group:1", ALL_PERMISSIONS))
-        utils.check_val_equal(perm.name, ALL_PERMISSIONS, msg="Should remain generic ALL_PERMISSION as name.")
-        utils.check_val_equal(perm.access, Access.ALLOW)
-        utils.check_val_equal(perm.scope, Scope.RECURSIVE, msg="Should be enforced to recursive for generic name.")
-        utils.check_val_equal(perm.type, PermissionType.INHERITED, msg="Should infer inherited from group specifier.")
+        utils.check_raises(lambda: PermissionSet((Allow, "group:1", ALL_PERMISSIONS)), TypeError,
+                           msg="Don't allow any object that makes the permission name not explicitly defined.")
 
     def test_compare_and_sort_operations(self):
         perm_rar = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)

@@ -97,6 +97,11 @@ Glossary
         :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`. Otherwise, it is whoever the
         :term:`Authentication` mechanism identifies with token extracted from request :term:`Cookies`.
 
+    OWS
+        Acronym that regroups all `Open Geospatial Consortium` (OGC) Web Services. This includes
+        `Web Feature Service` (WFS), `Web Map Service` (WMS) and `Web Processing Service` (WPS) for which `Magpie`
+        offers some specific :term:`Service` request parser implementations.
+
     Permission
         Element that defines which rules are applicable for a given combination of :term:`User` and/or :term:`Group`
         against one or many :term:`Service` and/or :term:`Resource`, depending of the many contexts for which they

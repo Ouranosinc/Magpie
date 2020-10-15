@@ -1297,6 +1297,11 @@ class ServiceResources_POST_ForbiddenResponseSchema(Resources_POST_ForbiddenResp
     description = "Invalid 'parent_id' specified for child resource creation under requested service."
 
 
+class ServiceResources_POST_UnprocessableEntityResponseSchema(BaseResponseSchemaAPI):
+    description = "Provided 'parent_id' value is invalid."
+    body = ErrorResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
+
+
 # delete service's resource use same method as direct resource delete
 class ServiceResource_DELETE_RequestSchema(Resource_DELETE_RequestSchema):
     service_name = ServiceNameParameter

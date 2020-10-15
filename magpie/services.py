@@ -334,7 +334,7 @@ class ServiceOWS(ServiceInterface):
         # type: (models.Service, Request) -> None
         super(ServiceOWS, self).__init__(service, request)
         self.parser = ows_parser_factory(request)
-        self.parser.parse(self.params_expected)
+        self.parser.parse(self.params_expected)  # run parsing to obtain guaranteed lowered-name parameters
 
     @abc.abstractmethod
     def resource_requested(self):
@@ -507,40 +507,41 @@ class ServiceNCWMS2(ServiceBaseWMS):
 
 class ServiceGeoserverWMS(ServiceBaseWMS):
     """
-    Service that represents a ``Web Map Service`` endpoint with functionalities specific to ``geoserver``.
+    Service that represents a ``Web Map Service`` endpoint with functionalities specific to ``GeoServer``.
     """
     service_type = "geoserverwms"
 
-    def get_acl(self):
-        self.expand_acl(self.service, self.request.user)
-
-        # localhost:8087/geoserver/WATERSHED/wms?layers=WATERSHED:BV_1NS&request=getmap
-        # localhost:8087/geoserver/wms?layers=WATERERSHED:BV1_NS&request=getmap
-        # those two request lead to the same thing so, here we need to check the workspace in the layer
-
-        # localhost:8087/geoserver/wms?request=getcapabilities (dangerous, get all workspace)
-        # localhost:8087/geoserver/WATERSHED/wms?request=getcapabilities (only for the workspace in the path)
-        # here we need to check the workspace in the path
-
-        request_type = self.permission_requested()
-        if request_type == Permission.GET_CAPABILITIES:
-            path_elem = self.request.path.split("/")
-            wms_idx = path_elem.index("wms")
-            if path_elem[wms_idx - 1] != "geoserver":
-                workspace_name = path_elem[wms_idx - 1]
-            else:
-                workspace_name = ""
+    def resource_requested(self):
+        permission = self.permission_requested()
+        path_parts = self.request.path.split()
+        parts_lower = [part.lower() for part in path_parts]
+        if parts_lower and parts_lower[0] == "geoserver":
+            path_parts = path_parts[1:]
+            parts_lower = parts_lower[1:]
+        workspace_name = None
+        if len(parts_lower) > 1 and parts_lower[1] == "wms":
+            workspace_name = path_parts[0]
+        if permission == Permission.GET_CAPABILITIES:
+            # here we need to check the workspace in the path
+            #   /geoserver/wms?request=getcapabilities (get all workspaces)
+            #   /geoserver/WATERSHED/wms?request=getcapabilities (only for the workspace in the path)
+            if not path_parts or "wms" not in parts_lower or (len(parts_lower) == 1 and parts_lower[0] == "wms"):
+                return self.service, True
         else:
-            layer_name = self.parser.params["layers"]
-            workspace_name = layer_name.split(":")[0]
-
-        # load workspace resource from the database
+            # those two request lead to the same thing so, here we need to check the workspace in the layer
+            #   /geoserver/WATERSHED/wms?layers=WATERSHED:BV_1NS&request=getmap
+            #   /geoserver/wms?layers=WATERERSHED:BV1_NS&request=getmap
+            if not workspace_name:
+                layer_name = self.parser.params["layers"] or ""
+                workspace_name = layer_name.split(":")[0]
+        if not workspace_name:
+            return self.service, False
         workspace = models.find_children_by_name(child_name=workspace_name,
                                                  parent_id=self.service.resource_id,
                                                  db_session=self.request.db)
         if workspace:
-            self.expand_acl(workspace, self.request.user)
-        return self.acl
+            return workspace, True
+        return self.service, False
 
 
 class ServiceAccess(ServiceInterface):

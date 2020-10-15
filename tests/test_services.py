@@ -13,11 +13,11 @@ from typing import TYPE_CHECKING
 import pytest
 import six
 
-from magpie import __meta__, owsrequest
+from magpie import __meta__, models, owsrequest
 from magpie.adapter.magpieowssecurity import OWSAccessForbidden
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, Scope
-from magpie.services import ServiceAccess, ServiceAPI, ServiceWPS
+from magpie.services import ServiceAccess, ServiceAPI, ServiceTHREDDS, ServiceWPS
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
 from tests import interfaces as ti, runner, utils
 
@@ -49,16 +49,16 @@ def make_ows_parser(method="GET", content_type=None, params=None, body=""):
 class TestOWSParser(unittest.TestCase):
     def test_ows_parser_factory(self):  # noqa: R0201
         parser = make_ows_parser(method="GET", content_type=None, params=None, body="")
-        assert isinstance(parser, owsrequest.WPSGet)
+        assert isinstance(parser, owsrequest.OWSGetParser)
 
         params = {"test": "something"}
         parser = make_ows_parser(method="GET", content_type=None, params=params, body="")
-        assert isinstance(parser, owsrequest.WPSGet)
+        assert isinstance(parser, owsrequest.OWSGetParser)
         assert parser.params["test"] == "something"
 
         body = six.ensure_binary('<?xml version="1.0" encoding="UTF-8"?><Execute/>')    # pylint: disable=C4001
         parser = make_ows_parser(method="POST", content_type=None, params=None, body=body)
-        assert isinstance(parser, owsrequest.WPSPost)
+        assert isinstance(parser, owsrequest.OWSPostParser)
 
         body = '{"test": "something"}'  # pylint: disable=C4001
         parser = make_ows_parser(method="POST", content_type=None, params=None, body=body)
@@ -81,13 +81,13 @@ class TestOWSParser(unittest.TestCase):
         params = {"test": "something"}
         parser = make_ows_parser(method="DELETE", content_type=None, params=params, body="")
         parser.parse(["test"])
-        assert isinstance(parser, owsrequest.WPSGet)
+        assert isinstance(parser, owsrequest.OWSGetParser)
         assert parser.params["test"] == "something"
 
         params = {"test": "something"}
         parser = make_ows_parser(method="PATCH", content_type=None, params=params, body="")
         parser.parse(["test"])
-        assert isinstance(parser, owsrequest.WPSGet)
+        assert isinstance(parser, owsrequest.OWSGetParser)
         assert parser.params["test"] == "something"
 
         body = '{"test": "something"}'  # pylint: disable=C4001
@@ -156,7 +156,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
 
         svc_name = "unittest-service-api"
         svc_type = ServiceAPI.service_type
-        res_type = ServiceAPI.resource_types[0].resource_type_name
+        res_type = models.Route.resource_type_name
         res_name = "sub"
         res_kw = {"override_resource_name": res_name, "override_resource_type": res_type}
         utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
@@ -244,8 +244,81 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
     def test_ServiceTHREDDS_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceTHREDDS` against a mocked `Magpie` adapter for `Twitcher`.
+
+        Validate that both :class:`model.Directory` and :class:`model.File` can be created under :class:`ServiceTHREDDS`
+        but that only :class:`model.Directory` then allows nested sub-resources. Resource of type :class:`model.File`
+        must correctly indicate a leaf resource.
+
+
+        Legend::
+
+            r: read     (interpreted as literal filesystem READ)
+            w: write    (interpreted as literal filesystem WRITE)
+            A: allow
+            D: deny
+            M: match
+            R: recursive
+
+        Permissions Applied::
+                                        user            group           effective (reason/importance)
+            Service1                    (w-D-M)         (w-A-R)         r-D, w-D  (user > group)
+                Directory1              (r-A-R)                         r-A, w-A
+                    Directory2                          (r-D-R)         r-D, w-A  (revert user-res1)
+                        Directory3      (w-A-R)         (w-D-M)         r-D, w-A  (user > group)
+                            File1                       (w-D-M)         r-D, w-D  (match > recursive)
+                Directory4                              (r-A-R)         r-A, w-A
+                    File2               (w-D-M)                         r-A, w-D
+                    Directory5                                          r-A, w-A
+                        File3           (r-D-M)                         r-D, w-A
         """
-        raise NotImplementedError  # FIXME
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+
+        svc_name = "unittest-service-thredds"
+        svc_type = ServiceTHREDDS.service_type
+        dir_type = models.Directory.resource_type_name
+        file_type = models.File.resource_type_name
+        utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc_id = info["resource_id"]
+
+        def make_res(res_type, index, parent_id):
+            res_name = "unittest-{}{}".format(res_type, index)
+            res_body = utils.TestSetup.create_TestResource(self, parent_resource_id=parent_id,
+                                                           override_resource_type=res_type,
+                                                           override_resource_name=res_name)
+            res_info = utils.TestSetup.get_ResourceInfo(self, override_body=res_body)
+            return res_info["resource_id"], res_name
+
+        # create resources
+        dir1_id, dir1_name = make_res(dir_type, 1, svc_id)
+        dir2_id, dir2_name = make_res(dir_type, 2, dir1_id)
+        dir3_id, dir3_name = make_res(dir_type, 3, dir2_id)
+        dir4_id, dir4_name = make_res(dir_type, 4, svc_id)
+        dir5_id, dir5_name = make_res(dir_type, 5, dir4_id)
+        file1_id, file1_name = make_res(file_type, 1, dir3_id)
+        file2_id, file2_name = make_res(file_type, 2, dir4_id)
+        file3_id, file3_name = make_res(file_type, 3, dir5_id)
+
+        # assign permissions
+        rAR = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)     # noqa
+        rDR = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)      # noqa
+        rDM = PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)          # noqa
+        wAR = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)    # noqa
+        wDM = PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)         # noqa
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc_id, override_permission=wDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc_id, override_permission=wAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir1_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir2_id, override_permission=rDR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir3_id, override_permission=wAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir3_id, override_permission=wDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=file1_id, override_permission=wDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir4_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file2_id, override_permission=wDM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file3_id, override_permission=rDM)
+
+        raise NotImplementedError  # FIXME validation of ACL
 
     @unittest.skip("impl")
     @pytest.mark.skip
@@ -260,7 +333,14 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
     def test_ServiceGeoserverWMS_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceGeoserverWMS` against a mocked `Magpie` adapter for `Twitcher`.
+
+
         """
+
+        #   /geoserver/wms?request=getcapabilities (get all workspaces)
+        #   /geoserver/WATERSHED/wms?request=getcapabilities (only for the workspace in the path)
+        #   /geoserver/WATERSHED/wms?layers=WATERSHED:BV_1NS&request=getmap
+        #   /geoserver/wms?layers=WATERERSHED:BV1_NS&request=getmap
         raise NotImplementedError  # FIXME
 
     @unittest.skip("impl")
@@ -309,7 +389,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         wps1_name = "unittest-service-wps-1"
         wps2_name = "unittest-service-wps-2"
         svc_type = ServiceWPS.service_type
-        proc_type = ServiceWPS.resource_types[0].resource_type_name
+        proc_type = models.Process.resource_type_name
         body = utils.TestSetup.create_TestService(self, override_service_name=wps1_name, override_service_type=svc_type)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         wps1_id = info["resource_id"]

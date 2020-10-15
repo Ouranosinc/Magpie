@@ -3,15 +3,13 @@ import itertools
 from typing import TYPE_CHECKING
 
 import six
-from pyramid.security import ALL_PERMISSIONS, Everyone
+from pyramid.security import Everyone
 
 from magpie.utils import ExtendedEnum
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Collection, Dict, List, Optional, Union
-
-    from pyramid.security import AllPermissionsList
 
     from magpie import models
     from magpie.typedefs import AccessControlEntryType, AnyPermissionType, PermissionObject, Str
@@ -89,7 +87,7 @@ class PermissionSet(object):
     __slots__ = ["_name", "_access", "_scope", "_type"]
 
     def __init__(self,
-                 permission,    # type: Union[AnyPermissionType, AllPermissionsList]
+                 permission,    # type: AnyPermissionType
                  access=None,   # type: Optional[Union[Access, Str]]
                  scope=None,    # type: Optional[Union[Scope, Str]]
                  typ=None,      # type: Optional[PermissionType]
@@ -203,7 +201,7 @@ class PermissionSet(object):
             target = "group:{}".format(user_or_group.id)
         else:  # both DIRECT and EFFECTIVE (effective is pre-computed with inherited permissions for the user)
             target = user_or_group.id
-        return (outcome, target, self.name.value)
+        return outcome, target, self.name.value
 
     @property
     def implicit_permission(self):
@@ -333,18 +331,18 @@ class PermissionSet(object):
             perm_type = PermissionType.DIRECT
         elif perm_type == "group":
             perm_type = PermissionType.INHERITED
-        if name == ALL_PERMISSIONS:
-            # ziggurat PermissionTuple resolves owner user/group of the resource with all permission as name
-            perm = ALL_PERMISSIONS
-            perm_type = PermissionType.OWNED
         if perm is not None:
             # when matched, either plain permission-name string or Permission enum, or AllPermissionList was passed
             # infer the rest of the parameters
             return PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE, perm_type)
 
-        # plain string representation, either implicit or explicit, but not only permission-name already matched above
+        # only permission-name at this point (with mandatory '-') as without it would be found by above 'Permission.get'
+        if not isinstance(name, six.string_types):
+            raise TypeError("Unknown permission object cannot be converted: {!r}".format(name))
         if "-" not in name:
             raise ValueError("Unknown permission name could not be parsed: {}".format(name))
+
+        # plain string representation, either implicit or explicit
         perm, modifier = name.rsplit("-", 1)
         scope = Scope.get(modifier)
         if "-" not in perm:  # either compound perm-name or perm-[access|scope] combination

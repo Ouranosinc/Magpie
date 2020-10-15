@@ -1,6 +1,13 @@
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPNotFound, HTTPOk
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPForbidden,
+    HTTPNotFound,
+    HTTPOk,
+    HTTPUnprocessableEntity
+)
 from pyramid.settings import asbool
 from pyramid.view import view_config
 
@@ -243,8 +250,8 @@ def create_service_resource_view(request):
         parent_id = service.resource_id
     else:
         parent_id = ax.evaluate_call(lambda: int(parent_id),
-                                     http_error=HTTPBadRequest,
-                                     msg_on_fail=s.ServiceResources_POST_BadRequestResponseSchema.description)
+                                     http_error=HTTPUnprocessableEntity,
+                                     msg_on_fail=s.ServiceResources_POST_UnprocessableEntityResponseSchema.description)
         # validate target service is actually the root service of the provided parent resource ID
         root_service = ru.get_resource_root_service_by_id(parent_id, db_session=db_session)
         ax.verify_param(root_service, not_none=True, param_name="parent_id",
@@ -252,8 +259,8 @@ def create_service_resource_view(request):
                         http_error=HTTPNotFound)
         ax.verify_param(root_service.resource_id, is_equal=True,
                         param_compare=service.resource_id, param_name="parent_id",
-                        msg_on_fail=s.ServiceResources_POST_BadRequestResponseSchema.description,
-                        http_error=HTTPBadRequest)
+                        msg_on_fail=s.ServiceResources_POST_ForbiddenResponseSchema.description,
+                        http_error=HTTPForbidden)
     return ru.create_resource(resource_name, resource_display_name, resource_type,
                               parent_id=parent_id, db_session=db_session)
 
