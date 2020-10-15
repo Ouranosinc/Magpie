@@ -1,9 +1,9 @@
-"""Resources of type Process introduced.
+"""
+Resources of type Process introduced.
 
 Revision ID: 5f2648b8ff49
 Revises: a2a039e2cff5
 Create Date: 2020-10-13 16:20:07.323467
-
 """
 
 from alembic import op
