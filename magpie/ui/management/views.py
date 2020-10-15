@@ -931,7 +931,7 @@ class ManagementViews(BaseViews):
         service_name = self.request.matchdict["service_name"]
         service_data = self.get_service_data(service_name)
         service_url = service_data["service_url"]
-        service_perm = service_data["permission_names"]
+        service_perm = {perm["name"] for perm in service_data["permissions"]}
         service_id = service_data["resource_id"]
         # apply default state if arriving on the page for the first time
         # future editions on the page will transfer the last saved state

@@ -8,7 +8,7 @@
 %for i, service in enumerate(service_names):
     <div class="alert alert-danger" id="ViewService_DeleteAlert_Service_${i}">
         <h3 class="alert-title-danger">Danger!</h3>
-        <div class="alert-info">
+        <div class="alert-text-container alert-danger">
             <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                  alt="" class="icon-error icon-color-invert" />
             <div class="alert-text">
@@ -66,7 +66,7 @@
             document.getElementById("ViewService_PushFailedAlert").style.display = "none";
         }
     </script>
-    <div class="alert alert-info" id="ViewService_PushProcessingAlert">
+    <div class="alert alert-info" id="ViewService_PushProcessingAlert" style="display: none">
         <h3 class="alert-title-info">Processing...</h3>
         <p>
             Syncing Phoenix services with Magpie services.
@@ -101,19 +101,28 @@
 
 <h1>Services</h1>
 
-
-%if service_push_show:
-    <form action="${request.path}" method="post" onsubmit="display_PushPhoenix()">
-        <input type="submit" class="button-warning" name="phoenix_push" value="Push to Phoenix">
-        <!-- <input type="button" class="button-warning" onclick="displayPushPhoenix()" value="Push to Phoenix">
-        <input type="hidden" value="Submit">-->
-    </form>
-%endif
-<button class="img-button theme" type="button"
-        onclick="location.href='${request.route_url('add_service', cur_svc_type=cur_svc_type)}'">
-    <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="">
-    Add Service
-</button>
+<table>
+<tbody>
+<tr>
+    <td class="no-border">
+        <button class="img-button theme" type="button"
+                onclick="location.href='${request.route_url('add_service', cur_svc_type=cur_svc_type)}'">
+            <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="">
+            Add Service
+        </button>
+    </td>
+    <td class="no-border">
+        %if service_push_show:
+        <form action="${request.path}" method="post" onsubmit="display_PushPhoenix()">
+            <input type="submit" class="button-warning" name="phoenix_push" value="Push to Phoenix">
+            <!-- <input type="button" class="button-warning" onclick="displayPushPhoenix()" value="Push to Phoenix">
+            <input type="hidden" value="Submit">-->
+        </form>
+        %endif
+    </td>
+</tr>
+</tbody>
+</table>
 
 <div class="tabs-panel">
 

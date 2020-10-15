@@ -47,6 +47,13 @@ Features / Changes
   method shared across service types to apply ``DescribeProcess`` and ``Execute`` permission on per-``Process`` basis
   (``match`` scope) or globally for all processes using permission on the parent WPS service (``recursive`` scope).
   (resolves `#266 <https://github.com/Ouranosinc/Magpie/issues/266>`_).
+* Modify all implementations of ``Service`` to support effective permission resolution to natively support new
+  permissions modifiers ``Access`` and ``Scope``.
+* Adjust all API routes that provide ``effective`` query parameter to return resolved effective permissions of the
+  ``User`` onto the targeted ``Resource``, and this for all applicable permissions on this ``Resource``, using new
+  ``Access`` permission modifier.
+* Adjust UI pages to provide selector of ``Access`` and ``Scope`` modifiers for all available permission names.
+
 * | Upgrade migration script is added to convert existing implicit names to new explicit permission names.
   |
   | **WARNING**:
@@ -58,6 +65,8 @@ Bug Fixes
 * Fix incorrect regex employed for validation of service URL during registration.
 * Replace HTTP status code ``400`` by ``403`` and ``422`` where applicable for invalid resource creation due to failing
   validations against reference parent service (relates to `#359 <https://github.com/Ouranosinc/Magpie/issues/359>`_).
+* Fix UI rendering of ``Push to Phoenix`` notification when viewing service page with type ``WPS``.
+* Fix UI rendering of some incorrect title background color for alert notifications.
 
 `2.0.1 <https://github.com/Ouranosinc/Magpie/tree/2.0.1>`_ (2020-09-30)
 ------------------------------------------------------------------------------------

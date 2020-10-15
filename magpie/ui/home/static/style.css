@@ -179,6 +179,10 @@ table thead {
     font-weight: bold;
 }
 
+.no-border {
+    border-style: none;
+}
+
 .checkbox-align label {
   display: block;
   /*float: left;*/
@@ -354,12 +358,12 @@ table.panel-line td {
     color: #FFFFFF;
 }
 
-.alert-info {
+.alert-text-container {
     display: inline-flex;
     text-align: center;
 }
 
-.alert-info>img {
+.alert-text-container>img {
     margin: 0.10em 0.25em 0.15em 0;
 }
 

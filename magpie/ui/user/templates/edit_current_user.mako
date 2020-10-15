@@ -8,7 +8,7 @@
 %if invalid_password or invalid_user_email:
 <div class="alert alert-warning alert-visible" id="UpdateUser_WarningFailureAlert">
     <h3 class="alert-title-warning">Warning</h3>
-    <div class="alert-info">
+    <div class="alert-text-container alert-warning">
         <img src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"
              alt="" class="icon-warning icon-color-invert" />
         <div class="alert-text">

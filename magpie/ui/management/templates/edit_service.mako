@@ -41,7 +41,7 @@
 
 <div class="alert alert-danger" id="EditService_DeleteAlert">
     <h3 class="alert-title-danger">Danger!</h3>
-    <div class="alert-info">
+    <div class="alert-text-container alert-danger">
         <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
              alt="" class="icon-error icon-color-invert" />
         <div class="alert-text">
