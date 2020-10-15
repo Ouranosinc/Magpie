@@ -1736,7 +1736,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # update existing permission
         perm = {"name": perm["name"], "access": Access.DENY.value, "scope": Scope.MATCH.value}
         data = {"permission": perm}
-        resp = utils.test_request(self, "PUT", path, json=data)
+        resp = utils.test_request(self, "PUT", path, json=data, headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 200, expected_method="PUT")
         perm.update({"type": PermissionType.DIRECT.value})
         expect_perms = [perm]
@@ -1744,7 +1744,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # create new permission
         perm = {"name": Permission.WRITE.value}
         data = {"permission": perm}  # only name, others should use defaults
-        resp = utils.test_request(self, "PUT", path, json=data)
+        resp = utils.test_request(self, "PUT", path, json=data, headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 201, expected_method="PUT")
         perm.update({"access": Access.ALLOW.value, "scope": Scope.RECURSIVE.value, "type": PermissionType.DIRECT.value})
         expect_perms.append(perm)
@@ -1906,7 +1906,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 utils.check_val_equal(obj["scope"], scope, msg="Resolved effective permission is always 'match'.")
                 utils.check_val_equal(PermissionType.get(obj["type"]), PermissionType.EFFECTIVE, msg=msg)
                 return  # validated
-            raise AssertionError("{} Could not find it within response permissions: {}.".format(msg, perm, permissions))
+            raise AssertionError("{} Could not find it within response permissions: {}.".format(msg, permissions))
 
         # test
         eval_perm_effective(svc1_name, svc1_id, Permission.READ, Access.ALLOW)
@@ -3435,7 +3435,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # update existing permission
         perm = {"name": perm["name"], "access": Access.DENY.value, "scope": Scope.MATCH.value}
         data = {"permission": perm}
-        resp = utils.test_request(self, "PUT", path, json=data)
+        resp = utils.test_request(self, "PUT", path, json=data, headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 200, expected_method="PUT")
         perm.update({"type": PermissionType.APPLIED.value})
         expect_perms = [perm]
@@ -3443,7 +3443,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # create new permission
         perm = {"name": Permission.WRITE.value}
         data = {"permission": perm}  # only name, others should use defaults
-        resp = utils.test_request(self, "PUT", path, json=data)
+        resp = utils.test_request(self, "PUT", path, json=data, headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 201, expected_method="PUT")
         perm.update({"access": Access.ALLOW.value,
                      "scope": Scope.RECURSIVE.value,

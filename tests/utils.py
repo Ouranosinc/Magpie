@@ -371,7 +371,7 @@ def mock_request(request_path_query="",     # type: Str
     path = parts[0]
     query = dict()
     if len(parts) > 1:
-        for part in parts[1:]:
+        for part in parts[1].split("&"):
             k, v = part.split("=")
             query[k] = v
     elif params:

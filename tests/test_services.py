@@ -17,13 +17,13 @@ from magpie import __meta__, models, owsrequest
 from magpie.adapter.magpieowssecurity import OWSAccessForbidden
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, Scope
-from magpie.services import ServiceAccess, ServiceAPI, ServiceTHREDDS, ServiceWPS
+from magpie.services import ServiceAccess, ServiceAPI, ServiceGeoserverWMS, ServiceTHREDDS, ServiceWPS
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
 from tests import interfaces as ti, runner, utils
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, Optional
+    from typing import Dict, Optional, Tuple, Union
 
     from magpie.typedefs import Str
 
@@ -47,6 +47,10 @@ def make_ows_parser(method="GET", content_type=None, params=None, body=""):
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_SERVICES
 class TestOWSParser(unittest.TestCase):
+    """
+    Validate operations of :mod:`owsrequest` that is employed by multiple :term:`OWS`-based service implementations.
+    """
+
     def test_ows_parser_factory(self):  # noqa: R0201
         parser = make_ows_parser(method="GET", content_type=None, params=None, body="")
         assert isinstance(parser, owsrequest.OWSGetParser)
@@ -101,7 +105,13 @@ class TestOWSParser(unittest.TestCase):
 @runner.MAGPIE_TEST_SERVICES
 @runner.MAGPIE_TEST_FUNCTIONAL
 class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
+    """
+    Test request parsing and ACL resolution against resource permissions for the various service implementations.
+    """
+    # pylint: disable=C0103,invalid-name
     __test__ = True
+    test_headers = None
+    test_cookies = None
 
     @classmethod
     @utils.mock_get_settings
@@ -125,9 +135,30 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         cls.test_user_name = "unittest-service-user"
         cls.test_group_name = "unittest-service-group"
 
+    def login_test_user(self):
+        """
+        Login test user for which the permissions were set.
+
+        Generated requested by :meth:`mock_request` will automatically use the credentials from this login.
+        """
+        utils.check_or_try_logout_user(self)
+        cred = utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name)
+        self.test_headers, self.test_cookies = cred
+
     def mock_request(self, *args, **kwargs):
         kwargs.update({"cookies": self.test_cookies, "headers": self.test_headers})
         return super(TestServices, self).mock_request(*args, **kwargs)
+
+    def make_resource(self, resource_type, parent_id, index="", resource_name_prefix=""):
+        # type: (Str, int, Union[int, Str], Str) -> Tuple[int, Str]
+        if not resource_name_prefix:
+            resource_name_prefix = "unittest-" + resource_type
+        res_name = "{}{}".format(resource_name_prefix, index)
+        res_body = utils.TestSetup.create_TestResource(self, parent_resource_id=parent_id,
+                                                       override_resource_type=resource_type,
+                                                       override_resource_name=res_name)
+        res_info = utils.TestSetup.get_ResourceInfo(self, override_body=res_body)
+        return res_info["resource_id"], res_name
 
     @utils.mock_get_settings
     def test_ServiceAPI_effective_permissions(self):
@@ -190,9 +221,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res4_id, override_permission=wDM)
 
         # login test user for which the permissions were set
-        utils.check_or_try_logout_user(self)
-        cred = utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name)
-        self.test_headers, self.test_cookies = cred
+        self.login_test_user()
 
         # Service1 direct call
         path = "/ows/proxy/{}".format(svc_name)
@@ -202,28 +231,28 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
         # Service1/Resource1
-        path = "/ows/proxy/{}/{}".format(svc_name, res_name)
+        path = "/ows/proxy/{svc}/{res}".format(svc=svc_name, res=res_name)
         req = self.mock_request(path, method="GET")
         utils.check_no_raise(lambda: self.ows.check_request(req))
         req = self.mock_request(path, method="POST")
         utils.check_no_raise(lambda: self.ows.check_request(req))
 
         # Service1/Resource1/Resource2
-        path = "/ows/proxy/{}/{}/{}".format(svc_name, res_name, res_name)
+        path = "/ows/proxy/{svc}/{res}/{res}".format(svc=svc_name, res=res_name)
         req = self.mock_request(path, method="GET")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
         req = self.mock_request(path, method="POST")
         utils.check_no_raise(lambda: self.ows.check_request(req))
 
         # Service1/Resource1/Resource2/Resource3
-        path = "/ows/proxy/{}/{}/{}/{}".format(svc_name, res_name, res_name, res_name)
+        path = "/ows/proxy/{svc}/{res}/{res}/{res}".format(svc=svc_name, res=res_name)
         req = self.mock_request(path, method="GET")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
         req = self.mock_request(path, method="POST")
         utils.check_no_raise(lambda: self.ows.check_request(req))
 
         # Service1/Resource1/Resource2/Resource3/Resource4
-        path = "/ows/proxy/{}/{}/{}/{}/{}".format(svc_name, res_name, res_name, res_name, res_name)
+        path = "/ows/proxy/{svc}/{res}/{res}/{res}/{res}".format(svc=svc_name, res=res_name)
         req = self.mock_request(path, method="GET")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
         req = self.mock_request(path, method="POST")
@@ -237,10 +266,12 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
             path = "/ows/proxy/{}".format(svc_name) + res_count * "/{}".format(res_name)
             for method in ["GET", "POST", "PUT", "DELETE"]:
                 req = self.mock_request(path, method=method)
-                utils.check_no_raise(lambda: self.ows.check_request(req))
+                msg = "Using combination [{}, {}]".format(method, path)
+                utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
 
     @unittest.skip("impl")
     @pytest.mark.skip
+    @utils.mock_get_settings
     def test_ServiceTHREDDS_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceTHREDDS` against a mocked `Magpie` adapter for `Twitcher`.
@@ -248,7 +279,6 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         Validate that both :class:`model.Directory` and :class:`model.File` can be created under :class:`ServiceTHREDDS`
         but that only :class:`model.Directory` then allows nested sub-resources. Resource of type :class:`model.File`
         must correctly indicate a leaf resource.
-
 
         Legend::
 
@@ -283,23 +313,15 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         svc_id = info["resource_id"]
 
-        def make_res(res_type, index, parent_id):
-            res_name = "unittest-{}{}".format(res_type, index)
-            res_body = utils.TestSetup.create_TestResource(self, parent_resource_id=parent_id,
-                                                           override_resource_type=res_type,
-                                                           override_resource_name=res_name)
-            res_info = utils.TestSetup.get_ResourceInfo(self, override_body=res_body)
-            return res_info["resource_id"], res_name
-
         # create resources
-        dir1_id, dir1_name = make_res(dir_type, 1, svc_id)
-        dir2_id, dir2_name = make_res(dir_type, 2, dir1_id)
-        dir3_id, dir3_name = make_res(dir_type, 3, dir2_id)
-        dir4_id, dir4_name = make_res(dir_type, 4, svc_id)
-        dir5_id, dir5_name = make_res(dir_type, 5, dir4_id)
-        file1_id, file1_name = make_res(file_type, 1, dir3_id)
-        file2_id, file2_name = make_res(file_type, 2, dir4_id)
-        file3_id, file3_name = make_res(file_type, 3, dir5_id)
+        dir1_id, dir1_name = self.make_resource(dir_type, svc_id, 1)
+        dir2_id, dir2_name = self.make_resource(dir_type, dir1_id, 2)
+        dir3_id, dir3_name = self.make_resource(dir_type, dir2_id, 3)
+        dir4_id, dir4_name = self.make_resource(dir_type, svc_id, 4)
+        dir5_id, dir5_name = self.make_resource(dir_type, dir4_id, 5)
+        file1_id, file1_name = self.make_resource(file_type, dir3_id, 1)
+        file2_id, file2_name = self.make_resource(file_type, dir4_id, 2)
+        file3_id, file3_name = self.make_resource(file_type, dir5_id, 3)
 
         # assign permissions
         rAR = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)     # noqa
@@ -318,33 +340,127 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file2_id, override_permission=wDM)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file3_id, override_permission=rDM)
 
+        # login test user for which the permissions were set
+        self.login_test_user()
+
         raise NotImplementedError  # FIXME validation of ACL
 
     @unittest.skip("impl")
     @pytest.mark.skip
+    @utils.mock_get_settings
     def test_ServiceNCWMS2_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceNCWMS2` against a mocked `Magpie` adapter for `Twitcher`.
         """
         raise NotImplementedError  # FIXME
 
-    @unittest.skip("impl")
-    @pytest.mark.skip
+    @utils.mock_get_settings
     def test_ServiceGeoserverWMS_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceGeoserverWMS` against a mocked `Magpie` adapter for `Twitcher`.
 
+        Legend::
 
+            c: GetCapabilities  (only permission parsed differently)
+            m: GetMap           (other permissions applicable, but they are all parsed the same as GetMap)
+            A: allow
+            D: deny
+            M: match
+            R: recursive
+
+        Permissions Applied::
+                                        user            group           effective
+            Service1                                    (c-A-R)         c-A, m-D
+                Workspace1              (c-D-M)                         c-D, m-D
+                Workspace2              (m-A-M)                         c-A, m-A
+            Service2                                    (m-A-R)         c-D, m-A
+                Workspace3                              (c-A-M)         c-A, m-A
         """
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
 
-        #   /geoserver/wms?request=getcapabilities (get all workspaces)
-        #   /geoserver/WATERSHED/wms?request=getcapabilities (only for the workspace in the path)
-        #   /geoserver/WATERSHED/wms?layers=WATERSHED:BV_1NS&request=getmap
-        #   /geoserver/wms?layers=WATERERSHED:BV1_NS&request=getmap
-        raise NotImplementedError  # FIXME
+        svc1_name = "unittest-service-geoserverwms1"
+        svc2_name = "unittest-service-geoserverwms2"
+        svc_type = ServiceGeoserverWMS.service_type
+        res_type = models.Workspace.resource_type_name
+        for svc_name in [svc1_name, svc2_name]:
+            utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc1_name, override_service_type=svc_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc1_id = info["resource_id"]
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc2_name, override_service_type=svc_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc2_id = info["resource_id"]
+
+        # create workspaces
+        res1_id, res1_name = self.make_resource(res_type, svc1_id, 1, "UNITTEST_WORKSPACE")
+        res2_id, res2_name = self.make_resource(res_type, svc1_id, 2, "UNITTEST_WORKSPACE")
+        res3_id, res3_name = self.make_resource(res_type, svc2_id, 3, "UNITTEST_WORKSPACE")
+
+        # assign permissions
+        cAR = PermissionSet(Permission.GET_CAPABILITIES, Access.ALLOW, Scope.RECURSIVE)     # noqa
+        cAM = PermissionSet(Permission.GET_CAPABILITIES, Access.ALLOW, Scope.MATCH)         # noqa
+        cDM = PermissionSet(Permission.GET_CAPABILITIES, Access.DENY, Scope.MATCH)          # noqa
+        mAM = PermissionSet(Permission.GET_MAP, Access.ALLOW, Scope.MATCH)                  # noqa
+        mAR = PermissionSet(Permission.GET_MAP, Access.ALLOW, Scope.RECURSIVE)              # noqa
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc1_id, override_permission=cAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res1_id, override_permission=cDM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res2_id, override_permission=mAM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc2_id, override_permission=mAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res3_id, override_permission=cAM)
+
+        self.login_test_user()
+
+        # parsing must be the same whether the service has GeoServer prefix or not
+        for prefix in ["", "/geoserver"]:
+
+            # GetCapabilities of all Workspaces
+            path = "/ows/proxy/{}{}/wms?request=getcapabilities".format(svc1_name, prefix)
+            req = self.mock_request(path, method="GET")
+            utils.check_no_raise(lambda: self.ows.check_request(req))
+            path = "/ows/proxy/{}{}/wms?request=getcapabilities".format(svc2_name, prefix)
+            req = self.mock_request(path, method="GET")
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+
+            # GetCapabilities of specific Workspace
+            path = "/ows/proxy/{}{}/{}/wms?request=getcapabilities".format(svc1_name, prefix, res1_name)
+            req = self.mock_request(path, method="GET")
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+            path = "/ows/proxy/{}{}/{}/wms?request=getcapabilities".format(svc1_name, prefix, res2_name)
+            req = self.mock_request(path, method="GET")
+            utils.check_no_raise(lambda: self.ows.check_request(req))
+            path = "/ows/proxy/{}{}/{}/wms?request=getcapabilities".format(svc2_name, prefix, res3_name)
+            req = self.mock_request(path, method="GET")
+            utils.check_no_raise(lambda: self.ows.check_request(req))
+
+            # GetMap of layer in Workspace (Workspace inferred from path prefix or layer name)
+            # workspace 1
+            svc_prefix = "/ows/proxy/{}{}".format(svc1_name, prefix)
+            layer_name = "{}:TEST_LAYER".format(res1_name)
+            for workspace_prefix in ["", "/" + res1_name]:
+                path = "{}{}/wms?request=getmap&layers={}".format(svc_prefix, workspace_prefix, layer_name)
+                req = self.mock_request(path, method="GET")
+                msg = "Using combination [{}, {}]".format("GET", path)
+                utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
+            # workspace 2
+            layer_name = "{}:TEST_LAYER".format(res2_name)
+            for workspace_prefix in ["", "/" + res2_name]:
+                path = "{}{}/wms?request=getmap&layers={}".format(svc_prefix, workspace_prefix, layer_name)
+                req = self.mock_request(path, method="GET")
+                msg = "Using combination [{}, {}]".format("GET", path)
+                utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
+            # workspace 3
+            svc_prefix = "/ows/proxy/{}{}".format(svc2_name, prefix)
+            layer_name = "{}:TEST_LAYER".format(res3_name)
+            for workspace_prefix in ["", "/" + res3_name]:
+                path = "{}{}/wms?request=getmap&layers={}".format(svc_prefix, workspace_prefix, layer_name)
+                req = self.mock_request(path, method="GET")
+                msg = "Using combination [{}, {}]".format("GET", path)
+                utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
 
     @unittest.skip("impl")
     @pytest.mark.skip
+    @utils.mock_get_settings
     def test_ServiceWFS_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceWFS` against a mocked `Magpie` adapter for `Twitcher`.
@@ -358,7 +474,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
 
         Legend::
 
-            g: GetCapabilities (*)
+            c: GetCapabilities (*)
             d: DescribeProcess
             e: Execute
             A: allow
@@ -368,19 +484,19 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
 
         Permissions Applied::
                                         user        group               effective
-            Service1                    (g-A-R)                         g-A,    d-D, e-D
-                Process1                (e-A-M)     (d-A-M)             g-A,    d-A, e-A
-            Service2                    (d-A-R)     (g-A-R)             g-A,    d-A, e-D
-                Process2                            (g-D-M), (e-A-M)    g-A(*), d-A, e-A
-                Process3                (e-D-M)                         g-A,    d-A, e-D
+            Service1                    (g-A-R)                         c-A,    d-D, e-D
+                Process1                (e-A-M)     (d-A-M)             c-A,    d-A, e-A
+            Service2                    (d-A-R)     (c-A-R)             c-A,    d-A, e-D
+                Process2                            (c-D-M), (e-A-M)    c-A(*), d-A, e-A
+                Process3                (e-D-M)                         c-A,    d-A, e-D
 
         .. note:: (*)
             All ``GetCapabilities`` requests completely ignore ``identifier`` query parameter by resolving immediately
             to the parent WPS Service since no Process applies in this case.
 
-            For this reason, although ``(g-D-M)`` is applied on ``Process2``, Process ``identifier`` does not take place
+            For this reason, although ``(c-D-M)`` is applied on ``Process2``, Process ``identifier`` does not take place
             in ``GetCapabilities``. Therefore, the ACL is immediately resolved with the parent ``Service2`` permission
-            of ``(g-A-R)`` which grants effective access.
+            of ``(c-A-R)`` which grants effective access.
         """
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
@@ -398,43 +514,26 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         wps2_id = info["resource_id"]
 
         # create processes
-        proc1_name = "unittest-process-1"
-        body = utils.TestSetup.create_TestResource(self, parent_resource_id=wps1_id,
-                                                   override_resource_name=proc1_name,
-                                                   override_resource_type=proc_type)
-        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        proc1_id = info["resource_id"]
-        proc2_name = "unittest-process-2"
-        body = utils.TestSetup.create_TestResource(self, parent_resource_id=wps2_id,
-                                                   override_resource_name=proc2_name,
-                                                   override_resource_type=proc_type)
-        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        proc2_id = info["resource_id"]
-        proc3_name = "unittest-process-3"
-        body = utils.TestSetup.create_TestResource(self, parent_resource_id=wps2_id,
-                                                   override_resource_name=proc3_name,
-                                                   override_resource_type=proc_type)
-        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        proc3_id = info["resource_id"]
+        proc1_id, proc1_name = self.make_resource(proc_type, wps1_id, 1)
+        proc2_id, proc2_name = self.make_resource(proc_type, wps2_id, 2)
+        proc3_id, proc3_name = self.make_resource(proc_type, wps2_id, 3)
 
         # assign permissions
-        gAR = PermissionSet(Permission.GET_CAPABILITIES, Access.ALLOW, Scope.RECURSIVE)     # noqa
+        cAR = PermissionSet(Permission.GET_CAPABILITIES, Access.ALLOW, Scope.RECURSIVE)     # noqa
         dAM = PermissionSet(Permission.DESCRIBE_PROCESS, Access.ALLOW, Scope.MATCH)         # noqa
         dAR = PermissionSet(Permission.DESCRIBE_PROCESS, Access.ALLOW, Scope.RECURSIVE)     # noqa
         eAM = PermissionSet(Permission.EXECUTE, Access.ALLOW, Scope.MATCH)                  # noqa
         eDM = PermissionSet(Permission.EXECUTE, Access.DENY, Scope.MATCH)                   # noqa
-        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=wps1_id, override_permission=gAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=wps1_id, override_permission=cAR)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=proc1_id, override_permission=eAM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=proc1_id, override_permission=dAM)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=wps2_id, override_permission=dAR)
-        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=wps2_id, override_permission=gAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=wps2_id, override_permission=cAR)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=proc2_id, override_permission=eAM)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=proc3_id, override_permission=eDM)
 
         # login test user for which the permissions were set
-        utils.check_or_try_logout_user(self)
-        cred = utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name)
-        self.test_headers, self.test_cookies = cred
+        self.login_test_user()
 
         # note:
         #   Following requests use various 'service' and 'request' values that do not necessarily match the exact format
@@ -581,9 +680,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc5_id, override_permission=aDM)
 
         # login test user for which the permissions were set
-        utils.check_or_try_logout_user(self)
-        cred = utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name)
-        self.test_headers, self.test_cookies = cred
+        self.login_test_user()
 
         # services calls
         req = self.mock_request("/ows/proxy/{}".format(svc1_name), method="GET")
@@ -601,6 +698,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
 
     @unittest.skip("impl")
     @pytest.mark.skip
+    @utils.mock_get_settings
     def test_ServiceADES_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceADES` against a mocked `Magpie` adapter for `Twitcher`.

@@ -186,7 +186,6 @@ class ServiceInterface(object):
             resource, is_target = resource
         if not isinstance(permissions, (list, set, tuple)):
             permissions = {permissions}
-        permissions = set(permissions)
         user = self.user_requested()
         return self._get_acl(user, resource, permissions, allow_match=is_target)
 
@@ -200,6 +199,18 @@ class ServiceInterface(object):
         """
         permissions = self.effective_permissions(user, resource, permissions, allow_match)
         return [perm.ace(self.request.user) for perm in permissions]
+
+    def _get_request_path_parts(self):
+        # type: () -> Optional[List[Str]]
+        """
+        Obtain the :attr:`request` path parts striped of anything prior to the referenced :attr:`service` name.
+        """
+        path_parts = self.request.path.rstrip("/").split("/")
+        svc_name = self.service.resource_name
+        if svc_name not in path_parts:
+            return None
+        svc_idx = path_parts.index(svc_name)
+        return path_parts[svc_idx + 1::]
 
     @classmethod
     def get_resource_permissions(cls, resource_type_name):
@@ -513,8 +524,11 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
 
     def resource_requested(self):
         permission = self.permission_requested()
-        path_parts = self.request.path.split()
+        path_parts = self._get_request_path_parts()
         parts_lower = [part.lower() for part in path_parts]
+        if parts_lower and parts_lower[0] == "":
+            path_parts = path_parts[1:]
+            parts_lower = parts_lower[1:]
         if parts_lower and parts_lower[0] == "geoserver":
             path_parts = path_parts[1:]
             parts_lower = parts_lower[1:]
@@ -577,16 +591,10 @@ class ServiceAPI(ServiceInterface):
     def resource_requested(self):
         # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
 
-        route_parts = self.request.path.rstrip("/").split("/")
-        route_api_base = self.service.resource_name
-
-        if not (self.service.resource_name in route_parts and route_api_base in route_parts):
-            return None
-
-        # keep only parts after api base route to process them
+        route_parts = self._get_request_path_parts()
+        if not route_parts:
+            return self.service, True
         route_child = self.service
-        api_idx = route_parts.index(route_api_base)
-        route_parts = route_parts[api_idx + 1::]
 
         # find deepest possible resource matching sub-route name
         while route_child and route_parts:
@@ -658,6 +666,9 @@ class ServiceTHREDDS(ServiceInterface):
 
     permissions = [
         Permission.READ,
+        # FIXME:
+        #   does WRITE permission even make sense here?
+        #   leave it for bw-compat, but not even considered since 'permission_requested' always returns READ
         Permission.WRITE,
     ]
 
@@ -670,33 +681,37 @@ class ServiceTHREDDS(ServiceInterface):
         models.File: permissions,
     }
 
-    def get_acl(self):
-        acl = self.expand_acl(self.service, self.request.user)
-        elems = self.request.path.split("/")
+    def resource_requested(self):
+        path_parts = self._get_request_path_parts()
 
-        if "fileServer" in elems:
-            first_idx = elems.index("fileServer")
-        elif "dodsC" in elems:
-            first_idx = elems.index("dodsC")
-            elems[-1] = elems[-1].replace(".html", "")
-        elif "catalog" in elems:
-            first_idx = elems.index("catalog")
-        elif elems[-1] == "catalog.html":
-            first_idx = elems.index(self.service.resource_name) - 1
-        else:
-            return acl
+        # handled optional prefix and missing specifiers
+        if not path_parts:
+            return self.service, True
+        if path_parts[0] == "":
+            path_parts = path_parts[1:]
+        if path_parts and path_parts[0].lower() == "thredds":
+            path_parts = path_parts[1:]
+        if not path_parts:
+            return self.service, True
 
-        elems = elems[first_idx + 1::]
-        new_child = self.service
-        while new_child and elems:
-            elem_name = elems.pop(0)
-            if ".nc" in elem_name:
-                elem_name = elem_name.split(".nc")[0] + ".nc"  # in case there is more extension to discard such as .dds
-            parent_id = new_child.resource_id
-            new_child = models.find_children_by_name(elem_name, parent_id=parent_id, db_session=self.request.db)
-            acl.extend(self.expand_acl(new_child, self.request.user))
+        # when looking at catalog, must point to corresponding parent Directory
+        if path_parts[-1].lower() == "catalog.html":
+            path_parts = path_parts[:-1]
+        # convert file name to common value representing the same NetCDF resource accessed
+        # remove any extra extension whenever applicable (eg: discard '.dds' from '.nc.dds')
+        if ".nc" in path_parts[-1].lower():
+            path_parts[-1] = path_parts[-1].split(".nc")[0] + ".nc"
 
-        return acl
+        # find deepest possible resource matching either Directory or File by name
+        found_resource = self.service
+        while found_resource and path_parts:
+            part_name = path_parts.pop(0)
+            found_res_id = found_resource.resource_id
+            found_resource = models.find_children_by_name(part_name, parent_id=found_res_id, db_session=self.request.db)
+
+        # target resource reached if no more parts to process, otherwise we have some parent (minimally the service)
+        target = not len(path_parts)
+        return found_resource, target
 
     def permission_requested(self):
         return Permission.READ
