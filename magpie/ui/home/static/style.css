@@ -451,7 +451,7 @@ table.simple-list th:not(:first-child) {
 }
 
 table.simple-list input[type="button"],
-table.simple-list input[type="submit"]{
+table.simple-list input[type="submit"] {
     margin: 0 0.5em;
 }
 
@@ -480,20 +480,9 @@ table.simple-list input[type="submit"]{
     cursor: pointer;
 }
 
-div.tree-item {
+.tree-item {
     display: block;
     float: left;
-}
-
-div.perm-title {
-    width: 3em;
-    float: right;
-    text-align: left;
-
-    -webkit-transform: rotate(-70deg); /* Safari */
-    -moz-transform: rotate(-70deg); /* Firefox */
-    -ms-transform: rotate(-70deg); /* IE */
-    -o-transform: rotate(-70deg); /* Opera */
 }
 
 .tree-button.goto-service {
@@ -514,13 +503,6 @@ div.perm-title {
     margin: -0.15em 0 0 0;
 }
 
-div.perm-checkbox {
-    width:3em;
-    float:right;
-    text-align: left;
-    margin: 0.1em 0 0 0;
-}
-
 div.tree-button {
     width:5em;
     float:right;
@@ -530,6 +512,45 @@ div.tree-button {
 
 .clear {
   clear: both;
+}
+
+.permission-title {
+    /* ensure that sufficient space is provided to fit all possible permission-name side-by-side */
+    width: 10.5em;  /* align with combobox nad checkbox, must include both their respective width */
+    float: right;
+    text-align: left;
+
+    /*-webkit-transform: rotate(-10deg);*/   /* Safari */
+    /*-moz-transform: rotate(-10deg);*/      /* Firefox */
+    /*-ms-transform: rotate(-10deg);*/       /* IE */
+    /*-o-transform: rotate(-10deg);*/        /* Opera */
+}
+
+.permission-entry {
+    float:right;
+    text-align: left;
+    margin: 0.1em 1em 0 0;
+}
+
+.permission-checkbox {
+    width: 1.5em;
+    float: right;
+    text-align: left;
+    margin: 0.1em 0 0 0;
+}
+
+.permission-combobox {
+    /* use separate border values to inherit the theme color */
+    -webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+    border-radius: 3px;
+    border-width: 1px;
+    border-style: solid;
+}
+
+/* Hide arrow icon in IE browsers */
+.permission-combobox::-ms-expand {
+    display: none;
 }
 
 /*---Header breadcrumb---*/

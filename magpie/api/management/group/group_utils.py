@@ -63,6 +63,7 @@ def get_group_resources(group, db_session):
             db_session=db_session,
             service_perms=svc_perms,
             resources_perms_dict=res_perm_dict,
+            permission_type=PermissionType.APPLIED,
             show_all_children=False,
             show_private_url=False,
         )
@@ -309,7 +310,7 @@ def get_group_service_permissions(group, service, db_session):
             perm_type = PermissionType.OWNED
             perms = SERVICE_TYPE_DICT[service.type].permissions
         else:
-            perm_type = PermissionType.INHERITED
+            perm_type = PermissionType.APPLIED
             perms = db_session.query(models.GroupResourcePermission) \
                               .filter(models.GroupResourcePermission.resource_id == service.resource_id) \
                               .filter(models.GroupResourcePermission.group_id == group.id)

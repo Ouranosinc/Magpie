@@ -24,6 +24,7 @@ from magpie.cli import sync_resources
 from magpie.cli.sync_resources import OUT_OF_SYNC
 from magpie.constants import get_constant
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT  # TODO: remove, implement getters via API
+from magpie.permissions import PermissionSet
 from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
@@ -314,7 +315,7 @@ class ManagementViews(BaseViews):
         # of them
         res_id = None
         removed_perms = None
-        new_perms = None
+        updated_perms = None
 
         if self.request.method == "POST":
             res_id = self.request.POST.get("resource_id")
@@ -342,7 +343,7 @@ class ManagementViews(BaseViews):
                     services_names = [s["service_name"] for s in services.values()]
                     res_id = self.add_remote_resource(cur_svc_type, services_names, user_name, remote_id, is_user=True)
 
-                removed_perms, new_perms = \
+                removed_perms, updated_perms = \
                     self.edit_user_or_group_resource_permissions(user_name, res_id, is_user=True)
             elif "edit_group_membership" in self.request.POST:
                 is_edit_group_membership = True
@@ -412,8 +413,8 @@ class ManagementViews(BaseViews):
         except Exception as exc:
             raise HTTPBadRequest(detail=repr(exc))
 
-        if res_id and (removed_perms or new_perms):
-            self.update_user_or_group_resources_permissions_dict(res_perms, res_id, removed_perms, new_perms)
+        if res_id and (removed_perms or updated_perms):
+            self.update_user_or_group_resources_permissions_dict(res_perms, res_id, removed_perms, updated_perms)
 
         sync_types = [s["service_sync_type"] for s in services.values()]
         sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
@@ -502,10 +503,12 @@ class ManagementViews(BaseViews):
     def resource_tree_parser(self, raw_resources_tree, permission):
         resources_tree = {}
         for r_id, resource in raw_resources_tree.items():
-            perm_names = self.default_get(permission, r_id, [])
+            perms = self.default_get(permission, r_id, [])
+            perm_names = [PermissionSet(perm_json).explicit_permission for perm_json in perms]
             children = self.resource_tree_parser(resource["children"], permission)
             children = OrderedDict(sorted(children.items()))
             resources_tree[resource["resource_name"]] = dict(id=r_id,
+                                                             permissions=perms,
                                                              permission_names=perm_names,
                                                              resource_display_name=resource["resource_display_name"],
                                                              children=children)
@@ -514,7 +517,7 @@ class ManagementViews(BaseViews):
     def perm_tree_parser(self, raw_perm_tree):
         permission = {}
         for r_id, resource in raw_perm_tree.items():
-            permission[r_id] = resource["permission_names"]
+            permission[r_id] = resource["permissions"]
             permission.update(self.perm_tree_parser(resource["children"]))
         return permission
 
@@ -550,36 +553,45 @@ class ManagementViews(BaseViews):
                 .format(group_name=user_or_group_name, resource_id=resource_id)
         try:
             resp = request_api(self.request, res_perms_path, "GET")
-            res_perms = get_json(resp)["permission_names"]
+            res_perms = get_json(resp)["permissions"]
         except Exception as exc:
             raise HTTPBadRequest(detail=repr(exc))
 
-        selected_perms = self.request.POST.getall("permission")
-
-        removed_perms = list(set(res_perms) - set(selected_perms))
-        new_perms = list(set(selected_perms) - set(res_perms))
+        existing_perms_set = {PermissionSet(perm_json) for perm_json in res_perms}
+        selected_perms_set = {PermissionSet(perm_json) for perm_json in self.request.POST.getall("permission")}
+        removed_perms = list(existing_perms_set - selected_perms_set)
+        updated_perms = list(selected_perms_set - existing_perms_set)
 
         for perm in removed_perms:
-            path = "{path}/{perm}".format(path=res_perms_path, perm=perm)
-            resp = request_api(self.request, path, "DELETE")
+            data = {"permission": perm}
+            resp = request_api(self.request, res_perms_path, "DELETE", data=data)
             check_response(resp)
-        for perm in new_perms:
-            data = {"permission_name": perm}
-            resp = request_api(self.request, res_perms_path, "POST", data=data)
+        for perm in updated_perms:
+            data = {"permission": perm}
+            resp = request_api(self.request, res_perms_path, "PUT", data=data)
             check_response(resp)
-        return removed_perms, new_perms
+        return removed_perms, updated_perms
 
     def get_user_or_group_resources_permissions_dict(self, user_or_group_name, services, service_type,
                                                      is_user=False, is_inherit_groups_permissions=False):
+        """
+        Get the user or group applied permissions and well as applicable permissions for corresponding services.
+
+        Result is a :class:`tuple` of:
+            - combined :term:`Allowed Permissions` (*names only*) for services and their children resources.
+            - dictionary of key-service-name, each with recursive map value of children resource details including
+              the :term:`Applied Permissions` or :term:`Inherited Resources` for the corresponding :term:`User`
+              or :term:`Group` accordingly to specified arguments.
+        """
         if is_user:
             query = "?inherited=true" if is_inherit_groups_permissions else ""
             path = schemas.UserResourcesAPI.path.format(user_name=user_or_group_name) + query
         else:
             path = schemas.GroupResourcesAPI.path.format(group_name=user_or_group_name)
 
-        resp_group_perms = request_api(self.request, path, "GET")
-        check_response(resp_group_perms)
-        resp_group_perms_json = get_json(resp_group_perms)
+        resp = request_api(self.request, path, "GET")
+        check_response(resp)
+        body = get_json(resp)
 
         path = schemas.ServiceTypeAPI.path.format(service_type=service_type)
         resp = request_api(self.request, path, "GET")
@@ -589,8 +601,10 @@ class ManagementViews(BaseViews):
         # remove possible duplicate permissions from different services
         resources_permission_names = set()
         for svc in resp_available_svc_types:
-            resources_permission_names.update(set(resp_available_svc_types[svc]["permission_names"]))
-        # inverse sort so that displayed permissions are sorted, since added from right to left in tree view
+            perm_names = {perm["name"] for perm in resp_available_svc_types[svc]["permissions"]}
+            resources_permission_names.update(perm_names)
+        # NOTE:
+        #  inverse sort so that displayed permissions are sorted, since added from right to left in tree view
         resources_permission_names = sorted(resources_permission_names, reverse=True)
 
         resources = OrderedDict()
@@ -600,8 +614,8 @@ class ManagementViews(BaseViews):
 
             permission = OrderedDict()
             try:
-                raw_perms = resp_group_perms_json["resources"][service_type][service]
-                permission[raw_perms["resource_id"]] = raw_perms["permission_names"]
+                raw_perms = body["resources"][service_type][service]
+                permission[raw_perms["resource_id"]] = raw_perms["permissions"]
                 permission.update(self.perm_tree_parser(raw_perms["resources"]))
             except KeyError:
                 pass
@@ -610,19 +624,23 @@ class ManagementViews(BaseViews):
             resp = request_api(self.request, path, "GET")
             check_response(resp)
             raw_resources = get_json(resp)[service]
+            perms = self.default_get(permission, raw_resources["resource_id"], [])
+            perm_names = [PermissionSet(perm_json).explicit_permission for perm_json in perms]
             resources[service] = OrderedDict(
                 id=raw_resources["resource_id"],
-                permission_names=self.default_get(permission, raw_resources["resource_id"], []),
+                permissions=perms,
+                permission_names=perm_names,
                 children=self.resource_tree_parser(raw_resources["resources"], permission))
         return resources_permission_names, resources
 
-    def update_user_or_group_resources_permissions_dict(self, res_perms, res_id, removed_perms, new_perms):
+    def update_user_or_group_resources_permissions_dict(self, res_perms, res_id, removed_perms, updated_perms):
         for res in res_perms.values():
             if int(res["id"]) == int(res_id):
-                res["permission_names"] = sorted(res["permission_names"] + new_perms)
-                res["permission_names"] = [perm for perm in res["permission_names"] if perm not in removed_perms]
+                res["permissions"] = sorted(res["permissions"] + updated_perms)
+                res["permissions"] = [perm for perm in res["permissions"] if perm not in removed_perms]
                 return True
-            if self.update_user_or_group_resources_permissions_dict(res["children"], res_id, removed_perms, new_perms):
+            if self.update_user_or_group_resources_permissions_dict(res["children"], res_id,
+                                                                    removed_perms, updated_perms):
                 return True
         return False
 
@@ -641,12 +659,11 @@ class ManagementViews(BaseViews):
         # when service type is 'default', this function replaces 'cur_svc_type' with the first one available
         svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
 
-        # In case of update, changes are not reflected when calling
-        # get_user_or_group_resources_permissions_dict so we must take care
-        # of them
+        # In case of update, changes are not reflected when calling 'get_user_or_group_resources_permissions_dict'
+        # so we must take care of them
         res_id = None
         removed_perms = None
-        new_perms = None
+        updated_perms = None
 
         # move to service or edit requested group/permission changes
         if self.request.method == "POST":
@@ -684,7 +701,7 @@ class ManagementViews(BaseViews):
                     services_names = [s["service_name"] for s in services.values()]
                     res_id = self.add_remote_resource(cur_svc_type, services_names, group_name,
                                                       remote_id, is_user=False)
-                removed_perms, new_perms = \
+                removed_perms, updated_perms = \
                     self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
             elif "member" in self.request.POST:
                 self.edit_group_users(group_name)
@@ -706,8 +723,9 @@ class ManagementViews(BaseViews):
         except Exception as exc:
             raise HTTPBadRequest(detail=repr(exc))
 
-        if res_id and (removed_perms or new_perms):
-            self.update_user_or_group_resources_permissions_dict(res_perms, res_id, removed_perms, new_perms)
+        # apply permission changes if any
+        if res_id and (removed_perms or updated_perms):
+            self.update_user_or_group_resources_permissions_dict(res_perms, res_id, removed_perms, updated_perms)
 
         sync_types = [s["service_sync_type"] for s in services.values()]
         sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
@@ -858,7 +876,7 @@ class ManagementViews(BaseViews):
         raw_resources = get_json(resp)[service_name]
         resources[service_name] = dict(
             id=raw_resources["resource_id"],
-            permission_names=[],
+            permissions=[],
             children=self.resource_tree_parser(raw_resources["resources"], {}))
         resources_id_type = self.get_resource_types()
         return resources, resources_id_type

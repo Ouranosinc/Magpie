@@ -4,20 +4,34 @@
 
 <%def name="render_item(key, value, level)">
     <input type="hidden" value="" name="edit_permissions">
-    %for perm in permissions:
-        <div class="perm-checkbox">
-            <label>
-            <input type="checkbox" value="${perm}" name="permission"
-                   onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()"
-                % if perm in value['permission_names']:
-                   checked
-                %endif
-                %if inherit_groups_permissions:
-                    disabled
-                %endif
-            >
+    %for perm_name in permissions:
+        <div class="permission-entry">
+            <label for="permission-combobox">
+            <select name="permission-combobox" id="permission-combobox" class="permission-combobox">
+                <option value=""></option>  <!-- none applied or remove permission -->
+                %for perm_access in ["allow", "deny"]:
+                    %for perm_scope in ["recursive", "match"]:
+                        <option value="${perm_name}-${perm_access}-${perm_scope}"
+                        %if "{}-{}-{}".format(perm_name, perm_access, perm_scope) in value["permission_names"]:
+                            selected
+                        %endif
+                        >${perm_access.capitalize()}, ${perm_scope.capitalize()}</option>
+                    %endfor
+                %endfor
+            </select>
             </label>
-       </div>
+            <div class="permission-checkbox">
+                <label>
+               <!-- onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()" -->
+                <input type="checkbox" value="${perm_name}" name="permission"
+                       %if perm_name in [perm["name"] for perm in value["permissions"]]:
+                       checked
+                       %endif
+                       disabled
+                >
+                </label>
+            </div>
+        </div>
     %endfor
     % if not value.get("matches_remote", True):
         <div class="tree-button">
@@ -209,7 +223,7 @@
         <div class="tree-header">
         <div class="tree-item">Resources</div>
         %for perm in permissions:
-            <div class="perm-title">${perm}</div>
+            <div class="permission-title">${perm}</div>
         %endfor
         </div>
         <div class="tree">
