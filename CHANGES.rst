@@ -15,11 +15,12 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Adjust ``alembic`` migration scripts to employ date-ordered naming convention to help searching features within them.
-* Add ``DENY`` permission access concept with new ``PermissionSet`` object and ``Access`` enum.
+* Add ``DENY`` permission access concept with new ``PermissionSet`` object and ``Access`` enum
+  (resolves `#235 <https://github.com/Ouranosinc/Magpie/issues/235>`_).
 * Remove ``-match`` suffixed entries from ``Permission`` enum in favor of new ``Scope`` enum employed by
   new ``PermissionSet`` definition.
 * Update permission entries to employ explicit string representation as ``[name]-[access]-[scope]`` in the database
-  (`#342 <https://github.com/Ouranosinc/Magpie/issues/342>`_).
+  (resolves `#342 <https://github.com/Ouranosinc/Magpie/issues/342>`_).
 * Add ``PermissionType`` enum that details the type of permission being represented in any given response
   (values correspond to types detailed in documentation).
 * Provide new ``permissions`` list in applicable API responses, with explicit ``name``, ``access``, ``scope`` and
