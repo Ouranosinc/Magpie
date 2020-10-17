@@ -54,6 +54,9 @@ Features / Changes
   ``User`` onto the targeted ``Resource``, and this for all applicable permissions on this ``Resource``, using new
   ``Access`` permission modifier.
 * Adjust UI pages to provide selector of ``Access`` and ``Scope`` modifiers for all available permission names.
+* Change UI permission pages to *Apply* batch edition of multiple entries simultaneously instead of one at the time.
+* Improve rendering of UI disabled items such as inactive checkboxes or selectors when not applicable for given context.
+* Refactor UI tree renderer to reuse same code for both ``User`` and ``Group`` resource permissions.
 
 * | Upgrade migration script is added to convert existing implicit names to new explicit permission names.
   |

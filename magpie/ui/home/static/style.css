@@ -51,10 +51,20 @@ a {
     text-decoration: none;
 }
 
+.disabled {
+    opacity: 50%;
+}
+
 a:focus,
 a:hover {
     color: #23527C;
     text-decoration: underline;
+}
+
+input[type="submit"].equal-width,
+input[type="button"].equal-width {
+    min-width: 5em;
+    width: 5em;
 }
 
 input[type="submit"].img-button.disabled,
@@ -274,6 +284,16 @@ table.panel-line td {
 .panel-value {
 }
 
+.center-text {
+    margin-top: 0.1em;
+    display: inline-block;
+    text-align: center;
+}
+
+.sync-text {
+    margin-left: 0.5em;
+}
+
 /*---Labels---*/
 
 .label {
@@ -467,10 +487,13 @@ table.simple-list input[type="submit"] {
 }
 
 .tree li {
+    line-height: 1.5em;
     border-bottom: 1px solid #dddddd;
+    padding-bottom: 0.25em;
+}
+
+.NoChild {
     list-style-type: circle;
-    line-height: 24px;
-    padding-bottom: 4px;
 }
 
 .Collapsable input {
@@ -746,13 +769,17 @@ table.request-details thead tbody td th {
 
 a.current-tab:link,
 a.current-tab:visited {
-    background-color: white;
-    color: black;
+    color: white;
     padding: 1em 1em 1.4em 1em;
     text-align: center;
     text-decoration: none;
     display: inline-block;
     font-weight: bold;
+}
+
+.tab {
+    min-width: 6em;  /* make tabs same width regardless of text length, but must be adjusted for longest one */
+    border-color: black;
 }
 
 a.tab:link,

@@ -30,7 +30,7 @@ from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, List, Optional, Tuple
+    from typing import Dict, List, Optional, Set, Tuple
 
     from sqlalchemy.orm.session import Session
 
@@ -310,13 +310,6 @@ class ManagementViews(BaseViews):
         user_info["inherit_groups_permissions"] = inherit_grp_perms
         error_message = ""
 
-        # In case of update, changes are not reflected when calling
-        # get_user_or_group_resources_permissions_dict so we must take care
-        # of them
-        res_id = None
-        removed_perms = None
-        updated_perms = None
-
         if self.request.method == "POST":
             res_id = self.request.POST.get("resource_id")
             is_edit_group_membership = False
@@ -338,13 +331,15 @@ class ManagementViews(BaseViews):
                 # "clean_resource" must be above "edit_permissions" because they"re in the same form.
                 self.delete_resource(res_id)
             elif "edit_permissions" in self.request.POST:
-                if not res_id or res_id == "None":
-                    remote_id = int(self.request.POST.get("remote_id"))
-                    services_names = [s["service_name"] for s in services.values()]
-                    res_id = self.add_remote_resource(cur_svc_type, services_names, user_name, remote_id, is_user=True)
-
-                removed_perms, updated_perms = \
-                    self.edit_user_or_group_resource_permissions(user_name, res_id, is_user=True)
+                # FIXME:
+                #   Add remote does not make sense anymore because we batch update resources (instead of one-by-one).
+                #   Also not necessary because recursive permission don't require to actually have the sub-resources.
+                #   If resources are needed to apply permissions on them, they are either added manually or via sync.
+                #if not res_id or res_id == "None":
+                #    remote_id = int(self.request.POST.get("remote_id"))
+                #    services_names = [s["service_name"] for s in services.values()]
+                #    res_id = self.add_remote_resource(cur_svc_type, services_names, user_name, remote_id, is_user=True)
+                self.edit_user_or_group_resource_permissions(user_name, is_user=True)
             elif "edit_group_membership" in self.request.POST:
                 is_edit_group_membership = True
             elif "edit_username" in self.request.POST:
@@ -412,9 +407,6 @@ class ManagementViews(BaseViews):
             )
         except Exception as exc:
             raise HTTPBadRequest(detail=repr(exc))
-
-        if res_id and (removed_perms or updated_perms):
-            self.update_user_or_group_resources_permissions_dict(res_perms, res_id, removed_perms, updated_perms)
 
         sync_types = [s["service_sync_type"] for s in services.values()]
         sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
@@ -544,38 +536,45 @@ class ManagementViews(BaseViews):
             resp = request_api(self.request, path, "POST", data=data)
             check_response(resp)
 
-    def edit_user_or_group_resource_permissions(self, user_or_group_name, resource_id, is_user=False):
-        if is_user:
-            res_perms_path = schemas.UserResourcePermissionsAPI.path \
-                .format(user_name=user_or_group_name, resource_id=resource_id)
-        else:
-            res_perms_path = schemas.GroupResourcePermissionsAPI.path \
-                .format(group_name=user_or_group_name, resource_id=resource_id)
-        try:
-            resp = request_api(self.request, res_perms_path, "GET")
-            res_perms = get_json(resp)["permissions"]
-        except Exception as exc:
-            raise HTTPBadRequest(detail=repr(exc))
+    def edit_user_or_group_resource_permissions(self, user_or_group_name, is_user=False):
+        posted = self.request.POST.dict_of_lists().items()
 
-        existing_perms_set = {PermissionSet(perm_json) for perm_json in res_perms}
-        selected_perms_set = {PermissionSet(perm_json) for perm_json in self.request.POST.getall("permission")}
-        removed_perms = list(existing_perms_set - selected_perms_set)
-        updated_perms = list(selected_perms_set - existing_perms_set)
+        # retrieve all selectors that have a value during apply (either added, same or modified)
+        # (note: could have N times the resource ID per available permissions for it)
+        res_applied_perms = {perm_res_id.replace("permission_resource_", ""): set(permissions) - {""}
+                             for perm_res_id, permissions in posted if perm_res_id.startswith("permission_resource")}
+        # retrieve all resources that previously had permissions (last apply or when generated page)
+        res_with_perms = {res_id.replace("resource_", ""): set(permissions) - {""}
+                          for res_id, permissions in posted if res_id.startswith("resource_")}
+        res_with_perms.pop("id")  # remove invalid entry used for redirects
 
-        for perm in removed_perms:
-            data = {"permission": perm}
-            resp = request_api(self.request, res_perms_path, "DELETE", data=data)
-            check_response(resp)
-        for perm in updated_perms:
-            data = {"permission": perm}
-            resp = request_api(self.request, res_perms_path, "PUT", data=data)
-            check_response(resp)
-        return removed_perms, updated_perms
+        updated_perms = {}
+        for res_id, applied in res_applied_perms.items():
+            prev_perms = res_with_perms.get(res_id, set())
+            removed = prev_perms - applied
+            updated = applied - prev_perms
+            if not (removed or updated):
+                continue
+            updated_perms[res_id] = applied
+            if is_user:
+                res_perms_path = schemas.UserResourcePermissionsAPI.path \
+                    .format(user_name=user_or_group_name, resource_id=res_id)
+            else:
+                res_perms_path = schemas.GroupResourcePermissionsAPI.path \
+                    .format(group_name=user_or_group_name, resource_id=res_id)
+            for perm in removed:
+                data = {"permission": perm}
+                resp = request_api(self.request, res_perms_path, "DELETE", data=data)
+                check_response(resp)
+            for perm in updated:
+                data = {"permission": perm}
+                resp = request_api(self.request, res_perms_path, "PUT", data=data)
+                check_response(resp)
 
     def get_user_or_group_resources_permissions_dict(self, user_or_group_name, services, service_type,
                                                      is_user=False, is_inherit_groups_permissions=False):
         """
-        Get the user or group applied permissions and well as applicable permissions for corresponding services.
+        Get the user or group applied permissions as well as applicable permissions for corresponding services.
 
         Result is a :class:`tuple` of:
             - combined :term:`Allowed Permissions` (*names only*) for services and their children resources.
@@ -633,14 +632,13 @@ class ManagementViews(BaseViews):
                 children=self.resource_tree_parser(raw_resources["resources"], permission))
         return resources_permission_names, resources
 
-    def update_user_or_group_resources_permissions_dict(self, res_perms, res_id, removed_perms, updated_perms):
+    def update_user_or_group_resources_permissions_dict(self, res_perms, updated_perms):
         for res in res_perms.values():
-            if int(res["id"]) == int(res_id):
-                res["permissions"] = sorted(res["permissions"] + updated_perms)
-                res["permissions"] = [perm for perm in res["permissions"] if perm not in removed_perms]
+            perms = updated_perms.get(str(res["id"]), [])
+            if perms:
+                res["permissions"] = perms
                 return True
-            if self.update_user_or_group_resources_permissions_dict(res["children"], res_id,
-                                                                    removed_perms, updated_perms):
+            if self.update_user_or_group_resources_permissions_dict(res["children"], updated_perms):
                 return True
         return False
 
@@ -658,12 +656,6 @@ class ManagementViews(BaseViews):
 
         # when service type is 'default', this function replaces 'cur_svc_type' with the first one available
         svc_types, cur_svc_type, services = self.get_services(cur_svc_type)
-
-        # In case of update, changes are not reflected when calling 'get_user_or_group_resources_permissions_dict'
-        # so we must take care of them
-        res_id = None
-        removed_perms = None
-        updated_perms = None
 
         # move to service or edit requested group/permission changes
         if self.request.method == "POST":
@@ -696,13 +688,16 @@ class ManagementViews(BaseViews):
                 group_info["discoverable"] = not asbool(self.request.POST.get("is_discoverable"))
                 group_info.update(self.update_group_info(group_name, group_info))
             elif "edit_permissions" in self.request.POST:
-                if not res_id or res_id == "None":
-                    remote_id = int(self.request.POST.get("remote_id"))
-                    services_names = [s["service_name"] for s in services.values()]
-                    res_id = self.add_remote_resource(cur_svc_type, services_names, group_name,
-                                                      remote_id, is_user=False)
-                removed_perms, updated_perms = \
-                    self.edit_user_or_group_resource_permissions(group_name, res_id, is_user=False)
+                # FIXME:
+                #   Add remote does not make sense anymore because we batch update resources (instead of one-by-one).
+                #   Also not necessary because recursive permission don't require to actually have the sub-resources.
+                #   If resources are needed to apply permissions on them, they are either added manually or via sync.
+                #if not res_id or res_id == "None":
+                #    remote_id = int(self.request.POST.get("remote_id"))
+                #    services_names = [s["service_name"] for s in services.values()]
+                #    res_id = self.add_remote_resource(cur_svc_type, services_names, group_name,
+                #                                      remote_id, is_user=False)
+                self.edit_user_or_group_resource_permissions(group_name, is_user=False)
             elif "member" in self.request.POST:
                 self.edit_group_users(group_name)
             elif "force_sync" in self.request.POST:
@@ -722,10 +717,6 @@ class ManagementViews(BaseViews):
             )
         except Exception as exc:
             raise HTTPBadRequest(detail=repr(exc))
-
-        # apply permission changes if any
-        if res_id and (removed_perms or updated_perms):
-            self.update_user_or_group_resources_permissions_dict(res_perms, res_id, removed_perms, updated_perms)
 
         sync_types = [s["service_sync_type"] for s in services.values()]
         sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)

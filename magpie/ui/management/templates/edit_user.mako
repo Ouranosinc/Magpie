@@ -2,54 +2,6 @@
 <%inherit file="ui.management:templates/tree_scripts.mako"/>
 <%namespace name="tree" file="ui.management:templates/tree_scripts.mako"/>
 
-<%def name="render_item(key, value, level)">
-    <input type="hidden" value="" name="edit_permissions">
-    %for perm_name in permissions:
-        <div class="permission-entry">
-            <label for="permission-combobox">
-            <select name="permission-combobox" id="permission-combobox" class="permission-combobox">
-                <option value=""></option>  <!-- none applied or remove permission -->
-                %for perm_access in ["allow", "deny"]:
-                    %for perm_scope in ["recursive", "match"]:
-                        <option value="${perm_name}-${perm_access}-${perm_scope}"
-                        %if "{}-{}-{}".format(perm_name, perm_access, perm_scope) in value["permission_names"]:
-                            selected
-                        %endif
-                        >${perm_access.capitalize()}, ${perm_scope.capitalize()}</option>
-                    %endfor
-                %endfor
-            </select>
-            </label>
-            <div class="permission-checkbox">
-                <label>
-               <!-- onchange="document.getElementById('resource_${value['id']}_${value.get('remote_id', '')}').submit()" -->
-                <input type="checkbox" value="${perm_name}" name="permission"
-                       %if perm_name in [perm["name"] for perm in value["permissions"]]:
-                       checked
-                       %endif
-                       disabled
-                >
-                </label>
-            </div>
-        </div>
-    %endfor
-    % if not value.get("matches_remote", True):
-        <div class="tree-button">
-            <input type="submit" class="button-warning" value="Clean" name="clean_resource">
-        </div>
-        <p class="tree-item-message">
-            <img title="This resource is absent from the remote server." class="icon-warning"
-                 src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}" alt="WARNING" />
-        </p>
-    % endif
-    % if level == 0:
-        <div class="tree-button">
-            <input type="submit" class="tree-button goto-service theme" value="Edit Service" name="goto_service">
-        </div>
-    % endif
-</%def>
-
-
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">
     Home</a></li>
@@ -170,64 +122,45 @@
 <h3>Permissions</h3>
 
 <form id="toggle_visible_perms" action="${request.path}" method="post">
-    <label>
-    <input type="checkbox" value="${inherit_groups_permissions}" name="toggle_inherit_groups_permissions"
-           onchange="document.getElementById('toggle_visible_perms').submit()"
-    %if inherit_groups_permissions:
-        checked>
-        <input type="hidden" value="False" name="inherit_groups_permissions"/>
-    %else:
-        >
-        <input type="hidden" value="True" name="inherit_groups_permissions"/>
-    %endif
-    View inherited group permissions
-    </label>
+    <div class="panel-line">
+        <label>
+        <input type="checkbox" value="${inherit_groups_permissions}" name="toggle_inherit_groups_permissions"
+               onchange="document.getElementById('toggle_visible_perms').submit()"
+        %if inherit_groups_permissions:
+            checked>
+            <input type="hidden" value="False" name="inherit_groups_permissions"/>
+        %else:
+            >
+            <input type="hidden" value="True" name="inherit_groups_permissions"/>
+        %endif
+        <span class="center-text">
+        View inherited group permissions
+        </span>
+        </label>
+    </div>
 </form>
 
 <div class="tabs-panel">
 
+    <%block cached="True" cache_timeout="3600">
     %for svc_type in svc_types:
         % if cur_svc_type == svc_type:
-            <a class="current-tab"
+            <a class="tab current-tab"
                href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % else:
             <a class="tab theme"
                href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % endif
     %endfor
+    </%block>
 
     <div class="current-tab-panel">
         <div class="clear"></div>
         %if error_message:
             <div class="alert alert-danger alert-visible">${error_message}</div>
         %endif
-        <form id="sync_info" action="${request.path}" method="post">
-            <p class="panel-line">
-                <span class="panel-entry">Last synchronization with remote services: </span>
-                %if sync_implemented:
-                    <span class="panel-value">${last_sync} </span>
-                    <input type="submit" value="Sync now" name="force_sync" class="button-warning">
-                %else:
-                    <span class="panel-value">Not implemented for this service type.</span>
-                %endif
-            </p>
-            %if ids_to_clean and not out_of_sync:
-                <p class="panel-line">
-                    <span class="panel-entry">Note: </span>
-                    <span class="panel-value">Some resources are absent from the remote server </span>
-                    <input type="hidden" value="${ids_to_clean}" name="ids_to_clean">
-                    <input type="submit" class="button-warning" value="Clean all" name="clean_all">
-                </p>
-            %endif
-        </form>
-        <div class="tree-header">
-        <div class="tree-item">Resources</div>
-        %for perm in permissions:
-            <div class="permission-title">${perm}</div>
-        %endfor
-        </div>
-        <div class="tree">
-            ${tree.render_tree(render_item, resources)}
-        </div>
+
+        ${tree.sync_resources()}
+        ${tree.render_resource_permission_tree(resources, permissions)}
     </div>
 </div>

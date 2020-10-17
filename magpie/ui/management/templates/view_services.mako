@@ -128,13 +128,13 @@
 
     %for svc_type in svc_types:
         % if cur_svc_type == svc_type:
-            <a class="current-tab" href="${request.route_url('view_services', cur_svc_type=svc_type)}">${svc_type}</a>
+            <a class="tab current-tab" href="${request.route_url('view_services', cur_svc_type=svc_type)}">${svc_type}</a>
         % else:
             <a class="tab theme" href="${request.route_url('view_services', cur_svc_type=svc_type)}">${svc_type}</a>
         % endif
     %endfor
 
-    <div class="current-tab-panel">
+    <div class="current-tab-panel ">
         <table class="simple-list">
             <thead class="theme">
             <tr>
