@@ -18,7 +18,7 @@ class TestPermissions(unittest.TestCase):
         Validate that provided permission sets are formatted as intended, with both implicit and explicit variants, and
         with both name strings and detailed JSON objects.
         """
-        utils.warn_version(__meta__.__version__, "permission format validation", "2.1", skip=True)
+        utils.warn_version(__meta__.__version__, "permission format validation", "3.0", skip=True)
 
         usr_perm = models.UserPermission()
         usr_perm.perm_name = Permission.GET_FEATURE.value
@@ -72,7 +72,7 @@ class TestPermissions(unittest.TestCase):
         .. seealso::
             :meth:`test_format_permissions_applied`
         """
-        utils.warn_version(__meta__.__version__, "permission format validation", "2.1", skip=True)
+        utils.warn_version(__meta__.__version__, "permission format validation", "3.0", skip=True)
 
         # add duplicates with extra modifiers only to test removal
         # provide in random order to validate proper sorting
@@ -122,7 +122,7 @@ class TestPermissions(unittest.TestCase):
 
         Validate various implicit conversion of permission name string to explicit definition.
         """
-        utils.warn_version(__meta__.__version__, "permission set conversion", "2.1", skip=True)
+        utils.warn_version(__meta__.__version__, "permission set conversion", "3.0", skip=True)
 
         perm = PermissionSet("read")  # old implicit format
         utils.check_val_equal(perm.name, Permission.READ)
@@ -151,7 +151,7 @@ class TestPermissions(unittest.TestCase):
 
         Validate various implicit conversion of permission name string to explicit definition.
         """
-        utils.warn_version(__meta__.__version__, "permission set conversion", "2.1", skip=True)
+        utils.warn_version(__meta__.__version__, "permission set conversion", "3.0", skip=True)
 
         perm = PermissionSet(Permission.READ)
         utils.check_val_equal(perm.name, Permission.READ)
@@ -168,7 +168,7 @@ class TestPermissions(unittest.TestCase):
 
         Validate various implicit conversion of permission JSON definition.
         """
-        utils.warn_version(__meta__.__version__, "permission set conversion", "2.1", skip=True)
+        utils.warn_version(__meta__.__version__, "permission set conversion", "3.0", skip=True)
 
         perm = PermissionSet({"name": Permission.WRITE, "access": Access.DENY, "scope": Scope.MATCH})
         utils.check_val_equal(perm.name, Permission.WRITE)
@@ -185,7 +185,7 @@ class TestPermissions(unittest.TestCase):
 
         Validate various implicit conversion of permission elements to explicit definition.
         """
-        utils.warn_version(__meta__.__version__, "permission set conversion", "2.1", skip=True)
+        utils.warn_version(__meta__.__version__, "permission set conversion", "3.0", skip=True)
 
         perm = PermissionSet(PermissionTuple("user-name", "write-deny-match", "user",  # important: perm-name & type
                                              "group_id", "resource_id", "owner", "allowed"))  # these doesn't matter
@@ -206,7 +206,7 @@ class TestPermissions(unittest.TestCase):
 
         Validate various implicit conversion of permission elements to explicit definition.
         """
-        utils.warn_version(__meta__.__version__, "permission set conversion", "2.1", skip=True)
+        utils.warn_version(__meta__.__version__, "permission set conversion", "3.0", skip=True)
 
         perm = PermissionSet((Allow, 1, "write-deny-match"))
         utils.check_val_equal(perm.name, Permission.WRITE)

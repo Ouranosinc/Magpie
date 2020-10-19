@@ -1220,7 +1220,7 @@ class TestSetup(object):
                     check_val_not_equal(len(service["permission_names"]), 0,
                                         msg="Service-scoped route must always provide all allowed permissions.")
                     permissions = SERVICE_TYPE_DICT[service["service_type"]].permissions
-                    if LooseVersion(test_case.version) < LooseVersion("2.1"):
+                    if LooseVersion(test_case.version) < LooseVersion("3.0"):
                         override_permissions = [perm.value for perm in permissions]
                     else:
                         override_permissions = TestSetup.get_PermissionNames(test_case, permissions, combinations=True)
@@ -1433,7 +1433,7 @@ class TestSetup(object):
         version = TestSetup.get_Version(test_case)
         if not isinstance(permissions, (list, set, tuple)):
             permissions = [permissions]
-        if combinations and LooseVersion(version) >= LooseVersion("2.1"):
+        if combinations and LooseVersion(version) >= LooseVersion("3.0"):
             permissions = [PermissionSet(*perm_combo) for perm_combo in itertools.product(permissions, Access, Scope)]
         else:
             permissions = [PermissionSet(perm) for perm in permissions]
@@ -1442,7 +1442,7 @@ class TestSetup(object):
             perm_impl = permission.implicit_permission
             if perm_impl is not None:
                 perm_names.add(perm_impl)
-            if LooseVersion(version) >= LooseVersion("2.1"):
+            if LooseVersion(version) >= LooseVersion("3.0"):
                 perm_names.add(permission.explicit_permission)
         return list(perm_names)
 

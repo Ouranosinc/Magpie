@@ -592,7 +592,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         data = {"user_name": self.usr}  # missing required password
         resp = utils.test_request(self, "POST", "/signin", data=data, expect_errors=True,
                                   headers=self.json_headers, cookies={})
-        if LooseVersion(self.version) >= LooseVersion("2.1"):
+        if LooseVersion(self.version) >= LooseVersion("3.0"):
             code = 422
         elif LooseVersion(self.version) >= LooseVersion("2.0"):
             code = 400
@@ -1532,7 +1532,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # tests
         q_groups = "inherit=true"
         q_effect = "effective=true"
-        test_effective = LooseVersion(self.version) < LooseVersion("2.1")
+        test_effective = LooseVersion(self.version) < LooseVersion("3.0")
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=q_groups)
@@ -1642,7 +1642,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_UpdateUserResourcePermissions(self):
-        utils.warn_version(self, "update user permissions", "2.1", skip=True)
+        utils.warn_version(self, "update user permissions", "3.0", skip=True)
 
         resource_name = "test-user-resource-update-no-conflict"
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
@@ -1690,7 +1690,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_DeleteUserResourcePermission(self):
-        utils.warn_version(self, "delete user permissions with body", "2.1", skip=True)
+        utils.warn_version(self, "delete user permissions with body", "3.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
@@ -1717,7 +1717,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_SERVICES
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_UpdateUserServicePermissions(self):
-        utils.warn_version(self, "update user permissions", "2.1", skip=True)
+        utils.warn_version(self, "update user permissions", "3.0", skip=True)
 
         # setup initial permission on service
         utils.TestSetup.create_TestGroup(self)
@@ -1760,7 +1760,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_SERVICES
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_DeleteUserServicePermission(self):
-        utils.warn_version(self, "delete user permissions with body", "2.1", skip=True)
+        utils.warn_version(self, "delete user permissions with body", "3.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
@@ -1819,7 +1819,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                     Resource8                           (w-D-R)         r-D, w-D  (revert group-svc3)
                         Resource9       (w-A-R)                         r-D, w-A  (user > group, revert group-res8)
         """
-        utils.warn_version(self, "effective permissions resolution with deny", "2.1", skip=True)
+        utils.warn_version(self, "effective permissions resolution with deny", "3.0", skip=True)
 
         # create user/group and services/resources
         utils.TestSetup.create_TestGroup(self)
@@ -2558,7 +2558,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 201, expected_method="POST")
 
         effective_perm_names = [applied_perm]
-        if LooseVersion(self.version) >= LooseVersion("2.1"):
+        if LooseVersion(self.version) >= LooseVersion("3.0"):
             effective_perm = PermissionSet(applied_perm, scope=Scope.MATCH)
             allowed_perm_names = utils.TestSetup.get_PermissionNames(self, effective_perm)
             denied_perm_names = {PermissionSet(perm).name for perm in applicable_perms} - {effective_perm.name}
@@ -2603,7 +2603,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # furthermore, effective permissions are always 'MATCH' as they define access specifically for that item, with
         # all recursive parent resource inheritance pre-computed
         effective_perm = PermissionSet(applied_perm)
-        if LooseVersion(self.version) >= LooseVersion("2.1"):
+        if LooseVersion(self.version) >= LooseVersion("3.0"):
             effective_perm = PermissionSet(applied_perm, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE)
 
         # test
@@ -2613,7 +2613,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("permission_names", body)
         utils.check_val_is_in(effective_perm.implicit_permission, body["permission_names"],
                               msg="Permission applied to anonymous group which user is member of should be effective")
-        if LooseVersion(self.version) >= LooseVersion("2.1"):
+        if LooseVersion(self.version) >= LooseVersion("3.0"):
             perms_names = {PermissionSet(perm).name for perm in applicable_perms}
             perms_denied = [PermissionSet(perm, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
                             for perm in perms_names if perm != PermissionSet(applied_perm).name]
@@ -3294,7 +3294,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_UpdateGroupServicePermissions(self):
-        utils.warn_version(self, "update group permissions", "2.1", skip=True)
+        utils.warn_version(self, "update group permissions", "3.0", skip=True)
 
         # setup initial permission on service
         utils.TestSetup.create_TestGroup(self)
@@ -3338,7 +3338,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_DeleteGroupServicePermissions(self):
-        utils.warn_version(self, "delete group permissions with body", "2.1", skip=True)
+        utils.warn_version(self, "delete group permissions with body", "3.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self)
         body = utils.TestSetup.create_TestService(self)
@@ -3416,7 +3416,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_UpdateGroupResourcePermissions(self):
-        utils.warn_version(self, "update group permissions", "2.1", skip=True)
+        utils.warn_version(self, "update group permissions", "3.0", skip=True)
 
         # setup initial permission on service
         utils.TestSetup.create_TestGroup(self)
@@ -3460,7 +3460,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_DeleteGroupResourcePermissions(self):
-        utils.warn_version(self, "delete group permissions with body", "2.1", skip=True)
+        utils.warn_version(self, "delete group permissions with body", "3.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self)
         body = utils.TestSetup.create_TestServiceResource(self)
@@ -3862,7 +3862,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         }
         resp = utils.test_request(self, "POST", path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        code = 403 if LooseVersion(self.version) >= LooseVersion("2.1") else 400
+        code = 403 if LooseVersion(self.version) >= LooseVersion("3.0") else 400
         body = utils.check_response_basic_info(resp, code, expected_method="POST")
         utils.check_error_param_structure(body, version=self.version, param_compare_exists=True, param_name="parent_id")
 
@@ -4043,7 +4043,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         code = 422
         none = repr(None)
         if LooseVersion(self.version) >= LooseVersion("2.0.0"):
-            if LooseVersion(self.version) < LooseVersion("2.1"):
+            if LooseVersion(self.version) < LooseVersion("3.0"):
                 code = 400
             none = None
         body = utils.check_response_basic_info(resp, code, expected_method="POST")
@@ -4159,7 +4159,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/resources/{res_id}".format(res_id=res_id)
         resp = utils.test_request(self, self.update_method, path, data={}, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        code = 422 if LooseVersion(self.version) >= LooseVersion("2.1") else 400
+        code = 422 if LooseVersion(self.version) >= LooseVersion("3.0") else 400
         utils.check_response_basic_info(resp, code, expected_method=self.update_method)
 
     @runner.MAGPIE_TEST_RESOURCES

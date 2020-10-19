@@ -14,8 +14,8 @@ to maintain backward compatibility of features and API response content with old
 Therefore, care must be taken to consider under which context this term is observed to ensure correct interpretation
 of observed results.
 
-.. versionchanged:: 2.1
-    Following introduced :term:`Permission` representations as JSON objects with this version, an new
+.. versionchanged:: 3.0
+    Following the introduced :ref:`Permission Representations` as JSON objects with this version, a new
     :class:`magpie.permissions.PermissionType` enum was added to make following types more explicit. Responses from
     the API will include a ``type`` field that indicates precisely the type of :term:`Permission` returned, for each
     specific item presented below.
@@ -362,7 +362,7 @@ identifiers in the hierarchy.
 Permissions Definition and Modifiers
 --------------------------------------
 
-.. versionadded:: 2.1
+.. versionadded:: 3.0
     Previous versions of `Magpie` employed literal ``[permission_name]`` and ``[permission_name]-match`` to
     respectively represent recursive and match ``scope`` over the hierarchy of :term:`Resource`.
     All ``-match`` suffixed :term:`Permission` names are now deprecated in favor of modifiers presented in this section.
@@ -443,7 +443,7 @@ hierarchy and by :term:`Group` memberships.
 Permissions Representations
 --------------------------------------
 
-.. versionadded:: 2.1
+.. versionadded:: 3.0
     Prior to this version, only plain *permission-names* where employed. These are represented by the *implicit* string
     representation in following versions of `M̀agpie`.
 
