@@ -1,5 +1,5 @@
-<%inherit file="ui.management:templates/tree_scripts.mako"/>
-<%namespace name="tree" file="ui.management:templates/tree_scripts.mako"/>
+<%inherit file="magpie.ui.management:templates/tree_scripts.mako"/>
+<%namespace name="tree" file="magpie.ui.management:templates/tree_scripts.mako"/>
 
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">

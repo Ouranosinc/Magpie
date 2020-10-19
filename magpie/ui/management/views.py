@@ -30,7 +30,7 @@ from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, List, Optional, Set, Tuple
+    from typing import Dict, List, Optional, Tuple
 
     from sqlalchemy.orm.session import Session
 

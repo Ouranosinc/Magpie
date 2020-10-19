@@ -1,69 +1,30 @@
-<%inherit file="ui.home:templates/template.mako"/>
+<%inherit file="magpie.ui.home:templates/template.mako"/>
 
 
-<%block name="style">
-li.Expanded {
-    list-style-image: url('${request.static_url('magpie.ui.home:static/ArrowExpanded.jpg')}');
-    /* list-style-type: disclosure-open; */  /* Only Recent Firefox */
-}
-
-li.Collapsed {
-    list-style-image: url('${request.static_url('magpie.ui.home:static/ArrowCollapsed.jpg')}');
-    /* list-style-type: disclosure-closed; */  /* Only Recent Firefox */
-}
-</%block>
-
-
-<%block name="script">
-    function toggle_subtree(li, target) {
-        if (target.tagName == 'INPUT') {
-            return;
-        }
-        let form = li.parent();
-        let next_elem = form.next();
-
-        if (next_elem.length == 1 && next_elem[0].tagName == 'UL') {
-            let cur_class = li.attr("class");
-            if (cur_class == "Collapsed") {
-                li.attr("class", "Expanded");
-            } else {
-                li.attr("class", "Collapsed");
-            }
-            next_elem.children().toggle();
-        }
-    }
-
-    $(".Expanded").click(function(e) {
-        toggle_subtree($(this), e.target);
-    });
-
-    $(".Collapsed").click(function(e) {
-        toggle_subtree($(this), e.target);
-    });
-</%block>
-
-<!-- renders a tree of nested service/resources using the provided item renderer function -->
+<!-- renders a tree of nested service/resources using the provided item renderer function
+     see 'tree_toggle.js' for toggling even
+-->
 <%def name="render_tree(item_renderer, tree, level=0)">
-    <ul>
+    <ul class="tree-level-${level}">
     %for key in tree:
-        <div class="clear"></div>
-        <div class="tree-level-${level}">
+        %if tree[key]["children"]:
+        <li class="collapsible expanded">
+        %else:
+        <li class="no-child">
+        %endif
             <div class="tree-line">
-            %if tree[key]["children"]:
-            <li class="Expanded" style="cursor:pointer;">
-            %else:
-            <li class="NoChild">
-            %endif
-                <div class="tree-item">${tree[key].get('resource_display_name', key)}</div>
-                ${item_renderer(key, tree[key], level)}
+                <div class="tree-key">
+                    ${tree[key].get('resource_display_name', key)}
+                </div>
+                <div class="tree-item">
+                    ${item_renderer(key, tree[key], level)}
+                </div>
             </div>
-                %if tree[key]["children"]:
-                ${render_tree(item_renderer, tree[key]["children"], level + 1)}
-                %else:
-                <ul></ul>
-                %endif
-            </li>  <!-- noqa -->
-        </div>
+            <div class="clear"></div>
+            %if tree[key]["children"]:
+            ${render_tree(item_renderer, tree[key]["children"], level + 1)}
+            %endif
+        </li>
     %endfor
     </ul>
 </%def>
@@ -81,10 +42,12 @@ li.Collapsed {
             %endif
         >
         <div class="tree-header">
-            <div class="tree-item">Resources</div>
-            %for perm_name in permissions:
-                <div class="permission-title">${perm_name}</div>
-            %endfor
+            <div class="tree-key">Resources</div>
+            <div class="tree-item">
+                %for perm_name in permissions:
+                    <div class="permission-title">${perm_name}</div>
+                %endfor
+            </div>
         </div>
         <div class="tree">
             ${render_tree(render_resource_permissions_item, resources)}

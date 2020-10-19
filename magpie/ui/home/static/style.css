@@ -486,26 +486,66 @@ table.simple-list input[type="submit"] {
     font-weight: bold;
 }
 
+.tree .collapsible {
+    /*cursor: pointer;*/  /* looks better on 'tree-key' element */
+}
+
+.tree .collapsible > ul {
+    display: none;      /* collapsed */
+    cursor: default;
+}
+
+.tree .collapsible.expanded > ul {
+    display: block;     /* expanded */
+}
+
+/* leaf nodes will have this style, as not overridden by following ones */
 .tree li {
+    /*margin-top: 0.25em;*/
+    /*margin-left: 2em;*/
+    /*margin-bottom: 0.25em;*/
     line-height: 1.5em;
-    border-bottom: 1px solid #dddddd;
-    padding-bottom: 0.25em;
+    list-style-type: square;
+    /*list-style-position: inside;*/
+    /*border-bottom: 1px solid #DDDDDD;*/
 }
 
-.NoChild {
-    list-style-type: circle;
+/* nodes that have child node(s) will have a expanded menu, default marker style when collapsed */
+.tree li.collapsible::marker {
+    content: "►\00a0\00a0";
+    list-style-type: none;
+    font-size: 0.875em;
+    /*font-family: monospace;*/
 }
 
-.Collapsable input {
-    float: left;
-    padding: 5px 100px;
-    border: 1px solid #eee;
+/* all collapsible nodes inherits from 'li.expanded::marker', 'expanded' added on top of it for expanded marker */
+.tree li.collapsible.expanded::marker {   /* note: 'expanded' name is important, must match JS script event to work */
+    content: "▼\00a0\00a0";
+}
+
+.tree-line {
+    display: block;
+}
+
+.tree-key {
+    /*display: block;
+    float: left;*/
+    display: inline-block;
+    position: absolute;
+    /*margin-top: 0.5em;*/
     cursor: pointer;
+
+    /* this ensures that element is on top to capture the click event to toggle collapsed/expanded
+       must be applied in combination to 'position' attribute */
+    z-index: 10;
 }
 
 .tree-item {
-    display: block;
-    float: left;
+    /*display: block;
+    float: right;*/
+    display: inline-block;
+    width: 100%;
+    vertical-align: middle;
 }
 
 .tree-button.goto-service {
@@ -527,14 +567,15 @@ table.simple-list input[type="submit"] {
 }
 
 div.tree-button {
-    width:5em;
-    float:right;
+    width: 5em;
+    float: right;
     text-align: center;
     margin: 0.1em 0 0 0;
 }
 
 .clear {
-  clear: both;
+    clear: both;
+    border-bottom: 1px solid #DDDDDD;
 }
 
 .permission-title {

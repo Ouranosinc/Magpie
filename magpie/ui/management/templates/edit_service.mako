@@ -1,5 +1,5 @@
-<%inherit file="ui.management:templates/tree_scripts.mako"/>
-<%namespace name="tree" file="ui.management:templates/tree_scripts.mako"/>
+<%inherit file="magpie.ui.management:templates/tree_scripts.mako"/>
+<%namespace name="tree" file="magpie.ui.management:templates/tree_scripts.mako"/>
 
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">
@@ -153,7 +153,6 @@
 
 <%def name="render_item(key, value, level)">
     <form id="resource_${value['id']}" action="${request.path}" method="post">
-        <div class="tree-line">
         <input type="hidden" value="${value['id']}" name="resource_id">
         <div class="tree-button">
             <input type="submit" value="Delete" name="delete_child"
@@ -181,6 +180,5 @@
                 >
             </div>
         %endif
-        </div>
     </form>
 </%def>

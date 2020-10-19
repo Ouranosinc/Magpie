@@ -71,6 +71,7 @@ Bug Fixes
   validations against reference parent service (relates to `#359 <https://github.com/Ouranosinc/Magpie/issues/359>`_).
 * Fix UI rendering of ``Push to Phoenix`` notification when viewing service page with type ``WPS``.
 * Fix UI rendering of some incorrect title background color for alert notifications.
+* Fix UI rendering of tree view items with collapsible/expandable resource nodes.
 
 `2.0.1 <https://github.com/Ouranosinc/Magpie/tree/2.0.1>`_ (2020-09-30)
 ------------------------------------------------------------------------------------
