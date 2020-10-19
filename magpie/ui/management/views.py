@@ -335,10 +335,11 @@ class ManagementViews(BaseViews):
                 #   Add remote does not make sense anymore because we batch update resources (instead of one-by-one).
                 #   Also not necessary because recursive permission don't require to actually have the sub-resources.
                 #   If resources are needed to apply permissions on them, they are either added manually or via sync.
-                #if not res_id or res_id == "None":
-                #    remote_id = int(self.request.POST.get("remote_id"))
-                #    services_names = [s["service_name"] for s in services.values()]
-                #    res_id = self.add_remote_resource(cur_svc_type, services_names, user_name, remote_id, is_user=True)
+                # if not res_id or res_id == "None":
+                #     remote_id = int(self.request.POST.get("remote_id"))
+                #     services_names = [s["service_name"] for s in services.values()]
+                #     res_id = self.add_remote_resource(cur_svc_type, services_names, user_name,
+                #                                       remote_id, is_user=True)
                 self.edit_user_or_group_resource_permissions(user_name, is_user=True)
             elif "edit_group_membership" in self.request.POST:
                 is_edit_group_membership = True
@@ -692,11 +693,11 @@ class ManagementViews(BaseViews):
                 #   Add remote does not make sense anymore because we batch update resources (instead of one-by-one).
                 #   Also not necessary because recursive permission don't require to actually have the sub-resources.
                 #   If resources are needed to apply permissions on them, they are either added manually or via sync.
-                #if not res_id or res_id == "None":
-                #    remote_id = int(self.request.POST.get("remote_id"))
-                #    services_names = [s["service_name"] for s in services.values()]
-                #    res_id = self.add_remote_resource(cur_svc_type, services_names, group_name,
-                #                                      remote_id, is_user=False)
+                # if not res_id or res_id == "None":
+                #     remote_id = int(self.request.POST.get("remote_id"))
+                #     services_names = [s["service_name"] for s in services.values()]
+                #     res_id = self.add_remote_resource(cur_svc_type, services_names, group_name,
+                #                                       remote_id, is_user=False)
                 self.edit_user_or_group_resource_permissions(group_name, is_user=False)
             elif "member" in self.request.POST:
                 self.edit_group_users(group_name)

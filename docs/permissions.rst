@@ -443,6 +443,40 @@ hierarchy and by :term:`Group` memberships.
 Permissions Representations
 --------------------------------------
 
-.. todo::
-    implicit vs explicit
-    string vs JSON
+.. versionadded:: 2.1
+    Prior to this version, only plain *permission-names* where employed. These are represented by the *implicit* string
+    representation in following versions of `M̀agpie`.
+
+As presented in the previous section, every :term:`Permission` in `Magpie` is represented by three (3) elements, namely
+the ``name``, the ``access`` and the ``scope``. These are represented in API responses by both *explicit* and *implicit*
+string representations, as well as one extensive JSON representation. The *implicit* representation is mostly preserved
+for backward compatibility reasons, and represents the previous naming convention which can be mapped to *some* of the
+*explicit* string representation, due to the addition of ``access`` and ``scope`` modifiers.
+
+Therefore, it can be noted that all API responses that contain details about permissions will return both the
+``permission_names`` and ``permissions`` fields as follows.
+
+.. code-block:: json
+
+    {
+        "permission_names": [
+            "[permission-name]",
+            "[name-access-scope]"
+        ],
+        "permissions": [
+            {
+                "name": "permission-name",
+                "access": "allow|deny",
+                "scope": "match|recursive",
+                "type": "access|allowed|applied|direct|inherited|effective|owned"
+        ]
+    }
+
+
+.. note::
+    Single :term:`Permission` operations, such as creation, deletion or update of a permission entry will also provide
+    all above variants, but without the plural ``s`` in the field name.
+
+It can be noted that the JSON representation also provides a fourth ``type`` parameter which serves as indicative
+detail about the kind of :term:`Permission` being displayed, in attempt to reduce the ambiguity described in
+:ref:`Types of Permissions`.
