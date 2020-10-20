@@ -16,6 +16,7 @@ from pyramid.settings import asbool
 from pyramid.testing import DummyRequest, setUp as PyramidSetUp
 from six.moves.urllib.parse import urlparse
 from webtest.app import AppError, TestApp  # noqa
+from webtest.forms import Form
 from webtest.response import TestResponse
 
 from magpie import __meta__, app, services
@@ -798,7 +799,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
 
 def check_ui_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_HTML,
                                  expected_title="Magpie Administration"):
-    # type: (AnyResponseType, int, Str, Optional[Str]) -> None
+    # type: (AnyResponseType, int, Str, Optional[Str]) -> Str
     """
     Validates minimal expected elements in a `Magpie` UI page.
 
@@ -806,7 +807,7 @@ def check_ui_response_basic_info(response, expected_code=200, expected_type=CONT
     That function should therefore be employed for responses coming directly from the API routes.
 
     :raises AssertionError: if any of the expected validation elements does not meet requirement.
-    :returns: nothing if every check was successful.
+    :returns: HTML text body of the response if every check was successful.
     """
     msg = None \
         if get_header("Content-Type", response.headers) != CONTENT_TYPE_JSON \
@@ -816,6 +817,7 @@ def check_ui_response_basic_info(response, expected_code=200, expected_type=CONT
     check_val_is_in(expected_type, get_response_content_types_list(response))
     if expected_title:
         check_val_is_in(expected_title, response.text, msg=null)   # don't output big html if failing
+    return response.text
 
 
 def check_error_param_structure(body,                                   # type: JSON
@@ -983,7 +985,7 @@ class TestSetup(object):
 
     @staticmethod
     def check_FormSubmit(test_case,                         # type: AnyMagpieTestCaseType
-                         form_match,                        # type: Union[Str, int, Dict[Str, Str]]
+                         form_match,                        # type: Union[Str, int, Dict[Str, Str], Form]
                          form_data=None,                    # type: Optional[Dict[Str, AnyValue]]
                          form_submit="submit",              # type: Union[Str, int]
                          previous_response=None,            # type: AnyResponseType
@@ -1003,7 +1005,7 @@ class TestSetup(object):
         Successive calls using form submits can be employed to simulate sequential page navigation by providing back
         the returned `response` object as input to the following page with argument :paramref:`previous_response`.
 
-        .. code-block:: json
+        .. code-block:: python
 
             svc_resp = check_FormSubmit(test, form_match="goto_add_service", path="/ui/services")
             add_resp = check_FormSubmit(test, form_match="add_service", form_data={...}, previous_response=svc_resp)
@@ -1012,7 +1014,11 @@ class TestSetup(object):
         :param form_match:
             Can be a form name, the form index (from all available forms on page) or an
             iterable of key/values of form fields to search for a match (first match is used if many are available).
-        :param form_data: specifies matched form fields to be filled as if entered from UI input using given key/value.
+            Also, can be directly the targeted form if already retrieved from the previous response.
+        :param form_data:
+            Specifies matched form fields to be filled as if entered from UI input using given key/value.
+            If multiple fields share the same key, the value must provide an iterable of same length as the expected
+            amount of fields matching that key, to fill each of the individual value.
         :param form_submit: specifies which `button` by name or index to submit within the matched form.
         :param path:
             Required page location where to send a request to fetch the required form, *unless* provided through
@@ -1039,7 +1045,9 @@ class TestSetup(object):
                                 cookies=override_cookies if override_cookies is not null else test_case.cookies)
         check_val_equal(resp.status_code, 200, msg="Cannot test form submission, initial page returned an error.")
         form = None
-        if isinstance(form_match, (int, six.string_types)):
+        if isinstance(form_match, Form):
+            form = form_match
+        elif isinstance(form_match, (int, six.string_types)):
             form = resp.forms[form_match]
         else:
             # select form if all key/value pairs specified match the current one
@@ -1057,7 +1065,12 @@ class TestSetup(object):
                            "from available form match/data combinations: [{}]".format(available_forms))
         if form_data:
             for f_field, f_value in dict(form_data).items():
-                form[f_field] = f_value
+                if isinstance(f_value, (list, set, tuple)):
+                    for i, i_value in enumerate(f_value):
+                        form.set(f_field, i_value, i)
+                else:
+                    form[f_field] = f_value
+
         resp = form.submit(form_submit, expect_errors=expect_errors)
         while 300 <= resp.status_code < 400 and max_redirect > 0:
             resp = resp.follow()
