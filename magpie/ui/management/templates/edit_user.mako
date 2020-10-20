@@ -122,7 +122,7 @@
 <h3>Permissions</h3>
 
 <form id="toggle_visible_perms" action="${request.path}" method="post">
-    <div class="panel-line">
+    <div class="option-section">
         <label>
         <input type="checkbox" value="${inherit_groups_permissions}" name="toggle_inherit_groups_permissions"
                onchange="document.getElementById('toggle_visible_perms').submit()"
@@ -133,16 +133,30 @@
             >
             <input type="hidden" value="True" name="inherit_groups_permissions"/>
         %endif
-        <span class="center-text">
+        <span class="option-text">
         View inherited group permissions
         </span>
         </label>
     </div>
 </form>
 
+%if inherit_groups_permissions:
+<div class="option-section">
+    <div class="alert-note-info alert-visible">
+        <img src="${request.static_url('magpie.ui.home:static/info.png')}"
+             alt="INFO" class="icon-info alert-info" />
+        <meta name="source" content="https://commons.wikimedia.org/wiki/File:Infobox_info_icon.svg">
+        <div class="alert-note-text">
+            Individual resources can be tested for effective access using the
+            <input type="button" value="?" class="permission-effective-button button-no-click">
+            <span>button next to the corresponding permission.</span>
+        </div>
+    </div>
+</div>
+%endif
+
 <div class="tabs-panel">
 
-    <%block cached="True" cache_timeout="3600">
     %for svc_type in svc_types:
         % if cur_svc_type == svc_type:
             <a class="tab current-tab"
@@ -152,7 +166,6 @@
                href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
         % endif
     %endfor
-    </%block>
 
     <div class="current-tab-panel">
         <div class="clear"></div>

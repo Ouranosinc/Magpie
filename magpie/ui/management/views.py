@@ -120,7 +120,7 @@ class ManagementViews(BaseViews):
         resp = request_api(self.request, schemas.ServicesAPI.path, "GET")
         check_response(resp)
         all_services = get_json(resp)["services"]
-        svc_types = sorted(all_services.keys())
+        svc_types = list(sorted(all_services))
         if cur_svc_type not in svc_types:
             cur_svc_type = svc_types[0]
         services = all_services[cur_svc_type]
@@ -330,7 +330,7 @@ class ManagementViews(BaseViews):
             if "clean_resource" in self.request.POST:
                 # "clean_resource" must be above "edit_permissions" because they"re in the same form.
                 self.delete_resource(res_id)
-            elif "edit_permissions" in self.request.POST:
+            elif "edit_permissions" in self.request.POST and not inherit_grp_perms:
                 # FIXME:
                 #   Add remote does not make sense anymore because we batch update resources (instead of one-by-one).
                 #   Also not necessary because recursive permission don't require to actually have the sub-resources.
@@ -735,7 +735,6 @@ class ManagementViews(BaseViews):
         group_info["last_sync"] = last_sync_humanized
         group_info["sync_implemented"] = sync_implemented
         group_info["out_of_sync"] = out_of_sync
-        group_info["cur_svc_type"] = cur_svc_type
         group_info["users"] = self.get_user_names()
         group_info["svc_types"] = svc_types
         group_info["cur_svc_type"] = cur_svc_type

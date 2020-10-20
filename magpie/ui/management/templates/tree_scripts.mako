@@ -33,14 +33,17 @@
 <!-- renderer of specific tree resources with applicable permissions (under a given service-type) -->
 <%def name="render_resource_permission_tree(resources, permissions)">
     <form id="resources_permissions" action="${request.path}" method="post">
-        <input type="submit" name="edit_permissions" value="Apply" title="Apply the permission changes"
-            %if inherit_groups_permissions:
-                disabled
-                class="button theme equal-width disabled"
-            %else:
-                class="button theme equal-width"
-            %endif
-        >
+        <div>
+            <input type="submit" name="edit_permissions" value="Apply" title="Apply the permission changes"
+                %if inherit_groups_permissions:
+                    disabled
+                    class="button theme equal-width disabled"
+                %else:
+                    class="button theme equal-width"
+                %endif
+            >
+        </div>
+
         <div class="tree-header">
             <div class="tree-key">Resources</div>
             <div class="tree-item">
@@ -111,6 +114,9 @@
         <input type="hidden" name="resource_${resource_info['id']}" value="${perm_name}">
         %endfor
         </label>
+
+        ${effective_button_test(user_name, resource_info['id'], permission_name)}
+
         <div class="permission-checkbox">
             <label>
             <!-- checkbox is only indicative of last active status retrieved for permission, therefore always disabled
@@ -126,6 +132,49 @@
             </label>
         </div>
     </div>
+</%def>
+
+
+<!-- creates a test button for effective permission for corresponding user/resource/permission by calling the API
+     once resolved, the response is parsed and displays either a checkmark or cross in place of the test button
+ -->
+<%def name="effective_button_test(user_name, resource_id, permission_name)">
+%if inherit_groups_permissions:
+    <script type="text/javascript">
+        function testPermissionEffective(host, userName, resourceId, permName) {
+            $.ajax({
+                url: host + "/users/" + userName + "/resources/" + resourceId + "/permissions?effective=true",
+                type: "get",
+                dataType: "json",
+                contentType: "application/json",
+                success: function (data) {
+                    console.log("AJAX OK");
+                    let permissions = data["permissions"];
+                    let result = $("#PermissionEffectiveFailure_" + resourceId + "_" + permName);
+                    $.each(permissions, function(_, perm){
+                        if (perm.name === permName && perm.access === "allow") {
+                            console.log("perm found! ", permName, perm.name, perm.access);
+                            result = $("#PermissionEffectiveSuccess_" + resourceId + "_" + permName);
+                            return false;
+                        }
+                    });
+                    let btn = $("#PermissionEffectiveButton_" + resourceId + "_" + permName);
+                    btn.hide();
+                    result.toggleClass("hidden");
+                },
+            });
+        }
+    </script>
+    <div class="permission-effective-tester" id="PermissionEffective_${resource_id}_${permission_name}">
+        <input type="button" value="?" id="PermissionEffectiveButton_${resource_id}_${permission_name}"
+               class="permission-effective-button"
+               onclick="testPermissionEffective('${MAGPIE_URL}', '${user_name}', '${resource_id}', '${permission_name}');">
+        <div class="permission-effective success hidden"
+             id="PermissionEffectiveSuccess_${resource_id}_${permission_name}">☑</div>
+        <div class="permission-effective failure hidden"
+             id="PermissionEffectiveFailure_${resource_id}_${permission_name}">☒</div>
+    </div>
+%endif
 </%def>
 
 

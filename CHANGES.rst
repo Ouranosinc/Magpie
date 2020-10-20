@@ -62,6 +62,8 @@ Features / Changes
 * Change UI permission pages to *Apply* batch edition of multiple entries simultaneously instead of one at the time.
 * Improve rendering of UI disabled items such as inactive checkboxes or selectors when not applicable for given context.
 * Refactor UI tree renderer to reuse same code for both ``User`` and ``Group`` resource permissions.
+* Add UI button on ``User`` edit page to test its *effective permission* on a given resource.
+  Must be in *inherited permissions* display mode to have access to test button, in order to help understand the result.
 
 * | Upgrade migration script is added to convert existing implicit names to new explicit permission names.
   |

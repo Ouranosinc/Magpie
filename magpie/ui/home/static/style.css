@@ -429,6 +429,19 @@ table.panel-line td {
     padding: 0 0.5em 0 0;
 }
 
+.alert-note-info {
+    width: auto;
+    display: inline-flex;
+    float: left;
+    text-align: center;
+    margin-top: 0.25em;
+    margin-left: 0.1em;
+}
+
+.alert-note-text {
+    margin-left: 0.25em;
+}
+
 .icon-error {
     width: 1.25em;
     height: 1.25em;
@@ -439,9 +452,84 @@ table.panel-line td {
     height: 1.25em;
 }
 
+.icon-info {
+    width: 1.25em;
+    height: 1.25em;
+    margin-top: 0.15em;
+}
+
 .icon-color-invert {
     filter: saturate(0) invert(100%);
     -webkit-filter: saturate(0) invert(100%);
+}
+
+.hidden {
+    display: none;
+}
+
+.option-section {
+    margin-left: 0.5em;
+    display: inline-block;
+}
+
+.option-text {
+
+}
+
+.permission-effective {
+    background-color: white;
+    padding: 1px 2px 2px;
+    font-weight: bold;
+    font-size: 1.25em;
+    /* this makes sure other current line checkbox remains aligned with others  */
+    margin-left: 0.1em;
+    margin-right: 0.05em;
+}
+
+.success {
+    color: #2C8F30;
+}
+
+.failure {
+    color: #880000;
+}
+
+.permission-effective-tester {
+    float: right;
+    display: inline-flex;
+}
+
+input[type="button"].permission-effective-button {
+    border-color: #377739;
+    border-width: 2px;
+    background-color: #DDDDDD;
+    color: #377739;
+    font-weight: bold;
+    font-size: 10px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    padding: 0.2em 0.6em;
+    margin: 3px 2px;
+    cursor: pointer;
+}
+
+input[type="button"].permission-effective-button:focus,
+input[type="button"].permission-effective-button:hover {
+    background-color: #358C39;
+    color: #FFFFFF;
+}
+
+/* button for display, without any attached action or effect */
+input[type="button"].button-no-click,
+input[type="button"].button-no-click:active,
+input[type="button"].button-no-click:focus,
+input[type="button"].button-no-click:hover {
+    vertical-align: top;
+    background-color: #DDDDDD;
+    border-style: solid;
+    color: #377739;
+    cursor: default;
 }
 
 /*---View users & groups pages ---*/
