@@ -658,10 +658,10 @@ class ServiceTHREDDS(ServiceInterface):
     service_type = "thredds"
 
     permissions = [
+        Permission.BROWSE,
+        # read are for
         Permission.READ,
-        # FIXME:
-        #   does WRITE permission even make sense here?
-        #   leave it for bw-compat, but not even considered since 'permission_requested' always returns READ
+        # NOTE: see special usage of WRITE in docs
         Permission.WRITE,
     ]
 

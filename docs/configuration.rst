@@ -5,14 +5,22 @@ Configuration
 =============
 
 At startup, `Magpie` application will load multiple configuration files to define various behaviours or setup
-operations. These are defined though the configuration settings presented below.
+operations. These are defined though the configuration settings presented in below sections.
 
-All generic `Magpie` configuration settings can be defined through either the `magpie.ini`_ file
-or environment variables. Values defined in `magpie.ini`_ are expected to follow the
-``magpie.[variable_name]`` format, and corresponding ``MAGPIE_[VARIABLE_NAME]`` format is used for environment
-variables. Both of these alternatives match the constants defined in `constants.py`_ and can be used
-interchangeably. Order of resolution will prioritize setting values over environment variables in case of duplicate
-configurations resulting into different values.
+All generic `Magpie` configuration settings can be defined through either the `magpie.ini`_ file or environment
+variables. Values defined in `magpie.ini`_ are expected to follow the ``magpie.[variable_name]`` format, and
+corresponding ``MAGPIE_[VARIABLE_NAME]`` format is used for environment variables. Both of these alternatives match
+the constants defined in `constants.py`_ and can be used interchangeably.
+
+.. versionchanged:: 1.1
+    Order of resolution will prioritize *setting configurations* over *environment variables* in case of duplicates
+    resulting into different values. Environment variables will not override already specified setting values.
+
+    Previous versions of `Magpie` would instead prioritize environment variables, but this behaviour was deemed as
+    counter intuitive. This is attributed to the global scope nature of environment variables that often made it hard
+    to understand why some custom INI file would not behave as intended since those variable would inconsistently take
+    precedence whether or not they were defined. Using a common configuration file makes it easier to maintain and
+    understand the applied settings, and is therefore preferable.
 
 .. _constants.py: https://github.com/Ouranosinc/Magpie/tree/master/magpie/constants.py
 
@@ -35,15 +43,14 @@ By default, `Magpie` will try to load a ``magpie.env`` file which can define fur
 used to setup the application (see ``MAGPIE_ENV_FILE`` setting further below). An example of expected format and common
 variables for this file is presented in `magpie.env.example`_.
 
-**Important Notes:**
+.. warning::
+    If ``magpie.env`` cannot be found (e.g.: using setting ``MAGPIE_ENV_FILE``) but `magpie.env.example`_ is available
+    after resolving any previously set ``MAGPIE_ENV_DIR`` variable, this example file will be used to make a copy saved
+    as ``magpie.env`` and will be used as the base ``.env`` file to load its contained environment variables.
+    This behaviour is intended to reduce initial configuration and preparation of  `Magpie` for a new user.
 
-If ``magpie.env`` cannot be found (using setting ``MAGPIE_ENV_FILE``) but ``magpie.env.example`` is available
-(after resolving any previously set ``MAGPIE_ENV_DIR`` variable), this example file will be used to make a copy
-saved as ``magpie.env`` and will be used as the base ``.env`` file to load its contained environment variables.
-This behaviour is intended to reduce initial configuration and preparation of  `Magpie` for a new user.
-
-When loading variables from the ``.env`` file, any conflicting environment variable will **NOT** be overridden.
-Therefore, only *missing but required* values will be added to the environment to ensure proper setup of `Magpie`.
+    When loading variables from the ``.env`` file, any conflicting environment variable will **NOT** be overridden.
+    Therefore, only *missing but required* values will be added to the environment to ensure proper setup of `Magpie`.
 
 .. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example
 
@@ -67,6 +74,10 @@ to the desired URL. See ``MAGPIE_PROVIDERS_CONFIG_PATH`` setting below to setup 
 configuration. Please refer to the comment header of sample file `providers.cfg`_ for specific format and parameter
 details.
 
+.. versionchanged:: 3.1
+    Some services, such as :ref:`ServiceTHREDDS` for instance, can take additional parameters to customize some of
+    their behaviour. Please refer to :ref:`Services` chapter for specific configuration supported.
+
 File: permissions.cfg
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -84,9 +95,11 @@ behaviour of each parameter according to encountered use cases.
 Combined Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. versionadded:: 2.0
+
 Since contents of all different configurations files (`providers.cfg`_, `permissions.cfg`_) reside under distinct
-top-level objects (of same name), it is actually possible to use an unique file to define everything. For example,
-one could define a combined configuration as follows.
+top-level objects, it is actually possible to use an unique file to define everything. For example, one could define
+a combined configuration as follows.
 
 .. code-block:: YAML
 
@@ -141,7 +154,7 @@ Settings and Constants
 
 Environment variables can be used to define all following configurations (unless mentioned otherwise with
 ``[constant]`` keyword next to the parameter name). Most values are parsed as plain strings, unless they refer to an
-activable setting (e.g.: ``True`` or ``False``), or when specified with more specific ``[<type>]`` notation.
+activatable setting (e.g.: ``True`` or ``False``), or when specified with more specific ``[<type>]`` notation.
 
 Configuration variables will be used by `Magpie` on startup unless prior definition is found within `magpie.ini`_.
 All variables (i.e.: non-``[constant]`` parameters) can also be specified by their ``magpie.[variable_name]`` setting

@@ -7,7 +7,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``BROWSE`` permission for ``ServiceTHREDDS`` to parse request against *metadata* or *data* contents according to
+  specified configuration of the specific service (resolves `#361 <https://github.com/Ouranosinc/Magpie/issues/361>`_).
 
 `3.0.0 <https://github.com/Ouranosinc/Magpie/tree/3.0.0>`_ (2020-10-19)
 ------------------------------------------------------------------------------------
@@ -513,7 +516,7 @@ Bug Fixes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Prioritize settings (ie: `magpie.ini` values) before environment variables and ``magpie.constants`` globals.
+* Prioritize settings (ie: ``magpie.ini`` values) before environment variables and ``magpie.constants`` globals.
 * Allow specifying ``magpie.scheme`` setting to generate the ``magpie.url`` with it if the later was omitted.
 * Look in settings for required parameters for function ``get_admin_cookies``.
 * Use API definitions instead of literal strings for routes employed in ``MagpieAdapter``.

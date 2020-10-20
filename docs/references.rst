@@ -13,6 +13,7 @@
 .. _Pyramid: https://docs.pylonsproject.org/projects/pyramid/
 .. _ReadTheDocs: https://pavics-magpie.readthedocs.io/
 .. _SQLAlchemy: https://www.sqlalchemy.org/
+.. _THREDDS: https://www.unidata.ucar.edu/software/tds/
 .. _Twitcher: https://github.com/bird-house/twitcher
 .. _Waitress: https://github.com/Pylons/waitress
 .. _Ziggurat-Foundations: https://github.com/ergo/ziggurat_foundations
