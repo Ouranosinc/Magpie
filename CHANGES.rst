@@ -12,11 +12,6 @@ Changes
 `3.0.0 <https://github.com/Ouranosinc/Magpie/tree/3.0.0>`_ (2020-10-19)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
-
-`2.1.0 <https://github.com/Ouranosinc/Magpie/tree/2.1.0>`_ (2020-09-22)
-------------------------------------------------------------------------------------
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Adjust ``alembic`` migration scripts to employ date-ordered naming convention to help searching features within them.
