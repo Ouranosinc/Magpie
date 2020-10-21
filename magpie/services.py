@@ -658,11 +658,9 @@ class ServiceTHREDDS(ServiceInterface):
     service_type = "thredds"
 
     permissions = [
-        Permission.BROWSE,
-        # read are for
-        Permission.READ,
-        # NOTE: see special usage of WRITE in docs
-        Permission.WRITE,
+        Permission.BROWSE,  # for metadata access
+        Permission.READ,    # for file data access
+        Permission.WRITE,   # NOTE: see special usage of WRITE in docs
     ]
 
     params_expected = [
@@ -676,6 +674,8 @@ class ServiceTHREDDS(ServiceInterface):
 
     def resource_requested(self):
         path_parts = self._get_request_path_parts()
+
+        re.match(".*.nc", os.path.split(path)[-1])[0]
 
         # handled optional prefix and missing specifiers
         if not path_parts:

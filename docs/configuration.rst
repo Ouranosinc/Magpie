@@ -92,6 +92,20 @@ See ``MAGPIE_PERMISSIONS_CONFIG_PATH`` setting below to setup alternate referenc
 Please refer to the comment header of sample file `permissions.cfg`_ for specific format details as well as specific
 behaviour of each parameter according to encountered use cases.
 
+Configuration File Formats
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionchanged:: 1.9.2
+
+Any file represented in the :ref:`Configuration` chapter using any of the extension ``.cfg``, ``.json``, ``.yaml`` or
+``.yml`` will be accepted interchangeably if provided. Both parsing as JSON and YAML will be attempted for backward
+compatibility of each resolved file path.
+
+It is not mandatory for the the name of each file to also match the employed name in the documentation, provided
+the paths can be resolved to valid files, though there is special handling of default ``.example`` extensions with
+matching file names when no other alternative configurations can be found. Again, this is mostly for backward
+compatibility.
+
 Combined Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -182,18 +196,18 @@ These settings can be used to specify where to find other settings through custo
 - | ``MAGPIE_PROVIDERS_CONFIG_PATH``
   | (Default: ``${MAGPIE_CONFIG_DIR}/providers.cfg``)
 
-  Path where to find ``providers.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
+  Path where to find a `providers.cfg`_ file. Can also be a directory path, where all contained ``.cfg`` files will
   be considered as `providers` files and will be loaded sequentially.
 
   .. note::
     If a directory path is specified, the order of loaded configuration files is not guaranteed
-    (depending on OS implementation).
+    (depending on OS implementation). Duplicate entries could therefore be loaded in inconsistent order.
     Please refer to `providers.cfg`_ for specific format details and loading methodology according to arguments.
 
 - | ``MAGPIE_PERMISSIONS_CONFIG_PATH``
   | (default: ``${MAGPIE_CONFIG_DIR}/permissions.cfg``)
 
-  Path where to find ``permissions.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
+  Path where to find `permissions.cfg`_ file. Can also be a directory path, where all contained ``.cfg`` files will
   be considered as `permissions` files and will be loaded sequentially.
 
   .. note::

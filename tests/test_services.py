@@ -310,8 +310,8 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
             according to :class:`ServiceTHREDDS` implementation.
 
         .. seealso::
-            Reference test server to explore supported formats by THREDDS service (many files available):
-            https://remotetest.unidata.ucar.edu/thredds/dodsC/testdods/rtofs.nc.html
+            Reference test server to explore supported formats by THREDDS service (many files and formats available):
+            https://remotetest.unidata.ucar.edu/thredds/catalog/catalog.html
         """
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)

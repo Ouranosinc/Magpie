@@ -94,53 +94,67 @@ parsing of incoming requests.
 As presented above, the main two permissions are :attr:`Permission.BROWSE` and :attr:`Permission.READ` which
 correspondingly serve to retrieve *metadata* and actual *data* of a given :term:`Resource`. To distinguish requests
 between these two types of contents, `ServiceTHREDDS`_ employs two parts from the request path, the sub-path *prefix*
-and the file *extension*. A default methodology is employed categorize these two types of content, but can be modified
-using custom configurations as described in :ref:`Custom THREDDS Settings` section.
-
-
-
-
-Custom THREDDS Settings
-~~~~~~~~~~~~~~~~~~~~~~~~~
+and the file *extension*. The *default* methodology employed to categorize these two types of content is represented
+by the below configuration.
 
 .. note::
-    See section :ref:`ServiceTHREDDS` about the base implementation components of this service type for further details.
-
-
-With either the `providers.cfg`_ or the `Combined Configuration File`_ presented in previous sections, a service of
-type `THREDDS`_ can be slightly customized to meet the intended needs. Specifically, two additional fields
-``metadata_type`` and ``data_type
-
-
-As presented above, the main two permissions are :attr:`Permission.BROWSE` and :attr:`Permission.READ` which
-correspondingly serve to retrieve *metadata* and actual *data* of a given :term:`Resource`. To distinguish requests
-between these two types of contents, `ServiceTHREDDS`_ employs two parts from the request path, the sub-path *prefix*
-and the file *extension*. The *default* methodology employed to categorize these two types of content is presented
-below.
+    A custom categorization between *metadata*/*data* contents can be provided With either the `providers.cfg`_ or
+    a :ref:`Combined Configuration File` as described in greater lengths within the :ref:`Configuration` chapter.
 
 .. code-block:: YAML
 
     providers:
-      thredds_service:
+      LocalThredds:
+        # minimal configuration requirements (where the real `THREDDS` service resides)
+        # other optional parameters from `providers.cfg` can also be provided
+        url: http://localhost:1234
+        type: thredds
+
+        # customizable request parsing methodology (specific to `thredds` type)
+        file_patterns:
+          - .*.nc
         data_type:
-          - prefix: fileServer
-          - prefix: dodsC
-          - prefix: wcs
-          - prefix: wms
+          prefixes:
+            - fileServer
+            - dodsC
+            - wcs
+            - wms
         metadata_type:
-          # no extra sub-path, case when navigating contents using an UI browser
-          # (`~` is the representation method of JSON's `null`, make sure to adjust accordingly with file extension)
-          - prefix: ~
-          - prefix: catalog
-          - prefix: ncml
-          - prefix: uddc
-          - prefix: iso
+          prefixes:
+            - catalog
+            - ncml
+            - uddc
+            - iso
+
+Assuming a proxy intended to receive incoming requests configured with :class:`magpie.adapter.MagpieAdapter` such that
+``{PROXY_URL}`` is the base path, the following path would point toward the above registered service::
+
+    {PROXY_URL}/LocalThredds
 
 
+An incoming request will be parsed according to configured values against the following format::
 
-.. note::
-    The *default* categorization between *metadata*/*data* contents can be modified using custom configurations
-    specified within a `providers.cfg`_ or :ref:`Combined Configuration File`.
+    {PROXY_URL}/LocalThredds/<prefix>/.../<file>
+
+The above template demonstrates that `Magpie` will attempt to match the ``<prefix>`` part with any of the listed
+``prefixes`` in the configuration. If a match is found, the corresponding *metadata* or *data* content will be assumed,
+according to where the match entry was located, to determine whether :attr:`Permission.BROWSE` or
+:attr:`Permission.READ` should be respectively assumed for this request access. If no ``<prefix>`` can be resolved, the
+permission will be immediately assumed as :attr:`Permission.BROWSE` directly on the :term:`Service`.
+
+After resolution of the content type from ``<prefix>``, the resolution of any amount of :class:`magpie.models.Directory`
+:term:`Resource` will be attempted. Any missing children directory :term:`Resource` will terminate the lookup process
+immediately, and :term:`ACL` will be resolved considering :attr:`Scope.RECURSIVE` if any applicable parent
+:term:`Resources` for the given :term:`Permission` selected by ``<prefix>`` and from where lookup stopped.
+
+Once the last element of the path is reached, the ``file_patterns`` will be applied against ``<file>`` in order to
+attempt extracting the targeted :class:`magpie.models.File` :term:`Resource`. Patterns are applied until the first
+positive match is found. Therefore, order is important if providing multiple. If there is a match, that value will be
+used to lookup the :term:`Resource`. Otherwise, the plain ``<file>`` name is used directly. The plain name is also used
+if ``file_patterns`` is specified as empty or ``null``. Not explicitly overriding the field will result into using the
+above *default* ``file_patterns``. The ``file_patterns`` allow for example to consider ``file.nc``, ``file.ncml`` and
+``file.nc.html`` as the same :term:`Resource` internally, which avoids duplicating :term:`Applied Permissions` across
+multiple :term:`Resource` for every *metadata*/*data* representation.
 
 
 ServiceGeoserverWMS
