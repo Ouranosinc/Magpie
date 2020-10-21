@@ -285,6 +285,12 @@ class ServiceInterface(object):
                     # if user is owner (directly or via groups), all permissions are set,
                     # but continue processing this resource until end in case user explicit deny reverts it
                     if perm_tup.perm_name == ALL_PERMISSIONS:
+                        # FIXME:
+                        #   This block needs to be validated if support of ownership rules are added.
+                        #   Conditions must be revised according to wanted behaviour...
+                        #   General idea for now is that explict user/group deny should be prioritized over resource
+                        #   ownership permissions since these can be attributed to *any user* while explicit deny are
+                        #   definitely set by an admin-level user.
                         for perm in requested_perms:
                             all_perm = PermissionSet(perm, perm_set.access, perm.scope, perm.type)
                             if perm_set.access == Access.DENY:
@@ -298,20 +304,25 @@ class ServiceInterface(object):
                     if not match and perm_set.scope == Scope.MATCH:
                         continue
 
+                    # less obvious use case for both of the following user/group blocks:
+                    #   no need to check explicitly for ALLOW since it was either already set during previous iteration
+                    #   (at that moment, perm=None) or a DENY was already set, but it takes precedence over it anyway
+
                     # user direct permissions have priority over inherited ones from groups
                     if perm_set.type == PermissionType.DIRECT:
                         perm = effective_perms.get(perm_name)
-                        # explicit user deny overrides user allow if any already found
+                        # explicit user DENY overrides user ALLOW if any already found
+                        # if permission name not already found, ALLOW/DENY is set regardless (first occurrence)
                         if perm is None or perm.type == PermissionType.INHERITED or perm_set.access == Access.DENY:
                             effective_perms[perm_name] = perm_set
                         continue  # final decision for this user, skip any group permissions
 
-                    # otherwise check if for another group permission and yet no user permission
+                    # otherwise check for group permission
+                    # like previously, explicit DENY overrides ALLOW if permission name was already found
+                    # if permission name not already found, ALLOW/DENY is set regardless (first occurrence)
                     perm = effective_perms.get(perm_name)
-                    if perm is None or perm.type == PermissionType.INHERITED:
-                        # explicit deny overrides allow if any already found
-                        if perm is None or perm_set.access == Access.DENY:
-                            effective_perms[perm_name] = perm_set
+                    if perm is None or (perm.type == PermissionType.INHERITED and perm_set.access == Access.DENY):
+                        effective_perms[perm_name] = perm_set
 
             # don't bother moving to parent if everything is resolved already
             if len(effective_perms) == len(requested_perms):

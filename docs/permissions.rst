@@ -469,6 +469,7 @@ Therefore, it can be noted that all API responses that contain details about per
                 "access": "allow|deny",
                 "scope": "match|recursive",
                 "type": "access|allowed|applied|direct|inherited|effective|owned"
+            }
         ]
     }
 
