@@ -176,12 +176,18 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
             R: recursive
 
         Permissions Applied::
-                                        user            group           effective (reason/importance)
-            Service1                    (w-D-M)         (w-A-R)         r-D, w-D  (user > group)
-                Resource1               (r-A-R)                         r-A, w-A
-                    Resource2                           (r-D-R)         r-D, w-A  (revert user-res1)
-                        Resource3       (w-A-R)         (w-D-M)         r-D, w-A  (user > group)
-                            Resource4                   (w-D-M)         r-D, w-D  (match > recursive)
+                                                user            group           effective (reason/importance)
+            Service1                            (w-D-M)         (w-A-R)         r-D, w-D  (user > group)
+                Resource1                       (r-A-R)                         r-A, w-A
+                    Resource2                                   (r-D-R)         r-D, w-A  (revert user-res1)
+                        Resource3               (w-A-R)         (w-D-M)         r-D, w-A  (user > group)
+                            Resource4                           (w-D-M)         r-D, w-D  (match > recursive)
+                                Resource5 (*)   [doesn't exist]                 r-D, w-A  (see note below)
+
+        .. note:: (*)
+            Last ``Resource5`` doesn't exist, but recursive access should be granted/refused from *closest* parent
+            resource *recursive* permission that could be found. In this case ``Resource2`` for ``read`` permission
+            and ``Resource3`` for ``write`` permission.
         """
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
@@ -259,6 +265,13 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         req = self.mock_request(path, method="POST")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
+        # Service1/Resource1/Resource2/Resource3/Resource4/Resource5 (last resource does not exist)
+        path = "/ows/proxy/{svc}/{res}/{res}/{res}/{res}/{res}".format(svc=svc_name, res=res_name)
+        req = self.mock_request(path, method="GET")
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+        req = self.mock_request(path, method="POST")
+        utils.check_no_raise(lambda: self.ows.check_request(req))
+
         # login with admin user, validate full access granted even if no explicit permissions was set admins
         utils.check_or_try_logout_user(self)
         cred = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
@@ -286,24 +299,25 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
 
         Legend::
 
-            r: read     (interpreted as literal filesystem READ)
-            w: write    (interpreted as literal filesystem WRITE)
+            b: browse   (metadata access of resource)
+            r: read     (interpreted as literal filesystem READ of data)
+            w: write    (unused by ACL resolution)
             A: allow
             D: deny
             M: match
             R: recursive
 
         Permissions Applied::
-                                        user            group           effective (reason/importance)
-            Service1                    (w-D-M)         (w-A-R)         r-D, w-D  (user > group)
-                Directory1              (r-A-R)                         r-A, w-A
-                    Directory2                          (r-D-R)         r-D, w-A  (revert user-res1)
-                        Directory3      (w-A-R)         (w-D-M)         r-D, w-A  (user > group)
-                            File1                       (w-D-M)         r-D, w-D  (match > recursive)
-                Directory4                              (r-A-R)         r-A, w-A
-                    File2               (r-D-M)         (w-D-R)         r-D, w-W
-                    Directory5                                          r-A, w-W
-                        File3                                           r-A, w-W
+                                        user                group               effective (reason/importance)
+            Service1                    (w-D-M)             (w-A-R)             b-D, r-D, w-D  (user > group)
+                Directory1              (b-A-R), (r-A-R)                        b-A, r-A, w-A
+                    Directory2                              (b-D-R), (r-D-R)    b-D, r-D, w-A  (revert user-res1)
+                        Directory3      (w-A-R)             (w-D-M)             b-D, r-D, w-A  (user > group)
+                            File1                           (w-D-M)             b-D, r-D, w-D  (match > recursive)
+                Directory4                                  (b-A-R), (r-A-R)    b-A, r-A, w-A
+                    File2               (b-D-M), (r-D-M)    (w-D-R)             b-D, r-D, w-W
+                    Directory5                                                  b-A, r-A, w-W
+                        File3                                                   b-A, r-A, w-W
 
         .. note::
             Permission :attr:`Permission.WRITE` can be created, but they don't actually have any use for the moment
@@ -366,8 +380,8 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         # login test user for which the permissions were set
         self.login_test_user()
 
-        # directory access with various path formats
-        dir_prefixes = [svc_name + "/catalog", svc_name + "/thredds/catalog", svc_name + "/thredds/dodsC"]
+        # directory path with various path formats, only actual directory listing should be allowed
+        dir_prefixes = [svc_name + "/catalog", svc_name + "/fileServer", svc_name + "/dodsC"]
         dir_suffixes = ["", "/catalog.html"]
         test_sub_dir = [
             (False, ""),
@@ -386,18 +400,18 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
                 utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
 
         # file access with various formats, locations and accessors
+        # using default config, they should all point toward the same resource regardless of formats after '.nc'
         test_files = [
             (False, "{}/{}/{}/{}".format(dir1_name, dir2_name, dir3_name, file1_name)),
             (False, "{}/{}".format(dir4_name, file2_name)),
             (True, "{}/{}/{}".format(dir4_name, dir5_name, file3_name)),
         ]
         for expect_allowed, file_path in test_files:
-            file_prefixes = ["", "/thredds"]
-            file_formats = ["dap4", "dodsC", "fileServer"]  # format of files accessors (anything else than 'catalog')
+            file_prefixes = ["dap4", "dodsC", "fileServer"]  # format of files accessors (anything else than 'catalog')
             file_suffixes = [file_path, "{}.dds".format(file_path), "{}.dmr.xml".format(file_path),
                              "{}.html".format(file_path), "{}.ascii?".format(file_path)]  # different representations
-            for prefix, fmt, suffix in itertools.product(file_prefixes, file_formats, file_suffixes):
-                path = "/ows/proxy/{}{}/{}/{}".format(svc_name, prefix, fmt, suffix)
+            for prefix, suffix in itertools.product(file_prefixes, file_suffixes):
+                path = "/ows/proxy/{}/{}/{}".format(svc_name, prefix, suffix)
                 req = self.mock_request(path, method="GET")
                 msg = "Using combination [GET, {}]".format(path)
                 if expect_allowed:

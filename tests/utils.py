@@ -348,8 +348,9 @@ def mock_get_settings(test):
 
     @functools.wraps(test)
     def wrapped(*_, **__):
-        with mock.patch("magpie.utils.get_settings", side_effect=mocked):
-            return test(*_, **__)
+        with mock.patch("magpie.services.get_settings", side_effect=mocked), \
+             mock.patch("magpie.utils.get_settings", side_effect=mocked):
+                return test(*_, **__)
     return wrapped
 
 

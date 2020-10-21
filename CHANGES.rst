@@ -11,6 +11,14 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``BROWSE`` permission for ``ServiceTHREDDS`` to parse request against *metadata* or *data* contents according to
   specified configuration of the specific service (resolves `#361 <https://github.com/Ouranosinc/Magpie/issues/361>`_).
+* Add documentation details about parsing methodologies, specific custom configurations and respective usage of the
+  various ``Service`` types provided by `Magpie`.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix parsing of ``ServiceAPI`` routes during retrieval of the deepest *available* ``Resource`` to ensure that even when
+  the targeted ``Resource`` is actually missing, the *closest* parent permissions with ``Scope.RECURSIVE`` will still
+  take effect.
 
 `3.0.0 <https://github.com/Ouranosinc/Magpie/tree/3.0.0>`_ (2020-10-19)
 ------------------------------------------------------------------------------------

@@ -73,3 +73,8 @@ if TYPE_CHECKING:
     AnyAccessPrincipalType = Union[Str, Iterable[Str]]
     AccessControlEntryType = Union[Tuple[Str, Str, Str], Str]
     AccessControlListType = List[AccessControlEntryType]
+
+    # registered configurations
+    ConfigItem = Dict[Str, JSON]
+    ConfigList = List[ConfigItem]
+    ConfigDict = Dict[Str, Union[ConfigItem, ConfigList]]

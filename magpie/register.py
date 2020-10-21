@@ -51,11 +51,8 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
-    from magpie.typedefs import JSON, AnyCookiesType, CookiesOrSessionType, Str
+    from magpie.typedefs import JSON, AnyCookiesType, ConfigDict, ConfigItem, ConfigList, CookiesOrSessionType, Str
 
-    ConfigItem = Dict[Str, Str]
-    ConfigList = List[ConfigItem]
-    ConfigDict = Dict[Str, Union[ConfigItem, ConfigList]]
 
 LOGGER = get_logger(__name__)
 
@@ -579,22 +576,41 @@ def _expand_all(config):
 
 def magpie_register_services_from_config(service_config_path, push_to_phoenix=False,
                                          force_update=False, disable_getcapabilities=False, db_session=None):
-    # type: (Str, bool, bool, bool, Optional[Session]) -> None
+    # type: (Str, bool, bool, bool, Optional[Session]) -> ConfigDict
     """
     Registers Magpie services from one or many `providers.cfg` file.
 
     Uses the provided DB session to directly update service definitions, or uses API request routes as admin. Optionally
     pushes updates to Phoenix.
+
+    :param service_config_path: where to look for `providers` configuration(s). Directory or file path.
+    :param push_to_phoenix: whether to push loaded service definitions to remote `Phoenix` service.
+    :param force_update: override service definitions that conflict by name with registered ones.
+    :param disable_getcapabilities:
+        Skip `GetCapabilities` request validation and permission update.
+        By default, any service with `type` that allows `GetCapabilities` permissions will be tested to ensure it can
+        be reached on the provided `url`. Once validated, this permission is applied to `anonymous` group to make its
+        entrypoint accessible by anyone.
+        Services that cannot have `GetCapabilities` permission are ignored regardless.
+    :param db_session: Use a pre-established database connection for registration. Otherwise, API requests are employed.
+    :returns: loaded service configurations.
     """
     LOGGER.info("Starting services processing.")
     services_configs = get_all_configs(service_config_path, "providers")
     services_config_count = len(services_configs)
     LOGGER.log(logging.INFO if services_config_count else logging.WARNING,
                "Found %s service configurations to process", services_config_count)
+    merged_service_configs = {}
     for services in services_configs:
         if not services:
             LOGGER.warning("Services configuration are empty.")
             continue
+
+        if force_update:
+            merged_service_configs.update(services)
+        else:
+            for svc, svc_cfg in services.items():
+                merged_service_configs.setdefault(svc, svc_cfg)
 
         # register services using API POSTs
         if db_session is None:
@@ -611,6 +627,7 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
                                                       push_to_phoenix=push_to_phoenix, force_update=force_update,
                                                       update_getcapabilities_permissions=not disable_getcapabilities)
     LOGGER.info("All services processed.")
+    return merged_service_configs
 
 
 def _log_permission(message, permission_index, trail=", skipping...", detail=None, permission=None, level=logging.WARN):

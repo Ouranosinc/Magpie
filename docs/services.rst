@@ -113,18 +113,19 @@ by the below configuration.
         # customizable request parsing methodology (specific to `thredds` type)
         file_patterns:
           - .*.nc
+        metadata_type:
+          prefixes:
+            - null  # note: special value evaluated as `no-prefix`, use quotes to handle special keywords if needed
+            - catalog
+            - ncml
+            - uddc
+            - iso
         data_type:
           prefixes:
             - fileServer
             - dodsC
             - wcs
             - wms
-        metadata_type:
-          prefixes:
-            - catalog
-            - ncml
-            - uddc
-            - iso
 
 Assuming a proxy intended to receive incoming requests configured with :class:`magpie.adapter.MagpieAdapter` such that
 ``{PROXY_URL}`` is the base path, the following path would point toward the above registered service::
@@ -140,7 +141,9 @@ The above template demonstrates that `Magpie` will attempt to match the ``<prefi
 ``prefixes`` in the configuration. If a match is found, the corresponding *metadata* or *data* content will be assumed,
 according to where the match entry was located, to determine whether :attr:`Permission.BROWSE` or
 :attr:`Permission.READ` should be respectively assumed for this request access. If no ``<prefix>`` can be resolved, the
-permission will be immediately assumed as :attr:`Permission.BROWSE` directly on the :term:`Service`.
+permission will be immediately assumed as :attr:`Access.DENY`. To allow top-level access directly on the
+:term:`Service`'s root without ``<prefix>``, it is important to provide ``null`` within the desired ``prefixes`` list.
+Duplicates between the two lists of ``prefixes`` will favor entries in ``metadata_type`` over ``data_type``.
 
 After resolution of the content type from ``<prefix>``, the resolution of any amount of :class:`magpie.models.Directory`
 :term:`Resource` will be attempted. Any missing children directory :term:`Resource` will terminate the lookup process
