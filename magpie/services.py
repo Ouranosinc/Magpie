@@ -78,9 +78,9 @@ class ServiceInterface(object):
         The method must specifically define how to convert generic request path, query, etc. elements into permissions
         that match the service and its children resources.
 
-        If ``None`` is returned, the ACL will effectively be resolved to denied access.
+        If ``None`` is returned, the :term:`ACL` will effectively be resolved to denied access.
         Otherwise, one or more returned :class:`Permission` will indicate which permissions should be looked for to
-        resolve the ACL of the authenticated user and its groups.
+        resolve the :term:`ACL` of the authenticated user and its groups.
         """
         raise NotImplementedError("missing implementation of request permission converter")
 
@@ -689,7 +689,7 @@ class ServiceTHREDDS(ServiceInterface):
         cfg.setdefault("file_patterns", [r".*.nc"])
         cfg.setdefault("data_type", {"prefixes": []})
         if not cfg["data_type"]["prefixes"]:
-            cfg["data_type"]["prefixes"] = ["fileServer", "dodsC", "wcs", "wms"]
+            cfg["data_type"]["prefixes"] = ["fileServer", "dodsC", "dap4", "wcs", "wms"]
         cfg.setdefault("metadata_type", {"prefixes": []})
         if not cfg["metadata_type"]["prefixes"]:
             cfg["metadata_type"]["prefixes"] = [None, "catalog", "ncml", "uddc", "iso"]
@@ -719,7 +719,7 @@ class ServiceTHREDDS(ServiceInterface):
                     try:
                         part_name = re.match(pattern, part_name)[0]
                         break
-                    except (TypeError, KeyError):  # fail match or fail to extract
+                    except (TypeError, KeyError):  # fail match or fail to extract (depending on configured pattern)
                         pass
             child_res_id = child_resource.resource_id
             child_resource = models.find_children_by_name(part_name, parent_id=child_res_id, db_session=self.request.db)
@@ -727,7 +727,7 @@ class ServiceTHREDDS(ServiceInterface):
                 found_resource = child_resource
 
         # target resource reached if no more parts to process, otherwise we have some parent (minimally the service)
-        target = not len(path_parts)
+        target = not len(path_parts) and child_resource is not None
         return found_resource, target
 
     def permission_requested(self):

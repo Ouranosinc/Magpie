@@ -13,6 +13,10 @@ Features / Changes
   specified configuration of the specific service (resolves `#361 <https://github.com/Ouranosinc/Magpie/issues/361>`_).
 * Add documentation details about parsing methodologies, specific custom configurations and respective usage of the
   various ``Service`` types provided by `Magpie`.
+* Adjust ``MagpieAdapter`` such that ``OWSAccessForbidden`` is raised by default if the ``Service`` implementation fails
+  to provide a valid ``Permission`` enum from ``permission_requested`` method. Incorrectly defined ``Service`` will
+  therefore not unexpectedly grant access to protected resources. Behaviour also aligns with default ``DENY`` access
+  obtained when resolving effective permissions through `Magpie` API routes.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

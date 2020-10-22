@@ -299,8 +299,8 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
 
         Legend::
 
-            b: browse   (metadata access of resource)
-            r: read     (interpreted as literal filesystem READ of data)
+            b: browse   (access of resource *metadata*, both for File information and Directory listing)
+            r: read     (interpreted as literal file system READ of *data*, effective resolution valid only on File)
             w: write    (unused by ACL resolution)
             A: allow
             D: deny
@@ -360,6 +360,9 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
             utils.check_response_basic_info(resp, 403, expected_method="POST")
 
         # assign permissions
+        bAR = PermissionSet(Permission.BROWSE, Access.ALLOW, Scope.RECURSIVE)   # noqa
+        bDR = PermissionSet(Permission.BROWSE, Access.DENY, Scope.RECURSIVE)    # noqa
+        bDM = PermissionSet(Permission.BROWSE, Access.DENY, Scope.MATCH)        # noqa
         rAR = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)     # noqa
         rDR = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)      # noqa
         rDM = PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)          # noqa
@@ -368,11 +371,15 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         wDM = PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)         # noqa
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc_id, override_permission=wDM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc_id, override_permission=wAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir1_id, override_permission=bAR)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir1_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir2_id, override_permission=bDR)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir2_id, override_permission=rDR)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir3_id, override_permission=wAR)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir3_id, override_permission=wDM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=file1_id, override_permission=wDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir4_id, override_permission=bAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file2_id, override_permission=bDM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir4_id, override_permission=rAR)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file2_id, override_permission=rDM)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file2_id, override_permission=wDR)
@@ -382,7 +389,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
 
         # directory path with various path formats, only actual directory listing should be allowed
         dir_prefixes = [svc_name + "/catalog", svc_name + "/fileServer", svc_name + "/dodsC"]
-        dir_suffixes = ["", "/catalog.html"]
+        dir_suffixes = ["", "/catalog.html"]  # with or without explicit catalog HTML, this points to directory listing
         test_sub_dir = [
             (False, ""),
             (True, "/" + dir1_name),
@@ -407,17 +414,29 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
             (True, "{}/{}/{}".format(dir4_name, dir5_name, file3_name)),
         ]
         for expect_allowed, file_path in test_files:
-            file_prefixes = ["dap4", "dodsC", "fileServer"]  # format of files accessors (anything else than 'catalog')
-            file_suffixes = [file_path, "{}.dds".format(file_path), "{}.dmr.xml".format(file_path),
-                             "{}.html".format(file_path), "{}.ascii?".format(file_path)]  # different representations
+            file_prefixes = ["dap4", "dodsC", "fileServer"]  # format of files accessors (anything in *data_type*)
+            file_suffixes = ["", ".dds", ".dmr.xml", ".html", ".ascii?"]  # different representations
             for prefix, suffix in itertools.product(file_prefixes, file_suffixes):
-                path = "/ows/proxy/{}/{}/{}".format(svc_name, prefix, suffix)
+                path = "/ows/proxy/{}/{}/{}{}".format(svc_name, prefix, file_path, suffix)
                 req = self.mock_request(path, method="GET")
                 msg = "Using combination [GET, {}]".format(path)
                 if expect_allowed:
                     utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
                 else:
                     utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
+
+        # validate that unknown prefix is always denied even if resource is otherwise allowed when prefix is known
+        # this is mostly to ensure that new prefix/formats added to THREDDS don't suddenly provide access unexpectedly
+        test_allowed_resources = [
+            "/" + dir1_name,
+            "{}/{}/{}".format(dir4_name, dir5_name, file3_name),
+        ]
+        unknown_prefix = "random"
+        for allowed_resource in test_allowed_resources:
+            path = "/ows/proxy/{}/{}/{}".format(svc_name, unknown_prefix, allowed_resource)
+            req = self.mock_request(path, method="GET")
+            msg = "Unknown prefix must be refused even when resource is normally allowed. Using [GET, {}]".format(path)
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
 
     @unittest.skip("impl")
     @pytest.mark.skip

@@ -124,6 +124,7 @@ by the below configuration.
           prefixes:
             - fileServer
             - dodsC
+            - dap4
             - wcs
             - wms
 
@@ -139,11 +140,11 @@ An incoming request will be parsed according to configured values against the fo
 
 The above template demonstrates that `Magpie` will attempt to match the ``<prefix>`` part with any of the listed
 ``prefixes`` in the configuration. If a match is found, the corresponding *metadata* or *data* content will be assumed,
-according to where the match entry was located, to determine whether :attr:`Permission.BROWSE` or
-:attr:`Permission.READ` should be respectively assumed for this request access. If no ``<prefix>`` can be resolved, the
-permission will be immediately assumed as :attr:`Access.DENY`. To allow top-level access directly on the
-:term:`Service`'s root without ``<prefix>``, it is important to provide ``null`` within the desired ``prefixes`` list.
-Duplicates between the two lists of ``prefixes`` will favor entries in ``metadata_type`` over ``data_type``.
+according to where the match entry was located, to determine whether the requested :term:`Resource` should be validated
+respectively for :attr:`Permission.BROWSE` or :attr:`Permission.READ` access. If no ``<prefix>`` can be resolved, the
+permission will be immediately assumed as :attr:`Access.DENY` regardless of type. To allow top-level access directly on
+the :term:`Service`'s root without ``<prefix>``, it is important to provide ``null`` within the desired ``prefixes``
+list. Duplicates between the two lists of ``prefixes`` will favor entries in ``metadata_type`` over ``data_type``.
 
 After resolution of the content type from ``<prefix>``, the resolution of any amount of :class:`magpie.models.Directory`
 :term:`Resource` will be attempted. Any missing children directory :term:`Resource` will terminate the lookup process
