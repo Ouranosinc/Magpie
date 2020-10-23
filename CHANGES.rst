@@ -22,7 +22,8 @@ Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix parsing of ``ServiceAPI`` routes during retrieval of the deepest *available* ``Resource`` to ensure that even when
   the targeted ``Resource`` is actually missing, the *closest* parent permissions with ``Scope.RECURSIVE`` will still
-  take effect.
+  take effect. Same fix applied for ``ServiceTHREDDS`` for corresponding directory and file typed ``Resource``.
+* Propagate SSL verify option of generated service definition if provided to `Twitcher` obtained from ``MagpieAdapter``.
 
 `3.0.0 <https://github.com/Ouranosinc/Magpie/tree/3.0.0>`_ (2020-10-19)
 ------------------------------------------------------------------------------------

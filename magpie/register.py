@@ -567,7 +567,7 @@ def _expand_all(config):
             config[i] = _expand_all(cfg)
     elif isinstance(config, six.string_types):
         config = os.path.expandvars(str(config))
-    elif isinstance(config, (int, bool, float)):
+    elif isinstance(config, (int, bool, float, type(None))):
         pass
     else:
         raise NotImplementedError("unknown parsing of config of type: {}".format(type(config)))

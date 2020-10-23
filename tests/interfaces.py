@@ -27,11 +27,10 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Dict, List, Optional, Set, Union
 
-    from pyramid.registry import Registry
     from sqlalchemy.orm.session import Session
     from webtest.app import TestApp
 
-    from magpie.typedefs import JSON, CookiesType, HeadersType, SettingsType, Str
+    from magpie.typedefs import JSON, CookiesType, HeadersType, Str
 
 
 @six.add_metaclass(ABCMeta)
@@ -53,8 +52,9 @@ class BaseTestCase(unittest.TestCase):
     # note: all following should be overridden by Test Case accordingly to the needs of their unit tests
     version = None                  # type: Optional[Str]
     require = None                  # type: Optional[Str]
-    app = None                      # type: Optional[TestApp]
     url = None                      # type: Optional[Str]
+    app = None                      # type: Optional[TestApp]
+    test_app = None                 # type: Optional[TestApp]
     # parameters for setup operations, admin-level access to the app
     grp = None                      # type: Optional[Str]
     usr = None                      # type: Optional[Str]
@@ -155,7 +155,7 @@ class BaseTestCase(unittest.TestCase):
             utils.check_or_try_logout_user(cls)
 
     def setup(self):
-        pass
+        self.test_app = None  # reset: each test must redefine it if a custom one is needed
 
     def tearDown(self):
         pass
@@ -198,19 +198,29 @@ class BaseAdminTestCase(BaseTestCase):
         assert cls.headers and cls.cookies, cls.require     # nosec
         cls.headers.update(cls.json_headers)
 
+    def cleanup(self):
+        """
+        Removes test attributes from database to avoid conflict and unwanted behaviour due to previous definitions.
+
+        Each employed test attribute must be overridden by the :attr:`setUpClass` of the `Test Case`.
+        """
+        self.check_requirements()  # re-login as needed in case test logged out the user with permissions
+        if self.test_resource_name:
+            utils.TestSetup.delete_TestServiceResource(self)
+        if self.test_service_name:
+            utils.TestSetup.delete_TestService(self)
+        if self.test_user_name:
+            utils.TestSetup.delete_TestUser(self)
+        if self.test_group_name:
+            utils.TestSetup.delete_TestGroup(self)
+
     def setUp(self):
-        self.check_requirements()
-        utils.TestSetup.delete_TestServiceResource(self)
-        utils.TestSetup.delete_TestService(self)
-        utils.TestSetup.delete_TestUser(self)
-        utils.TestSetup.delete_TestGroup(self)
+        super(BaseAdminTestCase, self).setUp()
+        self.cleanup()
 
     def tearDown(self):
-        self.check_requirements()   # re-login as needed in case test logged out the user with permissions
-        utils.TestSetup.delete_TestServiceResource(self)
-        utils.TestSetup.delete_TestService(self)
-        utils.TestSetup.delete_TestUser(self)
-        utils.TestSetup.delete_TestGroup(self)
+        super(BaseAdminTestCase, self).tearDown()
+        self.cleanup()
 
 
 @runner.MAGPIE_TEST_AUTH_ADMIN
@@ -4564,24 +4574,18 @@ class SetupMagpieAdapter(object):
     to the ones that would be received by the proxy. This allows to test handling of the requests be the various
     components defined in the adapter.
     """
-    session = None      # type: Optional[Session]
-    settings = None     # type: Optional[SettingsType]
-    registry = None     # type: Optional[Registry]
+    session = None  # type: Optional[Session]
 
     @classmethod
-    def setup(cls, settings=None):
-        # type: (Optional[SettingsType]) -> None
-        if cls.settings is None:
-            cls.settings = {}
-        if settings:
-            cls.settings.update(settings)
-        cls.adapter = MagpieAdapter(cls.settings)
-        cls.config = cls.adapter.configurator_factory(cls.settings)
+    def setup_adapter(cls):
+        test_app = utils.get_app_or_url(cls)
+        settings = test_app.app.registry.settings
+        adapter = MagpieAdapter(settings)
+        config = adapter.configurator_factory(settings)
         # making the app triggers creation of class instances from registry (eg: AuthN/AuthZ Policies)
-        cls.config.make_wsgi_app()
-        cls.registry = cls.config.registry
-        cls.settings = cls.config.registry.settings
-        cls.ows = cls.adapter.owssecurity_factory(cls.settings)
+        config.make_wsgi_app()
+        settings = config.registry.settings
+        cls.ows = adapter.owssecurity_factory(settings)
 
     @classmethod
     def mock_request(cls, *args, **kwargs):
@@ -4589,11 +4593,18 @@ class SetupMagpieAdapter(object):
         Set getters that are normally defined when running the full application.
         """
         request = utils.mock_request(*args, **kwargs)
-        request.registry = cls.registry
-        methods = cls.registry.queryUtility(IRequestExtensions).descriptors
+        test_app = utils.get_app_or_url(cls)
+        registry = test_app.app.registry
+        request.registry = registry
+        settings = kwargs.get("settings")
+        if settings:
+            request.registry.settings.update(settings)
+        methods = registry.queryUtility(IRequestExtensions).descriptors
         # process the reify request methods as they would normally be generated by pyramid app
         # this ensures they become available as properties from the request (eg: request.db, request.user, etc.)
-        for meth, reify in methods.items():
+        # note: 'user' method depends on 'db', which itself depends on 'tm', ensure they are sorted
+        methods = [(name, meth) for name, meth in methods.items() if name != "user"] + [("user", methods["user"])]
+        for meth, reify in methods:
             # handle DB session manually, otherwise it gets duplicated and QueuePool limit gets reached
             if meth == "db":
                 if not cls.session:

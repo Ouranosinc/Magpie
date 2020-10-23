@@ -77,4 +77,4 @@ if TYPE_CHECKING:
     # registered configurations
     ConfigItem = Dict[Str, JSON]
     ConfigList = List[ConfigItem]
-    ConfigDict = Dict[Str, Union[ConfigItem, ConfigList]]
+    ConfigDict = Dict[Str, Union[ConfigItem, ConfigList, JSON]]

@@ -7,8 +7,10 @@ test_services
 
 Tests for the services implementations magpie.
 """
+import inspect
 import itertools
 import unittest
+from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING
 
 import pytest
@@ -105,7 +107,7 @@ class TestOWSParser(unittest.TestCase):
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_SERVICES
 @runner.MAGPIE_TEST_FUNCTIONAL
-class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
+class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
     """
     Test request parsing and ACL resolution against resource permissions for the various service implementations.
     """
@@ -118,33 +120,24 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
     @utils.mock_get_settings
     def setUpClass(cls):
         cls.version = __meta__.__version__
-        cls.app = utils.get_test_magpie_app(cls.settings)
+        cls.app = utils.get_test_magpie_app()
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
-        cls.settings = cls.app.app.registry.settings
-        ti.SetupMagpieAdapter.setup(cls.settings)
-
-        cls.cookies = None
-        cls.version = utils.TestSetup.get_Version(cls)
-        cls.setup_admin()
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd, use_ui_form_submit=True)
-        cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
-        cls.check_requirements()
 
         # following will be wiped on setup
         cls.test_user_name = "unittest-service-user"
         cls.test_group_name = "unittest-service-group"
 
-    def login_test_user(self):
-        """
-        Login test user for which the permissions were set.
-
-        Generated requested by :meth:`mock_request` will automatically use the credentials from this login.
-        """
-        utils.check_or_try_logout_user(self)
-        cred = utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name)
-        self.test_headers, self.test_cookies = cred
+    @utils.mock_get_settings
+    def setUp(self):
+        super(TestServices, self).setUp()
+        self.setup_adapter()
+        self.cookies = None
+        self.setup_admin()
+        self.headers, self.cookies = utils.check_or_try_login_user(self, self.usr, self.pwd, use_ui_form_submit=True)
+        self.require = "cannot run tests without logged in user with '{}' permissions".format(self.grp)
+        self.check_requirements()
 
     def mock_request(self, *args, **kwargs):
         kwargs.update({"cookies": self.test_cookies, "headers": self.test_headers})
@@ -189,9 +182,6 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
             resource *recursive* permission that could be found. In this case ``Resource2`` for ``read`` permission
             and ``Resource3`` for ``write`` permission.
         """
-        utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.create_TestUser(self)
-
         svc_name = "unittest-service-api"
         svc_type = ServiceAPI.service_type
         res_type = models.Route.resource_type_name
@@ -327,9 +317,6 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
             Reference test server to explore supported formats by THREDDS service (many files and formats available):
             https://remotetest.unidata.ucar.edu/thredds/catalog/catalog.html
         """
-        utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.create_TestUser(self)
-
         svc_name = "unittest-service-thredds"
         svc_type = ServiceTHREDDS.service_type
         dir_type = models.Directory.resource_type_name
@@ -438,6 +425,119 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
             msg = "Unknown prefix must be refused even when resource is normally allowed. Using [GET, {}]".format(path)
             utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
 
+    @utils.mock_get_settings
+    def test_ServiceTHREDDS_custom_config(self):
+        """
+        Evaluate that :class:`ServiceTHREDDS` behaviour results into wanted behaviour of corresponding custom settings.
+
+        .. note::
+            Since we employ mocked requests to call :meth:`MagpieOWSSecurity.check_request` directly
+            (instead of going through the normal application receiving incoming requests), we need to pass down the
+            custom settings manually as the application would provide them for us.
+        """
+        svc_name = "unittest-service-thredds-custom"
+        svc_type = ServiceTHREDDS.service_type
+
+        custom_settings = None
+        with NamedTemporaryFile(mode="w", suffix=".yml") as config:
+            # generate a custom config for test THREDDS service
+            config.write(inspect.cleandoc("""
+                providers:
+                    {name}:
+                        url: http://localhost
+                        type: {type}
+                        file_patterns:
+                            - .*.ncml   # should be matched before plain '.nc' and correspond to another resource
+                            - .*.nc
+                        data_type:
+                            prefixes:
+                                # only allow these variants, other should be blocked ("dap4", "wcs", "wms")
+                                - dodsC
+                                - fileServer
+                        metadata_type:
+                            prefixes:
+                                # only allow these variants, others should be blocked ("ncml", "uddc", "iso")
+                                - null
+                                - catalog
+                permissions:  # fill only because required
+            """.format(name=svc_name, type=svc_type)))
+            config.flush()  # force write to file
+            settings = {"magpie.config_path": config.name}
+
+            # validate that app can retrieve the custom settings from providers
+            test_app = utils.get_test_magpie_app(settings)
+            custom_settings = test_app.app.registry.settings  # retrieve custom + resolved app settings
+            utils.check_val_is_in("magpie.services", custom_settings)
+            utils.check_val_is_in(svc_name, custom_settings["magpie.services"])
+            svc_settings = custom_settings["magpie.services"][svc_name]
+            utils.check_val_is_in("file_patterns", svc_settings)
+            utils.check_val_is_in("data_type", svc_settings)
+            utils.check_val_is_in("metadata_type", svc_settings)
+            utils.check_val_equal(svc_settings["file_patterns"], [".*.ncml", ".*.nc"])
+            utils.check_val_equal(svc_settings["data_type"]["prefixes"], ["dodsC", "fileServer"])
+            utils.check_val_equal(svc_settings["metadata_type"]["prefixes"], [None, "catalog"])
+
+        utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc_id = info["resource_id"]
+
+        # create resources
+        dir_id, dir_name = self.make_resource(models.Directory.resource_type_name, svc_id)
+        file_id, file_name = self.make_resource(models.File.resource_type_name, dir_id, ".nc")
+        file_ncml_id, file_ncml_name = self.make_resource(models.File.resource_type_name, dir_id, ".ncml")
+        file_html_id, file_html_name = self.make_resource(models.File.resource_type_name, dir_id, ".nc.html")
+
+        # create permissions, using specific match to only evaluate explicitly the resolution modified by custom config
+        bAM = PermissionSet(Permission.BROWSE, Access.ALLOW, Scope.MATCH)       # noqa
+        rAM = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)         # noqa
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir_id, override_permission=bAM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file_id, override_permission=rAM)
+
+        # login test user for which the permissions were set
+        self.login_test_user()
+
+        # directory can be accessed only via catalog according to permissions
+        path = "/ows/proxy/{}/catalog/{}".format(svc_name, dir_name)
+        req = self.mock_request(path, method="GET", settings=custom_settings)
+        msg = "Directory catalog access should be allowed. Using [GET, {}]".format(path)
+        utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
+        # using the same catalog prefix with any file is invalid (catalog is BROWSE metadata, files require READ data)
+        for test_file in [file_name, file_html_name, file_ncml_name]:
+            path = "/ows/proxy/{}/catalog/{}/{}".format(svc_name, dir_name, test_file)
+            req = self.mock_request(path, method="GET", settings=custom_settings)
+            msg = "File catalog access should be denied. Using [GET, {}]".format(path)
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
+
+        # file NC/HTML should be parsed as the same Resource which is allowed access when using allowed prefixes
+        # (same resource because matching '.*.nc' regex, NCML file matched by other '.*.ncml' regex, so other Resource)
+        # only accessible via specified data prefixes
+        allowed_files = [file_name, file_html_name]
+        known_prefixes = ["dodsC", "fileServer"]
+        for prefix in known_prefixes:
+            for test_file in allowed_files:
+                path = "/ows/proxy/{}/{}/{}/{}".format(svc_name, prefix, dir_name, test_file)
+                req = self.mock_request(path, method="GET", settings=custom_settings)
+                msg = "File access should be allowed. Using [GET, {}]".format(path)
+                utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
+            # file NCML must be parsed as completely different resource, and therefore be denied even with valid prefix
+            path = "/ows/proxy/{}/{}/{}/{}".format(svc_name, prefix, dir_name, file_ncml_name)
+            req = self.mock_request(path, method="GET", settings=custom_settings)
+            msg = "File pattern should make parsing of NCML resource separate than NC file, and should be denied. "
+            msg += "Using [GET, {}]".format(path)
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
+
+        # using unknown prefixes, otherwise allowed file should always be denied
+        unknown_prefixes = ["ncml", "dap4"]  # purposely take normally allowed THREDDS prefixes, validate active config
+        allowed_resources = [dir_name, "{}/{}".format(dir_name, file_name), "{}/{}".format(dir_name, file_html_name)]
+        for prefix in unknown_prefixes:
+            for target in allowed_resources:
+                path = "/ows/proxy/{}/{}/{}".format(svc_name, prefix, target)
+                req = self.mock_request(path, method="GET", settings=custom_settings)
+                msg = "Allowed resources should be resolved as denied when using an unregistered configuration prefix."
+                msg += "Using [GET, {}]".format(path)
+                utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
+
     @unittest.skip("impl")
     @pytest.mark.skip
     @utils.mock_get_settings
@@ -469,9 +569,6 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
             Service2                                    (m-A-R)         c-D, m-A
                 Workspace3                              (c-A-M)         c-A, m-A
         """
-        utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.create_TestUser(self)
-
         svc1_name = "unittest-service-geoserverwms1"
         svc2_name = "unittest-service-geoserverwms2"
         svc_type = ServiceGeoserverWMS.service_type
@@ -591,9 +688,6 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
             in ``GetCapabilities``. Therefore, the ACL is immediately resolved with the parent ``Service2`` permission
             of ``(c-A-R)`` which grants effective access.
         """
-        utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.create_TestUser(self)
-
         # create services
         wps1_name = "unittest-service-wps-1"
         wps2_name = "unittest-service-wps-2"
@@ -722,10 +816,6 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
             Service5                    (a-A-R)     (a-D-M)             a-A (user > group)
             Service6                                                    a-D (nothing defaults like explicit deny)
         """
-
-        utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.create_TestUser(self)
-
         # create services
         svc_type = ServiceAccess.service_type
         svc1_name = "unittest-service-access-1"

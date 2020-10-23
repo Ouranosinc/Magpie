@@ -87,7 +87,8 @@ class MagpieServiceStore(ServiceStoreInterface):
 
             return Service(url=service.url,
                            name=service.resource_name,
-                           type=service.type)
+                           type=service.type,
+                           verify=self.twitcher_ssl_verify)
         finally:
             session.close()
 

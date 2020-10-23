@@ -219,7 +219,7 @@ class ServiceInterface(object):
         """
         Obtains the configuration of the registered service during startup.
         """
-        return get_settings(self.request).get("services", {}).get(self.service.resource_name, {})
+        return get_settings(self.request).get("magpie.services", {}).get(self.service.resource_name, {})
 
     @classmethod
     def get_resource_permissions(cls, resource_type_name):
