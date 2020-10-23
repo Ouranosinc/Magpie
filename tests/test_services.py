@@ -131,7 +131,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
     @utils.mock_get_settings
     def setUp(self):
-        super(TestServices, self).setUp()
+        ti.UserTestCase.setUp(self)
         self.setup_adapter()
         self.cookies = None
         self.setup_admin()
