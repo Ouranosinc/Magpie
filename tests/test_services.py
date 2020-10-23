@@ -693,6 +693,8 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         wps2_name = "unittest-service-wps-2"
         svc_type = ServiceWPS.service_type
         proc_type = models.Process.resource_type_name
+        for svc_name in [wps1_name, wps2_name]:
+            utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
         body = utils.TestSetup.create_TestService(self, override_service_name=wps1_name, override_service_type=svc_type)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         wps1_id = info["resource_id"]
@@ -727,7 +729,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         #   of corresponding enums to validate the request query parameters are parsed correctly with combinations that
         #   are actually handled by the real WPS service.
 
-        # Service1 calls
+        # Service1 GET requests
         path = "/ows/proxy/{}".format(wps1_name)
         params = {"service": "WPS", "request": "GetCapabilities"}
         req = self.mock_request(path, method="GET", params=params)
@@ -739,7 +741,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         req = self.mock_request(path, method="GET", params=params)
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
-        # Process1 calls
+        # Process1 GET requests
         path = "/ows/proxy/{}".format(wps1_name)
         params = {"service": "WPS", "request": "GetCapabilities", "identifier": proc1_name}  # see docstring notes
         req = self.mock_request(path, method="GET", params=params)
@@ -751,7 +753,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         req = self.mock_request(path, method="GET", params=params)
         utils.check_no_raise(lambda: self.ows.check_request(req))
 
-        # Service2 calls
+        # Service2 GET requests
         path = "/ows/proxy/{}".format(wps2_name)
         params = {"service": "WPS", "request": "GetCapabilities"}
         req = self.mock_request(path, method="GET", params=params)
@@ -763,7 +765,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         req = self.mock_request(path, method="GET", params=params)
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
-        # Process2 calls
+        # Process2 GET requests
         path = "/ows/proxy/{}".format(wps2_name)
         params = {"service": "WPS", "request": "GETCAPABILITIES", "identifier": proc2_name}  # see docstring notes
         req = self.mock_request(path, method="GET", params=params)
@@ -775,7 +777,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         req = self.mock_request(path, method="GET", params=params)
         utils.check_no_raise(lambda: self.ows.check_request(req))
 
-        # Process3 calls
+        # Process3 GET requests
         path = "/ows/proxy/{}".format(wps2_name)
         params = {"service": "WPS", "request": "GETCAPABILITIES", "identifier": proc3_name}  # see docstring notes
         req = self.mock_request(path, method="GET", params=params)
@@ -785,6 +787,47 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         utils.check_no_raise(lambda: self.ows.check_request(req))
         params = {"service": "WPS", "request": "EXECUTE", "identifier": proc3_name}
         req = self.mock_request(path, method="GET", params=params)
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+
+        # evaluate parsing of POST-formatted Execute requests
+        # (source: https://docs.geoserver.org/stable/en/user/services/wps/operations.html)
+        wps_xml_post_body_template = inspect.cleandoc("""
+        <?xml version="1.0" encoding="UTF-8"?>
+        <wps:Execute version="1.0.0" service="WPS"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.opengis.net/wps/1.0.0" 
+         xmlns:wfs="http://www.opengis.net/wfs" xmlns:wps="http://www.opengis.net/wps/1.0.0" 
+         xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:gml="http://www.opengis.net/gml"
+         xmlns:ogc="http://www.opengis.net/ogc" xmlns:wcs="http://www.opengis.net/wcs/1.1.1"
+         xmlns:xlink="http://www.w3.org/1999/xlink" xsi:schemaLocation="http://www.opengis.net/wps/1.0.0
+         http://schemas.opengis.net/wps/1.0.0/wpsAll.xsd"
+        >
+          <ows:Identifier>{process}</ows:Identifier>
+          <wps:DataInputs>
+            <wps:Input>
+              <ows:Identifier>geom</ows:Identifier>
+              <wps:Data>
+                <wps:ComplexData mimeType="application/wkt"><![CDATA[POINT(0 0)]]></wps:ComplexData>
+              </wps:Data>
+            </wps:Input>
+          </wps:DataInputs>
+          <wps:ResponseForm>
+            <wps:RawDataOutput mimeType="application/gml-3.1.1">
+              <ows:Identifier>result</ows:Identifier>
+            </wps:RawDataOutput>
+          </wps:ResponseForm>
+        </wps:Execute>
+        """)
+
+        # Process2 POST Execute
+        path = "/ows/proxy/{}".format(wps2_name)
+        body = wps_xml_post_body_template.format(process=proc2_name).encode()
+        req = self.mock_request(path, method="POST", body=body, params=None)
+        utils.check_no_raise(lambda: self.ows.check_request(req))
+
+        # Process3 POST Execute
+        path = "/ows/proxy/{}".format(wps2_name)
+        body = wps_xml_post_body_template.format(process=proc3_name).encode()
+        req = self.mock_request(path, method="POST", body=body, params=None)
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
     @utils.mock_get_settings

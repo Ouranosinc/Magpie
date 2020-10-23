@@ -403,8 +403,8 @@ class ServiceWPS(ServiceOWS):
     params_expected = [
         "service",
         "request",
-        "version"
-        # "identifier" not used because not required when requesting capabilities
+        "version",
+        "identifier",
     ]
 
     resource_types_permissions = {
@@ -420,7 +420,7 @@ class ServiceWPS(ServiceOWS):
             return self.service, True
         if wps_request in [Permission.DESCRIBE_PROCESS, Permission.EXECUTE]:
             wps_id = self.service.resource_id
-            proc_id = self.request.params.get("identifier")
+            proc_id = self.parser.params["identifier"]
             if not proc_id:
                 return self.service, False
             proc = models.find_children_by_name(proc_id, parent_id=wps_id, db_session=self.request.db)

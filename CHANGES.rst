@@ -24,6 +24,8 @@ Bug Fixes
   the targeted ``Resource`` is actually missing, the *closest* parent permissions with ``Scope.RECURSIVE`` will still
   take effect. Same fix applied for ``ServiceTHREDDS`` for corresponding directory and file typed ``Resource``.
 * Propagate SSL verify option of generated service definition if provided to `Twitcher` obtained from ``MagpieAdapter``.
+* Adjust and validate parsing of ``ServiceWPS`` request using ``POST`` XML body
+  (fixes `157 <https://github.com/Ouranosinc/Magpie/issues/157>`_).
 
 `3.0.0 <https://github.com/Ouranosinc/Magpie/tree/3.0.0>`_ (2020-10-19)
 ------------------------------------------------------------------------------------
