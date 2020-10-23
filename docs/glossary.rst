@@ -126,7 +126,7 @@ Glossary
         for implementation details to achieve this result.
 
     Request User
-        Active request session :term:`User` that can be retrieved by calling ``request.user`` with resolution of
+        Active HTTP request session :term:`User` that can be retrieved by calling ``request.user`` with resolution of
         :term:`Authentication` headers within the request (:term:`User` is ``None`` if unauthenticated,
         i.e.: :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`). This is not the same as the :term:`Context User`
         extracted from ``{user_name}`` path variable, except for the special case covered by :term:`Logged User`'s

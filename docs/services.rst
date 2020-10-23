@@ -36,15 +36,15 @@ Every :term:`Service` type provided by `Magpie` must derive from :class:`magpie.
 specific implementation (see :ref:`services_available`) serves to convert a given incoming HTTP request components
 (method, path, query parameters, body, etc.) into the appropriate :term:`Service`, :term:`Resource` and
 :term:`Permission` elements. This ultimately provides the required elements to resolve :term:`ACL` access of a
-:term:`User` toward the targeted :term:`Resource` according to its :term:`Effective Permissions`.
+:term:`Request User` toward the targeted :term:`Resource` according to its :term:`Effective Permissions`.
 
 In order to implement a new :term:`Service` type, two (2) methods and a few attributes are required. The first method is
 :meth:`magpie.services.ServiceInterface.permission_requested` which basically indicates how the HTTP request should be
 interpreted into a given :class:`Permission`. The second is :meth:`magpie.services.ServiceInterface.resource_requested`
 which similarly tells the interpretation method to convert the request into a :class:`magpie.models.Resource` reference.
 
-Whenever :term:`Effective Permissions` or :term:`ACL` needs to be resolved in order to determine if a request
-:term:`User` can have access or not to a :term:`Resource`, `M̀agpie` will employ the appropriate :term:`Service`
+Whenever :term:`Effective Permissions` or :term:`ACL` needs to be resolved in order to determine if a
+:term:`Request User` can have access or not to a :term:`Resource`, `M̀agpie` will employ the appropriate :term:`Service`
 implementation and call the methods to process the result.
 
 .. versionchanged:: 3.0
@@ -56,6 +56,10 @@ implementation and call the methods to process the result.
 On top of the above methods, the following attributes must be defined.
 
 
+.. |br| raw:: html
+
+    <br>
+
 .. list-table::
     :header-rows: 1
 
@@ -63,18 +67,18 @@ On top of the above methods, the following attributes must be defined.
 
     * - Attribute
       - Description
-    * - :attr:`ServiceInterface.service_type` (``str``)
+    * - :attr:`ServiceInterface.service_type` |br| (``str``)
       - Defines the mapping of registered :term:`Service` to the appropriate implementation type. Each implementation
         must have an unique value.
-    * - :attr:`ServiceInterface.permissions` (``List[Permission]``)
+    * - :attr:`ServiceInterface.permissions` |br| (``List[Permission]``)
       - Defines the :term:`Allowed Permissions` that can be applied onto the :term:`Service` reference itself.
-    * - :attr:`ServiceInterface.resource_types_permissions` (``Dict[Resource, List[Permission]]``)
+    * - :attr:`ServiceInterface.resource_types_permissions` |br| (``Dict[Resource, List[Permission]]``)
       - Map of the allowed children :term:`Resource` under the :term:`Service` and their corresponding
         :term:`Allowed Permissions` for each case. Leaving this map empty will disallow the creation of any children
         :term:`Resource`, making the :term:`Service` the unique applicable element of the hierarchy. Note that each
         :term:`Resource` implemented by a derived class of :class:`magpie.models.Resource` also provides details about
         :Term:`Allowed Permissions`, their type and further nested children :term:`Resource`.
-    * - :attr:`ServiceInterface.params_expected` (``List[str]``)
+    * - :attr:`ServiceInterface.params_expected` |br| (``List[str]``)
       - Represents specific parameter names that can be preprocessed during HTTP request parsing to ease following
         resolution of :term:`ACL` use-cases. Employed most notably by :term:`Services` based on
         :class:`magpie.services.ServiceOWS`.
@@ -86,21 +90,39 @@ Available Services
 -------------------
 
 .. seealso::
-    - :py:mod:`magpie.services`
+    Module :py:mod:`magpie.services` contains the implementation of every :term:`Service` presented below.
+
+.. seealso::
+    Multiple of the following implementation details require comprehension of the concepts introduced in
+    :ref:`permission_modifiers`. Consider looking this up if descriptions feel hard to understand at first glance.
 
 
 ServiceAccess
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. todo::
+The implementation of this service is handled by class :class:`magpie.services.ServiceAccess`. It is intended to act
+as a simple *all-or-nothing* endpoint barrier, where only :attr:`Permission.ACCESS` can be applied, and only directly on
+the :term:`Service` itself. A :term:`User` or :term:`Group` that has that :term:`Permission` with :attr:`Access.ALLOW`
+will be able to reach the :term:`Service`. Any other operation, (or explicit :attr:`Access.DENY`) will all result into
+denied access to the private URL registered by the :term:`Service.
+
+.. versionchanged:: 3.0
+    This :term:`Service` implementation dates prior to the integration of :class:`Access` and :class:`Scope` concepts
+    that now provides modifiers to the :term:`Permission` resolution methodology, notably prior to the addition of
+    :attr:`Access.DENY`. This :term:`Service` is equivalent to a simplified version of the fine-grained `ServiceAPI`_
+    alternative where no children :term:`Resource` would be registered.
+
+.. note::
+    Due to the single-level aspect of this :term:`Service`, the :attr:`Scope` :term:`Permission` modifier does not
+    have any effect.
 
 ServiceAPI
 ~~~~~~~~~~~~~~~~~~~~~
 
-The implementation of this service is handled by class :class:`magpie.services.ServiceAPI`. It refers to a remote URL
-endpoint that should have a :term:`Resource` tree formed out of the path segments. The :term:`Service` only has one (1)
-type of :term:`Resource`, namely :class:`magpie.models.Route`, that can have an unlimited amount of nested children
-of the same type. The :term:`Allowed Permissions` for this :term:`Service` are :attr:`Permission.READ` and
+The implementation of this :term:`Service` is handled by class :class:`magpie.services.ServiceAPI`. It refers to a
+remote URL endpoint that should have a :term:`Resource` tree formed out of the path segments. The :term:`Service` only
+has one (1) type of :term:`Resource`, namely :class:`magpie.models.Route`, that can have an unlimited amount of nested
+children of the same type. The :term:`Allowed Permissions` for this :term:`Service` are :attr:`Permission.READ` and
 :attr:`Permission.WRITE`. All requests using ``GET`` or ``HEAD`` are mapped to :attr:`Permission.READ` access while all
 other HTTP methods represent a :attr:`Permission.WRITE` access.
 
@@ -131,8 +153,8 @@ customizable :term:`ACL` combinations. See `permission_modifiers`_ for further d
 ServiceTHREDDS
 ~~~~~~~~~~~~~~~~~~~~~
 
-The implementation of this service is handled by class :class:`magpie.services.ServiceTHREDDS`. It refers to a remote
-data server named `Thematic Real-time Environmental Distributed Data Services` (`THREDDS`_). The :term:`Service`
+The implementation of this :term:`Service` is handled by class :class:`magpie.services.ServiceTHREDDS`. It refers to a
+remote data server named `Thematic Real-time Environmental Distributed Data Services` (`THREDDS`_). The :term:`Service`
 employs two (2) types of :term:`Resources`, namely :class:`magpie.models.Directory` and :class:`magpie.models.File`.
 All the directory resources can be nested any number of times, and files can only reside as leaves of the hierarchy,
 similarly to a traditional file system. The :term:`Allowed Permissions` on both the :term:`Service` itself or any of
@@ -160,7 +182,7 @@ parsing of incoming requests.
 .. note::
     The :attr:`Permission.WRITE` is not handled by `ServiceTHREDDS`_ itself during :term:`ACL` resolution as it is not
     considered by :meth:`magpie.services.ServiceTHREDDS.permission_requested` that never returns this value. The method
-    only returns either :attr:`Permission.BROWSE` or :attr:`Permission.READ`. An :term:`User` or :term:`Group` can still
+    only returns either :attr:`Permission.BROWSE` or :attr:`Permission.READ`. A :term:`User` or :term:`Group` can still
     have this :term:`Applied Permission` to allow a third party service to interrogate `Magpie API` about the presence
     of :attr:`Permission.WRITE` permission and perform the appropriate action with the result. The
     :term:`Effective Permissions` API routes will provide the resolved ``access``. It is only `Twitcher`_ proxy that
@@ -246,39 +268,39 @@ multiple :term:`Resource` for every *metadata*/*data* representation.
 ServiceGeoserverWMS
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. todo:
+.. todo::
 
 ServiceNCWMS2
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. todo:
+.. todo::
 
 ServiceWMS
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. todo:
+.. todo::
 
 ServiceWPS
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. todo:
+.. todo::
 
 
 Adding Service Types
 -----------------------
 
-.. todo:
+.. todo::
     dynamic custom service definition
     https://github.com/Ouranosinc/Magpie/issues/149
-.. todo: even if not implementing above, could be good to document fields or ServiceInterface for future reference
+.. todo:: even if not implementing above, could be good to document fields or ServiceInterface for future reference
 
 Service Synchronization
 ------------------------
 
-.. todo:
+.. todo::
     resource auto-sync feature for a given service and cron configuration setup for it
 
 .. seealso::
 
-    Utility ``magpie_sync_resources`` in `Magpie CLI Helpers`_ is also available to manually launch a :term:`Resource`
-    synchronization operation for supporting :term:`Service`-types.
+    Utility ``magpie_sync_resources`` in :ref:`utilities_helpers` is also available to manually launch a
+    :term:`Resource` synchronization operation for supporting :term:`Service`-types.
