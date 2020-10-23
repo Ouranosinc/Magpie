@@ -22,8 +22,6 @@ the constants defined in `constants.py`_ and can be used interchangeably.
     precedence whether or not they were defined. Using a common configuration file makes it easier to maintain and
     understand the applied settings, and is therefore preferable.
 
-.. _constants.py: https://github.com/Ouranosinc/Magpie/tree/master/magpie/constants.py
-
 Configuration Files
 -------------------
 
@@ -52,8 +50,6 @@ variables for this file is presented in `magpie.env.example`_.
     When loading variables from the ``.env`` file, any conflicting environment variable will **NOT** be overridden.
     Therefore, only *missing but required* values will be added to the environment to ensure proper setup of `Magpie`.
 
-.. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example
-
 File: postgres.env
 ~~~~~~~~~~~~~~~~~~~
 
@@ -61,8 +57,6 @@ This file behaves exactly in the same manner as for ``magpie.env`` above, but fo
 employed to setup the `postgres` database connection (see ``MAGPIE_POSTGRES_ENV_FILE`` setting below).
 File `postgres.env.example`_ and auto-resolution of missing ``postgres.env`` is identical to ``magpie.env``
 case.
-
-.. _postgres.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/postgres.env.example
 
 File: providers.cfg
 ~~~~~~~~~~~~~~~~~~~
@@ -105,6 +99,8 @@ It is not mandatory for the the name of each file to also match the employed nam
 the paths can be resolved to valid files, though there is special handling of default ``.example`` extensions with
 matching file names when no other alternative configurations can be found. Again, this is mostly for backward
 compatibility.
+
+.. _config_file:
 
 Combined Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -226,7 +222,7 @@ These settings can be used to specify where to find other settings through custo
   .. note::
     When provided, all other combinations of ``MAGPIE_CONFIG_DIR``, ``MAGPIE_PERMISSIONS_CONFIG_PATH`` and
     ``MAGPIE_PROVIDERS_CONFIG_PATH`` are effectively ignored in favour of definitions in this file.
-    See `Combined Configuration File`_ for further details and example.
+    See :ref:config_file` for further details and example.
 
 - ``MAGPIE_INI_FILE_PATH``
 
@@ -252,11 +248,6 @@ These settings can be used to specify where to find other settings through custo
   | (Default: ``"${MAGPIE_ENV_DIR}/postgres.env"``)
 
   File path to ``postgres.env`` file with additional environment variables to configure the `postgres` connection.
-
-
-.. _magpie.ini: https://github.com/Ouranosinc/Magpie/tree/master/config/magpie.ini
-.. _permissions.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
-.. _providers.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
 
 Application Settings
 ~~~~~~~~~~~~~~~~~~~~~

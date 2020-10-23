@@ -154,7 +154,7 @@ class BaseTestCase(unittest.TestCase):
                                                      override_headers=admin_headers, override_cookies=admin_cookies)
             utils.check_or_try_logout_user(cls)
 
-    def setup(self):
+    def setUp(self):
         self.test_app = None  # reset: each test must redefine it if a custom one is needed
 
     def tearDown(self):

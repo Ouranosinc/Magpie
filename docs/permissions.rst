@@ -358,6 +358,7 @@ This query can be extremely useful to quickly answer *"does the user have any pe
 without needing to manually execute multiple successive lookup requests with all combinations of :term:`Resource`
 identifiers in the hierarchy.
 
+.. _permission_modifiers::
 
 Permissions Definition and Modifiers
 --------------------------------------
@@ -439,6 +440,8 @@ cause ambiguous resolution, the ``match`` :term:`Permission` is prioritized over
 As a general of thumb, all :term:`Permission` are resolved such that more restrictive access applied *closer* to
 the actual :term:`Resource` for the targeted :term:`User` will have priority, both in terms of inheritance by tree
 hierarchy and by :term:`Group` memberships.
+
+.. _permission_representations::
 
 Permissions Representations
 --------------------------------------

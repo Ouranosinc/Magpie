@@ -17,3 +17,11 @@
 .. _Twitcher: https://github.com/bird-house/twitcher
 .. _Waitress: https://github.com/Pylons/waitress
 .. _Ziggurat-Foundations: https://github.com/ergo/ziggurat_foundations
+
+.. file/source references
+.. _constants.py: https://github.com/Ouranosinc/Magpie/tree/master/magpie/constants.py
+.. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example
+.. _magpie.ini: https://github.com/Ouranosinc/Magpie/tree/master/config/magpie.ini
+.. _permissions.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
+.. _postgres.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/postgres.env.example
+.. _providers.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
