@@ -21,7 +21,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
         cls.settings = cls.app.app.registry.settings
-        ti.SetupMagpieAdapter.setup(cls.settings)
+        cls.setup_adapter()
 
         cls.cookies = None
         cls.version = utils.TestSetup.get_Version(cls)

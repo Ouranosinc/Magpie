@@ -3702,6 +3702,11 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     def test_GetServiceTypeResources_CheckValues(self):
         utils.warn_version(self, "get service type resources", "0.9.1", skip=True)
 
+        if LooseVersion(self.version) >= LooseVersion("3.1"):
+            thredds_perms = [Permission.BROWSE.value, Permission.READ.value, Permission.WRITE.value]
+        else:
+            thredds_perms = [Permission.READ.value, Permission.WRITE.value]
+
         # evaluate different types of services
         for svc_type, svc_res_info in [
             # recursive child resource allowed
@@ -3713,10 +3718,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             # child resource allowed only for specific types
             (ServiceTHREDDS.service_type,
                 {"directory": {
-                    "perms": [Permission.READ.value, Permission.WRITE.value],
+                    "perms": thredds_perms,
                     "child": True},
                  "file": {
-                     "perms": [Permission.READ.value, Permission.WRITE.value],
+                     "perms": thredds_perms,
                      "child": False}}),
             # no child allowed
             (ServiceAccess.service_type, {}),

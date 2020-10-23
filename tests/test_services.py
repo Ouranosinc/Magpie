@@ -485,8 +485,8 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         # create resources
         dir_id, dir_name = self.make_resource(models.Directory.resource_type_name, svc_id)
         file_id, file_name = self.make_resource(models.File.resource_type_name, dir_id, ".nc")
-        file_ncml_id, file_ncml_name = self.make_resource(models.File.resource_type_name, dir_id, ".ncml")
-        file_html_id, file_html_name = self.make_resource(models.File.resource_type_name, dir_id, ".nc.html")
+        _, file_ncml_name = self.make_resource(models.File.resource_type_name, dir_id, ".ncml")
+        _, file_html_name = self.make_resource(models.File.resource_type_name, dir_id, ".nc.html")
 
         # create permissions, using specific match to only evaluate explicitly the resolution modified by custom config
         bAM = PermissionSet(Permission.BROWSE, Access.ALLOW, Scope.MATCH)       # noqa
