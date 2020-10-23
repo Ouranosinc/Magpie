@@ -268,22 +268,42 @@ multiple :term:`Resource` for every *metadata*/*data* representation.
 ServiceGeoserverWMS
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. todo::
+.. todo:: details, depends on ServiceBaseWMS
 
 ServiceNCWMS2
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. todo::
+.. todo:: details, depends on ServiceBaseWMS
 
-ServiceWMS
-~~~~~~~~~~~~~~~~~~~~~
-
-.. todo::
 
 ServiceWPS
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. todo::
+The implementation of this :term:`Service` is handled by class :class:`magpie.services.ServiceWPS`. It is intended to
+control access to the operations provided by an :term:`OWS` `Web Processing Service`. This :term:`Service` allows
+one (1) type of child :term:`Resource`, namely the :class:`magpie.models.Process` which represent the execution units
+that are registered under a remote `WPS`. Every :class:`magpie.models.Process` cannot itself have a child
+:term:`Resource`, making `ServiceWPS`_ maximally a 2-tier level hierarchy.
+
+There are three (3) types of :term:`Allowed Permissions` which each represent an operation that can be requested from it
+(via ``request`` query parameter value of the HTTP request), specifically the :attr:`Permission.GET_CAPABILITIES`,
+:attr:`Permission.DESCRIBE_PROCESS`, and :attr:`Permission.EXECUTE`. The :attr:`Permission.GET_CAPABILITIES`
+corresponds to the retrieval of available list of *Processes* on the `WPS` instance, and therefore, can only be applied
+on the top-level :term:`Service`. The other two permissions can be applied on either the :term:`Service` or specifically
+on individual :class:`magpie.models.Process` :term:`Resource` definitions. When applied to the :term:`Service` with
+:attr:`Scope.RECURSIVE` modifier, the corresponding :term:`Permission` becomes effective to all underlying *Processes*.
+Otherwise, the :term:`Permission` applied on specific :class:`magpie.models.Process` entries control the specific
+:term:`ACL` only for it. When a specific :term:`Permission` is involved on a :class:`magpie.models.Process` during
+:term:`Effective Permissions` resolution, the value of the query parameter ``identifier`` is employ to attempt mapping
+it against an existing :term:`Resource`. The resolution of :term:`Effective Permissions` in even of multi-level tree
+:term:`Resource` is computed in the usual manner described in the :ref:`Permissions` chapter.
+
+
+.. warning::
+    When applying permissions on a per-:class:`magpie.models.Process` basis, :attr:`Scope.MATCH` modifier is recommended
+    if only a specific ``request`` should be granted access, although :attr:`Scope.RECURSIVE` would have the same effect
+    currently because these resources are necessarily leaf nodes by definition. This is to prevent unexpectedly granting
+    additional lower-level :term:`Resource` access in the event this definition gets modified or extended in the future.
 
 
 Adding Service Types
