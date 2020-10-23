@@ -340,9 +340,6 @@ at the start of the `Configuration`_ section.
   within the `themes`_ subdirectory.
 
 
-.. _themes: https://github.com/Ouranosinc/Magpie/tree/master/magpie/ui/home/static/themes
-
-
 Security Settings
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -768,18 +765,6 @@ this :term:`Authentication` procedure.
     Websites), rarely used authentication bridges by the developers could break without prior notice. If this is the
     case and you use one of the broken connectors, summit a new `issue`_.
 
-.. _OpenID: https://openid.net/
-.. _ESGF: https://esgf.llnl.gov/
-.. _DKRZ: https://esgf-data.dkrz.de
-.. _IPSL: https://www.ipsl.fr/
-.. _BADC: http://data.ceda.ac.uk/badc
-.. _CEDA: https://esgf-index1.ceda.ac.uk
-.. _LLNL: https://www.llnl.gov/
-.. _PCMDI: http://pcmdi.llnl.gov
-.. _SMHI: https://www.smhi.se
-.. _GitHub: https://developer.github.com/v3/#authentication
-.. _WSO2: https://wso2.com/
-.. _MagpieSecurity: https://github.com/Ouranosinc/Magpie/tree/master/magpie/security.py
 
 GitHub Settings
 ~~~~~~~~~~~~~~~~~

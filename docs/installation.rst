@@ -28,8 +28,6 @@ If you want the full setup for development (including dependencies for test exec
 
 You can run the Magpie container with a ``docker-compose.yml`` for a local setup (see `docker-compose.yml.example`_)
 
-.. _`docker-compose.yml.example`: https://github.com/Ouranosinc/Magpie/tree/master/docker-compose.yml.example
-
 
 Backward Compatibility
 --------------------------

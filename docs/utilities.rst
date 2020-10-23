@@ -37,8 +37,6 @@ Available helpers:
       - | Synchronizes local and remote resources based on `Magpie` service's ``sync-type`` methodology.
         | See also `magpie-con`_.
 
-.. _configuration: configuration.rst
-.. _magpie-con: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
 
 For convenience, a generic CLI ``magpie_helper`` is also provided which allows calling each of the other helper
 operations as *mode*. You can therefore do as follows.

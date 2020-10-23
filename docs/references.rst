@@ -18,10 +18,29 @@
 .. _Waitress: https://github.com/Pylons/waitress
 .. _Ziggurat-Foundations: https://github.com/ergo/ziggurat_foundations
 
+.. external providers
+.. _OpenID: https://openid.net/
+.. _ESGF: https://esgf.llnl.gov/
+.. _DKRZ: https://esgf-data.dkrz.de
+.. _IPSL: https://www.ipsl.fr/
+.. _BADC: http://data.ceda.ac.uk/badc
+.. _CEDA: https://esgf-index1.ceda.ac.uk
+.. _LLNL: https://www.llnl.gov/
+.. _PCMDI: http://pcmdi.llnl.gov
+.. _SMHI: https://www.smhi.se
+.. _GitHub: https://developer.github.com/v3/#authentication
+.. _WSO2: https://wso2.com/
+
 .. file/source references
+.. _configuration: configuration.rst
 .. _constants.py: https://github.com/Ouranosinc/Magpie/tree/master/magpie/constants.py
+.. _`docker-compose.yml.example`: https://github.com/Ouranosinc/Magpie/tree/master/docker-compose.yml.example
+.. _magpie-con: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
 .. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example
 .. _magpie.ini: https://github.com/Ouranosinc/Magpie/tree/master/config/magpie.ini
+.. _MagpieSecurity: https://github.com/Ouranosinc/Magpie/tree/master/magpie/security.py
 .. _permissions.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
 .. _postgres.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/postgres.env.example
 .. _providers.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
+.. _themes: https://github.com/Ouranosinc/Magpie/tree/master/magpie/ui/home/static/themes
+.. _tests: https://github.com/Ouranosinc/Magpie/tree/master/tests

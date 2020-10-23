@@ -1,9 +1,6 @@
 .. _services:
 .. include:: references.rst
 
-.. employ the permissions as base for this chapter to ease reading by shorter reference definitions
-.. py:currentmodule:: magpie.permissions
-
 ===========
 Services
 ===========
@@ -25,7 +22,7 @@ Therefore, they can be listed and searched for either using ``/services`` API ro
 On top of any :term:`Resource`'s metadata, a :term:`Service` provides specific information about its location, its
 remote synchronization method (if any), and its exposed endpoint. Another important detail about the :term:`Service`
 is its ``type``. This will not only dictate its purpose, but also define the whole schema of allowed :term:`Resource`
-under it (if any), as well as every one of their :ref:`Allowed Permissions`.
+under it (if any), as well as every one of their :term:`Allowed Permissions`.
 
 The final distinction between a :term:`Service` and generic :term:`Resource` is their position in the hierarchy. Only
 :term:`Service`-specialized :term:`Resource` (literally ``resource_type = "service"``) are allowed to be placed at the
@@ -89,6 +86,9 @@ On top of the above methods, the following attributes must be defined.
 Available Services
 -------------------
 
+.. employ the permissions as base for this section to ease reading by shorter reference definitions
+.. py:currentmodule:: magpie.permissions
+
 .. seealso::
     Module :py:mod:`magpie.services` contains the implementation of every :term:`Service` presented below.
 
@@ -148,7 +148,7 @@ each sub-:term:`Resource` as presented below.
 
 Every :class:`magpie.models.Route` as well as the :term:`Service` itself can have the :term:`Permission` based on the
 HTTP method of the incoming request. All :class:`Access` and :class:`Scope` modifiers are also supported for highly
-customizable :term:`ACL` combinations. See `permission_modifiers`_ for further details.
+customizable :term:`ACL` combinations. See :ref:`permission_modifiers` for further details.
 
 ServiceTHREDDS
 ~~~~~~~~~~~~~~~~~~~~~

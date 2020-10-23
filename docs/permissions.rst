@@ -5,6 +5,8 @@
 Permissions
 ===========
 
+.. _permission_types:
+
 Types of Permissions
 -----------------------
 
@@ -173,7 +175,6 @@ value that implicitly retrieves the :term:`Request User` as the :term:`Context U
     some additional request-specific logic (depending on its purpose and resulting actions) for special-cases that is
     not explicitly detailed in above steps. Some of these special behaviors can be observed across the various `tests`_.
 
-.. _tests: https://github.com/Ouranosinc/Magpie/tree/master/tests
 
 Finally, it is worth further detailing the small distinction between
 :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION` and :py:data:`magpie.constants.MAGPIE_CONTEXT_PERMISSION`,
@@ -236,7 +237,7 @@ to execute `Magpie` application. Effectively, when the active session correspond
 Example to distinguish Applied, Inherited and Effective Permissions
 --------------------------------------------------------------------------------------
 
-This section intends to provide more insight on the different :ref:`Types of Permissions` using a simplified
+This section intends to provide more insight on the different :ref:`permission_types` using a simplified
 demonstration of interaction between defined :term:`Service`, :term:`Resource`, :term:`Group`, :term:`User` and
 :term:`Permission` elements.
 
@@ -312,7 +313,7 @@ On the other hand, using ``effective`` would result in the following:
     /users/example-user/resources/resource-B1/permissions?effective=true    => [read]           (2)
     /users/example-user/resources/resource-B2/permissions?effective=true    => [read, write]    (4)
 
-In this case, :term:`Resource`s that had :term:`Permission` directly set on them :sup:`(2)`, whether through
+In this case, all :term:`Resource` entries that had :term:`Permission` directly set on them :sup:`(2)`, whether through
 :term:`User` or :term:`Group` combination, all return the exact same set of :term:`Permission`. This is because
 `Effective Permissions`_ always imply `Inherited Permissions`_ (i.e.: using both query simultaneously is redundant).
 The reason why we obtain these sets for cases :sup:`(2)` is also because there is no other :term:`Permission` applied
@@ -358,7 +359,7 @@ This query can be extremely useful to quickly answer *"does the user have any pe
 without needing to manually execute multiple successive lookup requests with all combinations of :term:`Resource`
 identifiers in the hierarchy.
 
-.. _permission_modifiers::
+.. _permission_modifiers:
 
 Permissions Definition and Modifiers
 --------------------------------------
@@ -483,4 +484,4 @@ Therefore, it can be noted that all API responses that contain details about per
 
 It can be noted that the JSON representation also provides a fourth ``type`` parameter which serves as indicative
 detail about the kind of :term:`Permission` being displayed, in attempt to reduce the ambiguity described in
-:ref:`Types of Permissions`.
+:ref:`permission_types`.
