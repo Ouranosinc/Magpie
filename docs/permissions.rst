@@ -1,6 +1,10 @@
 .. _permissions:
 .. include:: references.rst
 
+.. default location to quickly reference items without the explicit and long prefix
+.. using the full name when introducing the element (to make the location obvious), the reuse shorthand variant
+.. py:currentmodule:: magpie.permissions
+
 ===========
 Permissions
 ===========
@@ -368,7 +372,8 @@ Permissions Definition and Modifiers
     Previous versions of `Magpie` employed literal ``[permission_name]`` and ``[permission_name]-match`` to
     respectively represent recursive and match ``scope`` over the hierarchy of :term:`Resource`.
     All ``-match`` suffixed :term:`Permission` names are now deprecated in favor of modifiers presented in this section.
-    Furthermore, the `Deny` concept is introduced via ``access`` field, which did not exist at all in previous versions.
+    Furthermore, the :attr:`Access.DENY` concept is introduced via ``access`` field, which did not exist at all in
+    previous versions.
 
 When applying a :term:`Permission` on a :term:`Service` or :term:`Resource` for a :term:`User` or :term:`Group`, there
 are 3 components considered to interpret its definition:
@@ -389,11 +394,12 @@ The ``access`` component is defined by :class:`magpie.permissions.Access` enum. 
 correspondingly grant or remove the :term:`Permission` for previously denied or allowed :term:`User` or :term:`Group`
 when resolving the :term:`Resource` tree hierarchy. This helps solving special use cases where different inheritance
 conditions must be applied at different hierarchy levels. By default, if no ``access`` indication is provided when
-creating a new :term:`Permission`, `Allow` is employed since `Magpie` resolves all ``access`` to a :term:`Resource`
-as `Deny` unless explicitly granted. In other words, `Magpie` assumes that administrators adding new :term:`Permission`
-entries indent to grant :term:`Service` or :term:`Resource` access for the targeted :term:`User` or :term:`Group`.
-Any :term:`Permission` specifically created using `Deny` should be involved only to revert a previously resolved
-`Allow`, as they are otherwise redundant to default :term:`Effective Permissions` resolution.
+creating a new :term:`Permission`, :attr:`Access.ALLOW` is employed since `Magpie` resolves all ``access`` to a
+:term:`Resource` as :attr:`Access.DENY` unless explicitly granted. In other words, `Magpie` assumes that administrators
+adding new :term:`Permission` entries indent to grant :term:`Service` or :term:`Resource` access for the targeted
+:term:`User` or :term:`Group`. Any :term:`Permission` specifically created using :attr:`Access.DENY` should be involved
+only to revert a previously resolved :attr:`Access.ALLOW`, as they are otherwise redundant to default
+:term:`Effective Permissions` resolution.
 
 The ``scope`` concept is defined by :class:`magpie.permissions.Scope` enum. This tells `Magpie` whether the
 :term:`Applied Permission` should impact only the immediate :term:`Resource` (i.e.: when ``match``) or should instead
