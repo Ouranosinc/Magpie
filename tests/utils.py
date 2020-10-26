@@ -353,7 +353,7 @@ def mock_get_settings(test):
     def wrapped(*_, **__):
         with mock.patch("magpie.services.get_settings", side_effect=mocked), \
              mock.patch("magpie.utils.get_settings", side_effect=mocked):
-                return test(*_, **__)  # pylint: disable=W0311
+                return test(*_, **__)  # pylint: disable=E117,W0311
     return wrapped
 
 
