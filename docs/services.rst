@@ -204,7 +204,7 @@ and the file *extension*. The *default* methodology employed to categorize these
 by the below configuration.
 
 .. note::
-    A custom categorization between *metadata*/*data* contents can be provided With either the `providers.cfg`_ or
+    A custom categorization between *metadata* and *data* contents can be provided With either the `providers.cfg`_ or
     a :ref:`config_file` as described in greater lengths within the :ref:`configuration_link` chapter.
 
 .. code-block:: YAML
@@ -221,7 +221,7 @@ by the below configuration.
           - .*.nc
         metadata_type:
           prefixes:
-            - null  # note: special value evaluated as `no-prefix`, use quotes to handle special keywords if needed
+            - null  # note: special YAML value evaluated as `no-prefix`, use quotes if literal value is needed
             - catalog
             - ncml
             - uddc
@@ -264,13 +264,15 @@ used to lookup the :term:`Resource`. Otherwise, the plain ``<file>`` name is use
 if ``file_patterns`` is specified as empty or ``null``. Not explicitly overriding the field will result into using the
 above *default* ``file_patterns``. The ``file_patterns`` allow for example to consider ``file.nc``, ``file.ncml`` and
 ``file.nc.html`` as the same :term:`Resource` internally, which avoids duplicating :term:`Applied Permissions` across
-multiple :term:`Resource` for every *metadata*/*data* representation.
+multiple :term:`Resource` for every *metadata* or *data* representation.
 
 ServiceBaseWMS
 ~~~~~~~~~~~~~~~~~~~~~
 
 .. seealso::
+
     Derived implementations:
+
     - `ServiceGeoserverWMS`_
     - `ServiceNCWMS2`_
 
@@ -294,6 +296,7 @@ ServiceGeoserverWMS
 ~~~~~~~~~~~~~~~~~~~~~
 
 .. seealso::
+
     Base class: `ServiceBaseWMS`_
 
 This implementation is defined by :class:`magpie.services.ServiceGeoserverWMS`. It extends the base class by using
@@ -311,6 +314,7 @@ ServiceNCWMS2
 ~~~~~~~~~~~~~~~~~~~~~
 
 .. seealso::
+
     Base class: `ServiceBaseWMS`_
 
 This implementation is defined by :class:`magpie.services.ServiceNCWMS2`. It extends the base class by using
@@ -322,8 +326,9 @@ offered by `THREDDS`, but for mapping display. The HTTP request therefore points
 employs different query parameters specific to `WMS` requests (instead of `THREDDS`), although the provided file
 reference is technically the same. For this reason, the same :term:`Resource` hierarchy is supported, with any number
 of nested :class:`magpie.models.Directory` and :class:`magpie.models.File` as leaves. The targeted :term:`Resource` by
-the HTTP request is extracted from either the ``dataset``, ``layername`` or ``layers`` query parameter, depending on the
-appropriate :term:`Permission` being requested, based on the ``request`` query parameter.
+the HTTP request is extracted from either the ``dataset``, ``layername`` or ``layers`` query parameter formatted as
+relative file path from the ``THREDDS` root. The applicable query parameter depends on the appropriate
+:term:`Permission` being requested based on the provided ``request`` query parameter.
 
 .. note::
     Although the class name employs ``NCWMS2``, the registered type is represented by the string ``ncwms`` for
@@ -360,21 +365,38 @@ it against an existing :term:`Resource`. The resolution of :term:`Effective Perm
     additional lower-level :term:`Resource` access in the event this definition gets modified or extended in the future.
 
 
-Adding Service Types
------------------------
 
-.. todo::
+..
+    Adding Service Types
+    -----------------------
     dynamic custom service definition
-    https://github.com/Ouranosinc/Magpie/issues/149
-.. todo:: even if not implementing above, could be good to document fields or ServiceInterface for future reference
+
+.. todo: Add dynamic services if implemented (https://github.com/Ouranosinc/Magpie/issues/149)
+
 
 Service Synchronization
 ------------------------
 
-.. todo::
-    resource auto-sync feature for a given service and cron configuration setup for it
+.. versionadded:: 0.7
+
+Some :term:`Service` implementations offer a synchronization feature which is represented by field ``sync_type`` within
+`Magpie` API responses. When this option is available, the corresponding :term:`Service` is able to query the real
+*remote service provider* to retrieve actual :term:`Resource` nested under it. This allows quick generation of the full
+:term:`Resource` tree hierarchy rather than manually creating each element.
+
+.. note::
+    If only :attr:`Scope.RECURSIVE` :term:`Permission` are being applied on the :term:`Service` or their children
+    :term:`Resource`, it is better to enter *fewer* children element in the tree to reduce computation time of
+    :term:`Effective Permissions`. The complete hierarchy should be employed only when the depth of the tree is
+    relatively shallow or that :attr:`Scope.MATCH` must be applied specifically for some :term:`Resource` to obtain
+    desired access behaviour.
+
+When using the `Magpie` Docker image, the default command run the `magpie-cron`_ utility in parallel to the API. This
+cron job will periodically execute the :term:`Resource` auto-synchronization feature for a given :term:`Service` that
+supports it.
 
 .. seealso::
 
     Utility ``magpie_sync_resources`` in :ref:`utilities_helpers` is also available to manually launch a
-    :term:`Resource` synchronization operation for supporting :term:`Service`-types.
+    :term:`Resource` synchronization operation from the command line for supporting :term:`Service`-types.
+    This is the same operation that gets executed by `magpie-cron`_.

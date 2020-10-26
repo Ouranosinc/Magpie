@@ -37,7 +37,7 @@
 .. _configuration: configuration.rst
 .. _constants.py: https://github.com/Ouranosinc/Magpie/tree/master/magpie/constants.py
 .. _`docker-compose.yml.example`: https://github.com/Ouranosinc/Magpie/tree/master/docker-compose.yml.example
-.. _magpie-con: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
+.. _magpie-cron: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
 .. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example
 .. _magpie.ini: https://github.com/Ouranosinc/Magpie/tree/master/config/magpie.ini
 .. _MagpieSecurity: https://github.com/Ouranosinc/Magpie/tree/master/magpie/security.py

@@ -449,7 +449,7 @@ Permissions Representations
 
 .. versionadded:: 3.0
     Prior to this version, only plain *permission-names* where employed. These are represented by the *implicit* string
-    representation in following versions of `M̀agpie`.
+    representation in following versions of `Magpie`.
 
 As presented in the previous section, every :term:`Permission` in `Magpie` is represented by three (3) elements, namely
 the ``name``, the ``access`` and the ``scope``. These are represented in API responses by both *explicit* and *implicit*
