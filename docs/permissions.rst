@@ -442,7 +442,7 @@ As a general of thumb, all :term:`Permission` are resolved such that more restri
 the actual :term:`Resource` for the targeted :term:`User` will have priority, both in terms of inheritance by tree
 hierarchy and by :term:`Group` memberships.
 
-.. _permission_representations::
+.. _permission_representations:
 
 Permissions Representations
 --------------------------------------

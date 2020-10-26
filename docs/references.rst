@@ -3,10 +3,12 @@
 
 .. _Alembic: https://alembic.sqlalchemy.org/
 .. _Authomatic: https://authomatic.github.io/authomatic/
+.. _GeoServer: http://geoserver.org/
 .. _Gunicorn: https://gunicorn.org/
 .. _issue: https://github.com/Ouranosinc/Magpie/issues/new
 .. _Magpie Docker Images: https://hub.docker.com/r/pavics/magpie/tags
 .. _Magpie REST API: https://pavics-magpie.readthedocs.io/en/latest/api.html
+.. _ncWMS2: https://github.com/Reading-eScience-Centre/ncwms
 .. _Ouranosinc/requests-magpie: https://github.com/Ouranosinc/requests-magpie
 .. _Phoenix: https://github.com/bird-house/pyramid-phoenix
 .. _PostgreSQL: https://www.postgresql.org/

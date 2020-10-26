@@ -456,16 +456,6 @@ class ServiceBaseWMS(ServiceOWS):
         "dataset"
     ]
 
-    resource_types_permissions = {
-        models.Workspace: [
-            Permission.GET_CAPABILITIES,
-            Permission.GET_MAP,
-            Permission.GET_FEATURE_INFO,
-            Permission.GET_LEGEND_GRAPHIC,
-            Permission.GET_METADATA,
-        ]
-    }
-
 
 class ServiceNCWMS2(ServiceBaseWMS):
     """
@@ -542,6 +532,16 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
     Service that represents a ``Web Map Service`` endpoint with functionalities specific to ``GeoServer``.
     """
     service_type = "geoserverwms"
+
+    resource_types_permissions = {
+        models.Workspace: [
+            Permission.GET_CAPABILITIES,
+            Permission.GET_MAP,
+            Permission.GET_FEATURE_INFO,
+            Permission.GET_LEGEND_GRAPHIC,
+            Permission.GET_METADATA,
+        ]
+    }
 
     def resource_requested(self):
         permission = self.permission_requested()

@@ -41,7 +41,7 @@ interpreted into a given :class:`Permission`. The second is :meth:`magpie.servic
 which similarly tells the interpretation method to convert the request into a :class:`magpie.models.Resource` reference.
 
 Whenever :term:`Effective Permissions` or :term:`ACL` needs to be resolved in order to determine if a
-:term:`Request User` can have access or not to a :term:`Resource`, `M̀agpie` will employ the appropriate :term:`Service`
+:term:`Request User` can have access or not to a :term:`Resource`, `Magpie` will employ the appropriate :term:`Service`
 implementation and call the methods to process the result.
 
 .. versionchanged:: 3.0
@@ -57,10 +57,12 @@ On top of the above methods, the following attributes must be defined.
 
     <br>
 
+.. temporarily use services module to reduce displayed name in table
+.. py:currentmodule:: magpie.services
+
+
 .. list-table::
     :header-rows: 1
-
-    .. py:currentmodule:: magpie.services
 
     * - Attribute
       - Description
@@ -100,11 +102,11 @@ Available Services
 ServiceAccess
 ~~~~~~~~~~~~~~~~~~~~~
 
-The implementation of this service is handled by class :class:`magpie.services.ServiceAccess`. It is intended to act
-as a simple *all-or-nothing* endpoint barrier, where only :attr:`Permission.ACCESS` can be applied, and only directly on
-the :term:`Service` itself. A :term:`User` or :term:`Group` that has that :term:`Permission` with :attr:`Access.ALLOW`
-will be able to reach the :term:`Service`. Any other operation, (or explicit :attr:`Access.DENY`) will all result into
-denied access to the private URL registered by the :term:`Service.
+The implementation of this :term:`Service` is handled by class :class:`magpie.services.ServiceAccess`. It is intended to
+act as a simple *all-or-nothing* endpoint barrier, where only :attr:`Permission.ACCESS` can be applied, and only
+directly on the :term:`Service` itself. A :term:`User` or :term:`Group` that has that :term:`Permission` with
+:attr:`Access.ALLOW` will be able to reach the :term:`Service`. Any other operation (or explicit :attr:`Access.DENY`)
+will all result into denied access to the private URL registered by the :term:`Service`.
 
 .. versionchanged:: 3.0
     This :term:`Service` implementation dates prior to the integration of :class:`Access` and :class:`Scope` concepts
@@ -264,16 +266,68 @@ above *default* ``file_patterns``. The ``file_patterns`` allow for example to co
 ``file.nc.html`` as the same :term:`Resource` internally, which avoids duplicating :term:`Applied Permissions` across
 multiple :term:`Resource` for every *metadata*/*data* representation.
 
+ServiceBaseWMS
+~~~~~~~~~~~~~~~~~~~~~
+
+.. seealso::
+    Derived implementations:
+    - `ServiceGeoserverWMS`_
+    - `ServiceNCWMS2`_
+
+This is a *partial base* class employed to represent :term:`OWS` `Web Map Service` extended via other complete classes.
+It cannot be employed directly as :term:`Service` instance. The derived classes provide different parsing methodologies
+and children :term:`Resource` representation according to their respective functionalities.
+
+It provides support for the following permissions, each corresponding to the appropriate functionality of `WMS`:
+
+- :attr:`Permission.GET_CAPABILITIES`
+- :attr:`Permission.GET_MAP`
+- :attr:`Permission.GET_FEATURE_INFO`
+- :attr:`Permission.GET_LEGEND_GRAPHIC`
+- :attr:`Permission.GET_METADATA`
+
+Similar to any other :term:`OWS` based :term:`Service`, the HTTP request takes a ``request`` query parameter that
+indicates which of the above :term:`Permission` is being requested.
+
 
 ServiceGeoserverWMS
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. todo:: details, depends on ServiceBaseWMS
+.. seealso::
+    Base class: `ServiceBaseWMS`_
+
+This implementation is defined by :class:`magpie.services.ServiceGeoserverWMS`. It extends the base class by using
+children :term:`Resource` defined by :class:`magpie.models.Workspace`, which supports the same set of :term:`Permission`
+as their parent :term:`Service`. Each of those :class:`magpie.models.Workspace` correspond to the equivalent element
+provided to `GeoServer`_ based HTTP request using query parameter ``layers``, following format
+``layers=<Workspace>:<LayerName>``. The :term:`Permission` is obtained from the ``request`` query parameter.
+
+.. warning::
+    As of latest version of `Magpie`, there is no specific handling of the specific ``LayerName`` part of the targeted
+    :term:`Resource`. Please submit an `issue`_ with specific use-case if this is something that would be required.
+
 
 ServiceNCWMS2
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. todo:: details, depends on ServiceBaseWMS
+.. seealso::
+    Base class: `ServiceBaseWMS`_
+
+This implementation is defined by :class:`magpie.services.ServiceNCWMS2`. It extends the base class by using
+children :term:`Resource` defined as :class:`magpie.models.Directory` and :class:`magpie.models.File` instances but,
+using the corresponding :term:`Permission` entries from `ServiceBaseWMS`_ class instead of the default
+:attr:`Permission.READ` and :attr:`Permission.WRITE` (i.e.: see `ServiceTHREDDS`_). The general idea is that the remote
+`ncWMS2`_ *service provider* being represented by this :term:`Service` points to the same `NetCDF` file resources as
+offered by `THREDDS`, but for mapping display. The HTTP request therefore points toward another proxy endpoint and
+employs different query parameters specific to `WMS` requests (instead of `THREDDS`), although the provided file
+reference is technically the same. For this reason, the same :term:`Resource` hierarchy is supported, with any number
+of nested :class:`magpie.models.Directory` and :class:`magpie.models.File` as leaves. The targeted :term:`Resource` by
+the HTTP request is extracted from either the ``dataset``, ``layername`` or ``layers`` query parameter, depending on the
+appropriate :term:`Permission` being requested, based on the ``request`` query parameter.
+
+.. note::
+    Although the class name employs ``NCWMS2``, the registered type is represented by the string ``ncwms`` for
+    executing requests toward the `Magpie` API and contents returned in its responses.
 
 
 ServiceWPS
