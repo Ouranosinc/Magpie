@@ -380,9 +380,21 @@ Service Synchronization
 .. versionadded:: 0.7
 
 Some :term:`Service` implementations offer a synchronization feature which is represented by field ``sync_type`` within
-`Magpie` API responses. When this option is available, the corresponding :term:`Service` is able to query the real
-*remote service provider* to retrieve actual :term:`Resource` nested under it. This allows quick generation of the full
-:term:`Resource` tree hierarchy rather than manually creating each element.
+`Magpie` API responses. When this parameter is defined (during :term:`Service` creation, whether through API request or
+startup :ref:`Configuration`), the corresponding :term:`Service` will be able to query the real
+*remote service provider* to retrieve actual :term:`Resource` nested under it, based on the referenced implementation
+from the :mod:`magpie.cli.sync_services` module. Each of these synchronization implementations must derive from
+:class:`magpie.cli.sync_service.SyncServiceInterface` and must populate the database with appropriate :term:`Resource`
+types. This allows quick generation of the retrieved :term:`Resource` tree hierarchy rather than manually creating each
+element.
+
+.. note::
+    The depth of the :term:`Resource` tree hierarchy that will be synchronized between `Magpie` and the
+    *remote service provider* depends on the specific implementation of the ``sync_type`` referring to a derived
+    :class:`magpie.cli.sync_service.SyncServiceInterface`. These classes provide a parameter ``max_depth`` which
+    can limit how many :term:`Resource` must be generated. This is useful for entries that have very large and deeply
+    nested structure that would take too long to synchronize. By default, ``max_depth`` is not set to pull the whole
+    tree hierarchy.
 
 .. note::
     If only :attr:`Scope.RECURSIVE` :term:`Permission` are being applied on the :term:`Service` or their children
