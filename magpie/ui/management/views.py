@@ -759,11 +759,14 @@ class ManagementViews(BaseViews):
         errors = []
         session = self.request.db
         for service_info in services.values():
+            svc_name = service_info["service_name"]
+            svc_id = service_info["resource_id"]
             try:
-                sync_resources.fetch_single_service(service_info["resource_id"], session)
+                sync_resources.fetch_single_service(svc_id, session)
                 transaction.commit()
-            except Exception:  # noqa: W0703 # nosec: B110
-                errors.append(service_info["service_name"])
+            except Exception as exc:  # noqa: W0703 # nosec: B110
+                LOGGER.debug("Error during sync attempt for [%s, %s]: %s", svc_name, svc_id, str(exc), exc_info=exc)
+                errors.append(svc_name)
         if errors:
             return errors, self.make_sync_error_message(errors)
         return errors, None
