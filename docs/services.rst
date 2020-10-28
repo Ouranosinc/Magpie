@@ -407,6 +407,8 @@ When using the `Magpie` Docker image, the default command run the `magpie-cron`_
 cron job will periodically execute the :term:`Resource` auto-synchronization feature for a given :term:`Service` that
 supports it.
 
+The synchronization mechanism can be launched from `Magpie` UI using the ``Sync`` button located on relevant pages.
+
 .. seealso::
 
     Utility ``magpie_sync_resources`` in :ref:`utilities_helpers` is also available to manually launch a

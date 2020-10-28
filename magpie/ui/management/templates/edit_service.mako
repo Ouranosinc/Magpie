@@ -2,12 +2,13 @@
 <%namespace name="tree" file="magpie.ui.management:templates/tree_scripts.mako"/>
 
 <%block name="breadcrumb">
-<li><a href="${request.route_url('home')}">
-    Home</a></li>
-<li><a href="${request.route_url('view_services', cur_svc_type=cur_svc_type)}">
-    Services</a></li>
-<li><a href="${request.route_url('edit_service', service_name=service_name, service_url=service_url, cur_svc_type=cur_svc_type)}">
-    Service [${service_name}]</a></li>
+<li><a href="${request.route_url('home')}">Home</a></li>
+<li><a href="${request.route_url('view_services', cur_svc_type=cur_svc_type)}">Services</a></li>
+<li>
+    <a href="${request.route_url('edit_service', service_name=service_name, service_url=service_url, cur_svc_type=cur_svc_type)}">
+    Service [${service_name}]
+    </a>
+</li>
 </%block>
 
 <div class="alert alert-danger" id="EditService_DeleteAlert">

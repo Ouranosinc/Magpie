@@ -711,7 +711,7 @@ class ServiceTHREDDS(ServiceInterface):
             # when reaching the final part, test for possible file pattern, otherwise default to literal value
             #   allows combining different naming formats into a common file resource (eg: extra extensions)
             # if final part is a directory, still works because of literal value
-            #   directory name much match exactly, no format naming variants allowed
+            #   directory name must match exactly, no format naming variants allowed
             # if final part is 'catalog.html' file, lookup would fail and fall back to previous directory part
             #   since that would be the last part extracted, the parent directory will be matched as intended
             if not path_parts:

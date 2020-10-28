@@ -2,13 +2,14 @@
 
 
 <!-- renders a tree of nested service/resources using the provided item renderer function
-     see 'tree_toggle.js' for toggling even
+     see 'tree_scripts.js' for toggling even
 -->
 <%def name="render_tree(item_renderer, tree, level=0)">
     <ul class="tree-level-${level}">
     %for key in tree:
         %if tree[key]["children"]:
         <li class="collapsible expanded">
+        <div class="collapsible-marker"></div>
         %else:
         <li class="no-child">
         %endif
@@ -20,7 +21,7 @@
                     ${item_renderer(key, tree[key], level)}
                 </div>
             </div>
-            <div class="clear"></div>
+            <div class="clear underline"></div>
             %if tree[key]["children"]:
             ${render_tree(item_renderer, tree[key]["children"], level + 1)}
             %endif
@@ -34,12 +35,12 @@
 <%def name="render_resource_permission_tree(resources, permissions)">
     <form id="resources_permissions" action="${request.path}" method="post">
         <div>
-            <input type="submit" name="edit_permissions" value="Apply" title="Apply the permission changes"
+            <input type="submit" name="edit_permissions" value="Apply Permissions" title="Apply the permission changes"
                 %if inherit_groups_permissions:
                     disabled
-                    class="button theme equal-width disabled"
+                    class="button theme disabled"
                 %else:
-                    class="button theme equal-width"
+                    class="button theme"
                 %endif
             >
         </div>

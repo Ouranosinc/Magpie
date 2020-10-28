@@ -3,12 +3,13 @@
 <%namespace name="tree" file="magpie.ui.management:templates/tree_scripts.mako"/>
 
 <%block name="breadcrumb">
-<li><a href="${request.route_url('home')}">
-    Home</a></li>
-<li><a href="${request.route_url('view_users')}">
-    Users</a></li>
-<li><a href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=cur_svc_type)}">
-    User [${user_name}]</a></li>
+<li><a href="${request.route_url('home')}">Home</a></li>
+<li><a href="${request.route_url('view_users')}">Users</a></li>
+<li>
+    <a href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=cur_svc_type)}">
+    User [${user_name}]
+    </a>
+</li>
 </%block>
 
 <h1>Edit User: [${user_name}]</h1>
@@ -100,7 +101,7 @@
     %for group in groups:
     <tr>
         <td>
-            <label>
+            <label class="checkbox-align">
             <input type="checkbox" value="${group}" name="member"
                 %if group in own_groups:
                    checked
@@ -121,39 +122,41 @@
 
 <h3>Permissions</h3>
 
-<form id="toggle_visible_perms" action="${request.path}" method="post">
-    <div class="option-section">
-        <label>
-        <input type="checkbox" value="${inherit_groups_permissions}" name="toggle_inherit_groups_permissions"
-               onchange="document.getElementById('toggle_visible_perms').submit()"
-        %if inherit_groups_permissions:
-            checked>
-            <input type="hidden" value="False" name="inherit_groups_permissions"/>
-        %else:
-            >
-            <input type="hidden" value="True" name="inherit_groups_permissions"/>
-        %endif
-        <span class="option-text">
-        View inherited group permissions
-        </span>
-        </label>
-    </div>
-</form>
+<div class="option-container">
+    <form id="toggle_visible_perms" action="${request.path}" method="post">
+        <div class="option-section">
+            <label class="checkbox-align">
+            <input type="checkbox" value="${inherit_groups_permissions}" name="toggle_inherit_groups_permissions"
+                   onchange="document.getElementById('toggle_visible_perms').submit()"
+            %if inherit_groups_permissions:
+                checked>
+                <input type="hidden" value="False" name="inherit_groups_permissions"/>
+            %else:
+                >
+                <input type="hidden" value="True" name="inherit_groups_permissions"/>
+            %endif
+            <span class="option-text">
+            View inherited group permissions
+            </span>
+            </label>
+        </div>
+    </form>
 
-%if inherit_groups_permissions:
-<div class="option-section">
-    <div class="alert-note-info alert-visible">
-        <img src="${request.static_url('magpie.ui.home:static/info.png')}"
-             alt="INFO" class="icon-info alert-info" />
-        <meta name="source" content="https://commons.wikimedia.org/wiki/File:Infobox_info_icon.svg">
-        <div class="alert-note-text">
-            Individual resources can be tested for effective access using the
-            <input type="button" value="?" class="permission-effective-button button-no-click">
-            <span>button next to the corresponding permission.</span>
+    %if inherit_groups_permissions:
+    <div class="option-section">
+        <div class="alert-note-info alert-visible">
+            <img src="${request.static_url('magpie.ui.home:static/info.png')}"
+                 alt="INFO" class="icon-info alert-info" />
+            <meta name="source" content="https://commons.wikimedia.org/wiki/File:Infobox_info_icon.svg">
+            <div class="alert-note-text">
+                Individual resources can be tested for effective access using the
+                <input type="button" value="?" class="permission-effective-button button-no-click">
+                <span>button next to the corresponding permission.</span>
+            </div>
         </div>
     </div>
+    %endif
 </div>
-%endif
 
 <div class="tabs-panel">
 
@@ -168,7 +171,7 @@
     %endfor
 
     <div class="current-tab-panel">
-        <div class="clear"></div>
+        <div class="clear underline"></div>
         %if error_message:
             <div class="alert alert-danger alert-visible">${error_message}</div>
         %endif
