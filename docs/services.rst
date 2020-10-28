@@ -259,12 +259,22 @@ immediately, and :term:`ACL` will be resolved considering :attr:`Scope.RECURSIVE
 
 Once the last element of the path is reached, the ``file_patterns`` will be applied against ``<file>`` in order to
 attempt extracting the targeted :class:`magpie.models.File` :term:`Resource`. Patterns are applied until the first
-positive match is found. Therefore, order is important if providing multiple. If there is a match, that value will be
-used to lookup the :term:`Resource`. Otherwise, the plain ``<file>`` name is used directly. The plain name is also used
-if ``file_patterns`` is specified as empty or ``null``. Not explicitly overriding the field will result into using the
+positive match is found. Therefore, order is important if providing multiple. For example, if the path ended with
+``file.ncml`` and, that both ``.*.ncml`` and ``.*.nc`` where defined in the configuration in that specific order, the
+result will first match ``.*.ncml``, and the final :class:`magpie.models.File` :term:`Resource` value will be considered
+as ``file.ncml`` for lookup. In this case, another request using only ``file.nc`` would lookup an entirely different
+:term:`Resource`, since the second pattern would be the first valid match. On the other hand, if only ``.*.nc`` was
+defined in ``file_patterns``, the matched pattern would convert both the names ``file.ncml`` and ``file.nc`` to
+``file.nc``, which will lookup exactly the same :class:`magpie.models.File` reference.
+
+To summarize, if ``file_patterns`` produces a match, that matched portion will be used as lookup value of the
+:term:`Resource`. Otherwise, if not any match could be found amongst all the ``file_patterns``, the plain ``<file>``
+name is used directly (as is from the specified request path). The plain name is also used if ``file_patterns`` is
+explicitly specified as an empty list or ``null``. Not explicitly overriding the field will result into using the
 above *default* ``file_patterns``. The ``file_patterns`` allow for example to consider ``file.nc``, ``file.ncml`` and
 ``file.nc.html`` as the same :term:`Resource` internally, which avoids duplicating :term:`Applied Permissions` across
-multiple :term:`Resource` for every *metadata* or *data* representation.
+multiple :term:`Resource` for their corresponding *metadata* or *data* representations.
+
 
 ServiceBaseWMS
 ~~~~~~~~~~~~~~~~~~~~~
