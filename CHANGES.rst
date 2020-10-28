@@ -23,6 +23,15 @@ Features / Changes
   therefore not unexpectedly grant access to protected resources. Behaviour also aligns with default ``DENY`` access
   obtained when resolving effective permissions through `Magpie` API routes.
 
+* | Upgrade migration script is added to duplicate ``BROWSE`` permissions from existing ``READ`` permissions on every
+    ``ServiceTHREDDS`` and all their children resource to preserve previous functionality where both *metadata* and
+    *data* access where both managed by the same ``READ`` permission.
+  |
+  | **WARNING**:
+  | Downgrade migration drops every ``BROWSE`` permission that could exist in later versions. This is done like so
+    to avoid granting additional access to some ``THREDDS`` directories or file if only ``BROWSE`` was specified.
+    When doing downgrade migration, ensure to have ``READ`` where both *metadata* and *data* should be granted access.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix parsing of ``ServiceAPI`` routes during retrieval of the deepest *available* ``Resource`` to ensure that even when
