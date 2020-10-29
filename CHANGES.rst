@@ -7,7 +7,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * Nothing yet.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Adjust visual alignment of UI notices on individual newlines when viewing user inherited permissions.
 
 `3.1.0 <https://github.com/Ouranosinc/Magpie/tree/3.1.0>`_ (2020-10-23)
 ------------------------------------------------------------------------------------

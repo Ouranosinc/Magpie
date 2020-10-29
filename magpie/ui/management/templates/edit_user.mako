@@ -123,8 +123,8 @@
 <h3>Permissions</h3>
 
 <div class="option-container">
-    <form id="toggle_visible_perms" action="${request.path}" method="post">
-        <div class="option-section">
+    <div class="option-section">
+        <form id="toggle_visible_perms" action="${request.path}" method="post">
             <label class="checkbox-align">
             <input type="checkbox" value="${inherit_groups_permissions}" name="toggle_inherit_groups_permissions"
                    onchange="document.getElementById('toggle_visible_perms').submit()"
@@ -139,10 +139,10 @@
             View inherited group permissions and effective user permissions.
             </span>
             </label>
-        </div>
-    </form>
-
+        </form>
+    </div>
     %if inherit_groups_permissions:
+    <div class="clear"></div>
     <div class="option-section">
         <div class="alert-note alert-visible">
             <img src="${request.static_url('magpie.ui.home:static/info.png')}"
@@ -157,6 +157,9 @@
                 </p>
             </div>
         </div>
+    </div>
+    <div class="clear"></div>
+    <div class="option-section">
         <div class="alert-note alert-visible">
             <img src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"
                  alt="WARNING" class="icon-warning" title="Administrators effective permission resolution." />
@@ -169,6 +172,7 @@
     </div>
     %endif
 </div>
+<div class="clear"></div>
 
 <div class="tabs-panel">
 
