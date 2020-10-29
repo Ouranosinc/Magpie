@@ -162,6 +162,7 @@ class BaseViews(object):
         """
         all_data = data or {}
         all_data.update({
+            "MAGPIE_URL": self.magpie_url,
             "MAGPIE_TITLE": __meta__.__title__,
             "MAGPIE_AUTHOR": __meta__.__author__,
             "MAGPIE_VERSION": __meta__.__version__,

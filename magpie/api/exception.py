@@ -333,6 +333,7 @@ def evaluate_call(call,                                 # type: Callable[[], Any
     except Exception as exc:
         exc_call = {"exception": type(exc).__name__, "type": str(exc),
                     "detail": msg_on_fail, "content": content_repr}
+        LOGGER.debug("Exception during call evaluation: %s", exc_call, exc_info=exc)
     try:
         if fallback is not None:
             fallback()

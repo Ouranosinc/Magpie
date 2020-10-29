@@ -29,12 +29,51 @@ references are indicated using ``parent_id`` and ``root_service_id`` in correspo
 Available Services
 -------------------
 
+.. seealso::
+    - :py:mod:`magpie.services`
+
 .. todo:
     listing and explanation/features of every available service types, their 'effective permission' resolution, etc.
     https://github.com/Ouranosinc/Magpie/issues/332
 
-.. seealso::
-    - :py:mod:`magpie.services`
+ServiceAccess
+~~~~~~~~~~~~~~~~~~~~~
+
+.. todo:
+
+ServiceAPI
+~~~~~~~~~~~~~~~~~~~~~
+
+.. todo:
+
+ServiceTHREDDS
+~~~~~~~~~~~~~~~~~~~~~
+
+.. todo:
+
+ServiceGeoserverWMS
+~~~~~~~~~~~~~~~~~~~~~
+
+.. todo:
+
+ServiceNCWMS2
+~~~~~~~~~~~~~~~~~~~~~
+
+.. todo:
+
+ServiceWMS
+~~~~~~~~~~~~~~~~~~~~~
+
+.. todo:
+
+ServiceWPS
+~~~~~~~~~~~~~~~~~~~~~
+
+.. todo:
+
+
+Adding Service Types
+-----------------------
 
 .. todo:
     dynamic custom service definition

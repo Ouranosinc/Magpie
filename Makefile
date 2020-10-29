@@ -19,7 +19,7 @@ MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := magpie
-APP_VERSION ?= 2.0.1
+APP_VERSION ?= 3.0.0
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
 # guess OS (Linux, Darwin,...)
@@ -189,18 +189,29 @@ clean-docker: docker-clean	## alias for 'docker-clean' target
 
 ## --- Database targets --- ##
 
+.PHONY: _alembic
+_alembic: conda-env
+	@bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/alembic" || pip install $(PIP_XARGS) alembic'
+
 .PHONY: migrate
 migrate: database-migration		## alias to 'database-migration'
 
 .PHONY: database-migration
-database-migration: conda-env	## run postgres database migration with alembic
-	@bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/alembic" || "$(MAKE)" -C install'
+database-migration: conda-env _alembic 	## run postgres database migration with alembic
 	@echo "Running database migration..."
 	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" upgrade head'
 
+.PHONY: database-history
+database-history: conda-env _alembic    ## obtain database revision history
+	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" history'
+
 .PHONY: database-revision
-database-revision: conda-env	## retrieve current database revision
-	@bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/alembic" || "$(MAKE)" -C install'
+database-revision: conda-env _alembic   ## create a new database revision
+	@[ "${DOC}" ] || ( echo ">> 'DOC' is not set. Provide a description."; exit 1 )
+	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" revision -m $(DOC)'
+
+.PHONY: database-version
+database-version: conda-env _alembic 	## retrieve current database revision ID
 	@echo "Fetching database revision..."
 	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" current'
 

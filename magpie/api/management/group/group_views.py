@@ -155,15 +155,43 @@ def create_group_service_permission_view(request):
     group = ar.get_group_matchdict_checked(request)
     service = ar.get_service_matchdict_checked(request)
     permission = ar.get_permission_multiformat_body_checked(request, service)
-    return gu.create_group_resource_permission_response(group, service, permission, db_session=request.db)
+    return gu.create_group_resource_permission_response(group, service, permission, request.db, overwrite=False)
 
 
-@s.GroupServicePermissionAPI.delete(schema=s.GroupServicePermission_DELETE_RequestSchema(), tags=[s.GroupsTag],
-                                    response_schemas=s.GroupServicePermission_DELETE_responses)
-@view_config(route_name=s.GroupServicePermissionAPI.name, request_method="DELETE")
+@s.GroupServicePermissionsAPI.put(schema=s.GroupServicePermissions_PUT_RequestSchema(), tags=[s.GroupsTag],
+                                  response_schemas=s.GroupServicePermissions_PUT_responses)
+@view_config(route_name=s.GroupServicePermissionsAPI.name, request_method="PUT")
+def replace_group_service_permissions_view(request):
+    """
+    Create or modify an existing permission on a service for a group.
+
+    Can be used to adjust permission modifiers.
+    """
+    group = ar.get_group_matchdict_checked(request)
+    service = ar.get_service_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, service)
+    return gu.create_group_resource_permission_response(group, service, permission, request.db, overwrite=True)
+
+
+@s.GroupServicePermissionsAPI.delete(schema=s.GroupServicePermissions_DELETE_RequestSchema(), tags=[s.GroupsTag],
+                                     response_schemas=s.GroupServicePermissions_DELETE_responses)
+@view_config(route_name=s.GroupServicePermissionsAPI.name, request_method="DELETE")
 def delete_group_service_permission_view(request):
     """
-    Delete a permission from a specific service for a group.
+    Delete a permission from a specific resource for a group.
+    """
+    group = ar.get_group_matchdict_checked(request)
+    service = ar.get_service_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, service)
+    return gu.delete_group_resource_permission_response(group, service, permission, db_session=request.db)
+
+
+@s.GroupServicePermissionAPI.delete(schema=s.GroupServicePermissionName_DELETE_RequestSchema(), tags=[s.GroupsTag],
+                                    response_schemas=s.GroupServicePermissionName_DELETE_responses)
+@view_config(route_name=s.GroupServicePermissionAPI.name, request_method="DELETE")
+def delete_group_service_permission_name_view(request):
+    """
+    Delete a permission by name from a specific service for a group.
     """
     group = ar.get_group_matchdict_checked(request)
     service = ar.get_service_matchdict_checked(request)
@@ -200,7 +228,7 @@ def get_group_resource_permissions_view(request):
 @s.GroupResourcePermissionsAPI.post(schema=s.GroupResourcePermissions_POST_RequestSchema(), tags=[s.GroupsTag],
                                     response_schemas=s.GroupResourcePermissions_POST_responses)
 @view_config(route_name=s.GroupResourcePermissionsAPI.name, request_method="POST")
-def create_group_resource_permission_view(request):
+def create_group_resource_permissions_view(request):
     """
     Create a permission on a specific resource for a group.
     """
@@ -210,12 +238,40 @@ def create_group_resource_permission_view(request):
     return gu.create_group_resource_permission_response(group, resource, permission, db_session=request.db)
 
 
-@s.GroupResourcePermissionAPI.delete(schema=s.GroupResourcePermission_DELETE_RequestSchema(), tags=[s.GroupsTag],
-                                     response_schemas=s.GroupResourcePermission_DELETE_responses)
-@view_config(route_name=s.GroupResourcePermissionAPI.name, request_method="DELETE")
-def delete_group_resource_permission_view(request):
+@s.GroupResourcePermissionsAPI.put(schema=s.GroupResourcePermissions_PUT_RequestSchema(), tags=[s.GroupsTag],
+                                   response_schemas=s.GroupResourcePermissions_PUT_responses)
+@view_config(route_name=s.GroupResourcePermissionsAPI.name, request_method="PUT")
+def replace_group_resource_permissions_view(request):
+    """
+    Create or modify an existing permission on a resource for a group.
+
+    Can be used to adjust permission modifiers.
+    """
+    group = ar.get_group_matchdict_checked(request)
+    resource = ar.get_resource_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, resource)
+    return gu.create_group_resource_permission_response(group, resource, permission, request.db, overwrite=True)
+
+
+@s.GroupResourcePermissionsAPI.delete(schema=s.GroupResourcePermissions_DELETE_RequestSchema(), tags=[s.GroupsTag],
+                                      response_schemas=s.GroupResourcePermissions_DELETE_responses)
+@view_config(route_name=s.GroupResourcePermissionsAPI.name, request_method="DELETE")
+def delete_group_resource_permissions_view(request):
     """
     Delete a permission from a specific resource for a group.
+    """
+    group = ar.get_group_matchdict_checked(request)
+    resource = ar.get_resource_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, resource)
+    return gu.delete_group_resource_permission_response(group, resource, permission, db_session=request.db)
+
+
+@s.GroupResourcePermissionAPI.delete(schema=s.GroupResourcePermissionName_DELETE_RequestSchema(), tags=[s.GroupsTag],
+                                     response_schemas=s.GroupResourcePermissionName_DELETE_responses)
+@view_config(route_name=s.GroupResourcePermissionAPI.name, request_method="DELETE")
+def delete_group_resource_permission_name_view(request):
+    """
+    Delete a permission by name from a specific resource for a group.
     """
     group = ar.get_group_matchdict_checked(request)
     resource = ar.get_resource_matchdict_checked(request)

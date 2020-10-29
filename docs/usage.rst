@@ -56,7 +56,7 @@ information from authentication headers and/or cookies of the request. When no u
 of paths will provide some publicly available details, such as current session user. Other routes will be more verbose
 according to the applicable user permission (or is inherited group memberships).
 
-.. versionchanged:: 2.0.0
+.. versionchanged:: 2.0
 
     As of this version, some API paths will offer additional :term:`Logged User` operations such as self-registration
     to publicly available groups. See the appropriate API version documentation for routes that could be added or
@@ -80,7 +80,7 @@ allows quicker editing of elements accessible through the API by providing commo
 fields or adjusting specific user-resource permissions. To have access to this interface, the user must have
 administrator permissions.
 
-.. versionchanged:: 2.0.0
+.. versionchanged:: 2.0
 
     User-scoped views such as logged-user account details are now accessible to non-administrator level users.
     These offer some basic functionalities such as registration to publicly visible groups. Users minimally require

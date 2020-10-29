@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
     from typing import AnyStr as _AnyStr
-    from typing import Dict, Iterable, List, Tuple, Union
+    from typing import Dict, Iterable, List, Optional, Tuple, Union
 
     import six
     from pyramid.config import Configurator
@@ -22,9 +22,10 @@ if TYPE_CHECKING:
     from webob.headers import EnvironHeaders, ResponseHeaders
     from webob.response import Response as WebobResponse
     from webtest.response import TestResponse
+    from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
     from magpie import models
-    from magpie.permissions import Permission
+    from magpie.permissions import Permission, PermissionSet
 
     # pylint: disable=W0611,unused-import  # following definitions provided to be employed elsewhere in the code
 
@@ -56,11 +57,19 @@ if TYPE_CHECKING:
     # recursive nodes structure employed by functions for listing children resources hierarchy
     # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
     ChildrenResourceNodes = Dict[int, Dict[Str, Union[models.Resource, "ChildrenResourceNodes"]]]
-    ResourcePermissionMap = Dict[int, List[Str]]  # raw mapping of permission-names applied per resource ID
+    ResourcePermissionMap = Dict[int, List[PermissionSet]]  # raw mapping of permission-names applied per resource ID
 
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ServiceOrResourceType = Union[models.Service, models.Resource]
-    ResourcePermissionType = Union[models.GroupPermission, models.UserPermission]
-    AnyPermissionType = Union[Permission, ResourcePermissionType, Str]
+    PermissionObject = Dict[Str, Optional[Str]]
+    AnyZigguratPermissionType = Union[
+        models.GroupPermission,
+        models.UserPermission,
+        models.GroupResourcePermission,
+        models.UserResourcePermission,
+        PermissionTuple,
+    ]
+    AnyPermissionType = Union[Permission, PermissionSet, PermissionObject, AnyZigguratPermissionType, Str]
     AnyAccessPrincipalType = Union[Str, Iterable[Str]]
-    AccessControlListType = List[Union[Tuple[Str, Str, Str], Str]]
+    AccessControlEntryType = Union[Tuple[Str, Str, Str], Str]
+    AccessControlListType = List[AccessControlEntryType]

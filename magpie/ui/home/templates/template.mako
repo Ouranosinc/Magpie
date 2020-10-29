@@ -15,7 +15,10 @@
     <meta name="description" content=${MAGPIE_DESCRIPTION}>
     <meta name="version" content=${MAGPIE_VERSION}>
     <meta name="source" content=${MAGPIE_SOURCE_URL}>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        <%include file="magpie.ui.management:templates/tree_toggle.js"></%include>
+    </script>
     <style>
         <%block name="style"/>
     </style>

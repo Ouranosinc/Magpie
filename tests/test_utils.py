@@ -10,26 +10,18 @@ Tests for the various utility operations employed by magpie.
 
 import unittest
 from distutils.version import LooseVersion
-from typing import TYPE_CHECKING
 
 import mock
 import six
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPInternalServerError, HTTPOk
-from pyramid.request import Request
 from pyramid.settings import asbool
-from pyramid.testing import DummyRequest
 
-from magpie import __meta__, models
+from magpie import __meta__
 from magpie.api import exception as ax
 from magpie.api import generic as ag
 from magpie.api import requests as ar
-from magpie.permissions import Permission, format_permissions
 from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum, get_header
 from tests import runner, utils
-
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from magpie.typedefs import Str
 
 
 class DummyEnum(ExtendedEnum):
@@ -37,21 +29,9 @@ class DummyEnum(ExtendedEnum):
     VALUE2 = "value-2"
 
 
-@runner.MAGPIE_TEST_UTILS
 @runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_UTILS
 class TestUtils(unittest.TestCase):
-    @staticmethod
-    def make_request(request_path_query):
-        # type: (Str) -> Request
-        parts = request_path_query.split("?")
-        path = parts[0]
-        query = dict()
-        if len(parts) > 1:
-            for part in parts[1:]:
-                k, v = part.split("=")
-                query[k] = v
-        return DummyRequest(path=path, params=query)  # noqa
-
     @classmethod
     def setUpClass(cls):
         cls.version = __meta__.__version__  # only local test
@@ -110,35 +90,35 @@ class TestUtils(unittest.TestCase):
                 utils.check_val_equal(get_header(name, headers, split=split), CONTENT_TYPE_JSON)
 
     def test_get_query_param(self):
-        resp = self.make_request("/some/path")
+        resp = utils.mock_request("/some/path")
         v = ar.get_query_param(resp, "value")
         utils.check_val_equal(v, None)
 
-        resp = self.make_request("/some/path?other=test")
+        resp = utils.mock_request("/some/path?other=test")
         v = ar.get_query_param(resp, "value")
         utils.check_val_equal(v, None)
 
-        resp = self.make_request("/some/path?other=test")
+        resp = utils.mock_request("/some/path?other=test")
         v = ar.get_query_param(resp, "value", True)
         utils.check_val_equal(v, True)
 
-        resp = self.make_request("/some/path?value=test")
+        resp = utils.mock_request("/some/path?value=test")
         v = ar.get_query_param(resp, "value", True)
         utils.check_val_equal(v, "test")
 
-        resp = self.make_request("/some/path?query=value")
+        resp = utils.mock_request("/some/path?query=value")
         v = ar.get_query_param(resp, "query")
         utils.check_val_equal(v, "value")
 
-        resp = self.make_request("/some/path?QUERY=VALUE")
+        resp = utils.mock_request("/some/path?QUERY=VALUE")
         v = ar.get_query_param(resp, "query")
         utils.check_val_equal(v, "VALUE")
 
-        resp = self.make_request("/some/path?QUERY=VALUE")
+        resp = utils.mock_request("/some/path?QUERY=VALUE")
         v = asbool(ar.get_query_param(resp, "query"))
         utils.check_val_equal(v, False)
 
-        resp = self.make_request("/some/path?Query=TRUE")
+        resp = utils.mock_request("/some/path?Query=TRUE")
         v = asbool(ar.get_query_param(resp, "query"))
         utils.check_val_equal(v, True)
 
@@ -220,7 +200,7 @@ class TestUtils(unittest.TestCase):
         Arguments ``param`` and ``param_compare`` must be of same type for valid comparison, except for ``is_type``
         where compare parameter must be the type directly.
 
-        .. versionchanged:: 2.0.0
+        .. versionchanged:: 2.0
 
             Since ``param`` can come from user input, we should **NOT** raise ``HTTPInternalServerError`` because the
             whole point of the method is to ensure that values are compared accordingly in a controlled fashion.
@@ -273,26 +253,6 @@ class TestUtils(unittest.TestCase):
             VALUE1 = DummyEnum.VALUE1.value  # copy internal string representation
 
         utils.check_val_not_equal(DummyEnum.VALUE1, OtherEnum.VALUE1, msg="concrete enum elements should be different")
-
-    def test_format_permissions(self):
-        usr_perm = models.UserPermission()
-        usr_perm.perm_name = Permission.GET_FEATURE.value
-        grp_perm = models.GroupPermission()
-        grp_perm.perm_name = Permission.WRITE_MATCH.value
-        dup_perm = Permission.READ.value        # only one should remain in result
-        dup_usr_perm = models.UserPermission()
-        dup_usr_perm.perm_name = dup_perm       # also only one remains although different type
-        rand_perm = "random"                    # should be filtered out of result
-        any_perms = [dup_perm, Permission.GET_CAPABILITIES, usr_perm, dup_perm, grp_perm, rand_perm]
-
-        format_perms = format_permissions(any_perms)
-        expect_perms = [
-            Permission.GET_CAPABILITIES.value,
-            Permission.GET_FEATURE.value,
-            Permission.READ.value,
-            Permission.WRITE_MATCH.value,
-        ]
-        utils.check_all_equal(format_perms, expect_perms, any_order=False)
 
     def test_evaluate_call_callable_incorrect_usage(self):
         """
@@ -357,7 +317,7 @@ class TestUtils(unittest.TestCase):
         )
 
     def test_guess_target_format_default(self):
-        request = DummyRequest()
-        content_type, where = ag.guess_target_format(request)  # noqa
+        request = utils.mock_request()
+        content_type, where = ag.guess_target_format(request)
         utils.check_val_equal(content_type, CONTENT_TYPE_JSON)
         utils.check_val_equal(where, True)

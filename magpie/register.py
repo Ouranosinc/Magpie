@@ -31,7 +31,7 @@ from magpie.api.schemas import (
     UsersAPI
 )
 from magpie.constants import get_constant
-from magpie.permissions import Permission
+from magpie.permissions import Permission, PermissionSet
 from magpie.services import SERVICE_TYPE_DICT, ServiceWPS
 from magpie.utils import (
     bool2str,
@@ -59,8 +59,8 @@ if TYPE_CHECKING:
 
 LOGGER = get_logger(__name__)
 
-LOGIN_ATTEMPT = 10              # max attempts for login
-LOGIN_TIMEOUT = 10              # delay (s) between each login attempt
+LOGIN_ATTEMPT = 5               # max attempts for login
+LOGIN_TIMEOUT = 2               # delay (s) between each login attempt
 CREATE_SERVICE_INTERVAL = 2     # delay (s) between creations to allow server to respond/process
 GETCAPABILITIES_INTERVAL = 10   # delay (s) between 'GetCapabilities' Phoenix calls to validate service registration
 GETCAPABILITIES_ATTEMPTS = 12   # max attempts for 'GetCapabilities' validations
@@ -108,8 +108,9 @@ def _login_loop(login_url, cookies_file, data=None, message="Login response"):
         err, http = _request_curl(login_url, cookie_jar=cookies_file, form_params=data_str, msg=message)
         if not err and http == 200:
             break
-        time.sleep(LOGIN_TIMEOUT)
         attempt += 1
+        LOGGER.warning("Login failed, retrying in %ss (%s/%s)", LOGIN_TIMEOUT, attempt, LOGIN_ATTEMPT)
+        time.sleep(LOGIN_TIMEOUT)
         if attempt >= LOGIN_ATTEMPT:
             raise RegistrationLoginError("Cannot log in to {0}".format(login_url))
 
@@ -765,20 +766,14 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
         """
         action_oper = None
         if usr_name:
-            action_oper = UserResourcePermissionsAPI.path.replace("{user_name}", _usr_name)
+            action_oper = UserResourcePermissionsAPI.format(user_name=_usr_name, resource_id=resource_id)
         if grp_name:
-            action_oper = GroupResourcePermissionsAPI.path.replace("{group_name}", _grp_name)
+            action_oper = GroupResourcePermissionsAPI.format(group_name=_grp_name, resource_id=resource_id)
         if not action_oper:
             return None
-        if create_perm:
-            action_func = requests.post
-            action_path = "{url}{path}".format(url=magpie_url, path=action_oper)
-            action_body = {"permission_name": perm_name}
-        else:
-            action_func = requests.delete
-            action_path = "{url}{path}/{perm_name}".format(url=magpie_url, path=action_oper, perm_name=perm_name)
-            action_body = {}
-        action_path = action_path.format(resource_id=resource_id)
+        action_func = requests.post if create_perm else requests.delete
+        action_body = {"permission": perm.json()}
+        action_path = "{url}{path}".format(url=magpie_url, path=action_oper)
         action_resp = action_func(action_path, json=action_body, cookies=cookies_or_session)
         return action_resp
 
@@ -795,15 +790,19 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
         if _usr_name:
             usr = UserService.by_user_name(_usr_name, db_session=cookies_or_session)
             if create_perm:
-                return ut.create_user_resource_permission_response(usr, res, perm, db_session=cookies_or_session)
+                return ut.create_user_resource_permission_response(usr, res, perm, overwrite=True,
+                                                                   db_session=cookies_or_session)
             else:
-                return ut.delete_user_resource_permission_response(usr, res, perm, db_session=cookies_or_session)
+                return ut.delete_user_resource_permission_response(usr, res, perm,
+                                                                   db_session=cookies_or_session)
         if _grp_name:
             grp = GroupService.by_group_name(_grp_name, db_session=cookies_or_session)
             if create_perm:
-                return gt.create_group_resource_permission_response(grp, res, perm, db_session=cookies_or_session)
+                return gt.create_group_resource_permission_response(grp, res, perm, overwrite=True,
+                                                                    db_session=cookies_or_session)
             else:
-                return gt.delete_group_resource_permission_response(grp, res, perm, db_session=cookies_or_session)
+                return gt.delete_group_resource_permission_response(grp, res, perm,
+                                                                    db_session=cookies_or_session)
 
     def _apply_profile(_usr_name=None, _grp_name=None):
         """
@@ -855,7 +854,7 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
 
         # validation according to status code returned
         if is_create:
-            if _resp.status_code == 201:
+            if _resp.status_code in [200, 201]:  # update/create
                 _log_permission("{} successfully created.".format(item_type), entry_index, level=logging.INFO, trail="")
             elif _resp.status_code == 409:
                 _log_permission("{} already exists.".format(item_type), entry_index, level=logging.INFO)
@@ -872,10 +871,10 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
                                 permission=permission_config_entry, level=logging.ERROR)
 
     create_perm = permission_config_entry["action"] == "create"
-    perm_name = permission_config_entry["permission"]
+    perm_def = permission_config_entry["permission"]  # name or object
     usr_name = permission_config_entry.get("user")
     grp_name = permission_config_entry.get("group")
-    perm = Permission.get(perm_name)
+    perm = PermissionSet(perm_def)
 
     # process groups first as they can be referenced by user definitions
     _validate_response(lambda: _apply_profile(None, grp_name), is_create=True)

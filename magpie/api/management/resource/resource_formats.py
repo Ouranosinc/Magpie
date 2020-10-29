@@ -4,11 +4,11 @@ from pyramid.httpexceptions import HTTPInternalServerError
 from ziggurat_foundations.models.services.resource import ResourceService
 
 from magpie.api.exception import evaluate_call
-from magpie.permissions import format_permissions
+from magpie.permissions import PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 
 if TYPE_CHECKING:
-    from typing import Iterable, Optional
+    from typing import Collection, Optional
 
     from sqlalchemy.orm.session import Session
 
@@ -22,37 +22,37 @@ if TYPE_CHECKING:
     )
 
 
-def format_resource(resource, permissions=None, basic_info=False):
-    # type: (Resource, Optional[Iterable[AnyPermissionType]], bool) -> JSON
+def format_resource(resource, permissions=None, permission_type=None, basic_info=False):
+    # type: (Resource, Optional[Collection[AnyPermissionType]], Optional[PermissionType], bool) -> JSON
     """
     Formats the :paramref:`resource` information into JSON.
     """
-    def fmt_res(res, perms, info):
+    def fmt_res():
         result = {
-            "resource_name": str(res.resource_name),
-            "resource_display_name": str(res.resource_display_name or res.resource_name),
-            "resource_type": str(res.resource_type),
-            "resource_id": res.resource_id
+            "resource_name": str(resource.resource_name),
+            "resource_display_name": str(resource.resource_display_name or resource.resource_name),
+            "resource_type": str(resource.resource_type),
+            "resource_id": resource.resource_id
         }
-        if not info:
+        if not basic_info:
             result.update({
-                "parent_id": res.parent_id,
-                "root_service_id": res.root_service_id,
+                "parent_id": resource.parent_id,
+                "root_service_id": resource.root_service_id,
                 "children": {},
-                "permission_names": list() if perms is None else format_permissions(perms)
             })
+            result.update(format_permissions(permissions, permission_type))
         return result
 
     return evaluate_call(
-        lambda: fmt_res(resource, permissions, basic_info),
+        lambda: fmt_res(),
         http_error=HTTPInternalServerError,
         msg_on_fail="Failed to format resource.",
-        content={"resource": repr(resource), "permissions": repr(permissions), "basic_info": str(basic_info)}
+        content={"resource": repr(resource), "permissions": repr(permissions), "basic_info": basic_info}
     )
 
 
-def format_resource_tree(children, db_session, resources_perms_dict=None):
-    # type: (ChildrenResourceNodes, Session, Optional[ResourcePermissionMap]) -> JSON
+def format_resource_tree(children, db_session, resources_perms_dict=None, permission_type=None):
+    # type: (ChildrenResourceNodes, Session, Optional[ResourcePermissionMap], Optional[PermissionType]) -> JSON
     """
     Generates the formatted resource tree under the provided children resources, with all of their children resources by
     calling :func:`format_resource` recursively on them.
@@ -106,7 +106,7 @@ def format_resource_tree(children, db_session, resources_perms_dict=None):
                     }
                 perms = __internal_svc_res_perm_dict[service_id][resource.resource_type]  # 'resource_type' is str here
 
-            fmt_res_tree[child_id] = format_resource(resource, perms)
+            fmt_res_tree[child_id] = format_resource(resource, perms, permission_type)
             fmt_res_tree[child_id]["children"] = recursive_fmt_res_tree(new_children)
         return fmt_res_tree
 

@@ -16,6 +16,7 @@ from magpie.api.management.service.service_formats import format_service_resourc
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
+from magpie.permissions import PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
 
@@ -218,6 +219,7 @@ def get_user_resources_view(request):
 
     def build_json_user_resource_tree(usr):
         json_res = {}
+        perm_type = PermissionType.INHERITED if inherit_groups_perms else PermissionType.DIRECT
         services = ResourceService.all(models.Service, db_session=db)
         # add service-types so they are ordered and listed if no service of that type was defined
         for svc_type in sorted(SERVICE_TYPE_DICT):
@@ -235,6 +237,7 @@ def get_user_resources_view(request):
                     db_session=db,
                     service_perms=svc_perms,
                     resources_perms_dict=res_perms_dict,
+                    permission_type=perm_type,
                     show_all_children=False,
                     show_private_url=False,
                 )
@@ -274,25 +277,58 @@ def get_user_resource_permissions_view(request):
 @s.LoggedUserResourcePermissionsAPI.post(schema=s.UserResourcePermissions_POST_RequestSchema(), tags=[s.LoggedUserTag],
                                          response_schemas=s.LoggedUserResourcePermissions_POST_responses)
 @view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="POST")
-def create_user_resource_permission_view(request):
+def create_user_resource_permissions_view(request):
     """
     Create a permission on specific resource for a user.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request)
     permission = ar.get_permission_multiformat_body_checked(request, resource)
-    return uu.create_user_resource_permission_response(user, resource, permission, request.db)
+    return uu.create_user_resource_permission_response(user, resource, permission, request.db, overwrite=False)
 
 
-@s.UserResourcePermissionAPI.delete(schema=s.UserResourcePermission_DELETE_RequestSchema(), tags=[s.UsersTag],
-                                    response_schemas=s.UserResourcePermission_DELETE_responses)
-@s.LoggedUserResourcePermissionAPI.delete(schema=s.UserResourcePermission_DELETE_RequestSchema(),
-                                          tags=[s.LoggedUserTag],
-                                          response_schemas=s.LoggedUserResourcePermission_DELETE_responses)
-@view_config(route_name=s.UserResourcePermissionAPI.name, request_method="DELETE")
-def delete_user_resource_permission_view(request):
+@s.UserResourcePermissionsAPI.put(schema=s.UserResourcePermissions_PUT_RequestSchema(), tags=[s.UsersTag],
+                                  response_schemas=s.UserResourcePermissions_PUT_responses)
+@s.LoggedUserResourcePermissionsAPI.put(schema=s.UserResourcePermissions_PUT_RequestSchema(), tags=[s.LoggedUserTag],
+                                        response_schemas=s.LoggedUserResourcePermissions_PUT_responses)
+@view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="PUT")
+def replace_user_resource_permissions_view(request):
     """
-    Delete an applied permission on a resource for a user (not including his groups permissions).
+    Create or modify an existing permission on a resource for a user.
+
+    Can be used to adjust permission modifiers.
+    """
+    user = ar.get_user_matchdict_checked_or_logged(request)
+    resource = ar.get_resource_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, resource)
+    return uu.create_user_resource_permission_response(user, resource, permission, request.db, overwrite=True)
+
+
+@s.UserResourcePermissionsAPI.delete(schema=s.UserResourcePermissions_DELETE_RequestSchema(), tags=[s.UsersTag],
+                                     response_schemas=s.UserResourcePermissions_DELETE_responses)
+@s.LoggedUserResourcePermissionsAPI.delete(schema=s.UserResourcePermissions_DELETE_RequestSchema(),
+                                           tags=[s.LoggedUserTag],
+                                           response_schemas=s.LoggedUserResourcePermissions_DELETE_responses)
+@view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="DELETE")
+def delete_user_resource_permissions_view(request):
+    """
+    Delete a permission from a specific resource for a user (not including his groups permissions).
+    """
+    user = ar.get_user_matchdict_checked_or_logged(request)
+    resource = ar.get_resource_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, resource)
+    return uu.delete_user_resource_permission_response(user, resource, permission, request.db)
+
+
+@s.UserResourcePermissionAPI.delete(schema=s.UserResourcePermissionName_DELETE_RequestSchema(), tags=[s.UsersTag],
+                                    response_schemas=s.UserResourcePermissionName_DELETE_responses)
+@s.LoggedUserResourcePermissionAPI.delete(schema=s.UserResourcePermissionName_DELETE_RequestSchema(),
+                                          tags=[s.LoggedUserTag],
+                                          response_schemas=s.LoggedUserResourcePermissionName_DELETE_responses)
+@view_config(route_name=s.UserResourcePermissionAPI.name, request_method="DELETE")
+def delete_user_resource_permission_name_view(request):
+    """
+    Delete a permission by name from a resource for a user (not including his groups permissions).
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request)
@@ -336,13 +372,14 @@ def get_user_service_permissions_view(request):
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
     inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
+    perm_type = PermissionType.INHERITED if inherit_groups_perms else PermissionType.DIRECT
     perms = ax.evaluate_call(lambda: uu.get_user_service_permissions(service=service, user=user, request=request,
                                                                      inherit_groups_permissions=inherit_groups_perms),
                              fallback=lambda: request.db.rollback(), http_error=HTTPNotFound,
                              msg_on_fail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
                              content={"service_name": str(service.resource_name), "user_name": str(user.user_name)})
-    return ax.valid_http(http_success=HTTPOk, detail=s.UserServicePermissions_GET_OkResponseSchema.description,
-                         content={"permission_names": sorted(p.value for p in perms)})
+    return ax.valid_http(http_success=HTTPOk, content=format_permissions(perms, perm_type),
+                         detail=s.UserServicePermissions_GET_OkResponseSchema.description)
 
 
 @s.UserServicePermissionsAPI.post(schema=s.UserServicePermissions_POST_RequestSchema, tags=[s.UsersTag],
@@ -350,24 +387,57 @@ def get_user_service_permissions_view(request):
 @s.LoggedUserServicePermissionsAPI.post(schema=s.UserServicePermissions_POST_RequestSchema, tags=[s.LoggedUserTag],
                                         response_schemas=s.LoggedUserServicePermissions_POST_responses)
 @view_config(route_name=s.UserServicePermissionsAPI.name, request_method="POST")
-def create_user_service_permission_view(request):
+def create_user_service_permissions_view(request):
     """
     Create a permission on a service for a user.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
     permission = ar.get_permission_multiformat_body_checked(request, service)
-    return uu.create_user_resource_permission_response(user, service, permission, request.db)
+    return uu.create_user_resource_permission_response(user, service, permission, request.db, overwrite=False)
 
 
-@s.UserServicePermissionAPI.delete(schema=s.UserServicePermission_DELETE_RequestSchema, tags=[s.UsersTag],
-                                   response_schemas=s.UserServicePermission_DELETE_responses)
-@s.LoggedUserServicePermissionAPI.delete(schema=s.UserServicePermission_DELETE_RequestSchema, tags=[s.LoggedUserTag],
-                                         response_schemas=s.LoggedUserServicePermission_DELETE_responses)
-@view_config(route_name=s.UserServicePermissionAPI.name, request_method="DELETE")
-def delete_user_service_permission_view(request):
+@s.UserServicePermissionsAPI.put(schema=s.UserServicePermissions_PUT_RequestSchema, tags=[s.UsersTag],
+                                 response_schemas=s.UserServicePermissions_PUT_responses)
+@s.LoggedUserServicePermissionsAPI.put(schema=s.UserServicePermissions_PUT_RequestSchema, tags=[s.LoggedUserTag],
+                                       response_schemas=s.LoggedUserServicePermissions_PUT_responses)
+@view_config(route_name=s.UserServicePermissionsAPI.name, request_method="PUT")
+def replace_user_service_permissions_view(request):
     """
-    Delete an applied permission on a service for a user (not including his groups permissions).
+    Create or modify an existing permission on a service for a user.
+
+    Can be used to adjust permission modifiers.
+    """
+    user = ar.get_user_matchdict_checked_or_logged(request)
+    service = ar.get_service_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, service)
+    return uu.create_user_resource_permission_response(user, service, permission, request.db, overwrite=True)
+
+
+@s.UserServicePermissionsAPI.delete(schema=s.UserServicePermissions_DELETE_RequestSchema, tags=[s.UsersTag],
+                                    response_schemas=s.UserServicePermissions_DELETE_responses)
+@s.LoggedUserServicePermissionsAPI.delete(schema=s.UserServicePermissions_DELETE_RequestSchema, tags=[s.LoggedUserTag],
+                                          response_schemas=s.LoggedUserServicePermissions_DELETE_responses)
+@view_config(route_name=s.UserServicePermissionsAPI.name, request_method="DELETE")
+def delete_user_service_permissions_view(request):
+    """
+    Delete a permission from a service for a user (not including his groups permissions).
+    """
+    user = ar.get_user_matchdict_checked_or_logged(request)
+    service = ar.get_service_matchdict_checked(request)
+    permission = ar.get_permission_multiformat_body_checked(request, service)
+    return uu.delete_user_resource_permission_response(user, service, permission, request.db)
+
+
+@s.UserServicePermissionAPI.delete(schema=s.UserServicePermissionName_DELETE_RequestSchema, tags=[s.UsersTag],
+                                   response_schemas=s.UserServicePermissionName_DELETE_responses)
+@s.LoggedUserServicePermissionAPI.delete(schema=s.UserServicePermissionName_DELETE_RequestSchema,
+                                         tags=[s.LoggedUserTag],
+                                         response_schemas=s.LoggedUserServicePermissionName_DELETE_responses)
+@view_config(route_name=s.UserServicePermissionAPI.name, request_method="DELETE")
+def delete_user_service_permission_name_view(request):
+    """
+    Delete a permission by name from a service for a user (not including his groups permissions).
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
@@ -398,6 +468,7 @@ def get_user_service_resources_view(request):
         db_session=request.db,
         service_perms=service_perms,
         resources_perms_dict=resources_perms_dict,
+        permission_type=PermissionType.INHERITED if inherit_groups_perms else PermissionType.DIRECT,
         show_all_children=False,
         show_private_url=False,
     )

@@ -1,6 +1,13 @@
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPNotFound, HTTPOk
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPForbidden,
+    HTTPNotFound,
+    HTTPOk,
+    HTTPUnprocessableEntity
+)
 from pyramid.settings import asbool
 from pyramid.view import view_config
 
@@ -11,7 +18,7 @@ from magpie.api import schemas as s
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service import service_formats as sf
 from magpie.api.management.service import service_utils as su
-from magpie.permissions import Permission, format_permissions
+from magpie.permissions import Permission, PermissionType, format_permissions
 from magpie.register import SERVICES_PHOENIX_ALLOWED, sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import CONTENT_TYPE_JSON
@@ -95,7 +102,7 @@ def register_service_view(request):
     """
     # accomplish basic validations here, create_service will do more field-specific checks
     service_name = ar.get_value_multiformat_body_checked(request, "service_name")
-    service_url = ar.get_value_multiformat_body_checked(request, "service_url", pattern=ax.PARAM_REGEX)
+    service_url = ar.get_value_multiformat_body_checked(request, "service_url", pattern=ax.URL_REGEX)
     service_type = ar.get_value_multiformat_body_checked(request, "service_type")
     service_push = asbool(ar.get_multiformat_body(request, "service_push", default=False))
     return su.create_service(service_name, service_type, service_url, service_push, db_session=request.db)
@@ -200,7 +207,7 @@ def get_service_permissions_view(request):
                                  fallback=request.db.rollback(), http_error=HTTPBadRequest, content=svc_content,
                                  msg_on_fail=s.ServicePermissions_GET_BadRequestResponseSchema.description)
     return ax.valid_http(http_success=HTTPOk, detail=s.ServicePermissions_GET_OkResponseSchema.description,
-                         content={"permission_names": format_permissions(svc_perms)})
+                         content=format_permissions(svc_perms, PermissionType.ALLOWED))
 
 
 @s.ServiceResourceAPI.delete(schema=s.ServiceResource_DELETE_RequestSchema(), tags=[s.ServicesTag],
@@ -243,8 +250,8 @@ def create_service_resource_view(request):
         parent_id = service.resource_id
     else:
         parent_id = ax.evaluate_call(lambda: int(parent_id),
-                                     http_error=HTTPBadRequest,
-                                     msg_on_fail=s.ServiceResources_POST_BadRequestResponseSchema.description)
+                                     http_error=HTTPUnprocessableEntity,
+                                     msg_on_fail=s.ServiceResources_POST_UnprocessableEntityResponseSchema.description)
         # validate target service is actually the root service of the provided parent resource ID
         root_service = ru.get_resource_root_service_by_id(parent_id, db_session=db_session)
         ax.verify_param(root_service, not_none=True, param_name="parent_id",
@@ -252,8 +259,8 @@ def create_service_resource_view(request):
                         http_error=HTTPNotFound)
         ax.verify_param(root_service.resource_id, is_equal=True,
                         param_compare=service.resource_id, param_name="parent_id",
-                        msg_on_fail=s.ServiceResources_POST_BadRequestResponseSchema.description,
-                        http_error=HTTPBadRequest)
+                        msg_on_fail=s.ServiceResources_POST_ForbiddenResponseSchema.description,
+                        http_error=HTTPForbidden)
     return ru.create_resource(resource_name, resource_display_name, resource_type,
                               parent_id=parent_id, db_session=db_session)
 

@@ -4,6 +4,12 @@
     color: white;
 }
 
+a.current-tab {
+    border-width: 1px;
+    border-style: solid;
+    background-color: #2C548F;
+}
+
 a.tab:hover,
 a.tab:active,
 .img-button:hover,

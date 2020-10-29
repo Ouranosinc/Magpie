@@ -1,23 +1,27 @@
 import functools
+import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import unittest
 import warnings
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
+import mock
 import pytest
 import requests
 import requests.exceptions
 import six
 from pyramid.httpexceptions import HTTPException
 from pyramid.settings import asbool
-from pyramid.testing import setUp as PyramidSetUp
+from pyramid.testing import DummyRequest, setUp as PyramidSetUp
 from six.moves.urllib.parse import urlparse
 from webtest.app import AppError, TestApp  # noqa
+from webtest.forms import Form
 from webtest.response import TestResponse
 
 from magpie import __meta__, app, services
 from magpie.constants import get_constant
+from magpie.permissions import Access, PermissionSet, Scope
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess
 from magpie.utils import (
     CONTENT_TYPE_HTML,
@@ -32,12 +36,15 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
 
+    from pyramid.request import Request
+
     import tests.interfaces as ti
     from magpie.services import ServiceInterface
     from magpie.typedefs import (
         JSON,
         AnyCookiesType,
         AnyHeadersType,
+        AnyPermissionType,
         AnyResponseType,
         AnyValue,
         CookiesType,
@@ -285,7 +292,7 @@ def get_service_types_for_version(version):
 
 
 def warn_version(test, functionality, version, skip=True, older=False):
-    # type: (AnyMagpieTestCaseType, Str, Str, bool, bool) -> None
+    # type: (Union[AnyMagpieTestCaseType, Str], Str, Str, bool, bool) -> None
     """
     Verifies that ``test.version`` value *minimally* has :paramref:`version` requirement to execute a test.
     (ie: ``test.version >= version``).
@@ -294,15 +301,21 @@ def warn_version(test, functionality, version, skip=True, older=False):
     (ie: ``test.version < version``).
 
     If version condition is not met, a warning is emitted and the test is skipped according to ``skip`` value.
+
+    Optionally, the reference version can be directly provided as string using :paramref:`test` instead of `Test Case`.
     """
-    min_req = LooseVersion(test.version) < LooseVersion(version)
+    if isinstance(test, six.string_types):
+        test_version = test
+    else:
+        test_version = TestSetup.get_Version(test)
+    min_req = LooseVersion(test_version) < LooseVersion(version)
     if min_req or (not min_req and older):
         if min_req:
             msg = "Functionality [{}] not yet implemented in version [{}], upgrade [>={}] required to test." \
-                  .format(functionality, test.version, version)
+                  .format(functionality, test_version, version)
         else:
             msg = "Functionality [{}] was deprecated in version [{}], downgrade [<{}] required to test." \
-                  .format(functionality, test.version, version)
+                  .format(functionality, test_version, version)
         warnings.warn(msg, FutureWarning)
         if skip:
             test.skipTest(reason=msg)   # noqa: F401
@@ -317,6 +330,71 @@ def json_msg(json_body, msg=null):
     if msg is not null:
         return "{}\n{}".format(msg, json_str)
     return json_str
+
+
+def mock_get_settings(test):
+    """
+    Decorator to mock :func:`magpie.utils.get_settings` to allow retrieval of settings from :class:`DummyRequest`.
+
+    .. warning::
+        Only apply on test methods (not on class TestCase) to ensure that :mod:`pytest` can collect them correctly.
+    """
+    from magpie.utils import get_settings as real_get_settings
+
+    def mocked(container):
+        if isinstance(container, DummyRequest):
+            return container.registry.settings
+        return real_get_settings(container)
+
+    @functools.wraps(test)
+    def wrapped(*_, **__):
+        with mock.patch("magpie.utils.get_settings", side_effect=mocked):
+            return test(*_, **__)
+    return wrapped
+
+
+def mock_request(request_path_query="",     # type: Str
+                 method="GET",              # type: Str
+                 params=None,               # type: Optional[Dict[Str, Str]]
+                 body="",                   # type: Union[Str, JSON]
+                 content_type=None,         # type: Optional[Str]
+                 headers=None,              # type: Optional[AnyHeadersType]
+                 cookies=None,              # type: Optional[AnyCookiesType]
+                 settings=None,             # type: SettingsType
+                 ):                         # type: (...) -> Request
+    """
+    Generates a fake request with provided arguments.
+
+    Can be employed by functions that expect a request object as input to retrieve details such as body content, the
+    request path, or internal settings, but that no actual request needs to be accomplished.
+    """
+    parts = request_path_query.split("?")
+    path = parts[0]
+    query = dict()
+    if len(parts) > 1 and parts[1]:
+        for part in parts[1].split("&"):
+            kv = part.split("=")  # handle trailing keyword query arguments without values
+            if kv[0]:  # handle invalid keyword missing
+                query[kv[0]] = kv[1] if len(kv) > 1 else None
+    elif params:
+        query = params
+    request = DummyRequest(path=path, params=query)
+    request.path_qs = request_path_query
+    request.method = method
+    request.content_type = content_type
+    request.headers = headers or {}
+    request.cookies = cookies or {}
+    if content_type:
+        request.headers["Content-Type"] = content_type
+    request.body = body
+    try:
+        if body:
+            # set missing DummyRequest.json attribute
+            request.json = json_pkg.loads(body)
+    except (TypeError, ValueError):
+        pass
+    request.registry.settings = settings or {}
+    return request  # noqa  # fake type of what is normally expected just to avoid many 'noqa'
 
 
 def test_request(test_item,             # type: AnyMagpieTestItemType
@@ -627,7 +705,7 @@ def check_val_type(val, ref, msg=None):
 
 
 def check_raises(func, exception_type, msg=None):
-    # type: (Callable[[], None], Type[Exception], Optional[Str]) -> Exception
+    # type: (Callable[[], Any], Type[Exception], Optional[Str]) -> Exception
     """
     Calls the callable and verifies that the specific exception was raised.
 
@@ -646,14 +724,14 @@ def check_raises(func, exception_type, msg=None):
 
 
 def check_no_raise(func, msg=None):
-    # type: (Callable[[], None], Optional[Str]) -> None
+    # type: (Callable[[], Any], Optional[Str]) -> Any
     """
     Calls the callable and verifies that no exception was raised.
 
     :raise AssertionError: on any raised exception.
     """
     try:
-        func()
+        return func()
     except Exception as exc:  # pylint: disable=W0703
         msg = ": {}".format(msg) if msg else "."
         raise AssertionError("Exception [{!r}] was raised when none is expected{}".format(type(exc).__name__, msg))
@@ -721,7 +799,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
 
 def check_ui_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_HTML,
                                  expected_title="Magpie Administration"):
-    # type: (AnyResponseType, int, Str, Optional[Str]) -> None
+    # type: (AnyResponseType, int, Str, Optional[Str]) -> Str
     """
     Validates minimal expected elements in a `Magpie` UI page.
 
@@ -729,7 +807,7 @@ def check_ui_response_basic_info(response, expected_code=200, expected_type=CONT
     That function should therefore be employed for responses coming directly from the API routes.
 
     :raises AssertionError: if any of the expected validation elements does not meet requirement.
-    :returns: nothing if every check was successful.
+    :returns: HTML text body of the response if every check was successful.
     """
     msg = None \
         if get_header("Content-Type", response.headers) != CONTENT_TYPE_JSON \
@@ -739,6 +817,7 @@ def check_ui_response_basic_info(response, expected_code=200, expected_type=CONT
     check_val_is_in(expected_type, get_response_content_types_list(response))
     if expected_title:
         check_val_is_in(expected_title, response.text, msg=null)   # don't output big html if failing
+    return response.text
 
 
 def check_error_param_structure(body,                                   # type: JSON
@@ -906,7 +985,7 @@ class TestSetup(object):
 
     @staticmethod
     def check_FormSubmit(test_case,                         # type: AnyMagpieTestCaseType
-                         form_match,                        # type: Union[Str, int, Dict[Str, Str]]
+                         form_match,                        # type: Union[Str, int, Dict[Str, Str], Form]
                          form_data=None,                    # type: Optional[Dict[Str, AnyValue]]
                          form_submit="submit",              # type: Union[Str, int]
                          previous_response=None,            # type: AnyResponseType
@@ -926,7 +1005,7 @@ class TestSetup(object):
         Successive calls using form submits can be employed to simulate sequential page navigation by providing back
         the returned `response` object as input to the following page with argument :paramref:`previous_response`.
 
-        .. code-block:: json
+        .. code-block:: python
 
             svc_resp = check_FormSubmit(test, form_match="goto_add_service", path="/ui/services")
             add_resp = check_FormSubmit(test, form_match="add_service", form_data={...}, previous_response=svc_resp)
@@ -935,7 +1014,11 @@ class TestSetup(object):
         :param form_match:
             Can be a form name, the form index (from all available forms on page) or an
             iterable of key/values of form fields to search for a match (first match is used if many are available).
-        :param form_data: specifies matched form fields to be filled as if entered from UI input using given key/value.
+            Also, can be directly the targeted form if already retrieved from the previous response.
+        :param form_data:
+            Specifies matched form fields to be filled as if entered from UI input using given key/value.
+            If multiple fields share the same key, the value must provide an iterable of same length as the expected
+            amount of fields matching that key, to fill each of the individual value.
         :param form_submit: specifies which `button` by name or index to submit within the matched form.
         :param path:
             Required page location where to send a request to fetch the required form, *unless* provided through
@@ -962,7 +1045,9 @@ class TestSetup(object):
                                 cookies=override_cookies if override_cookies is not null else test_case.cookies)
         check_val_equal(resp.status_code, 200, msg="Cannot test form submission, initial page returned an error.")
         form = None
-        if isinstance(form_match, (int, six.string_types)):
+        if isinstance(form_match, Form):
+            form = form_match
+        elif isinstance(form_match, (int, six.string_types)):
             form = resp.forms[form_match]
         else:
             # select form if all key/value pairs specified match the current one
@@ -980,7 +1065,12 @@ class TestSetup(object):
                            "from available form match/data combinations: [{}]".format(available_forms))
         if form_data:
             for f_field, f_value in dict(form_data).items():
-                form[f_field] = f_value
+                if isinstance(f_value, (list, set, tuple)):
+                    for i, i_value in enumerate(f_value):
+                        form.set(f_field, i_value, i)
+                else:
+                    form[f_field] = f_value
+
         resp = form.submit(form_submit, expect_errors=expect_errors)
         while 300 <= resp.status_code < 400 and max_redirect > 0:
             resp = resp.follow()
@@ -1142,8 +1232,14 @@ class TestSetup(object):
                 if override_permissions is null:
                     check_val_not_equal(len(service["permission_names"]), 0,
                                         msg="Service-scoped route must always provide all allowed permissions.")
-                    override_permissions = [p.value for p in SERVICE_TYPE_DICT[service["service_type"]].permissions]
-                check_all_equal(service["permission_names"], list(override_permissions), any_order=True)
+                    permissions = SERVICE_TYPE_DICT[service["service_type"]].permissions
+                    if LooseVersion(test_case.version) < LooseVersion("3.0"):
+                        override_permissions = [perm.value for perm in permissions]
+                    else:
+                        override_permissions = TestSetup.get_PermissionNames(test_case, permissions, combinations=True)
+                else:
+                    override_permissions = TestSetup.get_PermissionNames(test_case, override_permissions)
+                check_all_equal(service["permission_names"], override_permissions, any_order=True)
         if has_children_resources:
             check_val_is_in("resources", service)
             children = service["resources"]
@@ -1250,7 +1346,7 @@ class TestSetup(object):
                                          override_item_name=null,           # type: Optional[Str]
                                          resource_info=null,                # type: Optional[JSON]
                                          override_resource_id=null,         # type: Optional[int]
-                                         override_permission_name=null,     # type: Optional[Str]
+                                         override_permission=null,          # type: Optional[AnyPermissionType]
                                          override_headers=null,             # type: Optional[HeadersType]
                                          override_cookies=null,             # type: Optional[CookiesType]
                                          ):                                 # type: (...) -> JSON
@@ -1263,13 +1359,13 @@ class TestSetup(object):
                                                        override_cookies=override_cookies)
         else:
             no_perms = "permission_names" not in resource_info or not resource_info.get("permission_names")
-            get_details = no_perms or override_permission_name is null
+            get_details = no_perms or override_permission is null
             resource_info = TestSetup.get_ResourceInfo(test_case, override_body=resource_info, full_detail=get_details,
                                                        override_headers=override_headers,
                                                        override_cookies=override_cookies)
         res_id = resource_info["resource_id"]
-        if override_permission_name is null:
-            override_permission_name = resource_info["permission_names"][0]
+        if override_permission is null:
+            override_permission = resource_info["permission_names"][0]
         if item_type == "group":
             item_name = override_item_name if override_item_name is not null else test_case.test_group_name
             item_path = "/groups/{}".format(item_name)
@@ -1278,7 +1374,7 @@ class TestSetup(object):
             item_path = "/users/{}".format(item_name)
         else:
             raise ValueError("invalid item-type: [{}]".format(item_type))
-        data = {"permission_name": override_permission_name}
+        data = {"permission": PermissionSet(override_permission).json()}
         path = "{}/resources/{}/permissions".format(item_path, res_id)
         resp = test_request(test_case, "POST", path, data=data,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
@@ -1289,7 +1385,7 @@ class TestSetup(object):
     def create_TestUserResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
                                           resource_info=null,               # type: Optional[JSON]
                                           override_resource_id=null,        # type: Optional[int]
-                                          override_permission_name=null,    # type: Optional[Str]
+                                          override_permission=null,         # type: Optional[AnyPermissionType]
                                           override_user_name=null,          # type: Optional[Str]
                                           override_headers=null,            # type: Optional[HeadersType]
                                           override_cookies=null,            # type: Optional[CookiesType]
@@ -1306,7 +1402,7 @@ class TestSetup(object):
         """
         return TestSetup.create_TestAnyResourcePermission(
             test_case, "user", resource_info=resource_info,
-            override_resource_id=override_resource_id, override_permission_name=override_permission_name,
+            override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_user_name, override_headers=override_headers, override_cookies=override_cookies
         )
 
@@ -1314,7 +1410,7 @@ class TestSetup(object):
     def create_TestGroupResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
                                            resource_info=null,               # type: Optional[JSON]
                                            override_resource_id=null,        # type: Optional[int]
-                                           override_permission_name=null,    # type: Optional[Str]
+                                           override_permission=null,         # type: Optional[AnyPermissionType]
                                            override_group_name=null,         # type: Optional[Str]
                                            override_headers=null,            # type: Optional[HeadersType]
                                            override_cookies=null,            # type: Optional[CookiesType]
@@ -1331,9 +1427,37 @@ class TestSetup(object):
         """
         return TestSetup.create_TestAnyResourcePermission(
             test_case, "group", resource_info=resource_info,
-            override_resource_id=override_resource_id, override_permission_name=override_permission_name,
+            override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_group_name, override_headers=override_headers, override_cookies=override_cookies
         )
+
+    @staticmethod
+    def get_PermissionNames(test_case,              # type: AnyMagpieTestCaseType
+                            permissions,            # type: Union[AnyPermissionType, Collection[AnyPermissionType]]
+                            combinations=False,     # type: bool
+                            ):                      # type: (...) -> List[Str]
+        """
+        Obtains all applicable permission names for the given version and specified permission(s).
+
+        :param test_case: test case
+        :param permissions: one or many permission(s) for which to generate the list of applicable permission names.
+        :param combinations: extend permissions with all possible modifiers, applicable only if version allows it.
+        """
+        version = TestSetup.get_Version(test_case)
+        if not isinstance(permissions, (list, set, tuple)):
+            permissions = [permissions]
+        if combinations and LooseVersion(version) >= LooseVersion("3.0"):
+            permissions = [PermissionSet(*perm_combo) for perm_combo in itertools.product(permissions, Access, Scope)]
+        else:
+            permissions = [PermissionSet(perm) for perm in permissions]
+        perm_names = set()
+        for permission in permissions:
+            perm_impl = permission.implicit_permission
+            if perm_impl is not None:
+                perm_names.add(perm_impl)
+            if LooseVersion(version) >= LooseVersion("3.0"):
+                perm_names.add(permission.explicit_permission)
+        return list(perm_names)
 
     @staticmethod
     def get_ResourceInfo(test_case,                 # type: AnyMagpieTestCaseType

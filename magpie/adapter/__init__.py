@@ -18,7 +18,10 @@ from magpie.db import get_engine, get_session_factory, get_tm_session
 from magpie.security import get_auth_config
 from magpie.utils import CONTENT_TYPE_JSON, SingletonMeta, get_logger, get_magpie_url, get_settings
 
-# twitcher available only when this module is imported from it
+# WARNING:
+#   twitcher available only when this module is imported from it
+#   installed during tests for evaluation
+#   module 'magpie.adapter' should not be imported from magpie package
 from twitcher.adapter.base import AdapterInterface  # noqa
 from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
 
@@ -154,7 +157,7 @@ class MagpieAdapter(AdapterInterface):
         raise NotImplementedError
 
     def owssecurity_factory(self, request):
-        # type: (Request) -> MagpieOWSSecurity
+        # type: (AnySettingsContainer) -> MagpieOWSSecurity
         if self._owssecurity is None:
             self._owssecurity = MagpieOWSSecurity(request)
         return self._owssecurity
