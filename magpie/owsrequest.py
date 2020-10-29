@@ -115,6 +115,9 @@ class OWSPostParser(OWSParser):
             return self.document.attrib[param].lower()
         if param == "request":
             return self.document.tag.lower()
+        for section in self.document:
+            if param == section.tag.lower():
+                return section.text.strip()
         return None
 
 

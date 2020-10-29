@@ -64,9 +64,11 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                     for attr_name in base_attr:
                         LOGGER.debug("  %s: %s", attr_name, getattr(authn_policy.cookie, attr_name))
 
-                if not has_permission:
-                    raise OWSAccessForbidden("Not authorized to access this resource. "
-                                             "User does not meet required permissions.")
+                if has_permission:
+                    return  # allowed
+
+            raise OWSAccessForbidden("Not authorized to access this resource. "
+                                     "User does not meet required permissions.")
 
     def update_request_cookies(self, request):
         """

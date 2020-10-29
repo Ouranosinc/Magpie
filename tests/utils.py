@@ -228,10 +228,13 @@ def get_test_magpie_app(settings=None):
 def get_app_or_url(test_item):
     # type: (AnyMagpieTestItemType) -> TestAppOrUrlType
     """
-    Obtains the referenced Magpie local application or remote URL from `Test Case` implementation.
+    Obtains the referenced Magpie test application, local application or remote URL from `Test Case` implementation.
     """
     if isinstance(test_item, (TestApp, six.string_types)):
         return test_item
+    test_app = getattr(test_item, "test_app", None)
+    if test_app and isinstance(test_app, TestApp):
+        return test_app
     app_or_url = getattr(test_item, "app", None) or getattr(test_item, "url", None)
     if not app_or_url:
         raise ValueError("Invalid test class, application or URL could not be found.")
@@ -348,7 +351,8 @@ def mock_get_settings(test):
 
     @functools.wraps(test)
     def wrapped(*_, **__):
-        with mock.patch("magpie.utils.get_settings", side_effect=mocked):
+        with mock.patch("magpie.services.get_settings", side_effect=mocked), \
+             mock.patch("magpie.utils.get_settings", side_effect=mocked):
             return test(*_, **__)
     return wrapped
 
@@ -384,6 +388,7 @@ def mock_request(request_path_query="",     # type: Str
     request.content_type = content_type
     request.headers = headers or {}
     request.cookies = cookies or {}
+    request.matched_route = None  # cornice method
     if content_type:
         request.headers["Content-Type"] = content_type
     request.body = body
@@ -597,7 +602,7 @@ def check_or_try_login_user(test_item,                      # type: AnyMagpieTes
             return resp.headers, resp_cookies
 
     if auth is True:
-        body = TestSetup.get_UserInfo(app_or_url, override_body=body)
+        body = TestSetup.get_UserInfo(test_item, override_body=body)
         logged_user = body.get("user_name", "")
         if username != logged_user:
             raise AssertionError("invalid user")

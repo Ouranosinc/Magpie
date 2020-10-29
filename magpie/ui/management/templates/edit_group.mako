@@ -2,12 +2,13 @@
 <%namespace name="tree" file="magpie.ui.management:templates/tree_scripts.mako"/>
 
 <%block name="breadcrumb">
-<li><a href="${request.route_url('home')}">
-    Home</a></li>
-<li><a href="${request.route_url('view_groups')}">
-    Groups</a></li>
-<li><a href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=cur_svc_type)}">
-    Group [${group_name}]</a></li>
+<li><a href="${request.route_url('home')}">Home</a></li>
+<li><a href="${request.route_url('view_groups')}">Groups</a></li>
+<li>
+    <a href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=cur_svc_type)}">
+    Group [${group_name}]
+    </a>
+</li>
 </%block>
 
 <h1>Edit Group: [${group_name}]</h1>
@@ -88,9 +89,9 @@
                     </p>
                 </form>
                 <form id="edit_discoverable" action="${request.path}" method="post">
-                    <p class="panel-line panel-line-checkbox">
+                    <p class="panel-line">
                         <span class="panel-entry">Discoverable: </span>
-                        <label>
+                        <label class="checkbox-align panel-line-checkbox">
                         <!-- when unchecked but checkbox pressed checkbox 'value' not actually sent -->
                         <input type="hidden" value="${discoverable}" name="is_discoverable"/>
                         <input type="checkbox" name="new_discoverable"
@@ -118,7 +119,7 @@
 %for user in users:
 <tr>
     <td>
-        <label>
+        <label class="checkbox-align">
         <input type="checkbox" value="${user}" name="member"
             %if user in members:
                checked
@@ -153,7 +154,7 @@
     %endfor
 
     <div class="current-tab-panel">
-        <div class="clear"></div>
+        <div class="clear underline"></div>
         %if error_message:
             <div class="alert alert-danger alert-visible">${error_message}</div>
         %endif

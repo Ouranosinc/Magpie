@@ -9,6 +9,38 @@ Changes
 
 * Nothing yet.
 
+`3.1.0 <https://github.com/Ouranosinc/Magpie/tree/3.1.0>`_ (2020-10-23)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``BROWSE`` permission for ``ServiceTHREDDS`` to parse request against *metadata* or *data* contents according to
+  specified configuration of the specific service (resolves `#361 <https://github.com/Ouranosinc/Magpie/issues/361>`_).
+* Add documentation details about parsing methodologies, specific custom configurations and respective usage of the
+  various ``Service`` types provided by `Magpie`.
+* Adjust ``MagpieAdapter`` such that ``OWSAccessForbidden`` is raised by default if the ``Service`` implementation fails
+  to provide a valid ``Permission`` enum from ``permission_requested`` method. Incorrectly defined ``Service`` will
+  therefore not unexpectedly grant access to protected resources. Behaviour also aligns with default ``DENY`` access
+  obtained when resolving effective permissions through `Magpie` API routes.
+
+* | Upgrade migration script is added to duplicate ``BROWSE`` permissions from existing ``READ`` permissions on every
+    ``ServiceTHREDDS`` and all their children resource to preserve previous functionality where both *metadata* and
+    *data* access where both managed by the same ``READ`` permission.
+  |
+  | **WARNING**:
+  | Downgrade migration drops every ``BROWSE`` permission that could exist in later versions. This is done like so
+    to avoid granting additional access to some ``THREDDS`` directories or file if only ``BROWSE`` was specified.
+    When doing downgrade migration, ensure to have ``READ`` where both *metadata* and *data* should be granted access.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix parsing of ``ServiceAPI`` routes during retrieval of the deepest *available* ``Resource`` to ensure that even when
+  the targeted ``Resource`` is actually missing, the *closest* parent permissions with ``Scope.RECURSIVE`` will still
+  take effect. Same fix applied for ``ServiceTHREDDS`` for corresponding directory and file typed ``Resource``.
+* Propagate SSL verify option of generated service definition if provided to `Twitcher` obtained from ``MagpieAdapter``.
+* Adjust and validate parsing of ``ServiceWPS`` request using ``POST`` XML body
+  (fixes `157 <https://github.com/Ouranosinc/Magpie/issues/157>`_).
+
 `3.0.0 <https://github.com/Ouranosinc/Magpie/tree/3.0.0>`_ (2020-10-19)
 ------------------------------------------------------------------------------------
 
@@ -513,7 +545,7 @@ Bug Fixes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Prioritize settings (ie: `magpie.ini` values) before environment variables and ``magpie.constants`` globals.
+* Prioritize settings (ie: ``magpie.ini`` values) before environment variables and ``magpie.constants`` globals.
 * Allow specifying ``magpie.scheme`` setting to generate the ``magpie.url`` with it if the later was omitted.
 * Look in settings for required parameters for function ``get_admin_cookies``.
 * Use API definitions instead of literal strings for routes employed in ``MagpieAdapter``.

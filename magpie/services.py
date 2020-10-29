@@ -1,3 +1,4 @@
+import re
 from typing import TYPE_CHECKING
 
 import abc
@@ -15,6 +16,7 @@ from magpie.api import exception as ax
 from magpie.constants import get_constant
 from magpie.owsrequest import ows_parser_factory
 from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
+from magpie.utils import get_settings
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -23,7 +25,7 @@ if TYPE_CHECKING:
     from pyramid.request import Request
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
-    from magpie.typedefs import AccessControlListType, ServiceOrResourceType, Str
+    from magpie.typedefs import AccessControlListType, ConfigDict, ServiceOrResourceType, Str
 
 
 class ServiceMeta(type):
@@ -76,9 +78,9 @@ class ServiceInterface(object):
         The method must specifically define how to convert generic request path, query, etc. elements into permissions
         that match the service and its children resources.
 
-        If ``None`` is returned, the ACL will effectively be resolved to denied access.
+        If ``None`` is returned, the :term:`ACL` will effectively be resolved to denied access.
         Otherwise, one or more returned :class:`Permission` will indicate which permissions should be looked for to
-        resolve the ACL of the authenticated user and its groups.
+        resolve the :term:`ACL` of the authenticated user and its groups.
         """
         raise NotImplementedError("missing implementation of request permission converter")
 
@@ -210,7 +212,14 @@ class ServiceInterface(object):
         if svc_name not in path_parts:
             return None
         svc_idx = path_parts.index(svc_name)
-        return path_parts[svc_idx + 1::]
+        return path_parts[svc_idx + 1:]
+
+    def get_config(self):
+        # type: () -> ConfigDict
+        """
+        Obtains the configuration of the registered service during startup.
+        """
+        return get_settings(self.request).get("magpie.services", {}).get(self.service.resource_name, {})
 
     @classmethod
     def get_resource_permissions(cls, resource_type_name):
@@ -394,8 +403,8 @@ class ServiceWPS(ServiceOWS):
     params_expected = [
         "service",
         "request",
-        "version"
-        # "identifier" not used because not required when requesting capabilities
+        "version",
+        "identifier",
     ]
 
     resource_types_permissions = {
@@ -411,7 +420,7 @@ class ServiceWPS(ServiceOWS):
             return self.service, True
         if wps_request in [Permission.DESCRIBE_PROCESS, Permission.EXECUTE]:
             wps_id = self.service.resource_id
-            proc_id = self.request.params.get("identifier")
+            proc_id = self.parser.params["identifier"]
             if not proc_id:
                 return self.service, False
             proc = models.find_children_by_name(proc_id, parent_id=wps_id, db_session=self.request.db)
@@ -446,16 +455,6 @@ class ServiceBaseWMS(ServiceOWS):
         "layername",
         "dataset"
     ]
-
-    resource_types_permissions = {
-        models.Workspace: [
-            Permission.GET_CAPABILITIES,
-            Permission.GET_MAP,
-            Permission.GET_FEATURE_INFO,
-            Permission.GET_LEGEND_GRAPHIC,
-            Permission.GET_METADATA,
-        ]
-    }
 
 
 class ServiceNCWMS2(ServiceBaseWMS):
@@ -534,6 +533,16 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
     """
     service_type = "geoserverwms"
 
+    resource_types_permissions = {
+        models.Workspace: [
+            Permission.GET_CAPABILITIES,
+            Permission.GET_MAP,
+            Permission.GET_FEATURE_INFO,
+            Permission.GET_LEGEND_GRAPHIC,
+            Permission.GET_METADATA,
+        ]
+    }
+
     def resource_requested(self):
         permission = self.permission_requested()
         path_parts = self._get_request_path_parts()
@@ -606,17 +615,19 @@ class ServiceAPI(ServiceInterface):
         route_parts = self._get_request_path_parts()
         if not route_parts:
             return self.service, True
-        route_child = self.service
+        route_found = route_child = self.service
 
         # find deepest possible resource matching sub-route name
         while route_child and route_parts:
             part_name = route_parts.pop(0)
             route_res_id = route_child.resource_id
             route_child = models.find_children_by_name(part_name, parent_id=route_res_id, db_session=self.request.db)
+            if route_child:
+                route_found = route_child
 
         # target reached if no more parts to process, otherwise we have some parent (minimally the service)
-        route_target = not len(route_parts)
-        return route_child, route_target
+        route_target = not len(route_parts) and route_child is not None
+        return route_found, route_target
 
     def permission_requested(self):
         if self.request.method.upper() in ["GET", "HEAD"]:
@@ -658,11 +669,9 @@ class ServiceTHREDDS(ServiceInterface):
     service_type = "thredds"
 
     permissions = [
-        Permission.READ,
-        # FIXME:
-        #   does WRITE permission even make sense here?
-        #   leave it for bw-compat, but not even considered since 'permission_requested' always returns READ
-        Permission.WRITE,
+        Permission.BROWSE,  # for metadata access
+        Permission.READ,    # for file data access
+        Permission.WRITE,   # NOTE: see special usage of WRITE in docs
     ]
 
     params_expected = [
@@ -674,48 +683,64 @@ class ServiceTHREDDS(ServiceInterface):
         models.File: permissions,
     }
 
+    def get_config(self):
+        # type: () -> ConfigDict
+        cfg = super(ServiceTHREDDS, self).get_config()
+        cfg.setdefault("file_patterns", [r".*.nc"])
+        cfg.setdefault("data_type", {"prefixes": []})
+        if not cfg["data_type"]["prefixes"]:
+            cfg["data_type"]["prefixes"] = ["fileServer", "dodsC", "dap4", "wcs", "wms"]
+        cfg.setdefault("metadata_type", {"prefixes": []})
+        if not cfg["metadata_type"]["prefixes"]:
+            cfg["metadata_type"]["prefixes"] = [None, "catalog", "ncml", "uddc", "iso"]
+        return cfg
+
     def resource_requested(self):
         path_parts = self._get_request_path_parts()
 
-        # handled optional prefix and missing specifiers
-        if not path_parts:
+        # handle optional prefix or remove it
+        if len(path_parts) < 2:
             return self.service, True
-        if path_parts[0] == "":
-            path_parts = path_parts[1:]
-        if path_parts and path_parts[0].lower() == "thredds":
-            path_parts = path_parts[1:]
-        if not path_parts:
-            return self.service, True
-
-        # when looking at catalog, must point to corresponding parent Directory
-        if path_parts[-1].lower() == "catalog.html":
-            path_parts = path_parts[:-1]
-        # convert file name to common value representing the same NetCDF resource accessed
-        if ".nc" in path_parts[-1].lower():
-            # same as 'catalog.html' when 'catalog' is in path, even if '.nc' file is specified
-            # (THREDDS redirects to HTML view of parent directory)
-            if path_parts[0] == "catalog":
-                path_parts = path_parts[:-1]
-            # otherwise it is the specific representation of the NetCDF
-            # remove any extra extension whenever applicable (eg: discard '.dds' from '.nc.dds')
-            else:
-                path_parts[-1] = path_parts[-1].split(".nc")[0] + ".nc"
-        # remove the 'serviceType' prefix (dodsC, catalog, etc.)
         path_parts = path_parts[1:]
+        cfg = self.get_config()
 
         # find deepest possible resource matching either Directory or File by name
-        found_resource = self.service
-        while found_resource and path_parts:
+        found_resource = child_resource = self.service
+        while child_resource and path_parts:
             part_name = path_parts.pop(0)
-            found_res_id = found_resource.resource_id
-            found_resource = models.find_children_by_name(part_name, parent_id=found_res_id, db_session=self.request.db)
+            # when reaching the final part, test for possible file pattern, otherwise default to literal value
+            #   allows combining different naming formats into a common file resource (eg: extra extensions)
+            # if final part is a directory, still works because of literal value
+            #   directory name must match exactly, no format naming variants allowed
+            # if final part is 'catalog.html' file, lookup would fail and fall back to previous directory part
+            #   since that would be the last part extracted, the parent directory will be matched as intended
+            if not path_parts:
+                for pattern in cfg["file_patterns"]:
+                    try:
+                        part_name = re.match(pattern, part_name)[0]
+                        break
+                    except (TypeError, KeyError):  # fail match or fail to extract (depending on configured pattern)
+                        pass
+            child_res_id = child_resource.resource_id
+            child_resource = models.find_children_by_name(part_name, parent_id=child_res_id, db_session=self.request.db)
+            if child_resource:
+                found_resource = child_resource
 
         # target resource reached if no more parts to process, otherwise we have some parent (minimally the service)
-        target = not len(path_parts)
+        target = not len(path_parts) and child_resource is not None
         return found_resource, target
 
     def permission_requested(self):
-        return Permission.READ
+        path_parts = self._get_request_path_parts() or [None]  # in case of no `<prefix>`, simulate as `null`
+        path_prefix = path_parts[0]
+        cfg = self.get_config()
+        for prefix in cfg["metadata_type"]["prefixes"]:
+            if prefix == path_prefix:
+                return Permission.BROWSE
+        for prefix in cfg["data_type"]["prefixes"]:
+            if prefix == path_prefix:
+                return Permission.READ
+        return None  # automatically deny
 
 
 SERVICE_TYPE_DICT = dict()

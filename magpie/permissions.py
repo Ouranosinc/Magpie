@@ -23,6 +23,7 @@ class Permission(ExtendedEnum):
     READ = "read"
     WRITE = "write"
     ACCESS = "access"
+    BROWSE = "browse"
     # WPS permissions
     GET_CAPABILITIES = "getcapabilities"
     GET_MAP = "getmap"
