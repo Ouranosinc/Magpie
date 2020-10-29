@@ -306,19 +306,21 @@ class ServiceInterface(object):
 
                     # less obvious use case for both of the following user/group blocks:
                     #   no need to check explicitly for ALLOW since it was either already set during previous iteration
-                    #   (at that moment, perm=None) or a DENY was already set, but it takes precedence over it anyway
+                    #   (at that moment, perm=None) or DENY was already set, and DENY takes precedence over ALLOW anyway
 
                     # user direct permissions have priority over inherited ones from groups
+                    # if inherited permission was found during previous iteration, overwrite it with direct permission
                     if perm_set.type == PermissionType.DIRECT:
                         perm = effective_perms.get(perm_name)
-                        # explicit user DENY overrides user ALLOW if any already found
+                        # explicit user direct DENY overrides user direct ALLOW if any already found
+                        # if inherited permission was previously set, user direct ALLOW has priority over inherited DENY
                         # if permission name not already found, ALLOW/DENY is set regardless (first occurrence)
                         if perm is None or perm.type == PermissionType.INHERITED or perm_set.access == Access.DENY:
                             effective_perms[perm_name] = perm_set
                         continue  # final decision for this user, skip any group permissions
 
-                    # otherwise check for group permission
-                    # like previously, explicit DENY overrides ALLOW if permission name was already found
+                    # otherwise check for group(s) inherited permission, all groups have equal priority
+                    # explicit group inherited DENY overrides group inherited ALLOW if permission name was already found
                     # if permission name not already found, ALLOW/DENY is set regardless (first occurrence)
                     perm = effective_perms.get(perm_name)
                     if perm is None or (perm.type == PermissionType.INHERITED and perm_set.access == Access.DENY):
