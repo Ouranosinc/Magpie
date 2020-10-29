@@ -1,5 +1,5 @@
 """
-Apply THREDDS BROWSE permission for resources with READ
+Apply THREDDS BROWSE permission for resources with READ.
 
 Due to the addition of metadata BROWSE permission, any pre-existing resource with READ permissions for user/group
 that previously handled both metadata and data access would become denied access for metadata-related access.
