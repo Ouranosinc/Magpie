@@ -34,7 +34,7 @@
 <!-- renderer of specific tree resources with applicable permissions (under a given service-type) -->
 <%def name="render_resource_permission_tree(resources, permissions)">
     <form id="resources_permissions" action="${request.path}" method="post">
-        <div>
+        <div class="permission-apply-container">
             <input type="submit" name="edit_permissions" value="Apply Permissions" title="Apply the permission changes"
                 %if inherit_groups_permissions:
                     disabled

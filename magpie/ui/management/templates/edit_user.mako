@@ -136,7 +136,7 @@
                 <input type="hidden" value="True" name="inherit_groups_permissions"/>
             %endif
             <span class="option-text">
-            View inherited group permissions
+            View inherited group permissions and effective user permissions.
             </span>
             </label>
         </div>
@@ -144,14 +144,26 @@
 
     %if inherit_groups_permissions:
     <div class="option-section">
-        <div class="alert-note-info alert-visible">
+        <div class="alert-note alert-visible">
             <img src="${request.static_url('magpie.ui.home:static/info.png')}"
-                 alt="INFO" class="icon-info alert-info" />
+                 alt="INFO" class="icon-info alert-info" title="User effective permission resolution." />
             <meta name="source" content="https://commons.wikimedia.org/wiki/File:Infobox_info_icon.svg">
             <div class="alert-note-text">
-                Individual resources can be tested for effective access using the
-                <input type="button" value="?" class="permission-effective-button button-no-click">
-                <span>button next to the corresponding permission.</span>
+                <p>
+                    Individual resources can be tested for effective access using the
+                    <input type="button" value="?" class="permission-effective-button button-no-click">
+                    <span>button next to the corresponding permission.</span>
+                    <br>Displayed permissions combine user direct permissions and inherited group permissions.
+                </p>
+            </div>
+        </div>
+        <div class="alert-note alert-visible">
+            <img src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"
+                 alt="WARNING" class="icon-warning" title="Administrators effective permission resolution." />
+            <div class="alert-note-text">
+                <p>
+                    Users member of the administrative group have full effective access regardless of permissions.
+                </p>
             </div>
         </div>
     </div>

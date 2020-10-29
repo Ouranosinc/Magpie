@@ -429,17 +429,19 @@ table.panel-line td {
     padding: 0 0.5em 0 0;
 }
 
-.alert-note-info {
+.alert-note {
     width: auto;
     display: inline-flex;
     float: left;
-    text-align: center;
-    margin-top: 0.25em;
+    margin-top: 1em;
     margin-left: 0.1em;
 }
 
 .alert-note-text {
     margin-left: 0.25em;
+    margin-bottom: -1em;
+    margin-top: -1em;
+    text-align: left;
 }
 
 .icon-error {
@@ -450,6 +452,7 @@ table.panel-line td {
 .icon-warning {
     width: 1.25em;
     height: 1.25em;
+    margin-top: 0.05em;
 }
 
 .icon-info {
@@ -479,6 +482,16 @@ table.panel-line td {
 .option-text {
 }
 
+.permission-apply-container {
+    display: inline-block;
+    width: 100%;
+}
+
+.permission-apply-container>input {
+    float: right;
+    margin-right: 1.25em;
+}
+
 .permission-effective {
     background-color: white;
     padding: 1px 2px 2px;
@@ -489,17 +502,17 @@ table.panel-line td {
     margin-right: 0.05em;
 }
 
+.permission-effective-tester {
+    float: right;
+    display: inline-flex;
+}
+
 .success {
     color: #2C8F30;
 }
 
 .failure {
     color: #880000;
-}
-
-.permission-effective-tester {
-    float: right;
-    display: inline-flex;
 }
 
 input[type="button"].permission-effective-button {
