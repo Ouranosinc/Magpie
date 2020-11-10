@@ -218,10 +218,12 @@ by the below configuration.
 
         # customizable request parsing methodology (specific to `thredds` type)
         file_patterns:
-          - .*.nc
+          # note: make sure to employ quotes and double escapes to avoid parsing YAML error
+          - ".*\\.nc"
         metadata_type:
           prefixes:
             - null  # note: special YAML value evaluated as `no-prefix`, use quotes if literal value is needed
+            - "catalog\\.\\w+"  # note: special case for `THREDDS` top-level directory (root) accessed for `BROWSE`
             - catalog
             - ncml
             - uddc
@@ -233,6 +235,18 @@ by the below configuration.
             - dap4
             - wcs
             - wms
+
+..  warning:: Regular Expression Patterns
+
+    Ensure to properly escape special characters, notably the dot (``.``), to avoid granting unexpected permissions.
+
+.. versionchanged:: 3.2
+    Added ``catalog`` specific pattern by default to metadata prefixes that composes another valid URL variant to
+    request :attr:`Permission.BROWSE` directly on the top-level ``THREDDS`` service (directory), although ``<prefix>``
+    is otherwise always expected at that second position path segment (see below). The pattern allows multiple
+    extensions to support the various representation modes of the ``catalog`` listing (e.g.: XML, HTML, etc.).
+
+    As of that version, the ``prefixes`` entries also support patterns, using standard regular expression syntax.
 
 Assuming a proxy intended to receive incoming requests configured with :class:`magpie.adapter.MagpieAdapter` such that
 ``{PROXY_URL}`` is the base path, the following path would point toward the above registered service::
