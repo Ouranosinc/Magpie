@@ -2,6 +2,7 @@ import re
 from typing import TYPE_CHECKING
 
 import abc
+import fnmatch
 import six
 from beaker.cache import cache_region, cache_regions, region_invalidate
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotImplemented
@@ -692,7 +693,7 @@ class ServiceTHREDDS(ServiceInterface):
             cfg["data_type"]["prefixes"] = ["fileServer", "dodsC", "dap4", "wcs", "wms"]
         cfg.setdefault("metadata_type", {"prefixes": []})
         if not cfg["metadata_type"]["prefixes"]:
-            cfg["metadata_type"]["prefixes"] = [None, "catalog", "ncml", "uddc", "iso"]
+            cfg["metadata_type"]["prefixes"] = [None, "catalog.*", "catalog", "ncml", "uddc", "iso"]
         return cfg
 
     def resource_requested(self):
@@ -717,8 +718,8 @@ class ServiceTHREDDS(ServiceInterface):
             if not path_parts:
                 for pattern in cfg["file_patterns"]:
                     try:
-                        part_name = re.match(pattern, part_name)[0]
-                        break
+                        if fnmatch.fnmatch(part_name, pattern):
+                            break
                     except (TypeError, KeyError):  # fail match or fail to extract (depending on configured pattern)
                         pass
             child_res_id = child_resource.resource_id
@@ -735,10 +736,10 @@ class ServiceTHREDDS(ServiceInterface):
         path_prefix = path_parts[0]
         cfg = self.get_config()
         for prefix in cfg["metadata_type"]["prefixes"]:
-            if prefix == path_prefix:
+            if (prefix is None and not path_prefix) or fnmatch.fnmatch(path_prefix, prefix):
                 return Permission.BROWSE
         for prefix in cfg["data_type"]["prefixes"]:
-            if prefix == path_prefix:
+            if (prefix is None and not path_prefix) or fnmatch.fnmatch(path_prefix, prefix):
                 return Permission.READ
         return None  # automatically deny
 

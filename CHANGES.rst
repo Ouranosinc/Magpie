@@ -9,10 +9,19 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Nothing yet.
+* Adjust the ``file_patterns`` of ``ServiceTHREDDS`` to employ Shell-like syntax to avoid parsing ambiguity of special
+  characters (notably ``.``). Previous regexes such as ``.*.nc`` could be incorrectly interpreted as *any* character
+  (``.*``) followed by ``.nc`` extension, but actually resolved to *any* character with final ``nc``, regardless of
+  the dot separator. Shell-like syntax enforces that dots are interpreted as literal values, and ``*`` can be used by
+  itself to represent *any*.
+* Added pattern support for ``prefixes`` entries of ``ServiceTHREDDS``.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
+* Add ``catalog.*`` by default as expected metadata prefix for ``ServiceTHREDDS``.
+  This resolves an issue where top-level THREDDS can be accessed as ``<PROXY_URL>/thredds/catalog.html`` which must be
+  resolved as ``BROWSE`` of the root directory, but was otherwise compared against the format-related *prefix* that is
+  expected at this sub-path position for any other accessed children resource.
 * Adjust visual alignment of UI notices on individual newlines when viewing user inherited permissions.
 
 `3.1.0 <https://github.com/Ouranosinc/Magpie/tree/3.1.0>`_ (2020-10-23)
