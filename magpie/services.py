@@ -686,13 +686,13 @@ class ServiceTHREDDS(ServiceInterface):
     def get_config(self):
         # type: () -> ConfigDict
         cfg = super(ServiceTHREDDS, self).get_config()
-        cfg.setdefault("file_patterns", [r".*.nc"])
+        cfg.setdefault("file_patterns", [".*\\.nc"])
         cfg.setdefault("data_type", {"prefixes": []})
         if not cfg["data_type"]["prefixes"]:
             cfg["data_type"]["prefixes"] = ["fileServer", "dodsC", "dap4", "wcs", "wms"]
         cfg.setdefault("metadata_type", {"prefixes": []})
         if not cfg["metadata_type"]["prefixes"]:
-            cfg["metadata_type"]["prefixes"] = [None, "catalog", "ncml", "uddc", "iso"]
+            cfg["metadata_type"]["prefixes"] = [None, "catalog\\.\\w+", "catalog", "ncml", "uddc", "iso"]
         return cfg
 
     def resource_requested(self):
@@ -734,12 +734,17 @@ class ServiceTHREDDS(ServiceInterface):
         path_parts = self._get_request_path_parts() or [None]  # in case of no `<prefix>`, simulate as `null`
         path_prefix = path_parts[0]
         cfg = self.get_config()
-        for prefix in cfg["metadata_type"]["prefixes"]:
-            if prefix == path_prefix:
-                return Permission.BROWSE
-        for prefix in cfg["data_type"]["prefixes"]:
-            if prefix == path_prefix:
-                return Permission.READ
+        for prefixes, permission in [
+            (cfg["metadata_type"]["prefixes"], Permission.BROWSE),  # first to favor BROWSE over READ prefix conflicts
+            (cfg["data_type"]["prefixes"], Permission.READ),
+        ]:
+            for prefix in prefixes:
+                try:
+                    path_prefix = re.match(prefix, path_prefix)[0]
+                except (TypeError, KeyError):  # fail match or fail to extract pattern group
+                    pass
+                if prefix == path_prefix:
+                    return permission
         return None  # automatically deny
 
 

@@ -9,7 +9,11 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Nothing yet.
+* Add ``catalog`` specific pattern by default for metadata ``BROWSE`` access of top-level ``ServiceTHREDDS`` directory.
+  This resolves an issue where THREDDS accessed as ``<PROXY_URL>/thredds/catalog.html`` for listing the root directory
+  attempted to compare ``catalog.html`` against the format-related *prefix* that is normally expected at this sub-path
+  position (``<PROXY_URL>/thredds/catalog/[...]/catalog.html``) during children resource listing.
+* Added pattern support for ``prefixes`` entries of ``ServiceTHREDDS``.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
