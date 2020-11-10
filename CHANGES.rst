@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`3.2.0 <https://github.com/Ouranosinc/Magpie/tree/3.2.0>`_ (2020-11-10)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``catalog`` specific pattern by default for metadata ``BROWSE`` access of top-level ``ServiceTHREDDS`` directory.
