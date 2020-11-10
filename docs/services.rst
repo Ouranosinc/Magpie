@@ -214,14 +214,15 @@ by the below configuration.
         # minimal configuration requirements (where the real `THREDDS` service resides)
         # other optional parameters from `providers.cfg` can also be provided
         url: http://localhost:1234
-        type: thredds
+        type: threddsw
 
         # customizable request parsing methodology (specific to `thredds` type)
         file_patterns:
-          - .*.nc
+          - "*.nc"  # note: make sure to employ quotes when pattern can cause parsing issues of YAML format
         metadata_type:
           prefixes:
             - null  # note: special YAML value evaluated as `no-prefix`, use quotes if literal value is needed
+            - catalog.*  # note: special case where THREDDS top-level directory (root) is accessed for BROWSE
             - catalog
             - ncml
             - uddc
@@ -233,6 +234,18 @@ by the below configuration.
             - dap4
             - wcs
             - wms
+
+
+.. versionchanged:: 3.2
+    Added ``catalog.*`` by default to metadata prefixes that composes another valid URL variant to request
+    :attr:`Permission.BROWSE` directly on the top-level ``THREDDS`` service (directory), although ``<prefix>`` is
+    otherwise always expected at that second position path segment (see below).
+
+    Patterns provided by ``file_patterns`` employ Shell-like patterns. This is to avoid the confusion between the very
+    common ``.`` (dot) as file extension, that is otherwise interpreted as *any* character using Python regex syntax.
+
+    As of that version, the ``prefixes`` entries also support patterns, using the same syntax.
+
 
 Assuming a proxy intended to receive incoming requests configured with :class:`magpie.adapter.MagpieAdapter` such that
 ``{PROXY_URL}`` is the base path, the following path would point toward the above registered service::

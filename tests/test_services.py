@@ -308,6 +308,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                     File2               (b-D-M), (r-D-M)    (w-D-R)             b-D, r-D, w-W
                     Directory5                                                  b-A, r-A, w-W
                         File3                                                   b-A, r-A, w-W
+            Service2                                        (b-A-R)             b-A, r-D, w-D  (validate catalog access)
 
         .. note::
             Permission :attr:`Permission.WRITE` can be created, but they don't actually have any use for the moment
@@ -317,20 +318,25 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             Reference test server to explore supported formats by THREDDS service (many files and formats available):
             https://remotetest.unidata.ucar.edu/thredds/catalog/catalog.html
         """
-        svc_name = "unittest-service-thredds"
         svc_type = ServiceTHREDDS.service_type
+        svc1_name = "unittest-service-thredds-1"
+        svc2_name = "unittest-service-thredds-2"
         dir_type = models.Directory.resource_type_name
         file_type = models.File.resource_type_name
-        utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
-        body = utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+        utils.TestSetup.delete_TestService(self, override_service_name=svc1_name)
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc1_name, override_service_type=svc_type)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        svc_id = info["resource_id"]
+        svc1_id = info["resource_id"]
+        utils.TestSetup.delete_TestService(self, override_service_name=svc2_name)
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc2_name, override_service_type=svc_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc2_id = info["resource_id"]
 
         # create resources
-        dir1_id, dir1_name = self.make_resource(dir_type, svc_id, 1)
+        dir1_id, dir1_name = self.make_resource(dir_type, svc1_id, 1)
         dir2_id, dir2_name = self.make_resource(dir_type, dir1_id, 2)
         dir3_id, dir3_name = self.make_resource(dir_type, dir2_id, 3)
-        dir4_id, dir4_name = self.make_resource(dir_type, svc_id, 4)
+        dir4_id, dir4_name = self.make_resource(dir_type, svc1_id, 4)
         dir5_id, dir5_name = self.make_resource(dir_type, dir4_id, 5)
         # files must have '.nc' extension
         file1_id, file1_name = self.make_resource(file_type, dir3_id, "1.nc")
@@ -338,7 +344,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         file3_id, file3_name = self.make_resource(file_type, dir5_id, "3.nc")  # pylint: disable=W0612
 
         # validate refused creation of invalid Directory or File under a leaf File resource
-        path = "/services/{}/resources".format(svc_name)
+        path = "/services/{}/resources".format(svc1_name)
         for child_res_type in [dir_type, file_type]:
             data = {"resource_type": child_res_type, "parent_id": file1_id,
                     "resource_name": "unittest-service-thredds-forbidden-child-resource"}
@@ -356,8 +362,8 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         wAR = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)    # noqa
         wDR = PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)     # noqa
         wDM = PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)         # noqa
-        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc_id, override_permission=wDM)
-        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc_id, override_permission=wAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc1_id, override_permission=wDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc1_id, override_permission=wAR)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir1_id, override_permission=bAR)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir1_id, override_permission=rAR)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir2_id, override_permission=bDR)
@@ -370,12 +376,13 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir4_id, override_permission=rAR)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file2_id, override_permission=rDM)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=file2_id, override_permission=wDR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc2_id, override_permission=bAR)
 
         # login test user for which the permissions were set
         self.login_test_user()
 
         # directory path with various path formats, only actual directory listing should be allowed
-        dir_prefixes = [svc_name + "/catalog", svc_name + "/fileServer", svc_name + "/dodsC"]
+        dir_prefixes = [svc1_name + "/catalog", svc1_name + "/fileServer", svc1_name + "/dodsC"]
         dir_suffixes = ["", "/catalog.html"]  # with or without explicit catalog HTML, this points to directory listing
         test_sub_dir = [
             (False, ""),
@@ -393,6 +400,15 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             else:
                 utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
 
+        # top-level directory access with special catalog prefix and various formats considered
+        # (all equivalently pointing directly to THREDDS catalog browsing)
+        suffixes = ["", "/catalog", "/catalog.html", "/catalog.xml", "/catalog/catalog.html", "/catalog/catalog.xml"]
+        for suffix in suffixes:
+            path = "/ows/proxy/{}{}".format(svc2_name, suffix)
+            req = self.mock_request(path, method="GET")
+            msg = "Using combination [GET, {}]".format(path)
+            utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
+
         # file access with various formats, locations and accessors
         # using default config, they should all point toward the same resource regardless of formats after '.nc'
         test_files = [
@@ -404,7 +420,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             file_prefixes = ["dap4", "dodsC", "fileServer"]  # format of files accessors (anything in *data_type*)
             file_suffixes = ["", ".dds", ".dmr.xml", ".html", ".ascii?"]  # different representations
             for prefix, suffix in itertools.product(file_prefixes, file_suffixes):
-                path = "/ows/proxy/{}/{}/{}{}".format(svc_name, prefix, file_path, suffix)
+                path = "/ows/proxy/{}/{}/{}{}".format(svc1_name, prefix, file_path, suffix)
                 req = self.mock_request(path, method="GET")
                 msg = "Using combination [GET, {}]".format(path)
                 if expect_allowed:
@@ -420,7 +436,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         ]
         unknown_prefix = "random"
         for allowed_resource in test_allowed_resources:
-            path = "/ows/proxy/{}/{}/{}".format(svc_name, unknown_prefix, allowed_resource)
+            path = "/ows/proxy/{}/{}/{}".format(svc1_name, unknown_prefix, allowed_resource)
             req = self.mock_request(path, method="GET")
             msg = "Unknown prefix must be refused even when resource is normally allowed. Using [GET, {}]".format(path)
             utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
@@ -444,11 +460,11 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             config.write(inspect.cleandoc("""
                 providers:
                     {name}:
-                        url: http://localhost
+                        url: "http://localhost"
                         type: {type}
                         file_patterns:
-                            - .*.ncml   # should be matched before plain '.nc' and correspond to another resource
-                            - .*.nc
+                            - "*.ncml"   # should be matched before plain '.nc' and correspond to another resource
+                            - "*.nc"
                         data_type:
                             prefixes:
                                 # only allow these variants, other should be blocked ("dap4", "wcs", "wms")
