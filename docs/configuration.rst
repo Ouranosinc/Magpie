@@ -135,6 +135,7 @@ a combined configuration as follows.
     permissions:
       - service: api
         resource: /resource/user-resource  # will create both resources respecting children relationship
+        type: route      # not mandatory here since service type 'api' only allows this type, but useful for other cases
         permission: read
         user: my-user    # will reference above user
         action: create

@@ -7,7 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix incorrect flag that made some registration unittests to be skipped.
+* Fix parsing of JSON and explicit string formatted permissions during their registration from configuration files.
+* Update ``config/permissions.cfg`` documentation about omitted ``type`` field.
 
 `3.2.0 <https://github.com/Ouranosinc/Magpie/tree/3.2.0>`_ (2020-11-10)
 ------------------------------------------------------------------------------------

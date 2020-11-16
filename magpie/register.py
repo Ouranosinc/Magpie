@@ -980,7 +980,11 @@ def _process_permissions(permissions, magpie_url, cookies_or_session, users=None
         if not isinstance(perm_cfg, dict) or not all(f in perm_cfg for f in ["permission", "service"]):
             _log_permission("Invalid permission format for [{!s}]".format(perm_cfg), i)
             continue
-        if perm_cfg["permission"] not in Permission.values():
+        try:
+            perm = PermissionSet(perm_cfg["permission"])
+        except (ValueError, TypeError):
+            perm = None
+        if not perm:
             _log_permission("Unknown permission [{!s}]".format(perm_cfg["permission"]), i)
             continue
         usr_name = perm_cfg.get("user")
