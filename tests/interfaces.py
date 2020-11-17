@@ -78,6 +78,7 @@ class BaseTestCase(unittest.TestCase):
     extra_resource_ids = set()      # type: Set[int]
     extra_service_names = set()     # type: Set[Str]
 
+    # NOTE: don't forget to override this, or your specialized test-suite will not run
     __test__ = False    # won't run this as a test case, only its derived classes that overrides to True
 
     @classmethod
