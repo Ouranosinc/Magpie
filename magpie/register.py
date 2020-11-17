@@ -557,7 +557,7 @@ def _expand_all(config):
     Applies environment variable expansion recursively to all applicable fields of a configuration definition.
     """
     if isinstance(config, dict):
-        for cfg in config:
+        for cfg in list(config):
             cfg_key = os.path.expandvars(cfg)
             if cfg_key != cfg:
                 config[cfg_key] = config.pop(cfg)
