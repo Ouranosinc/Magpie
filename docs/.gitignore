@@ -2,4 +2,4 @@ api.json
 magpie*.rst
 modules.rst
 redirects.*
-./autoapi/
+autoapi/

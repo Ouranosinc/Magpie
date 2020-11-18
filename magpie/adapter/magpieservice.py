@@ -11,7 +11,10 @@ from magpie.api.schemas import ServicesAPI
 from magpie.models import Service as MagpieService
 from magpie.utils import CONTENT_TYPE_JSON, get_admin_cookies, get_logger, get_magpie_url, get_settings
 
-# twitcher available only when this module is imported from it
+# WARNING:
+#   twitcher available only when this module is imported from it
+#   installed during tests for evaluation
+#   module 'magpie.adapter' should not be imported from magpie package
 from twitcher.datatype import Service  # noqa
 from twitcher.exceptions import ServiceNotFound  # noqa
 from twitcher.store import ServiceStoreInterface  # noqa
@@ -84,7 +87,8 @@ class MagpieServiceStore(ServiceStoreInterface):
 
             return Service(url=service.url,
                            name=service.resource_name,
-                           type=service.type)
+                           type=service.type,
+                           verify=self.twitcher_ssl_verify)
         finally:
             session.close()
 

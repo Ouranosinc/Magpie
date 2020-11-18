@@ -9,6 +9,142 @@ Changes
 
 * Nothing yet.
 
+`3.2.1 <https://github.com/Ouranosinc/Magpie/tree/3.2.1>`_ (2020-11-17)
+------------------------------------------------------------------------------------
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix incorrect flag that made some registration unittests to be skipped.
+* Fix parsing of JSON and explicit string formatted permissions during their registration from configuration files.
+* Update ``config/permissions.cfg`` documentation about omitted ``type`` field.
+
+`3.2.0 <https://github.com/Ouranosinc/Magpie/tree/3.2.0>`_ (2020-11-10)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``catalog`` specific pattern by default for metadata ``BROWSE`` access of top-level ``ServiceTHREDDS`` directory.
+  This resolves an issue where THREDDS accessed as ``<PROXY_URL>/thredds/catalog.html`` for listing the root directory
+  attempted to compare ``catalog.html`` against the format-related *prefix* that is normally expected at this sub-path
+  position (``<PROXY_URL>/thredds/catalog/[...]/catalog.html``) during children resource listing.
+* Added pattern support for ``prefixes`` entries of ``ServiceTHREDDS``.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Adjust visual alignment of UI notices on individual newlines when viewing user inherited permissions.
+
+`3.1.0 <https://github.com/Ouranosinc/Magpie/tree/3.1.0>`_ (2020-10-23)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``BROWSE`` permission for ``ServiceTHREDDS`` to parse request against *metadata* or *data* contents according to
+  specified configuration of the specific service (resolves `#361 <https://github.com/Ouranosinc/Magpie/issues/361>`_).
+* Add documentation details about parsing methodologies, specific custom configurations and respective usage of the
+  various ``Service`` types provided by `Magpie`.
+* Adjust ``MagpieAdapter`` such that ``OWSAccessForbidden`` is raised by default if the ``Service`` implementation fails
+  to provide a valid ``Permission`` enum from ``permission_requested`` method. Incorrectly defined ``Service`` will
+  therefore not unexpectedly grant access to protected resources. Behaviour also aligns with default ``DENY`` access
+  obtained when resolving effective permissions through `Magpie` API routes.
+
+* | Upgrade migration script is added to duplicate ``BROWSE`` permissions from existing ``READ`` permissions on every
+    ``ServiceTHREDDS`` and all their children resource to preserve previous functionality where both *metadata* and
+    *data* access where both managed by the same ``READ`` permission.
+  |
+  | **WARNING**:
+  | Downgrade migration drops every ``BROWSE`` permission that could exist in later versions. This is done like so
+    to avoid granting additional access to some ``THREDDS`` directories or file if only ``BROWSE`` was specified.
+    When doing downgrade migration, ensure to have ``READ`` where both *metadata* and *data* should be granted access.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix parsing of ``ServiceAPI`` routes during retrieval of the deepest *available* ``Resource`` to ensure that even when
+  the targeted ``Resource`` is actually missing, the *closest* parent permissions with ``Scope.RECURSIVE`` will still
+  take effect. Same fix applied for ``ServiceTHREDDS`` for corresponding directory and file typed ``Resource``.
+* Propagate SSL verify option of generated service definition if provided to `Twitcher` obtained from ``MagpieAdapter``.
+* Adjust and validate parsing of ``ServiceWPS`` request using ``POST`` XML body
+  (fixes `157 <https://github.com/Ouranosinc/Magpie/issues/157>`_).
+
+`3.0.0 <https://github.com/Ouranosinc/Magpie/tree/3.0.0>`_ (2020-10-19)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Adjust ``alembic`` migration scripts to employ date-ordered naming convention to help searching features within them.
+* Add ``DENY`` permission access concept with new ``PermissionSet`` object and ``Access`` enum
+  (resolves `#235 <https://github.com/Ouranosinc/Magpie/issues/235>`_).
+* Remove ``-match`` suffixed entries from ``Permission`` enum in favor of new ``Scope`` enum employed by
+  new ``PermissionSet`` definition.
+* Update permission entries to employ explicit string representation as ``[name]-[access]-[scope]`` in the database
+  (resolves `#342 <https://github.com/Ouranosinc/Magpie/issues/342>`_).
+* Add ``PermissionType`` enum that details the type of permission being represented in any given response
+  (values correspond to types detailed in documentation).
+* Provide new ``permissions`` list in applicable API responses, with explicit ``name``, ``access``, ``scope`` and
+  ``type`` fields for each ``PermissionSet`` represented as individual JSON object. Responses will also return the
+  *explicit* string representations (see above) combined with the older *implicit* representation still returned
+  in ``permission_names`` field for backward compatibility
+  (note: ``DENY`` elements are only represented as *explicit* as there was no such *implicit* permissions before).
+* Add more documentation details and examples about new permission concepts introduced.
+* Add ``DELETE`` request views with ``permission`` object provided in body to allow deletion using ``PermissionSet``
+  JSON representation instead of literal string by path variable.
+  Still support ``permission_name`` path variable requests for backward compatibility for equivalent names.
+* Add ``POST`` request support of ``permission`` JSON representation of ``PermissionSet`` provided in request body.
+  Fallback to ``permission_name`` field for backward compatibility if equivalent ``permission`` is not found.
+* Add new ``PUT`` request that updates a *possibly* existing ``permission`` (or create it if missing) without needing
+  to execute any prior ``GET`` and/or ``DELETE`` requests that would normally be required to validate the existence or
+  not of previously defined ``permission`` to avoid HTTP Conflict on ``POST``. This allows quicker changes of ``access``
+  and ``scope`` modifiers applied on a given ``permission`` with a single operation
+  (see details in issue `#342 <https://github.com/Ouranosinc/Magpie/issues/342>`_).
+* Add many omitted tests regarding validation of operations on user/group service/resource permissions API routes.
+* Add functional tests that evaluate ``MagpieAdapter`` behaviour and access control of service/resource from resolution
+  of effective permissions upon incoming requests as they would be received by `Twitcher` proxy.
+* Add ``Cache-Control: no-cache`` header support during ACL resolution of effective permissions on service/resource to
+  ignore any caching optimization provided by ``beaker``.
+* Add resource of type ``Process`` for ``ServiceWPS`` which can take advantage of new effective permission resolution
+  method shared across service types to apply ``DescribeProcess`` and ``Execute`` permission on per-``Process`` basis
+  (``match`` scope) or globally for all processes using permission on the parent WPS service (``recursive`` scope).
+  (resolves `#266 <https://github.com/Ouranosinc/Magpie/issues/266>`_).
+* Modify all implementations of ``Service`` to support effective permission resolution to natively support new
+  permissions modifiers ``Access`` and ``Scope``.
+* Adjust all API routes that provide ``effective`` query parameter to return resolved effective permissions of the
+  ``User`` onto the targeted ``Resource``, and this for all applicable permissions on this ``Resource``, using new
+  ``Access`` permission modifier.
+* Adjust UI pages to provide selector of ``Access`` and ``Scope`` modifiers for all available permission names.
+* Change UI permission pages to *Apply* batch edition of multiple entries simultaneously instead of one at the time.
+* Improve rendering of UI disabled items such as inactive checkboxes or selectors when not applicable for given context.
+* Refactor UI tree renderer to reuse same code for both ``User`` and ``Group`` resource permissions.
+* Add UI button on ``User`` edit page to test its *effective permission* on a given resource.
+  Must be in *inherited permissions* display mode to have access to test button, in order to help understand the result.
+
+* | Upgrade migration script is added to convert existing implicit names to new explicit permission names.
+  |
+  | **WARNING**:
+  | Downgrade migration drops any ``DENY`` permission that would be added in future versions,
+    as they do not exist prior to this introduced version. The same applies for ``Process`` resources.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix incorrect regex employed for validation of service URL during registration.
+* Replace HTTP status code ``400`` by ``403`` and ``422`` where applicable for invalid resource creation due to failing
+  validations against reference parent service (relates to `#359 <https://github.com/Ouranosinc/Magpie/issues/359>`_).
+* Fix UI rendering of ``Push to Phoenix`` notification when viewing service page with type ``WPS``.
+* Fix UI rendering of some incorrect title background color for alert notifications.
+* Fix UI rendering of tree view items with collapsible/expandable resource nodes.
+
+`2.0.1 <https://github.com/Ouranosinc/Magpie/tree/2.0.1>`_ (2020-09-30)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* N/A
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix ``users`` typo in example ``config/config.yml`` (fixes `#354 <https://github.com/Ouranosinc/Magpie/issues/354>`_).
+* Fix CLI operation ``batch_update_users`` to employ provided ``password`` from input file ``config/config.yml``
+  instead of overriding it by random value. Omitted information will still auto-generate a random user password.
+  (fixes `#355 <https://github.com/Ouranosinc/Magpie/issues/355>`_).
+
 `2.0.0 <https://github.com/Ouranosinc/Magpie/tree/2.0.0>`_ (2020-07-31)
 ------------------------------------------------------------------------------------
 
@@ -433,7 +569,7 @@ Bug Fixes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Prioritize settings (ie: `magpie.ini` values) before environment variables and ``magpie.constants`` globals.
+* Prioritize settings (ie: ``magpie.ini`` values) before environment variables and ``magpie.constants`` globals.
 * Allow specifying ``magpie.scheme`` setting to generate the ``magpie.url`` with it if the later was omitted.
 * Look in settings for required parameters for function ``get_admin_cookies``.
 * Use API definitions instead of literal strings for routes employed in ``MagpieAdapter``.

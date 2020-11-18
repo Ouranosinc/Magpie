@@ -1,6 +1,9 @@
 ## Combined configuration definition to setup objects at Magpie startup
 ## See documentation 'Configuration'
-# All following sections are optional
+
+# All following sections are optional.
+# All parameters must fulfill data validation rules as per corresponding API requests.
+# (e.g.: minimum password length as defined by Magpie instance settings, allowed characters for fields, etc.)
 
 # all providers are defined first
 providers:
@@ -17,7 +20,7 @@ permissions:
 # default values will be used for missing optional fields
 #   not providing an entry referenced somewhere else (e.g.: in permissions)
 #   will default to only using the user name and defaults for every other field
-user:
+users:
   - username: username  # required if entry provided
     password:           # optional
     email:              # optional

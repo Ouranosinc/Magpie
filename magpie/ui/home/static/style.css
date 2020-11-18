@@ -51,10 +51,20 @@ a {
     text-decoration: none;
 }
 
+.disabled {
+    opacity: 50%;
+}
+
 a:focus,
 a:hover {
     color: #23527C;
     text-decoration: underline;
+}
+
+input[type="submit"].equal-width,
+input[type="button"].equal-width {
+    min-width: 5em;
+    width: 5em;
 }
 
 input[type="submit"].img-button.disabled,
@@ -166,12 +176,12 @@ input[type="submit"] {
 table {
     font-family: arial, sans-serif;
     border-collapse: collapse;
-    width: 100%;
+    width: auto;
 }
 
 td, th {
     border: 1px solid #dddddd;
-    padding: 8px;
+    padding: 0.5em;
 }
 
 table thead {
@@ -179,22 +189,32 @@ table thead {
     font-weight: bold;
 }
 
+.no-border {
+    border-style: none;
+}
+
 .checkbox-align label {
-  display: block;
-  /*float: left;*/
-  padding-left: 0.2em;
-  padding-right: 0.2em;
-  padding-bottom: 1em;
-  white-space: nowrap;
+    display: block;
+    /*float: left;*/
+    padding-left: 0.2em;
+    padding-right: 0.2em;
+    padding-bottom: 1em;
+    white-space: nowrap;
 }
 .checkbox-align input {
-  vertical-align: middle;
+    vertical-align: middle;
+    margin-top: 0.05em;
 }
+
 .checkbox-align label span {
-  vertical-align: middle;
+    vertical-align: middle;
 }
 
 /*---Panel Information Box---*/
+
+.panel-body {
+    padding: 0.5em;
+}
 
 .panel-box {
     background-color: #FFFFFF;
@@ -221,12 +241,27 @@ table thead {
     margin-top: -3px;
 }
 
-.panel-body {
-    padding: 15px;
+.panel-fields {
+    padding: 0.5em;
 }
 
 .panel-line {
     margin: 0.5em;
+}
+
+table.panel-line {
+    margin: 0.25em;
+}
+
+table.panel-line th,
+table.panel-line td {
+    border: 0;
+    white-space: nowrap;
+    padding: 0;  /* override global th/td */
+}
+
+.panel-error {
+    margin-left: 0.5em;
 }
 
 .panel-line input[type="submit"] {
@@ -234,10 +269,8 @@ table thead {
 }
 
 .panel-line-checkbox {
-    vertical-align: middle;
-    display: inline-flex;
-    margin-top: 0;
-    margin-bottom: 0;
+    padding-top: 0.1em;
+    display: inline-block;
 }
 
 .panel-title {
@@ -249,6 +282,16 @@ table thead {
 }
 
 .panel-value {
+}
+
+.center-text {
+    margin-top: 0.1em;
+    display: inline-block;
+    text-align: center;
+}
+
+.sync-text {
+    margin-left: 0.5em;
 }
 
 /*---Labels---*/
@@ -335,12 +378,12 @@ table thead {
     color: #FFFFFF;
 }
 
-.alert-info {
+.alert-text-container {
     display: inline-flex;
     text-align: center;
 }
 
-.alert-info>img {
+.alert-text-container>img {
     margin: 0.10em 0.25em 0.15em 0;
 }
 
@@ -370,11 +413,11 @@ table thead {
 }
 
 .alert-form-error {
-    width: 100px;
+    width: auto;
     display: inline-flex;
     float: left;
     text-align: center;
-    margin: 0.25em 0 0 0;
+    margin-top: 0.25em;
 }
 
 .alert-form-text {
@@ -386,6 +429,21 @@ table thead {
     padding: 0 0.5em 0 0;
 }
 
+.alert-note {
+    width: auto;
+    display: inline-flex;
+    float: left;
+    margin-top: 1em;
+    margin-left: 0.1em;
+}
+
+.alert-note-text {
+    margin-left: 0.25em;
+    margin-bottom: -1em;
+    margin-top: -1em;
+    text-align: left;
+}
+
 .icon-error {
     width: 1.25em;
     height: 1.25em;
@@ -394,6 +452,13 @@ table thead {
 .icon-warning {
     width: 1.25em;
     height: 1.25em;
+    margin-top: 0.05em;
+}
+
+.icon-info {
+    width: 1.25em;
+    height: 1.25em;
+    margin-top: 0.05em;
 }
 
 .icon-color-invert {
@@ -401,7 +466,93 @@ table thead {
     -webkit-filter: saturate(0) invert(100%);
 }
 
+.hidden {
+    display: none;
+}
+
+.option-container {
+    margin-bottom: 1em;
+}
+
+.option-section {
+    margin-left: 0.5em;
+    display: inline-block;
+}
+
+.option-text {
+}
+
+.permission-apply-container {
+    display: inline-block;
+    width: 100%;
+}
+
+.permission-apply-container>input {
+    float: right;
+    margin-right: 1.25em;
+}
+
+.permission-effective {
+    background-color: white;
+    padding: 1px 2px 2px;
+    font-weight: bold;
+    font-size: 1.25em;
+    /* this makes sure other current line checkbox remains aligned with others  */
+    margin-left: 0.1em;
+    margin-right: 0.05em;
+}
+
+.permission-effective-tester {
+    float: right;
+    display: inline-flex;
+}
+
+.success {
+    color: #2C8F30;
+}
+
+.failure {
+    color: #880000;
+}
+
+input[type="button"].permission-effective-button {
+    border-color: #377739;
+    border-width: 2px;
+    background-color: #DDDDDD;
+    color: #377739;
+    font-weight: bold;
+    font-size: 10px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    padding: 0.2em 0.6em;
+    margin: 3px 2px;
+    cursor: pointer;
+}
+
+input[type="button"].permission-effective-button:focus,
+input[type="button"].permission-effective-button:hover {
+    background-color: #358C39;
+    color: #FFFFFF;
+}
+
+/* button for display, without any attached action or effect */
+input[type="button"].button-no-click,
+input[type="button"].button-no-click:active,
+input[type="button"].button-no-click:focus,
+input[type="button"].button-no-click:hover {
+    vertical-align: top;
+    background-color: #DDDDDD;
+    border-style: solid;
+    color: #377739;
+    cursor: default;
+}
+
 /*---View users & groups pages ---*/
+
+table.simple-list {
+    width: 100%;
+}
 
 /* note: use explicit row classes instead of 'tr:nth-child(even)' because generated code doesn't handle it well */
 table.simple-list tr.list-row-odd {
@@ -424,7 +575,7 @@ table.simple-list th:not(:first-child) {
 }
 
 table.simple-list input[type="button"],
-table.simple-list input[type="submit"]{
+table.simple-list input[type="submit"] {
     margin: 0 0.5em;
 }
 
@@ -435,38 +586,88 @@ table.simple-list input[type="submit"]{
 }
 
 .tree-header {
-    padding: 5em 0 2em;
+    padding: 1em 0 0;
     font-weight: bold;
 }
 
-.tree li {
-    border-bottom: 1px solid #dddddd;
-    list-style-type: circle;
-    line-height: 24px;
-    padding-bottom: 4px;
+.tree .collapsible {
+    /*cursor: pointer;*/  /* looks better on 'tree-key' element */
+    margin-top: -1em;  /* make each new sub-list aligned such as if continuous flat list without extra spacing */
 }
 
-.Collapsable input {
-    float: left;
-    padding: 5px 100px;
-    border: 1px solid #eee;
+.tree .collapsible > ul {
+    display: none;      /* collapsed */
+    cursor: default;
+}
+
+.tree .collapsible.expanded > ul {
+    display: block;     /* expanded */
+}
+
+/* fake marker area to receive click event handler over 'collapsible::marker' list-item (toggling arrow) */
+.collapsible-marker {
+    /* make the area offset back (starting from text) over the arrow marker of list-item */
+    position: relative;
+    left: -1.25em;
+    top: 1.25em;
+    /* make the marker area large enough to overlap completely the arrow with a little overflow  */
+    width: 1.25em;
+    height: 1.25em;
+    margin-bottom: -0.25em;  /* undo extra height added to align the marker, preserve appearance of line height */
+    background-color: transparent;  /* adjust color with alpha value to apply changes to help visualize during edits */
+}
+
+.collapsible-marker:hover {
     cursor: pointer;
 }
 
-div.tree-item {
-    display: block;
-    float: left;
+/* leaf nodes will have this style, as not overridden by following ones */
+.tree li {
+    /*margin-top: 0.25em;*/
+    /*margin-left: 2em;*/
+    /*margin-bottom: 0.25em;*/
+    line-height: 1.5em;
+    list-style-type: square;
+    /*list-style-position: inside;*/
+    /*border-bottom: 1px solid #DDDDDD;*/
 }
 
-div.perm-title {
-    width: 3em;
-    float: right;
-    text-align: left;
+/* nodes that have child node(s) will have a expanded menu, default marker style when collapsed */
+.tree li.collapsible::marker {
+    content: "►\00a0\00a0";
+    list-style-type: none;
+    font-size: 0.875em;
+    /*font-family: monospace;*/
+}
 
-    -webkit-transform: rotate(-70deg); /* Safari */
-    -moz-transform: rotate(-70deg); /* Firefox */
-    -ms-transform: rotate(-70deg); /* IE */
-    -o-transform: rotate(-70deg); /* Opera */
+/* all collapsible nodes inherits from 'li.expanded::marker', 'expanded' added on top of it for expanded marker */
+.tree li.collapsible.expanded::marker {   /* note: 'expanded' name is important, must match JS script event to work */
+    content: "▼\00a0\00a0";
+}
+
+.tree-line {
+    display: block;
+}
+
+.tree-key {
+    /*display: block;
+    float: left;*/
+    display: inline-block;
+    position: absolute;
+    /*margin-top: 0.5em;*/
+    cursor: pointer;
+
+    /* this ensures that element is on top to capture the click event to toggle collapsed/expanded
+       must be applied in combination to 'position' attribute */
+    z-index: 10;
+}
+
+.tree-item {
+    /*display: block;
+    float: right;*/
+    display: inline-block;
+    width: 100%;
+    vertical-align: middle;
 }
 
 .tree-button.goto-service {
@@ -487,22 +688,58 @@ div.perm-title {
     margin: -0.15em 0 0 0;
 }
 
-div.perm-checkbox {
-    width:3em;
-    float:right;
-    text-align: left;
-    margin: 0.1em 0 0 0;
-}
-
 div.tree-button {
-    width:5em;
-    float:right;
+    width: 5em;
+    float: right;
     text-align: center;
     margin: 0.1em 0 0 0;
 }
 
 .clear {
-  clear: both;
+    clear: both;
+}
+
+.underline {
+    border-bottom: 1px solid #DDDDDD;
+}
+
+.permission-title {
+    /* ensure that sufficient space is provided to fit all possible permission-name side-by-side */
+    width: 10.5em;  /* align with combobox nad checkbox, must include both their respective width */
+    float: right;
+    text-align: left;
+
+    /*-webkit-transform: rotate(-10deg);*/   /* Safari */
+    /*-moz-transform: rotate(-10deg);*/      /* Firefox */
+    /*-ms-transform: rotate(-10deg);*/       /* IE */
+    /*-o-transform: rotate(-10deg);*/        /* Opera */
+}
+
+.permission-entry {
+    float:right;
+    text-align: left;
+    margin: 0.1em 1em 0 0;
+}
+
+.permission-checkbox {
+    width: 1.5em;
+    float: right;
+    text-align: left;
+    margin: 0.1em 0 0 0;
+}
+
+.permission-combobox {
+    /* use separate border values to inherit the theme color */
+    -webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+    border-radius: 3px;
+    border-width: 1px;
+    border-style: solid;
+}
+
+/* Hide arrow icon in IE browsers */
+.permission-combobox::-ms-expand {
+    display: none;
 }
 
 /*---Header breadcrumb---*/
@@ -545,6 +782,14 @@ ul.breadcrumb li a:hover {
 
 .header{
     vertical-align: center;
+}
+
+.header-line {
+    height: 5px;  /* offset to avoid being partially under Magpie logo */
+    border-bottom: 1px solid #DDDDDD;
+}
+
+.header-section {
 }
 
 .header>div>a {
@@ -595,6 +840,14 @@ ul.breadcrumb li a:hover {
 #image-overlay>img {
     width: inherit;
     height: inherit;
+}
+
+.language {
+    float: left;
+}
+
+.logged {
+    float: right;
 }
 
 /*---Home---*/
@@ -698,13 +951,17 @@ table.request-details thead tbody td th {
 
 a.current-tab:link,
 a.current-tab:visited {
-    background-color: white;
-    color: black;
+    color: white;
     padding: 1em 1em 1.4em 1em;
     text-align: center;
     text-decoration: none;
     display: inline-block;
     font-weight: bold;
+}
+
+.tab {
+    min-width: 6em;  /* make tabs same width regardless of text length, but must be adjusted for longest one */
+    border-color: black;
 }
 
 a.tab:link,
@@ -727,6 +984,10 @@ table.service-details {
     margin: auto;
     width: 30%;
     min-width: 500px;
+}
+
+table.fields-table {
+    width: auto;
 }
 
 table.fields-table th,

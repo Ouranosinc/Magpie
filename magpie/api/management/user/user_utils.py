@@ -22,7 +22,7 @@ from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
 from magpie.constants import get_constant
-from magpie.permissions import convert_permission, format_permissions
+from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory
 
 if TYPE_CHECKING:
@@ -32,16 +32,9 @@ if TYPE_CHECKING:
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
     from sqlalchemy.orm.session import Session
+    from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
-    from magpie.permissions import Permission
-    from magpie.typedefs import (
-        AnyPermissionType,
-        ResourcePermissionMap,
-        ResourcePermissionType,
-        ServiceOrResourceType,
-        Str,
-        UserServicesType
-    )
+    from magpie.typedefs import ResourcePermissionMap, ServiceOrResourceType, Str, UserServicesType
 
 
 def create_user(user_name, password, email, group_name, db_session):
@@ -117,31 +110,48 @@ def create_user(user_name, password, email, group_name, db_session):
                          content={"user": uf.format_user(new_user, new_user_groups)})
 
 
-def create_user_resource_permission_response(user, resource, permission, db_session):
-    # type: (models.User, ServiceOrResourceType, Permission, Session) -> HTTPException
+def create_user_resource_permission_response(user, resource, permission, db_session, overwrite=False):
+    # type: (models.User, ServiceOrResourceType, PermissionSet, Session, bool) -> HTTPException
     """
-    Creates a permission on a user/resource combination if it is permitted and not conflicting.
+    Creates a permission on a user/resource combination if it is permitted, and optionally not conflicting.
 
+    :param user: user for which to create/update the permission.
+    :param resource: service or resource for which to create the permission.
+    :param permission: permission with modifiers to be applied.
+    :param db_session: database connection.
+    :param overwrite:
+        If the corresponding `(user, resource, permission[name])` exists, there is a conflict.
+        Conflict is considered only by permission-name regardless of other modifiers.
+        If overwrite is ``False``, the conflict will be raised and not be applied.
+        If overwrite is ``True``, the permission modifiers will be replaced by the new ones, or created if missing.
     :returns: valid HTTP response on successful operation.
     """
-    ru.check_valid_service_or_resource_permission(permission.value, resource, db_session)
+    ru.check_valid_service_or_resource_permission(permission.name, resource, db_session)
     res_id = resource.resource_id
-    existing_perm = UserResourcePermissionService.by_resource_user_and_perm(
-        user_id=user.id, resource_id=res_id, perm_name=permission.value, db_session=db_session)
-    ax.verify_param(existing_perm, is_none=True, with_param=False, http_error=HTTPConflict,
-                    content={"resource_id": res_id, "user_id": user.id, "permission_name": permission.value},
-                    msg_on_fail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
+    exist_perm = get_similar_user_resource_permission(user, resource, permission, db_session=db_session)
 
-    new_perm = models.UserResourcePermission(resource_id=res_id, user_id=user.id, perm_name=permission.value)  # noqa
-    usr_res_data = {"resource_id": res_id, "user_id": user.id, "permission_name": permission.value}
+    permission.type = PermissionType.APPLIED
+    err_content = {"resource_id": res_id, "user_id": user.id,
+                   "permission_name": str(permission), "permission": permission.json()}
+    http_success = HTTPCreated
+    http_detail = s.UserResourcePermissions_POST_CreatedResponseSchema.description
+    if overwrite and exist_perm:
+        # skip similar permission lookup since we already did it
+        http_success = HTTPOk
+        http_detail = s.UserResourcePermissions_PUT_OkResponseSchema.description
+        delete_user_resource_permission_response(user, resource, exist_perm, db_session=db_session, similar=False)
+    else:
+        ax.verify_param(exist_perm, is_none=True, with_param=False, http_error=HTTPConflict, content=err_content,
+                        msg_on_fail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
+
+    new_perm = models.UserResourcePermission(resource_id=res_id, user_id=user.id, perm_name=str(permission))
     ax.verify_param(new_perm, not_none=True, http_error=HTTPForbidden,
                     content={"resource_id": res_id, "user_id": user.id},
                     msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
-                     http_error=HTTPForbidden, content=usr_res_data,
+                     http_error=HTTPForbidden, content=err_content,
                      msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
-    return ax.valid_http(http_success=HTTPCreated, content=usr_res_data,
-                         detail=s.UserResourcePermissions_POST_CreatedResponseSchema.description)
+    return ax.valid_http(http_success=http_success, content=err_content, detail=http_detail)
 
 
 def delete_user_group(user, group, db_session):
@@ -166,32 +176,72 @@ def delete_user_group(user, group, db_session):
                      content={"user_name": user.user_name, "group_name": group.group_name})
 
 
-def delete_user_resource_permission_response(user, resource, permission, db_session):
-    # type: (models.User, ServiceOrResourceType, Permission, Session) -> HTTPException
+def delete_user_resource_permission_response(user, resource, permission, db_session, similar=True):
+    # type: (models.User, ServiceOrResourceType, PermissionSet, Session, bool) -> HTTPException
     """
     Get validated response on deleted user resource permission.
 
+    :param user: user for which to delete the permission.
+    :param resource: service or resource for which to delete the permission.
+    :param permission: permission with modifiers to be deleted.
+    :param db_session: database connection.
+    :param similar:
+        Allow matching provided permission against any similar database permission. Otherwise, must match exactly.
     :returns: valid HTTP response on successful operations.
     :raises HTTPException: error HTTP response of corresponding situation.
     """
-    ru.check_valid_service_or_resource_permission(permission.value, resource, db_session)
+    ru.check_valid_service_or_resource_permission(permission.name, resource, db_session)
     res_id = resource.resource_id
-    del_perm = UserResourcePermissionService.get(user.id, res_id, permission.value, db_session)
+    if similar:
+        found_perm = get_similar_user_resource_permission(user, resource, permission, db_session)
+    else:
+        found_perm = permission
+    del_perm = UserResourcePermissionService.get(user.id, res_id, str(found_perm), db_session)
+    permission.type = PermissionType.APPLIED
+    err_content = {"resource_id": res_id, "user_id": user.id,
+                   "permission_name": str(permission), "permission": permission.json()}
+    ax.verify_param(del_perm, not_none=True, http_error=HTTPNotFound, content=err_content,
+                    msg_on_fail=s.UserResourcePermissionName_DELETE_NotFoundResponseSchema.description)
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
-                     http_error=HTTPNotFound,
-                     msg_on_fail=s.UserResourcePermissions_DELETE_NotFoundResponseSchema.description,
-                     content={"resource_id": res_id, "user_id": user.id, "permission_name": permission.value})
-    return ax.valid_http(http_success=HTTPOk, detail=s.UserResourcePermissions_DELETE_OkResponseSchema.description)
+                     http_error=HTTPNotFound, content=err_content,
+                     msg_on_fail=s.UserResourcePermissionName_DELETE_NotFoundResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.UserResourcePermissionName_DELETE_OkResponseSchema.description)
 
 
 def filter_user_permission(resource_permission_list, user):
-    # type: (List[ResourcePermissionType], models.User) -> Iterable[ResourcePermissionType]
+    # type: (List[PermissionTuple], models.User) -> Iterable[PermissionTuple]
     """
     Retrieves only direct user permissions on resources amongst a list of user/group resource/service permissions.
     """
     def is_user_perm(perm):
         return perm.group is None and perm.type == "user" and perm.user.user_name == user.user_name
     return filter(is_user_perm, resource_permission_list)
+
+
+def get_similar_user_resource_permission(user, resource, permission, db_session):
+    # type: (models.User, ServiceOrResourceType, PermissionSet, Session) -> Optional[PermissionSet]
+    """
+    Obtains the user service/resource permission that corresponds to the provided one.
+
+    Lookup considers only *similar* applied permission such that other permission modifiers don't affect comparison.
+    """
+    permission.type = PermissionType.APPLIED
+    err_content = {"resource_id": resource.resource_id, "user_id": user.id,
+                   "permission_name": str(permission), "permission": permission.json()}
+
+    def is_similar_permission():
+        perms_list = ResourceService.direct_perms_for_user(resource, user, db_session=db_session)
+        perms_list = [PermissionSet(perm) for perm in perms_list]
+        return [perm for perm in perms_list if perm.like(permission)]
+
+    similar_perms = ax.evaluate_call(lambda: is_similar_permission(),
+                                     http_error=HTTPForbidden, content=err_content,
+                                     msg_on_fail=s.UserResourcePermissions_Check_ErrorResponseSchema.description)
+    if not similar_perms:
+        return None
+    found_perm = similar_perms[0]
+    found_perm.type = PermissionType.DIRECT
+    return found_perm
 
 
 def get_user_resource_permissions_response(user, resource, request,
@@ -207,26 +257,31 @@ def get_user_resource_permissions_response(user, resource, request,
     db_session = request.db
 
     def get_usr_res_perms():
+        perm_type = None
         if resource.owner_user_id == user.id:
             # FIXME: no 'magpie.models.Resource.permissions' - ok for now because no owner handling...
+            perm_type = PermissionType.OWNED
             res_perm_list = models.RESOURCE_TYPE_DICT[resource.type].permissions
         else:
             if effective_permissions:
                 svc = ru.get_resource_root_service_impl(resource, request)
-                res_perm_list = svc.effective_permissions(resource, user)
+                res_perm_list = svc.effective_permissions(user, resource)
+                perm_type = PermissionType.EFFECTIVE
             else:
                 if inherit_groups_permissions:
                     res_perm_list = ResourceService.perms_for_user(resource, user, db_session=db_session)
+                    perm_type = PermissionType.INHERITED
                 else:
                     res_perm_list = ResourceService.direct_perms_for_user(resource, user, db_session=db_session)
-        return format_permissions(res_perm_list)
+                    perm_type = PermissionType.DIRECT
+        return format_permissions(res_perm_list, perm_type)
 
-    perm_names = ax.evaluate_call(
+    permissions = ax.evaluate_call(
         lambda: get_usr_res_perms(),
         fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
         msg_on_fail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
         content={"resource_name": str(resource.resource_name), "user_name": str(user.user_name)})
-    return ax.valid_http(http_success=HTTPOk, content={"permission_names": perm_names},
+    return ax.valid_http(http_success=HTTPOk, content=permissions,
                          detail=s.UserResourcePermissions_GET_OkResponseSchema.description)
 
 
@@ -254,14 +309,14 @@ def get_user_services(user, request, cascade_resources=False,
         and for each case, either considering only user permissions or every :term:`Inherited Permissions`,
         according to provided options.
     :rtype:
-        Dict of services by type with corresponding services by name containing sub-dict information,
-        unless :paramref:`format_as_list` is ``True``
+        Mapping of services by type to corresponding services by name containing each sub-mapping of their information,
+        unless :paramref:`format_as_list` is ``True``, in which case a flat list of service information is returned.
     """
     db_session = request.db
     resource_type = None if cascade_resources else [models.Service.resource_type]
     res_perm_dict = get_user_resources_permissions_dict(user, resource_types=resource_type, request=request,
                                                         inherit_groups_permissions=inherit_groups_permissions)
-
+    perm_type = PermissionType.INHERITED if inherit_groups_permissions else PermissionType.DIRECT
     services = {}
     for resource_id, perms in res_perm_dict.items():
         resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
@@ -283,7 +338,8 @@ def get_user_services(user, request, cascade_resources=False,
         # if service was not already added, add it (could be directly its permissions, or empty via children resource)
         # otherwise, set explicit immediate permissions on service instead of empty children resource permissions
         if svc_name not in services[svc_type] or is_service:
-            services[svc_type][svc_name] = format_service(svc.service, perms, show_private_url=False)
+            svc_json = format_service(svc.service, perms, perm_type, show_private_url=False)
+            services[svc_type][svc_name] = svc_json
 
     if not format_as_list:
         return services
@@ -296,20 +352,23 @@ def get_user_services(user, request, cascade_resources=False,
 
 
 def get_user_service_permissions(user, service, request, inherit_groups_permissions=True):
-    # type: (models.User, models.Service, Request, bool) -> List[Permission]
+    # type: (models.User, models.Service, Request, bool) -> List[PermissionSet]
     if service.owner_user_id == user.id:
+        perm_type = PermissionType.OWNED
         usr_svc_perms = service_factory(service, request).permissions
     else:
         if inherit_groups_permissions:
+            perm_type = PermissionType.INHERITED
             usr_svc_perms = ResourceService.perms_for_user(service, user, db_session=request.db)
         else:
+            perm_type = PermissionType.DIRECT
             usr_svc_perms = ResourceService.direct_perms_for_user(service, user, db_session=request.db)
-    return [convert_permission(p) for p in usr_svc_perms]
+    return [PermissionSet(p, typ=perm_type) for p in usr_svc_perms]
 
 
 def get_user_resources_permissions_dict(user, request, resource_types=None,
                                         resource_ids=None, inherit_groups_permissions=True):
-    # type: (models.User, Request, Optional[List[Str]], Optional[List[int]], bool) -> Dict[Str, AnyPermissionType]
+    # type: (models.User, Request, Optional[List[Str]], Optional[List[int]], bool) -> Dict[Str, PermissionSet]
     """
     Creates a dictionary of resources by id with corresponding permissions of the user.
 
@@ -333,9 +392,9 @@ def get_user_resources_permissions_dict(user, request, resource_types=None,
     resources_permissions_dict = {}
     for res_perm in res_perm_tuple_list:
         if res_perm.resource.resource_id not in resources_permissions_dict:
-            resources_permissions_dict[res_perm.resource.resource_id] = [res_perm.perm_name]
+            resources_permissions_dict[res_perm.resource.resource_id] = [PermissionSet(res_perm)]
         else:
-            resources_permissions_dict[res_perm.resource.resource_id].append(res_perm.perm_name)
+            resources_permissions_dict[res_perm.resource.resource_id].append(PermissionSet(res_perm))
 
     # remove any duplicates that could be incorporated by multiple groups
     for res_id in resources_permissions_dict:

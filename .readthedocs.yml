@@ -13,7 +13,7 @@ formats:
 python:
   version: 3.7
   install:
-    - requirements: requirements-docs.txt
+    - requirements: requirements-doc.txt
     # required for OpenAPI generation
     - requirements: requirements.txt
 #    - method: pip

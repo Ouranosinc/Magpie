@@ -12,11 +12,19 @@ Glossary
         Required :term:`Group` membership to obtain sufficient privileges in order to be permitted the execution of
         a given request. Requests under different scopes require variable access levels depending on context.
 
+    ACE
+        Access Control Entry.
+
+        Definition of an access control rule as Allow/Deny condition for a given :term:`User` or :term:`Group` to
+        act according to a certain :term:`Permission` name. Multiple :term:`ACE` form the effective :term:`ACL`
+        conditions to be evaluated to either grant or refuse access.
+
     ACL
         Access Control List.
 
         Set of :term:`User` and :term:`Group` scopes, provided session :term:`Authentication` elements, that either
-        grants or denies access to the applicable :term:`User` to the targeted HTTP request.
+        grants or denies :term:`Permission` access to the applicable :term:`User` for the targeted :term:`Resource`.
+        Formed of multiple :term:`ACE`.
 
     Allowed Permissions
         Set of applicable :term:`Permission` values onto an element. See :ref:`Allowed Permissions` section.
@@ -89,6 +97,15 @@ Glossary
         :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`. Otherwise, it is whoever the
         :term:`Authentication` mechanism identifies with token extracted from request :term:`Cookies`.
 
+    OGC
+        Acronym for `Open Geospatial Consortium` that represent the global initiative and community to standardize
+        geospatial data and service methodologies in order to improve access to geospatial and location information.
+
+    OWS
+        Acronym that regroups all :term:`OGC` Web Services. This includes `Web Feature Service` (WFS),
+        `Web Map Service` (WMS) and `Web Processing Service` (WPS) for which `Magpie` offers some specific
+        :term:`Service` request parser implementations.
+
     Permission
         Element that defines which rules are applicable for a given combination of :term:`User` and/or :term:`Group`
         against one or many :term:`Service` and/or :term:`Resource`, depending of the many contexts for which they
@@ -113,7 +130,7 @@ Glossary
         for implementation details to achieve this result.
 
     Request User
-        Active request session :term:`User` that can be retrieved by calling ``request.user`` with resolution of
+        Active HTTP request session :term:`User` that can be retrieved by calling ``request.user`` with resolution of
         :term:`Authentication` headers within the request (:term:`User` is ``None`` if unauthenticated,
         i.e.: :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`). This is not the same as the :term:`Context User`
         extracted from ``{user_name}`` path variable, except for the special case covered by :term:`Logged User`'s

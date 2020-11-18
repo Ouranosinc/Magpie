@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from pyramid.authentication import Authenticated
-from pyramid.httpexceptions import HTTPFound
+from pyramid.httpexceptions import HTTPFound, HTTPBadRequest, HTTPUnprocessableEntity
 from pyramid.view import view_config
 
 from magpie.api import schemas
@@ -70,7 +70,11 @@ class UserViews(BaseViews):
         user_info["edit_mode"] = "no_edit"
         user_info["joined_groups"] = joined_groups
         user_info["groups"] = public_groups
-        error_message = ""
+        # reset error messages/flags
+        user_info["error_message"] = ""
+        for field in ["password", "user_email", "user_name"]:
+            user_info["invalid_" + field] = ""
+            user_info["reason_" + field] = ""
 
         if self.request.method == "POST":
             is_edit_group_membership = False
@@ -105,6 +109,21 @@ class UserViews(BaseViews):
 
             if is_save_user_info:
                 resp = request_api(self.request, schemas.LoggedUserAPI.path, "PATCH", data=user_info)
+                if resp.status_code in (HTTPBadRequest.code, HTTPUnprocessableEntity.code):
+                    # attempt to retrieve the API specific reason why the operation is invalid
+                    body = get_json(resp)
+                    param_name = body.get("param", {}).get("name")
+                    reason = body.get("detail", "Invalid")
+                    user_info.pop("password", None)  # always remove password from output
+                    if param_name == "password":
+                        user_info["invalid_password"] = True
+                        user_info["reason_password"] = reason
+                        return self.add_template_data(user_info)
+                    if param_name == "user_email":
+                        user_info["invalid_user_email"] = True
+                        user_info["reason_user_email"] = reason
+                        return self.add_template_data(user_info)
+                # fail if unknown bad request reason or other error type
                 check_response(resp)
                 # need to commit updates since we are using the same session
                 # otherwise, updated user doesn't exist yet in the db for next calls
@@ -122,5 +141,4 @@ class UserViews(BaseViews):
                 user_info["joined_groups"] = self.get_current_user_groups()
 
         user_info.pop("password", None)  # always remove password from output
-        user_info["error_message"] = error_message
         return self.add_template_data(data=user_info)

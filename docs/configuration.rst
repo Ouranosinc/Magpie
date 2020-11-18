@@ -5,16 +5,22 @@ Configuration
 =============
 
 At startup, `Magpie` application will load multiple configuration files to define various behaviours or setup
-operations. These are defined though the configuration settings presented below.
+operations. These are defined though the configuration settings presented in below sections.
 
-All generic `Magpie` configuration settings can be defined through either the `magpie.ini`_ file
-or environment variables. Values defined in `magpie.ini`_ are expected to follow the
-``magpie.[variable_name]`` format, and corresponding ``MAGPIE_[VARIABLE_NAME]`` format is used for environment
-variables. Both of these alternatives match the constants defined in `constants.py`_ and can be used
-interchangeably. Order of resolution will prioritize setting values over environment variables in case of duplicate
-configurations resulting into different values.
+All generic `Magpie` configuration settings can be defined through either the `magpie.ini`_ file or environment
+variables. Values defined in `magpie.ini`_ are expected to follow the ``magpie.[variable_name]`` format, and
+corresponding ``MAGPIE_[VARIABLE_NAME]`` format is used for environment variables. Both of these alternatives match
+the constants defined in `constants.py`_ and can be used interchangeably.
 
-.. _constants.py: https://github.com/Ouranosinc/Magpie/tree/master/magpie/constants.py
+.. versionchanged:: 1.1
+    Order of resolution will prioritize *setting configurations* over *environment variables* in case of duplicates
+    resulting into different values. Environment variables will not override already specified setting values.
+
+    Previous versions of `Magpie` would instead prioritize environment variables, but this behaviour was deemed as
+    counter intuitive. This is attributed to the global scope nature of environment variables that often made it hard
+    to understand why some custom INI file would not behave as intended since those variable would inconsistently take
+    precedence whether or not they were defined. Using a common configuration file makes it easier to maintain and
+    understand the applied settings, and is therefore preferable.
 
 Configuration Files
 -------------------
@@ -35,17 +41,14 @@ By default, `Magpie` will try to load a ``magpie.env`` file which can define fur
 used to setup the application (see ``MAGPIE_ENV_FILE`` setting further below). An example of expected format and common
 variables for this file is presented in `magpie.env.example`_.
 
-**Important Notes:**
+.. warning::
+    If ``magpie.env`` cannot be found (e.g.: using setting ``MAGPIE_ENV_FILE``) but `magpie.env.example`_ is available
+    after resolving any previously set ``MAGPIE_ENV_DIR`` variable, this example file will be used to make a copy saved
+    as ``magpie.env`` and will be used as the base ``.env`` file to load its contained environment variables.
+    This behaviour is intended to reduce initial configuration and preparation of  `Magpie` for a new user.
 
-If ``magpie.env`` cannot be found (using setting ``MAGPIE_ENV_FILE``) but ``magpie.env.example`` is available
-(after resolving any previously set ``MAGPIE_ENV_DIR`` variable), this example file will be used to make a copy
-saved as ``magpie.env`` and will be used as the base ``.env`` file to load its contained environment variables.
-This behaviour is intended to reduce initial configuration and preparation of  `Magpie` for a new user.
-
-When loading variables from the ``.env`` file, any conflicting environment variable will **NOT** be overridden.
-Therefore, only *missing but required* values will be added to the environment to ensure proper setup of `Magpie`.
-
-.. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example
+    When loading variables from the ``.env`` file, any conflicting environment variable will **NOT** be overridden.
+    Therefore, only *missing but required* values will be added to the environment to ensure proper setup of `Magpie`.
 
 File: postgres.env
 ~~~~~~~~~~~~~~~~~~~
@@ -54,8 +57,6 @@ This file behaves exactly in the same manner as for ``magpie.env`` above, but fo
 employed to setup the `postgres` database connection (see ``MAGPIE_POSTGRES_ENV_FILE`` setting below).
 File `postgres.env.example`_ and auto-resolution of missing ``postgres.env`` is identical to ``magpie.env``
 case.
-
-.. _postgres.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/postgres.env.example
 
 File: providers.cfg
 ~~~~~~~~~~~~~~~~~~~
@@ -66,6 +67,10 @@ look for mismatches between the :term:`Service` name and URL with the correspond
 to the desired URL. See ``MAGPIE_PROVIDERS_CONFIG_PATH`` setting below to setup alternate references to this type of
 configuration. Please refer to the comment header of sample file `providers.cfg`_ for specific format and parameter
 details.
+
+.. versionchanged:: 3.1
+    Some services, such as :ref:`ServiceTHREDDS` for instance, can take additional parameters to customize some of
+    their behaviour. Please refer to :ref:`Services` chapter for specific configuration supported.
 
 File: permissions.cfg
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -81,12 +86,30 @@ See ``MAGPIE_PERMISSIONS_CONFIG_PATH`` setting below to setup alternate referenc
 Please refer to the comment header of sample file `permissions.cfg`_ for specific format details as well as specific
 behaviour of each parameter according to encountered use cases.
 
+Configuration File Formats
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionchanged:: 1.9.2
+
+Any file represented in the :ref:`Configuration` chapter using any of the extension ``.cfg``, ``.json``, ``.yaml`` or
+``.yml`` will be accepted interchangeably if provided. Both parsing as JSON and YAML will be attempted for backward
+compatibility of each resolved file path.
+
+It is not mandatory for the the name of each file to also match the employed name in the documentation, provided
+the paths can be resolved to valid files, though there is special handling of default ``.example`` extensions with
+matching file names when no other alternative configurations can be found. Again, this is mostly for backward
+compatibility.
+
+.. _config_file:
+
 Combined Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. versionadded:: 2.0
+
 Since contents of all different configurations files (`providers.cfg`_, `permissions.cfg`_) reside under distinct
-top-level objects (of same name), it is actually possible to use an unique file to define everything. For example,
-one could define a combined configuration as follows.
+top-level objects, it is actually possible to use an unique file to define everything. For example, one could define
+a combined configuration as follows.
 
 .. code-block:: YAML
 
@@ -112,6 +135,7 @@ one could define a combined configuration as follows.
     permissions:
       - service: api
         resource: /resource/user-resource  # will create both resources respecting children relationship
+        type: route      # not mandatory here since service type 'api' only allows this type, but useful for other cases
         permission: read
         user: my-user    # will reference above user
         action: create
@@ -141,7 +165,7 @@ Settings and Constants
 
 Environment variables can be used to define all following configurations (unless mentioned otherwise with
 ``[constant]`` keyword next to the parameter name). Most values are parsed as plain strings, unless they refer to an
-activable setting (e.g.: ``True`` or ``False``), or when specified with more specific ``[<type>]`` notation.
+activatable setting (e.g.: ``True`` or ``False``), or when specified with more specific ``[<type>]`` notation.
 
 Configuration variables will be used by `Magpie` on startup unless prior definition is found within `magpie.ini`_.
 All variables (i.e.: non-``[constant]`` parameters) can also be specified by their ``magpie.[variable_name]`` setting
@@ -169,18 +193,18 @@ These settings can be used to specify where to find other settings through custo
 - | ``MAGPIE_PROVIDERS_CONFIG_PATH``
   | (Default: ``${MAGPIE_CONFIG_DIR}/providers.cfg``)
 
-  Path where to find ``providers.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
+  Path where to find a `providers.cfg`_ file. Can also be a directory path, where all contained ``.cfg`` files will
   be considered as `providers` files and will be loaded sequentially.
 
   .. note::
     If a directory path is specified, the order of loaded configuration files is not guaranteed
-    (depending on OS implementation).
+    (depending on OS implementation). Duplicate entries could therefore be loaded in inconsistent order.
     Please refer to `providers.cfg`_ for specific format details and loading methodology according to arguments.
 
 - | ``MAGPIE_PERMISSIONS_CONFIG_PATH``
   | (default: ``${MAGPIE_CONFIG_DIR}/permissions.cfg``)
 
-  Path where to find ``permissions.cfg`` file. Can also be a directory path, where all contained ``.cfg`` files will
+  Path where to find `permissions.cfg`_ file. Can also be a directory path, where all contained ``.cfg`` files will
   be considered as `permissions` files and will be loaded sequentially.
 
   .. note::
@@ -199,7 +223,7 @@ These settings can be used to specify where to find other settings through custo
   .. note::
     When provided, all other combinations of ``MAGPIE_CONFIG_DIR``, ``MAGPIE_PERMISSIONS_CONFIG_PATH`` and
     ``MAGPIE_PROVIDERS_CONFIG_PATH`` are effectively ignored in favour of definitions in this file.
-    See `Combined Configuration File`_ for further details and example.
+    See :ref:config_file` for further details and example.
 
 - ``MAGPIE_INI_FILE_PATH``
 
@@ -225,11 +249,6 @@ These settings can be used to specify where to find other settings through custo
   | (Default: ``"${MAGPIE_ENV_DIR}/postgres.env"``)
 
   File path to ``postgres.env`` file with additional environment variables to configure the `postgres` connection.
-
-
-.. _magpie.ini: https://github.com/Ouranosinc/Magpie/tree/master/config/magpie.ini
-.. _permissions.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
-.. _providers.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
 
 Application Settings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -322,9 +341,6 @@ at the start of the `Configuration`_ section.
   within the `themes`_ subdirectory.
 
 
-.. _themes: https://github.com/Ouranosinc/Magpie/tree/master/magpie/ui/home/static/themes
-
-
 Security Settings
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -342,7 +358,7 @@ remain available as described at the start of the `Configuration`_ section.
     This value **MUST** be defined before starting the application in order to move on to user accounts and permissions
     creation in your `Magpie` instance. The application will quit with an error if this value cannot be found.
 
-  .. versionchanged:: 2.0.0
+  .. versionchanged:: 2.0
     Prior to this version, a default value was employed if this setting not provided. Later `Magpie` version now
     require an explicit definition of this parameter to avoid weak default configuration making the protected system
     prone to easier breaches. This also avoids incorrect initial setup of special :term:`User`s with that temporary
@@ -379,7 +395,7 @@ remain available as described at the start of the `Configuration`_ section.
   could cause other operations to fail drastically since this special user will be employed by other `Magpie` internal
   operations such as :ref:`Service Synchronization` and setup during the application startup.
 
-  .. versionchanged:: 2.0.0
+  .. versionchanged:: 2.0
     Prior to this version, a default value was employed if this setting was not provided. Later `Magpie` version now
     require an explicit definition of this parameter to avoid weak default configuration making the protected system
     prone to easier breaches. This value **MUST** be defined before starting the application in order to resume to any
@@ -391,7 +407,7 @@ remain available as described at the start of the `Configuration`_ section.
 
   Password of the default 'administrator' :term:`User` generated by the application (see ``MAGPIE_ADMIN_USER`` details).
 
-  .. versionchanged:: 2.0.0
+  .. versionchanged:: 2.0
     Prior to this version, a default value was employed if this setting was not provided. Later `Magpie` version now
     require an explicit definition of this parameter to avoid weak default configuration making the protected system
     prone to easier breaches. This value **MUST** be defined before starting the application in order to resume to any
@@ -424,7 +440,7 @@ remain available as described at the start of the `Configuration`_ section.
 - | ``MAGPIE_LOGGED_PERMISSION`` [constant]
   | (Value: ``"MAGPIE_LOGGED_USER"``)
 
-  .. versionadded:: 2.0.0
+  .. versionadded:: 2.0
 
   Defines a special condition of :term:`Access Permissions` related to the :term:`Logged User` session and the
   targeted :term:`User` by the request. See details in :ref:`Route Access` for when it applies.
@@ -444,7 +460,7 @@ remain available as described at the start of the `Configuration`_ section.
     but this same user will receive a forbidden response if using is ID in the path if he doesn't have required
     privileges.
 
-  .. versionchanged:: 2.0.0
+  .. versionchanged:: 2.0
     Even without administrative access rights, the :term:`Logged User` is allowed to obtain some additional details
     about the targeted :term:`User` of the request path if it corresponds to itself. See ``MAGPIE_LOGGED_PERMISSION``
     and :ref:`Route Access` for further details.
@@ -474,7 +490,7 @@ remain available as described at the start of the `Configuration`_ section.
   This parameter is enforced to be equal to ``MAGPIE_ANONYMOUS_USER``. It is preserved for backward compatibility of
   migration scripts and external libraries that specifically refer to this parameter.
 
-  .. versionchanged::
+  .. versionchanged:: 2.0
     The :term:`Group` generated by this configuration cannot be modified to remove :term:`User` memberships or change
     other metadata associated to it.
 
@@ -493,7 +509,7 @@ remain available as described at the start of the `Configuration`_ section.
 
   Name of a generic :term:`Group` created to associate registered :term:`User` memberships in the application.
 
-  .. versionchanged:: 2.0.0
+  .. versionchanged:: 2.0
     New :term:`User` are **NOT** automatically added to this :term:`Group` anymore. This :term:`Group` remains
     available for testing and backward compatibility reasons, but doesn't have any special connotation and can be
     modified just as any other normal :term:`Group`.
@@ -518,7 +534,7 @@ remain available as described at the start of the `Configuration`_ section.
 - | ``MAGPIE_PASSWORD_MIN_LENGTH``
   | (Default: ``12``)
 
-  .. versionadded:: 2.0.0
+  .. versionadded:: 2.0
     Minimum length of the password for :term:`User` creation or update.
 
   .. note::
@@ -594,7 +610,7 @@ Following settings define parameters required by `Twitcher`_ (OWS Security Proxy
 - | ``TWITCHER_HOST``
   | (Default: None)
 
-  .. versionadded:: 2.0.0
+  .. versionadded:: 2.0
 
   Specifies the explicit hostname to employ in combination with ``TWITCHER_PROTECTED_PATH`` to form the complete base
   service protected URL. Ignored if ``TWITCHER_PROTECTED_URL`` was provided directly.
@@ -660,7 +676,7 @@ configuration names are supported where mentioned.
 
   Database connection username to retrieve `Magpie` data stored in `PostgreSQL`_.
 
-  .. versionchanged:: 1.9.0
+  .. versionchanged:: 1.9
       On top of ``MAGPIE_POSTGRES_USERNAME``, environment variable ``POSTGRES_USERNAME`` and setting
       ``postgres.username`` are all supported interchangeably. For backward compatibility, all above variants with
       ``user`` instead of ``username`` (with corresponding lower/upper case) are also verified for potential
@@ -672,7 +688,7 @@ configuration names are supported where mentioned.
 
   Database connection password to retrieve `Magpie` data stored in `PostgreSQL`_.
 
-  .. versionchanged:: 1.9.0
+  .. versionchanged:: 1.9
     Environment variable ``POSTGRES_PASSWORD`` and setting ``postgres.password`` are also supported if not previously
     identified by their `Magpie`-prefixed variants.
 
@@ -681,7 +697,7 @@ configuration names are supported where mentioned.
 
   Database connection host location to retrieve `Magpie` data stored in `PostgreSQL`_.
 
-  .. versionchanged:: 1.9.0
+  .. versionchanged:: 1.9
     Environment variable ``POSTGRES_HOST`` and setting ``postgres.host`` are also supported if not previously
     identified by their `Magpie`-prefixed variants.
 
@@ -690,7 +706,7 @@ configuration names are supported where mentioned.
 
   Database connection port to retrieve `Magpie` data stored in `PostgreSQL`_.
 
-  .. versionchanged:: 1.9.0
+  .. versionchanged:: 1.9
     Environment variable ``POSTGRES_PORT`` and setting ``postgres.port`` are also supported if not previously
     identified by their `Magpie`-prefixed variants.
 
@@ -699,7 +715,7 @@ configuration names are supported where mentioned.
 
   Name of the database located at the specified connection to retrieve `Magpie` data stored in `PostgreSQL`_.
 
-  .. versionchanged:: 1.9.0
+  .. versionchanged:: 1.9
     Environment variable ``POSTGRES_DB`` and setting ``postgres.db``, as well as the same variants with ``database``
     instead of ``db``, are also supported if not previously identified by their `Magpie`-prefixed variants.
 
@@ -750,18 +766,6 @@ this :term:`Authentication` procedure.
     Websites), rarely used authentication bridges by the developers could break without prior notice. If this is the
     case and you use one of the broken connectors, summit a new `issue`_.
 
-.. _OpenID: https://openid.net/
-.. _ESGF: https://esgf.llnl.gov/
-.. _DKRZ: https://esgf-data.dkrz.de
-.. _IPSL: https://www.ipsl.fr/
-.. _BADC: http://data.ceda.ac.uk/badc
-.. _CEDA: https://esgf-index1.ceda.ac.uk
-.. _LLNL: https://www.llnl.gov/
-.. _PCMDI: http://pcmdi.llnl.gov
-.. _SMHI: https://www.smhi.se
-.. _GitHub: https://developer.github.com/v3/#authentication
-.. _WSO2: https://wso2.com/
-.. _MagpieSecurity: https://github.com/Ouranosinc/Magpie/tree/master/magpie/security.py
 
 GitHub Settings
 ~~~~~~~~~~~~~~~~~

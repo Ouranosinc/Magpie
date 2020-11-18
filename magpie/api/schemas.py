@@ -23,7 +23,7 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 
 from magpie import __meta__
 from magpie.constants import get_constant
-from magpie.permissions import Permission
+from magpie.permissions import Access, Permission, PermissionType, Scope
 from magpie.security import get_provider_names
 from magpie.utils import (
     CONTENT_TYPE_HTML,
@@ -284,8 +284,8 @@ TAG_DESCRIPTIONS = {
         "permitted additional access if the logged session user corresponds to the path variable user.",
     LoggedUserTag:
         "Utility paths that correspond to their {} counterparts, but that automatically ".format(UserAPI.path) +
-        "determine the applicable user from the logged session. If there is no active session, the public anonymous "
-        "access is employed.\n\nNOTE: Value '{}' depends on Magpie configuration.".format(_LOGGED_USER_VALUE),
+        "determine the applicable user from the logged session. If there is no active session, the public "
+        "unauthenticated access is employed.",
     GroupsTag:
         "Groups management and control of their applicable users, services, resources and permissions.\n\n"
         "Administrator-level permissions are required to access most paths. ",
@@ -584,7 +584,44 @@ class UserNamesListSchema(colander.SequenceSchema):
     user_name = UserNameParameter
 
 
-class PermissionListSchema(colander.SequenceSchema):
+class Permission_Check_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid permission format. Must be a permission string name or detailed JSON object."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class PermissionObjectSchema(colander.MappingSchema):
+    name = colander.SchemaNode(
+        colander.String(),
+        description="Permission name applicable to the service/resource.",
+        example=Permission.READ.value
+    )
+    access = colander.SchemaNode(
+        colander.String(),
+        description="Permission access rule to the service/resource.",
+        default=Access.ALLOW.value,
+        example=Access.ALLOW.value,
+    )
+    scope = colander.SchemaNode(
+        colander.String(),
+        description="Permission scope over service/resource tree hierarchy.",
+        default=Scope.RECURSIVE.value,
+        example=Scope.RECURSIVE.value,
+    )
+
+
+class PermissionObjectTypeSchema(PermissionObjectSchema):
+    type = colander.SchemaNode(
+        colander.String(),
+        description="Permission type being displayed.",
+        example=PermissionType.ALLOWED.value
+    )
+
+
+class PermissionObjectListSchema(colander.SequenceSchema):
+    permission = PermissionObjectTypeSchema()
+
+
+class PermissionNameListSchema(colander.SequenceSchema):
     permission_name = colander.SchemaNode(
         colander.String(),
         description="Permissions applicable to the service/resource",
@@ -654,9 +691,12 @@ class ServiceBodySchema(colander.MappingSchema):
         colander.Integer(),
         description="Resource identification number",
     )
-    permission_names = PermissionListSchema(
+    permission_names = PermissionNameListSchema(
         description="List of service permissions applicable or effective for a given user/group according to context.",
         example=[Permission.READ.value, Permission.WRITE.value]
+    )
+    permissions = PermissionObjectListSchema(
+        description="List of detailed service permissions applicable or effective for user/group according to context."
     )
     service_name = colander.SchemaNode(
         colander.String(),
@@ -717,9 +757,13 @@ class ResourceBodySchema(colander.MappingSchema):
         default=colander.null,  # if no parent
         missing=colander.drop   # if not returned (basic_info = True)
     )
-    permission_names = PermissionListSchema(example=[Permission.READ.value, Permission.WRITE.value],
-                                            description="List of resource permissions applicable or effective "
-                                                        "for a given user/group according to context.")
+    permission_names = PermissionNameListSchema(
+        description="List of resource permissions applicable or effective for a given user/group according to context.",
+        example=[Permission.READ.value, Permission.WRITE.value]
+    )
+    permissions = PermissionObjectListSchema(
+        description="List of detailed resource permissions applicable or effective for user/group according to context."
+    )
     permission_names.default = colander.null  # if no parent
     permission_names.missing = colander.drop  # if not returned (basic_info = True)
 
@@ -934,9 +978,12 @@ class Resources_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
 
 
 class ResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema(
+    permission_names = PermissionNameListSchema(
         description="List of permissions applicable for the referenced resource.",
         example=[Permission.READ.value, Permission.WRITE.value]
+    )
+    permissions = PermissionObjectListSchema(
+        description="List of detailed permissions applicable for the referenced resource."
     )
 
 
@@ -964,12 +1011,12 @@ class ServiceType_access_SchemaNode(colander.MappingSchema):
 
 class ServiceType_geoserverapi_SchemaNode(colander.MappingSchema):
     name = "geoserver-api"
-    title = "Services typed for GeoServer API"
+    title = "Services typed for GeoServer-API"
     geoserver_api = ServiceBodySchema(missing=colander.drop, name="geoserver-api")
 
 
 class ServiceType_geoserverwms_SchemaNode(colander.MappingSchema):
-    title = "Services typed for GeoServer WMS"
+    title = "Services typed for GeoServer-WMS"
     geoserverwms = ServiceBodySchema(missing=colander.drop)
 
 
@@ -990,7 +1037,7 @@ class ServiceType_thredds_SchemaNode(colander.MappingSchema):
 
 
 class ServiceType_wfs_SchemaNode(colander.MappingSchema):
-    title = "Services typed for GeoServer WFS"
+    title = "Services typed for WFS"
     geoserver = ServiceBodySchema(missing=colander.drop)
 
 
@@ -1213,7 +1260,13 @@ class Service_DELETE_ForbiddenResponseSchema(BaseResponseSchemaAPI):
 
 
 class ServicePermissions_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema(example=[Permission.READ.value, Permission.WRITE.value])
+    permission_names = PermissionNameListSchema(
+        description="List of permissions applicable to the service.",
+        example=[Permission.READ.value, Permission.WRITE.value]
+    )
+    permissions = PermissionObjectListSchema(
+        description="List of detailed permissions applicable to the service."
+    )
 
 
 class ServicePermissions_GET_OkResponseSchema(BaseResponseSchemaAPI):
@@ -1236,13 +1289,17 @@ class ServiceResources_POST_RequestSchema(Resources_POST_RequestSchema):
 
 
 ServiceResources_POST_CreatedResponseSchema = Resources_POST_CreatedResponseSchema
-ServiceResources_POST_ForbiddenResponseSchema = Resources_POST_ForbiddenResponseSchema
 ServiceResources_POST_NotFoundResponseSchema = Resources_POST_NotFoundResponseSchema
 ServiceResources_POST_ConflictResponseSchema = Resources_POST_ConflictResponseSchema
 
 
-class ServiceResources_POST_BadRequestResponseSchema(Resources_POST_BadRequestResponseSchema):
+class ServiceResources_POST_ForbiddenResponseSchema(Resources_POST_ForbiddenResponseSchema):
     description = "Invalid 'parent_id' specified for child resource creation under requested service."
+
+
+class ServiceResources_POST_UnprocessableEntityResponseSchema(BaseResponseSchemaAPI):
+    description = "Provided 'parent_id' value is invalid."
+    body = ErrorResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
 
 
 # delete service's resource use same method as direct resource delete
@@ -1272,9 +1329,12 @@ class ServiceTypeResourceInfo(colander.MappingSchema):
         colander.Boolean(),
         description="Indicates if the resource type allows child resources."
     )
-    permission_names = PermissionListSchema(
+    permission_names = PermissionNameListSchema(
         description="Permissions applicable to the specific resource type.",
         example=[Permission.READ.value, Permission.WRITE.value]
+    )
+    permissions = PermissionObjectListSchema(
+        description="List of detailed permissions applicable to the specific resource type."
     )
 
 
@@ -1382,7 +1442,7 @@ class User_Check_ForbiddenResponseSchema(BaseResponseSchemaAPI):
 
 class User_Check_ConflictResponseSchema(BaseResponseSchemaAPI):
     description = "User name matches an already existing user name."
-    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
 class User_POST_RequestBodySchema(colander.MappingSchema):
@@ -1660,6 +1720,26 @@ class UserResources_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
+class UserResourcePermissions_Check_ParamResponseBodySchema(colander.MappingSchema):
+    name = colander.SchemaNode(colander.String(), description="Specified parameter.", example="permission_name")
+    value = colander.SchemaNode(colander.String(), description="Specified parameter value.")
+
+
+class UserResourcePermissions_Check_ErrorResponseBodySchema(ErrorResponseBodySchema):
+    user_name = colander.SchemaNode(colander.String(), description="Specified user name.")
+    resource_id = colander.SchemaNode(colander.String(), description="Specified service/resource id.")
+    permission_name = colander.SchemaNode(colander.String(), description="Specified permission name.")
+    permission = PermissionObjectTypeSchema(description="Specific permission extended definition.")
+    param = UserResourcePermissions_Check_ParamResponseBodySchema(missing=colander.drop)
+
+
+class UserResourcePermissions_Check_ErrorResponseSchema(BaseResponseSchemaAPI):
+    description = "Lookup of similar permission on service/resource for user refused by db."
+    body = UserResourcePermissions_Check_ErrorResponseBodySchema(
+        code=HTTPInternalServerError.code, description=description
+    )
+
+
 class UserResourcePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
     effective = QueryEffectivePermissions
@@ -1670,9 +1750,12 @@ class UserResourcePermissions_GET_RequestSchema(BaseRequestSchemaAPI):
 
 
 class UserResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema(
-        description="List of resource permissions effective for the referenced user.",
+    permission_names = PermissionNameListSchema(
+        description="List of resource permissions applied or effective for the referenced user.",
         example=[Permission.READ.value, Permission.WRITE.value]
+    )
+    permissions = PermissionObjectListSchema(
+        description="List of detailed resource permissions applied or effective to the referenced user."
     )
 
 
@@ -1718,7 +1801,13 @@ class UserResourcePermissions_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
 class UserResourcePermissions_POST_RequestBodySchema(colander.MappingSchema):
     permission_name = colander.SchemaNode(
         colander.String(),
-        description="permission_name of the created user-resource-permission reference.")
+        description="Permission name (implicit or explicit) to create on the resource for the user.",
+        missing=colander.drop
+    )
+    permission = PermissionObjectSchema(
+        description="Detailed permission definition to create on the resource for the user.",
+        missing=colander.drop
+    )
 
 
 class UserResourcePermissions_POST_RequestSchema(BaseRequestSchemaAPI):
@@ -1727,16 +1816,27 @@ class UserResourcePermissions_POST_RequestSchema(BaseRequestSchemaAPI):
     user_name = UserNameParameter
 
 
+UserResourcePermissions_PUT_RequestSchema = UserResourcePermissions_POST_RequestSchema
+
+
 class UserResourcePermissions_POST_ResponseBodySchema(BaseResponseBodySchema):
     resource_id = colander.SchemaNode(
         colander.Integer(),
-        description="resource_id of the created user-resource-permission reference.")
+        description="Resource for which to create the user permission."
+    )
     user_id = colander.SchemaNode(
         colander.Integer(),
-        description="user_id of the created user-resource-permission reference.")
+        description="User for which to create the permission on the resource."
+    )
     permission_name = colander.SchemaNode(
         colander.String(),
-        description="permission_name of the created user-resource-permission reference.")
+        description="Permission name (implicit or explicit) to create on the resource for the user.",
+        missing=colander.drop
+    )
+    permission = PermissionObjectSchema(
+        description="Detailed permission definition to create on the resource for the user.",
+        missing=colander.drop
+    )
 
 
 class UserResourcePermissions_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
@@ -1744,53 +1844,66 @@ class UserResourcePermissions_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
     body = UserResourcePermissions_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
 
 
-class UserResourcePermissions_POST_ParamResponseBodySchema(colander.MappingSchema):
-    name = colander.SchemaNode(colander.String(), description="Specified parameter.", example="permission_name")
-    value = colander.SchemaNode(colander.String(), description="Specified parameter value.")
-
-
-class UserResourcePermissions_POST_BadResponseBodySchema(BaseResponseBodySchema):
-    user_name = colander.SchemaNode(colander.String(), description="Specified user name.")
-    resource_id = colander.SchemaNode(colander.String(), description="Specified resource id.")
-    permission_name = colander.SchemaNode(colander.String(), description="Specified permission name.")
-    param = UserResourcePermissions_POST_ParamResponseBodySchema(missing=colander.drop)
-
-
 class UserResourcePermissions_POST_BadRequestResponseSchema(BaseResponseSchemaAPI):
     description = "Permission not allowed for specified 'resource_type'."
-    body = UserResourcePermissions_POST_BadResponseBodySchema(code=HTTPBadRequest.code, description=description)
+    body = UserResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class UserResourcePermissions_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     description = "Creation of permission on resource for user refused by db."
-    body = UserResourcePermissions_POST_BadResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = UserResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class UserResourcePermissions_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
-    description = "Permission already exist on resource for user."
-    body = UserResourcePermissions_POST_ResponseBodySchema(code=HTTPConflict.code, description=description)
+    description = "Similar permission already exist on resource for user."
+    body = UserResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
+class UserResourcePermissions_PUT_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Update user resource permission successful."
+    body = UserResourcePermissions_POST_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+UserResourcePermissions_PUT_CreatedResponseSchema = UserResourcePermissions_POST_CreatedResponseSchema
+UserResourcePermissions_PUT_BadRequestResponseSchema = UserResourcePermissions_POST_BadRequestResponseSchema
+UserResourcePermissions_PUT_ForbiddenResponseSchema = UserResourcePermissions_POST_ForbiddenResponseSchema
 
 
 # using same definitions
-UserResourcePermissions_DELETE_BadResponseBodySchema = UserResourcePermissions_POST_ResponseBodySchema
-UserResourcePermissions_DELETE_BadRequestResponseSchema = UserResourcePermissions_POST_BadRequestResponseSchema
+UserResourcePermissionName_DELETE_ErrorResponseBodySchema = UserResourcePermissions_Check_ErrorResponseBodySchema
+UserResourcePermissionName_DELETE_BadRequestResponseSchema = UserResourcePermissions_POST_BadRequestResponseSchema
 
 
-class UserResourcePermission_DELETE_RequestSchema(BaseRequestSchemaAPI):
+class UserResourcePermissionName_DELETE_RequestSchema(BaseRequestSchemaAPI):
     body = colander.MappingSchema(default={})
     user_name = UserNameParameter
     resource_id = ResourceIdParameter
     permission_name = PermissionNameParameter
 
 
-class UserResourcePermissions_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
+class UserResourcePermissionName_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Delete user resource permission successful."
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class UserResourcePermissions_DELETE_NotFoundResponseSchema(BaseResponseSchemaAPI):
+class UserResourcePermissionName_DELETE_NotFoundResponseSchema(BaseResponseSchemaAPI):
     description = "Could not find user resource permission to delete from db."
-    body = UserResourcePermissions_DELETE_BadResponseBodySchema(code=HTTPOk.code, description=description)
+    body = UserResourcePermissionName_DELETE_ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class UserResourcePermissions_DELETE_RequestBodySchema(colander.MappingSchema):
+    permission = PermissionObjectSchema(description="Permission to be deleted.")
+
+
+class UserResourcePermissions_DELETE_RequestSchema(BaseRequestSchemaAPI):
+    body = UserResourcePermissions_DELETE_RequestBodySchema()
+    user_name = UserNameParameter
+    resource_id = ResourceIdParameter
+
+
+UserResourcePermissions_DELETE_OkResponseSchema = UserResourcePermissionName_DELETE_OkResponseSchema
+UserResourcePermissions_DELETE_BadRequestResponseSchema = UserResourcePermissionName_DELETE_BadRequestResponseSchema
+UserResourcePermissions_DELETE_NotFoundResponseSchema = UserResourcePermissionName_DELETE_NotFoundResponseSchema
 
 
 class UserServiceResources_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1813,7 +1926,15 @@ class UserServiceResources_GET_RequestSchema(BaseRequestSchemaAPI):
 
 
 class UserServicePermissions_POST_RequestBodySchema(colander.MappingSchema):
-    permission_name = colander.SchemaNode(colander.String(), description="Name of the permission to create.")
+    permission_name = colander.SchemaNode(
+        colander.String(),
+        description="Permission name (implicit or explicit) to create on the service for the user.",
+        missing=colander.drop
+    )
+    permission = PermissionObjectSchema(
+        description="Detailed permission definition to create on the service for the user.",
+        missing=colander.drop
+    )
 
 
 class UserServicePermissions_POST_RequestSchema(BaseRequestSchemaAPI):
@@ -1822,7 +1943,20 @@ class UserServicePermissions_POST_RequestSchema(BaseRequestSchemaAPI):
     service_name = ServiceNameParameter
 
 
-class UserServicePermission_DELETE_RequestSchema(BaseRequestSchemaAPI):
+UserServicePermissions_PUT_RequestSchema = UserServicePermissions_POST_RequestSchema
+
+
+class UserServicePermissions_DELETE_RequestBodySchema(colander.MappingSchema):
+    permission = PermissionObjectSchema(description="Permission to be deleted.")
+
+
+class UserServicePermissions_DELETE_RequestSchema(BaseRequestSchemaAPI):
+    body = UserResourcePermissions_DELETE_RequestBodySchema()
+    user_name = UserNameParameter
+    resource_id = ResourceIdParameter
+
+
+class UserServicePermissionName_DELETE_RequestSchema(BaseRequestSchemaAPI):
     body = colander.MappingSchema(default={})
     user_name = UserNameParameter
     service_name = ServiceNameParameter
@@ -1860,9 +1994,12 @@ class UserServicePermissions_GET_RequestSchema(BaseRequestSchemaAPI):
 
 
 class UserServicePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema(
-        description="List of service permissions effective for the referenced user.",
+    permission_names = PermissionNameListSchema(
+        description="List of service permissions applied or effective for the referenced user.",
         example=[Permission.READ.value, Permission.WRITE.value]
+    )
+    permissions = PermissionObjectListSchema(
+        description="List of detailed service permissions applied or effective to the referenced user."
     )
 
 
@@ -2064,9 +2201,12 @@ class GroupServices_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
 
 
 class GroupServicePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permission_names = PermissionListSchema(
-        description="List of service permissions effective for the referenced group.",
+    permission_names = PermissionNameListSchema(
+        description="List of service permissions applied to the referenced group.",
         example=[Permission.READ.value, Permission.WRITE.value]
+    )
+    permissions = PermissionObjectListSchema(
+        description="List of detailed service permissions applied to the referenced group."
     )
 
 
@@ -2087,7 +2227,15 @@ class GroupServicePermissions_GET_InternalServerErrorResponseSchema(BaseResponse
 
 
 class GroupServicePermissions_POST_RequestBodySchema(colander.MappingSchema):
-    permission_name = colander.SchemaNode(colander.String(), description="Name of the permission to create.")
+    permission_name = colander.SchemaNode(
+        colander.String(),
+        description="Permission name (implicit or explicit) to create on the service for the group.",
+        missing=colander.drop
+    )
+    permission = PermissionObjectSchema(
+        description="Detailed permission definition to create on the service for the group.",
+        missing=colander.drop
+    )
 
 
 class GroupServicePermissions_POST_RequestSchema(BaseRequestSchemaAPI):
@@ -2102,42 +2250,77 @@ class GroupResourcePermissions_POST_RequestSchema(BaseRequestSchemaAPI):
     resource_id = ResourceIdParameter
 
 
-class GroupResourcePermissions_POST_ResponseBodySchema(BaseResponseBodySchema):
+class GroupResourcePermissions_Check_ResponseBodySchema(BaseResponseBodySchema):
     permission_name = colander.SchemaNode(colander.String(), description="Name of the permission requested.")
+    permission = PermissionObjectTypeSchema(description="Detailed permission definition.")
     resource = ResourceBodySchema()
     group = GroupInfoBodySchema()
 
 
+class GroupResourcePermissions_Check_ErrorResponseBodySchema(ErrorResponseBodySchema):
+    pass
+
+
+class GroupResourcePermissions_Check_ErrorResponseSchema(BaseResponseSchemaAPI):
+    description = "Lookup of similar permission on service/resource for group refused by db."
+    body = GroupResourcePermissions_Check_ErrorResponseBodySchema(
+        code=HTTPInternalServerError.code, description=description
+    )
+
+
 class GroupResourcePermissions_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
     description = "Create group resource permission successful."
-    body = GroupResourcePermissions_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
+    body = GroupResourcePermissions_Check_ResponseBodySchema(code=HTTPCreated.code, description=description)
 
 
 class GroupResourcePermissions_POST_ForbiddenAddResponseSchema(BaseResponseSchemaAPI):
     description = "Add group resource permission refused by db."
-    body = GroupResourcePermissions_POST_ResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = GroupResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class GroupResourcePermissions_POST_ForbiddenCreateResponseSchema(BaseResponseSchemaAPI):
     description = "Create group resource permission failed."
-    body = GroupResourcePermissions_POST_ResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = GroupResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class GroupResourcePermissions_POST_ForbiddenGetResponseSchema(BaseResponseSchemaAPI):
     description = "Get group resource permission failed."
-    body = GroupResourcePermissions_POST_ResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = GroupResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class GroupResourcePermissions_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
-    description = "Group resource permission already exists."
-    body = GroupResourcePermissions_POST_ResponseBodySchema(code=HTTPConflict.code, description=description)
+    description = "Similar permission already exists on resource for group."
+    body = GroupResourcePermissions_Check_ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
-class GroupResourcePermission_DELETE_RequestSchema(BaseRequestSchemaAPI):
+GroupResourcePermissions_PUT_RequestSchema = GroupResourcePermissions_POST_RequestSchema
+GroupResourcePermissions_PUT_CreatedResponseSchema = GroupResourcePermissions_POST_CreatedResponseSchema
+GroupResourcePermissions_PUT_ForbiddenResponseSchema = GroupResourcePermissions_POST_ForbiddenGetResponseSchema
+
+
+class GroupResourcePermissions_PUT_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Update group resource permission successful."
+    body = GroupResourcePermissions_Check_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class GroupResourcePermissionName_DELETE_RequestSchema(BaseRequestSchemaAPI):
     body = colander.MappingSchema(default={})
     group_name = GroupNameParameter
     resource_id = ResourceIdParameter
     permission_name = PermissionNameParameter
+
+
+class GroupResourcePermissions_DELETE_RequestBodySchema(colander.MappingSchema):
+    permission = PermissionObjectSchema(
+        description="Detailed permission definition to delete from the resource for the group.",
+        missing=colander.drop
+    )
+
+
+class GroupResourcePermissions_DELETE_RequestSchema(BaseRequestSchemaAPI):
+    body = GroupResourcePermissions_DELETE_RequestBodySchema()
+    group_name = GroupNameParameter
+    resource_id = ResourceIdParameter
 
 
 class GroupResourcesPermissions_InternalServerErrorResponseBodySchema(InternalServerErrorResponseBodySchema):
@@ -2183,9 +2366,12 @@ class GroupResources_GET_InternalServerErrorResponseSchema(BaseResponseSchemaAPI
 
 
 class GroupResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
-    permissions_names = PermissionListSchema(
-        description="List of resource permissions effective for the referenced group.",
+    permissions_names = PermissionNameListSchema(
+        description="List of resource permissions applied to the referenced group.",
         example=[Permission.READ.value, Permission.WRITE.value]
+    )
+    permissions = PermissionObjectListSchema(
+        description="List of detailed resource permissions applied to the referenced group."
     )
 
 
@@ -2203,11 +2389,15 @@ class GroupServiceResources_GET_OkResponseSchema(BaseResponseSchemaAPI):
     body = GroupServiceResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
+GroupServicePermissions_PUT_RequestSchema = GroupServicePermissions_POST_RequestSchema
+GroupServicePermissions_DELETE_RequestSchema = GroupResourcePermissions_DELETE_RequestSchema
+
+
 class GroupServicePermission_DELETE_RequestBodySchema(colander.MappingSchema):
     permission_name = colander.SchemaNode(colander.String(), description="Name of the permission to delete.")
 
 
-class GroupServicePermission_DELETE_RequestSchema(BaseRequestSchemaAPI):
+class GroupServicePermissionName_DELETE_RequestSchema(BaseRequestSchemaAPI):
     body = GroupServicePermission_DELETE_RequestBodySchema()
     group_name = GroupNameParameter
     service_name = ServiceNameParameter
@@ -2215,9 +2405,17 @@ class GroupServicePermission_DELETE_RequestSchema(BaseRequestSchemaAPI):
 
 
 class GroupServicePermission_DELETE_ResponseBodySchema(BaseResponseBodySchema):
-    permission_name = colander.SchemaNode(colander.String(), description="Name of the permission requested.")
-    resource = ResourceBodySchema()
     group = GroupInfoBodySchema()
+    resource = ResourceBodySchema()
+    permission_name = colander.SchemaNode(
+        colander.String(),
+        description="Permission name (implicit or explicit) to be created.",
+        missing=colander.drop
+    )
+    permission = PermissionObjectSchema(
+        description="Detailed permission to be created",
+        missing=colander.drop
+    )
 
 
 class GroupServicePermission_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
@@ -2507,9 +2705,9 @@ class SwaggerAPI_GET_OkResponseSchema(colander.MappingSchema):
 # Responses for specific views
 Resource_GET_responses = {
     "200": Resource_GET_OkResponseSchema(),
-    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),
+    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2517,8 +2715,8 @@ Resource_GET_responses = {
 }
 Resource_PATCH_responses = {
     "200": Resource_PATCH_OkResponseSchema(),
-    "400": Resource_PATCH_BadRequestResponseSchema(),
-    "403": Resource_PATCH_ForbiddenResponseSchema(),
+    "400": Resource_PATCH_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "403": Resource_PATCH_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "409": Resource_PATCH_ConflictResponseSchema(),
@@ -2533,7 +2731,6 @@ Resources_GET_responses = {
 }
 Resources_POST_responses = {
     "201": Resources_POST_CreatedResponseSchema(),
-    "400": Resources_POST_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": Resources_POST_ForbiddenResponseSchema(),
     "404": Resources_POST_NotFoundResponseSchema(),
@@ -2544,9 +2741,9 @@ Resources_POST_responses = {
 }
 Resources_DELETE_responses = {
     "200": Resource_DELETE_OkResponseSchema(),
-    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),
+    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": Resource_DELETE_ForbiddenResponseSchema(),
+    "403": Resource_DELETE_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2554,9 +2751,9 @@ Resources_DELETE_responses = {
 }
 ResourcePermissions_GET_responses = {
     "200": ResourcePermissions_GET_OkResponseSchema(),
-    "400": ResourcePermissions_GET_BadRequestResponseSchema(),
+    "400": ResourcePermissions_GET_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2570,23 +2767,23 @@ ServiceTypes_GET_responses = {
 }
 ServiceType_GET_responses = {
     "200": Services_GET_OkResponseSchema(),
-    "400": Services_GET_BadRequestResponseSchema(),
+    "400": Services_GET_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Services_GET_responses = {
     "200": Services_GET_OkResponseSchema(),
-    "400": Services_GET_BadRequestResponseSchema(),
+    "400": Services_GET_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Services_POST_responses = {
     "201": Services_POST_CreatedResponseSchema(),
-    "400": Services_POST_BadRequestResponseSchema(),
+    "400": Services_POST_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": Services_POST_ForbiddenResponseSchema(),
+    "403": Services_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
     "409": Services_POST_ConflictResponseSchema(),
     "422": Services_POST_UnprocessableEntityResponseSchema(),
@@ -2595,16 +2792,16 @@ Services_POST_responses = {
 Service_GET_responses = {
     "200": Service_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Service_MatchDictCheck_ForbiddenResponseSchema(),
+    "403": Service_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Service_PATCH_responses = {
     "200": Service_PATCH_OkResponseSchema(),
-    "400": Service_PATCH_BadRequestResponseSchema(),
+    "400": Service_PATCH_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": Service_PATCH_ForbiddenResponseSchema(),
+    "403": Service_PATCH_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
     "409": Service_PATCH_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
@@ -2612,16 +2809,16 @@ Service_PATCH_responses = {
 Service_DELETE_responses = {
     "200": Service_DELETE_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Service_DELETE_ForbiddenResponseSchema(),
+    "403": Service_DELETE_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 ServicePermissions_GET_responses = {
     "200": ServicePermissions_GET_OkResponseSchema(),
-    "400": ServicePermissions_GET_BadRequestResponseSchema(),
+    "400": ServicePermissions_GET_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": Service_MatchDictCheck_ForbiddenResponseSchema(),
+    "403": Service_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2630,7 +2827,7 @@ ServicePermissions_GET_responses = {
 ServiceResources_GET_responses = {
     "200": ServiceResources_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Service_MatchDictCheck_ForbiddenResponseSchema(),
+    "403": Service_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2638,7 +2835,6 @@ ServiceResources_GET_responses = {
 }
 ServiceResources_POST_responses = {
     "201": ServiceResources_POST_CreatedResponseSchema(),
-    "400": ServiceResources_POST_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": ServiceResources_POST_ForbiddenResponseSchema(),
     "404": ServiceResources_POST_NotFoundResponseSchema(),
@@ -2650,7 +2846,7 @@ ServiceResources_POST_responses = {
 ServiceTypeResources_GET_responses = {
     "200": ServiceTypeResources_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": ServiceTypeResources_GET_ForbiddenResponseSchema(),
+    "403": ServiceTypeResources_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": ServiceTypeResources_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2659,6 +2855,7 @@ ServiceTypeResources_GET_responses = {
 ServiceTypeResourceTypes_GET_responses = {
     "200": ServiceTypeResourceTypes_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
+    # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "403": ServiceTypeResourceTypes_GET_ForbiddenResponseSchema(),
     "404": ServiceTypeResourceTypes_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -2667,9 +2864,9 @@ ServiceTypeResourceTypes_GET_responses = {
 }
 ServiceResource_DELETE_responses = {
     "200": ServiceResource_DELETE_OkResponseSchema(),
-    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),
+    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": ServiceResource_DELETE_ForbiddenResponseSchema(),
+    "403": ServiceResource_DELETE_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2678,22 +2875,22 @@ ServiceResource_DELETE_responses = {
 Users_GET_responses = {
     "200": Users_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Users_GET_ForbiddenResponseSchema(),
+    "403": Users_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Users_POST_responses = {
     "201": Users_POST_CreatedResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": Users_POST_ForbiddenResponseSchema(),
+    "403": Users_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
     "409": User_Check_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 User_GET_responses = {
     "200": User_GET_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -2702,16 +2899,16 @@ User_GET_responses = {
 }
 User_PATCH_responses = {
     "200": Users_PATCH_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": UserGroup_GET_ForbiddenResponseSchema(),
+    "403": UserGroup_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
     "409": User_Check_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 User_DELETE_responses = {
     "200": User_DELETE_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
@@ -2721,7 +2918,7 @@ User_DELETE_responses = {
 }
 UserResources_GET_responses = {
     "200": UserResources_GET_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": UserResources_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -2730,7 +2927,7 @@ UserResources_GET_responses = {
 }
 UserGroups_GET_responses = {
     "200": UserGroups_GET_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -2739,7 +2936,7 @@ UserGroups_GET_responses = {
 }
 UserGroups_POST_responses = {
     "201": UserGroups_POST_CreatedResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
@@ -2750,9 +2947,9 @@ UserGroups_POST_responses = {
 }
 UserGroup_DELETE_responses = {
     "200": UserGroup_DELETE_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": UserGroup_DELETE_ForbiddenResponseSchema(),
+    "403": UserGroup_DELETE_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": UserGroup_DELETE_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2760,8 +2957,8 @@ UserGroup_DELETE_responses = {
 }
 UserResourcePermissions_GET_responses = {
     "200": UserResourcePermissions_GET_OkResponseSchema(),
-    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),
-    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2769,16 +2966,31 @@ UserResourcePermissions_GET_responses = {
 }
 UserResourcePermissions_POST_responses = {
     "201": UserResourcePermissions_POST_CreatedResponseSchema(),
+    # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "400": UserResourcePermissions_POST_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
+    # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "403": UserResourcePermissions_POST_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "409": UserResourcePermissions_POST_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-UserResourcePermission_DELETE_responses = {
+# same method handles operations/results/messages, but conflict will not occur
+UserResourcePermissions_PUT_responses = {
+    "200": UserResourcePermissions_PUT_OkResponseSchema(),          # updated
+    "201": UserResourcePermissions_PUT_CreatedResponseSchema(),     # created
+    "401": UnauthorizedResponseSchema(),
+    # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "403": UserResourcePermissions_PUT_ForbiddenResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
+    # 409: not applicable
+    "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+UserResourcePermissions_DELETE_responses = {
     "200": UserResourcePermissions_DELETE_OkResponseSchema(),
+    # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "400": UserResourcePermissions_DELETE_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "404": UserResourcePermissions_DELETE_NotFoundResponseSchema(),
@@ -2786,10 +2998,20 @@ UserResourcePermission_DELETE_responses = {
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
+UserResourcePermissionName_DELETE_responses = {
+    "200": UserResourcePermissionName_DELETE_OkResponseSchema(),
+    # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "400": UserResourcePermissionName_DELETE_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "404": UserResourcePermissionName_DELETE_NotFoundResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
 UserServices_GET_responses = {
     "200": UserServices_GET_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),
-    "403": User_GET_ForbiddenResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "403": User_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": User_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2797,8 +3019,8 @@ UserServices_GET_responses = {
 }
 UserServicePermissions_GET_responses = {
     "200": UserServicePermissions_GET_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),
-    "403": User_GET_ForbiddenResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "403": User_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": UserServicePermissions_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2806,15 +3028,17 @@ UserServicePermissions_GET_responses = {
 }
 UserServiceResources_GET_responses = {
     "200": UserServiceResources_GET_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),
-    "403": User_GET_ForbiddenResponseSchema(),
+    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "403": User_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 UserServicePermissions_POST_responses = UserResourcePermissions_POST_responses
-UserServicePermission_DELETE_responses = UserResourcePermission_DELETE_responses
+UserServicePermissions_PUT_responses = UserResourcePermissions_PUT_responses
+UserServicePermissions_DELETE_responses = UserResourcePermissions_DELETE_responses
+UserServicePermissionName_DELETE_responses = UserResourcePermissionName_DELETE_responses
 LoggedUser_GET_responses = {
     "200": User_GET_OkResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
@@ -2825,9 +3049,9 @@ LoggedUser_GET_responses = {
 }
 LoggedUser_PATCH_responses = {
     "200": Users_PATCH_OkResponseSchema(),
-    "400": User_PATCH_BadRequestResponseSchema(),
+    "400": User_PATCH_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": User_PATCH_ForbiddenResponseSchema(),
+    "403": User_PATCH_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
     "409": User_PATCH_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
@@ -2878,8 +3102,8 @@ LoggedUserGroup_DELETE_responses = {
 }
 LoggedUserResourcePermissions_GET_responses = {
     "200": UserResourcePermissions_GET_OkResponseSchema(),
-    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),
-    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2887,6 +3111,7 @@ LoggedUserResourcePermissions_GET_responses = {
 }
 LoggedUserResourcePermissions_POST_responses = {
     "201": UserResourcePermissions_POST_CreatedResponseSchema(),
+    # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "400": UserResourcePermissions_POST_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -2894,18 +3119,35 @@ LoggedUserResourcePermissions_POST_responses = {
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-LoggedUserResourcePermission_DELETE_responses = {
+# same method handles operations/results/messages, but conflict will not occur
+LoggedUserResourcePermissions_PUT_responses = {
+    "200": UserResourcePermissions_PUT_OkResponseSchema(),          # updated
+    "201": UserResourcePermissions_PUT_CreatedResponseSchema(),     # created
+    "401": UnauthorizedResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
+    # 409: not applicable
+    "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+LoggedUserResourcePermissions_DELETE_responses = {
     "200": UserResourcePermissions_DELETE_OkResponseSchema(),
-    "400": UserResourcePermissions_DELETE_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "404": UserResourcePermissions_DELETE_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
+LoggedUserResourcePermissionName_DELETE_responses = {
+    "200": UserResourcePermissionName_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "404": UserResourcePermissionName_DELETE_NotFoundResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
 LoggedUserServices_GET_responses = {
     "200": UserServices_GET_OkResponseSchema(),
-    "403": User_GET_ForbiddenResponseSchema(),
+    "403": User_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": User_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2913,7 +3155,7 @@ LoggedUserServices_GET_responses = {
 }
 LoggedUserServicePermissions_GET_responses = {
     "200": UserServicePermissions_GET_OkResponseSchema(),
-    "403": User_GET_ForbiddenResponseSchema(),
+    "403": User_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": UserServicePermissions_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2921,26 +3163,28 @@ LoggedUserServicePermissions_GET_responses = {
 }
 LoggedUserServiceResources_GET_responses = {
     "200": UserServiceResources_GET_OkResponseSchema(),
-    "403": User_GET_ForbiddenResponseSchema(),
+    "403": User_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Service_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 LoggedUserServicePermissions_POST_responses = LoggedUserResourcePermissions_POST_responses
-LoggedUserServicePermission_DELETE_responses = LoggedUserResourcePermission_DELETE_responses
+LoggedUserServicePermissions_PUT_responses = LoggedUserResourcePermissions_PUT_responses
+LoggedUserServicePermissions_DELETE_responses = LoggedUserResourcePermissions_DELETE_responses
+LoggedUserServicePermissionName_DELETE_responses = LoggedUserResourcePermissionName_DELETE_responses
 Groups_GET_responses = {
     "200": Groups_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Groups_GET_ForbiddenResponseSchema(),
+    "403": Groups_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Groups_POST_responses = {
     "201": Groups_POST_CreatedResponseSchema(),
-    "400": Groups_POST_BadRequestResponseSchema(),
+    "400": Groups_POST_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
-    "403": Groups_POST_ForbiddenCreateResponseSchema(),
+    "403": Groups_POST_ForbiddenCreateResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
     "409": Groups_POST_ConflictResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2949,7 +3193,7 @@ Groups_POST_responses = {
 Group_GET_responses = {
     "200": Group_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2957,7 +3201,7 @@ Group_GET_responses = {
 }
 Group_PATCH_responses = {
     "200": Group_PATCH_OkResponseSchema(),
-    "400": Group_PATCH_Name_BadRequestResponseSchema(),
+    "400": Group_PATCH_Name_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
     "403": Group_PATCH_ReservedKeyword_ForbiddenResponseSchema(),
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
@@ -2978,7 +3222,7 @@ Group_DELETE_responses = {
 GroupUsers_GET_responses = {
     "200": GroupUsers_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": GroupUsers_GET_ForbiddenResponseSchema(),
+    "403": GroupUsers_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -2995,7 +3239,7 @@ GroupServices_GET_responses = {
 GroupServicePermissions_GET_responses = {
     "200": GroupServicePermissions_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -3004,7 +3248,7 @@ GroupServicePermissions_GET_responses = {
 GroupServiceResources_GET_responses = {
     "200": GroupServiceResources_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -3013,6 +3257,7 @@ GroupServiceResources_GET_responses = {
 GroupResourcePermissions_POST_responses = {
     "201": GroupResourcePermissions_POST_CreatedResponseSchema(),
     "401": UnauthorizedResponseSchema(),
+    # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "403": GroupResourcePermissions_POST_ForbiddenGetResponseSchema(),
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -3021,19 +3266,35 @@ GroupResourcePermissions_POST_responses = {
     "500": InternalServerErrorResponseSchema(),
 }
 GroupServicePermissions_POST_responses = GroupResourcePermissions_POST_responses
-GroupServicePermission_DELETE_responses = {
+GroupResourcePermissions_PUT_responses = {
+    "200": GroupResourcePermissions_PUT_OkResponseSchema(),         # updated
+    "201": GroupResourcePermissions_PUT_CreatedResponseSchema(),    # created
+    "401": UnauthorizedResponseSchema(),
+    # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "403": GroupResourcePermissions_PUT_ForbiddenResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
+    # 409: not applicable
+    "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+GroupServicePermissions_PUT_responses = GroupResourcePermissions_PUT_responses
+GroupServicePermissionName_DELETE_responses = {
     "200": GroupServicePermission_DELETE_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
+    # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "403": GroupServicePermission_DELETE_ForbiddenResponseSchema(),
     "404": GroupServicePermission_DELETE_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
+GroupServicePermissions_DELETE_responses = GroupServicePermissionName_DELETE_responses
+GroupResourcePermissions_DELETE_responses = GroupServicePermissions_DELETE_responses
+GroupResourcePermissionName_DELETE_responses = GroupServicePermissionName_DELETE_responses
 GroupResources_GET_responses = {
     "200": GroupResources_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
@@ -3042,17 +3303,16 @@ GroupResources_GET_responses = {
 GroupResourcePermissions_GET_responses = {
     "200": GroupResourcePermissions_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),
+    "403": Group_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-GroupResourcePermission_DELETE_responses = GroupServicePermission_DELETE_responses
 RegisterGroups_GET_responses = {
     "200": RegisterGroups_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": RegisterGroups_GET_ForbiddenResponseSchema(),
+    "403": RegisterGroups_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "500": InternalServerErrorResponseSchema(),
 }
 RegisterGroup_GET_responses = {
@@ -3064,7 +3324,7 @@ RegisterGroup_GET_responses = {
 RegisterGroup_POST_responses = {
     "201": RegisterGroup_POST_CreatedResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": RegisterGroup_POST_ForbiddenResponseSchema(),
+    "403": RegisterGroup_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": RegisterGroup_NotFoundResponseSchema(),
     "409": RegisterGroup_POST_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
@@ -3072,7 +3332,7 @@ RegisterGroup_POST_responses = {
 RegisterGroup_DELETE_responses = {
     "200": RegisterGroup_DELETE_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": RegisterGroup_DELETE_ForbiddenResponseSchema(),
+    "403": RegisterGroup_DELETE_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": RegisterGroup_DELETE_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
@@ -3083,18 +3343,18 @@ Providers_GET_responses = {
 }
 ProviderSignin_GET_responses = {
     "302": ProviderSignin_GET_FoundResponseSchema(),
-    "400": ProviderSignin_GET_BadRequestResponseSchema(),
+    "400": ProviderSignin_GET_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": ProviderSignin_GET_UnauthorizedResponseSchema(),
-    "403": ProviderSignin_GET_ForbiddenResponseSchema(),
+    "403": ProviderSignin_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": ProviderSignin_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Signin_POST_responses = {
     "200": Signin_POST_OkResponseSchema(),
-    "400": Signin_POST_BadRequestResponseSchema(),
+    "400": Signin_POST_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": Signin_POST_UnauthorizedResponseSchema(),
-    "403": Signin_POST_ForbiddenResponseSchema(),
+    "403": Signin_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": ProviderSignin_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "409": Signin_POST_ConflictResponseSchema(),

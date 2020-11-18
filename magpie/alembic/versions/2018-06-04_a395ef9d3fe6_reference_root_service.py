@@ -5,6 +5,7 @@ Revision ID: a395ef9d3fe6
 Revises: ae1a3c8c7860
 Create Date: 2018-06-04 11:38:31.296950
 """
+
 import sqlalchemy as sa
 from alembic import op
 from alembic.context import get_context  # noqa: F401
@@ -20,9 +21,9 @@ depends_on = None
 Session = sessionmaker()
 
 resources = sa.table(
-    "resources", 
-    sa.column("root_service_id", sa.Integer), 
-    sa.column("resource_id", sa.Integer), 
+    "resources",
+    sa.column("root_service_id", sa.Integer),
+    sa.column("resource_id", sa.Integer),
     sa.column("parent_id", sa.Integer)
 )
 

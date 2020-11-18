@@ -15,10 +15,22 @@
     <meta name="description" content=${MAGPIE_DESCRIPTION}>
     <meta name="version" content=${MAGPIE_VERSION}>
     <meta name="source" content=${MAGPIE_SOURCE_URL}>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
-    <style>
-        <%block name="style"/>
-    </style>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        <%include file="magpie.ui.management:templates/tree_scripts.js"/>
+    </script>
+    <!-- needs more work, some elements should be static such as resource-names -->
+    <!--
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+          new google.translate.TranslateElement(
+              {pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE},
+              "google_translate_element" // div element id
+          );
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    -->
 </head>
 <body>
 
@@ -62,15 +74,18 @@
             %endif
         </div>
     </div>
-    <div class="clear"></div>
-    <div>
+    <div class="clear header-line"></div>
+    <div class="header-section">
         <ul class="breadcrumb">
             <%block name="breadcrumb"/>
         </ul>
         %if MAGPIE_LOGGED_USER:
-        <div style="float: right;">Logged in: <a href="${request.route_url('edit_current_user')}">${MAGPIE_LOGGED_USER}</a></div>
+        <div class="logged">
+            Logged in: <a href="${request.route_url('edit_current_user')}">${MAGPIE_LOGGED_USER}</a>
+        </div>
         %endif
     </div>
+    <div class="language" id="google_translate_element"></div>
 </div>
 
 <div class="content">

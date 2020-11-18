@@ -1,47 +1,19 @@
-<%inherit file="ui.management:templates/tree_scripts.mako"/>
-<%namespace name="tree" file="ui.management:templates/tree_scripts.mako"/>
-
-<%def name="render_item(key, value, level)">
-    <div class="tree-button">
-        <input type="submit" value="Delete" name="delete_child"
-        %if level > 0:
-               class="button delete"
-        %else:
-               class="button delete disabled" disabled
-        %endif
-        >
-    </div>
-    %if "id" in value.keys():
-        <div class="tree-button">
-            <input type="submit" value="Add child" name="add_child"
-            %if int(value["id"]) in resources_id_type.keys():
-                %if resources_id_type[int(value["id"])] in resources_no_child:
-                    class="button theme disabled" disabled
-                %else:
-                    class="button theme"
-                %endif
-            %elif not service_no_child:
-                    class="button theme"
-            %else:
-                class="button theme disabled" disabled
-            % endif
-            >
-        </div>
-    %endif
-</%def>
+<%inherit file="magpie.ui.management:templates/tree_scripts.mako"/>
+<%namespace name="tree" file="magpie.ui.management:templates/tree_scripts.mako"/>
 
 <%block name="breadcrumb">
-<li><a href="${request.route_url('home')}">
-    Home</a></li>
-<li><a href="${request.route_url('view_services', cur_svc_type=cur_svc_type)}">
-    Services</a></li>
-<li><a href="${request.route_url('edit_service', service_name=service_name, service_url=service_url, cur_svc_type=cur_svc_type)}">
-    Service [${service_name}]</a></li>
+<li><a href="${request.route_url('home')}">Home</a></li>
+<li><a href="${request.route_url('view_services', cur_svc_type=cur_svc_type)}">Services</a></li>
+<li>
+    <a href="${request.route_url('edit_service', service_name=service_name, service_url=service_url, cur_svc_type=cur_svc_type)}">
+    Service [${service_name}]
+    </a>
+</li>
 </%block>
 
 <div class="alert alert-danger" id="EditService_DeleteAlert">
     <h3 class="alert-title-danger">Danger!</h3>
-    <div class="alert-info">
+    <div class="alert-text-container alert-danger">
         <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
              alt="" class="icon-error icon-color-invert" />
         <div class="alert-text">
@@ -81,17 +53,6 @@
     }
 </script>
 
-<!-- since checkbox 'not checked' state is not actually sent,
-     apply 'off' to force return state of the checkbox on submit -->
-<script type="text/javascript">
-    $(document).ready(function() {
-        $("#form_edit_service").on('submit', function() {
-            $(this + 'input[type=checkbox]:not(:checked)').each(function () {
-                $(this).attr('checked', true).val(0);
-            });
-        })
-    })
-</script>
 
 <div class="panel-box">
     <div class="panel-heading theme">
@@ -107,7 +68,7 @@
             <div class="panel-heading subsection">
                 <div class="panel-title">Details</div>
             </div>
-            <div>
+            <div class="panel-fields">
                 <form action="${request.path}" method="post">
                     <p class="panel-line">
                         <span class="panel-entry">Name: </span>
@@ -184,12 +145,41 @@
             <div class="panel-heading subsection">
                 <div class="panel-title">Resources</div>
             </div>
-            <div>
-                <div class="clear"></div>
-                <div class="tree">
-                    ${tree.render_tree(render_item, resources)}
-                </div>
+            <div class="tree">
+                ${tree.render_tree(render_item, resources)}
             </div>
         </div>
     </div>
 </div>
+
+<%def name="render_item(key, value, level)">
+    <form id="resource_${value['id']}" action="${request.path}" method="post">
+        <input type="hidden" value="${value['id']}" name="resource_id">
+        <div class="tree-button">
+            <input type="submit" value="Delete" name="delete_child"
+            %if level > 0:
+                   class="button delete"
+            %else:
+                   class="button delete disabled" disabled
+            %endif
+            >
+        </div>
+        %if "id" in value.keys():
+            <div class="tree-button">
+                <input type="submit" value="Add child" name="add_child"
+                %if int(value["id"]) in resources_id_type.keys():
+                    %if resources_id_type[int(value["id"])] in resources_no_child:
+                        class="button theme disabled" disabled
+                    %else:
+                        class="button theme"
+                    %endif
+                %elif not service_no_child:
+                        class="button theme"
+                %else:
+                    class="button theme disabled" disabled
+                % endif
+                >
+            </div>
+        %endif
+    </form>
+</%def>

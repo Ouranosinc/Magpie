@@ -31,7 +31,7 @@ from magpie.api.schemas import (
     UsersAPI
 )
 from magpie.constants import get_constant
-from magpie.permissions import Permission
+from magpie.permissions import Permission, PermissionSet
 from magpie.services import SERVICE_TYPE_DICT, ServiceWPS
 from magpie.utils import (
     bool2str,
@@ -51,16 +51,13 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
-    from magpie.typedefs import JSON, AnyCookiesType, CookiesOrSessionType, Str
+    from magpie.typedefs import JSON, AnyCookiesType, ConfigDict, ConfigItem, ConfigList, CookiesOrSessionType, Str
 
-    ConfigItem = Dict[Str, Str]
-    ConfigList = List[ConfigItem]
-    ConfigDict = Dict[Str, Union[ConfigItem, ConfigList]]
 
 LOGGER = get_logger(__name__)
 
-LOGIN_ATTEMPT = 10              # max attempts for login
-LOGIN_TIMEOUT = 10              # delay (s) between each login attempt
+LOGIN_ATTEMPT = 5               # max attempts for login
+LOGIN_TIMEOUT = 2               # delay (s) between each login attempt
 CREATE_SERVICE_INTERVAL = 2     # delay (s) between creations to allow server to respond/process
 GETCAPABILITIES_INTERVAL = 10   # delay (s) between 'GetCapabilities' Phoenix calls to validate service registration
 GETCAPABILITIES_ATTEMPTS = 12   # max attempts for 'GetCapabilities' validations
@@ -108,8 +105,9 @@ def _login_loop(login_url, cookies_file, data=None, message="Login response"):
         err, http = _request_curl(login_url, cookie_jar=cookies_file, form_params=data_str, msg=message)
         if not err and http == 200:
             break
-        time.sleep(LOGIN_TIMEOUT)
         attempt += 1
+        LOGGER.warning("Login failed, retrying in %ss (%s/%s)", LOGIN_TIMEOUT, attempt, LOGIN_ATTEMPT)
+        time.sleep(LOGIN_TIMEOUT)
         if attempt >= LOGIN_ATTEMPT:
             raise RegistrationLoginError("Cannot log in to {0}".format(login_url))
 
@@ -559,7 +557,7 @@ def _expand_all(config):
     Applies environment variable expansion recursively to all applicable fields of a configuration definition.
     """
     if isinstance(config, dict):
-        for cfg in config:
+        for cfg in list(config):
             cfg_key = os.path.expandvars(cfg)
             if cfg_key != cfg:
                 config[cfg_key] = config.pop(cfg)
@@ -569,7 +567,7 @@ def _expand_all(config):
             config[i] = _expand_all(cfg)
     elif isinstance(config, six.string_types):
         config = os.path.expandvars(str(config))
-    elif isinstance(config, (int, bool, float)):
+    elif isinstance(config, (int, bool, float, type(None))):
         pass
     else:
         raise NotImplementedError("unknown parsing of config of type: {}".format(type(config)))
@@ -578,22 +576,41 @@ def _expand_all(config):
 
 def magpie_register_services_from_config(service_config_path, push_to_phoenix=False,
                                          force_update=False, disable_getcapabilities=False, db_session=None):
-    # type: (Str, bool, bool, bool, Optional[Session]) -> None
+    # type: (Str, bool, bool, bool, Optional[Session]) -> ConfigDict
     """
     Registers Magpie services from one or many `providers.cfg` file.
 
     Uses the provided DB session to directly update service definitions, or uses API request routes as admin. Optionally
     pushes updates to Phoenix.
+
+    :param service_config_path: where to look for `providers` configuration(s). Directory or file path.
+    :param push_to_phoenix: whether to push loaded service definitions to remote `Phoenix` service.
+    :param force_update: override service definitions that conflict by name with registered ones.
+    :param disable_getcapabilities:
+        Skip `GetCapabilities` request validation and permission update.
+        By default, any service with `type` that allows `GetCapabilities` permissions will be tested to ensure it can
+        be reached on the provided `url`. Once validated, this permission is applied to `anonymous` group to make its
+        entrypoint accessible by anyone.
+        Services that cannot have `GetCapabilities` permission are ignored regardless.
+    :param db_session: Use a pre-established database connection for registration. Otherwise, API requests are employed.
+    :returns: loaded service configurations.
     """
     LOGGER.info("Starting services processing.")
     services_configs = get_all_configs(service_config_path, "providers")
     services_config_count = len(services_configs)
     LOGGER.log(logging.INFO if services_config_count else logging.WARNING,
                "Found %s service configurations to process", services_config_count)
+    merged_service_configs = {}
     for services in services_configs:
         if not services:
             LOGGER.warning("Services configuration are empty.")
             continue
+
+        if force_update:
+            merged_service_configs.update(services)
+        else:
+            for svc, svc_cfg in services.items():
+                merged_service_configs.setdefault(svc, svc_cfg)
 
         # register services using API POSTs
         if db_session is None:
@@ -610,6 +627,7 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
                                                       push_to_phoenix=push_to_phoenix, force_update=force_update,
                                                       update_getcapabilities_permissions=not disable_getcapabilities)
     LOGGER.info("All services processed.")
+    return merged_service_configs
 
 
 def _log_permission(message, permission_index, trail=", skipping...", detail=None, permission=None, level=logging.WARN):
@@ -765,20 +783,14 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
         """
         action_oper = None
         if usr_name:
-            action_oper = UserResourcePermissionsAPI.path.replace("{user_name}", _usr_name)
+            action_oper = UserResourcePermissionsAPI.format(user_name=_usr_name, resource_id=resource_id)
         if grp_name:
-            action_oper = GroupResourcePermissionsAPI.path.replace("{group_name}", _grp_name)
+            action_oper = GroupResourcePermissionsAPI.format(group_name=_grp_name, resource_id=resource_id)
         if not action_oper:
             return None
-        if create_perm:
-            action_func = requests.post
-            action_path = "{url}{path}".format(url=magpie_url, path=action_oper)
-            action_body = {"permission_name": perm_name}
-        else:
-            action_func = requests.delete
-            action_path = "{url}{path}/{perm_name}".format(url=magpie_url, path=action_oper, perm_name=perm_name)
-            action_body = {}
-        action_path = action_path.format(resource_id=resource_id)
+        action_func = requests.post if create_perm else requests.delete
+        action_body = {"permission": perm.json()}
+        action_path = "{url}{path}".format(url=magpie_url, path=action_oper)
         action_resp = action_func(action_path, json=action_body, cookies=cookies_or_session)
         return action_resp
 
@@ -795,15 +807,19 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
         if _usr_name:
             usr = UserService.by_user_name(_usr_name, db_session=cookies_or_session)
             if create_perm:
-                return ut.create_user_resource_permission_response(usr, res, perm, db_session=cookies_or_session)
+                return ut.create_user_resource_permission_response(usr, res, perm, overwrite=True,
+                                                                   db_session=cookies_or_session)
             else:
-                return ut.delete_user_resource_permission_response(usr, res, perm, db_session=cookies_or_session)
+                return ut.delete_user_resource_permission_response(usr, res, perm,
+                                                                   db_session=cookies_or_session)
         if _grp_name:
             grp = GroupService.by_group_name(_grp_name, db_session=cookies_or_session)
             if create_perm:
-                return gt.create_group_resource_permission_response(grp, res, perm, db_session=cookies_or_session)
+                return gt.create_group_resource_permission_response(grp, res, perm, overwrite=True,
+                                                                    db_session=cookies_or_session)
             else:
-                return gt.delete_group_resource_permission_response(grp, res, perm, db_session=cookies_or_session)
+                return gt.delete_group_resource_permission_response(grp, res, perm,
+                                                                    db_session=cookies_or_session)
 
     def _apply_profile(_usr_name=None, _grp_name=None):
         """
@@ -855,7 +871,7 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
 
         # validation according to status code returned
         if is_create:
-            if _resp.status_code == 201:
+            if _resp.status_code in [200, 201]:  # update/create
                 _log_permission("{} successfully created.".format(item_type), entry_index, level=logging.INFO, trail="")
             elif _resp.status_code == 409:
                 _log_permission("{} already exists.".format(item_type), entry_index, level=logging.INFO)
@@ -872,10 +888,10 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
                                 permission=permission_config_entry, level=logging.ERROR)
 
     create_perm = permission_config_entry["action"] == "create"
-    perm_name = permission_config_entry["permission"]
+    perm_def = permission_config_entry["permission"]  # name or object
     usr_name = permission_config_entry.get("user")
     grp_name = permission_config_entry.get("group")
-    perm = Permission.get(perm_name)
+    perm = PermissionSet(perm_def)
 
     # process groups first as they can be referenced by user definitions
     _validate_response(lambda: _apply_profile(None, grp_name), is_create=True)
@@ -964,7 +980,11 @@ def _process_permissions(permissions, magpie_url, cookies_or_session, users=None
         if not isinstance(perm_cfg, dict) or not all(f in perm_cfg for f in ["permission", "service"]):
             _log_permission("Invalid permission format for [{!s}]".format(perm_cfg), i)
             continue
-        if perm_cfg["permission"] not in Permission.values():
+        try:
+            perm = PermissionSet(perm_cfg["permission"])
+        except (ValueError, TypeError):
+            perm = None
+        if not perm:
             _log_permission("Unknown permission [{!s}]".format(perm_cfg["permission"]), i)
             continue
         usr_name = perm_cfg.get("user")

@@ -363,5 +363,4 @@ texinfo_documents = [
 # texinfo_no_detailmenu = False
 
 intersphinx_mapping = {
-    "celery": ("http://docs.celeryproject.org/en/latest/", None),
 }

@@ -1,3 +1,4 @@
+import logging
 import requests
 from pyramid.authentication import IAuthenticationPolicy
 from pyramid.authorization import IAuthorizationPolicy
@@ -14,7 +15,10 @@ from magpie.permissions import Permission
 from magpie.services import service_factory
 from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url, get_settings
 
-# twitcher available only when this module is imported from it
+# WARNING:
+#   twitcher available only when this module is imported from it
+#   installed during tests for evaluation
+#   module 'magpie.adapter' should not be imported from magpie package
 from twitcher.owsexceptions import OWSAccessForbidden  # noqa
 from twitcher.owssecurity import OWSSecurityInterface  # noqa
 from twitcher.utils import parse_service_name  # noqa
@@ -26,8 +30,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
 
     def __init__(self, request):
         super(MagpieOWSSecurity, self).__init__()
-        self.magpie_url = get_magpie_url(request)
         self.settings = get_settings(request)
+        self.magpie_url = get_magpie_url(self.settings)
         self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.twitcher_protected_path = self.settings.get("twitcher.ows_proxy_protected_path", "/ows")
 
@@ -35,7 +39,6 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         if request.path.startswith(self.twitcher_protected_path):
             service_name = parse_service_name(request.path, self.twitcher_protected_path)
             service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=request.db),
-                                    fallback=lambda: request.db.rollback(),
                                     http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
             verify_param(service, not_none=True, http_error=HTTPNotFound, msg_on_fail="Service name not found.")
 
@@ -55,14 +58,17 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                 principals = authn_policy.effective_principals(request)
                 has_permission = authz_policy.permits(service_specific, principals, permission_requested)
 
-                LOGGER.debug("%s - AUTHN policy configurations:", type(self).__name__)
-                base_attr = [attr for attr in dir(authn_policy.cookie) if not attr.startswith("_")]
-                for attr_name in base_attr:
-                    LOGGER.debug("  %s: %s", attr_name, getattr(authn_policy.cookie, attr_name))
+                if LOGGER.isEnabledFor(logging.DEBUG):
+                    LOGGER.debug("%s - AUTHN policy configurations:", type(self).__name__)
+                    base_attr = [attr for attr in dir(authn_policy.cookie) if not attr.startswith("_")]
+                    for attr_name in base_attr:
+                        LOGGER.debug("  %s: %s", attr_name, getattr(authn_policy.cookie, attr_name))
 
-                if not has_permission:
-                    raise OWSAccessForbidden("Not authorized to access this resource. "
-                                             "User does not meet required permissions.")
+                if has_permission:
+                    return  # allowed
+
+            raise OWSAccessForbidden("Not authorized to access this resource. "
+                                     "User does not meet required permissions.")
 
     def update_request_cookies(self, request):
         """

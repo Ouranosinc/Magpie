@@ -10,7 +10,7 @@ from magpie.api.management.resource import resource_formats as rf
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.api.management.service.service_utils import get_services_by_type
-from magpie.permissions import format_permissions
+from magpie.permissions import PermissionType, format_permissions
 from magpie.register import sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT
 
@@ -124,4 +124,4 @@ def get_resource_permissions_view(request):
                                 msg_on_fail=s.ResourcePermissions_GET_BadRequestResponseSchema.description,
                                 content={"resource": rf.format_resource(resource, basic_info=True)})
     return ax.valid_http(http_success=HTTPOk, detail=s.ResourcePermissions_GET_OkResponseSchema.description,
-                         content={"permission_names": format_permissions(res_perm)})
+                         content=format_permissions(res_perm, PermissionType.ALLOWED))

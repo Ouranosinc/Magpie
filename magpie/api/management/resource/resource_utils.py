@@ -7,7 +7,8 @@ from pyramid.httpexceptions import (
     HTTPForbidden,
     HTTPInternalServerError,
     HTTPNotFound,
-    HTTPOk
+    HTTPOk,
+    HTTPUnprocessableEntity
 )
 from pyramid.settings import asbool
 from ziggurat_foundations.models.services.resource import ResourceService
@@ -23,7 +24,7 @@ from magpie.services import SERVICE_TYPE_DICT, service_factory
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import List, Optional, Tuple, Type
+    from typing import List, Optional, Tuple, Type, Union
 
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
 
 
 def check_valid_service_or_resource_permission(permission_name, service_or_resource, db_session):
-    # type: (Str, ServiceOrResourceType, Session) -> Optional[Permission]
+    # type: (Union[Str, Permission], ServiceOrResourceType, Session) -> Optional[Permission]
     """
     Checks if a permission is valid to be applied to a specific `service` or a `resource` under a root service.
 
@@ -43,6 +44,7 @@ def check_valid_service_or_resource_permission(permission_name, service_or_resou
     :param service_or_resource: resource item corresponding to either a Service or a Resource
     :param db_session: db connection
     :return: valid Permission if allowed by the service/resource
+    :raises HTTPBadRequest: if the permission is not valid for the targeted service/resource
     """
     svc_res_permissions = get_resource_permissions(service_or_resource, db_session=db_session)
     svc_res_type = service_or_resource.resource_type
@@ -68,7 +70,7 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
     parent_type = parent_resource.resource_type_name
     parent_msg_err = "Child resource not allowed for specified parent resource type '{}'".format(parent_type)
     ax.verify_param(models.RESOURCE_TYPE_DICT[parent_type].child_resource_allowed, is_equal=True,
-                    param_compare=True, http_error=HTTPBadRequest, msg_on_fail=parent_msg_err)
+                    param_compare=True, http_error=HTTPForbidden, msg_on_fail=parent_msg_err)
     root_service = get_resource_root_service(parent_resource, db_session=db_session)
     ax.verify_param(root_service, not_none=True, http_error=HTTPInternalServerError,
                     msg_on_fail="Failed retrieving 'root_service' from db")
@@ -76,9 +78,9 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
                     param_name="resource_type", param_compare=models.Service.resource_type_name,
                     msg_on_fail="Invalid 'root_service' retrieved from db is not a service")
     ax.verify_param(SERVICE_TYPE_DICT[root_service.type].child_resource_allowed, is_equal=True,
-                    param_compare=True, http_error=HTTPBadRequest,
+                    param_compare=True, http_error=HTTPForbidden,
                     msg_on_fail="Child resource not allowed for specified service type '{}'".format(root_service.type))
-    ax.verify_param(resource_type, is_in=True, http_error=HTTPBadRequest,
+    ax.verify_param(resource_type, is_in=True, http_error=HTTPForbidden,
                     param_name="resource_type", param_compare=SERVICE_TYPE_DICT[root_service.type].resource_type_names,
                     msg_on_fail="Invalid 'resource_type' specified for service type '{}'".format(root_service.type))
     return root_service
@@ -270,17 +272,18 @@ def get_resource_root_service_impl(resource, request):
 def create_resource(resource_name, resource_display_name, resource_type, parent_id, db_session):
     # type: (Str, Optional[Str], Str, int, Session) -> HTTPException
     ax.verify_param(resource_name, param_name="resource_name", not_none=True, not_empty=True,
-                    http_error=HTTPBadRequest,
+                    http_error=HTTPUnprocessableEntity,
                     msg_on_fail="Invalid 'resource_name' specified for child resource creation.")
     ax.verify_param(resource_type, param_name="resource_type", not_none=True, not_empty=True,
-                    http_error=HTTPBadRequest,
+                    http_error=HTTPUnprocessableEntity,
                     msg_on_fail="Invalid 'resource_type' specified for child resource creation.")
     ax.verify_param(parent_id, param_name="parent_id", not_none=True, is_type=True, param_compare=int,
-                    http_error=HTTPBadRequest, msg_on_fail="Invalid 'parent_id' specified for child resource creation.")
+                    http_error=HTTPUnprocessableEntity,
+                    msg_on_fail="Invalid 'parent_id' specified for child resource creation.")
     parent_resource = ax.evaluate_call(lambda: ResourceService.by_resource_id(parent_id, db_session=db_session),
                                        fallback=lambda: db_session.rollback(), http_error=HTTPNotFound,
                                        msg_on_fail=s.Resources_POST_NotFoundResponseSchema.description,
-                                       content={"parent_id": str(parent_id), "resource_name": str(resource_name),
+                                       content={"parent_id": parent_id, "resource_name": str(resource_name),
                                                 "resource_type": str(resource_type)})
 
     # verify for valid permissions from top-level service-specific corresponding resources permissions
