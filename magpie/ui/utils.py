@@ -9,6 +9,7 @@ from magpie import __meta__
 from magpie.api.generic import get_exception_info, get_request_info
 from magpie.api.requests import get_logged_user
 from magpie.constants import get_constant
+from magpie.security import mask_credentials
 from magpie.utils import CONTENT_TYPE_JSON, get_header, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
@@ -126,12 +127,14 @@ def handle_errors(func):
             content = {}
             if view_container:
                 content = get_request_info(view_container.request, default_message=detail, exception_details=True)
-            if isinstance(exc_info, dict) and "exception" in exc_info and "exception" not in content:
-                content = exc_info
-            if "detail" not in content:
-                content = {"detail": detail}
+            if isinstance(exc_info, dict):
+                if "exception" in exc_info and "exception" not in content:
+                    content = exc_info
+                else:
+                    content["cause"] = exc_info
+            content.setdefault("detail", detail)
             if view_container:
-                return redirect_error(view_container.request, content=content)
+                return redirect_error(view_container.request, content=mask_credentials(content))
             raise HTTPInternalServerError(detail=str(exc))
     return wrap
 

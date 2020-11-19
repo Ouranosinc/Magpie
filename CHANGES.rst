@@ -7,7 +7,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add better details of error cause in returned UI page
+  (resolves `#369 <https://github.com/Ouranosinc/Magpie/issues/369>`_).
+* Add function to parse output body and redact potential leaks of flagged fields.
+
 
 `3.2.1 <https://github.com/Ouranosinc/Magpie/tree/3.2.1>`_ (2020-11-17)
 ------------------------------------------------------------------------------------

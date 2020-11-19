@@ -643,11 +643,21 @@ def check_or_try_logout_user(test_item, msg=None):
     raise Exception("logout did not succeed" + msg)
 
 
+def visual_repr(item):
+    # type: (Any) -> Str
+    try:
+        if isinstance(item, (dict, list)):
+            return json_pkg.dumps(item, indent=4, ensure_ascii=False)
+    except Exception:
+        pass
+    return "'{}'".format(repr(item))
+
+
 def format_test_val_ref(val, ref, pre="Fail", msg=None):
     if is_null(msg):
-        _msg = "({0}) Failed condition between test and reference values.".format(pre)
+        _msg = "({}) Failed condition between test and reference values.".format(pre)
     else:
-        _msg = "({0}) Test value: '{1}', Reference value: '{2}'".format(pre, val, ref)
+        _msg = "({}) Test value: {}, Reference value: {}".format(pre, visual_repr(val), visual_repr(ref))
         if isinstance(msg, six.string_types):
             _msg = "{}\n{}".format(msg, _msg)
     return _msg

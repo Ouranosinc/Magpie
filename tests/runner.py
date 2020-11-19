@@ -29,6 +29,7 @@ MAGPIE_TEST_ADAPTER = RunOptionDecorator("MAGPIE_TEST_ADAPTER", "magpie adapter 
 MAGPIE_TEST_REGISTER = RunOptionDecorator("MAGPIE_TEST_REGISTER", "magpie methods employed in 'register' module")
 MAGPIE_TEST_LOGIN = RunOptionDecorator("MAGPIE_TEST_LOGIN", "magpie login operations")
 MAGPIE_TEST_SERVICES = RunOptionDecorator("MAGPIE_TEST_SERVICES", "magpie services operations")
+MAGPIE_TEST_SECURITY = RunOptionDecorator("MAGPIE_TEST_SECURITY", "magpie security operations")
 MAGPIE_TEST_RESOURCES = RunOptionDecorator("MAGPIE_TEST_RESOURCES", "magpie resources operations")
 MAGPIE_TEST_PERMISSIONS = RunOptionDecorator("MAGPIE_TEST_PERMISSIONS", "magpie permissions operations")
 MAGPIE_TEST_GROUPS = RunOptionDecorator("MAGPIE_TEST_GROUPS", "magpie groups operations")

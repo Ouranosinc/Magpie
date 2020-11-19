@@ -16,10 +16,50 @@ from magpie.utils import get_logger, get_settings
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from magpie.typedefs import JSON, AnySettingsContainer
+    from typing import List, Optional
+
+    from magpie.typedefs import AnySettingsContainer, JSON, Str
 
 AUTHOMATIC_LOGGER = get_logger("magpie.authomatic", level=logging.DEBUG)
 LOGGER = get_logger(__name__)
+
+
+def mask_credentials(container, redact="[REDACTED]", flags=None, parent=None):
+    # type: (JSON, Str, Optional[List[Str]], Optional[Str]) -> JSON
+    """
+    Masks away any credential matched against :paramref:`flags` recursively from JSON :paramref:`container`.
+
+    Matched credential entries are replaced by :paramref:`redact`. List items are all replaced by the same
+    :paramref:`redact` when their :paramref:`parent` field name is matched.
+
+    :param container: JSON container to mask.
+        If starting with a list on top-level, first level children will not be masked unless parent is provided.
+    :param redact: string by which to replace flagged fields.
+    :param flags: field names (partial matches) to flag for masking.
+    :param parent: reference to contained elements if in a listing format rather than mapping.
+    :return: masked credentials JSON container.
+    """
+    flags = flags or ["password", "pwd"]
+
+    def flagged(_compare):
+        if isinstance(_compare, (dict, tuple, list, set, type(None))):
+            return False
+        return any(_flag in _compare for _flag in flags)
+
+    if isinstance(container, (list, tuple, set)):
+        for i in range(len(container)):
+            container[i] = mask_credentials(container[i], redact=redact, flags=flags, parent=parent)
+        return container
+
+    if isinstance(container, dict):
+        for key in list(container):
+            container[key] = mask_credentials(container[key], redact=redact, flags=flags, parent=key)
+        return container
+
+    if flagged(parent):
+        return redact
+
+    return container
 
 
 def get_auth_config(container):
