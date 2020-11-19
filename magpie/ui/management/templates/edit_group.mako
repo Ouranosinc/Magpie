@@ -39,54 +39,50 @@
             </div>
             <div class="panel-fields">
                 <form id="edit_name" action="${request.path}" method="post">
-                    <p class="panel-line">
-                        <span class="panel-entry">Name: </span>
-                        %if edit_mode == "edit_group_name" and group_name not in MAGPIE_FIXED_GROUP_EDITS:
-                            <label>
-                            <input type="text" value="${group_name}" placeholder="group name" name="new_group_name"
-                                   id="input_group_name" onkeyup="adjustWidth('input_group_name')">
-                            <input type="submit" value="Save" name="save_group_name" class="button theme">
-                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
-                            </label>
-                        %else:
-                            <label>
-                            <span class="panel-value">${group_name}</span>
-                            %if group_name not in MAGPIE_FIXED_GROUP_EDITS:
-                            <input type="submit" value="Edit" name="edit_group_name" class="button theme">
-                            %endif
-                            </label>
+                    <span class="panel-entry">Name: </span>
+                    %if edit_mode == "edit_group_name" and group_name not in MAGPIE_FIXED_GROUP_EDITS:
+                        <label>
+                        <input type="text" value="${group_name}" placeholder="group name" name="new_group_name"
+                               id="input_group_name" onkeyup="adjustWidth('input_group_name')">
+                        <input type="submit" value="Save" name="save_group_name" class="button theme">
+                        <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                        </label>
+                    %else:
+                        <label>
+                        <span class="panel-value">${group_name}</span>
+                        %if group_name not in MAGPIE_FIXED_GROUP_EDITS:
+                        <input type="submit" value="Edit" name="edit_group_name" class="button theme">
                         %endif
-                    </p>
+                        </label>
+                    %endif
                 </form>
                 <form id="edit_description" action="${request.path}" method="post">
-                    <p class="panel-line">
-                        <span class="panel-entry">Description: </span>
-                        %if edit_mode == "edit_description" and group_name not in MAGPIE_FIXED_GROUP_EDITS:
-                            <label>
-                            <input type="text" placeholder="description" name="new_description"
-                                   id="input_description" onkeyup="adjustWidth('input_description')"
-                                %if description:
-                                    value="${description}"
-                                %endif
-                            >
-                            <input type="submit" value="Save" name="save_description" class="button theme">
-                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
-                            </label>
-                        %else:
-                            <label>
-                            <span class="panel-value">
-                                %if description:
-                                    ${description}
-                                %else:
-                                    n/a
-                                %endif
-                            </span>
-                            %if group_name not in MAGPIE_FIXED_GROUP_EDITS:
-                            <input type="submit" value="Edit" name="edit_description" class="button theme">
+                    <span class="panel-entry">Description: </span>
+                    %if edit_mode == "edit_description" and group_name not in MAGPIE_FIXED_GROUP_EDITS:
+                        <label>
+                        <input type="text" placeholder="description" name="new_description"
+                               id="input_description" onkeyup="adjustWidth('input_description')"
+                            %if description:
+                                value="${description}"
                             %endif
-                            </label>
+                        >
+                        <input type="submit" value="Save" name="save_description" class="button theme">
+                        <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                        </label>
+                    %else:
+                        <label>
+                        <span class="panel-value">
+                            %if description:
+                                ${description}
+                            %else:
+                                n/a
+                            %endif
+                        </span>
+                        %if group_name not in MAGPIE_FIXED_GROUP_EDITS:
+                        <input type="submit" value="Edit" name="edit_description" class="button theme">
                         %endif
-                    </p>
+                        </label>
+                    %endif
                 </form>
                 <form id="edit_discoverable" action="${request.path}" method="post">
                     <p class="panel-line">
@@ -143,15 +139,17 @@
 
 <div class="tabs-panel">
 
-    %for svc_type in svc_types:
-        % if cur_svc_type == svc_type:
-            <a class="tab current-tab"
-               href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
-        % else:
-            <a class="tab theme"
-               href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
-        % endif
-    %endfor
+    <div class="tab-panel-selector">
+        %for svc_type in svc_types:
+            % if cur_svc_type == svc_type:
+                <a class="tab current-tab"
+                   href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
+            % else:
+                <a class="tab theme"
+                   href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
+            % endif
+        %endfor
+    </div>
 
     <div class="current-tab-panel">
         <div class="clear underline"></div>

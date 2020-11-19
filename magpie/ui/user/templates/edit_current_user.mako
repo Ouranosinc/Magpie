@@ -58,32 +58,34 @@
                 <table class="panel-line">
                     <tr>
                         <td>
-                            <!-- username fixed -->
-                            <label>
-                                <span class="panel-entry">Username: </span>
-                                ${user_name}
-                            </label>
+                            <p class="panel-line-entry">
+                                <!-- username fixed -->
+                                <label>
+                                    <span class="panel-entry">Username: </span>
+                                    ${user_name}
+                                </label>
+                            </p>
                         </td>
                     </tr>
-                </table>
-                <table class="panel-line">
                     <tr>
                         <td>
                             <form id="edit_password" action="${request.path}" method="post">
-                            <span class="panel-entry">Password: </span>
-                            %if edit_mode == "edit_password":
-                                <label>
-                                    <input type="password" placeholder="new password" value="" name="new_user_password"
-                                           id="input_password" onkeyup="adjustWidth('input_password')">
-                                    <input type="submit" value="Save" name="save_password" class="button theme">
-                                    <input type="submit" value="Cancel" name="no_edit" class="button cancel">
-                                </label>
-                            %else:
-                                <label>
-                                    <span class="panel-value">***</span>
-                                    <input type="submit" value="Edit" name="edit_password" class="button theme">
-                                </label>
-                            %endif
+                                <p class="panel-line-entry">
+                                    <span class="panel-entry">Password: </span>
+                                    %if edit_mode == "edit_password":
+                                        <label>
+                                            <input type="password" placeholder="new password" name="new_user_password"
+                                                   id="input_password" value="" onkeyup="adjustWidth('input_password')">
+                                            <input type="submit" value="Save" name="save_password" class="button theme">
+                                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                                        </label>
+                                    %else:
+                                        <label>
+                                            <span class="panel-value">***</span>
+                                            <input type="submit" value="Edit" name="edit_password" class="button theme">
+                                        </label>
+                                    %endif
+                                </p>
                             </form>
                         </td>
                         <td>
@@ -98,25 +100,25 @@
                         %endif
                         </td>
                     </tr>
-                </table>
-                <table class="panel-line">
                     <tr>
                         <td>
                             <form id="edit_email" action="${request.path}" method="post">
-                            <span class="panel-entry">Email: </span>
-                            %if edit_mode == "edit_email":
-                                <label>
-                                    <input type="email" placeholder="new email" value="${email}" name="new_user_email"
-                                           id="input_email" onkeyup="adjustWidth('input_url')">
-                                    <input type="submit" value="Save" name="save_email" class="button theme">
-                                    <input type="submit" value="Cancel" name="no_edit" class="button cancel">
-                                </label>
-                            %else:
-                                <label>
-                                    <span class="panel-value">${email}</span>
-                                    <input type="submit" value="Edit" name="edit_email" class="button theme">
-                                </label>
-                            %endif
+                                <p class="panel-line-entry">
+                                    <span class="panel-entry">Email: </span>
+                                    %if edit_mode == "edit_email":
+                                        <label>
+                                            <input type="email" placeholder="new email" name="new_user_email"
+                                                   id="input_email" value="${email}" onkeyup="adjustWidth('input_url')">
+                                            <input type="submit" value="Save" name="save_email" class="button theme">
+                                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                                        </label>
+                                    %else:
+                                        <label>
+                                            <span class="panel-value">${email}</span>
+                                            <input type="submit" value="Edit" name="edit_email" class="button theme">
+                                        </label>
+                                    %endif
+                                </p>
                             </form>
                         </td>
                         <td>

@@ -246,26 +246,35 @@ table thead {
 }
 
 .panel-line {
-    margin: 0.5em;
+    margin: 0.25em 0.5em;
+    font-family: arial, sans-serif;  /* same as table to ensure they match when table is not actually used */
 }
 
 table.panel-line {
-    margin: 0.25em;
+    margin: 0.25em 0.5em;
 }
 
 table.panel-line th,
 table.panel-line td {
     border: 0;
+    margin: 0.25em 0.25em;
     white-space: nowrap;
     padding: 0;  /* override global th/td */
+}
+
+.panel-line-entry {
+    margin: 0.25em 0;
 }
 
 .panel-error {
     margin-left: 0.5em;
 }
 
-.panel-line input[type="submit"] {
+.panel-line input[type="submit"],
+.panel-line-entry input[type="submit"] {
     height: auto;
+    float: right;
+    margin-left: 0.5em;
 }
 
 .panel-line-checkbox {
@@ -671,7 +680,7 @@ table.simple-list input[type="submit"] {
 }
 
 .tree-button.goto-service {
-    margin: 0.1em 0 0 -4em;
+    margin: 0.25em 0 0 -4em;
 }
 
 .tree-item-message {
@@ -692,7 +701,7 @@ div.tree-button {
     width: 5em;
     float: right;
     text-align: center;
-    margin: 0.1em 0 0 0;
+    margin-bottom: 0.15em;
 }
 
 .clear {
@@ -941,6 +950,10 @@ table.request-details thead tbody td th {
     padding: 1px;
 }
 
+.tab-panel-selector {
+    margin: 0.1em;
+}
+
 .current-tab-panel {
     background: white;
     padding: 1em;
@@ -961,6 +974,7 @@ a.current-tab:visited {
 
 .tab {
     min-width: 6em;  /* make tabs same width regardless of text length, but must be adjusted for longest one */
+    margin-bottom: 0.1em;   /* in case page is not wide enough, avoid wrapped tabs to be sticking on top of another */
     border-color: black;
 }
 

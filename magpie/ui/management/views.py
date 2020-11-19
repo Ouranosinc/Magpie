@@ -308,7 +308,12 @@ class ManagementViews(BaseViews):
         user_info["own_groups"] = own_groups
         user_info["groups"] = all_groups
         user_info["inherit_groups_permissions"] = inherit_grp_perms
+        param_fields = ["password", "user_name", "user_email"]
         error_message = ""
+
+        for field in param_fields:
+            user_info["invalid_{}".format(field)] = False
+            user_info["reason_{}".format(field)] = ""
 
         if self.request.method == "POST":
             res_id = self.request.POST.get("resource_id")
@@ -369,6 +374,17 @@ class ManagementViews(BaseViews):
 
             if is_save_user_info:
                 resp = request_api(self.request, user_path, "PATCH", data=user_info)
+                if resp.status_code in (HTTPBadRequest.code, HTTPUnprocessableEntity.code):
+                    # attempt to retrieve the API more-specific reason why the operation is invalid
+                    body = get_json(resp)
+                    param_name = body.get("param", {}).get("name")
+                    reason = body.get("detail", "Invalid")
+                    for field in param_fields:
+                        if param_name == field:
+                            user_info["invalid_{}".format(field)] = True
+                            user_info["reason_{}".format(field)] = reason
+                            user_info.pop("password", None)  # just in case, remove to avoid leak
+                            return self.add_template_data(user_info)
                 check_response(resp)
                 # FIXME: need to commit updates since we are using the same session
                 #        otherwise, updated user doesn't exist yet in the db for next calls

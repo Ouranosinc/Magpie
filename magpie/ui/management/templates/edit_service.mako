@@ -69,75 +69,97 @@
                 <div class="panel-title">Details</div>
             </div>
             <div class="panel-fields">
-                <form action="${request.path}" method="post">
-                    <p class="panel-line">
-                        <span class="panel-entry">Name: </span>
-                        %if edit_mode == "edit_name":
-                            <label>
-                            <input type="text" value="${service_name}" name="new_svc_name"
-                                   id="input_name" onkeyup="adjustWidth('input_name')">
-                            <input class="button theme" type="submit" value="Save" name="save_name">
-                            <input class="button cancel" type="submit" value="Cancel" name="no_edit">
-                            </label>
-                        %else:
-                            <label>
-                            <span class="panel-value">${service_name}</span>
-                            <input class="button theme" type="submit" value="Edit" name="edit_name">
-                            </label>
-                        %endif
-                    </p>
-                </form>
-                <form action="${request.path}" method="post">
-                    <p class="panel-line">
-                        <span class="panel-entry">Protected URL: </span>
-                        %if edit_mode == "edit_url":
-                            <label>
-                            <input type="url" value="${service_url}" name="new_svc_url"
-                                   id="input_url" onkeyup="adjustWidth('input_url')">
-                            <input class="button theme" type="submit" value="Save" name="save_url">
-                            <input class="button cancel" type="submit" value="Cancel" name="no_edit">
-                            </label>
-                        %else:
-                            <label>
-                            <a href="${service_url}" class="panel-value">${service_url}</a>
-                            <input class="button theme" type="submit" value="Edit" name="edit_url">
-                            </label>
-                        %endif
-                    </p>
-                </form>
-                <p class="panel-line">
-                    <span class="panel-entry">Public URL: </span>
-                    <a href="${public_url}" class="panel-value">${public_url}</a>
-                </p>
-                <p class="panel-line">
-                    <span class="panel-entry">Type: </span>
-                    <span class="label label-info">${cur_svc_type}</span>
-                </p>
-                <p class="panel-line">
-                    <span class="panel-entry">Permissions: </span>
-                    %for perm in service_perm:
-                        <span class="label label-warning">${perm}</span>
-                    %endfor
-                </p>
-                <p class="panel-line">
-                    <span class="panel-entry">ID: </span>
-                    <span class="panel-value">${service_id}</span>
-                </p>
-                %if service_push_show:
-                    <div class="checkbox-align">
-                        <label for="push_phoenix_checkbox_details">
-                            <input type="hidden" name="service_push" value="off"/>
-                            %if service_push:
-                                <input type="checkbox" name="service_push"
-                                       id="push_phoenix_checkbox_details" checked/>
-                            %else:
-                                <input type="checkbox" name="service_push"
-                                       id="push_phoenix_checkbox_details"/>
-                            %endif
-                            <span>Push updates to Phoenix?</span>
-                        </label>
-                    </div>
-                %endif
+                <table class="panel-line">
+                    <tr>
+                        <td>
+                            <form action="${request.path}" method="post">
+                                <span class="panel-entry">Name: </span>
+                                %if edit_mode == "edit_name":
+                                    <label>
+                                    <input type="text" value="${service_name}" name="new_svc_name"
+                                           id="input_name" onkeyup="adjustWidth('input_name')">
+                                    <input class="button theme" type="submit" value="Save" name="save_name">
+                                    <input class="button cancel" type="submit" value="Cancel" name="no_edit">
+                                    </label>
+                                %else:
+                                    <label>
+                                    <span class="panel-value">${service_name}</span>
+                                    <input class="button theme" type="submit" value="Edit" name="edit_name">
+                                    </label>
+                                %endif
+                            </form>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <form action="${request.path}" method="post">
+                                <span class="panel-entry">Protected URL: </span>
+                                %if edit_mode == "edit_url":
+                                    <label>
+                                    <input type="url" value="${service_url}" name="new_svc_url"
+                                           id="input_url" onkeyup="adjustWidth('input_url')">
+                                    <input class="button theme" type="submit" value="Save" name="save_url">
+                                    <input class="button cancel" type="submit" value="Cancel" name="no_edit">
+                                    </label>
+                                %else:
+                                    <label>
+                                    <a href="${service_url}" class="panel-value">${service_url}</a>
+                                    <input class="button theme" type="submit" value="Edit" name="edit_url">
+                                    </label>
+                                %endif
+                            </form>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <p class="panel-line-entry">
+                                <span class="panel-entry">Public URL: </span>
+                                <a href="${public_url}" class="panel-value">${public_url}</a>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <p class="panel-line-entry">
+                                <span class="panel-entry">Type: </span>
+                                <span class="label label-info">${cur_svc_type}</span>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <p class="panel-line-entry">
+                                <span class="panel-entry">Permissions: </span>
+                                %for perm in service_perm:
+                                    <span class="label label-warning">${perm}</span>
+                                %endfor
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <p class="panel-line-entry">
+                                <span class="panel-entry">ID: </span>
+                                <span class="panel-value">${service_id}</span>
+                                %if service_push_show:
+                                    <div class="checkbox-align">
+                                        <label for="push_phoenix_checkbox_details">
+                                            <input type="hidden" name="service_push" value="off"/>
+                                            %if service_push:
+                                                <input type="checkbox" name="service_push"
+                                                       id="push_phoenix_checkbox_details" checked/>
+                                            %else:
+                                                <input type="checkbox" name="service_push"
+                                                       id="push_phoenix_checkbox_details"/>
+                                            %endif
+                                            <span>Push updates to Phoenix?</span>
+                                        </label>
+                                    </div>
+                                %endif
+                            </p>
+                        </td>
+                    </tr>
+                </table>
             </div>
         </div>
 
