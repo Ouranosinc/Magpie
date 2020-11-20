@@ -36,10 +36,12 @@
                 <table class="panel-line">
                     <tr>
                         <td>
+                            <span class="panel-entry">Username: </span>
+                        </td>
+                        <td>
                             <form id="edit_username" action="${request.path}" method="post">
-                                <p class="panel-line-entry">
-                                    <span class="panel-entry">Username: </span>
-                                    %if edit_mode == 'edit_username':
+                                <div class="panel-line-entry">
+                                    %if edit_mode == "edit_username":
                                         <label>
                                         <input type="text" placeholder="new user name" name="new_user_name"
                                                id="input_username" value="${user_name}"
@@ -49,16 +51,16 @@
                                         </label>
                                     %else:
                                         <label>
-                                        <span class="panel-value">${user_name}</span>
+                                        <span class="panel-line-textbox">${user_name}</span>
                                         <input type="submit" value="Edit" name="edit_username" class="button theme">
                                         </label>
                                     %endif
-                                </p>
+                                </div>
                             </form>
                         </td>
                         <td>
                         %if invalid_user_name:
-                            <div class="alert-form-error panel-error">
+                            <div class="panel-form-error">
                                 <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                                      alt="ERROR" class="icon-error" />
                                 <div class="alert-form-text">
@@ -70,9 +72,11 @@
                     </tr>
                     <tr>
                         <td>
+                            <span class="panel-entry">Password: </span>
+                        </td>
+                        <td>
                             <form id="edit_password" action="${request.path}" method="post">
-                                <p class="panel-line-entry">
-                                    <span class="panel-entry">Password: </span>
+                                <div class="panel-line-entry">
                                     %if edit_mode == "edit_password":
                                         <label>
                                         <input type="password" placeholder="new password" name="new_user_password"
@@ -87,12 +91,12 @@
                                         <input type="submit" value="Edit" name="edit_password" class="button theme">
                                         </label>
                                     %endif
-                                </p>
+                                </div>
                             </form>
                         </td>
                         <td>
                         %if invalid_password:
-                            <div class="alert-form-error panel-error">
+                            <div class="panel-form-error">
                                 <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                                      alt="ERROR" class="icon-error" />
                                 <div class="alert-form-text">
@@ -104,9 +108,11 @@
                     </tr>
                     <tr>
                         <td>
+                            <span class="panel-entry">Email: </span>
+                        </td>
+                        <td>
                             <form id="edit_email" action="${request.path}" method="post">
-                                <p class="panel-line-entry">
-                                    <span class="panel-entry">Email: </span>
+                                <div class="panel-line-entry">
                                     %if edit_mode == "edit_email":
                                         <label>
                                         <input type="email" placeholder="new email" name="new_user_email"
@@ -121,12 +127,12 @@
                                         <input type="submit" value="Edit" name="edit_email" class="button theme">
                                         </label>
                                     %endif
-                                </p>
+                                </div>
                             </form>
                         </td>
                         <td>
                         %if invalid_user_email:
-                            <div class="alert-form-error panel-error">
+                            <div class="panel-form-error">
                                 <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                                      alt="ERROR" class="icon-error" />
                                 <div class="alert-form-text">

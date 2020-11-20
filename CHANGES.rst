@@ -9,13 +9,17 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add better details of error cause in returned UI page
+* Add better details of HTTP error cause in returned UI page
   (resolves `#369 <https://github.com/Ouranosinc/Magpie/issues/369>`_).
+* Ensure that general programming internal errors are not bubbled up in UI error page.
 * Add function to parse output body and redact potential leaks of flagged fields.
+* Align HTML format and structure of all edit forms portions of `Users`, `Groups` and `Services` UI pages to simplify
+  and unify their rendering.
+* Add inline UI error messages to `User` edition fields.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix validation of edited user password to handle and adequately indicate returned error on UI
+* Fix validation of edited user fields to handle and adequately indicate returned error on UI
   (resolves `#370 <https://github.com/Ouranosinc/Magpie/issues/370>`_).
 
 `3.2.1 <https://github.com/Ouranosinc/Magpie/tree/3.2.1>`_ (2020-11-17)

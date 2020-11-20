@@ -58,20 +58,25 @@
                 <table class="panel-line">
                     <tr>
                         <td>
-                            <p class="panel-line-entry">
+                            <span class="panel-entry">Username: </span>
+                        </td>
+                        <td>
+                            <div class="panel-line-entry">
                                 <!-- username fixed -->
                                 <label>
-                                    <span class="panel-entry">Username: </span>
                                     ${user_name}
                                 </label>
-                            </p>
+                            </div>
                         </td>
+                        <td></td>
                     </tr>
                     <tr>
                         <td>
+                            <span class="panel-entry">Password: </span>
+                        </td>
+                        <td>
                             <form id="edit_password" action="${request.path}" method="post">
-                                <p class="panel-line-entry">
-                                    <span class="panel-entry">Password: </span>
+                                <div class="panel-line-entry">
                                     %if edit_mode == "edit_password":
                                         <label>
                                             <input type="password" placeholder="new password" name="new_user_password"
@@ -85,12 +90,12 @@
                                             <input type="submit" value="Edit" name="edit_password" class="button theme">
                                         </label>
                                     %endif
-                                </p>
+                                </div>
                             </form>
                         </td>
                         <td>
                         %if invalid_password:
-                            <div class="alert-form-error panel-error">
+                            <div class="panel-form-error">
                                 <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                                      alt="ERROR" class="icon-error" />
                                 <div class="alert-form-text">
@@ -102,9 +107,11 @@
                     </tr>
                     <tr>
                         <td>
+                            <span class="panel-entry">Email: </span>
+                        </td>
+                        <td>
                             <form id="edit_email" action="${request.path}" method="post">
-                                <p class="panel-line-entry">
-                                    <span class="panel-entry">Email: </span>
+                                <div class="panel-line-entry">
                                     %if edit_mode == "edit_email":
                                         <label>
                                             <input type="email" placeholder="new email" name="new_user_email"
@@ -118,12 +125,12 @@
                                             <input type="submit" value="Edit" name="edit_email" class="button theme">
                                         </label>
                                     %endif
-                                </p>
+                                </div>
                             </form>
                         </td>
                         <td>
                         %if invalid_user_email:
-                            <div class="alert-form-error panel-error">
+                            <div class="panel-form-error">
                                 <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                                      alt="ERROR" class="icon-error" />
                                 <div class="alert-form-text">

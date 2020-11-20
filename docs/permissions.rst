@@ -444,7 +444,7 @@ priority over any :term:`Group` :term:`Permission`. Also, ``deny`` access is pri
 the default interpretation of protected access control defined by `Magpie`. When ``match`` and ``recursive`` scopes
 cause ambiguous resolution, the ``match`` :term:`Permission` is prioritized over inherited access via parent ``scope``.
 
-As a general of thumb, all :term:`Permission` are resolved such that more restrictive access applied *closer* to
+As a general rule of thumb, all :term:`Permission` are resolved such that more restrictive access applied *closer* to
 the actual :term:`Resource` for the targeted :term:`User` will have priority, both in terms of inheritance by tree
 hierarchy and by :term:`Group` memberships.
 

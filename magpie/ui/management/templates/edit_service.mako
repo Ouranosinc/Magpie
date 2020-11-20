@@ -72,74 +72,90 @@
                 <table class="panel-line">
                     <tr>
                         <td>
+                            <span class="panel-entry">Name: </span>
+                        </td>
+                        <td>
                             <form action="${request.path}" method="post">
-                                <span class="panel-entry">Name: </span>
-                                %if edit_mode == "edit_name":
-                                    <label>
-                                    <input type="text" value="${service_name}" name="new_svc_name"
-                                           id="input_name" onkeyup="adjustWidth('input_name')">
-                                    <input class="button theme" type="submit" value="Save" name="save_name">
-                                    <input class="button cancel" type="submit" value="Cancel" name="no_edit">
-                                    </label>
-                                %else:
-                                    <label>
-                                    <span class="panel-value">${service_name}</span>
-                                    <input class="button theme" type="submit" value="Edit" name="edit_name">
-                                    </label>
-                                %endif
+                                <div class="panel-line-entry">
+                                    %if edit_mode == "edit_name":
+                                        <label>
+                                        <input type="text" value="${service_name}" name="new_svc_name"
+                                               id="input_name" onkeyup="adjustWidth('input_name')">
+                                        <input class="button theme" type="submit" value="Save" name="save_name">
+                                        <input class="button cancel" type="submit" value="Cancel" name="no_edit">
+                                        </label>
+                                    %else:
+                                        <label>
+                                        <span class="panel-value">${service_name}</span>
+                                        <input class="button theme" type="submit" value="Edit" name="edit_name">
+                                        </label>
+                                    %endif
+                                </div>
                             </form>
                         </td>
                     </tr>
                     <tr>
                         <td>
+                            <span class="panel-entry">Protected URL: </span>
+                        </td>
+                        <td>
                             <form action="${request.path}" method="post">
-                                <span class="panel-entry">Protected URL: </span>
-                                %if edit_mode == "edit_url":
-                                    <label>
-                                    <input type="url" value="${service_url}" name="new_svc_url"
-                                           id="input_url" onkeyup="adjustWidth('input_url')">
-                                    <input class="button theme" type="submit" value="Save" name="save_url">
-                                    <input class="button cancel" type="submit" value="Cancel" name="no_edit">
-                                    </label>
-                                %else:
-                                    <label>
-                                    <a href="${service_url}" class="panel-value">${service_url}</a>
-                                    <input class="button theme" type="submit" value="Edit" name="edit_url">
-                                    </label>
-                                %endif
+                                <div class="panel-line-entry">
+                                    %if edit_mode == "edit_url":
+                                        <label>
+                                        <input type="url" value="${service_url}" name="new_svc_url"
+                                               id="input_url" onkeyup="adjustWidth('input_url')">
+                                        <input class="button theme" type="submit" value="Save" name="save_url">
+                                        <input class="button cancel" type="submit" value="Cancel" name="no_edit">
+                                        </label>
+                                    %else:
+                                        <label>
+                                        <a href="${service_url}" class="panel-value">${service_url}</a>
+                                        <input class="button theme" type="submit" value="Edit" name="edit_url">
+                                        </label>
+                                    %endif
+                                </div>
                             </form>
                         </td>
                     </tr>
                     <tr>
                         <td>
-                            <p class="panel-line-entry">
-                                <span class="panel-entry">Public URL: </span>
+                            <span class="panel-entry">Public URL: </span>
+                        </td>
+                        <td>
+                            <div class="panel-line-entry">
                                 <a href="${public_url}" class="panel-value">${public_url}</a>
-                            </p>
+                            </div>
                         </td>
                     </tr>
                     <tr>
                         <td>
-                            <p class="panel-line-entry">
-                                <span class="panel-entry">Type: </span>
+                            <span class="panel-entry">Type: </span>
+                        </td>
+                        <td>
+                            <div class="panel-line-entry">
                                 <span class="label label-info">${cur_svc_type}</span>
-                            </p>
+                            </div>
                         </td>
                     </tr>
                     <tr>
                         <td>
-                            <p class="panel-line-entry">
-                                <span class="panel-entry">Permissions: </span>
+                            <span class="panel-entry">Permissions: </span>
+                        </td>
+                        <td>
+                            <div class="panel-line-entry">
                                 %for perm in service_perm:
                                     <span class="label label-warning">${perm}</span>
                                 %endfor
-                            </p>
+                            </div>
                         </td>
                     </tr>
                     <tr>
                         <td>
-                            <p class="panel-line-entry">
-                                <span class="panel-entry">ID: </span>
+                            <span class="panel-entry">ID: </span>
+                        </td>
+                        <td>
+                            <div class="panel-line-entry">
                                 <span class="panel-value">${service_id}</span>
                                 %if service_push_show:
                                     <div class="checkbox-align">
@@ -156,7 +172,7 @@
                                         </label>
                                     </div>
                                 %endif
-                            </p>
+                            </div>
                         </td>
                     </tr>
                 </table>
@@ -174,7 +190,7 @@
     </div>
 </div>
 
-<%def name="render_item(key, value, level)">
+<%def name="render_item(_, value, level)">
     <form id="resource_${value['id']}" action="${request.path}" method="post">
         <input type="hidden" value="${value['id']}" name="resource_id">
         <div class="tree-button">

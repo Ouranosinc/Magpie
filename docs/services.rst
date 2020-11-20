@@ -169,7 +169,7 @@ its children :term:`Resource` are :attr:`Permission.BROWSE`, :attr:`Permission.R
     provides *metadata* access to that file.
 
 Permission :attr:`Permission.READ` can be applied to all of the resources, but will only effectively make sense when
-attempting access of a specific :term:`Resource of type :class:`magpie.models.File`.
+attempting access of a specific :term:`Resource` of type :class:`magpie.models.File`.
 
 .. versionchanged:: 3.1
     Permission :attr:`Permission.READ` does not offer *metadata* content listing of :class:`magpie.models.Directory`

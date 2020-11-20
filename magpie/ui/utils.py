@@ -120,7 +120,8 @@ def handle_errors(func):
         try:
             return func(*args, **kwargs)
         except Exception as exc:
-            detail = "{}: {}".format(type(exc).__name__, str(exc))
+            exc_name = type(exc).__name__
+            detail = "{}: {}".format(exc_name, str(exc))
             exc_info = get_exception_info(exc, exception_details=True) or detail  # noqa
             with_tb = not isinstance(exc, HTTPException) or getattr(exc, "status_code", 500) >= 500
             LOGGER.error("Unexpected API error under UI operation. [%s]", exc_info, exc_info=with_tb)
@@ -132,6 +133,11 @@ def handle_errors(func):
                     content = exc_info
                 else:
                     content["cause"] = exc_info
+            # redact traceback errors (logged), such that displayed error in UI is not too verbose
+            # only display full original message from HTTP related errors
+            if not isinstance(exc, HTTPException) or with_tb:
+                detail = "{} occurred during operation. Please refer to application logs for details.".format(exc_name)
+                content["detail"] = detail
             content.setdefault("detail", detail)
             if view_container:
                 return redirect_error(view_container.request, content=mask_credentials(content))
