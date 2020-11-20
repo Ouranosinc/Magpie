@@ -47,8 +47,8 @@ def mask_credentials(container, redact="[REDACTED]", flags=None, parent=None):
         return any(_flag in _compare for _flag in flags)
 
     if isinstance(container, (list, tuple, set)):
-        for i in range(len(container)):
-            container[i] = mask_credentials(container[i], redact=redact, flags=flags, parent=parent)
+        for i, item in enumerate(container):
+            container[i] = mask_credentials(item, redact=redact, flags=flags, parent=parent)
         return container
 
     if isinstance(container, dict):
