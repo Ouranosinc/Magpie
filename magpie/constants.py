@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 import dotenv
 from pyramid.settings import asbool
+from pyramid.threadlocal import get_current_registry
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -68,7 +69,7 @@ except IOError:
 
 def _get_default_log_level():
     """
-    Get default configurations from ini file.
+    Get logging level from INI configuration file. Fallback to default ``INFO`` if it cannot be retrieved.
     """
     _default_log_lvl = "INFO"
     try:
@@ -76,7 +77,7 @@ def _get_default_log_level():
         _settings = magpie.utils.get_settings_from_config_ini(MAGPIE_INI_FILE_PATH,
                                                               ini_main_section_name="logger_magpie")
         _default_log_lvl = _settings.get("level", _default_log_lvl)
-    except Exception:  # noqa: W0703 # nosec: B110
+    except (AttributeError, ImportError, ModuleNotFoundError):  # noqa: W0703 # nosec: B110
         pass
     return _default_log_lvl
 
@@ -161,10 +162,15 @@ _REGEX_ASCII_ONLY = re.compile(r"\W|^(?=\d)")
 
 def get_constant_setting_name(name):
     """
-    Lower-case name and replace all non-ascii chars by `_`.
+    Lower-case name and replace all non-ascii chars by `_`. Then, convert known prefixes with their dotted name.
     """
     name = re.sub(_REGEX_ASCII_ONLY, "_", name.strip().lower())
-    return name.replace("magpie_", "magpie.", 1)
+    for prefix in ["magpie", "twitcher", "postgres", "phoenix"]:
+        known_prefix = "{}_".format(prefix)
+        dotted_prefix = "{}.".format(prefix)
+        if name.startswith(known_prefix):
+            return name.replace(known_prefix, dotted_prefix, 1)
+    return name
 
 
 def get_constant(constant_name,             # type: Str
@@ -192,7 +198,7 @@ def get_constant(constant_name,             # type: Str
     (i.e.: ``MAGPIE_ADMIN_USER`` will also search for ``magpie.admin_user`` and so on for corresponding constants).
 
     :param constant_name: key to search for a value
-    :param settings_container: wsgi app settings container
+    :param settings_container: WSGI application settings container (if not provided, uses found one in current thread)
     :param settings_name: alternative name for `settings` if specified
     :param default_value: default value to be returned if not found anywhere, and exception raises are disabled.
     :param raise_missing: raise exception if key is not found anywhere
@@ -208,14 +214,19 @@ def get_constant(constant_name,             # type: Str
         return globals()[constant_name]
     missing = True
     magpie_value = None
-    settings = get_settings(settings_container) if settings_container else None
+    if settings_container:
+        settings = get_settings(settings_container)
+    else:
+        # note: this will work only after include of magpie will have triggered configurator setup
+        print_log("Using settings from local thread.", level=logging.DEBUG)
+        settings = get_settings(get_current_registry())
     if settings and constant_name in settings:  # pylint: disable=E1135
         missing = False
         magpie_value = settings.get(constant_name)
         if magpie_value is not None:
             print_log("Constant found in settings with: {}".format(constant_name), level=logging.DEBUG)
             return magpie_value
-    if not settings_name and constant_name.startswith("MAGPIE_"):
+    if not settings_name:
         settings_name = get_constant_setting_name(constant_name)
         print_log("Constant alternate search: {}".format(settings_name), level=logging.DEBUG)
     if settings and settings_name and settings_name in settings:  # pylint: disable=E1135

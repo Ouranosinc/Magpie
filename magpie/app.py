@@ -86,6 +86,7 @@ def main(global_config=None, **settings):  # noqa: F811
 
     # don't use scan otherwise modules like 'magpie.adapter' are
     # automatically found and cause import errors on missing packages
+    print_log("Including Magpie modules...", LOGGER)
     config.include("magpie")
     # config.scan("magpie")
 

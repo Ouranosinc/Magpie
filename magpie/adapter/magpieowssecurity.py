@@ -16,9 +16,9 @@ from magpie.services import service_factory
 from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url, get_settings
 
 # WARNING:
-#   twitcher available only when this module is imported from it
-#   installed during tests for evaluation
-#   module 'magpie.adapter' should not be imported from magpie package
+#   Twitcher available only when this module is imported from it.
+#   It is installed during tests for evaluation.
+#   Module 'magpie.adapter' should not be imported from 'magpie' package.
 from twitcher.owsexceptions import OWSAccessForbidden  # noqa
 from twitcher.owssecurity import OWSSecurityInterface  # noqa
 from twitcher.utils import parse_service_name  # noqa

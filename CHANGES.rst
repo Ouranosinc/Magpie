@@ -16,6 +16,12 @@ Features / Changes
 * Align HTML format and structure of all edit forms portions of `Users`, `Groups` and `Services` UI pages to simplify
   and unify their rendering.
 * Add inline UI error messages to `User` edition fields.
+* Improve resolution of `Twitcher` URL using ``TWITCHER_HOST`` explicitly provided  setting (or environment variable)
+  before falling back to default ``HOSTNAME`` value.
+* Employ `Pyramid`'s local thread registry to resolve application settings if not explicitly provided to
+  ``magpie.constants.get_constant``, avoiding inconsistent resolution of setting value versus environment variable
+  wherever the settings container was not passed down everywhere over deeply nested function calls.
+* Handle `Twitcher`, `PostgreSQL` and `Phoenix` setting prefix conversion from corresponding environment variable names.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

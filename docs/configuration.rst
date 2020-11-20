@@ -613,7 +613,8 @@ Following settings define parameters required by `Twitcher`_ (OWS Security Proxy
   .. versionadded:: 2.0
 
   Specifies the explicit hostname to employ in combination with ``TWITCHER_PROTECTED_PATH`` to form the complete base
-  service protected URL. Ignored if ``TWITCHER_PROTECTED_URL`` was provided directly.
+  service protected URL. Ignored if ``TWITCHER_PROTECTED_URL`` was provided directly. If not provided, hostname
+  resolution falls back to using ``HOSTNAME`` environment variable.
 
   .. note::
     The resulting URL will take the form ``https://{TWITCHER_HOST}[/twitcher]{TWITCHER_PROTECTED_PATH}`` to imitate
