@@ -519,6 +519,12 @@ test-remote: install-dev install	## run only remote tests with the environment P
 	@echo "Running remote tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+.PHONY: test-custom
+test-custom: install-dev install	## run custom marker tests using SPEC="<marker-specification>"
+	@echo "Running custom tests..."
+	@[ "${SPEC}" ] || ( echo ">> 'TESTS' is not set"; exit 1 )
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
 .PHONY: test-docker
 test-docker: docker-test			## alias for 'docker-test' target - WARNING: could build image if missing
 

@@ -33,60 +33,116 @@
                 <div class="panel-title">Details</div>
             </div>
             <div class="panel-fields">
-                <form id="edit_username" action="${request.path}" method="post">
-                    <p class="panel-line">
-                        <span class="panel-entry">Username: </span>
-                        %if edit_mode == 'edit_username':
-                            <label>
-                            <input type="text" placeholder="new user name" value="${user_name}" name="new_user_name"
-                                   id="input_username" onkeyup="adjustWidth('input_username')">
-                            <input type="submit" value="Save" name="save_username" class="button theme">
-                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
-                            </label>
-                        %else:
-                            <label>
-                            <span class="panel-value">${user_name}</span>
-                            <input type="submit" value="Edit" name="edit_username" class="button theme">
-                            </label>
+                <table class="panel-line">
+                    <tr>
+                        <td>
+                            <span class="panel-entry">Username: </span>
+                        </td>
+                        <td>
+                            <form id="edit_username" action="${request.path}" method="post">
+                                <div class="panel-line-entry">
+                                    %if edit_mode == "edit_username":
+                                        <label>
+                                        <input type="text" placeholder="new user name" name="new_user_name"
+                                               id="input_username" value="${user_name}"
+                                               onkeyup="adjustWidth('input_username')">
+                                        <input type="submit" value="Save" name="save_username" class="button theme">
+                                        <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                                        </label>
+                                    %else:
+                                        <label>
+                                        <span class="panel-line-textbox">${user_name}</span>
+                                        <input type="submit" value="Edit" name="edit_username" class="button theme">
+                                        </label>
+                                    %endif
+                                </div>
+                            </form>
+                        </td>
+                        <td>
+                        %if invalid_user_name:
+                            <div class="panel-form-error">
+                                <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                                     alt="ERROR" class="icon-error" />
+                                <div class="alert-form-text">
+                                    ${reason_user_name}
+                                </div>
+                            </div>
                         %endif
-                    </p>
-                </form>
-                <form id="edit_password" action="${request.path}" method="post">
-                    <p class="panel-line">
-                        <span class="panel-entry">Password: </span>
-                        %if edit_mode == "edit_password":
-                            <label>
-                            <input type="password" placeholder="new password" value="" name="new_user_password"
-                                   id="input_password" onkeyup="adjustWidth('input_password')">
-                            <input type="submit" value="Save" name="save_password" class="button theme">
-                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
-                            </label>
-                        %else:
-                            <label>
-                            <span class="panel-value">***</span>
-                            <input type="submit" value="Edit" name="edit_password" class="button theme">
-                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="panel-entry">Password: </span>
+                        </td>
+                        <td>
+                            <form id="edit_password" action="${request.path}" method="post">
+                                <div class="panel-line-entry">
+                                    %if edit_mode == "edit_password":
+                                        <label>
+                                        <input type="password" placeholder="new password" name="new_user_password"
+                                               id="input_password" value=""
+                                               onkeyup="adjustWidth('input_password')">
+                                        <input type="submit" value="Save" name="save_password" class="button theme">
+                                        <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                                        </label>
+                                    %else:
+                                        <label>
+                                        <span class="panel-value">***</span>
+                                        <input type="submit" value="Edit" name="edit_password" class="button theme">
+                                        </label>
+                                    %endif
+                                </div>
+                            </form>
+                        </td>
+                        <td>
+                        %if invalid_password:
+                            <div class="panel-form-error">
+                                <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                                     alt="ERROR" class="icon-error" />
+                                <div class="alert-form-text">
+                                    ${reason_password}
+                                </div>
+                            </div>
                         %endif
-                    </p>
-                </form>
-                <form id="edit_email" action="${request.path}" method="post">
-                    <p class="panel-line">
-                        <span class="panel-entry">Email: </span>
-                        %if edit_mode == "edit_email":
-                            <label>
-                            <input type="email" placeholder="new email" value="${email}" name="new_user_email"
-                                   id="input_email" onkeyup="adjustWidth('input_url')">
-                            <input type="submit" value="Save" name="save_email" class="button theme">
-                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
-                            </label>
-                        %else:
-                            <label>
-                            <span class="panel-value">${email}</span>
-                            <input type="submit" value="Edit" name="edit_email" class="button theme">
-                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="panel-entry">Email: </span>
+                        </td>
+                        <td>
+                            <form id="edit_email" action="${request.path}" method="post">
+                                <div class="panel-line-entry">
+                                    %if edit_mode == "edit_email":
+                                        <label>
+                                        <input type="email" placeholder="new email" name="new_user_email"
+                                               id="input_email" value="${email}"
+                                               onkeyup="adjustWidth('input_url')">
+                                        <input type="submit" value="Save" name="save_email" class="button theme">
+                                        <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                                        </label>
+                                    %else:
+                                        <label>
+                                        <span class="panel-value">${email}</span>
+                                        <input type="submit" value="Edit" name="edit_email" class="button theme">
+                                        </label>
+                                    %endif
+                                </div>
+                            </form>
+                        </td>
+                        <td>
+                        %if invalid_user_email:
+                            <div class="panel-form-error">
+                                <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                                     alt="ERROR" class="icon-error" />
+                                <div class="alert-form-text">
+                                    ${reason_user_email}
+                                </div>
+                            </div>
                         %endif
-                    </p>
-                </form>
+                        </td>
+                    </tr>
+                </table>
             </div>
         </div>
     </div>
@@ -175,16 +231,17 @@
 <div class="clear"></div>
 
 <div class="tabs-panel">
-
-    %for svc_type in svc_types:
-        % if cur_svc_type == svc_type:
-            <a class="tab current-tab"
-               href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
-        % else:
-            <a class="tab theme"
-               href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
-        % endif
-    %endfor
+    <div class="tab-panel-selector">
+        %for svc_type in svc_types:
+            % if cur_svc_type == svc_type:
+                <a class="tab current-tab"
+                   href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
+            % else:
+                <a class="tab theme"
+                   href="${request.route_url('edit_user', user_name=user_name, cur_svc_type=svc_type)}">${svc_type}</a>
+            % endif
+        %endfor
+    </div>
 
     <div class="current-tab-panel">
         <div class="clear underline"></div>

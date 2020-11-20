@@ -58,37 +58,44 @@
                 <table class="panel-line">
                     <tr>
                         <td>
-                            <!-- username fixed -->
-                            <label>
-                                <span class="panel-entry">Username: </span>
-                                ${user_name}
-                            </label>
+                            <span class="panel-entry">Username: </span>
                         </td>
+                        <td>
+                            <div class="panel-line-entry">
+                                <!-- username fixed -->
+                                <label>
+                                    ${user_name}
+                                </label>
+                            </div>
+                        </td>
+                        <td></td>
                     </tr>
-                </table>
-                <table class="panel-line">
                     <tr>
                         <td>
-                            <form id="edit_password" action="${request.path}" method="post">
                             <span class="panel-entry">Password: </span>
-                            %if edit_mode == "edit_password":
-                                <label>
-                                    <input type="password" placeholder="new password" value="" name="new_user_password"
-                                           id="input_password" onkeyup="adjustWidth('input_password')">
-                                    <input type="submit" value="Save" name="save_password" class="button theme">
-                                    <input type="submit" value="Cancel" name="no_edit" class="button cancel">
-                                </label>
-                            %else:
-                                <label>
-                                    <span class="panel-value">***</span>
-                                    <input type="submit" value="Edit" name="edit_password" class="button theme">
-                                </label>
-                            %endif
+                        </td>
+                        <td>
+                            <form id="edit_password" action="${request.path}" method="post">
+                                <div class="panel-line-entry">
+                                    %if edit_mode == "edit_password":
+                                        <label>
+                                            <input type="password" placeholder="new password" name="new_user_password"
+                                                   id="input_password" value="" onkeyup="adjustWidth('input_password')">
+                                            <input type="submit" value="Save" name="save_password" class="button theme">
+                                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                                        </label>
+                                    %else:
+                                        <label>
+                                            <span class="panel-value">***</span>
+                                            <input type="submit" value="Edit" name="edit_password" class="button theme">
+                                        </label>
+                                    %endif
+                                </div>
                             </form>
                         </td>
                         <td>
                         %if invalid_password:
-                            <div class="alert-form-error panel-error">
+                            <div class="panel-form-error">
                                 <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                                      alt="ERROR" class="icon-error" />
                                 <div class="alert-form-text">
@@ -98,30 +105,32 @@
                         %endif
                         </td>
                     </tr>
-                </table>
-                <table class="panel-line">
                     <tr>
                         <td>
-                            <form id="edit_email" action="${request.path}" method="post">
                             <span class="panel-entry">Email: </span>
-                            %if edit_mode == "edit_email":
-                                <label>
-                                    <input type="email" placeholder="new email" value="${email}" name="new_user_email"
-                                           id="input_email" onkeyup="adjustWidth('input_url')">
-                                    <input type="submit" value="Save" name="save_email" class="button theme">
-                                    <input type="submit" value="Cancel" name="no_edit" class="button cancel">
-                                </label>
-                            %else:
-                                <label>
-                                    <span class="panel-value">${email}</span>
-                                    <input type="submit" value="Edit" name="edit_email" class="button theme">
-                                </label>
-                            %endif
+                        </td>
+                        <td>
+                            <form id="edit_email" action="${request.path}" method="post">
+                                <div class="panel-line-entry">
+                                    %if edit_mode == "edit_email":
+                                        <label>
+                                            <input type="email" placeholder="new email" name="new_user_email"
+                                                   id="input_email" value="${email}" onkeyup="adjustWidth('input_url')">
+                                            <input type="submit" value="Save" name="save_email" class="button theme">
+                                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                                        </label>
+                                    %else:
+                                        <label>
+                                            <span class="panel-value">${email}</span>
+                                            <input type="submit" value="Edit" name="edit_email" class="button theme">
+                                        </label>
+                                    %endif
+                                </div>
                             </form>
                         </td>
                         <td>
                         %if invalid_user_email:
-                            <div class="alert-form-error panel-error">
+                            <div class="panel-form-error">
                                 <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                                      alt="ERROR" class="icon-error" />
                                 <div class="alert-form-text">

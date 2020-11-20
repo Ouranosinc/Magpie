@@ -9,6 +9,7 @@ from magpie import __meta__
 from magpie.api.generic import get_exception_info, get_request_info
 from magpie.api.requests import get_logged_user
 from magpie.constants import get_constant
+from magpie.security import mask_credentials
 from magpie.utils import CONTENT_TYPE_JSON, get_header, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
@@ -119,19 +120,27 @@ def handle_errors(func):
         try:
             return func(*args, **kwargs)
         except Exception as exc:
-            detail = "{}: {}".format(type(exc).__name__, str(exc))
+            exc_name = type(exc).__name__
+            detail = "{}: {}".format(exc_name, str(exc))
             exc_info = get_exception_info(exc, exception_details=True) or detail  # noqa
             with_tb = not isinstance(exc, HTTPException) or getattr(exc, "status_code", 500) >= 500
             LOGGER.error("Unexpected API error under UI operation. [%s]", exc_info, exc_info=with_tb)
             content = {}
             if view_container:
                 content = get_request_info(view_container.request, default_message=detail, exception_details=True)
-            if isinstance(exc_info, dict) and "exception" in exc_info and "exception" not in content:
-                content = exc_info
-            if "detail" not in content:
-                content = {"detail": detail}
+            if isinstance(exc_info, dict):
+                if "exception" in exc_info and "exception" not in content:
+                    content = exc_info
+                else:
+                    content["cause"] = exc_info
+            # redact traceback errors (logged), such that displayed error in UI is not too verbose
+            # only display full original message from HTTP related errors
+            if not isinstance(exc, HTTPException) or with_tb:
+                detail = "{} occurred during operation. Please refer to application logs for details.".format(exc_name)
+                content["detail"] = detail
+            content.setdefault("detail", detail)
             if view_container:
-                return redirect_error(view_container.request, content=content)
+                return redirect_error(view_container.request, content=mask_credentials(content))
             raise HTTPInternalServerError(detail=str(exc))
     return wrap
 

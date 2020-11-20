@@ -51,7 +51,8 @@ def make_ows_parser(method="GET", content_type=None, params=None, body=""):
 @runner.MAGPIE_TEST_SERVICES
 class TestOWSParser(unittest.TestCase):
     """
-    Validate operations of :mod:`owsrequest` that is employed by multiple :term:`OWS`-based service implementations.
+    Validate operations of :mod:`magpie.owsrequest` that is employed by multiple :term:`OWS`-based service
+    implementations.
     """
 
     def test_ows_parser_factory(self):  # noqa: R0201
@@ -109,7 +110,7 @@ class TestOWSParser(unittest.TestCase):
 @runner.MAGPIE_TEST_FUNCTIONAL
 class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
     """
-    Test request parsing and ACL resolution against resource permissions for the various service implementations.
+    Test request parsing and :term:`ACL` resolution against resource permissions for various service implementations.
     """
     # pylint: disable=C0103,invalid-name
     __test__ = True
@@ -454,7 +455,6 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         svc_name = "unittest-service-thredds-custom"
         svc_type = ServiceTHREDDS.service_type
 
-        custom_settings = None
         with NamedTemporaryFile(mode="w", suffix=".yml") as config:
             # generate a custom config for test THREDDS service
             config.write(inspect.cleandoc("""

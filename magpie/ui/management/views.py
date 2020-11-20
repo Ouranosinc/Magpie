@@ -286,7 +286,7 @@ class ManagementViews(BaseViews):
 
     @view_config(route_name="edit_user", renderer="templates/edit_user.mako")
     def edit_user(self):
-        user_name = self.request.matchdict["user_name"]
+        user_name = self.request.matchdict["user_name"]  # keep reference to original name in case of update request
         cur_svc_type = self.request.matchdict["cur_svc_type"]
         inherit_grp_perms = self.request.matchdict.get("inherit_groups_permissions", False)
 
@@ -303,12 +303,25 @@ class ManagementViews(BaseViews):
         user_path = schemas.UserAPI.path.format(user_name=user_name)
         user_resp = request_api(self.request, user_path, "GET")
         check_response(user_resp)
+
+        # set default values needed by the page in case of early return due to error
         user_info = get_json(user_resp)["user"]
         user_info["edit_mode"] = "no_edit"
         user_info["own_groups"] = own_groups
         user_info["groups"] = all_groups
+        user_info["cur_svc_type"] = cur_svc_type
+        user_info["svc_types"] = svc_types
         user_info["inherit_groups_permissions"] = inherit_grp_perms
-        error_message = ""
+        user_info["error_message"] = ""
+        user_info["last_sync"] = "Never"
+        user_info["ids_to_clean"] = []
+        user_info["out_of_sync"] = []
+        user_info["sync_implemented"] = False
+        param_fields = ["password", "user_name", "user_email"]
+
+        for field in param_fields:
+            user_info["invalid_{}".format(field)] = False
+            user_info["reason_{}".format(field)] = ""
 
         if self.request.method == "POST":
             res_id = self.request.POST.get("resource_id")
@@ -361,7 +374,7 @@ class ManagementViews(BaseViews):
                 is_save_user_info = True
             elif "force_sync" in self.request.POST:
                 _, errmsg = self.sync_services(services)
-                error_message += errmsg or ""
+                user_info["error_message"] += errmsg or ""
             elif "clean_all" in self.request.POST:
                 ids_to_clean = self.request.POST.get("ids_to_clean").split(";")
                 for id_ in ids_to_clean:
@@ -369,12 +382,24 @@ class ManagementViews(BaseViews):
 
             if is_save_user_info:
                 resp = request_api(self.request, user_path, "PATCH", data=user_info)
-                check_response(resp)
-                # FIXME: need to commit updates since we are using the same session
-                #        otherwise, updated user doesn't exist yet in the db for next calls
-                self.request.tm.commit()
+                if resp.status_code in (HTTPBadRequest.code, HTTPUnprocessableEntity.code):
+                    requires_update_name = False  # revoke fetch new name because failure occurred
+                    # attempt to retrieve the API more-specific reason why the operation is invalid
+                    body = get_json(resp)
+                    param_name = body.get("param", {}).get("name")
+                    reason = body.get("detail", "Invalid")
+                    for field in param_fields:
+                        if param_name == field:
+                            user_info["invalid_{}".format(field)] = True
+                            user_info["reason_{}".format(field)] = reason
+                            break  # cannot return early because we are still missing other resources/permissions info
+                else:
+                    check_response(resp)
+                    # FIXME: need to commit updates since we are using the same session
+                    #        otherwise, updated user doesn't exist yet in the db for next calls
+                    self.request.tm.commit()
 
-            # always remove password from output
+            # ensure remove password from output (just in case)
             user_info.pop("password", None)
 
             if requires_update_name:
@@ -416,9 +441,8 @@ class ManagementViews(BaseViews):
         res_perms, ids_to_clean, last_sync_humanized, out_of_sync = info
 
         if out_of_sync:
-            error_message = self.make_sync_error_message(out_of_sync)
+            user_info["error_message"] = self.make_sync_error_message(out_of_sync)
 
-        user_info["error_message"] = error_message
         user_info["ids_to_clean"] = ";".join(ids_to_clean)
         user_info["last_sync"] = last_sync_humanized
         user_info["sync_implemented"] = sync_implemented
