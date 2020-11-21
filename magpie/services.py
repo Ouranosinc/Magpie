@@ -217,9 +217,9 @@ class ServiceInterface(object):
     def get_config(self):
         # type: () -> ConfigDict
         """
-        Obtains the configuration of the registered service during startup.
+        Obtains the custom configuration of the registered service.
         """
-        return get_settings(self.request).get("magpie.services", {}).get(self.service.resource_name, {})
+        return self.service.configuration
 
     @classmethod
     def get_resource_permissions(cls, resource_type_name):
@@ -739,12 +739,13 @@ class ServiceTHREDDS(ServiceInterface):
             (cfg["data_type"]["prefixes"], Permission.READ),
         ]:
             for prefix in prefixes:
+                if path_prefix is None and prefix is None:
+                    return permission
                 try:
                     path_prefix = re.match(prefix, path_prefix)[0]
+                    return permission
                 except (TypeError, KeyError):  # fail match or fail to extract pattern group
                     pass
-                if prefix == path_prefix:
-                    return permission
         return None  # automatically deny
 
 

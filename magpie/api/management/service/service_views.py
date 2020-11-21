@@ -105,7 +105,8 @@ def register_service_view(request):
     service_url = ar.get_value_multiformat_body_checked(request, "service_url", pattern=ax.URL_REGEX)
     service_type = ar.get_value_multiformat_body_checked(request, "service_type")
     service_push = asbool(ar.get_multiformat_body(request, "service_push", default=False))
-    return su.create_service(service_name, service_type, service_url, service_push, db_session=request.db)
+    service_cfg = ar.get_multiformat_body(request, "configuration")
+    return su.create_service(service_name, service_type, service_url, service_push, service_cfg, db_session=request.db)
 
 
 @s.ServiceAPI.patch(schema=s.Service_PATCH_RequestBodySchema(), tags=[s.ServicesTag],
@@ -130,6 +131,16 @@ def update_service_view(request):
     ax.verify_param(svc_name == service.resource_name and svc_url == service.url, not_equal=True,
                     param_compare=True, param_name="service_name/service_url",
                     http_error=HTTPBadRequest, msg_on_fail=s.Service_PATCH_BadRequestResponseSchema.description)
+
+    # config explicitly provided as None (null) means override (erase)
+    # to leave it as is, just don't specific the field
+    old_svc_config = service.configuration
+    new_svc_config = ar.get_multiformat_body(request, "configuration")
+    if old_svc_config != new_svc_config:
+        if new_svc_config is not None:
+            ax.verify_param(new_svc_config, param_compare=dict, is_type=True, http_error=HTTPUnprocessableEntity,
+                            msg_on_fail=s.Service_CheckConfig_UnprocessableEntityResponseSchema.description)
+        service.configuration = new_svc_config
 
     if svc_name != service.resource_name:
         all_services = request.db.query(models.Service)
@@ -164,7 +175,8 @@ def get_service_view(request):
     Get a service information.
     """
     service = ar.get_service_matchdict_checked(request)
-    service_info = sf.format_service(service, show_private_url=True, show_resources_allowed=True)
+    service_info = sf.format_service(service, show_private_url=True,
+                                     show_resources_allowed=True, show_configuration=True)
     return ax.valid_http(http_success=HTTPOk, detail=s.Service_GET_OkResponseSchema.description,
                          content={"service": service_info})
 

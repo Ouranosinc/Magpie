@@ -686,17 +686,16 @@ class GroupDetailBodySchema(GroupPublicBodySchema, GroupInfoBodySchema):
     )
 
 
-class ServiceBodySchema(colander.MappingSchema):
+class ServiceConfigurationSchema(colander.MappingSchema):
+    description="Custom configuration of the service. Expected format and fields specific to each service type."
+    missing=colander.drop
+    default=colander.null
+
+
+class ServiceSummarySchema(colander.MappingSchema):
     resource_id = colander.SchemaNode(
         colander.Integer(),
         description="Resource identification number",
-    )
-    permission_names = PermissionNameListSchema(
-        description="List of service permissions applicable or effective for a given user/group according to context.",
-        example=[Permission.READ.value, Permission.WRITE.value]
-    )
-    permissions = PermissionObjectListSchema(
-        description="List of detailed service permissions applicable or effective for user/group according to context."
     )
     service_name = colander.SchemaNode(
         colander.String(),
@@ -720,9 +719,24 @@ class ServiceBodySchema(colander.MappingSchema):
     )
     service_url = colander.SchemaNode(
         colander.String(),
+        missing=colander.drop,  # if listed with corresponding scope (users/groups/admin)
         description="Private URL of the service (restricted access)",
         example="http://localhost:9999/thredds"
     )
+
+
+class ServiceBodySchema(ServiceSummarySchema):
+    permission_names = PermissionNameListSchema(
+        description="List of service permissions applicable or effective for a given user/group according to context.",
+        example=[Permission.READ.value, Permission.WRITE.value]
+    )
+    permissions = PermissionObjectListSchema(
+        description="List of detailed service permissions applicable or effective for user/group according to context."
+    )
+
+
+class ServiceDetailSchema(ServiceBodySchema):
+    configuration = ServiceConfigurationSchema()
 
 
 class ResourceBodySchema(colander.MappingSchema):
@@ -1089,6 +1103,18 @@ class ServicesCategorizedSchemaNode(colander.MappingSchema):
     wps = ServiceType_wps_SchemaNode(missing=colander.drop)
 
 
+class Service_SummaryBodyResponseSchema(BaseResponseBodySchema):
+    service = ServiceSummarySchema()
+
+
+class Service_SuccessBodyResponseSchema(BaseResponseBodySchema):
+    service = ServiceBodySchema()
+
+
+class Service_DetailBodyResponseSchema(BaseResponseBodySchema):
+    service = ServiceDetailSchema()
+
+
 class ServicesListingSchemaNode(colander.SequenceSchema):
     service = ServiceBodySchema()
 
@@ -1103,11 +1129,16 @@ class Service_MatchDictCheck_NotFoundResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
+class Service_CheckConfig_UnprocessableEntityResponseSchema(BaseResponseSchemaAPI):
+    description = "Service configuration must be formatted as JSON or null."
+    body = ErrorResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
+
+
 Services_GET_RequestSchema = ServiceTypes_GET_RequestSchema
 
 
 class Service_GET_ResponseBodySchema(BaseResponseBodySchema):
-    service = ServiceBodySchema()
+    service = ServiceDetailSchema()
 
 
 class Service_GET_OkResponseSchema(BaseResponseSchemaAPI):
@@ -1152,6 +1183,7 @@ class Services_POST_BodySchema(colander.MappingSchema):
         description="Private URL of the service to create",
         example="http://localhost:9000/my_service"
     )
+    configuration = ServiceConfigurationSchema()
 
 
 class Services_POST_RequestBodySchema(BaseRequestSchemaAPI):
@@ -1209,19 +1241,16 @@ class Service_PATCH_ResponseBodySchema(colander.MappingSchema):
         example="http://localhost:9000/new_service_name"
     )
     service_push = PhoenixServicePushOption()
+    configuration = ServiceConfigurationSchema()
 
 
 class Service_PATCH_RequestBodySchema(BaseRequestSchemaAPI):
     body = Service_PATCH_ResponseBodySchema()
 
 
-class Service_SuccessBodyResponseSchema(BaseResponseBodySchema):
-    service = ServiceBodySchema()
-
-
 class Service_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Update service successful."
-    body = Service_SuccessBodyResponseSchema(code=HTTPOk.code, description=description)
+    body = Service_DetailBodyResponseSchema(code=HTTPOk.code, description=description)
 
 
 class Service_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
@@ -1251,7 +1280,7 @@ class Service_DELETE_RequestSchema(BaseRequestSchemaAPI):
 
 class Service_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Delete service successful."
-    body = ServiceBodySchema(code=HTTPOk.code, description=description)
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class Service_DELETE_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -2804,6 +2833,7 @@ Service_PATCH_responses = {
     "403": Service_PATCH_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
     "409": Service_PATCH_ConflictResponseSchema(),
+    "422": Service_CheckConfig_UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Service_DELETE_responses = {

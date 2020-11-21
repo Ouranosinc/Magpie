@@ -450,7 +450,7 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
     for svc_name, svc_values in services_dict.items():
         svc_new_url = svc_values["url"]
         svc_type = svc_values["type"]
-
+        svc_config = svc_values.get("configuration")
         svc_sync_type = svc_values.get("sync_type")
         if force_update and svc_name in existing_services_names:
             svc = models.Service.by_service_name(svc_name, db_session=db_session)
@@ -462,6 +462,7 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
                           .format(url_old=svc.url, url_new=svc_new_url, svc=svc_name), logger=LOGGER)
                 svc.url = svc_new_url
             svc.sync_type = svc_sync_type
+            svc.configuration = svc_config
         elif not force_update and svc_name in existing_services_names:
             print_log("Skipping service [{svc}] (conflict)" .format(svc=svc_name), logger=LOGGER)
         else:
@@ -470,6 +471,7 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
                                  resource_type=models.Service.resource_type_name,
                                  url=svc_new_url,
                                  type=svc_type,
+                                 configuration=svc_config,
                                  sync_type=svc_sync_type)  # noqa
             db_session.add(svc)
 

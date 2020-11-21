@@ -208,7 +208,7 @@ database-history: conda-env _alembic    ## obtain database revision history
 .PHONY: database-revision
 database-revision: conda-env _alembic   ## create a new database revision
 	@[ "${DOC}" ] || ( echo ">> 'DOC' is not set. Provide a description."; exit 1 )
-	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" revision -m $(DOC)'
+	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" revision -m "$(DOC)"'
 
 .PHONY: database-version
 database-version: conda-env _alembic 	## retrieve current database revision ID
