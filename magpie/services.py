@@ -691,7 +691,7 @@ class ServiceTHREDDS(ServiceInterface):
         if self._config is not None:
             return self._config
 
-        self._config = super(ServiceTHREDDS, self).get_config()
+        self._config = super(ServiceTHREDDS, self).get_config() or {}
         self._config.setdefault("skip_prefix", "thredds")
         self._config.setdefault("file_patterns", [".*\\.nc"])
         self._config.setdefault("data_type", {"prefixes": []})
