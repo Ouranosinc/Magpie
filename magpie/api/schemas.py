@@ -687,9 +687,9 @@ class GroupDetailBodySchema(GroupPublicBodySchema, GroupInfoBodySchema):
 
 
 class ServiceConfigurationSchema(colander.MappingSchema):
-    description="Custom configuration of the service. Expected format and fields specific to each service type."
-    missing=colander.drop
-    default=colander.null
+    description = "Custom configuration of the service. Expected format and fields specific to each service type."
+    missing = colander.drop
+    default = colander.null
 
 
 class ServiceSummarySchema(colander.MappingSchema):

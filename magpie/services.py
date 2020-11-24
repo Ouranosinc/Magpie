@@ -16,7 +16,6 @@ from magpie.api import exception as ax
 from magpie.constants import get_constant
 from magpie.owsrequest import ows_parser_factory
 from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
-from magpie.utils import get_settings
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
