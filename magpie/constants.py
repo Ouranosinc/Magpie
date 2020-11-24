@@ -69,7 +69,7 @@ except IOError:
 
 def _get_default_log_level():
     """
-    Get logging level from INI configuration file. Fallback to default ``INFO`` if it cannot be retrieved.
+    Get logging level from INI configuration file or fallback to default ``INFO`` if it cannot be retrieved.
     """
     _default_log_lvl = "INFO"
     try:
@@ -162,7 +162,10 @@ _REGEX_ASCII_ONLY = re.compile(r"\W|^(?=\d)")
 
 def get_constant_setting_name(name):
     """
-    Lower-case name and replace all non-ascii chars by `_`. Then, convert known prefixes with their dotted name.
+    Find the equivalent setting name of the provided environment variable name.
+
+    Lower-case name and replace all non-ascii chars by `_`.
+    Then, convert known prefixes with their dotted name.
     """
     name = re.sub(_REGEX_ASCII_ONLY, "_", name.strip().lower())
     for prefix in ["magpie", "twitcher", "postgres", "phoenix"]:
