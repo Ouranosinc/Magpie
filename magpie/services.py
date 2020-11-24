@@ -683,22 +683,42 @@ class ServiceTHREDDS(ServiceInterface):
         models.File: permissions,
     }
 
+    def __init__(self, *_, **__):
+        super(ServiceTHREDDS, self).__init__(*_, **__)
+        self._config = None
+
     def get_config(self):
         # type: () -> ConfigDict
-        cfg = super(ServiceTHREDDS, self).get_config()
-        cfg.setdefault("file_patterns", [".*\\.nc"])
-        cfg.setdefault("data_type", {"prefixes": []})
-        if not cfg["data_type"]["prefixes"]:
-            cfg["data_type"]["prefixes"] = ["fileServer", "dodsC", "dap4", "wcs", "wms"]
-        cfg.setdefault("metadata_type", {"prefixes": []})
-        if not cfg["metadata_type"]["prefixes"]:
-            cfg["metadata_type"]["prefixes"] = [None, "catalog\\.\\w+", "catalog", "ncml", "uddc", "iso"]
-        return cfg
+        if self._config is not None:
+            return self._config
+
+        self._config = super(ServiceTHREDDS, self).get_config()
+        self._config.setdefault("skip_prefix", "thredds")
+        self._config.setdefault("file_patterns", [".*\\.nc"])
+        self._config.setdefault("data_type", {"prefixes": []})
+        if not self._config["data_type"]["prefixes"]:
+            self._config["data_type"]["prefixes"] = ["fileServer", "dodsC", "dap4", "wcs", "wms"]
+        self._config.setdefault("metadata_type", {"prefixes": []})
+        if not self._config["metadata_type"]["prefixes"]:
+            self._config["metadata_type"]["prefixes"] = [None, "catalog\\.\\w+", "catalog", "ncml", "uddc", "iso"]
+        return self._config
+
+    def get_path_parts(self):
+        cfg = self.get_config()
+        path_parts = self._get_request_path_parts()
+        skip_prefix = cfg["skip_prefix"]
+        if path_parts and skip_prefix:
+            full_path = "/".join(path_parts)
+            skip_prefix = skip_prefix.lstrip("/").rstrip("/")
+            if full_path.startswith(skip_prefix):
+                path_parts = full_path.split(skip_prefix)[-1].split("/")
+                return path_parts[1:]  # remove extra '' added by split
+        return path_parts
 
     def resource_requested(self):
-        path_parts = self._get_request_path_parts()
+        path_parts = self.get_path_parts()
 
-        # handle optional prefix or remove it
+        # handle optional prefix as targeting the service directly
         if len(path_parts) < 2:
             return self.service, True
         path_parts = path_parts[1:]
@@ -731,14 +751,16 @@ class ServiceTHREDDS(ServiceInterface):
         return found_resource, target
 
     def permission_requested(self):
-        path_parts = self._get_request_path_parts() or [None]  # in case of no `<prefix>`, simulate as `null`
-        path_prefix = path_parts[0]
         cfg = self.get_config()
+        path_parts = self.get_path_parts()
+        path_prefix = None  # in case of no `<prefix>`, simulate as `null`
+        if path_parts:
+            path_prefix = path_parts[0]
         for prefixes, permission in [
             (cfg["metadata_type"]["prefixes"], Permission.BROWSE),  # first to favor BROWSE over READ prefix conflicts
             (cfg["data_type"]["prefixes"], Permission.READ),
         ]:
-            for prefix in prefixes:
+            for prefix in prefixes:  # type: Str
                 if path_prefix is None and prefix is None:
                     return permission
                 try:
