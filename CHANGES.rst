@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`3.3.0 <https://github.com/Ouranosinc/Magpie/tree/3.3.0>`_ (2020-11-25)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add better details of HTTP error cause in returned UI page
@@ -24,6 +29,8 @@ Features / Changes
 * Handle `Twitcher`, `PostgreSQL` and `Phoenix` setting prefix conversion from corresponding environment variable names.
 * Store custom configuration of ``Service`` into database for same definition retrieval between `Magpie` and `Twitcher`
   without need to provide the same configuration file to both on startup.
+* Update ``Service`` registration operations at startup to update entries if custom configuration was modified.
+* Update API to allow POST and PATCH operations with ``Service`` custom configuration.
 * Display custom ``Service`` configuration as JSON/YAML on its corresponding UI edit page when applicable.
 
 Bug Fixes
