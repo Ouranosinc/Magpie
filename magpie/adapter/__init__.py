@@ -19,9 +19,9 @@ from magpie.security import get_auth_config
 from magpie.utils import CONTENT_TYPE_JSON, SingletonMeta, get_logger, get_magpie_url, get_settings
 
 # WARNING:
-#   twitcher available only when this module is imported from it
-#   installed during tests for evaluation
-#   module 'magpie.adapter' should not be imported from magpie package
+#   Twitcher available only when this module is imported from it.
+#   It is installed during tests for evaluation.
+#   Module 'magpie.adapter' should not be imported from 'magpie' package.
 from twitcher.adapter.base import AdapterInterface  # noqa
 from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
 

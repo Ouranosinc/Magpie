@@ -232,6 +232,17 @@ table thead {
     font-weight: bold;
 }
 
+.panel-message {
+    margin: 1em;
+    display: inline-flex;
+}
+
+.panel-message-text {
+    margin-left: 0.25em;
+    margin-top: -0.05em;
+    text-align: left;
+}
+
 .subsection {
     background-color: #CCCCCC;
 }
@@ -1021,6 +1032,34 @@ a.tab:visited {
     text-align: center;
     text-decoration: none;
     display: inline-block;
+}
+
+/*---service configuration languages---*/
+
+.panel-code-language {
+    background: #DDDDDD;
+    padding: 1px;
+}
+
+.code-language-selector {
+    margin: 0.1em;
+}
+
+.current-code-language {
+    background: white;
+    padding: 0.5em 1em 0.25em;
+    margin: 0;
+    border: 1px solid white;
+}
+
+.code-language-option {
+    min-width: 6em;  /* make tabs same width regardless of text length, but must be adjusted for longest one */
+    margin-bottom: 0.1em;   /* in case page is not wide enough, avoid wrapped tabs to be sticking on top of another */
+    border-color: black;
+}
+
+.current-option {
+
 }
 
 /*---service details---*/

@@ -1,7 +1,14 @@
 from typing import TYPE_CHECKING
 
 import six
-from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPInternalServerError
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPCreated,
+    HTTPForbidden,
+    HTTPInternalServerError,
+    HTTPUnprocessableEntity
+)
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 
@@ -18,18 +25,18 @@ from magpie.utils import get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Iterable
+    from typing import Iterable, Optional
 
     from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import Str
+    from magpie.typedefs import JSON, Str
 
 LOGGER = get_logger(__name__)
 
 
-def create_service(service_name, service_type, service_url, service_push, db_session):
-    # type: (Str, Str, Str, bool, Session) -> HTTPException
+def create_service(service_name, service_type, service_url, service_push, service_config, db_session):
+    # type: (Str, Str, Str, bool, Optional[JSON], Session) -> HTTPException
     """
     Generates an instance to register a new service.
     """
@@ -65,8 +72,13 @@ def create_service(service_name, service_type, service_url, service_push, db_ses
     ax.verify_param(models.Service.by_service_name(service_name, db_session=db_session), is_none=True,
                     param_name="service_name", with_param=False, content={"service_name": str(service_name)},
                     http_error=HTTPConflict, msg_on_fail=s.Services_POST_ConflictResponseSchema.description)
+    if service_config is not None:
+        ax.verify_param(service_config, param_name="configuration", param_compare=dict, is_type=True,
+                        http_error=HTTPUnprocessableEntity,
+                        msg_on_fail=s.Service_CheckConfig_UnprocessableEntityResponseSchema.description)
     service = ax.evaluate_call(lambda: models.Service(resource_name=str(service_name),
                                                       resource_type=models.Service.resource_type_name,
+                                                      configuration=service_config,
                                                       url=str(service_url), type=str(service_type)),  # noqa
                                fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
                                msg_on_fail=s.Services_POST_UnprocessableEntityResponseSchema.description,

@@ -217,31 +217,41 @@ by the below configuration.
         type: thredds
 
         # customizable request parsing methodology (specific to `thredds` type)
-        file_patterns:
-          # note: make sure to employ quotes and double escapes to avoid parsing YAML error
-          - ".*\\.nc"
-        metadata_type:
-          prefixes:
-            - null  # note: special YAML value evaluated as `no-prefix`, use quotes if literal value is needed
-            - "catalog\\.\\w+"  # note: special case for `THREDDS` top-level directory (root) accessed for `BROWSE`
-            - catalog
-            - ncml
-            - uddc
-            - iso
-        data_type:
-          prefixes:
-            - fileServer
-            - dodsC
-            - dap4
-            - wcs
-            - wms
+        configuration:
+          # path prefix to skip (strip) before processing the rest of the path in case the
+          # registered service URL in Magpie does not have the same root as proxied by Twitcher public URL
+          skip_prefix: thredds
+          # define which pattern matches that will map different path variations into same file resources
+          # this can be used to consider two file extensions as the same resource to avoid duplication of permissions
+          file_patterns:
+            # note: make sure to employ quotes and double escapes to avoid parsing YAML error
+            #       patterns are **NOT** UNIX filters, but regex format (eg: dot is 'any-character', not a literal dot)
+            - ".*\\.nc"
+          # path prefix to resources to be considered as BROWSE-able metadata (directory listing or file details)
+          metadata_type:
+            prefixes:
+              - null  # note: special YAML value evaluated as `no-prefix`, use quotes if literal value is needed
+              - "catalog\\.\\w+"  # note: special case for `THREDDS` top-level directory (root) accessed for `BROWSE`
+              - catalog
+              - ncml
+              - uddc
+              - iso
+          # path prefix to resources to be considered as READ-able data (i.e.: file contents)
+          data_type:
+            prefixes:
+              - fileServer
+              - dodsC
+              - dap4
+              - wcs
+              - wms
 
 ..  warning:: Regular Expression Patterns
 
-    Ensure to properly escape special characters, notably the dot (``.``), to avoid granting unexpected permissions.
+    Ensure to properly escape special characters, notably the dot (``.``), to avoid granting unexpected permissions that
+    would match *any* character. Format employed in above patterns are traditional Regex, **not** UNIX style filters.
 
 .. versionchanged:: 3.2
-    Added ``catalog`` specific pattern by default to metadata prefixes that composes another valid URL variant to
+    Added ``catalog`` specific patterns by default to metadata prefixes that composes another valid URL variant to
     request :attr:`Permission.BROWSE` directly on the top-level ``THREDDS`` service (directory), although ``<prefix>``
     is otherwise always expected at that second position path segment (see below). The pattern allows multiple
     extensions to support the various representation modes of the ``catalog`` listing (e.g.: XML, HTML, etc.).
@@ -256,15 +266,21 @@ Assuming a proxy intended to receive incoming requests configured with :class:`m
 
 An incoming request will be parsed according to configured values against the following format::
 
-    {PROXY_URL}/LocalThredds/<prefix>/.../<file>
+    {PROXY_URL}/LocalThredds[/skip/prefix]/<prefix_type>/.../<file>
 
-The above template demonstrates that `Magpie` will attempt to match the ``<prefix>`` part with any of the listed
-``prefixes`` in the configuration. If a match is found, the corresponding *metadata* or *data* content will be assumed,
-according to where the match entry was located, to determine whether the requested :term:`Resource` should be validated
-respectively for :attr:`Permission.BROWSE` or :attr:`Permission.READ` access. If no ``<prefix>`` can be resolved, the
-permission will be immediately assumed as :attr:`Access.DENY` regardless of type. To allow top-level access directly on
-the :term:`Service`'s root without ``<prefix>``, it is important to provide ``null`` within the desired ``prefixes``
-list. Duplicates between the two lists of ``prefixes`` will favor entries in ``metadata_type`` over ``data_type``.
+The above template demonstrates that `Magpie` will attempt to match the ``<prefix_type>`` part of the request path with
+any of the listed ``prefixes`` in the configuration. The ``<prefix_type>`` location in the path will be determined by
+the next part following configuration value defined by ``skip_prefix`` (any number of sub-parts). If ``skip_prefix``
+cannot be located in the request path, the first part after the service name is simply assumed as the ``<prefix_type>``
+to lookup.
+
+If a match is found between the various ``prefixes`` and ``<prefix_type>``, the corresponding *metadata* or *data*
+content will be assumed, according to where the match entry was located, to determine whether the requested
+:term:`Resource` should be validated respectively for :attr:`Permission.BROWSE` or :attr:`Permission.READ` access.
+If no ``<prefix_type>`` can be resolved, the :term:`Permission` will be immediately assumed as :attr:`Access.DENY`
+regardless of type. To allow top-level access directly on the :term:`Service`'s root without ``<prefix_type>``, it is
+important to provide ``null`` within the desired ``prefixes`` list. Duplicates between the two lists of ``prefixes``
+will favor entries in ``metadata_type`` over ``data_type``.
 
 After resolution of the content type from ``<prefix>``, the resolution of any amount of :class:`magpie.models.Directory`
 :term:`Resource` will be attempted. Any missing children directory :term:`Resource` will terminate the lookup process
@@ -273,13 +289,15 @@ immediately, and :term:`ACL` will be resolved considering :attr:`Scope.RECURSIVE
 
 Once the last element of the path is reached, the ``file_patterns`` will be applied against ``<file>`` in order to
 attempt extracting the targeted :class:`magpie.models.File` :term:`Resource`. Patterns are applied until the first
-positive match is found. Therefore, order is important if providing multiple. For example, if the path ended with
-``file.ncml`` and, that both ``.*.ncml`` and ``.*.nc`` where defined in the configuration in that specific order, the
-result will first match ``.*.ncml``, and the final :class:`magpie.models.File` :term:`Resource` value will be considered
-as ``file.ncml`` for lookup. In this case, another request using only ``file.nc`` would lookup an entirely different
-:term:`Resource`, since the second pattern would be the first valid match. On the other hand, if only ``.*.nc`` was
-defined in ``file_patterns``, the matched pattern would convert both the names ``file.ncml`` and ``file.nc`` to
-``file.nc``, which will lookup exactly the same :class:`magpie.models.File` reference.
+positive match is found. Therefore, order is important if providing multiple patterns. For example, if the path ended
+with ``file.ncml`` and, that both ``.*\\.ncml`` and ``.*\\.nc`` where defined in the configuration in that specific
+order, the result will first match ``.*\\.ncml``, and the final :class:`magpie.models.File` :term:`Resource` value will
+be considered as ``file.ncml`` for lookup. In this case, another request using only ``file.nc`` would lookup an entirely
+different :term:`Resource`, since the second pattern would be the first successful match. On the other hand, if only
+``.*\\.nc`` was defined in ``file_patterns``, the matched pattern would convert both the names ``file.ncml`` and
+``file.nc`` to ``file.nc``, which will lookup exactly the same :class:`magpie.models.File` reference. The most common
+usage of this feature is to support additional extension suffixes as the same file with regrouped permissions such that
+``file.nc``, ``file.nc.ascii?``, ``file.nc.html``, etc. all correspond to single and common :term:`Resource`.
 
 To summarize, if ``file_patterns`` produces a match, that matched portion will be used as lookup value of the
 :term:`Resource`. Otherwise, if not any match could be found amongst all the ``file_patterns``, the plain ``<file>``

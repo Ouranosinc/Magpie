@@ -16,9 +16,9 @@ from magpie.services import service_factory
 from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url, get_settings
 
 # WARNING:
-#   twitcher available only when this module is imported from it
-#   installed during tests for evaluation
-#   module 'magpie.adapter' should not be imported from magpie package
+#   Twitcher available only when this module is imported from it.
+#   It is installed during tests for evaluation.
+#   Module 'magpie.adapter' should not be imported from 'magpie' package.
 from twitcher.owsexceptions import OWSAccessForbidden  # noqa
 from twitcher.owssecurity import OWSSecurityInterface  # noqa
 from twitcher.utils import parse_service_name  # noqa
@@ -77,7 +77,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         Only update if `MAGPIE_COOKIE_NAME` is missing and is retrievable from `access_token` in `Authorization` header.
         Counter-validate the login procedure by calling Magpie's `/session` which should indicated a logged user.
         """
-        token_name = get_constant("MAGPIE_COOKIE_NAME", settings_name=request.registry.settings)
+        token_name = get_constant("MAGPIE_COOKIE_NAME", settings_container=request.registry.settings)
         if "Authorization" in request.headers and token_name not in request.cookies:
             magpie_prov = request.params.get("provider", "WSO2")
             magpie_path = ProviderSigninAPI.path.format(provider_name=magpie_prov)
