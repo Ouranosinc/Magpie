@@ -252,14 +252,22 @@ by the below configuration.
 
 .. versionchanged:: 3.2
     Added ``catalog`` specific patterns by default to metadata prefixes that composes another valid URL variant to
-    request :attr:`Permission.BROWSE` directly on the top-level ``THREDDS`` service (directory), although ``<prefix>``
-    is otherwise always expected at that second position path segment (see below). The pattern allows multiple
-    extensions to support the various representation modes of the ``catalog`` listing (e.g.: XML, HTML, etc.).
+    request :attr:`Permission.BROWSE` directly on the top-level `THREDDS`_ service (directory), although
+    ``<prefix_type>`` is otherwise always expected at that second position path segment after the service name
+    (see below example). The pattern allows multiple extensions to support the various representation modes of the
+    ``catalog`` listing (e.g.: XML, HTML, etc.).
 
     As of that version, the ``prefixes`` entries also support patterns, using standard regular expression syntax.
 
+.. versionchanged:: 3.3
+    Added ``skip_prefix`` to allow ignoring intermediate path segments between the service name and the desired
+    ``<prefix_type>`` position. A typical use case with `THREDDS`_ is the ``/thredds`` prefix it adds between its
+    API entrypoint and `Tomcat` service running it. If this feature is not needed, it can be disabled by setting the
+    parameter to ``null``.
+
 Assuming a proxy intended to receive incoming requests configured with :class:`magpie.adapter.MagpieAdapter` such that
-``{PROXY_URL}`` is the base path, the following path would point toward the above registered service::
+``{PROXY_URL}`` is the base path, the following path would point toward the registered service with the above YAML
+configuration::
 
     {PROXY_URL}/LocalThredds
 
@@ -269,10 +277,10 @@ An incoming request will be parsed according to configured values against the fo
     {PROXY_URL}/LocalThredds[/skip/prefix]/<prefix_type>/.../<file>
 
 The above template demonstrates that `Magpie` will attempt to match the ``<prefix_type>`` part of the request path with
-any of the listed ``prefixes`` in the configuration. The ``<prefix_type>`` location in the path will be determined by
-the next part following configuration value defined by ``skip_prefix`` (any number of sub-parts). If ``skip_prefix``
-cannot be located in the request path, the first part after the service name is simply assumed as the ``<prefix_type>``
-to lookup.
+any of the listed ``prefixes`` in the configuration (*metadata* or *data*). The ``<prefix_type>`` location in the path
+(i.e.: which segment to consider as ``<prefix_type>``) will be determined by the next part following configuration value
+defined by ``skip_prefix`` (any number of sub-parts). If ``skip_prefix`` cannot be located in the request path or was
+defined as ``null``, the first part after the service name is simply assumed as the ``<prefix_type>`` to lookup.
 
 If a match is found between the various ``prefixes`` and ``<prefix_type>``, the corresponding *metadata* or *data*
 content will be assumed, according to where the match entry was located, to determine whether the requested
@@ -282,10 +290,11 @@ regardless of type. To allow top-level access directly on the :term:`Service`'s 
 important to provide ``null`` within the desired ``prefixes`` list. Duplicates between the two lists of ``prefixes``
 will favor entries in ``metadata_type`` over ``data_type``.
 
-After resolution of the content type from ``<prefix>``, the resolution of any amount of :class:`magpie.models.Directory`
-:term:`Resource` will be attempted. Any missing children directory :term:`Resource` will terminate the lookup process
-immediately, and :term:`ACL` will be resolved considering :attr:`Scope.RECURSIVE` if any applicable parent
-:term:`Resources` for the given :term:`Permission` selected by ``<prefix>`` and from where lookup stopped.
+After resolution of the content type from ``<prefix_type>``, the resolution of any amount of
+:class:`magpie.models.Directory` :term:`Resource` will be attempted. Any missing children directory :term:`Resource`
+will terminate the lookup process immediately, and :term:`ACL` will be resolved considering :attr:`Scope.RECURSIVE` if
+any applicable parent :term:`Resources` for the given :term:`Permission` selected by ``<prefix_type>`` and from where
+lookup stopped.
 
 Once the last element of the path is reached, the ``file_patterns`` will be applied against ``<file>`` in order to
 attempt extracting the targeted :class:`magpie.models.File` :term:`Resource`. Patterns are applied until the first
