@@ -137,7 +137,7 @@
         %endfor
     </div>
 
-    <div class="current-tab-panel ">
+    <div class="current-tab-panel">
         <table class="simple-list">
             <thead class="theme">
             <tr>

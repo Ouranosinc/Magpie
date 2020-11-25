@@ -22,6 +22,9 @@ Features / Changes
   ``magpie.constants.get_constant``, avoiding inconsistent resolution of setting value versus environment variable
   wherever the settings container was not passed down everywhere over deeply nested function calls.
 * Handle `Twitcher`, `PostgreSQL` and `Phoenix` setting prefix conversion from corresponding environment variable names.
+* Store custom configuration of ``Service`` into database for same definition retrieval between `Magpie` and `Twitcher`
+  without need to provide the same configuration file to both on startup.
+* Display custom ``Service`` configuration as JSON/YAML on its corresponding UI edit page when applicable.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

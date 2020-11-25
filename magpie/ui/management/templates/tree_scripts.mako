@@ -149,7 +149,6 @@
                 dataType: "json",
                 contentType: "application/json",
                 success: function (data) {
-                    console.log("AJAX OK");
                     let permissions = data["permissions"];
                     let result = $("#PermissionEffectiveFailure_" + resourceId + "_" + permName);
                     $.each(permissions, function(_, perm){

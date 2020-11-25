@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import humanize
 import six
 import transaction
+import yaml
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
@@ -970,11 +971,29 @@ class ManagementViews(BaseViews):
         # future editions on the page will transfer the last saved state
         service_push_show = cur_svc_type in register.SERVICES_PHOENIX_ALLOWED
         service_push = asbool(self.request.POST.get("service_push", False))
+        service_info = {
+            "edit_mode": "no_edit",
+            "public_url": register.get_twitcher_protected_service_url(service_name),
+            "service_name": service_name,
+            "service_url": service_url,
+            "service_perm": service_perm,
+            "service_id": service_id,
+            "service_push": service_push,
+            "service_push_show": service_push_show,
+            "cur_svc_type": cur_svc_type,
+        }
 
-        service_info = {"edit_mode": "no_edit", "service_name": service_name, "service_url": service_url,
-                        "public_url": register.get_twitcher_protected_service_url(service_name),
-                        "service_perm": service_perm, "service_id": service_id, "service_push": service_push,
-                        "service_push_show": service_push_show, "cur_svc_type": cur_svc_type}
+        svc_config = service_data["configuration"]
+        if not svc_config:
+            service_info["service_configuration"] = None
+            service_info["service_config_json"] = None
+            service_info["service_config_yaml"] = None
+        else:
+            svc_cfg_json = json.dumps(svc_config, ensure_ascii=False, indent=4).strip()
+            svc_cfg_yaml = yaml.safe_dump(svc_config, allow_unicode=True, indent=4, sort_keys=False).strip()
+            service_info["service_configuration"] = True
+            service_info["service_config_json"] = svc_cfg_json
+            service_info["service_config_yaml"] = svc_cfg_yaml
 
         if "edit_name" in self.request.POST:
             service_info["edit_mode"] = "edit_name"

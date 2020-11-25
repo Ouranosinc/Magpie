@@ -23,3 +23,7 @@ input[type="button"]:focus {
     background-color: #5CA3BF;
     text-decoration: none;
 }
+
+.button-active {
+    background-color: #5CA3BF;
+}
