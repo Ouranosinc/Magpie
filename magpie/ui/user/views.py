@@ -93,8 +93,6 @@ class UserViews(BaseViews):
                 user_info["email"] = self.request.POST.get("new_user_email")
                 is_save_user_info = True
             elif "delete" in self.request.POST:
-                # FIXME: user unregister itself?
-                # wat
                 delete_response = request_api(
                     self.request,
                     schemas.UserAPI.path.format(user_name=user_info['user_name']),
