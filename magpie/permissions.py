@@ -4,7 +4,9 @@ from typing import TYPE_CHECKING
 
 import six
 from pyramid.security import Everyone
+from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
+from magpie.constants import get_constant
 from magpie.utils import ExtendedEnum
 
 if TYPE_CHECKING:
@@ -85,7 +87,7 @@ class PermissionSet(object):
     On missing :class:`Access` or :class:`Scope` specifications, they default to :attr:`Access.ALLOW` and
     :attr:`Scope.RECURSIVE` to handle backward compatible naming convention of plain ``permission_name``.
     """
-    __slots__ = ["_name", "_access", "_scope", "_type"]
+    __slots__ = ["_name", "_access", "_scope", "_tuple", "_type"]
 
     def __init__(self,
                  permission,    # type: AnyPermissionType
@@ -102,10 +104,13 @@ class PermissionSet(object):
         :param typ: Type of permission being represented. Informative only, does not impact behavior if omitted.
 
         .. seealso::
-            :meth:`PermissionSet.convert`
+            :meth:`PermissionSet._convert`
         """
+        self._tuple = None  # type: Optional[PermissionTuple]   # reference to original item if available
         if not isinstance(permission, Permission):
-            perm_set = PermissionSet.convert(permission)
+            perm_set = PermissionSet._convert(permission)
+            if isinstance(permission, PermissionTuple):
+                self._tuple = permission
             permission = perm_set.name
             access = perm_set.access if access is None else access
             scope = perm_set.scope if scope is None else scope
@@ -118,7 +123,7 @@ class PermissionSet(object):
     def __eq__(self, other):
         # type: (Any) -> bool
         if not isinstance(other, PermissionSet):
-            other = PermissionSet.convert(other)
+            other = PermissionSet(other)
         return self.json() == other.json()
 
     def __ne__(self, other):
@@ -205,6 +210,18 @@ class PermissionSet(object):
         return outcome, target, self.name.value
 
     @property
+    def priority(self):
+        # type: () -> Optional[int]
+        """
+        Priority accessor in case of group inherited permission resolved by :class:`PermissionTuple`.
+        """
+        if self._tuple is not None and self.type == PermissionType.INHERITED:
+            if self._tuple.group.group_name == get_constant("MAGPIE_ANONYMOUS_GROUP"):
+                return -1
+            return self._tuple.group.priority
+        return None
+
+    @property
     def implicit_permission(self):
         # type: () -> Optional[Str]
         """
@@ -285,7 +302,7 @@ class PermissionSet(object):
         self._type = PermissionType.get(typ)
 
     @classmethod
-    def convert(cls, permission):
+    def _convert(cls, permission):
         # type: (AnyPermissionType) -> Optional[PermissionSet]
         """
         Converts any permission representation to the :class:`PermissionSet` with applicable enum members.

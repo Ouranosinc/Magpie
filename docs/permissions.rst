@@ -47,7 +47,7 @@ More specifically, following distinctions can be observed between different kind
     When executing requests under scopes ``/users`` and ``/groups``, responses without query parameter modifiers
     (see `perm_example`_) are by default `Applied Permissions`_. These are also scoped under a *single context*
     at a given time (:term:`User` or :term:`Group`), depending on the request path being executed. They determine
-    which access rights will be granted or denied for the respective :term:`User` or :term`Group`.
+    which access rights will be granted or denied for the respective :term:`User` or :term:`Group`.
 
 .. _`direct permissions`:
 

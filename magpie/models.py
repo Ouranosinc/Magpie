@@ -51,6 +51,13 @@ class Group(GroupMixin, Base):
         """
         return sa.Column(sa.Boolean(), default=False)
 
+    @declared_attr
+    def priority(self):
+        """
+        Sorting priority weight of the group for resolving conflicting effective permissions.
+        """
+        return sa.Column(sa.Integer(), nullable=False, default=0)
+
 
 class GroupPermission(GroupPermissionMixin, Base):
     pass

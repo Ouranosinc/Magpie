@@ -19,7 +19,7 @@ from magpie.permissions import Access, Permission, PermissionSet, PermissionType
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Collection, Dict, List, Optional, Set, Tuple, Type, Union
+    from typing import Collection, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 
     from pyramid.request import Request
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
@@ -327,11 +327,19 @@ class ServiceInterface(object):
                             effective_perms[perm_name] = perm_set
                         continue  # final decision for this user, skip any group permissions
 
-                    # otherwise check for group(s) inherited permission, all groups have equal priority
-                    # explicit group inherited DENY overrides group inherited ALLOW if permission name was already found
-                    # if permission name not already found, ALLOW/DENY is set regardless (first occurrence)
+                    # otherwise check for group(s) inherited permission
+                    # if permission name was not already found, ALLOW/DENY is set regardless (first occurrence)
                     perm = effective_perms.get(perm_name)
-                    if perm is None or (perm.type == PermissionType.INHERITED and perm_set.access == Access.DENY):
+                    if perm is None:
+                        effective_perms[perm_name] = perm_set
+                    # otherwise, inherited group explicit DENY overrides group inherited ALLOW (in general)
+                    # - only exception to this case is if multiple permissions at the save level and opposite ALLOW/DENY
+                    #   are specified by different groups the user is member of, then group priority dictates resolution
+                    # - if groups are of equal priority, then DENY is selected
+                    elif perm.type == PermissionType.INHERITED and (
+                            (perm.priority < perm_set.priority) or
+                            (perm.priority == perm_set.priority and perm_set.access == Access.DENY)
+                    ):
                         effective_perms[perm_name] = perm_set
 
             # don't bother moving to parent if everything is resolved already
