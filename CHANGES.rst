@@ -7,7 +7,17 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``Group`` priority to resolve inherited permission resolution in case of multiple entries from different
+  group membership of the evaluated user.
+* Add ``reason`` field to returned ``Permission`` objects to help better comprehend the provenance of a composed
+  set of permissions from ``User`` and its multiple ``Group`` memberships.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix invalid submission of ``Group`` memberships from ``User`` edit UI page to ignore ``MAGPIE_ANONYMOUS_GROUP``
+  presence or omission since it cannot be edited regardless (blocked by API).
 
 `3.4.0 <https://github.com/Ouranosinc/Magpie/tree/3.4.0>`_ (2020-12-09)
 ------------------------------------------------------------------------------------

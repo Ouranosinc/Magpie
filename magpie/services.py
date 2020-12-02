@@ -276,7 +276,8 @@ class ServiceInterface(object):
         admin_group = get_constant("MAGPIE_ADMIN_GROUP", self.request)
         admin_group = GroupService.by_group_name(admin_group, db_session=db_session)
         if admin_group in user.groups:  # noqa
-            return [PermissionSet(perm, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE) for perm in permissions]
+            return [PermissionSet(perm, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE, reason="administrator")
+                    for perm in permissions]
 
         # current and parent resource(s) recursive-scope
         match = allow_match
@@ -300,11 +301,13 @@ class ServiceInterface(object):
                         #   ownership permissions since these can be attributed to *any user* while explicit deny are
                         #   definitely set by an admin-level user.
                         for perm in requested_perms:
-                            all_perm = PermissionSet(perm, perm_set.access, perm.scope, perm.type)
                             if perm_set.access == Access.DENY:
+                                all_perm = PermissionSet(perm, perm_set.access, perm.scope, PermissionType.OWNED)
                                 effective_perms[perm] = all_perm
                             else:
+                                all_perm = PermissionSet(perm, perm_set.access, perm.scope, PermissionType.OWNED)
                                 effective_perms.setdefault(perm, all_perm)
+                        continue
                     # skip if the current permission must not be processed (at all or for the moment until next iter)
                     elif perm_set.name not in requested_perms or perm_set.name != perm_name:
                         continue
@@ -335,12 +338,10 @@ class ServiceInterface(object):
                     # otherwise, inherited group explicit DENY overrides group inherited ALLOW (in general)
                     # - only exception to this case is if multiple permissions at the save level and opposite ALLOW/DENY
                     #   are specified by different groups the user is member of, then group priority dictates resolution
-                    # - if groups are of equal priority, then DENY is selected
-                    elif perm.type == PermissionType.INHERITED and (
-                            (perm.priority < perm_set.priority) or
-                            (perm.priority == perm_set.priority and perm_set.access == Access.DENY)
-                    ):
-                        effective_perms[perm_name] = perm_set
+                    # - if groups are of equal priority, then DENY is selected (see called method for details)
+                    # resolve only if previously matched permission was also on group to avoid recomputing USER > GROUP
+                    elif perm.type == PermissionType.INHERITED:
+                        effective_perms[perm_name] = PermissionSet.resolve_inherited(perm_set, perm)
 
             # don't bother moving to parent if everything is resolved already
             if len(effective_perms) == len(requested_perms):

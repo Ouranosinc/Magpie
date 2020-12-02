@@ -208,16 +208,6 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
     return ax.valid_http(http_success=HTTPOk, detail=s.UserResourcePermissionName_DELETE_OkResponseSchema.description)
 
 
-def filter_user_permission(resource_permission_list, user):
-    # type: (List[PermissionTuple], models.User) -> Iterable[PermissionTuple]
-    """
-    Retrieves only direct user permissions on resources amongst a list of user/group resource/service permissions.
-    """
-    def is_user_perm(perm):
-        return perm.group is None and perm.type == "user" and perm.user.user_name == user.user_name
-    return filter(is_user_perm, resource_permission_list)
-
-
 def get_similar_user_resource_permission(user, resource, permission, db_session):
     # type: (models.User, ServiceOrResourceType, PermissionSet, Session) -> Optional[PermissionSet]
     """
@@ -270,6 +260,7 @@ def get_user_resource_permissions_response(user, resource, request,
             else:
                 if inherit_groups_permissions:
                     res_perm_list = ResourceService.perms_for_user(resource, user, db_session=db_session)
+                    res_perm_list = combine_user_group_permissions(res_perm_list)
                     perm_type = PermissionType.INHERITED
                 else:
                     res_perm_list = ResourceService.direct_perms_for_user(resource, user, db_session=db_session)
@@ -366,6 +357,69 @@ def get_user_service_permissions(user, service, request, inherit_groups_permissi
     return [PermissionSet(p, typ=perm_type) for p in usr_svc_perms]
 
 
+def filter_user_permission(resource_permission_list, user):
+    # type: (List[PermissionTuple], models.User) -> Iterable[PermissionTuple]
+    """
+    Retrieves only user :term:`Direct Permissions` amongst a list of user/group resource/service permissions.
+    """
+    def is_user_perm(perm):
+        return perm.group is None and perm.type == "user" and perm.user.user_name == user.user_name
+    return filter(is_user_perm, resource_permission_list)
+
+
+def combine_user_group_permissions(resource_permission_list):
+    # type: (List[PermissionTuple]) -> Iterable[PermissionTuple]
+    """
+    Reduces overlapping user :term:`Inherited Permissions` for corresponding resources/services amongst the given list.
+
+    User :term:`Direct Permissions` have the top-most priority and are therefore selected first if permissions are
+    found for corresponding resource. In such case, only one entry is possible (it is invalid to have more than one
+    combination of ``(User, Resource, Permission)``, including modifiers, as per validation during their creation).
+
+    Otherwise, for corresponding :term:`Inherited Permissions`, resolve the prioritized permission across every group.
+    Similarly to users, :func:`magpie.groups.group_utils.get_similar_group_resource_permission` validate that only one
+    combination of ``(Group, Resource, Permission)`` can exist including permission modifiers. Only, cross-group
+    memberships for a given resource must then be computed.
+
+    Priority of combined group permissions follows 3 conditions:
+        1. Permissions inherited from special group :py:data:`MAGPIE_ANONYMOUS_GROUP` have lower priority than any
+           other more explicit group membership, regardless of permission modifiers applied on it.
+        2. Permissions with :attr:`Access.DENY` are prioritized over :attr:`Access.ALLOW`
+        3. Permissions with :attr:`Scope.RECURSIVE` are prioritized over :attr:`Access.MATCH` as they eventually result
+           into a larger range of affected resources when :term:`Effective Permissions` are requested.
+
+    .. note::
+        Resource tree inherited resolution is not considered here (no :term:`Effective Permissions` computed).
+        Only same-level scope of every given resource is processed independently.
+
+    .. seealso::
+        - Sorting methods of :class:`magpie.permissions.PermissionSet` that orders the permissions with desired result.
+        - :func:`magpie.groups.group_utils.get_similar_group_resource_permission`
+        - :func:`magpie.users.user_utils.get_similar_user_resource_permission`
+    """
+    #return resource_permission_list  # FIXME: return the full list or the combined one below?
+
+    # convert all first to avoid re-doing it each iteration for comparisons
+    res_perm_sets = [PermissionSet(perm) for perm in resource_permission_list]
+
+    # quickly return if there are no conflict to resolve
+    res_perms = [(perm.perm_tuple.resource.resource_id, perm.name) for perm in res_perm_sets]
+    if len(set(res_perms)) == len(res_perms):
+        return resource_permission_list
+
+    # combine overlapping resource/permission
+    combo_perms = {}
+    for perm in res_perm_sets:
+        res_id = perm.perm_tuple.resource.resource_id
+        perm_key = (res_id, perm.name)
+        prev_perm = combo_perms.get(perm_key)
+        if not prev_perm:
+            combo_perms[perm_key] = perm
+            continue
+        combo_perms[perm_key] = PermissionSet.resolve_inherited(perm, prev_perm)
+    return list(combo_perms.values())
+
+
 def get_user_resources_permissions_dict(user, request, resource_types=None,
                                         resource_ids=None, inherit_groups_permissions=True):
     # type: (models.User, Request, Optional[List[Str]], Optional[List[int]], bool) -> Dict[Str, PermissionSet]
@@ -374,8 +428,8 @@ def get_user_resources_permissions_dict(user, request, resource_types=None,
 
     :param user: user for which to find services
     :param request: request with database session connection
-    :param resource_types: filter the search query with specified resource types
-    :param resource_ids: filter the search query with specified resource ids
+    :param resource_types: filter the search query with only the specified resource types
+    :param resource_ids: filter the search query to only the specified resource IDs
     :param inherit_groups_permissions:
         If ``False``, return only user-specific resource permissions.
         Otherwise, resolve inherited permissions using all groups the user is member of.
@@ -387,7 +441,9 @@ def get_user_resources_permissions_dict(user, request, resource_types=None,
                     msg_on_fail=s.UserResourcePermissions_GET_NotFoundResponseSchema.description)
     res_perm_tuple_list = UserService.resources_with_possible_perms(
         user, resource_ids=resource_ids, resource_types=resource_types, db_session=request.db)
-    if not inherit_groups_permissions:
+    if inherit_groups_permissions:
+        res_perm_tuple_list = combine_user_group_permissions(res_perm_tuple_list)
+    else:
         res_perm_tuple_list = filter_user_permission(res_perm_tuple_list, user)
     resources_permissions_dict = {}
     for res_perm in res_perm_tuple_list:

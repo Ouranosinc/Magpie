@@ -1395,8 +1395,9 @@ class TestSetup(object):
         return check_response_basic_info(resp)
 
     @staticmethod
-    def create_TestAnyResourcePermission(test_case,                         # type: AnyMagpieTestCaseType
+    def update_TestAnyResourcePermission(test_case,                         # type: AnyMagpieTestCaseType
                                          item_type,                         # type: Str
+                                         method,                            # type: Str
                                          override_item_name=null,           # type: Optional[Str]
                                          resource_info=null,                # type: Optional[JSON]
                                          override_resource_id=null,         # type: Optional[int]
@@ -1407,6 +1408,7 @@ class TestSetup(object):
         """
         See :meth:`create_TestGroupResourcePermission` and :meth:`create_TestUserResourcePermission` for specific uses.
         """
+        method = method.upper()
         if resource_info is null:
             resource_info = TestSetup.get_ResourceInfo(test_case, resource_id=override_resource_id, full_detail=True,
                                                        override_headers=override_headers,
@@ -1419,7 +1421,11 @@ class TestSetup(object):
                                                        override_cookies=override_cookies)
         res_id = resource_info["resource_id"]
         if override_permission is null:
-            override_permission = resource_info["permission_names"][0]
+            # to preserve backward compatibility with existing tests that assumed first permission from different order,
+            # override the modifiers to generate ([first-name]-allow-recursive) which was then returned as first element
+            # (sorting of PermissionSet now returns MATCH before RECURSIVE)
+            first_perm = resource_info["permission_names"][0]
+            override_permission = PermissionSet(first_perm, access=Access.ALLOW, scope=Scope.RECURSIVE)
         if item_type == "group":
             item_name = override_item_name if override_item_name is not null else test_case.test_group_name
             item_path = "/groups/{}".format(item_name)
@@ -1430,10 +1436,13 @@ class TestSetup(object):
             raise ValueError("invalid item-type: [{}]".format(item_type))
         data = {"permission": PermissionSet(override_permission).json()}
         path = "{}/resources/{}/permissions".format(item_path, res_id)
-        resp = test_request(test_case, "POST", path, data=data,
+        resp = test_request(test_case, method, path, data=data,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
-        return check_response_basic_info(resp, 201, expected_method="POST")
+        if method == "DELETE":
+            code = 200 if resp.status_code != 404 else 404:
+            return check_response_basic_info(resp, code, expected_method=method)
+        return check_response_basic_info(resp, 201, expected_method=method)
 
     @staticmethod
     def create_TestUserResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
@@ -1455,7 +1464,7 @@ class TestSetup(object):
         If resource information container is not provided, all desired values must be given as parameter for creation.
         """
         return TestSetup.create_TestAnyResourcePermission(
-            test_case, "user", resource_info=resource_info,
+            test_case, "user", "POST", resource_info=resource_info,
             override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_user_name, override_headers=override_headers, override_cookies=override_cookies
         )
@@ -1470,7 +1479,7 @@ class TestSetup(object):
                                            override_cookies=null,            # type: Optional[CookiesType]
                                            ):                                # type: (...) -> JSON
         """
-        Utility method to create a permission on given resource for the user.
+        Utility method to create a permission on given resource for the group.
 
         Employs the resource information returned from one of the creation utilities:
             - :meth:`create_TestResource`
@@ -1480,7 +1489,7 @@ class TestSetup(object):
         If resource information container is not provided, all desired values must be given as parameter for creation.
         """
         return TestSetup.create_TestAnyResourcePermission(
-            test_case, "group", resource_info=resource_info,
+            test_case, "group", "POST", resource_info=resource_info,
             override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_group_name, override_headers=override_headers, override_cookies=override_cookies
         )
@@ -2012,3 +2021,63 @@ class TestSetup(object):
             check_response_basic_info(resp, 200, expected_method="DELETE")
         TestSetup.check_NonExistingTestGroup(test_case, override_group_name=group_name,
                                              override_headers=headers, override_cookies=cookies)
+
+    @staticmethod
+    def delete_TestUserResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
+                                          resource_info=null,               # type: Optional[JSON]
+                                          override_resource_id=null,        # type: Optional[int]
+                                          override_permission=null,         # type: Optional[AnyPermissionType]
+                                          override_user_name=null,          # type: Optional[Str]
+                                          override_headers=null,            # type: Optional[HeadersType]
+                                          override_cookies=null,            # type: Optional[CookiesType]
+                                          ignore_missing=True,              # type: bool
+                                          ):                                # type: (...) -> JSON
+        """
+        Utility method to delete a permission on given resource for the user.
+
+        Employs the resource information returned from one of the creation utilities:
+            - :meth:`create_TestResource`
+            - :meth:`create_TestService`
+            - :meth:`create_TestServiceResource`
+
+        If resource information container is not provided, the resource ID must be given as parameter for deletion.
+        If the permission cannot be found, the operation assumes that nothing needs to be done (no failure).
+        """
+        result = TestSetup.create_TestAnyResourcePermission(
+            test_case, "user", "DELETE", resource_info=resource_info,
+            override_resource_id=override_resource_id, override_permission=override_permission,
+            override_item_name=override_user_name, override_headers=override_headers, override_cookies=override_cookies
+        )
+        if not ignore_missing:
+            check_val_equal(result["code"], 200)
+        return result
+
+    @staticmethod
+    def delete_TestGroupResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
+                                           resource_info=null,               # type: Optional[JSON]
+                                           override_resource_id=null,        # type: Optional[int]
+                                           override_permission=null,         # type: Optional[AnyPermissionType]
+                                           override_group_name=null,         # type: Optional[Str]
+                                           override_headers=null,            # type: Optional[HeadersType]
+                                           override_cookies=null,            # type: Optional[CookiesType]
+                                           ignore_missing=True,              # type: bool
+                                           ):                                # type: (...) -> JSON
+        """
+        Utility method to delete a permission on given resource for the group.
+
+        Employs the resource information returned from one of the creation utilities:
+            - :meth:`create_TestResource`
+            - :meth:`create_TestService`
+            - :meth:`create_TestServiceResource`
+
+        If resource information container is not provided, the resource ID must be given as parameter for deletion.
+        If the permission cannot be found, the operation assumes that nothing needs to be done (no failure).
+        """
+        result = TestSetup.create_TestAnyResourcePermission(
+            test_case, "group", "DELETE", resource_info=resource_info,
+            override_resource_id=override_resource_id, override_permission=override_permission,
+            override_item_name=override_group_name, override_headers=override_headers, override_cookies=override_cookies
+        )
+        if not ignore_missing:
+            check_val_equal(result["code"], 200)
+        return result

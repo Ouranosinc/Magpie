@@ -1,5 +1,6 @@
 import functools
 import itertools
+import math
 from typing import TYPE_CHECKING
 
 import six
@@ -11,10 +12,16 @@ from magpie.utils import ExtendedEnum
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Collection, Dict, List, Optional, Union
+    from typing import Any, Collection, Dict, List, Optional, Type, Union
 
     from magpie import models
-    from magpie.typedefs import AccessControlEntryType, AnyPermissionType, PermissionObject, Str
+    from magpie.typedefs import (
+        AccessControlEntryType,
+        AnyPermissionType,
+        PermissionObject,
+        ResolvablePermissionType,
+        Str
+    )
 
 
 class Permission(ExtendedEnum):
@@ -87,13 +94,14 @@ class PermissionSet(object):
     On missing :class:`Access` or :class:`Scope` specifications, they default to :attr:`Access.ALLOW` and
     :attr:`Scope.RECURSIVE` to handle backward compatible naming convention of plain ``permission_name``.
     """
-    __slots__ = ["_name", "_access", "_scope", "_tuple", "_type"]
+    __slots__ = ["_name", "_access", "_scope", "_tuple", "_type", "_reason"]
 
     def __init__(self,
                  permission,    # type: AnyPermissionType
                  access=None,   # type: Optional[Union[Access, Str]]
                  scope=None,    # type: Optional[Union[Scope, Str]]
                  typ=None,      # type: Optional[PermissionType]
+                 reason=None,   # type: Optional[Str]
                  ):             # type: (...) -> None
         """
         Initializes the permission definition, possibly using required conversion from other implementations.
@@ -102,6 +110,9 @@ class PermissionSet(object):
         :param access: Effective behaviour of the permissions. Generally, grant or deny the specified permission.
         :param scope: Scope for which the permission affects hierarchical resources. Important for effective resolution.
         :param typ: Type of permission being represented. Informative only, does not impact behavior if omitted.
+        :param reason:
+            Slightly more indicative information on why the current permission-type has this value.
+            Value should be either explicitly provided or will be inferred if converted from input PermissionTuple.
 
         .. seealso::
             :meth:`PermissionSet._convert`
@@ -115,10 +126,12 @@ class PermissionSet(object):
             access = perm_set.access if access is None else access
             scope = perm_set.scope if scope is None else scope
             typ = perm_set.type if perm_set.type is not None else typ
+            reason = perm_set.reason if perm_set.reason is not None else reason
         self.name = permission
         self.access = access
         self.scope = scope
         self.type = typ
+        self._reason = reason
 
     def __eq__(self, other):
         # type: (Any) -> bool
@@ -133,13 +146,40 @@ class PermissionSet(object):
     def __lt__(self, other):
         # type: (Any) -> bool
         """
-        Sort by permission name, followed by *more permissive access* and *more generic scope*.
+        Ascending sort of permission according to their name, access and scope modifiers.
+
+        First sort by permission name alphabetically, followed by increasing *restrictive access* and increasing
+        *range of scoped resources*.
 
         Using this sorting methodology, similar permissions by name are grouped together first, and permissions of same
-        name with modifiers are then ordered from ``allow-recursive`` to ``deny-match``, the first having less priority
-        in the :term:`Effective Permissions` resolution than the later. Respecting :attr:`Access.DENY` is more important
-        than :attr:`Access.ALLOW` (to protect the :term:`Resource`), and :attr:`Scope.MATCH` is *closer* to the actual
-        :term:`Resource` than :attr:`Scope.RECURSIVE` permission received from a *farther* parent in the hierarchy.
+        name with modifiers are then ordered, the first having less priority when selecting a single item to display
+        with conflicting possibilities. Respecting :attr:`Access.DENY` is more important than :attr:`Access.ALLOW`
+        (to protect the :term:`Resource`), and :attr:`Scope.MATCH` is *closer* to the actual :term:`Resource` than
+        :attr:`Scope.RECURSIVE` permission received from a *farther* parent in the hierarchy.
+
+        Explicitly, sorting becomes::
+
+            [name1]-[allow]-[match]
+            [name1]-[allow]-[recursive]
+            [name1]-[deny]-[match]
+            [name1]-[deny]-[recursive]
+            [name2]-[allow]-[match]
+            [name2]-[allow]-[recursive]
+            [name2]-[deny]-[match]
+            [name2]-[deny]-[recursive]
+            ...
+
+        We then obtain two **crucial** ordering results:
+            1. We can easily pick the last sorted item with highest resolution priority to find the final result of
+               corresponding permissions.
+               (note: final result for same user or group, their direct/inherited resolution is not considered here).
+            2. Picking the first element with lowest priority also displays the permission that impacts the widest
+               range of resources. For instance in Magpie UI, indicating that a permission as :attr:`Scope.RECURSIVE`
+               is more verbose as it tell other resources under it are also receive the specified :class:`Access`
+               modifier rather than only the punctual resource.
+
+        .. warning::
+            Sorting names is not aesthetic in this case, it impacts the resolution order of some combinations.
         """
         if not isinstance(other, PermissionSet):
             other = PermissionSet(other)
@@ -148,7 +188,7 @@ class PermissionSet(object):
         if self.access != other.access:
             return self.access == Access.ALLOW
         if self.scope != other.scope:
-            return self.scope == Scope.RECURSIVE
+            return self.scope == Scope.MATCH
         return False
 
     def __hash__(self):
@@ -188,12 +228,15 @@ class PermissionSet(object):
         """
         Obtains the JSON representation of this :class:`PermissionSet`.
         """
-        return {
+        perm = {
             "name": self.name.value,
             "access": self.access.value,
             "scope": self.scope.value,
             "type": self.type.value if self.type is not None else None,
         }
+        if self.reason:
+            perm.update({"reason": self.reason})
+        return perm
 
     def ace(self, user_or_group):
         # type: (Optional[Union[models.User, models.Group]]) -> AccessControlEntryType
@@ -210,16 +253,78 @@ class PermissionSet(object):
         return outcome, target, self.name.value
 
     @property
-    def priority(self):
-        # type: () -> Optional[int]
+    def reason(self):
+        # type: () -> Optional[Str]
+        """
+        Indicative reason of the returned value defined by :meth:`type` or inferred by the :class:`PermissionTuple`.
+        """
+        if self.type is None:
+            return None
+        if self._reason is None and self._tuple is not None:
+            if self._tuple.type == "user":
+                self._reason = "user:{}:{}".format(self._tuple.user.id, self._tuple.user.user_name)
+            if self._tuple.type == "group":
+                self._reason = "group:{}:{}".format(self._tuple.group.id, self._tuple.group.group_name)
+        return self._reason
+
+    @classmethod
+    def resolve_inherited(cls, permission1, permission2):
+        # type: (ResolvablePermissionType, ResolvablePermissionType) -> ResolvablePermissionType
+        """
+        Resolves which of the provided permissions should be considered as the winning candidate for a resource.
+
+        Permissions **MUST** have the same resource and name. Furthermore, the resolution is only accomplished
+        locally for :term:`Inherited Permissions` of a user and his groups memberships.
+
+        .. seealso::
+            - :meth:`magpie.services.ServiceInterface.effective_permissions`
+            - :func:`magpie.api.management.users.user_utils.combine_user_group_permissions`
+            - :meth:`PermissionSet.__lt__`
+        """
+        if not isinstance(permission1, PermissionSet):
+            permission1 = PermissionSet(permission1)
+        if not isinstance(permission1, PermissionSet):
+            permission2 = PermissionSet(permission2)
+        # user permission always comes first, only one is possible on a given resource, so it can be found directly
+        if permission1.name != permission2.name or \
+                (permission1.perm_tuple.resource is not permission2.perm_tuple.resource) or \
+                (permission1.type == PermissionType.DIRECT and permission2.type == PermissionType.DIRECT):
+            raise ValueError("Invalid resolution attempt between two incomparable permissions.")
+        if permission1.type == PermissionType.DIRECT:
+            return permission1
+        if permission2.type == PermissionType.DIRECT:
+            return permission2
+        # when only comparing groups, priority dictates the result
+        priority1 = permission1.group_priority
+        priority2 = permission2.group_priority
+        if priority1 > priority2:
+            return permission1
+        if priority1 < priority2:
+            return permission2
+        # same group priority are resolved according to corresponding permission names/access/scope (__lt__)
+        return permission2 if permission1 < permission2 else permission1
+
+    @property
+    def group_priority(self):
+        # type: () -> Optional[Union[int, Type[math.inf]]]
         """
         Priority accessor in case of group inherited permission resolved by :class:`PermissionTuple`.
         """
         if self._tuple is not None and self.type == PermissionType.INHERITED:
             if self._tuple.group.group_name == get_constant("MAGPIE_ANONYMOUS_GROUP"):
                 return -1
+            elif self._tuple.group.group_name == get_constant("MAGPIE_ADMIN_GROUP"):
+                return math.inf
             return self._tuple.group.priority
         return None
+
+    @property
+    def perm_tuple(self):
+        # type: () -> Optional[PermissionTuple]
+        """
+        Get the original :class:`PermissionTuple` if available (:class:`PermissionSet` must have been created by one).
+        """
+        return self._tuple
 
     @property
     def implicit_permission(self):
@@ -295,6 +400,11 @@ class PermissionSet(object):
     @property
     def type(self):
         # type: () -> Optional[PermissionType]
+        if self._type is None and self._tuple is not None:
+            if self._tuple.type == "user":
+                self._type = PermissionType.DIRECT
+            if self._tuple.type == "group":
+                self._type = PermissionType.INHERITED
         return self._type
 
     @type.setter
@@ -430,7 +540,7 @@ def format_permissions(permissions,             # type: Optional[Collection[AnyP
                 bw_perm_unique.add(explicit_perm)
         json_perms = [perm.json() for perm in unique_perms]
     for perm in json_perms:
-        perm["type"] = permission_type.value
+        perm.setdefault("type", permission_type.value)
     return {
         "permission_names": bw_perm_names,  # backward compatible + explicit names
         "permissions": json_perms           # explicit objects with types
