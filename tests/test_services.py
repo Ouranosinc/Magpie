@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Dict, Optional, Tuple, Union
 
-    from magpie.typedefs import Str
+    from magpie.typedefs import JSON, Str
 
 
 def make_ows_parser(method="GET", content_type=None, params=None, body=""):
@@ -51,7 +51,8 @@ def make_ows_parser(method="GET", content_type=None, params=None, body=""):
 @runner.MAGPIE_TEST_SERVICES
 class TestOWSParser(unittest.TestCase):
     """
-    Validate operations of :mod:`owsrequest` that is employed by multiple :term:`OWS`-based service implementations.
+    Validate operations of :mod:`magpie.owsrequest` that is employed by multiple :term:`OWS`-based service
+    implementations.
     """
 
     def test_ows_parser_factory(self):  # noqa: R0201
@@ -109,7 +110,7 @@ class TestOWSParser(unittest.TestCase):
 @runner.MAGPIE_TEST_FUNCTIONAL
 class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
     """
-    Test request parsing and ACL resolution against resource permissions for the various service implementations.
+    Test request parsing and :term:`ACL` resolution against resource permissions for various service implementations.
     """
     # pylint: disable=C0103,invalid-name
     __test__ = True
@@ -453,52 +454,58 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         """
         svc_name = "unittest-service-thredds-custom"
         svc_type = ServiceTHREDDS.service_type
+        utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
 
-        custom_settings = None
         with NamedTemporaryFile(mode="w", suffix=".yml") as config:
             # generate a custom config for test THREDDS service
             config.write(inspect.cleandoc("""
                 providers:
                     {name}:
+                        # mandatory provider settings
                         url: http://localhost
                         type: {type}
-                        file_patterns:
-                            # note: following patterns should have only one-double backslash escape each,
-                            #       but needs quadruple in this case because of 2-steps (dump to YAML, read from YAML)
-                            - ".*\\\\.ncml"   # should be matched before plain '.nc' and correspond to another resource
-                            - ".*\\\\.nc"
-                        data_type:
-                            prefixes:
-                                # only allow these variants, other should be blocked ("dap4", "wcs", "wms")
-                                - dodsC
-                                - fileServer
-                        metadata_type:
-                            prefixes:
-                                # only allow these variants, others should be blocked ("ncml", "uddc", "iso")
-                                - null
-                                - catalog
+                        # custom configuration definition
+                        configuration:
+                            file_patterns:
+                                # note: 
+                                #   following patterns should have only one-double backslash escape each,
+                                #   but needs quadruple in this case because of 2-steps (dump to YAML, read from YAML)
+                                - ".*\\\\.ncml"   # matched before plain '.nc', will correspond to another resource
+                                - ".*\\\\.nc"
+                            data_type:
+                                prefixes:
+                                    # only allow these variants, other should be blocked ("dap4", "wcs", "wms")
+                                    - dodsC
+                                    - fileServer
+                            metadata_type:
+                                prefixes:
+                                    # only allow these variants, others should be blocked ("ncml", "uddc", "iso")
+                                    - null
+                                    - catalog
                 permissions:  # fill only because required
             """.format(name=svc_name, type=svc_type)))
             config.flush()  # force write to file
             settings = {"magpie.config_path": config.name}
+            # trigger application startup to load providers configuration
+            utils.get_test_magpie_app(settings)
 
-            # validate that app can retrieve the custom settings from providers
-            test_app = utils.get_test_magpie_app(settings)
-            custom_settings = test_app.app.registry.settings  # retrieve custom + resolved app settings
-            utils.check_val_is_in("magpie.services", custom_settings)
-            utils.check_val_is_in(svc_name, custom_settings["magpie.services"])
-            svc_settings = custom_settings["magpie.services"][svc_name]
-            utils.check_val_is_in("file_patterns", svc_settings)
-            utils.check_val_is_in("data_type", svc_settings)
-            utils.check_val_is_in("metadata_type", svc_settings)
-            utils.check_val_equal(svc_settings["file_patterns"], [".*\\.ncml", ".*\\.nc"])
-            utils.check_val_equal(svc_settings["data_type"]["prefixes"], ["dodsC", "fileServer"])
-            utils.check_val_equal(svc_settings["metadata_type"]["prefixes"], [None, "catalog"])
-
-        utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
-        body = utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+        # obtain service to view applied config
+        path = "/services/{}".format(svc_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         svc_id = info["resource_id"]
+
+        # validate that created service on startup has custom settings from providers config file
+        utils.check_val_is_in("configuration", info)
+        svc_config = info["configuration"]  # type: JSON
+        utils.check_val_not_equal(svc_config, None)
+        utils.check_val_is_in("file_patterns", svc_config)
+        utils.check_val_is_in("data_type", svc_config)
+        utils.check_val_is_in("metadata_type", svc_config)
+        utils.check_val_equal(svc_config["file_patterns"], [".*\\.ncml", ".*\\.nc"])
+        utils.check_val_equal(svc_config["data_type"]["prefixes"], ["dodsC", "fileServer"])
+        utils.check_val_equal(svc_config["metadata_type"]["prefixes"], [None, "catalog"])
 
         # create resources
         dir_id, dir_name = self.make_resource(models.Directory.resource_type_name, svc_id)
@@ -517,13 +524,13 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
         # directory can be accessed only via catalog according to permissions
         path = "/ows/proxy/{}/catalog/{}".format(svc_name, dir_name)
-        req = self.mock_request(path, method="GET", settings=custom_settings)
+        req = self.mock_request(path, method="GET", settings=settings)
         msg = "Directory catalog access should be allowed. Using [GET, {}]".format(path)
         utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
         # using the same catalog prefix with any file is invalid (catalog is BROWSE metadata, files require READ data)
         for test_file in [file_name, file_html_name, file_ncml_name]:
             path = "/ows/proxy/{}/catalog/{}/{}".format(svc_name, dir_name, test_file)
-            req = self.mock_request(path, method="GET", settings=custom_settings)
+            req = self.mock_request(path, method="GET", settings=settings)
             msg = "File catalog access should be denied. Using [GET, {}]".format(path)
             utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
 
@@ -535,12 +542,12 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         for prefix in known_prefixes:
             for test_file in allowed_files:
                 path = "/ows/proxy/{}/{}/{}/{}".format(svc_name, prefix, dir_name, test_file)
-                req = self.mock_request(path, method="GET", settings=custom_settings)
+                req = self.mock_request(path, method="GET", settings=settings)
                 msg = "File access should be allowed. Using [GET, {}]".format(path)
                 utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
             # file NCML must be parsed as completely different resource, and therefore be denied even with valid prefix
             path = "/ows/proxy/{}/{}/{}/{}".format(svc_name, prefix, dir_name, file_ncml_name)
-            req = self.mock_request(path, method="GET", settings=custom_settings)
+            req = self.mock_request(path, method="GET", settings=settings)
             msg = "File pattern should make parsing of NCML resource separate than NC file, and should be denied. "
             msg += "Using [GET, {}]".format(path)
             utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
@@ -551,7 +558,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         for prefix in unknown_prefixes:
             for target in allowed_resources:
                 path = "/ows/proxy/{}/{}/{}".format(svc_name, prefix, target)
-                req = self.mock_request(path, method="GET", settings=custom_settings)
+                req = self.mock_request(path, method="GET", settings=settings)
                 msg = "Allowed resources should be resolved as denied when using an unregistered configuration prefix."
                 msg += "Using [GET, {}]".format(path)
                 utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)

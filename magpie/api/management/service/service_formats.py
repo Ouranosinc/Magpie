@@ -22,8 +22,9 @@ if TYPE_CHECKING:
 
 
 def format_service(service, permissions=None, permission_type=None,
-                   show_private_url=False, show_resources_allowed=False):
-    # type: (Service, Optional[List[PermissionSet]], Optional[PermissionType], bool, bool) -> JSON
+                   show_private_url=False, show_resources_allowed=False,
+                   show_configuration=False, basic_info=False):
+    # type: (Service, Optional[List[PermissionSet]], Optional[PermissionType], bool, bool, bool, bool) -> JSON
     """
     Formats the ``service`` information into JSON.
 
@@ -32,27 +33,29 @@ def format_service(service, permissions=None, permission_type=None,
         To preserve `empty` permissions such as during listing of `user`/`group` resource permissions,
         an empty ``list`` should be specified.
     """
-    def fmt_svc(svc, perms):
-
+    def fmt_svc():
         svc_info = {
-            "public_url": str(get_twitcher_protected_service_url(svc.resource_name)),
-            "service_name": str(svc.resource_name),
-            "service_type": str(svc.type),
-            "service_sync_type": str(svc.sync_type) if svc.sync_type is not None else svc.sync_type,
-            "resource_id": svc.resource_id,
+            "public_url": str(get_twitcher_protected_service_url(service.resource_name)),
+            "service_name": str(service.resource_name),
+            "service_type": str(service.type),
+            "service_sync_type": str(service.sync_type) if service.sync_type is not None else service.sync_type,
+            "resource_id": service.resource_id,
         }
-        if perms is None:  # user/group permission specify empty list
-            perms = SERVICE_TYPE_DICT[svc.type].permissions
-        svc_info.update(format_permissions(perms, permission_type))
         if show_private_url:
-            svc_info["service_url"] = str(svc.url)
+            svc_info["service_url"] = str(service.url)
+        if basic_info:
+            return svc_info
+        if show_configuration:
+            svc_info["configuration"] = service.configuration
+        perms = SERVICE_TYPE_DICT[service.type].permissions if permissions is None else permissions
+        svc_info.update(format_permissions(perms, permission_type))
         if show_resources_allowed:
-            svc_info["resource_types_allowed"] = sorted(SERVICE_TYPE_DICT[svc.type].resource_type_names)
-            svc_info["resource_child_allowed"] = SERVICE_TYPE_DICT[svc.type].child_resource_allowed
+            svc_info["resource_types_allowed"] = sorted(SERVICE_TYPE_DICT[service.type].resource_type_names)
+            svc_info["resource_child_allowed"] = SERVICE_TYPE_DICT[service.type].child_resource_allowed
         return svc_info
 
     return evaluate_call(
-        lambda: fmt_svc(service, permissions),
+        lambda: fmt_svc(),
         http_error=HTTPInternalServerError,
         msg_on_fail="Failed to format service.",
         content={"service": repr(service), "permissions": repr(permissions)}

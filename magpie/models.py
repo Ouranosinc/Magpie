@@ -246,6 +246,16 @@ class Service(Resource):
         # project-api, geoserver-api,...
         return sa.Column(sa.UnicodeText(), nullable=True)
 
+    @declared_attr
+    def configuration(self):
+        """
+        Configuration modifiers for parsing access to resources and permissions.
+
+        .. seealso::
+            - :meth:`magpie.services.ServiceInterface.get_config`
+        """
+        return sa.Column(sa.JSON(), nullable=True)
+
     @staticmethod
     def by_service_name(service_name, db_session):
         db = get_db_session(db_session)

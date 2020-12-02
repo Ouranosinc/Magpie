@@ -4,7 +4,7 @@ LOGGER = get_logger(__name__)
 
 
 def includeme(config):
-    LOGGER.info("Adding api routes...")
+    LOGGER.info("Adding API routes...")
 
     # Add all the admin ui routes
     config.include("magpie.api.home")

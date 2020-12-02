@@ -19,7 +19,7 @@ MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := magpie
-APP_VERSION ?= 3.2.1
+APP_VERSION ?= 3.3.0
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
 # guess OS (Linux, Darwin,...)
@@ -208,7 +208,7 @@ database-history: conda-env _alembic    ## obtain database revision history
 .PHONY: database-revision
 database-revision: conda-env _alembic   ## create a new database revision
 	@[ "${DOC}" ] || ( echo ">> 'DOC' is not set. Provide a description."; exit 1 )
-	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" revision -m $(DOC)'
+	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" revision -m "$(DOC)"'
 
 .PHONY: database-version
 database-version: conda-env _alembic 	## retrieve current database revision ID
@@ -518,6 +518,12 @@ test-local: install-dev install		## run only local tests with the environment Py
 test-remote: install-dev install	## run only remote tests with the environment Python
 	@echo "Running remote tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
+.PHONY: test-custom
+test-custom: install-dev install	## run custom marker tests using SPEC="<marker-specification>"
+	@echo "Running custom tests..."
+	@[ "${SPEC}" ] || ( echo ">> 'TESTS' is not set"; exit 1 )
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-docker
 test-docker: docker-test			## alias for 'docker-test' target - WARNING: could build image if missing

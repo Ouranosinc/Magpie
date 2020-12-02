@@ -232,6 +232,17 @@ table thead {
     font-weight: bold;
 }
 
+.panel-message {
+    margin: 1em;
+    display: inline-flex;
+}
+
+.panel-message-text {
+    margin-left: 0.25em;
+    margin-top: -0.05em;
+    text-align: left;
+}
+
 .subsection {
     background-color: #CCCCCC;
 }
@@ -246,26 +257,71 @@ table thead {
 }
 
 .panel-line {
-    margin: 0.5em;
+    margin: 0.25em 0.5em;
+    font-family: arial, sans-serif;  /* same as table to ensure they match when table is not actually used */
 }
 
 table.panel-line {
-    margin: 0.25em;
+    margin: 0.25em 0.5em;
 }
 
 table.panel-line th,
 table.panel-line td {
     border: 0;
+    margin: 0.25em 0.25em;
     white-space: nowrap;
     padding: 0;  /* override global th/td */
 }
 
-.panel-error {
-    margin-left: 0.5em;
+.panel-line-entry {
+    margin: 0.25em 0;
+    min-height: 1em;
 }
 
-.panel-line input[type="submit"] {
+.panel-form-error>img {
+    width: 1em;
+    height: 1em;
+    margin: 0.1em 0.25em 0.15em 0;
+}
+
+.panel-form-error {
+    width: auto;
+    display: inline-flex;
+    float: left;
+    text-align: center;
+    margin-left: 0.25em;
+    margin-top: 0;
+}
+
+.panel-line input[type="submit"],
+.panel-line-entry input[type="submit"] {
     height: auto;
+    float: right;
+    margin-left: 0.5em;
+    min-width: 4em;  /* for save/edit buttons alignment when editing one field and others are still in non-edit mode */
+}
+
+/* textual field entry when in edit mode */
+.panel-line-entry input[type="password"],
+.panel-line-entry input[type="text"],
+.panel-line-entry input[type="url"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 1.125em;
+    border: solid #666 1px;
+    font-size: 14px;
+    margin-bottom: 0.1em;
+}
+
+/* textual field entry when in non-edit mode */
+.panel-line-entry span {
+/*
+    background-color: lightgray;
+    border-color: black;
+    border-width: 0.15em;
+    border-style: inset;
+    padding: 0 0.25em;
+*/
 }
 
 .panel-line-checkbox {
@@ -279,6 +335,7 @@ table.panel-line td {
 
 .panel-entry {
     font-weight: bold;
+    margin-right: 0.5em;
 }
 
 .panel-value {
@@ -671,7 +728,7 @@ table.simple-list input[type="submit"] {
 }
 
 .tree-button.goto-service {
-    margin: 0.1em 0 0 -4em;
+    margin: 0.25em 0 0 -4em;
 }
 
 .tree-item-message {
@@ -692,7 +749,7 @@ div.tree-button {
     width: 5em;
     float: right;
     text-align: center;
-    margin: 0.1em 0 0 0;
+    margin-bottom: 0.15em;
 }
 
 .clear {
@@ -941,6 +998,10 @@ table.request-details thead tbody td th {
     padding: 1px;
 }
 
+.tab-panel-selector {
+    margin: 0.1em;
+}
+
 .current-tab-panel {
     background: white;
     padding: 1em;
@@ -961,6 +1022,7 @@ a.current-tab:visited {
 
 .tab {
     min-width: 6em;  /* make tabs same width regardless of text length, but must be adjusted for longest one */
+    margin-bottom: 0.1em;   /* in case page is not wide enough, avoid wrapped tabs to be sticking on top of another */
     border-color: black;
 }
 
@@ -970,6 +1032,34 @@ a.tab:visited {
     text-align: center;
     text-decoration: none;
     display: inline-block;
+}
+
+/*---service configuration languages---*/
+
+.panel-code-language {
+    background: #DDDDDD;
+    padding: 1px;
+}
+
+.code-language-selector {
+    margin: 0.1em;
+}
+
+.current-code-language {
+    background: white;
+    padding: 0.5em 1em 0.25em;
+    margin: 0;
+    border: 1px solid white;
+}
+
+.code-language-option {
+    min-width: 6em;  /* make tabs same width regardless of text length, but must be adjusted for longest one */
+    margin-bottom: 0.1em;   /* in case page is not wide enough, avoid wrapped tabs to be sticking on top of another */
+    border-color: black;
+}
+
+.current-option {
+
 }
 
 /*---service details---*/

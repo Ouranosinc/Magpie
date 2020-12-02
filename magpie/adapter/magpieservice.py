@@ -12,9 +12,9 @@ from magpie.models import Service as MagpieService
 from magpie.utils import CONTENT_TYPE_JSON, get_admin_cookies, get_logger, get_magpie_url, get_settings
 
 # WARNING:
-#   twitcher available only when this module is imported from it
-#   installed during tests for evaluation
-#   module 'magpie.adapter' should not be imported from magpie package
+#   Twitcher available only when this module is imported from it.
+#   It is installed during tests for evaluation.
+#   Module 'magpie.adapter' should not be imported from 'magpie' package.
 from twitcher.datatype import Service  # noqa
 from twitcher.exceptions import ServiceNotFound  # noqa
 from twitcher.store import ServiceStoreInterface  # noqa
