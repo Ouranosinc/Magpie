@@ -29,13 +29,13 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Requires Python 2.7, 3.5+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/3.3.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/3.3.1.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/Magpie/compare/3.3.0...master
+    :target: https://github.com/Ouranosinc/Magpie/compare/3.3.1...master
 
-.. |version| image:: https://img.shields.io/badge/tag-3.3.0-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-3.3.1-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/Magpie/tree/3.3.0
+    :target: https://github.com/Ouranosinc/Magpie/tree/3.3.1
 
 .. |dependencies| image:: https://pyup.io/repos/github/Ouranosinc/Magpie/shield.svg
     :alt: Dependencies Status
@@ -45,9 +45,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Travis-CI Build Status (master branch)
     :target: https://travis-ci.com/Ouranosinc/Magpie
 
-.. |travis_tagged| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/3.3.0.svg?label=3.3.0
+.. |travis_tagged| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/3.3.1.svg?label=3.3.1
     :alt: Travis-CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/tree/3.3.0
+    :target: https://github.com/Ouranosinc/Magpie/tree/3.3.1
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/pavics-magpie
     :alt: Readthedocs Build Status (master branch)
@@ -118,8 +118,8 @@ Following most recent variants are available:
     * - Magpie
       - Twitcher |br|
         (with integrated ``MagpieAdapter``)
-    * - pavics/magpie:3.3.0
-      - pavics/twitcher:magpie-3.3.0
+    * - pavics/magpie:3.3.1
+      - pavics/twitcher:magpie-3.3.1
     * - pavics/magpie:latest
       - pavics/twitcher:magpie-latest
 
