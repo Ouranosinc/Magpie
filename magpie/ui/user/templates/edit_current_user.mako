@@ -60,11 +60,15 @@
         <span class="panel-title">User: </span>
         <span class="panel-value">[${user_name}]</span>
         <span class="panel-heading-button">
-            <input type="button"
-                   value="Delete Account"
-                   name="delete"
-                   class="button delete"
-                   onclick="document.getElementById('EditService_UserSelfDeleteAlert').style.display = 'block'">
+            <input value="Delete Account" name="delete"
+				%if user_name in MAGPIE_FIXED_USERS:
+					class="button delete disabled" type="button" disabled
+				%else:
+				    type="button"
+                    class="button delete"
+                    onclick="document.getElementById('EditService_UserSelfDeleteAlert').style.display = 'block'"
+				%endif
+			>
         </span>
     </div>
     <div class="panel-body">
