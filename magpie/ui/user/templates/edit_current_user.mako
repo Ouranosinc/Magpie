@@ -41,7 +41,7 @@
     </div>
     <p>
         This operation will delete your account and its associated permissions as well as log you out of Magpie.
-        This is not reversible.
+        This is irreversible.
     </p>
     <p>Do you want to continue?</p>
     <form id="delete_user" action="${request.path}" method="post">
