@@ -4653,7 +4653,8 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         utils.TestSetup.create_TestUser(self, override_user_name=other_user)
         utils.check_or_try_logout_user(self)
 
-        self.headers, self.cookies = utils.check_or_try_login_user(self, username=other_user, password=self.test_user_name)
+        self.headers, self.cookies = utils.check_or_try_login_user(self,
+                                                                   username=other_user, password=self.test_user_name)
 
         # trigger the Delete Account button form to obtain the 1st response, then trigger the confirmation Delete button
         path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
@@ -4671,6 +4672,7 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
                                   data={"user_name": get_constant("MAGPIE_ADMIN_USER"),
                                         "password": get_constant("MAGPIE_ADMIN_PASSWORD")})
         utils.TestSetup.check_NonExistingTestUser(self, override_user_name=other_user)
+
 
 @runner.MAGPIE_TEST_UI
 @six.add_metaclass(ABCMeta)

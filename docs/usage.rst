@@ -109,7 +109,8 @@ There are both local and remote tests. The PostgreSQL is sufficient for the loca
 also require a running instance of Magpie.
 
 A basic Magpie instance can also be initialized by using the docker-compose.yml.example file.
-Note that the environment variables MAGPIE_TEST_REMOTE_SERVER_URL and HOST_FQDN must first be defined for the remote tests.
+Note that the environment variables MAGPIE_TEST_REMOTE_SERVER_URL and HOST_FQDN
+must first be defined for the remote tests.
 For example, these default values should work with the docker-compose::
 
     export MAGPIE_TEST_REMOTE_SERVER_URL=http://localhost:2001

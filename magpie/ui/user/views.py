@@ -95,7 +95,7 @@ class UserViews(BaseViews):
             elif "delete" in self.request.POST:
                 delete_response = request_api(
                     self.request,
-                    schemas.UserAPI.path.format(user_name=user_info['user_name']),
+                    schemas.UserAPI.path.format(user_name=user_info["user_name"]),
                     "DELETE")
                 check_response(delete_response)
                 logout_response = request_api(

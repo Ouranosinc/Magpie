@@ -164,8 +164,8 @@ class BaseViews(object):
         admin = get_constant("MAGPIE_ADMIN_GROUP", settings_container=self.request)
         self.__class__.MAGPIE_FIXED_GROUP_MEMBERSHIPS = [anonymous]   # special groups membership that cannot be edited
         self.__class__.MAGPIE_FIXED_GROUP_EDITS = [anonymous, admin]  # special groups that cannot be edited
-        self.__class__.MAGPIE_FIXED_USERS = [get_constant("MAGPIE_ADMIN_USER"),
-                                             get_constant("MAGPIE_ANONYMOUS_USER")]  # special users that cannot be deleted
+        # special users that cannot be deleted
+        self.__class__.MAGPIE_FIXED_USERS = [get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ANONYMOUS_USER")]
 
     def add_template_data(self, data=None):
         # type: (Optional[Dict[Str, Any]]) -> Dict[Str, Any]
