@@ -4646,7 +4646,7 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Logged user can delete his own account on account page.
         """
-        utils.warn_version(self, "user account page", "3.2.1", skip=True)
+        utils.warn_version(self, "user account page", "3.3.1", skip=True)
 
         other_user = self.test_user_name + "-other"
         utils.TestSetup.delete_TestUser(self, override_user_name=other_user)
