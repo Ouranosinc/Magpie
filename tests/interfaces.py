@@ -543,6 +543,58 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
         utils.TestSetup.get_UserInfo(self, override_username=self.test_user_name)  # if found, no update was applied
 
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_STATUS
+    def test_DeleteUser_ReservedKeyword_Anonymous_Unauthorized(self):
+        """
+        Not logged-in user is not allowed to delete his own account as it doesn't represent an actual user account.
+        """
+        anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
+        path = "/users/{}".format(anonymous)
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=401, expected_method="DELETE")
+
+        # login to validate user was not updated
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.get_UserInfo(self, override_username=anonymous)  # if found, no update was applied
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_STATUS
+    def test_DeleteUser_ReservedKeyword_Admin_Unauthorized(self):
+        """
+        Not logged-in user is not allowed to delete the special admin user.
+        """
+        admin = get_constant("MAGPIE_ADMIN_USER")
+        path = "/users/{}".format(admin)
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=401, expected_method="DELETE")
+
+        # login to validate user was not updated
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.get_UserInfo(self, override_username=admin)  # if found, no update was applied
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_STATUS
+    def test_DeleteUser_OtherUser_Unauthorized(self):
+        """
+        Not logged-in user is not allowed to delete any other user.
+        """
+        # login to setup test data, then re-logout to test
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        self.headers.update(self.json_headers)
+        utils.TestSetup.delete_TestUser(self)
+        body = utils.TestSetup.create_TestUser(self, override_group_name=None)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_or_try_logout_user(self)
+
+        path = "/users/{}".format(info["user_name"])
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=401, expected_method="DELETE")
+
+        # login to validate user was not updated
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.get_UserInfo(self, override_username=self.test_user_name)  # if found, no deletion was applied
+
 
 @runner.MAGPIE_TEST_API
 @six.add_metaclass(ABCMeta)
@@ -831,6 +883,72 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
         resp = utils.test_request(self, "GET", path, cookies=self.cookies, headers=self.json_headers)
         utils.check_response_basic_info(resp)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_DeleteUser_DeleteSelf(self):
+        """
+        Logged user is allowed to delete his own account.
+        """
+        # login as test user and delete its own account
+        self.login_test_user()
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "DELETE", path, headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+        # verify if user cannot log back in
+        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
+                                  expect_errors=True,
+                                  data={"user_name": self.test_user_name, "password": self.test_user_name})
+        utils.check_response_basic_info(resp, 401, expected_method="POST")
+
+        # login as admin and validate if test user doesn't exist
+        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
+                                  data={"user_name": self.usr, "password": self.pwd})
+        utils.TestSetup.check_NonExistingTestUser(self)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_DeleteUser_Forbidden_DeleteOthers(self):
+        """
+        Logged user is not allowed to delete other users.
+        """
+        # Create another user that the test user will try to delete
+        other_user = self.test_user_name + "-other"
+        utils.TestSetup.delete_TestUser(self, override_user_name=other_user)
+        utils.TestSetup.create_TestUser(self, override_user_name=other_user)
+
+        # login as test user and try deleting the other account
+        self.login_test_user()
+        path = "/users/{usr}".format(usr=other_user)
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        # validate the request is forbidden
+        utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+
+    @runner.MAGPIE_TEST_USERS
+    def test_DeleteUser_Forbidden_ReservedKeyword_Admin(self):
+        """
+        Logged user is not allowed to delete special admin user.
+        """
+        # login as test user and try deleting the other account
+        self.login_test_user()
+        path = "/users/{usr}".format(usr=get_constant("MAGPIE_ADMIN_USER"))
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        # validate the request is forbidden
+        utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+
+    @runner.MAGPIE_TEST_USERS
+    def test_DeleteUser_Forbidden_ReservedKeyword_Anonymous(self):
+        """
+        Logged user is not allowed to delete special anonymous user.
+        """
+        # login as test user and try deleting the other account
+        self.login_test_user()
+        path = "/users/{usr}".format(usr=get_constant("MAGPIE_ANONYMOUS_USER"))
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        # validate the request is forbidden
+        utils.check_response_basic_info(resp, 403, expected_method="DELETE")
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
@@ -2967,7 +3085,38 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_all_equal(body["group_names"], expected_groups, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
-    def test_DeleteUser(self):
+    def test_DeleteUser_DeleteSelf(self):
+        """
+        A generic admin user is allowed to delete his own account.
+        """
+        # Create a test admin user
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ADMIN_GROUP"))
+
+        # login as test admin user and delete its own account
+        utils.check_or_try_logout_user(self)
+        self.test_headers, self.test_cookies = utils.check_or_try_login_user(
+            self, username=self.test_user_name, password=self.test_user_name, use_ui_form_submit=True)
+
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "DELETE", path, headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+        # verify if user cannot log back in
+        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
+                                  expect_errors=True,
+                                  data={"user_name": self.test_user_name, "password": self.test_user_name})
+        utils.check_response_basic_info(resp, 401, expected_method="POST")
+
+        # login as admin and validate if the test admin user doesn't exist
+        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
+                                  data={"user_name": self.usr, "password": self.pwd})
+        utils.TestSetup.check_NonExistingTestUser(self)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_DeleteUser_DeleteOthers(self):
+        """
+        Admin user is allowed to delete other users.
+        """
         utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
         path = "/users/{usr}".format(usr=self.test_user_name)
         resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
@@ -2976,7 +3125,55 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_DEFAULTS
-    def test_DeleteUser_forbidden_ReservedKeyword_Anonymous(self):
+    def test_DeleteUser_SelfDelete_Forbidden_ReservedKeyword_Admin(self):
+        """
+        The special admin user cannot be self deleted.
+        """
+        admin = get_constant("MAGPIE_ADMIN_USER")
+        users = utils.TestSetup.get_RegisteredUsersList(self)
+        utils.check_val_is_in(admin, users, msg="Admin user pre-requirement missing for test.")
+
+        # Check if the special admin user cannot delete itself
+        path = "/users/{}".format(admin)
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+        users = utils.TestSetup.get_RegisteredUsersList(self)
+        utils.check_val_is_in(admin, users, msg="Admin special user should still exist.")
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_DEFAULTS
+    def test_DeleteUser_DeleteOthers_Forbidden_ReservedKeyword_Admin(self):
+        """
+        The special admin user cannot be deleted by another admin.
+        """
+        admin = get_constant("MAGPIE_ADMIN_USER")
+        users = utils.TestSetup.get_RegisteredUsersList(self)
+        utils.check_val_is_in(admin, users, msg="Admin user pre-requirement missing for test.")
+
+        # Create a test admin user
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ADMIN_GROUP"))
+
+        # login as test admin user
+        utils.check_or_try_logout_user(self)
+        self.test_headers, self.test_cookies = utils.check_or_try_login_user(
+            self, username=self.test_user_name, password=self.test_user_name, use_ui_form_submit=True)
+
+        # Attempt to delete the special admin
+        path = "/users/{}".format(admin)
+        resp = utils.test_request(self, "DELETE", path, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+
+        # Delete the temporary admin user and sign back in to special admin user
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "DELETE", path, headers=self.test_headers, cookies=self.test_cookies)
+        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
+                                  data={"user_name": self.usr, "password": self.pwd})
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_DEFAULTS
+    def test_DeleteUser_Forbidden_ReservedKeyword_Anonymous(self):
         """
         Even administrator level user is not allowed to remove the special anonymous user.
         """
@@ -4442,6 +4639,38 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
                                   data={"user_name": self.test_user_name, "password": self.test_user_name})
         utils.check_response_basic_info(resp, 401, expected_method="POST")
 
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_FUNCTIONAL
+    def test_UserAccount_DeleteSelf(self):
+        """
+        Logged user can delete his own account on account page.
+        """
+        utils.warn_version(self, "user account page", "3.2.1", skip=True)
+
+        other_user = self.test_user_name + "-other"
+        utils.TestSetup.delete_TestUser(self, override_user_name=other_user)
+        utils.TestSetup.create_TestUser(self, override_user_name=other_user)
+        utils.check_or_try_logout_user(self)
+
+        self.headers, self.cookies = utils.check_or_try_login_user(self, username=other_user, password=self.test_user_name)
+
+        # trigger the Delete Account button form to obtain the 1st response, then trigger the confirmation Delete button
+        path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
+        resp = utils.TestSetup.check_FormSubmit(self, form_match="delete_user", form_submit="delete",
+                                                method="GET", path=path)
+        utils.check_ui_response_basic_info(resp, expected_title="Magpie Administration")
+
+        # verify if user cannot log back in
+        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
+                                  expect_errors=True,
+                                  data={"user_name": other_user, "password": self.test_user_name})
+        utils.check_response_basic_info(resp, 401, expected_method="POST")
+
+        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
+                                  data={"user_name": get_constant("MAGPIE_ADMIN_USER"),
+                                        "password": get_constant("MAGPIE_ADMIN_PASSWORD")})
+        utils.TestSetup.check_NonExistingTestUser(self, override_user_name=other_user)
 
 @runner.MAGPIE_TEST_UI
 @six.add_metaclass(ABCMeta)
