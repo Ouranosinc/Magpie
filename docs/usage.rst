@@ -102,7 +102,8 @@ Testing
 ~~~~~~~
 
 To execute the tests on your local machine, a `PostgreSQL`_ instance must be running.
-This `PostgreSQL`_ instance can be easily initialized by using the `docker-compose.yml.example`_ file with the default values.
+This `PostgreSQL`_ instance can be easily initialized by using the `docker-compose.yml.example`_ file
+with the default values.
 Make sure the values defined in postgres.env are also corresponding to your testing setup.
 
 There are both local and remote tests. The `PostgreSQL`_ is sufficient for the local tests but the remote tests
