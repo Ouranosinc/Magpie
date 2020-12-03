@@ -101,15 +101,15 @@ Please refer to this section for more details.
 Testing
 ~~~~~~~
 
-To execute the tests on your local machine, a PostgreSQL instance must be running.
-This PostgreSQL instance can be easily initialized by using the docker-compose.yml.example file with the default values.
+To execute the tests on your local machine, a `PostgreSQL`_ instance must be running.
+This `PostgreSQL`_ instance can be easily initialized by using the `docker-compose.yml.example`_ file with the default values.
 Make sure the values defined in postgres.env are also corresponding to your testing setup.
 
-There are both local and remote tests. The PostgreSQL is sufficient for the local tests but the remote tests
+There are both local and remote tests. The `PostgreSQL`_ is sufficient for the local tests but the remote tests
 also require a running instance of Magpie.
 
-A basic Magpie instance can also be initialized by using the docker-compose.yml.example file.
-Note that the environment variables MAGPIE_TEST_REMOTE_SERVER_URL and HOST_FQDN
+A basic Magpie instance can also be initialized by using the `docker-compose.yml.example`_ file.
+Note that the environment variables ``MAGPIE_TEST_REMOTE_SERVER_URL`` and ``HOST_FQDN``
 must first be defined for the remote tests.
 For example, these default values should work with the docker-compose::
 
