@@ -957,7 +957,7 @@ class TestSetup(object):
     # pylint: disable=C0103,invalid-name
 
     @staticmethod
-    def get_Version(test_case, real_version=True, override_headers=null, override_cookies=null):
+    def get_Version(test_case, real_version=False, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, bool, Optional[HeadersType], Optional[CookiesType]) -> Str
         """
         Obtains the `Magpie` version of the test instance (local or remote). This version can then be used in
