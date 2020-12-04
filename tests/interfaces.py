@@ -328,7 +328,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         utils.check_val_is_in("db_version", body)
         utils.check_val_is_in("version", body)
         # server not necessarily at latest version, ensure at least format
-        utils.check_val_equal(body["version"], self.version)
+        utils.check_val_equal(body["version"], utils.TestSetup.get_Version(real_version=True))
         utils.check_val_type(body["version"], six.string_types)
         version_parts = body["version"].split(".")
         utils.check_val_equal(len(version_parts), 3)
@@ -1496,7 +1496,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(resp.status_code, 200)
         utils.check_val_is_in("info", body)
         utils.check_val_is_in("version", body["info"])
-        utils.check_val_equal(body["info"]["version"], self.version)
+        utils.check_val_equal(body["info"]["version"], utils.TestSetup.get_Version(real_version=True))
         utils.check_val_is_in("paths", body)
         utils.check_val_is_in("host", body)
         utils.check_val_is_in("schemes", body)

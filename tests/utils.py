@@ -957,7 +957,7 @@ class TestSetup(object):
     # pylint: disable=C0103,invalid-name
 
     @staticmethod
-    def get_Version(test_case, override_headers=null, override_cookies=null):
+    def get_Version(test_case, real_version=True, override_headers=null, override_cookies=null):
         # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType]) -> Str
         """
         Obtains the `Magpie` version of the test instance (local or remote). This version can then be used in
@@ -972,14 +972,21 @@ class TestSetup(object):
         .. seealso::
             - :func:`warn_version`
 
+        :param real_version:
+            Force request to retrieve the API version as defined in metadata.
+            Otherwise, version can be either overridden by ``MAGPIE_TEST_VERSION``, the current Test Suite, or the API
+            version, whichever is found first.
+        :param override_headers: headers for request to override any stored ones from Test Suite.
+        :param override_cookies: cookies for request to override any stored ones from Test Suite.
         :raises AssertionError: if the response cannot successfully retrieve the test instance version.
         """
-        version = getattr(test_case, "version", None)
-        if version:
-            return version
-        version = get_constant("MAGPIE_TEST_VERSION")
-        if version:
-            return version
+        if real_version:
+            version = get_constant("MAGPIE_TEST_VERSION")
+            if version:
+                return version
+            version = getattr(test_case, "version", None)
+            if version:
+                return version
         app_or_url = get_app_or_url(test_case)
         resp = test_request(app_or_url, "GET", "/version",
                             headers=override_headers if override_headers is not null else test_case.json_headers,
