@@ -889,7 +889,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Logged user is allowed to delete his own account.
         """
-        utils.warn_version(self, "Delete the logged user's own account", "3.3.1", skip=True)
+        utils.warn_version(self, "Delete the logged user's own account", "3.4.0", skip=True)
 
         # login as test user and delete its own account
         self.login_test_user()
@@ -3091,8 +3091,6 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         A generic admin user is allowed to delete his own account.
         """
-        utils.warn_version(self, "Delete the logged admin user's own account", "3.3.1", skip=True)
-
         # Create a test admin user
         utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ADMIN_GROUP"))
 
@@ -4650,7 +4648,7 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Logged user can delete his own account on account page.
         """
-        utils.warn_version(self, "delete account on user account page", "3.3.1", skip=True)
+        utils.warn_version(self, "delete account on user account page", "3.4.0", skip=True)
 
         other_user = self.test_user_name + "-other"
         utils.TestSetup.delete_TestUser(self, override_user_name=other_user)
