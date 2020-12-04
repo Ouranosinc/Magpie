@@ -23,6 +23,10 @@ if TYPE_CHECKING:
         Str
     )
 
+# values employed for special cases of 'PermissionSet.reason' during permission resolution
+PERMISSION_REASON_DEFAULT = "no-permission"
+PERMISSION_REASON_ADMIN = "administrator"
+
 
 class Permission(ExtendedEnum):
     """

@@ -18,7 +18,7 @@ from magpie.adapter import MagpieAdapter
 from magpie.api import schemas as s
 from magpie.constants import MAGPIE_ROOT, get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Directory, Route
-from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
+from magpie.permissions import PERMISSION_REASON_DEFAULT, Access, Permission, PermissionSet, PermissionType, Scope
 from magpie.register import pseudo_random_string
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceNCWMS2, ServiceTHREDDS
 from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML, get_twitcher_protected_service_url
@@ -1672,7 +1672,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         expect_perm_recur = utils.TestSetup.get_PermissionNames(self, perm_recur)
 
         # tests
-        q_groups = "inherit=true"
+        q_groups = "inherit=true"  # note: 'inherit' is old name, official is 'inherited', but backward supported
         q_effect = "effective=true"
         test_effective = TestVersion(self.version) < TestVersion("3.0")
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=None)
@@ -1863,7 +1863,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         # setup initial permission on service
         utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.create_TestUser(self)
+        body = utils.TestSetup.create_TestUser(self)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        test_user_id = info["user_id"]
         body = utils.TestSetup.create_TestService(self)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=info["resource_id"])
@@ -1890,6 +1892,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 201, expected_method="PUT")
         perm.update({"access": Access.ALLOW.value, "scope": Scope.RECURSIVE.value, "type": PermissionType.DIRECT.value})
         expect_perms.append(perm)
+
+        if TestVersion(self.version) >= TestVersion("3.4.0"):
+            for perm in expect_perms:
+                perm["reason"] = "user:{}:{}".format(test_user_id, self.test_user_name)
 
         # validate both permissions exist
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
@@ -2837,7 +2843,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         permission applied on a parent resource of the targeted resource that supports sub-tree inheritance.
         """
         # setup
-        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        utils.TestSetup.create_TestUser(self, override_group_name=anonymous)
+        info = utils.TestSetup.get_GroupInfo(self, override_group_name=anonymous)
+        anonym_id = info["group_id"]
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
@@ -2870,11 +2879,15 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                               msg="Permission applied to anonymous group which user is member of should be effective")
         if TestVersion(self.version) >= TestVersion("3.0"):
             perms_names = {PermissionSet(perm).name for perm in applicable_perms}
-            perms_denied = [PermissionSet(perm, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
+            perms_denied = [PermissionSet(perm, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE).json()
                             for perm in perms_names if perm != PermissionSet(applied_perm).name]
-            effective_permissions = [effective_perm] + perms_denied
+            effective_permissions = [effective_perm.json()] + perms_denied  # noqa
+            if TestVersion(self.version) >= TestVersion("3.4"):
+                effective_permissions[0]["reason"] = "group:{}:{}".format(anonym_id, anonymous)
+                for perm in effective_perm[1:]:
+                    perm["reason"] = PERMISSION_REASON_DEFAULT
             utils.check_val_is_in("permissions", body)
-            utils.check_all_equal([perm.json() for perm in effective_permissions], body["permissions"], any_order=True)
+            utils.check_all_equal(effective_permissions, body["permissions"], any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers(self):

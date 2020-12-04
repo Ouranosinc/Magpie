@@ -15,7 +15,15 @@ from magpie import models
 from magpie.api import exception as ax
 from magpie.constants import get_constant
 from magpie.owsrequest import ows_parser_factory
-from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
+from magpie.permissions import (
+    PERMISSION_REASON_ADMIN,
+    PERMISSION_REASON_DEFAULT,
+    Access,
+    Permission,
+    PermissionSet,
+    PermissionType,
+    Scope
+)
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -276,8 +284,11 @@ class ServiceInterface(object):
         admin_group = get_constant("MAGPIE_ADMIN_GROUP", self.request)
         admin_group = GroupService.by_group_name(admin_group, db_session=db_session)
         if admin_group in user.groups:  # noqa
-            return [PermissionSet(perm, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE, reason="administrator")
-                    for perm in permissions]
+            return [
+                PermissionSet(perm, access=Access.ALLOW, scope=Scope.MATCH,
+                              typ=PermissionType.EFFECTIVE, reason=PERMISSION_REASON_ADMIN)
+                for perm in permissions
+            ]
 
         # current and parent resource(s) recursive-scope
         match = allow_match
@@ -358,7 +369,9 @@ class ServiceInterface(object):
         missing_perms = set(permissions) - resolved_perms
         final_perms = set(effective_perms.values())  # type: Set[PermissionSet]
         for perm_name in missing_perms:
-            final_perms.add(PermissionSet(perm_name, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE))
+            perm = PermissionSet(perm_name, access=Access.DENY, scope=Scope.MATCH,
+                                 typ=PermissionType.EFFECTIVE, reason=PERMISSION_REASON_DEFAULT)
+            final_perms.add(perm)
         # enforce type and scope (use MATCH to make it explicit that it applies specifically for this resource)
         for perm in final_perms:
             perm.type = PermissionType.EFFECTIVE
