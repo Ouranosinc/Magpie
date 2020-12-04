@@ -958,7 +958,7 @@ class TestSetup(object):
 
     @staticmethod
     def get_Version(test_case, real_version=True, override_headers=null, override_cookies=null):
-        # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType]) -> Str
+        # type: (AnyMagpieTestCaseType, bool, Optional[HeadersType], Optional[CookiesType]) -> Str
         """
         Obtains the `Magpie` version of the test instance (local or remote). This version can then be used in
         combination with :class:`TestVersion` comparisons or :func:`warn_version` to toggle test execution of certain
@@ -980,7 +980,7 @@ class TestSetup(object):
         :param override_cookies: cookies for request to override any stored ones from Test Suite.
         :raises AssertionError: if the response cannot successfully retrieve the test instance version.
         """
-        if real_version:
+        if not real_version:
             version = get_constant("MAGPIE_TEST_VERSION")
             if version:
                 return version

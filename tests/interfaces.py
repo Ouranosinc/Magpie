@@ -12,6 +12,7 @@ import yaml
 from pyramid.interfaces import IRequestExtensions
 from six.moves.urllib.parse import urlparse
 
+from magpie import __meta__
 from magpie.adapter import MagpieAdapter
 from magpie.api import schemas as s
 from magpie.constants import MAGPIE_ROOT, get_constant
@@ -327,11 +328,36 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("db_version", body)
         utils.check_val_is_in("version", body)
-        # server not necessarily at latest version, ensure at least format
-        utils.check_val_equal(body["version"], utils.TestSetup.get_Version(real_version=True))
         utils.check_val_type(body["version"], six.string_types)
         version_parts = body["version"].split(".")
         utils.check_val_equal(len(version_parts), 3)
+        # server not necessarily at latest version, ensure at least format,
+        # but can't validate the number with internal variable if using remote server
+        # also doesn't make sense to request the version and compare against same request accomplished here
+        # so validate version number only if local
+        app_or_url = utils.get_app_or_url(self)
+        localhosts = ["localhost", "127.0.0.1", "0.0.0.0"]
+        if isinstance(app_or_url, six.string_types) and any(loc in app_or_url for loc in localhosts):
+            utils.check_val_equal(body["version"], __meta__.__version__)
+
+    @runner.MAGPIE_TEST_STATUS
+    def test_GetAPI(self):
+        resp = utils.test_request(self, "GET", s.SwaggerGenerator.path, headers=self.json_headers)
+        body = utils.get_json_body(resp)
+        content_types = utils.get_response_content_types_list(resp)
+        utils.check_val_is_in(CONTENT_TYPE_JSON, content_types)
+        utils.check_val_equal(resp.status_code, 200)
+        utils.check_val_is_in("info", body)
+        utils.check_val_is_in("version", body["info"])
+        utils.check_val_equal(body["info"]["version"], utils.TestSetup.get_Version(self, real_version=True))
+        utils.check_val_is_in("paths", body)
+        utils.check_val_is_in("host", body)
+        utils.check_val_is_in("schemes", body)
+        utils.check_val_is_in("tags", body)
+        utils.check_val_is_in("basePath", body)
+        utils.check_val_is_in("securityDefinitions", body)
+        utils.check_val_is_in("swagger", body)
+        utils.check_val_equal(body["swagger"], "2.0")
 
     @runner.MAGPIE_TEST_STATUS
     def test_NotAcceptableRequest(self):
@@ -1487,24 +1513,6 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         cls.test_group_name = "magpie-unittest-dummy-group"
         cls.test_user_name = "magpie-unittest-toto"
-
-    def test_GetAPI(self):
-        resp = utils.test_request(self, "GET", s.SwaggerGenerator.path, headers=self.json_headers)
-        body = utils.get_json_body(resp)
-        content_types = utils.get_response_content_types_list(resp)
-        utils.check_val_is_in(CONTENT_TYPE_JSON, content_types)
-        utils.check_val_equal(resp.status_code, 200)
-        utils.check_val_is_in("info", body)
-        utils.check_val_is_in("version", body["info"])
-        utils.check_val_equal(body["info"]["version"], utils.TestSetup.get_Version(real_version=True))
-        utils.check_val_is_in("paths", body)
-        utils.check_val_is_in("host", body)
-        utils.check_val_is_in("schemes", body)
-        utils.check_val_is_in("tags", body)
-        utils.check_val_is_in("basePath", body)
-        utils.check_val_is_in("securityDefinitions", body)
-        utils.check_val_is_in("swagger", body)
-        utils.check_val_equal(body["swagger"], "2.0")
 
     @runner.MAGPIE_TEST_STATUS
     def test_unauthorized_forbidden_responses(self):
