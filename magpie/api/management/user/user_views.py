@@ -123,7 +123,7 @@ def get_user_view(request):
 @s.UserAPI.delete(schema=s.User_DELETE_RequestSchema(), tags=[s.UsersTag], response_schemas=s.User_DELETE_responses)
 @s.LoggedUserAPI.delete(schema=s.User_DELETE_RequestSchema(), tags=[s.LoggedUserTag],
                         response_schemas=s.LoggedUser_DELETE_responses)
-@view_config(route_name=s.UserAPI.name, request_method="DELETE")  # FIXME: permission=MAGPIE_LOGGED_USER self-unregister
+@view_config(route_name=s.UserAPI.name, request_method="DELETE", permission=MAGPIE_LOGGED_PERMISSION)
 def delete_user_view(request):
     """
     Delete a user by name.

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from pyramid.authentication import Authenticated
-from pyramid.httpexceptions import HTTPBadRequest, HTTPUnprocessableEntity
+from pyramid.httpexceptions import HTTPFound, HTTPBadRequest, HTTPUnprocessableEntity
 from pyramid.view import view_config
 
 from magpie.api import schemas
@@ -80,12 +80,6 @@ class UserViews(BaseViews):
             is_edit_group_membership = False
             is_save_user_info = False
 
-            # FIXME: user unregister itself?
-            # if "delete" in self.request.POST:
-            #     resp = request_api(self.request, user_path, "DELETE")
-            #    check_response(resp)
-            #    return HTTPFound(self.request.route_url("view_users"))
-
             if "edit_group_membership" in self.request.POST:
                 is_edit_group_membership = True
             elif "edit_password" in self.request.POST:
@@ -98,6 +92,18 @@ class UserViews(BaseViews):
             elif "save_email" in self.request.POST:
                 user_info["email"] = self.request.POST.get("new_user_email")
                 is_save_user_info = True
+            elif "delete" in self.request.POST:
+                delete_response = request_api(
+                    self.request,
+                    schemas.UserAPI.path.format(user_name=user_info["user_name"]),
+                    "DELETE")
+                check_response(delete_response)
+                logout_response = request_api(
+                    self.request,
+                    schemas.SignoutAPI.path,
+                    "GET")
+                check_response(logout_response)
+                return HTTPFound(location="/")
 
             if is_save_user_info:
                 resp = request_api(self.request, schemas.LoggedUserAPI.path, "PATCH", data=user_info)

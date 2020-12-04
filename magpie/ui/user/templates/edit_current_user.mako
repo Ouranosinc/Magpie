@@ -1,8 +1,8 @@
 <%inherit file="magpie.ui.home:templates/template.mako"/>
 
 <%block name="breadcrumb">
-<li><a href="${request.route_url('home')}">Home</a></li>
-<li><a href="${request.route_url('edit_current_user', user_name=user_name)}">User [${user_name}]</a></li>
+    <li><a href="${request.route_url('home')}">Home</a></li>
+    <li><a href="${request.route_url('edit_current_user', user_name=user_name)}">User [${user_name}]</a></li>
 </%block>
 
 %if invalid_password or invalid_user_email:
@@ -30,23 +30,46 @@
 
 <h3>User Information</h3>
 
+<div class="alert alert-danger" id="EditService_UserSelfDeleteAlert">
+    <h3 class="alert-title-danger">Danger!</h3>
+    <div class="alert-danger">
+        <div class="alert-text">
+            <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                 alt="" class="icon-error icon-color-invert"/>
+            &nbsp;Delete your account?
+        </div>
+    </div>
+    <p>
+        This operation will delete your account and its associated permissions as well as log you out of Magpie.
+        All data linked to your account will also be lost. <br> This is irreversible.
+    </p>
+    <p>Do you want to continue?</p>
+    <form id="delete_user" action="${request.path}" method="post">
+        <div>
+            <input type="submit" class="button delete" name="delete" value="Delete">
+            <input type="submit" class="button cancel" name="cancel" value="Cancel">
+        </div>
+    </form>
+</div>
 
 <div class="panel-box">
     <!-- # FIXME: implement with better warning (alert), API route supports operation
         (admin is immediate delete, but we should confirm user self-delete beforehand just in case)
     -->
     <div class="panel-heading theme">
-    <!--
-    <form id="delete_user" action="${request.path}" method="post">
-    -->
         <span class="panel-title">User: </span>
         <span class="panel-value">[${user_name}]</span>
-    <!--
         <span class="panel-heading-button">
-            <input type="submit" value="Delete Account" name="delete" class="button delete">
+            <input value="Delete Account" name="delete"
+                %if user_name in MAGPIE_FIXED_USERS:
+                    class="button delete disabled" type="button" disabled
+                %else:
+                    type="button"
+                    class="button delete"
+                    onclick="document.getElementById('EditService_UserSelfDeleteAlert').style.display = 'block'"
+                %endif
+            >
         </span>
-    </form>
-    -->
     </div>
     <div class="panel-body">
         <div class="panel-box">
@@ -152,24 +175,24 @@
 <form id="edit_membership" action="${request.path}" method="post">
     <input type="hidden" value="True" name="edit_group_membership"/>
     <table class="simple-list">
-    %for group in groups:
-    <tr>
-        <td>
-            <label>
-            <input type="checkbox" value="${group}" name="member"
-               % if group in joined_groups:
-                   checked
-               %endif
-               %if group in MAGPIE_FIXED_GROUP_MEMBERSHIPS:
-                   disabled
-               %else:
-                   onchange="document.getElementById('edit_membership').submit()"
-               %endif
-            >
-            ${group}
-            </label>
-        </td>
-    </tr>
-    %endfor
+        %for group in groups:
+            <tr>
+                <td>
+                    <label>
+                        <input type="checkbox" value="${group}" name="member"
+                            %if group in joined_groups:
+                               checked
+                            %endif
+                            %if group in MAGPIE_FIXED_GROUP_MEMBERSHIPS:
+                               disabled
+                            %else:
+                               onchange="document.getElementById('edit_membership').submit()"
+                            %endif
+                        >
+                        ${group}
+                    </label>
+                </td>
+            </tr>
+        %endfor
     </table>
 </form>

@@ -2,8 +2,8 @@ version: "3"
 services:
   postgres:
     image: "postgres:latest"
-    expose:
-      - "5432"
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_PASSWORD: qwerty
       POSTGRES_DB: magpie
@@ -25,7 +25,7 @@ services:
       MAGPIE_SECRET : itzaseekrit
       MAGPIE_ADMIN_GROUP : administrators
       MAGPIE_ADMIN_USER : admin
-      MAGPIE_ADMIN_PASSWORD : admin
+      MAGPIE_ADMIN_PASSWORD : qwerty
       MAGPIE_USER_GROUP : users
       MAGPIE_ANONYMOUS_USER : anonymous
       MAGPIE_PORT : 2001

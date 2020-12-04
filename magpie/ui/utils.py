@@ -152,6 +152,7 @@ class BaseViews(object):
     """
     MAGPIE_FIXED_GROUP_MEMBERSHIPS = []
     MAGPIE_FIXED_GROUP_EDITS = []
+    MAGPIE_FIXED_USERS = []
 
     def __init__(self, request):
         self.request = request
@@ -163,6 +164,8 @@ class BaseViews(object):
         admin = get_constant("MAGPIE_ADMIN_GROUP", settings_container=self.request)
         self.__class__.MAGPIE_FIXED_GROUP_MEMBERSHIPS = [anonymous]   # special groups membership that cannot be edited
         self.__class__.MAGPIE_FIXED_GROUP_EDITS = [anonymous, admin]  # special groups that cannot be edited
+        # special users that cannot be deleted
+        self.__class__.MAGPIE_FIXED_USERS = [get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ANONYMOUS_USER")]
 
     def add_template_data(self, data=None):
         # type: (Optional[Dict[Str, Any]]) -> Dict[Str, Any]
@@ -182,6 +185,7 @@ class BaseViews(object):
         all_data.setdefault("MAGPIE_UI_THEME", self.ui_theme)
         all_data.setdefault("MAGPIE_FIXED_GROUP_MEMBERSHIPS", self.MAGPIE_FIXED_GROUP_MEMBERSHIPS)
         all_data.setdefault("MAGPIE_FIXED_GROUP_EDITS", self.MAGPIE_FIXED_GROUP_EDITS)
+        all_data.setdefault("MAGPIE_FIXED_USERS", self.MAGPIE_FIXED_USERS)
         magpie_logged_user = get_logged_user(self.request)
         if magpie_logged_user:
             all_data.update({"MAGPIE_LOGGED_USER": magpie_logged_user.user_name})
