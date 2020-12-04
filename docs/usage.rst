@@ -151,6 +151,7 @@ does not fulfill version requirements specified with the `safeguard`.
 Another approach is to employ ``if/else`` blocks to separate execution by version of the tested instance as follows:
 
 .. code-block:: python
+
     if TestVersion(self.version) >= TestVersion("1.2.3"):
         # specific test for 1.2.3 and above
     else:
@@ -161,6 +162,7 @@ This allows fine-grained operation if the changes between versions are relativel
 
 .. note::
     When developing new features, it often happens that the new version does not yet exist, since the feature is not
-    yet merged, tagged and deployed. The `safeguards` would then always ignore the new tests! To work around this,
-    you should define variable ``MAGPIE_TEST_VERSION=latest`` in your environment (or any other loaded ``.env`` file).
-    This will tell the `local` test runner to consider the version as always greater that any other compared value.
+    yet merged, tagged and deployed. Any `safeguards` checking against this future version would then always ignore
+    the new feature tests! To work around this, you should define variable ``MAGPIE_TEST_VERSION=latest`` in your
+    environment (or any other loaded ``.env`` file). This will tell the `local` test runner to consider the current
+    version as always greater that any compared minimal requirement, effectively enabling ``latest`` test changes.
