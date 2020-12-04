@@ -1440,7 +1440,7 @@ class TestSetup(object):
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
         if method == "DELETE":
-            code = 200 if resp.status_code != 404 else 404:
+            code = 200 if resp.status_code != 404 else 404
             return check_response_basic_info(resp, code, expected_method=method)
         return check_response_basic_info(resp, 201, expected_method=method)
 
@@ -1463,7 +1463,7 @@ class TestSetup(object):
 
         If resource information container is not provided, all desired values must be given as parameter for creation.
         """
-        return TestSetup.create_TestAnyResourcePermission(
+        return TestSetup.update_TestAnyResourcePermission(
             test_case, "user", "POST", resource_info=resource_info,
             override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_user_name, override_headers=override_headers, override_cookies=override_cookies
@@ -1488,7 +1488,7 @@ class TestSetup(object):
 
         If resource information container is not provided, all desired values must be given as parameter for creation.
         """
-        return TestSetup.create_TestAnyResourcePermission(
+        return TestSetup.update_TestAnyResourcePermission(
             test_case, "group", "POST", resource_info=resource_info,
             override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_group_name, override_headers=override_headers, override_cookies=override_cookies
@@ -2043,7 +2043,7 @@ class TestSetup(object):
         If resource information container is not provided, the resource ID must be given as parameter for deletion.
         If the permission cannot be found, the operation assumes that nothing needs to be done (no failure).
         """
-        result = TestSetup.create_TestAnyResourcePermission(
+        result = TestSetup.update_TestAnyResourcePermission(
             test_case, "user", "DELETE", resource_info=resource_info,
             override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_user_name, override_headers=override_headers, override_cookies=override_cookies
@@ -2073,7 +2073,7 @@ class TestSetup(object):
         If resource information container is not provided, the resource ID must be given as parameter for deletion.
         If the permission cannot be found, the operation assumes that nothing needs to be done (no failure).
         """
-        result = TestSetup.create_TestAnyResourcePermission(
+        result = TestSetup.update_TestAnyResourcePermission(
             test_case, "group", "DELETE", resource_info=resource_info,
             override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_group_name, override_headers=override_headers, override_cookies=override_cookies
