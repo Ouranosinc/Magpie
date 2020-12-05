@@ -1867,7 +1867,7 @@ class TestSetup(object):
 
         Executes an HTTP request with the currently logged user (using cookies/headers) or for another user (using
         :paramref:`override_username` (needs admin-level login cookies/headers).
-        Using :paramref:`body`, one can directly fetch details from JSON body instead of performing the request.
+        Using :paramref:`override_body`, details can be fetched from JSON body instead of performing the request.
         Employed version is extracted from the :paramref:`test_case` unless provided by :paramref:`override_version`.
         """
         if override_body:
@@ -1883,6 +1883,41 @@ class TestSetup(object):
             check_val_is_in("user", body)
             body = body["user"]
         return body or {}
+
+    @staticmethod
+    def get_GroupInfo(test_case,                 # type: AnyMagpieTestCaseType
+                      override_body=None,        # type: JSON
+                      override_group_name=null,  # type: Optional[Str]
+                      override_version=null,     # type: Optional[Str]
+                      override_headers=null,     # type: Optional[HeadersType]
+                      override_cookies=null,     # type: Optional[CookiesType]
+                      ):                         # type: (...) -> JSON
+        """
+        Obtains in a backward compatible way the group details based on response body and the tested instance version.
+
+        Executes an HTTP request with required admin-level login cookies/headers if the details are not found.
+        Using :paramref:`override_body`, details can be fetched from JSON body instead of performing the request.
+        Employed version is extracted from the :paramref:`test_case` unless provided by :paramref:`override_version`.
+        """
+        version = override_version if override_version is not null else TestSetup.get_Version(test_case)
+        grp_name = override_group_name if override_group_name is not null else test_case.test_group_name
+        if TestVersion(version) < TestVersion("0.6.4"):  # route did not exist before that
+            if override_body and "group" in override_body:
+                return override_body["group"]
+            if override_body and "group_name" in override_body:
+                return override_body
+            return {"group_name": grp_name or {}}
+        if override_body:
+            if override_body and "group" in override_body:
+                return override_body["group"]
+            if override_body and "group_name" in override_body:
+                return override_body
+        resp = test_request(test_case, "GET", "/groups/{}".format(grp_name),
+                            headers=override_headers if override_headers is not null else test_case.json_headers,
+                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        body = check_response_basic_info(resp)
+        check_val_is_in("group", body)
+        return body["group"] or {}
 
     @staticmethod
     def check_UserGroupMembership(test_case,                    # type: AnyMagpieTestCaseType

@@ -27,7 +27,7 @@ from tests.utils import TestVersion
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, List, Optional, Set, Union
+    from typing import Dict, List, Optional, Set, Tuple, Union
 
     from sqlalchemy.orm.session import Session
     from webtest.app import TestApp
@@ -1942,9 +1942,22 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         test_group_1 = "unittest-test-{!s}".format(uuid.uuid4())
         test_group_2 = "unittest-test-{!s}".format(uuid.uuid4())
         anonym_group = get_constant("MAGPIE_ANONYMOUS_GROUP")
-        utils.TestSetup.create_TestGroup(self, override_group_name=test_group_1)
-        utils.TestSetup.create_TestGroup(self, override_group_name=test_group_2)
-        utils.TestSetup.create_TestUser(self, override_group_name=anonym_group)
+        info = utils.TestSetup.get_GroupInfo(self, override_group_name=anonym_group)
+        anonym_id = info["group_id"]
+        anonym_reason = "group:{}:{}".format(anonym_id, anonym_group)
+        body = utils.TestSetup.create_TestGroup(self, override_group_name=test_group_1)
+        info = utils.TestSetup.get_GroupInfo(self, override_body=body)
+        grp1_id = info["group_id"]
+        grp1_reason = "group:{}:{}".format(grp1_id, test_group_1)
+        body = utils.TestSetup.create_TestGroup(self, override_group_name=test_group_2)
+        info = utils.TestSetup.get_GroupInfo(self, override_body=body)
+        grp2_id = info["group_id"]
+        grp2_reason = "group:{}:{}".format(grp2_id, test_group_2)
+        body = utils.TestSetup.create_TestUser(self, override_group_name=anonym_group)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        user_id = info["user_id"]
+        user_reason = "user:{}:{}".format(user_id, self.test_user_name)
+        anonym_reason = "group:{}:{}".format(grp1_id, test_group_1)
         utils.TestSetup.assign_TestUserGroup(self, override_group_name=test_group_1)
         utils.TestSetup.assign_TestUserGroup(self, override_group_name=test_group_2)
         utils.TestSetup.create_TestService(self)
@@ -1954,8 +1967,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc_id)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         res_id = info["resource_id"]
-        multi_perm_name = self.test_service_resource_perms[0]
-        other_perm_name = self.test_service_resource_perms[1]
+        perm1_name = self.test_service_resource_perms[0]
+        perm2_name = self.test_service_resource_perms[1]
         user_path_effect = "/users/{}/resources/{}/permissions?effective=true".format(self.test_user_name, res_id)
         user_path_inherit = "/users/{}/resources/{}/permissions?inherited=true".format(self.test_user_name, res_id)
 
@@ -1964,10 +1977,17 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         #  comparison checks with JSON response. That field is ignored during creation/deletion of the permission.
 
         # note: effective permissions are always MATCH as they resolve the RECURSIVE aspect of the resource tree
-        perm_effect_allow = PermissionSet(multi_perm_name, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE)
-        perm_effect_deny = PermissionSet(multi_perm_name, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
+        effect_perm1_allow = PermissionSet(perm1_name, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE)
+        effect_perm1_deny = PermissionSet(perm1_name, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
+        effect_perm2_deny = PermissionSet(perm2_name, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
 
-        def create_and_validate(_res_id, _type, _usr_grp, _new_perm, _expect_inherit, _expect_effect):
+        def create_and_validate(_res_id,    # type: int             # resource to create permission under
+                                _type,      # type: Str             # type "user"/"group"
+                                _usr_grp,   # type: Str             # name of user/group
+                                _new_perm,  # type: PermissionSet   # resource permission to create
+                                _inherit,   # type: List[Tuple[PermissionSet, Str]]  # expected inherited perm/reason(s)
+                                _effect,    # type: List[Tuple[PermissionSet, Str]]  # expected effective perm/reason(s)
+                                ):          # type: () -> None
             if _type == "user":
                 utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=_res_id,
                                                                   override_permission=_new_perm,
@@ -1977,10 +1997,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                                                    override_permission=_new_perm,
                                                                    override_group_name=_usr_grp)
             # expected permissions can have more than one entry if the names are not the same, otherwise always only one
-            _expect_inherit = [_expect_inherit] if not isinstance(_expect_inherit, list) else _expect_inherit
-            _expect_inherit = [_perm.json() for _perm in _expect_effect]
-            _expect_effect = [_expect_effect] if not isinstance(_expect_effect, list) else _expect_effect
-            _expect_effect = [_perm.json() for _perm in _expect_effect]
+            _expect_inherit = [_perm[0].json() for _perm in _inherit]
+            for i, _reason in enumerate(_inherit):
+                _expect_inherit[i]["reason"] = _reason
+            _expect_effect = [_perm[0].json() for _perm in _effect]
+            for i, _reason in enumerate(_effect):
+                _expect_effect[i]["reason"] = _reason
             # tests
             _resp = utils.test_request(self, "GET", user_path_inherit, headers=self.json_headers, cookies=self.cookies)
             _body = utils.check_response_basic_info(_resp)
@@ -1990,55 +2012,63 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             utils.check_all_equal(_body["permissions"], _expect_effect, any_order=True)
 
         # with only special anonymous group permission, it should be found directly
-        perm1 = PermissionSet(multi_perm_name, Access.DENY, Scope.MATCH, PermissionType.INHERITED)
-        create_and_validate(res_id, "group", anonym_group, perm1, perm1, perm_effect_deny)
+        perm1 = PermissionSet(perm1_name, Access.DENY, Scope.MATCH, PermissionType.INHERITED)
+        create_and_validate(res_id, "group", anonym_group, perm1,
+                            [(perm1, anonym_reason)], [(effect_perm1_deny, anonym_reason)])
 
         # with special anonymous group deny permission on resource and other group allow permission at higher scope,
         # that generic group prevails over anonymous during effective resolution, even if normally deny > allow
         # inherited local scope remains with previous anonymous permission as higher group permission is not resolved
-        perm2 = PermissionSet(multi_perm_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.INHERITED)
-        create_and_validate(svc_id, "group", test_group_1, perm2, perm1, perm_effect_allow)
+        perm2 = PermissionSet(perm1_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.INHERITED)
+        create_and_validate(svc_id, "group", test_group_1, perm2,
+                            [(perm1, anonym_reason)], [(effect_perm1_allow, grp1_reason)])
         # delete previous group permission to make sure following tests validate the right scope and not that permission
         utils.TestSetup.delete_TestGroupResourcePermission(self, ignore_missing=False, override_resource_id=svc_id,
                                                            override_permission=perm2, override_group_name=test_group_1)
 
         # generic group allow permission on same resource must be found instead of anonymous deny
         # (generic group > anonymous group)
-        perm3 = PermissionSet(multi_perm_name, Access.ALLOW, Scope.MATCH, PermissionType.INHERITED)
-        create_and_validate(res_id, "group", test_group_1, perm3, perm3, perm_effect_allow)
+        perm3 = PermissionSet(perm1_name, Access.ALLOW, Scope.MATCH, PermissionType.INHERITED)
+        create_and_validate(res_id, "group", test_group_1, perm3,
+                            [(perm3, grp1_reason)], [(effect_perm1_allow, grp1_reason)])
 
         # add second group recursive modifier that should become prioritized over match of first group (higher scope)
         # because those are different groups, two permissions of same name can exist simultaneously on the same resource
         # note:
         #   in this case, scope change only modifies inherited interpretation of the permission
         #   (eg: indication that lower resource will also be affected instead of only this local resource).
-        #   effective resolution still return the same allow as both permissions have that access
-        perm4 = PermissionSet(multi_perm_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.INHERITED)
-        create_and_validate(res_id, "group", test_group_2, perm4, perm4, perm_effect_allow)
+        #   effective resolution still return the same allow match as both permissions have that access
+        perm4 = PermissionSet(perm1_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.INHERITED)
+        create_and_validate(res_id, "group", test_group_2, perm4,
+                            [(perm4, grp2_reason)], [(effect_perm1_allow, grp2_reason)])
 
         # replace first group match permission access to deny, it should then take priority over the second group allow
         utils.TestSetup.delete_TestGroupResourcePermission(self, ignore_missing=False, override_resource_id=res_id,
                                                            override_permission=perm3, override_group_name=test_group_1)
-        perm5 = PermissionSet(multi_perm_name, Access.DENY, perm3.scope, PermissionType.INHERITED)
-        create_and_validate(res_id, "group", test_group_1, perm5, perm5, perm_effect_deny)
+        perm5 = PermissionSet(perm1_name, Access.DENY, perm3.scope, PermissionType.INHERITED)
+        create_and_validate(res_id, "group", test_group_1, perm5,
+                            [(perm5, grp1_reason)], [(effect_perm1_deny, grp1_reason)])
 
-        # apply allow user permission on parent service
+        # apply allow user permission on parent service (on level above, not same resource as previous tests)
         # allow user permission takes priority over deny from second group, but only during effective resolution
-        # even if second group deny still exists, the user allow permission takes priority due to more focused reference
+        # even if second group deny still exists, the user allow permission takes priority as it is more specific
         # during check of local inherited permissions (no recursive considered), second group deny remains the result
-        perm6 = PermissionSet(multi_perm_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.DIRECT)
-        create_and_validate(svc_id, "user", self.test_user_name, perm6, perm5, perm_effect_allow)
+        perm6 = PermissionSet(perm1_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.DIRECT)
+        create_and_validate(svc_id, "user", self.test_user_name, perm6,
+                            [(perm5, grp1_reason)], [(effect_perm1_allow, user_reason)])
 
         # apply user direct permission directly on the targeted resource
         # now all previous group inherited permissions should be completely ignored as user takes priority at same level
-        perm7 = PermissionSet(multi_perm_name, Access.ALLOW, Scope.MATCH, PermissionType.DIRECT)
-        create_and_validate(res_id, "user", self.test_user_name, perm7, perm7, perm_effect_allow)
+        perm7 = PermissionSet(perm1_name, Access.ALLOW, Scope.MATCH, PermissionType.DIRECT)
+        create_and_validate(res_id, "user", self.test_user_name, perm7,
+                            [(perm7, user_reason)], [(effect_perm1_allow, user_reason)])
 
         # add a completely different permission name to validate that previous resolution of user-direct permission
-        # don't impact other permissions that don't overlap with this new entry with only group inherited permissions
-        perm8 = PermissionSet(other_perm_name, Access.DENY, Scope.MATCH, PermissionType.INHERITED)
-        perm_deny_other = PermissionSet(other_perm_name, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
-        create_and_validate(res_id, "group", test_group_1, perm8, [perm7, perm8], [perm_effect_allow, perm_deny_other])
+        # doesn't interfere with other group inherited permissions resolution
+        perm8 = PermissionSet(perm2_name, Access.DENY, Scope.MATCH, PermissionType.INHERITED)
+        create_and_validate(res_id, "group", test_group_1, perm8,
+                            [(perm7, user_reason), (perm8, grp2_reason)],
+                            [(effect_perm1_allow, user_reason), (effect_perm2_deny, grp2_reason)])
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
