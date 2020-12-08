@@ -138,7 +138,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         self.cookies = None
         self.headers, self.cookies = utils.check_or_try_login_user(self, self.usr, self.pwd, use_ui_form_submit=True)
         self.require = "cannot run tests without logged in user with '{}' permissions".format(self.grp)
-        self.check_requirements()
+        self.login_admin()
 
     def mock_request(self, *args, **kwargs):
         kwargs.update({"cookies": self.test_cookies, "headers": self.test_headers})

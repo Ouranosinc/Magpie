@@ -195,7 +195,10 @@ class BaseAdminTestCase(BaseTestCase):
         super(BaseAdminTestCase, cls).tearDownClass()
 
     @classmethod
-    def check_requirements(cls):
+    def login_admin(cls):
+        """
+        Login as administrator user for setup pre-test components or validation post-test execution.
+        """
         utils.check_or_try_logout_user(cls)  # in case user changed during another test
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
         assert cls.headers and cls.cookies, cls.require     # nosec
@@ -207,7 +210,7 @@ class BaseAdminTestCase(BaseTestCase):
 
         Each employed test attribute must be overridden by the :attr:`setUpClass` of the `Test Case`.
         """
-        self.check_requirements()  # re-login as needed in case test logged out the user with permissions
+        self.login_admin()  # re-login as needed in case test logged out the user with permissions
         if self.test_resource_name:
             utils.TestSetup.delete_TestServiceResource(self)
         if self.test_service_name:
@@ -931,8 +934,8 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 401, expected_method="POST")
 
         # login as admin and validate if test user doesn't exist
-        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
-                                  data={"user_name": self.usr, "password": self.pwd})
+        utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
+                           data={"user_name": self.usr, "password": self.pwd})
         utils.TestSetup.check_NonExistingTestUser(self)
 
     @runner.MAGPIE_TEST_USERS
@@ -1957,7 +1960,6 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         info = utils.TestSetup.get_UserInfo(self, override_body=body)
         user_id = info["user_id"]
         user_reason = "user:{}:{}".format(user_id, self.test_user_name)
-        anonym_reason = "group:{}:{}".format(grp1_id, test_group_1)
         utils.TestSetup.assign_TestUserGroup(self, override_group_name=test_group_1)
         utils.TestSetup.assign_TestUserGroup(self, override_group_name=test_group_2)
         utils.TestSetup.create_TestService(self)
@@ -1987,7 +1989,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                 _new_perm,  # type: PermissionSet   # resource permission to create
                                 _inherit,   # type: List[Tuple[PermissionSet, Str]]  # expected inherited perm/reason(s)
                                 _effect,    # type: List[Tuple[PermissionSet, Str]]  # expected effective perm/reason(s)
-                                ):          # type: () -> None
+                                ):          # type: (...) -> None
             if _type == "user":
                 utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=_res_id,
                                                                   override_permission=_new_perm,
@@ -1998,10 +2000,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                                                    override_group_name=_usr_grp)
             # expected permissions can have more than one entry if the names are not the same, otherwise always only one
             _expect_inherit = [_perm[0].json() for _perm in _inherit]
-            for i, _reason in enumerate(_inherit):
+            for i, (_, _reason) in enumerate(_inherit):
                 _expect_inherit[i]["reason"] = _reason
             _expect_effect = [_perm[0].json() for _perm in _effect]
-            for i, _reason in enumerate(_effect):
+            for i, (_, _reason) in enumerate(_effect):
                 _expect_effect[i]["reason"] = _reason
             # tests
             _resp = utils.test_request(self, "GET", user_path_inherit, headers=self.json_headers, cookies=self.cookies)
@@ -2914,7 +2916,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             effective_permissions = [effective_perm.json()] + perms_denied  # noqa
             if TestVersion(self.version) >= TestVersion("3.4"):
                 effective_permissions[0]["reason"] = "group:{}:{}".format(anonym_id, anonymous)
-                for perm in effective_perm[1:]:
+                for perm in effective_permissions[1:]:
                     perm["reason"] = PERMISSION_REASON_DEFAULT
             utils.check_val_is_in("permissions", body)
             utils.check_all_equal(effective_permissions, body["permissions"], any_order=True)
@@ -3277,8 +3279,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 401, expected_method="POST")
 
         # login as admin and validate if the test admin user doesn't exist
-        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
-                                  data={"user_name": self.usr, "password": self.pwd})
+        self.login_admin()
         utils.TestSetup.check_NonExistingTestUser(self)
 
     @runner.MAGPIE_TEST_USERS
@@ -3336,9 +3337,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         # Delete the temporary admin user and sign back in to special admin user
         path = "/users/{usr}".format(usr=self.test_user_name)
-        resp = utils.test_request(self, "DELETE", path, headers=self.test_headers, cookies=self.test_cookies)
+        utils.test_request(self, "DELETE", path, headers=self.test_headers, cookies=self.test_cookies)
         resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
                                   data={"user_name": self.usr, "password": self.pwd})
+        utils.check_response_basic_info(resp, 200, expected_method="POST")
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_DEFAULTS
@@ -4710,13 +4712,6 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
     def setUpClass(cls):
         raise NotImplementedError
 
-    @classmethod
-    def check_requirements(cls):
-        utils.check_or_try_logout_user(cls)  # in case user changed during another test
-        cls.require = "cannot run tests without logged admin user permissions to setup test data"
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
-        assert cls.headers and cls.cookies, cls.require  # nosec
-
     @runner.MAGPIE_TEST_LOGIN
     def test_FormLogin(self):
         utils.check_or_try_logout_user(self)
@@ -4832,14 +4827,12 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         utils.check_ui_response_basic_info(resp, expected_title="Magpie Administration")
 
         # verify if user cannot log back in
-        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
-                                  expect_errors=True,
-                                  data={"user_name": other_user, "password": self.test_user_name})
+        data = {"user_name": other_user, "password": self.test_user_name}
+        resp = utils.test_request(self, "POST", "/signin", json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies={})
         utils.check_response_basic_info(resp, 401, expected_method="POST")
 
-        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
-                                  data={"user_name": get_constant("MAGPIE_ADMIN_USER"),
-                                        "password": get_constant("MAGPIE_ADMIN_PASSWORD")})
+        self.login_admin()
         utils.TestSetup.check_NonExistingTestUser(self, override_user_name=other_user)
 
 

@@ -72,7 +72,7 @@ class TestCase_MagpieUI_UsersAuth_Local(ti.Interface_MagpieUI_UsersAuth, unittes
         cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.version = utils.TestSetup.get_Version(cls)
         cls.setup_admin()
-        cls.check_requirements()
+        cls.login_admin()
         cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_ui-user-local",
                                           raise_missing=False, raise_not_set=False)
         cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-user-auth_ui-group-local",
@@ -103,7 +103,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.setup_admin()
-        cls.check_requirements()
+        cls.login_admin()
 
         cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_ui-user-local",
                                           raise_missing=False, raise_not_set=False)
@@ -331,7 +331,7 @@ class TestCase_MagpieUI_UsersAuth_Remote(ti.Interface_MagpieUI_UsersAuth, unitte
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME", raise_missing=False, raise_not_set=False)
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD", raise_missing=False, raise_not_set=False)
         cls.setup_admin()
-        cls.check_requirements()
+        cls.login_admin()
         cls.version = utils.TestSetup.get_Version(cls)
         cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_ui-user-remote",
                                           raise_missing=False, raise_not_set=False)
@@ -351,13 +351,14 @@ class TestCase_MagpieUI_AdminAuth_Remote(ti.Interface_MagpieUI_AdminAuth, unitte
 
     @classmethod
     def setUpClass(cls):
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME", raise_missing=False, raise_not_set=False)
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD", raise_missing=False, raise_not_set=False)
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
-        cls.require = "cannot run tests without logged in '{}' user".format(get_constant("MAGPIE_ADMIN_GROUP"))
+        cls.require = "cannot run tests without logged in '{}' user".format(cls.grp)
         cls.setup_admin()
-        cls.check_requirements()
+        cls.login_admin()
         cls.version = utils.TestSetup.get_Version(cls)
         cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_ui-user-remote",
                                           raise_missing=False, raise_not_set=False)

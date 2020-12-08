@@ -352,7 +352,7 @@ class ServiceInterface(object):
                     # - if groups are of equal priority, then DENY is selected (see called method for details)
                     # resolve only if previously matched permission was also on group to avoid recomputing USER > GROUP
                     elif perm.type == PermissionType.INHERITED:
-                        effective_perms[perm_name] = PermissionSet.resolve_inherited(perm_set, perm)
+                        effective_perms[perm_name] = PermissionSet.combine(perm_set, perm)
 
             # don't bother moving to parent if everything is resolved already
             if len(effective_perms) == len(requested_perms):

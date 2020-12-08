@@ -206,8 +206,9 @@ def get_user_resources_view(request):
     """
     List all resources a user has permissions on.
     """
-    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
-    filtered_perms = asbool(ar.get_query_param(request, "filter") or ar.get_query_param(request, "filtered"))
+    inherit_groups_perms = asbool(ar.get_query_param(request, ["inherit", "inherited"]))
+    resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
+    filtered_perms = asbool(ar.get_query_param(request, ["filter", "filtered"]))
     user = ar.get_user_matchdict_checked_or_logged(request)
     db = request.db
 
@@ -226,9 +227,11 @@ def get_user_resources_view(request):
             json_res[svc_type] = {}
         for svc in services:
             svc_perms = uu.get_user_service_permissions(
-                user=usr, service=svc, request=request, inherit_groups_permissions=inherit_groups_perms)
+                user=usr, service=svc, request=request,
+                inherit_groups_permissions=inherit_groups_perms, resolve_groups_permissions=resolve_groups_perms)
             res_perms_dict = uu.get_user_service_resources_permissions_dict(
-                user=usr, service=svc, request=request, inherit_groups_permissions=inherit_groups_perms)
+                user=usr, service=svc, request=request,
+                inherit_groups_permissions=inherit_groups_perms, resolve_groups_permissions=resolve_groups_perms)
             # always allow admin to view full resource tree, unless explicitly requested to be filtered
             # otherwise (non-admin), only add details if there is at least one resource permission (any level)
             if (is_admin and not filtered_perms) or (svc_perms or res_perms_dict):
@@ -265,10 +268,12 @@ def get_user_resource_permissions_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     resource = ar.get_resource_matchdict_checked(request, "resource_id")
-    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
+    inherit_groups_perms = asbool(ar.get_query_param(request, ["inherit", "inherited"]))
+    resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
     effective_perms = asbool(ar.get_query_param(request, "effective"))
     return uu.get_user_resource_permissions_response(user, resource, request,
                                                      inherit_groups_permissions=inherit_groups_perms,
+                                                     resolve_groups_permissions=resolve_groups_perms,
                                                      effective_permissions=effective_perms)
 
 
@@ -347,12 +352,14 @@ def get_user_services_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     cascade_resources = asbool(ar.get_query_param(request, "cascade"))
-    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
+    inherit_groups_perms = asbool(ar.get_query_param(request, ["inherit", "inherited"]))
+    resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
     format_as_list = asbool(ar.get_query_param(request, "flatten"))
 
     svc_json = uu.get_user_services(user, request=request,
                                     cascade_resources=cascade_resources,
                                     inherit_groups_permissions=inherit_groups_perms,
+                                    resolve_groups_permissions=resolve_groups_perms,
                                     format_as_list=format_as_list)
     return ax.valid_http(http_success=HTTPOk, content={"services": svc_json},
                          detail=s.UserServices_GET_OkResponseSchema.description)
@@ -371,10 +378,12 @@ def get_user_service_permissions_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
-    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
+    inherit_groups_perms = asbool(ar.get_query_param(request, ["inherit", "inherited"]))
+    resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
     perm_type = PermissionType.INHERITED if inherit_groups_perms else PermissionType.DIRECT
     perms = ax.evaluate_call(lambda: uu.get_user_service_permissions(service=service, user=user, request=request,
-                                                                     inherit_groups_permissions=inherit_groups_perms),
+                                                                     inherit_groups_permissions=inherit_groups_perms,
+                                                                     resolve_groups_permissions=resolve_groups_perms),
                              fallback=lambda: request.db.rollback(), http_error=HTTPNotFound,
                              msg_on_fail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
                              content={"service_name": str(service.resource_name), "user_name": str(user.user_name)})
@@ -456,13 +465,18 @@ def get_user_service_resources_view(request):
     """
     List all resources under a service a user has permission on.
     """
-    inherit_groups_perms = asbool(ar.get_query_param(request, "inherit") or ar.get_query_param(request, "inherited"))
+    inherit_groups_perms = asbool(ar.get_query_param(request, ["inherit", "inherited"]))
+    resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
     user = ar.get_user_matchdict_checked_or_logged(request)
     service = ar.get_service_matchdict_checked(request)
     service_perms = uu.get_user_service_permissions(
-        user, service, request=request, inherit_groups_permissions=inherit_groups_perms)
+        user, service, request=request,
+        inherit_groups_permissions=inherit_groups_perms,
+        resolve_groups_permissions=resolve_groups_perms)
     resources_perms_dict = uu.get_user_service_resources_permissions_dict(
-        user, service, request=request, inherit_groups_permissions=inherit_groups_perms)
+        user, service, request=request,
+        inherit_groups_permissions=inherit_groups_perms,
+        resolve_groups_permissions=resolve_groups_perms)
     user_svc_res_json = format_service_resources(
         service=service,
         db_session=request.db,

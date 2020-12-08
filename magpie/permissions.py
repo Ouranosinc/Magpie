@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 # values employed for special cases of 'PermissionSet.reason' during permission resolution
 PERMISSION_REASON_DEFAULT = "no-permission"
+PERMISSION_REASON_MULTIPLE = "multiple"
 PERMISSION_REASON_ADMIN = "administrator"
 
 
@@ -121,11 +122,13 @@ class PermissionSet(object):
         .. seealso::
             :meth:`PermissionSet._convert`
         """
-        self._tuple = None  # type: Optional[PermissionTuple]   # reference to original item if available
+        tup = None
         if not isinstance(permission, Permission):
             perm_set = PermissionSet._convert(permission)
             if isinstance(permission, PermissionTuple):
-                self._tuple = permission
+                tup = permission
+            elif isinstance(permission, PermissionSet):
+                tup = permission.perm_tuple
             permission = perm_set.name
             access = perm_set.access if access is None else access
             scope = perm_set.scope if scope is None else scope
@@ -135,6 +138,7 @@ class PermissionSet(object):
         self.access = access
         self.scope = scope
         self.type = typ
+        self._tuple = tup  # type: Optional[PermissionTuple]   # reference to original item if available
         self._reason = reason
 
     def __eq__(self, other):
@@ -261,24 +265,39 @@ class PermissionSet(object):
         # type: () -> Optional[Str]
         """
         Indicative reason of the returned value defined by :meth:`type` or inferred by the :class:`PermissionTuple`.
+
+        .. seealso::
+            :meth:`combine`
+
+        :returns:
+            Single string that describes the reason (source) of the permission, or multiple strings if updated by
+            combination of multiple permissions.
         """
-        if self.type is None:
+        if self._reason is not None:
+            return self._reason
+        if self._tuple is None:
             return None
-        if self._reason is None and self._tuple is not None:
-            if self._tuple.type == "user":
-                self._reason = "user:{}:{}".format(self._tuple.user.id, self._tuple.user.user_name)
-            if self._tuple.type == "group":
-                self._reason = "group:{}:{}".format(self._tuple.group.id, self._tuple.group.group_name)
+        if self._tuple.type == "user":
+            self._reason = "user:{}:{}".format(self._tuple.user.id, self._tuple.user.user_name)
+        if self._tuple.type == "group":
+            self._reason = "group:{}:{}".format(self._tuple.group.id, self._tuple.group.group_name)
         return self._reason
 
+    @reason.setter
+    def reason(self, reason):
+        # type: (Optional[Str]) -> None
+        self._tuple = None  # reset to avoid mismatch between override reason and stored tuple
+        self._reason = reason
+
     @classmethod
-    def resolve_inherited(cls, permission1, permission2):
+    def combine(cls, permission1, permission2):
         # type: (ResolvablePermissionType, ResolvablePermissionType) -> ResolvablePermissionType
         """
-        Resolves which of the provided permissions should be considered as the winning candidate for a resource.
+        Resolves provided permissions into a single one considering various modifiers and groups for a resource.
 
-        Permissions **MUST** have the same resource and name. Furthermore, the resolution is only accomplished
-        locally for :term:`Inherited Permissions` of a user and his groups memberships.
+        Permissions **MUST** have the same resource and permission name. Furthermore, the resolution is only
+        accomplished locally respectively for the targeted resource. The combination considers the :class:`Scope` of
+        :term:`Inherited Permissions` of a user and his groups memberships as well as their priority.
 
         .. seealso::
             - :meth:`magpie.services.ServiceInterface.effective_permissions`
@@ -289,11 +308,13 @@ class PermissionSet(object):
             permission1 = PermissionSet(permission1)
         if not isinstance(permission1, PermissionSet):
             permission2 = PermissionSet(permission2)
-        # user permission always comes first, only one is possible on a given resource, so it can be found directly
+        # user direct permission always comes first
+        # only one is possible at a given time on a same resource and same permission name
         if permission1.name != permission2.name or \
                 (permission1.perm_tuple.resource is not permission2.perm_tuple.resource) or \
                 (permission1.type == PermissionType.DIRECT and permission2.type == PermissionType.DIRECT):
             raise ValueError("Invalid resolution attempt between two incomparable permissions.")
+
         if permission1.type == PermissionType.DIRECT:
             return permission1
         if permission2.type == PermissionType.DIRECT:
@@ -306,6 +327,12 @@ class PermissionSet(object):
         if priority1 < priority2:
             return permission2
         # same group priority are resolved according to corresponding permission names/access/scope (__lt__)
+        if permission1 == permission2:
+            # if the two different groups have the exact same resolution value,
+            # indicate that multiple groups resolve into the same access
+            permission1.reason = PERMISSION_REASON_MULTIPLE
+            return permission1
+        # otherwise return whichever group permission has higher resolution value
         return permission2 if permission1 < permission2 else permission1
 
     @property
