@@ -290,14 +290,19 @@ class PermissionSet(object):
         self._reason = reason
 
     @classmethod
-    def combine(cls, permission1, permission2):
+    def combine(cls, permission1, permission2, same_resources=True):
         # type: (ResolvablePermissionType, ResolvablePermissionType) -> ResolvablePermissionType
         """
         Resolves provided permissions into a single one considering various modifiers and groups for a resource.
 
-        Permissions **MUST** have the same resource and permission name. Furthermore, the resolution is only
-        accomplished locally respectively for the targeted resource. The combination considers the :class:`Scope` of
-        :term:`Inherited Permissions` of a user and his groups memberships as well as their priority.
+        Permissions **MUST** have the same :term:`Permission` name.
+        By default (:paramref:`same_resources`), the associated :term:`Resource` on which the compared
+        :term:`Permission` are applied on should also be the same (especially during local :term:`Inherited Permissions`
+        resolution). This safeguard must be disabled for :term:`Effective Permissions` that specifically handles
+        multi-level :term:`Resource` resolution.
+
+        The comparison considers both the :class:`Access` and :class:`Scope` of :term:`Inherited Permissions` of the
+        :term:`User`, as well as his groups memberships sorted by their priority.
 
         .. seealso::
             - :meth:`magpie.services.ServiceInterface.effective_permissions`
@@ -311,7 +316,7 @@ class PermissionSet(object):
         # user direct permission always comes first
         # only one is possible at a given time on a same resource and same permission name
         if permission1.name != permission2.name or \
-                (permission1.perm_tuple.resource is not permission2.perm_tuple.resource) or \
+                (same_resources and permission1.perm_tuple.resource is not permission2.perm_tuple.resource) or \
                 (permission1.type == PermissionType.DIRECT and permission2.type == PermissionType.DIRECT):
             raise ValueError("Invalid resolution attempt between two incomparable permissions.")
 

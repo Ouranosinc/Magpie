@@ -255,6 +255,7 @@ def get_user_resource_permissions_response(user, resource, request,
 
     def get_usr_res_perms():
         perm_type = None
+        res_perm_list = []
         if resource.owner_user_id == user.id:
             # FIXME: no 'magpie.models.Resource.permissions' - ok for now because no owner handling...
             perm_type = PermissionType.OWNED
@@ -268,7 +269,7 @@ def get_user_resource_permissions_response(user, resource, request,
                 if inherit_groups_permissions or resolve_groups_permissions:
                     res_perm_list = ResourceService.perms_for_user(resource, user, db_session=db_session)
                     res_perm_list = regroup_permissions(res_perm_list, combine=resolve_groups_permissions)
-                    res_perm_list = res_perm_list[resource.resource_id]
+                    res_perm_list = res_perm_list.get(resource.resource_id, [])
                     perm_type = PermissionType.INHERITED
                 else:
                     res_perm_list = ResourceService.direct_perms_for_user(resource, user, db_session=db_session)

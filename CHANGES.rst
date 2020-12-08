@@ -26,6 +26,8 @@ Bug Fixes
 * Fix session retrieval in case of erroneous cookie token provided in request and not matching any valid ``User``.
   This could happen in case of previously valid ``User`` token employed right after it got deleted, making
   corresponding ID unresolvable until invalidated by timeout or forgotten, or by plain forgery of invalid tokens.
+* Fix returned ``Group`` ID in response from creation request. Value was ``None`` and required second request to get
+  the actual value. The ID is returned immediately with expected value.
 
 `3.4.0 <https://github.com/Ouranosinc/Magpie/tree/3.4.0>`_ (2020-12-09)
 ------------------------------------------------------------------------------------

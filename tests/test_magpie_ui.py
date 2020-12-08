@@ -10,6 +10,7 @@ Tests for :mod:`magpie.ui` module.
 
 import re
 import unittest
+from typing import TYPE_CHECKING
 
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
@@ -19,6 +20,11 @@ from magpie.permissions import Access, Permission, PermissionSet, PermissionType
 from magpie.services import ServiceAPI, ServiceWPS
 from tests import runner, utils
 from tests.utils import TestVersion
+
+if TYPE_CHECKING:
+    from typing import Union
+
+    from magpie.typedefs import Str
 
 
 @runner.MAGPIE_TEST_UI
@@ -197,6 +203,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
 
         # utilities for later tests
         def to_ui_permission(permission):
+            # type: (Union[Str, PermissionSet]) -> Str
             return permission.explicit_permission if isinstance(permission, PermissionSet) else ""
 
         def check_ui_resource_permissions(perm_form, resource_id, permissions):
@@ -216,10 +223,13 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 urp_path = "/users/{}/resources/{}/permissions".format(self.test_user_name, _r_id)
                 urp_resp = utils.test_request(self, "GET", urp_path)
                 urp_body = utils.check_response_basic_info(urp_resp)
-                ur_perms = [perm for perm in _r_perms if isinstance(perm, PermissionSet)]
+                ur_perms = [perm.json() for perm in _r_perms if isinstance(perm, PermissionSet)]
                 for perm in ur_perms:
-                    perm.type = PermissionType.DIRECT
-                utils.check_all_equal(urp_body["permissions"], [perms.json() for perms in ur_perms], any_order=True)
+                    perm["type"] = PermissionType.DIRECT.value
+                permissions = urp_body["permissions"]
+                for perm in permissions:
+                    perm.pop("reason", None)  # >= 3.4, don't care for this test
+                utils.check_all_equal(permissions, ur_perms, any_order=True)
 
         # 0. goto user edit page (default first service selected)
         path = "/ui/users/{}/default".format(self.test_user_name)
