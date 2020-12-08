@@ -15,7 +15,7 @@ Features / Changes
   set of permissions from ``User`` and its multiple ``Group`` memberships.
 * Add ``Group`` priority to resolve inherited permission resolution in case of multiple entries from different
   group membership of the evaluated user.
-* Make ``MAGPIE_ANONYMOUS_GROUP`` have less priority than other *custom* ``Group`` to allow reverting publicly ``DENY``
+* Make ``MAGPIE_ANONYMOUS_GROUP`` have less priority than other *generic* ``Group`` to allow reverting publicly ``DENY``
   permission by one of those more specific ``Group`` with ``ALLOW`` permission.
 * Update documentation with more permission resolution concepts and examples.
 

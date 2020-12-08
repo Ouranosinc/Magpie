@@ -620,7 +620,13 @@ class PermissionObjectTypeSchema(PermissionObjectSchema):
     type = colander.SchemaNode(
         colander.String(),
         description="Permission type being displayed.",
-        example=PermissionType.ALLOWED.value
+        example=PermissionType.ALLOWED.value,
+    )
+    reason = colander.SchemaNode(
+        colander.String(),
+        description="Description of user or group where this permission originated from.",
+        example="user:123:my-user",
+        missing=colander.drop,
     )
 
 

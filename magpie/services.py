@@ -322,7 +322,7 @@ class ServiceInterface(object):
                     # skip if the current permission must not be processed (at all or for the moment until next iter)
                     elif perm_set.name not in requested_perms or perm_set.name != perm_name:
                         continue
-                    # only first resource can use match, parents are recursive-only
+                    # only first resource can use match (if even enabled with found one), parents are recursive-only
                     if not match and perm_set.scope == Scope.MATCH:
                         continue
 
@@ -353,15 +353,15 @@ class ServiceInterface(object):
                     # resolve only if previously matched permission was also on group to avoid recomputing USER > GROUP
                     elif perm.type == PermissionType.INHERITED:
                         # must turn off safeguard of same resources compare as tree hierarchy is being resolved
-                        resolved_perm = PermissionSet.combine(perm_set, perm, same_resources=False)
+                        resolved_perm = PermissionSet.resolve(perm_set, perm, same_resources=False)
                         effective_perms[perm_name] = resolved_perm
                         # when DENY is resolved as effective permission, it means this permission-name is at its
                         # last iteration for this level in the resource hierarchy (following permissions are skipped)
-                        # therefore, resolve with every other
-                        if effective_perms[perm_name].access == Access.DENY:
-                            leftover_perms = []
-                            for remain_perm in leftover_perms:
-                                effective_perms[perm_name] = PermissionSet.combine(resolved_perm, remain_perm)
+                        # therefore, resolve with every other possible
+                        #if effective_perms[perm_name].access == Access.DENY:
+                        #    leftover_perms = []
+                        #    for remain_perm in leftover_perms:
+                        #        effective_perms[perm_name] = PermissionSet.combine(resolved_perm, remain_perm)
 
             # don't bother moving to parent if everything is resolved already
             if len(effective_perms) == len(requested_perms):

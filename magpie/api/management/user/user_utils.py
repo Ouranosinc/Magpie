@@ -255,6 +255,7 @@ def get_user_resource_permissions_response(user, resource, request,
 
     def get_usr_res_perms():
         perm_type = None
+        perm_unique = True
         res_perm_list = []
         if resource.owner_user_id == user.id:
             # FIXME: no 'magpie.models.Resource.permissions' - ok for now because no owner handling...
@@ -267,14 +268,15 @@ def get_user_resource_permissions_response(user, resource, request,
                 perm_type = PermissionType.EFFECTIVE
             else:
                 if inherit_groups_permissions or resolve_groups_permissions:
+                    perm_unique = resolve_groups_permissions  # allow duplicates from distinct groups if not resolved
                     res_perm_list = ResourceService.perms_for_user(resource, user, db_session=db_session)
-                    res_perm_list = regroup_permissions(res_perm_list, combine=resolve_groups_permissions)
+                    res_perm_list = regroup_permissions_by_resource(res_perm_list, resolve=resolve_groups_permissions)
                     res_perm_list = res_perm_list.get(resource.resource_id, [])
                     perm_type = PermissionType.INHERITED
                 else:
                     res_perm_list = ResourceService.direct_perms_for_user(resource, user, db_session=db_session)
                     perm_type = PermissionType.DIRECT
-        return format_permissions(res_perm_list, perm_type)
+        return format_permissions(res_perm_list, perm_type, force_unique=perm_unique)
 
     permissions = ax.evaluate_call(
         lambda: get_usr_res_perms(),
@@ -292,7 +294,7 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
     Returns services by type with corresponding services by name containing sub-dict information.
 
     .. seealso::
-        :func:`regroup_permissions`
+        :func:`regroup_permissions_by_resource`
 
     :param user: user for which to find services
     :param request: request with database session connection
@@ -383,7 +385,7 @@ def filter_user_permission(resource_permission_list, user):
     return filter(is_user_perm, resource_permission_list)
 
 
-def combine_user_group_permissions(resource_permission_list):
+def resolve_user_group_permissions(resource_permission_list):
     # type: (List[ResolvablePermissionType]) -> Iterable[PermissionSet]
     """
     Reduces overlapping user :term:`Inherited Permissions` for corresponding resources/services amongst the given list.
@@ -432,26 +434,26 @@ def combine_user_group_permissions(resource_permission_list):
         if not prev_perm:
             combo_perms[perm_key] = perm
             continue
-        combo_perms[perm_key] = PermissionSet.combine(perm, prev_perm)
+        combo_perms[perm_key] = PermissionSet.resolve(perm, prev_perm)
     return list(combo_perms.values())
 
 
-def regroup_permissions(resource_permissions, combine=False):
+def regroup_permissions_by_resource(resource_permissions, resolve=False):
     # type: (Iterable[ResolvablePermissionType], bool) -> ResourcePermissionMap
     """
     Regroups multiple uncategorized permissions into a dictionary of corresponding resource IDs.
 
     While regrouping the various permissions (both :term:`Direct Permissions` and any amount of groups
-    :term:`Inherited Permissions`) under their respective resource by ID, optionally combine overlapping or conflicting
+    :term:`Inherited Permissions`) under their respective resource by ID, optionally resolve overlapping or conflicting
     permissions by name such that only one permission persists for that resource and name.
 
     .. seealso::
-        :func:`combine_user_group_permissions`
+        :func:`resolve_user_group_permissions`
 
     :param resource_permissions:
         List of resource permissions to process.
         Can include both user :term:`Direct Permissions` and its groups :term:`Inherited Permissions`.
-    :param combine:
+    :param resolve:
         When ``False``, only mapping by resource ID is accomplished. Full listing of permissions is returned.
         Otherwise, resolves the corresponding resource permissions (by same ID) considering various priority rules to
         obtain unique permission names per resource.
@@ -469,9 +471,9 @@ def regroup_permissions(resource_permissions, combine=False):
             resources_permissions_dict[res_id].append(res_perm)
 
     # remove any duplicates that could be incorporated by multiple groups as requested
-    if combine:
+    if resolve:
         for res_id in resources_permissions_dict:
-            resources_permissions_dict[res_id] = combine_user_group_permissions(resources_permissions_dict[res_id])
+            resources_permissions_dict[res_id] = resolve_user_group_permissions(resources_permissions_dict[res_id])
     return resources_permissions_dict
 
 
@@ -482,7 +484,7 @@ def get_user_resources_permissions_dict(user, request, resource_types=None, reso
     Creates a dictionary of resources ID with corresponding permissions of the user.
 
     .. seealso::
-        :func:`regroup_permissions`
+        :func:`regroup_permissions_by_resource`
 
     :param user: user for which to find resources permissions
     :param request: request with database session connection
@@ -492,7 +494,7 @@ def get_user_resources_permissions_dict(user, request, resource_types=None, reso
         Whether to include group inherited permissions from user memberships or not.
         If ``False``, return only user-specific resource permissions.
         Otherwise, resolve inherited permissions using all groups the user is member of.
-    :param resolve_groups_permissions: whether to combine corresponding user/group permissions or not.
+    :param resolve_groups_permissions: whether to combine corresponding user/group permissions into one or not.
     :return:
         Only resources which the user has permissions on, or including all :term:`Inherited Permissions`, according to
         :paramref:`inherit_groups_permissions` argument.
@@ -505,7 +507,7 @@ def get_user_resources_permissions_dict(user, request, resource_types=None, reso
         user, resource_ids=resource_ids, resource_types=resource_types, db_session=request.db)
     if not inherit_groups_permissions and not resolve_groups_permissions:
         res_perm_tuple_list = filter_user_permission(res_perm_tuple_list, user)
-    return regroup_permissions(res_perm_tuple_list, combine=resolve_groups_permissions)
+    return regroup_permissions_by_resource(res_perm_tuple_list, resolve=resolve_groups_permissions)
 
 
 def get_user_service_resources_permissions_dict(user, service, request,
@@ -519,7 +521,7 @@ def get_user_service_resources_permissions_dict(user, service, request,
 
     .. seealso::
         :func:`get_user_resources_permissions_dict`
-        :func:`regroup_permissions`
+        :func:`regroup_permissions_by_resource`
 
     :returns: dictionary of resource IDs with corresponding permissions.
     """

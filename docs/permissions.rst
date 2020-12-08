@@ -456,21 +456,22 @@ Below are the resolution steps which are applied for every distinct :term:`Permi
         *potentially revert* a previous :term:`Group` decision.
 
 
-The specific use case of step (2.3) is intended to give higher resolution precedence to custom :term:`Groups` over the
-special ``MAGPIE_ANONYMOUS_GROUP`` definition. This means that a custom :term:`Group` with a :term:`Permission` affected
-by :attr:`Access.ALLOW` modifier can override special ``MAGPIE_ANONYMOUS_GROUP`` that would have :attr:`Access.DENY` for
-the same :term:`Resource`, although resolution is opposite in every other situation. The reason for this exception is
-due to the nature of ``MAGPIE_ANONYMOUS_GROUP`` membership that is being automatically applied to every :term:`User` in
-order to also grant them `Public Access`_ to any :term:`Resource` marked as accessible to anyone. Since that special
-:term:`Group` also represents *"unauthenticated users"*, it is both counter intuitive and not practical to equally
-resolve conflicting :term:`Inherited Permissions` as it is naturally expected that an authenticated :term:`User` with
-specific :term:`Group` memberships should receive higher access privileges than its unauthenticated counterpart in case
-of contradictory :term:`Permissions` across both :term:`Group`. In other words, when a :term:`Resource` is blocked to
-the open public, it is expected that a :term:`User` that would obtain access to that :term:`Resource` through another
-one of its :term:`Group` memberships doesn't remain denied access due to its implicit ``MAGPIE_ANONYMOUS_GROUP``
-membership. Step (2.3) handles this edge case specifically.
+The specific use case of step (2.3) is intended to give higher resolution precedence to *generic* :term:`Groups` over
+the *special* ``MAGPIE_ANONYMOUS_GROUP`` definition. This means that a *generic* :term:`Group` with a
+:term:`Permission` affected by :attr:`Access.ALLOW` modifier can override *special* ``MAGPIE_ANONYMOUS_GROUP`` that
+would have :attr:`Access.DENY` for the same :term:`Resource`, although resolution is opposite in every other
+situation. The reason for this exception is due to the nature of ``MAGPIE_ANONYMOUS_GROUP`` membership that is being
+automatically applied to every :term:`User` in order to also grant them `Public Access`_ to any :term:`Resource`
+marked as accessible to anyone. Since that *special* :term:`Group` also represents *"unauthenticated users"*, it is
+both counter intuitive and not practical to equally resolve conflicting :term:`Inherited Permissions` as it is
+naturally expected that an authenticated :term:`User` with specific :term:`Group` memberships should receive higher
+access privileges than its unauthenticated counterpart in case of contradictory :term:`Permissions` across both
+:term:`Group`. In other words, when a :term:`Resource` is blocked to the open public, it is expected that a
+:term:`User` that would obtain access to that :term:`Resource` through another one of its :term:`Group` memberships
+doesn't remain denied access due to its implicit ``MAGPIE_ANONYMOUS_GROUP`` membership. Step (2.3) handles this edge
+case specifically.
 
-Every custom :term:`Group` share the same priority, and will therefore resolve conflicting :class:`Access` using the
+Every *generic* :term:`Group` share the same priority, and will therefore resolve conflicting :class:`Access` using the
 normal step conditions and prioritizing :attr:`Access.DENY`.
 
 When resolving only :term:`Inherited Permissions`, the procedure stops here and provides the applicable result if any

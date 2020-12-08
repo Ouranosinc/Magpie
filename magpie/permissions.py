@@ -145,7 +145,7 @@ class PermissionSet(object):
         # type: (Any) -> bool
         if not isinstance(other, PermissionSet):
             other = PermissionSet(other)
-        return self.json() == other.json()
+        return self.name == other.name and self.access == other.access and self.scope == other.scope
 
     def __ne__(self, other):
         # type: (Any) -> bool
@@ -286,11 +286,10 @@ class PermissionSet(object):
     @reason.setter
     def reason(self, reason):
         # type: (Optional[Str]) -> None
-        self._tuple = None  # reset to avoid mismatch between override reason and stored tuple
         self._reason = reason
 
     @classmethod
-    def combine(cls, permission1, permission2, same_resources=True):
+    def resolve(cls, permission1, permission2, same_resources=True):
         # type: (ResolvablePermissionType, ResolvablePermissionType) -> ResolvablePermissionType
         """
         Resolves provided permissions into a single one considering various modifiers and groups for a resource.
@@ -313,13 +312,13 @@ class PermissionSet(object):
             permission1 = PermissionSet(permission1)
         if not isinstance(permission1, PermissionSet):
             permission2 = PermissionSet(permission2)
-        # user direct permission always comes first
-        # only one is possible at a given time on a same resource and same permission name
+        # only one is user permission possible at a given time on a same resource and same permission name
         if permission1.name != permission2.name or \
                 (same_resources and permission1.perm_tuple.resource is not permission2.perm_tuple.resource) or \
                 (permission1.type == PermissionType.DIRECT and permission2.type == PermissionType.DIRECT):
             raise ValueError("Invalid resolution attempt between two incomparable permissions.")
 
+        # user direct permission always have priority
         if permission1.type == PermissionType.DIRECT:
             return permission1
         if permission2.type == PermissionType.DIRECT:
@@ -336,7 +335,7 @@ class PermissionSet(object):
             # if the two different groups have the exact same resolution value,
             # indicate that multiple groups resolve into the same access
             permission1.reason = PERMISSION_REASON_MULTIPLE
-            return permission1
+            return permission1  # preserved group in perm-tuple doesn't matter as they are equivalent
         # otherwise return whichever group permission has higher resolution value
         return permission2 if permission1 < permission2 else permission1
 
@@ -350,8 +349,8 @@ class PermissionSet(object):
             if self._tuple.group.group_name == get_constant("MAGPIE_ANONYMOUS_GROUP"):
                 return -1
             elif self._tuple.group.group_name == get_constant("MAGPIE_ADMIN_GROUP"):
-                return math.inf
-            return self._tuple.group.priority
+                return math.inf  # make sure that everything will be lower than admins
+            return max(self._tuple.group.priority, 0)  # make sure that nothing can be lower/equal to anonymous
         return None
 
     @property
@@ -526,20 +525,24 @@ class PermissionSet(object):
 
 def format_permissions(permissions,             # type: Optional[Collection[AnyPermissionType]]
                        permission_type=None,    # type: Optional[PermissionType]
+                       force_unique=True,       # type: bool
                        ):                       # type: (...) -> Dict[Str, Union[List[Str], PermissionObject, Str]]
     """
     Obtains the formatted permission representations after validation that each of their name is a known member of
     :class:`Permission` enum, and optionally with modifiers as defined by :class:`PermissionSet`.
 
-    The returned lists are sorted alphabetically by permission *name* and cleaned of any duplicate entries.
+    The returned lists are sorted alphabetically by permission *name*, and then in order of resolution priority (from
+    highest to lowest) for each subset or corresponding *name*.
+
+    The permissions are cleaned from any duplicate entries, unless :paramref:`force_unique` is specified to allow it.
     If no or empty :paramref:`permissions` is provided, empty lists are returned.
 
     .. note::
         Field ``permission_names`` provides both the *older* implicit permission names and the *newer* explicit name
         representation. For this reason, there will be semantically "duplicate" permissions in that list, but there
         will not be any literal string duplicates. Implicit names are immediately followed by their explicit name,
-        unless implicit names do not apply for the given permission (e.g.: when :attr:`Access.DENY`).
-        Only the detailed and explicit JSON representations are provided in the ``permissions`` list.
+        unless implicit names do not apply for the given permission (e.g.: when :attr:`Access.DENY` did not exist).
+        Only detailed and explicit JSON representations are provided in the ``permissions`` list.
 
     When :paramref:`permission_type` is equal to :attr:`PermissionType.ALLOWED`, the collection of every applicable
     :class:`PermissionSet` is automatically generated by expanding all combinations of :class:`Access` and
@@ -547,11 +550,12 @@ def format_permissions(permissions,             # type: Optional[Collection[AnyP
     definition of allowed permissions under :class:`magpie.services.Services` and their children :term:`Resources` by
     only defining :class:`Permission` names without manually listing all variations of :class:`PermissionSet`.
 
-    For other :paramref:`permission_type` values, which represent :term:`Applied Permissions` only specifically
+    For other :paramref:`permission_type` values, which represent :term:`Applied Permissions` only explicitly
     provided :paramref:`permissions` are returned, to effectively return the collection of *active* permissions.
 
     :param permissions: multiple permissions of any implementation and type, to be rendered both as names and JSON.
     :param permission_type: indication of the represented permissions to be formatted, for informative indication.
+    :param: force_unique: whether to remove duplicate entries by association of name, access and scope.
     :returns: JSON with the permissions listed as implicit+explicit names, as permission set objects, and their type.
     """
     json_perms = []
@@ -560,12 +564,15 @@ def format_permissions(permissions,             # type: Optional[Collection[AnyP
         permission_type = PermissionType.ALLOWED
     if permissions:
         bw_perm_unique = set()  # for quick remove of duplicates
-        unique_perms = sorted({PermissionSet(perm, typ=permission_type) for perm in permissions})
+        perms_list = [PermissionSet(perm, typ=permission_type) for perm in permissions]
+        if force_unique:
+            perms_list = set(perms_list)
+        perms_list = sorted(perms_list)
         if permission_type == PermissionType.ALLOWED:
-            unique_names = {perm.name for perm in unique_perms}  # trim out any extra variations, then build full list
-            unique_perms = sorted([PermissionSet(name, access, scope, PermissionType.ALLOWED)
-                                   for name, access, scope in itertools.product(unique_names, Access, Scope)])
-        for perm in unique_perms:
+            unique_names = {perm.name for perm in perms_list}  # trim out any extra variations, then build full list
+            perms_list = sorted([PermissionSet(name, access, scope, PermissionType.ALLOWED)
+                                 for name, access, scope in itertools.product(unique_names, Access, Scope)])
+        for perm in perms_list:
             implicit_perm = perm.implicit_permission
             explicit_perm = perm.explicit_permission
             if implicit_perm is not None and implicit_perm not in bw_perm_unique:
@@ -574,7 +581,7 @@ def format_permissions(permissions,             # type: Optional[Collection[AnyP
             if explicit_perm not in bw_perm_names:
                 bw_perm_names.append(explicit_perm)
                 bw_perm_unique.add(explicit_perm)
-        json_perms = [perm.json() for perm in unique_perms]
+        json_perms = [perm.json() for perm in perms_list]
     for perm in json_perms:
         perm.setdefault("type", permission_type.value)
     return {

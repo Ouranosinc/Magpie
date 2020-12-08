@@ -2137,7 +2137,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # replace first group allow permission access to deny, it should then take priority over the second group allow
         utils.TestSetup.delete_TestGroupResourcePermission(self, ignore_missing=False, override_resource_id=res_id,
                                                            override_permission=perm3, override_group_name=test_group_1)
-        perm5 = PermissionSet(perm1_name, Access.DENY, perm3.scope, PermissionType.INHERITED)
+        perm5 = PermissionSet(perm1_name, Access.DENY, Scope.MATCH, PermissionType.INHERITED)
         create_and_validate(res_id, "group", test_group_1, perm5,
                             [(perm4, grp2_reason), (perm5, grp1_reason), (perm1, anonym_reason)],  # perm3->perm5 (DENY)
                             [(perm5, grp1_reason)],  # because DENY > ALLOW, group1 returns as the most prioritized
@@ -2172,11 +2172,11 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         # set an exactly equivalent permission as the previous one created, but using the second group this time
         # because the two groups share equal priority and same permissions name/modifiers, none can be favored
-        create_and_validate(res_id, "group", test_group_2, perm8,  # reuse 'perm8'
+        create_and_validate(res_id, "group", test_group_2, perm8,  # same permission, different group
                             [(perm7, user_reason), (perm4, grp2_reason), (perm5, grp1_reason), (perm1, anonym_reason),
                              (perm8, grp1_reason), (perm8, grp2_reason)],  # again everything remains, but adds new one
                             [(perm7, user_reason), (perm8, PERMISSION_REASON_MULTIPLE)],  # reason multiple equal groups
-                            [(effect_perm1_allow, user_reason), (effect_perm2_deny, grp1_reason)])
+                            [(effect_perm1_allow, user_reason), (effect_perm2_deny, PERMISSION_REASON_MULTIPLE)])
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
