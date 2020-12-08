@@ -429,37 +429,64 @@ Permissions Resolution
 
 This section details the step-by-step process employed to resolve :term:`Effective Permissions` to grant or refuse
 :term:`User` access to a given :term:`Resource`. Some of the steps also apply to :term:`Inherited Permissions`
-resolution (see :term:`Extended Representation`_),
+resolution (see :term:`Extended Representation`_).
 
 .. versionchanged:: 3.4
-    Previous versions of `Magpie` would consider every :term:`Group` with equal priority, not giving higher priority
-    to custom :term:`Groups` over special ``MAGPIE_ANONYMOUS_GROUP`` definition.
+    Previous versions of `Magpie` would consider every :term:`Group` with equal priority (step (2.2) in below list),
+    not making any distinction between them although there are usually some implied priorities in practice. Later
+    versions include step (2.3) to remediate this issue.
+
+Below are the resolution steps which are applied for every distinct :term:`Permission` ``name`` over a given
+:term:`Resource` for which :term:`ACL` must be obtained:
+
+1. Any :term:`Direct Permissions` applied explicitly for the evaluated :term:`User` and :term:`Resource` combination
+   are obtained. Any such :term:`Permission`, whether it is affected by :attr:`Access.ALLOW` or :attr:`Access.DENY`
+   modifier dictates the access result over that :term:`Resource`.
+
+2. Following is the resolution of :term:`Inherited Permissions`. In this case, there are three possibilities:
+
+    2.1 There is only one :term:`Group` for which a :term:`Permission` is defined. The :term:`User` inherits that
+        specification, whether it is :attr:`Access.ALLOW` or :attr:`Access.DENY`.
+
+    2.2 Many :term:`Group` membership exist and share of same highest priority. In this case, if any :term:`Group` has
+        :attr:`Access.DENY`, the resolved access is marked as denied. If every equally prioritized :term:`Group`
+        indicate :attr:`Access.ALLOW`, then access is granted to the :term:`User`.
+
+    2.3 Otherwise, the highest priority :term:`Group` dictates the :class:`Access` resolution. This can
+        *potentially revert* a previous :term:`Group` decision.
 
 
-Below are the resolution steps:
+The specific use case of step (2.3) is intended to give higher resolution precedence to custom :term:`Groups` over the
+special ``MAGPIE_ANONYMOUS_GROUP`` definition. This means that a custom :term:`Group` with a :term:`Permission` affected
+by :attr:`Access.ALLOW` modifier can override special ``MAGPIE_ANONYMOUS_GROUP`` that would have :attr:`Access.DENY` for
+the same :term:`Resource`, although resolution is opposite in every other situation. The reason for this exception is
+due to the nature of ``MAGPIE_ANONYMOUS_GROUP`` membership that is being automatically applied to every :term:`User` in
+order to also grant them `Public Access`_ to any :term:`Resource` marked as accessible to anyone. Since that special
+:term:`Group` also represents *"unauthenticated users"*, it is both counter intuitive and not practical to equally
+resolve conflicting :term:`Inherited Permissions` as it is naturally expected that an authenticated :term:`User` with
+specific :term:`Group` memberships should receive higher access privileges than its unauthenticated counterpart in case
+of contradictory :term:`Permissions` across both :term:`Group`. In other words, when a :term:`Resource` is blocked to
+the open public, it is expected that a :term:`User` that would obtain access to that :term:`Resource` through another
+one of its :term:`Group` memberships doesn't remain denied access due to its implicit ``MAGPIE_ANONYMOUS_GROUP``
+membership. Step (2.3) handles this edge case specifically.
 
-1.
+Every custom :term:`Group` share the same priority, and will therefore resolve conflicting :class:`Access` using the
+normal step conditions and prioritizing :attr:`Access.DENY`.
 
+When resolving only :term:`Inherited Permissions`, the procedure stops here and provides the applicable result if any
+was found, with the corresponding ``reason``. An empty set of :term:`Permission` is returned if none could be found.
 
+When instead resolving :term:`Effective Permissions`, the above process continues by rewinding the parent
+:term:`Resource` hierarchy until the first :term:`Permission` is found. Only on the first iteration (when the targeted
+:term:`Resource` is the same as the one looked for potential :term:`Inherited Permissions`) does :attr:`Scope.MATCH`
+take effect. Only :attr:`Scope.RECURSIVE` are considered afterwards. When a :term:`Permission` is found, the process
+immediately completes if :attr:`Access.DENY` results from the previous resolution steps. Otherwise, the process still
+continues until reaching the top-most :term:`Service` to validate :attr:`Access.ALLOW` over the entire scope the
+:term:`Permission` was found. If still no :term:`Permission` is defined after complete hierarchy processing, the result
+defaults to :attr:`Access.DENY`, and indicated by ``"no-permission"`` reason.
 
-
-
-
-This meant that a custom
-:term:`Group` would not have greater priority over special ``MAGPIE_ANONYMOUS_GROUP`` automatically applied to
-every :term:`User`. Since that :term:`Group` basically represents `Public Access`_ or *"unauthenticated users"*,
-it was both counter intuitive and not practical to equally resolve conflicting :term:`Inherited Permissions`  as it
-is more naturally expected that an authenticated :term:`User` with specific :term:`Group` memberships should receive
-higher access privileges than its unauthenticated counterpart in case of contradictory :term:`Permissions` across
-both :term:`Group`. For this reason, every :term:`Group` is resolved with higher priority over special
-``MAGPIE_ANONYMOUS_GROUP``, which means that any custom :term:`Group` with :term:`Permissions`  :attr:`Access.ALLOW` modifier will
-
-
-
-.. todo: Permissions Resolution
-
-
-
+.. seealso::
+    - |perm_example_resolve|_
 
 Examples
 -------------------
