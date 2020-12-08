@@ -1,7 +1,6 @@
 .. _services:
 .. include:: references.rst
 
-===========
 Services
 ===========
 

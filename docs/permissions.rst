@@ -5,7 +5,6 @@
 .. using the full name when introducing the element (to make the location obvious), the reuse shorthand variant
 .. py:currentmodule:: magpie.permissions
 
-===========
 Permissions
 ===========
 
@@ -26,6 +25,10 @@ of observed results.
     the API will include a ``type`` field that indicates precisely the type of :term:`Permission` returned, for each
     specific item presented below.
 
+.. seealso::
+    - `Permissions Representation`_
+    - |perm_example_type|_
+
 More specifically, following distinctions can be observed between different kind of :term:`Permission` used by `Magpie`:
 
 .. _`allowed permissions`:
@@ -45,8 +48,8 @@ More specifically, following distinctions can be observed between different kind
     These entries are validated during requests against the appropriate `Allowed Permissions`_ of the targeted item
     (:term:`Service` or :term:`Resource`) to create the "rule" under (for) the targeted :term:`User` or :term:`Group`.
     When executing requests under scopes ``/users`` and ``/groups``, responses without query parameter modifiers
-    (see `perm_example`_) are by default `Applied Permissions`_. These are also scoped under a *single context*
-    at a given time (:term:`User` or :term:`Group`), depending on the request path being executed. They determine
+    are by default `Applied Permissions`_. These are also scoped under a *single context* at a given time
+    (:term:`User` or :term:`Group`), depending on the request path being executed. They determine
     which access rights will be granted or denied for the respective :term:`User` or :term:`Group`.
 
 .. _`direct permissions`:
@@ -74,9 +77,9 @@ More specifically, following distinctions can be observed between different kind
     Represents the combined set of `Applied Permissions`_ from the :term:`User` context and every one of its
     :term:`Group` membership contexts. When requesting a :term:`Group`'s permissions, only "rules" explicitly set on
     the given group are returned. The same concept applies when *only* requesting :term:`User` permissions. Providing
-    applicable :term:`User`-scoped requests with ``inherited=true`` query parameter will return the *merged* set of
+    applicable :term:`User`-scoped requests with ``inherited=true`` query parameter will return the complete set of
     `Applied Permissions`_ for that :term:`User` and all his :term:`Group` membership simultaneously.
-    See `perm_example`_ for complete comparison.
+    See |perm_example_type|_ for comparison of results with different query parameters.
 
     .. versionchanged:: 2.0
         Prior to this version, ``inherit`` (without ``ed``) was employed as query parameter name. This often lead to
@@ -90,8 +93,8 @@ More specifically, following distinctions can be observed between different kind
     Represents all `Inherited Permissions`_ of the :term:`User` and all its :term:`Group` membership, as well as the
     extensive resolution of the :term:`Service` and every children :term:`Resource` in its hierarchy for the requested
     :term:`Resource` scope. Effective permissions automatically imply ``inherited=True``, and can be obtained from
-    :term:`User`-scoped requests with ``effective=true`` query parameter wherever supported. See `perm_example`_ for
-    complete comparison.
+    :term:`User`-scoped requests with ``effective=true`` query parameter wherever supported.
+    See |perm_example_type|_ for complete comparison.
 
 .. _`access permissions`:
 
@@ -235,25 +238,256 @@ to execute `Magpie` application. Effectively, when the active session correspond
 :term:`Logged User`, it is still allowed to call :term:`User`-scoped API request paths, which will return details about
 :term:`Public` accessible items.
 
-.. _perm_example:
-.. |perm_example| replace:: Permission Example
 
-Example to distinguish Applied, Inherited and Effective Permissions
---------------------------------------------------------------------------------------
+Finding User Permissions
+----------------------------
+
+One of the trickiest (and often confusing) situation when we want to figure out which :term:`Service` a :term:`User` has
+any :term:`Permission` on, is where to actually start looking? Effectively, if we have a vast amount of registered
+:term:`Service` each with a immense hierarchy of :term:`Resource`, doing an exhaustive search can be quite daunting,
+not to mention costly in terms of request lookup and resources.
+
+For this purpose, there is one query parameter named ``cascade`` that can be employed with request
+``GET /users/{user_name}/services``. In normal condition (without the parameter), this request responds with every
+:term:`Service` where the user has :term:`Immediate Permissions` on (doesn't lookup the whole tree hierarchy). With the
+added query parameter, it tells `Magpie` to recursively search the hierarchy of `Applied Permissions`_ and return all
+:term:`Service` instances that possess *any* :term:`Permission` given to at least one child :term:`Resource` at *any*
+level. Furthermore, the ``cascade`` query can be combined with ``inherited`` query to search for all combinations of
+:term:`Inherited Permissions` instead of (by default) only for the :term:`User`'s :term:`Direct Permissions`.
+
+This query can be extremely useful to quickly answer *"does the user have any permission at all on this service"*,
+without needing to manually execute multiple successive lookup requests with all combinations of :term:`Resource`
+identifiers in the hierarchy.
+
+.. versionchanged:: 3.4
+    As of this version, API responses also provide ``reason`` field to help identify the source of every returned
+    :term:`Permission`. Please refer to `Permissions Representation`_ for more details.
+
+.. _permission_modifiers:
+
+Permission Definition and Modifiers
+--------------------------------------
+
+.. versionadded:: 3.0
+    Previous versions of `Magpie` employed literal ``[permission_name]`` and ``[permission_name]-match`` to
+    respectively represent recursive and exact match ``scope`` over the tree hierarchy of :term:`Resource`.
+    All ``-match`` suffixed :term:`Permission` names are now deprecated in favor of modifiers presented in this section.
+    Furthermore, the :attr:`Access.DENY` concept is introduced via ``access`` field, which did not exist at all in
+    previous versions.
+
+When applying a :term:`Permission` on a :term:`Service` or :term:`Resource` for a :term:`User` or :term:`Group`, there
+are 3 components considered to interpret its definition:
+
+1. ``name``
+2. ``access``
+3. ``scope``
+
+These concepts are implemented using :class:`magpie.permissions.PermissionSet`.
+
+The ``name`` represents the actual operation that is being attributed. For example, ``read`` and ``write`` would be
+different ``name`` that could be applied on a :term:`Resource` that represents a file. All allowed ``name`` values
+are defined by :class:`magpie.permissions.Permission` enum, but the subset of :term:`Allowed Permissions` are controlled
+per specific :term:`Service` and children :term:`Resource` implementations.
+
+The ``access`` component is defined by :class:`magpie.permissions.Access` enum. This specifies whether the
+:term:`Permission` should be *allowed* or *denied*. More specifically, it provides flexibility to administrators to
+correspondingly grant or remove the :term:`Permission` for previously denied or allowed :term:`User` or :term:`Group`
+when resolving the :term:`Resource` tree hierarchy. This helps solving special use cases where different inheritance
+conditions must be applied at different hierarchy levels. By default, if no ``access`` indication is provided when
+creating a new :term:`Permission`, :attr:`Access.ALLOW` is employed since `Magpie` resolves all ``access`` to a
+:term:`Resource` as :attr:`Access.DENY` unless explicitly granted. In other words, `Magpie` assumes that administrators
+adding new :term:`Permission` entries indent to grant :term:`Service` or :term:`Resource` access for the targeted
+:term:`User` or :term:`Group`. Any :term:`Permission` specifically created using :attr:`Access.DENY` should be involved
+only to revert a previously resolved :attr:`Access.ALLOW`, as they are otherwise redundant to default
+:term:`Effective Permissions` resolution.
+
+The ``scope`` concept is defined by :class:`magpie.permissions.Scope` enum. This tells `Magpie` whether the
+:term:`Applied Permission` should impact only the immediate :term:`Resource` (i.e.: when ``match``) or should instead
+be applied recursively for it and all its children. By applying a recursive :term:`Permission` on a higher-level
+:term:`Resource`, this modifier avoids having to manually set the same :term:`Permission` on every sub-:term:`Resource`
+when access as to be provided over a large hierarchy. Also, when combined with the ``access`` component, the ``scope``
+modifier can provide advanced control over granted or denied access.
+
+As a general rule of thumb, all :term:`Permission` are resolved such that more restrictive access applied *closer* to
+the actual :term:`Resource` for the targeted :term:`User` will have priority, both in terms of inheritance by tree
+hierarchy and by :term:`Group` memberships.
+
+.. seealso::
+    - |perm_example_modifiers|_
+    - |perm_example_resolution|_
+
+.. _permission_representations:
+
+Permissions Representation
+--------------------------------------
+
+Basic Representation
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 3.0
+    Prior to this version, only plain *permission-names* where employed. These are represented by the *implicit* string
+    representation in following versions of `Magpie`.
+
+As presented in the previous section, every :term:`Permission` in `Magpie` is represented by three (3) elements, namely
+the ``name``, the ``access`` and the ``scope``. These are represented in API responses by both *explicit* and *implicit*
+string representations, as well as one extensive JSON representation. The *implicit* representation is mostly preserved
+for backward compatibility reasons, and represents the previous naming convention which can **partially* be mapped to
+the *explicit* string representation, due to the addition of ``access`` and ``scope`` modifiers.
+
+Therefore, it can be noted that all API responses that contain details about permissions will return both the
+``permission_names`` and ``permissions`` fields as follows.
+
+.. code-block:: json
+
+    {
+        "permission_names": [
+            "[permission-name]",
+            "[name-access-scope]"
+        ],
+        "permissions": [
+            {
+                "name": "permission-name",
+                "access": "allow|deny",
+                "scope": "match|recursive",
+                "type": "access|allowed|applied|direct|inherited|effective|owned",
+                "reason": "<optional>"
+            }
+        ]
+    }
+
+
+.. note::
+    Single :term:`Permission` operations, such as creation, deletion or update of a permission entry will also provide
+    all above variants, but without the plural ``s`` in the field name.
+
+Extended Representation
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+It can be noted that the previous JSON representation also provides a fourth ``type`` parameter which serves as
+indicative detail about the kind of :term:`Permission` being displayed, in attempt to reduce the ambiguity described in
+:ref:`permission_types`.
+
+.. versionadded:: 3.4
+    Fifth field named ``reason`` is introduced. It is also an informative field such as ``type`` and does not impact
+    the stored :term:`Permission`, but helps comprehend how :term:`ACL` gets resolved for a given :term:`User`.
+
+Using field ``reason``, it is possible to obtain an even more detailed explanation of the returned :term:`Permission`
+set. This field can be represented with the following combinations:
+
+.. list-table::
+    :header-rows: 1
+
+    * - Value/Format of ``reason``
+      - Description
+    * - ``"administrator"``
+      - Indicates that permission was granted because the :term:`User` has full administrative access over the
+        corresponding :term:`Resource`. Typically, this means the :term:`User` is a member of ``MAGPIE_ADMIN_GROUP``
+        and no further :term:`Permission` resolution needs to take place.
+    * - ``"user:<id>:<name>"``
+      - The resolved access to the :term:`Resource` is caused by the :term:`Direct Permissions` of the :term:`User`.
+    * - ``"group:<id>:<name>"``
+      - The resolved access to the :term:`Resource` is caused by an :term:`Inherited Permissions` the :term:`User`
+        obtains through the specified :term:`Group` membership.
+    * - ``"multiple"``
+      - The resolved access to the :term:`Resource` is simultaneously caused by multiple :term:`Inherited Permissions`
+        of equal priority. This can be displayed when using ``resolve`` detailed below, and that not only a single
+        :term:`Group` affects the resulting :term:`Permission`.
+    * - ``"no-permission"``
+      - The resolved access results into not a single :term:`Permission` found, defaulting to denied access.
+        This occurs only during :term:`Effective Permissions` resolution where explicit :class:`Access` values must be
+        returned for every possible :term:`Permission` ``name``. Unspecified :term:`Permission` entries are simply
+        omitted (as they don't exist) for every other type of request.
+
+
+Field ``reason`` is specifically useful when employed with ``inherited`` query parameter onto :term:`User`-scoped
+request paths, as this option will simultaneously return all :term:`Inherited Permissions`, both applied for the
+:term:`User` itself and all its :term:`Group` memberships. Each of the listed :term:`Permission` would then individually
+have its appropriate ``reason`` field indicated, giving a broad overview of the applicable permissions for that
+:term:`User` when processing :term:`Effective Permissions`. Not using ``inherited`` would obviously only return
+:term:`Direct Permissions`, which will only return ``"user:<id>:<name>"`` formatted ``reason`` fields.
+
+Furthermore, a *localized preview* of the resolved :term:`Permission` can be obtained by using query parameter
+``resolve``. When this option is provided, `Magpie` will merge all :term:`Applied Permissions` of the :term:`User`
+and its :term:`Groups` into a single entry (one per distinct :term:`Permission` ``name``) over the targeted
+:term:`Resource`. This offers a simplified view of the `Permissions Resolution`_ (although only locally), to ease
+interpretation of :term:`Applied Permissions`, notably when multiple :term:`Group` memberships with redundant,
+complementary or even contradicting :term:`Permission` entries on the :term:`Resource` are defined, which the
+:term:`User` would inherit from.
+
+.. seealso::
+    - `Permissions Resolution`_
+    - |perm_example_resolution|_
+
+.. warning::
+    Field ``resolve`` does not return the *final* :term:`Effective Permissions` resolution (:attr:`Scope.RECURSIVE` is
+    not considered in this case). It only indicates, *locally* for a given :term:`Resource`, the *most important*
+    :term:`Applied Permission` of a :term:`User` amongst all of its existing :term:`Inherited Permissions`.
+
+
+Permissions Resolution
+------------------------
+
+This section details the step-by-step process employed to resolve :term:`Effective Permissions` to grant or refuse
+:term:`User` access to a given :term:`Resource`. Some of the steps also apply to :term:`Inherited Permissions`
+resolution (see :term:`Extended Representation`_),
+
+.. versionchanged:: 3.4
+    Previous versions of `Magpie` would consider every :term:`Group` with equal priority, not giving higher priority
+    to custom :term:`Groups` over special ``MAGPIE_ANONYMOUS_GROUP`` definition.
+
+
+Below are the resolution steps:
+
+1.
+
+
+
+
+
+
+This meant that a custom
+:term:`Group` would not have greater priority over special ``MAGPIE_ANONYMOUS_GROUP`` automatically applied to
+every :term:`User`. Since that :term:`Group` basically represents `Public Access`_ or *"unauthenticated users"*,
+it was both counter intuitive and not practical to equally resolve conflicting :term:`Inherited Permissions`  as it
+is more naturally expected that an authenticated :term:`User` with specific :term:`Group` memberships should receive
+higher access privileges than its unauthenticated counterpart in case of contradictory :term:`Permissions` across
+both :term:`Group`. For this reason, every :term:`Group` is resolved with higher priority over special
+``MAGPIE_ANONYMOUS_GROUP``, which means that any custom :term:`Group` with :term:`Permissions`  :attr:`Access.ALLOW` modifier will
+
+
+
+.. todo: Permissions Resolution
+
+
+
+
+Examples
+-------------------
+
+.. _perm_example_type:
+.. |perm_example_type| replace:: Permission Types example
+
+Distinguishing Applied, Inherited and Effective Permissions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section intends to provide more insight on the different :ref:`permission_types` using a simplified
 demonstration of interaction between defined :term:`Service`, :term:`Resource`, :term:`Group`, :term:`User` and
 :term:`Permission` elements.
 
 Let's say we have some fictive :term:`Service` that allows the following *permission scheme*, and that it implements
-the default hierarchical resolution of :term:`Resource` items (i.e.: having permissions on ``resource-type-1`` also
-provides the same ones for child resources ``resource-type-2``).
+the default hierarchical resolution of :term:`Resource` items.
 
 .. code-block::
 
     service-type                [read | write]
         resource-type-1         [read | write]
             resource-type-2     [read | write]
+
+.. note::
+    To simplify this example, having permissions on ``resource-type-1`` also provides the same ones for child
+    resources ``resource-type-2`` and so on. More explicitly, it is assumed that every :term:`Permission` is affected
+    with (default) :class:`Scope.RECURSIVE` and :class:`Access.ALLOW` modifiers.
+    See `Permission Definition and Modifiers`_ for further details on alternatives.
 
 Given that scheme, let's say that existing elements are defined using the allowed types as follows:
 
@@ -342,71 +576,11 @@ In summary, ``effective`` tells us *"which permissions does the user have access
 ``inherited`` answers *"which permissions does the user have on this resource alone"*, and without any query, we
 obtain *"what are the permissions that this user explicitly has on this resource"*.
 
+.. perm_example_modifiers:
+.. |perm_example_modifiers| replace:: Permission Modifiers example
 
-Finding User Permissions
-----------------------------
-
-One of the trickiest (and often annoying) situation when we want to figure out which :term:`Service` a :term:`User` has
-any :term:`Permission` on, is where to actually start looking? Effectively, if we have a vast amount of registered
-:term:`Service` each with a immense hierarchy of :term:`Resource`, doing an exhaustive search can be quite daunting,
-not to mention costly in terms of request lookup and resources.
-
-For this purpose, there is one query parameter named ``cascade`` that can be employed with request
-``GET /users/{user_name}/services``. In normal condition (without the parameter), this request responds with every
-:term:`Service` where the user has :term:`Immediate Permissions` on (doesn't lookup the whole tree hierarchy). With the
-added query parameter, it tells `Magpie` to recursively search the hierarchy of `Applied Permissions`_ and return all
-:term:`Service` instances that possess *any* :term:`Permission` given to at least one child :term:`Resource` at *any*
-level. Furthermore, the ``cascade`` query can be combined with ``inherited`` query to search for all combinations of
-:term:`Inherited Permissions` instead of (by default) only for the :term:`User`'s :term:`Direct Permissions`.
-
-This query can be extremely useful to quickly answer *"does the user have any permission at all on this service"*,
-without needing to manually execute multiple successive lookup requests with all combinations of :term:`Resource`
-identifiers in the hierarchy.
-
-.. _permission_modifiers:
-
-Permissions Definition and Modifiers
---------------------------------------
-
-.. versionadded:: 3.0
-    Previous versions of `Magpie` employed literal ``[permission_name]`` and ``[permission_name]-match`` to
-    respectively represent recursive and match ``scope`` over the hierarchy of :term:`Resource`.
-    All ``-match`` suffixed :term:`Permission` names are now deprecated in favor of modifiers presented in this section.
-    Furthermore, the :attr:`Access.DENY` concept is introduced via ``access`` field, which did not exist at all in
-    previous versions.
-
-When applying a :term:`Permission` on a :term:`Service` or :term:`Resource` for a :term:`User` or :term:`Group`, there
-are 3 components considered to interpret its definition:
-
-1. ``name``
-2. ``access``
-3. ``scope``
-
-These concepts are implemented using :class:`magpie.permissions.PermissionSet`.
-
-The ``name`` represents the actual operation that is being attributed. For example, ``read`` and ``write`` would be
-different ``name`` that could be applied on a :term:`Resource` that represents a file. All allowed ``name`` values
-are defined by :class:`magpie.permissions.Permission` enum, but the subset of :term:`Allowed Permissions` are controlled
-per specific :term:`Service` and children :term:`Resource` implementations.
-
-The ``access`` component is defined by :class:`magpie.permissions.Access` enum. This specifies whether the
-:term:`Permission` should be *allowed* or *denied*. More specifically, it provides flexibility to administrators to
-correspondingly grant or remove the :term:`Permission` for previously denied or allowed :term:`User` or :term:`Group`
-when resolving the :term:`Resource` tree hierarchy. This helps solving special use cases where different inheritance
-conditions must be applied at different hierarchy levels. By default, if no ``access`` indication is provided when
-creating a new :term:`Permission`, :attr:`Access.ALLOW` is employed since `Magpie` resolves all ``access`` to a
-:term:`Resource` as :attr:`Access.DENY` unless explicitly granted. In other words, `Magpie` assumes that administrators
-adding new :term:`Permission` entries indent to grant :term:`Service` or :term:`Resource` access for the targeted
-:term:`User` or :term:`Group`. Any :term:`Permission` specifically created using :attr:`Access.DENY` should be involved
-only to revert a previously resolved :attr:`Access.ALLOW`, as they are otherwise redundant to default
-:term:`Effective Permissions` resolution.
-
-The ``scope`` concept is defined by :class:`magpie.permissions.Scope` enum. This tells `Magpie` whether the
-:term:`Applied Permission` should impact only the immediate :term:`Resource` (i.e.: when ``match``) or should instead
-be applied recursively for it and all its children. By applying a recursive :term:`Permission` on a higher-level
-:term:`Resource`, this modifier avoids having to manually set the same :term:`Permission` on every sub-:term:`Resource`
-when access as to be provided over a large hierarchy. Also, when combined with the ``access`` component, the ``scope``
-modifier can provide advanced control over granted or denied access.
+The effect of Permission Modifiers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Below are examples of :term:`Permission` definitions that can help better understand the different concepts.
 The definitions employ the ``[name]-[access]-[scope]`` convention to illustrate the applied :term:`Permission`.
@@ -444,50 +618,9 @@ priority over any :term:`Group` :term:`Permission`. Also, ``deny`` access is pri
 the default interpretation of protected access control defined by `Magpie`. When ``match`` and ``recursive`` scopes
 cause ambiguous resolution, the ``match`` :term:`Permission` is prioritized over inherited access via parent ``scope``.
 
-As a general rule of thumb, all :term:`Permission` are resolved such that more restrictive access applied *closer* to
-the actual :term:`Resource` for the targeted :term:`User` will have priority, both in terms of inheritance by tree
-hierarchy and by :term:`Group` memberships.
 
-.. _permission_representations:
+.. perm_example_resolve:
+.. |perm_example_resolve| replace:: Permission Resolution example
 
-Permissions Representations
---------------------------------------
-
-.. versionadded:: 3.0
-    Prior to this version, only plain *permission-names* where employed. These are represented by the *implicit* string
-    representation in following versions of `Magpie`.
-
-As presented in the previous section, every :term:`Permission` in `Magpie` is represented by three (3) elements, namely
-the ``name``, the ``access`` and the ``scope``. These are represented in API responses by both *explicit* and *implicit*
-string representations, as well as one extensive JSON representation. The *implicit* representation is mostly preserved
-for backward compatibility reasons, and represents the previous naming convention which can be mapped to *some* of the
-*explicit* string representation, due to the addition of ``access`` and ``scope`` modifiers.
-
-Therefore, it can be noted that all API responses that contain details about permissions will return both the
-``permission_names`` and ``permissions`` fields as follows.
-
-.. code-block:: json
-
-    {
-        "permission_names": [
-            "[permission-name]",
-            "[name-access-scope]"
-        ],
-        "permissions": [
-            {
-                "name": "permission-name",
-                "access": "allow|deny",
-                "scope": "match|recursive",
-                "type": "access|allowed|applied|direct|inherited|effective|owned"
-            }
-        ]
-    }
-
-
-.. note::
-    Single :term:`Permission` operations, such as creation, deletion or update of a permission entry will also provide
-    all above variants, but without the plural ``s`` in the field name.
-
-It can be noted that the JSON representation also provides a fourth ``type`` parameter which serves as indicative
-detail about the kind of :term:`Permission` being displayed, in attempt to reduce the ambiguity described in
-:ref:`permission_types`.
+Resolution of Overlapping Permissions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
