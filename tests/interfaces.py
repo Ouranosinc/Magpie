@@ -20,7 +20,15 @@ from magpie.adapter import MagpieAdapter
 from magpie.api import schemas as s
 from magpie.constants import MAGPIE_ROOT, get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Directory, Route
-from magpie.permissions import PERMISSION_REASON_DEFAULT, Access, Permission, PermissionSet, PermissionType, Scope
+from magpie.permissions import (
+    PERMISSION_REASON_DEFAULT,
+    PERMISSION_REASON_MULTIPLE,
+    Access,
+    Permission,
+    PermissionSet,
+    PermissionType,
+    Scope
+)
 from magpie.register import pseudo_random_string
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceNCWMS2, ServiceTHREDDS
 from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML, get_twitcher_protected_service_url
@@ -2160,6 +2168,14 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                             [(perm7, user_reason), (perm4, grp2_reason), (perm5, grp1_reason), (perm1, anonym_reason),
                              (perm8, grp1_reason)],  # all previous permissions untouched, only new one added
                             [(perm7, user_reason), (perm8, grp1_reason)],  # resolved with prioritized regrouped by name
+                            [(effect_perm1_allow, user_reason), (effect_perm2_deny, grp1_reason)])
+
+        # set an exactly equivalent permission as the previous one created, but using the second group this time
+        # because the two groups share equal priority and same permissions name/modifiers, none can be favored
+        create_and_validate(res_id, "group", test_group_2, perm8,  # reuse 'perm8'
+                            [(perm7, user_reason), (perm4, grp2_reason), (perm5, grp1_reason), (perm1, anonym_reason),
+                             (perm8, grp1_reason), (perm8, grp2_reason)],  # again everything remains, but adds new one
+                            [(perm7, user_reason), (perm8, PERMISSION_REASON_MULTIPLE)],  # reason multiple equal groups
                             [(effect_perm1_allow, user_reason), (effect_perm2_deny, grp1_reason)])
 
     @runner.MAGPIE_TEST_USERS

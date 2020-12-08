@@ -299,7 +299,7 @@ class ServiceInterface(object):
             cur_res_perms.extend(permission_to_pyramid_acls(resource.__acl__))
 
             for perm_name in requested_perms:
-                for perm_tup in cur_res_perms:
+                for i, perm_tup in enumerate(cur_res_perms):
                     perm_set = PermissionSet(perm_tup)
 
                     # if user is owner (directly or via groups), all permissions are set,
@@ -353,13 +353,21 @@ class ServiceInterface(object):
                     # resolve only if previously matched permission was also on group to avoid recomputing USER > GROUP
                     elif perm.type == PermissionType.INHERITED:
                         # must turn off safeguard of same resources compare as tree hierarchy is being resolved
-                        effective_perms[perm_name] = PermissionSet.combine(perm_set, perm, same_resources=False)
+                        resolved_perm = PermissionSet.combine(perm_set, perm, same_resources=False)
+                        effective_perms[perm_name] = resolved_perm
+                        # when DENY is resolved as effective permission, it means this permission-name is at its
+                        # last iteration for this level in the resource hierarchy (following permissions are skipped)
+                        # therefore, resolve with every other
+                        if effective_perms[perm_name].access == Access.DENY:
+                            leftover_perms = []
+                            for remain_perm in leftover_perms:
+                                effective_perms[perm_name] = PermissionSet.combine(resolved_perm, remain_perm)
 
             # don't bother moving to parent if everything is resolved already
             if len(effective_perms) == len(requested_perms):
                 break
             # otherwise, move to parent if any available, since we are not done rewinding the resource tree
-            match = False
+            match = False  # reset match not applicable anymore for following parent resources
             if resource.parent_id:
                 resource = ResourceService.by_resource_id(resource.parent_id, db_session=db_session)
             else:
