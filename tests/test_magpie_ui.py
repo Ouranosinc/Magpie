@@ -10,7 +10,6 @@ Tests for :mod:`magpie.ui` module.
 
 import re
 import unittest
-from distutils.version import LooseVersion
 
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
@@ -19,6 +18,7 @@ from magpie.models import Route
 from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
 from magpie.services import ServiceAPI, ServiceWPS
 from tests import runner, utils
+from tests.utils import TestVersion
 
 
 @runner.MAGPIE_TEST_UI
@@ -150,7 +150,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
             resp = utils.TestSetup.check_FormSubmit(self, form_match="add_resource_form", form_submit="add_child",
                                                     form_data=data, previous_response=resp)
             for res_name in (self.test_service_parent_resource_name, self.test_service_child_resource_name):
-                if LooseVersion(self.version) >= LooseVersion("3.0"):
+                if TestVersion(self.version) >= TestVersion("3.0"):
                     find = "<div class=\"tree-key\">{}</div>".format(res_name)
                     text = resp.text.replace("\n", "").replace("  ", "")  # ignore formatting of source file
                 else:
