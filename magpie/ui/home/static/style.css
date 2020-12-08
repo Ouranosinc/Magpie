@@ -999,7 +999,9 @@ table.request-details thead tbody td th {
 }
 
 .tab-panel-selector {
-    margin: 0.1em;
+    /* see 'tab' for below spacing */
+    margin-bottom: 0.125em;
+    margin-right: 0.125em;
 }
 
 .current-tab-panel {
@@ -1022,8 +1024,10 @@ a.current-tab:visited {
 
 .tab {
     min-width: 6em;  /* make tabs same width regardless of text length, but must be adjusted for longest one */
-    margin-bottom: 0.1em;   /* in case page is not wide enough, avoid wrapped tabs to be sticking on top of another */
     border-color: black;
+    /* below margins top/left must be opposite to bottom/right of 'tab-panel-selector' to make it look equally spaced */
+    margin-top: 0.125em;   /* in case page is not wide enough, avoid wrapped tabs to be sticking top row tabs */
+    margin-left: 0.125em;  /* also avoid sticking to previous tab or edge of 'tab-panel-selector' */
 }
 
 a.tab:link,
