@@ -13,11 +13,19 @@ Features / Changes
   group membership of the evaluated user.
 * Add ``reason`` field to returned ``Permission`` objects to help better comprehend the provenance of a composed
   set of permissions from ``User`` and its multiple ``Group`` memberships.
+* Add ``Group`` priority to resolve inherited permission resolution in case of multiple entries from different
+  group membership of the evaluated user.
+* Make ``MAGPIE_ANONYMOUS_GROUP`` have less priority than other *custom* ``Group`` to allow reverting publicly ``DENY``
+  permission by one of those more specific ``Group`` with ``ALLOW`` permission.
+* Update documentation with more permission resolution concepts and examples.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix invalid submission of ``Group`` memberships from ``User`` edit UI page to ignore ``MAGPIE_ANONYMOUS_GROUP``
   presence or omission since it cannot be edited regardless (blocked by API).
+* Fix session retrieval in case of erroneous cookie token provided in request and not matching any valid ``User``.
+  This could happen in case of previously valid ``User`` token employed right after it got deleted, making
+  corresponding ID unresolvable until invalidated by timeout or forgotten, or by plain forgery of invalid tokens.
 
 `3.4.0 <https://github.com/Ouranosinc/Magpie/tree/3.4.0>`_ (2020-12-09)
 ------------------------------------------------------------------------------------

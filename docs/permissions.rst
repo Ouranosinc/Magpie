@@ -485,6 +485,10 @@ continues until reaching the top-most :term:`Service` to validate :attr:`Access.
 :term:`Permission` was found. If still no :term:`Permission` is defined after complete hierarchy processing, the result
 defaults to :attr:`Access.DENY`, and indicated by ``"no-permission"`` reason.
 
+.. todo: pseudo-code to represent the 'effective permission' portion of the resolution
+
+
+
 .. seealso::
     - |perm_example_resolve|_
 
@@ -651,3 +655,7 @@ cause ambiguous resolution, the ``match`` :term:`Permission` is prioritized over
 
 Resolution of Overlapping Permissions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. todo: permission resolution example with >2 group that contradict, >2 groups that have redundant (same) permissions
+.. todo: permission resolution example with some Group ALLOW > anonymous DENY
+.. todo: permission resolution example that includes simultaneously recursive/match, allow/deny and user/multi-group

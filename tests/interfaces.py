@@ -1,4 +1,6 @@
 import os
+import secrets
+import string
 import unittest
 import uuid
 import warnings
@@ -157,6 +159,19 @@ class BaseTestCase(unittest.TestCase):
                                                      override_headers=admin_headers, override_cookies=admin_cookies)
             utils.check_or_try_logout_user(cls)
 
+    @classmethod
+    def login_admin(cls):
+        """
+        Login as administrator user for setup pre-test components or validation post-test execution.
+
+        Each tests should call this method whenever appropriate considering the context (access control level) they
+        should be running with, and execute proper login/logout afterwards to correctly evaluate intended behaviour.
+        """
+        utils.check_or_try_logout_user(cls)  # in case user changed during another test
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
+        assert cls.headers and cls.cookies, cls.require     # nosec
+        cls.headers.update(cls.json_headers)
+
     def setUp(self):
         self.test_app = None  # reset: each test must redefine it if a custom one is needed
 
@@ -193,16 +208,6 @@ class BaseAdminTestCase(BaseTestCase):
     @classmethod
     def tearDownClass(cls):
         super(BaseAdminTestCase, cls).tearDownClass()
-
-    @classmethod
-    def login_admin(cls):
-        """
-        Login as administrator user for setup pre-test components or validation post-test execution.
-        """
-        utils.check_or_try_logout_user(cls)  # in case user changed during another test
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
-        assert cls.headers and cls.cookies, cls.require     # nosec
-        cls.headers.update(cls.json_headers)
 
     def cleanup(self):
         """
@@ -325,6 +330,59 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         utils.check_val_not_in("user_name", body)
         utils.check_val_not_in("user_email", body)
         utils.check_val_not_in("group_names", body)
+
+    @runner.MAGPIE_TEST_STATUS
+    def test_GetSession_InvalidTokens(self):
+        """
+        Invalid token in cookies must be ignored completely and return unauthorized response.
+        """
+        utils.warn_version(self, "session retrieval with invalid token", "3.4.0", skip=True)
+
+        # magpie uses SHA512, which is 64 bytes, converted to HEX becomes 128 characters
+        # adds 8 bytes to represent the timestamp + variable length of the user_id
+        # for evaluation, let's assume that user_id is 4 char: 128 + 8 + <4> + 16-char of post-data parsing method ('!')
+        user_id_len = 4
+        token_data = "!userid_type:int"
+        token_digest = "".join(secrets.choice(string.hexdigits) for _ in range(128 + 8 + user_id_len))
+        token_name = get_constant("MAGPIE_COOKIE_NAME", default_value="auth_tkt")
+        fake_token = token_digest + token_data
+        fake_cookie = {token_name: fake_token}
+
+        # test with forged cookie token
+        utils.check_or_try_logout_user(self)  # just to make extra sure
+        resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=fake_cookie)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(body["authenticated"], False)
+
+        # setup test user, retrieve temporarily valid token
+        self.login_admin()
+        test_user_name = "unittest-test-user-cookie-session"
+        utils.TestSetup.delete_TestUser(self, override_user_name=test_user_name)  # in case of previous failure
+        body = utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"),
+                                               override_user_name=test_user_name, override_password=test_user_name)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        real_user_id = info["user_id"]
+
+        utils.check_or_try_logout_user(self)
+        _, cookies = utils.check_or_try_login_user(self, username=test_user_name, password=test_user_name)
+        real_token = cookies.get(token_name, "")
+        token_size = 128 + 8 + len(str(real_user_id)) + len(token_data)
+        utils.check_val_equal(len(real_token), token_size, msg="could not retrieve test user token")
+        # validate the token actually works in normal conditions
+        real_cookies = {token_name: real_token}
+        resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=real_cookies)  # valid
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(body["user"]["user_name"], test_user_name)
+        utils.check_val_equal(body["authenticated"], True)
+
+        # remove test user to make token invalid, although it was valid just before removing the test user
+        # then logout again to test that using this token to retrieve session returns unauthorized
+        self.login_admin()
+        utils.TestSetup.delete_TestUser(self, override_user_name=test_user_name)
+        utils.check_or_try_logout_user(self)
+        resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=real_cookies)  # invalid
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(body["authenticated"], False)
 
     @runner.MAGPIE_TEST_STATUS
     def test_GetVersion(self):
@@ -3273,8 +3331,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 200, expected_method="GET")
 
         # verify if user cannot log back in
-        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
-                                  expect_errors=True,
+        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={}, expect_errors=True,
                                   data={"user_name": self.test_user_name, "password": self.test_user_name})
         utils.check_response_basic_info(resp, 401, expected_method="POST")
 
