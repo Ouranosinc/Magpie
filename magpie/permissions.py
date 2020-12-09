@@ -289,19 +289,20 @@ class PermissionSet(object):
         self._reason = reason
 
     @classmethod
-    def resolve(cls, permission1, permission2, same_resources=True):
-        # type: (ResolvablePermissionType, ResolvablePermissionType) -> ResolvablePermissionType
+    def resolve(cls, permission1, permission2, context=PermissionType.INHERITED):
+        # type: (ResolvablePermissionType, ResolvablePermissionType, PermissionType) -> ResolvablePermissionType
         """
         Resolves provided permissions into a single one considering various modifiers and groups for a resource.
 
         Permissions **MUST** have the same :term:`Permission` name.
-        By default (:paramref:`same_resources`), the associated :term:`Resource` on which the compared
-        :term:`Permission` are applied on should also be the same (especially during local :term:`Inherited Permissions`
+
+        By default (using :paramref:`same_resources`), the associated :term:`Resource` on which the two compared
+        permissions are applied on should also be the same (especially during local :term:`Inherited Permissions`
         resolution). This safeguard must be disabled for :term:`Effective Permissions` that specifically handles
         multi-level :term:`Resource` resolution.
 
         The comparison considers both the :class:`Access` and :class:`Scope` of :term:`Inherited Permissions` of the
-        :term:`User`, as well as his groups memberships sorted by their priority.
+        :term:`User`, as well as its :term:`Group` memberships sorted by their priority.
 
         .. seealso::
             - :meth:`magpie.services.ServiceInterface.effective_permissions`
@@ -310,13 +311,18 @@ class PermissionSet(object):
         """
         if not isinstance(permission1, PermissionSet):
             permission1 = PermissionSet(permission1)
-        if not isinstance(permission1, PermissionSet):
+        if not isinstance(permission2, PermissionSet):
             permission2 = PermissionSet(permission2)
-        # only one is user permission possible at a given time on a same resource and same permission name
-        if permission1.name != permission2.name or \
-                (same_resources and permission1.perm_tuple.resource is not permission2.perm_tuple.resource) or \
-                (permission1.type == PermissionType.DIRECT and permission2.type == PermissionType.DIRECT):
+        # both permissions must contain the user or group reference from the original permission tuple to allow compare
+        # they must also have the same permission name to actually resolving the one to preserve
+        if permission1.name != permission2.name or not (permission1.perm_tuple and permission2.perm_tuple):
             raise ValueError("Invalid resolution attempt between two incomparable permissions.")
+        # when resolving (local inherited resolution), only one user permission on same resource is possible (by design)
+        # hierarchical/effective resolution of resources can differ
+        if context == PermissionType.INHERITED and (
+                (permission1.perm_tuple.resource is not permission2.perm_tuple.resource) or
+                (permission1.type == PermissionType.DIRECT and permission2.type == PermissionType.DIRECT)):
+            raise ValueError("Invalid inherited resolution attempt expected same resources but contain invalid values.")
 
         # user direct permission always have priority
         if permission1.type == PermissionType.DIRECT:
@@ -555,7 +561,7 @@ def format_permissions(permissions,             # type: Optional[Collection[AnyP
 
     :param permissions: multiple permissions of any implementation and type, to be rendered both as names and JSON.
     :param permission_type: indication of the represented permissions to be formatted, for informative indication.
-    :param: force_unique: whether to remove duplicate entries by association of name, access and scope.
+    :param force_unique: whether to remove duplicate entries by association of name, access and scope or not.
     :returns: JSON with the permissions listed as implicit+explicit names, as permission set objects, and their type.
     """
     json_perms = []

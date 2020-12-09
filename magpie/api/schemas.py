@@ -1838,7 +1838,7 @@ class UserResourcePermissions_GET_BadRequestResourceTypeResponseSchema(BaseRespo
 
 
 class UserResourcePermissions_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
-    description = "Specified user not found to obtain resource permissions."
+    description = "Specified user or resource not found to obtain permissions."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 

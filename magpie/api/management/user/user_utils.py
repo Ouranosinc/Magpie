@@ -281,7 +281,7 @@ def get_user_resource_permissions_response(user, resource, request,
     permissions = ax.evaluate_call(
         lambda: get_usr_res_perms(),
         fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
-        msg_on_fail=s.UserServicePermissions_GET_NotFoundResponseSchema.description,
+        msg_on_fail=s.UserResourcePermissions_GET_NotFoundResponseSchema.description,
         content={"resource_name": str(resource.resource_name), "user_name": str(user.user_name)})
     return ax.valid_http(http_success=HTTPOk, content=permissions,
                          detail=s.UserResourcePermissions_GET_OkResponseSchema.description)

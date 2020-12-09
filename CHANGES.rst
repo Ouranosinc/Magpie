@@ -14,9 +14,10 @@ Features / Changes
 * Add ``reason`` field to returned ``Permission`` objects to help better comprehend the provenance of a composed
   set of permissions from ``User`` and its multiple ``Group`` memberships.
 * Add ``Group`` priority to resolve inherited permission resolution in case of multiple entries from different
-  group membership of the evaluated user.
-* Make ``MAGPIE_ANONYMOUS_GROUP`` have less priority than other *generic* ``Group`` to allow reverting publicly ``DENY``
-  permission by one of those more specific ``Group`` with ``ALLOW`` permission.
+  ``Group`` membership of the evaluated ``User``.
+* Make *special* ``MAGPIE_ANONYMOUS_GROUP`` have less priority than other *generic* ``Group`` to allow reverting
+  public ``DENY`` permission by one of those more specific ``Group`` with ``ALLOW`` permission.
+* Simplify and combine multiple permission resolution steps into ``PermissionSet.resolve`` method.
 * Update documentation with more permission resolution concepts and examples.
 
 Bug Fixes

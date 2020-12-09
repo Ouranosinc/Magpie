@@ -325,43 +325,29 @@ class ServiceInterface(object):
                     # only first resource can use match (if even enabled with found one), parents are recursive-only
                     if not match and perm_set.scope == Scope.MATCH:
                         continue
-
-                    # less obvious use case for both of the following user/group blocks:
-                    #   no need to check explicitly for ALLOW since it was either already set during previous iteration
-                    #   (at that moment, perm=None) or DENY was already set, and DENY takes precedence over ALLOW anyway
+                    # pick the first permission if none was found up to this point
+                    perm = effective_perms.get(perm_name)
+                    if not perm:
+                        effective_perms[perm_name] = perm_set
+                        continue
 
                     # user direct permissions have priority over inherited ones from groups
                     # if inherited permission was found during previous iteration, overwrite it with direct permission
                     if perm_set.type == PermissionType.DIRECT:
-                        perm = effective_perms.get(perm_name)
                         # explicit user direct DENY overrides user direct ALLOW if any already found
                         # if inherited permission was previously set, user direct ALLOW has priority over inherited DENY
-                        # if permission name not already found, ALLOW/DENY is set regardless (first occurrence)
-                        if perm is None or perm.type == PermissionType.INHERITED or perm_set.access == Access.DENY:
+                        #   no need to check explicitly for ALLOW since it was either already set during last iteration
+                        #   (at that moment, perm=None) or DENY was already set which takes precedence over ALLOW
+                        if perm.type == PermissionType.INHERITED or perm_set.access == Access.DENY:
                             effective_perms[perm_name] = perm_set
                         continue  # final decision for this user, skip any group permissions
 
-                    # otherwise check for group(s) inherited permission
-                    # if permission name was not already found, ALLOW/DENY is set regardless (first occurrence)
-                    perm = effective_perms.get(perm_name)
-                    if perm is None:
-                        effective_perms[perm_name] = perm_set
-                    # otherwise, inherited group explicit DENY overrides group inherited ALLOW (in general)
-                    # - only exception to this case is if multiple permissions at the save level and opposite ALLOW/DENY
-                    #   are specified by different groups the user is member of, then group priority dictates resolution
-                    # - if groups are of equal priority, then DENY is selected (see called method for details)
-                    # resolve only if previously matched permission was also on group to avoid recomputing USER > GROUP
+                    # resolve prioritized permission according to ALLOW/DENY, scope and group priority
+                    # (see called method for extensive details)
+                    # skip if last permission is not on group to avoid redundant USER > GROUP check
                     elif perm.type == PermissionType.INHERITED:
-                        # must turn off safeguard of same resources compare as tree hierarchy is being resolved
-                        resolved_perm = PermissionSet.resolve(perm_set, perm, same_resources=False)
+                        resolved_perm = PermissionSet.resolve(perm_set, perm, context=PermissionType.EFFECTIVE)
                         effective_perms[perm_name] = resolved_perm
-                        # when DENY is resolved as effective permission, it means this permission-name is at its
-                        # last iteration for this level in the resource hierarchy (following permissions are skipped)
-                        # therefore, resolve with every other possible
-                        #if effective_perms[perm_name].access == Access.DENY:
-                        #    leftover_perms = []
-                        #    for remain_perm in leftover_perms:
-                        #        effective_perms[perm_name] = PermissionSet.combine(resolved_perm, remain_perm)
 
             # don't bother moving to parent if everything is resolved already
             if len(effective_perms) == len(requested_perms):
