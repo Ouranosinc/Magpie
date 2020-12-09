@@ -3,7 +3,6 @@ import unittest
 import warnings
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
 import mock
@@ -13,6 +12,7 @@ import yaml
 from pyramid.interfaces import IRequestExtensions
 from six.moves.urllib.parse import urlparse
 
+from magpie import __meta__
 from magpie.adapter import MagpieAdapter
 from magpie.api import schemas as s
 from magpie.constants import MAGPIE_ROOT, get_constant
@@ -22,6 +22,7 @@ from magpie.register import pseudo_random_string
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceNCWMS2, ServiceTHREDDS
 from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML, get_twitcher_protected_service_url
 from tests import runner, utils
+from tests.utils import TestVersion
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -119,7 +120,7 @@ class BaseTestCase(unittest.TestCase):
 
     @property
     def update_method(self):
-        if LooseVersion(self.version) >= LooseVersion("2.0.0"):
+        if TestVersion(self.version) >= TestVersion("2.0.0"):
             return "PATCH"
         return "PUT"
 
@@ -327,11 +328,36 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("db_version", body)
         utils.check_val_is_in("version", body)
-        # server not necessarily at latest version, ensure at least format
-        utils.check_val_equal(body["version"], self.version)
         utils.check_val_type(body["version"], six.string_types)
         version_parts = body["version"].split(".")
         utils.check_val_equal(len(version_parts), 3)
+        # server not necessarily at latest version, ensure at least format,
+        # but can't validate the number with internal variable if using remote server
+        # also doesn't make sense to request the version and compare against same request accomplished here
+        # so validate version number only if local
+        app_or_url = utils.get_app_or_url(self)
+        localhosts = ["localhost", "127.0.0.1", "0.0.0.0"]
+        if isinstance(app_or_url, six.string_types) and any(loc in app_or_url for loc in localhosts):
+            utils.check_val_equal(body["version"], __meta__.__version__)
+
+    @runner.MAGPIE_TEST_STATUS
+    def test_GetAPI(self):
+        resp = utils.test_request(self, "GET", s.SwaggerGenerator.path, headers=self.json_headers)
+        body = utils.get_json_body(resp)
+        content_types = utils.get_response_content_types_list(resp)
+        utils.check_val_is_in(CONTENT_TYPE_JSON, content_types)
+        utils.check_val_equal(resp.status_code, 200)
+        utils.check_val_is_in("info", body)
+        utils.check_val_is_in("version", body["info"])
+        utils.check_val_equal(body["info"]["version"], utils.TestSetup.get_Version(self, real_version=True))
+        utils.check_val_is_in("paths", body)
+        utils.check_val_is_in("host", body)
+        utils.check_val_is_in("schemes", body)
+        utils.check_val_is_in("tags", body)
+        utils.check_val_is_in("basePath", body)
+        utils.check_val_is_in("securityDefinitions", body)
+        utils.check_val_is_in("swagger", body)
+        utils.check_val_equal(body["swagger"], "2.0")
 
     @runner.MAGPIE_TEST_STATUS
     def test_NotAcceptableRequest(self):
@@ -655,9 +681,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         data = {"user_name": self.usr}  # missing required password
         resp = utils.test_request(self, "POST", "/signin", data=data, expect_errors=True,
                                   headers=self.json_headers, cookies={})
-        if LooseVersion(self.version) >= LooseVersion("3.0"):
+        if TestVersion(self.version) >= TestVersion("3.0"):
             code = 422
-        elif LooseVersion(self.version) >= LooseVersion("2.0"):
+        elif TestVersion(self.version) >= TestVersion("2.0"):
             code = 400
         else:
             code = 401
@@ -1488,24 +1514,6 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         cls.test_group_name = "magpie-unittest-dummy-group"
         cls.test_user_name = "magpie-unittest-toto"
 
-    def test_GetAPI(self):
-        resp = utils.test_request(self, "GET", s.SwaggerGenerator.path, headers=self.json_headers)
-        body = utils.get_json_body(resp)
-        content_types = utils.get_response_content_types_list(resp)
-        utils.check_val_is_in(CONTENT_TYPE_JSON, content_types)
-        utils.check_val_equal(resp.status_code, 200)
-        utils.check_val_is_in("info", body)
-        utils.check_val_is_in("version", body["info"])
-        utils.check_val_equal(body["info"]["version"], self.version)
-        utils.check_val_is_in("paths", body)
-        utils.check_val_is_in("host", body)
-        utils.check_val_is_in("schemes", body)
-        utils.check_val_is_in("tags", body)
-        utils.check_val_is_in("basePath", body)
-        utils.check_val_is_in("securityDefinitions", body)
-        utils.check_val_is_in("swagger", body)
-        utils.check_val_equal(body["swagger"], "2.0")
-
     @runner.MAGPIE_TEST_STATUS
     def test_unauthorized_forbidden_responses(self):
         """
@@ -1663,7 +1671,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # tests
         q_groups = "inherit=true"
         q_effect = "effective=true"
-        test_effective = LooseVersion(self.version) < LooseVersion("3.0")
+        test_effective = TestVersion(self.version) < TestVersion("3.0")
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
         body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=q_groups)
@@ -2154,7 +2162,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             # Starting with 1.4.0, users are automatically members of anonymous group, and therefore
             # inherit their permissions. Find the number of anonymous-only permissions, there shouldn't be any other.
             resources_anonymous_body = {}
-            if LooseVersion(self.version) >= LooseVersion("1.4.0") and query:
+            if TestVersion(self.version) >= TestVersion("1.4.0") and query:
                 path = "/groups/{grp}/resources".format(grp=get_constant("MAGPIE_ANONYMOUS_GROUP"))
                 resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
                 resources_anonymous_body = utils.check_response_basic_info(resp, 200, expected_method="GET")
@@ -2222,7 +2230,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         res2_id = info["resource_id"]
         utils.TestSetup.create_TestGroupResourcePermission(self, resource_info=info, override_permission=res_perm2)
-        if LooseVersion(self.version) >= LooseVersion("0.7.4"):
+        if TestVersion(self.version) >= TestVersion("0.7.4"):
             path = "/users/{}/resources?inherit=true".format(self.test_user_name)
         else:
             # deprecated as of 0.7.4, removed in 2.0.0
@@ -2436,7 +2444,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         service_types = utils.get_service_types_for_version(self.version)
         # as of version 0.7.0, visible services depend on the connected user permissions,
         # so all services types not necessarily returned in the response
-        if LooseVersion(self.version) < LooseVersion("0.7.0"):
+        if TestVersion(self.version) < TestVersion("0.7.0"):
             utils.check_all_equal(list(services), service_types, any_order=True)
         else:
             utils.check_all_equal(list(services), [self.test_service_type])
@@ -2459,7 +2467,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServices_Flatten(self):
         utils.warn_version(self, "flatten user services response format", "1.0.0", skip=True)
-        flatten_query = "flatten" if LooseVersion(self.version) >= LooseVersion("2.0.0") else "list"
+        flatten_query = "flatten" if TestVersion(self.version) >= TestVersion("2.0.0") else "list"
         test_items = self.setup_GetUserServices()
 
         path = "/users/{}/services?{}=true".format(self.test_user_name, flatten_query)
@@ -2689,7 +2697,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 201, expected_method="POST")
 
         effective_perm_names = [applied_perm]
-        if LooseVersion(self.version) >= LooseVersion("3.0"):
+        if TestVersion(self.version) >= TestVersion("3.0"):
             effective_perm = PermissionSet(applied_perm, scope=Scope.MATCH)
             allowed_perm_names = utils.TestSetup.get_PermissionNames(self, effective_perm)
             denied_perm_names = {PermissionSet(perm).name for perm in applicable_perms} - {effective_perm.name}
@@ -2734,7 +2742,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # furthermore, effective permissions are always 'MATCH' as they define access specifically for that item, with
         # all recursive parent resource inheritance pre-computed
         effective_perm = PermissionSet(applied_perm)
-        if LooseVersion(self.version) >= LooseVersion("3.0"):
+        if TestVersion(self.version) >= TestVersion("3.0"):
             effective_perm = PermissionSet(applied_perm, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE)
 
         # test
@@ -2744,7 +2752,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("permission_names", body)
         utils.check_val_is_in(effective_perm.implicit_permission, body["permission_names"],
                               msg="Permission applied to anonymous group which user is member of should be effective")
-        if LooseVersion(self.version) >= LooseVersion("3.0"):
+        if TestVersion(self.version) >= TestVersion("3.0"):
             perms_names = {PermissionSet(perm).name for perm in applicable_perms}
             perms_denied = [PermissionSet(perm, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
                             for perm in perms_names if perm != PermissionSet(applied_perm).name]
@@ -3082,7 +3090,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("group_names", body)
         utils.check_val_type(body["group_names"], list)
         expected_groups = {self.test_group_name, users_group}
-        if LooseVersion(self.version) >= LooseVersion("1.4.0"):
+        if TestVersion(self.version) >= TestVersion("1.4.0"):
             expected_groups.add(get_constant("MAGPIE_ANONYMOUS_GROUP"))
         utils.check_all_equal(body["group_names"], expected_groups, any_order=True)
 
@@ -3283,7 +3291,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_type(body["group"]["group_name"], six.string_types)
         utils.check_val_is_in("member_count", body["group"])
         utils.check_val_type(body["group"]["member_count"], int)
-        if LooseVersion(self.version) >= LooseVersion("0.10.0"):
+        if TestVersion(self.version) >= TestVersion("0.10.0"):
             utils.check_val_equal(body["group"]["member_count"], 1)
         else:
             utils.warn_version(self, "Member count invalid (always zero).", "0.10.0", skip=False)
@@ -3449,7 +3457,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         service_types = utils.get_service_types_for_version(self.version)
         # as of version 0.7.0, visible services depend on the connected user permissions,
         # so all services types not necessarily returned in the response
-        if LooseVersion(self.version) < LooseVersion("0.7.0"):
+        if TestVersion(self.version) < TestVersion("0.7.0"):
             utils.check_all_equal(list(services), service_types, any_order=True)
         for svc_type in services:
             utils.check_val_is_in(svc_type, service_types)  # one of valid service types
@@ -3466,7 +3474,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 utils.check_val_type(svc_dict["service_type"], six.string_types)
                 utils.check_val_type(svc_dict["public_url"], six.string_types)
                 utils.check_val_type(svc_dict["permission_names"], list)
-                if LooseVersion(self.version) >= LooseVersion("0.7.0"):
+                if TestVersion(self.version) >= TestVersion("0.7.0"):
                     utils.check_val_is_in("service_sync_type", svc_dict)
                     utils.check_val_type(svc_dict["service_sync_type"], utils.OPTIONAL_STRING_TYPES)
                     utils.check_val_not_in("service_url", svc_dict)
@@ -3794,7 +3802,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # so not even a forbidden case to handle
         resp = utils.test_request(self, self.update_method, "/services/types", data={}, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        if LooseVersion(self.version) >= LooseVersion("0.9.5"):
+        if TestVersion(self.version) >= TestVersion("0.9.5"):
             # directly interpreted as expected path `/services/types` behaviour, so method PATCH not allowed
             utils.check_response_basic_info(resp, 405, expected_method=self.update_method)
         else:
@@ -3809,7 +3817,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                   headers=self.json_headers, cookies=self.cookies)
 
         code = 404  # before update did not exist, path was not found
-        if LooseVersion(self.version) >= LooseVersion("0.9.5"):
+        if TestVersion(self.version) >= TestVersion("0.9.5"):
             code = 405  # directly interpreted as expected path `/services/types` behaviour, so method not allowed
         utils.check_response_basic_info(resp, expected_code=code, expected_method=self.update_method)
 
@@ -3821,7 +3829,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
         code = 400  # before considered as bad request value
-        if LooseVersion(self.version) >= LooseVersion("2.0.0"):
+        if TestVersion(self.version) >= TestVersion("2.0.0"):
             code = 403  # later version distinguish with more explicit forbidden
         body = utils.check_response_basic_info(resp, code, expected_method=self.update_method)  # forbidden name 'types'
         utils.check_val_is_in("'types'", body["detail"])  # validate error message specific to this keyword
@@ -3832,7 +3840,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/services/{svc}".format(svc=self.test_service_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        if LooseVersion(self.version) < LooseVersion("0.9.1"):
+        if TestVersion(self.version) < TestVersion("0.9.1"):
             utils.check_val_is_in(self.test_service_name, body)
             svc_info = body[self.test_service_name]
             utils.check_val_type(svc_info, dict)
@@ -3861,7 +3869,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_type(svc_info["service_type"], six.string_types)
         utils.check_val_type(svc_info["public_url"], six.string_types)
         utils.check_val_type(svc_info["permission_names"], list)
-        if LooseVersion(self.version) >= LooseVersion("0.7.0"):
+        if TestVersion(self.version) >= TestVersion("0.7.0"):
             utils.check_val_is_in("service_sync_type", svc_info)
             utils.check_val_type(svc_info["service_sync_type"], utils.OPTIONAL_STRING_TYPES)
 
@@ -3902,7 +3910,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     def test_GetServiceTypeResources_CheckValues(self):
         utils.warn_version(self, "get service type resources", "0.9.1", skip=True)
 
-        if LooseVersion(self.version) >= LooseVersion("3.1"):
+        if TestVersion(self.version) >= TestVersion("3.1"):
             thredds_perms = [Permission.BROWSE.value, Permission.READ.value, Permission.WRITE.value]
         else:
             thredds_perms = [Permission.READ.value, Permission.WRITE.value]
@@ -4038,7 +4046,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/resources/{res_id}".format(res_id=child_resource_id)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        if LooseVersion(self.version) >= LooseVersion("0.9.2"):
+        if TestVersion(self.version) >= TestVersion("0.9.2"):
             resource_body = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         else:
             utils.check_val_is_in(str(child_resource_id), body)
@@ -4077,7 +4085,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         }
         resp = utils.test_request(self, "POST", path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        code = 403 if LooseVersion(self.version) >= LooseVersion("3.0") else 400
+        code = 403 if TestVersion(self.version) >= TestVersion("3.0") else 400
         body = utils.check_response_basic_info(resp, code, expected_method="POST")
         utils.check_error_param_structure(body, version=self.version, param_compare_exists=True, param_name="parent_id")
 
@@ -4163,7 +4171,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 utils.check_val_type(resource["service_name"], six.string_types)
                 utils.check_val_type(resource["service_type"], six.string_types)
                 utils.check_val_type(resource["permission_names"], list)
-                if LooseVersion(self.version) >= LooseVersion("2.0.0"):
+                if TestVersion(self.version) >= TestVersion("2.0.0"):
                     utils.check_val_not_equal(len(resource["permission_names"]), 0,
                                               msg="Resource route must always provide its applicable permissions.")
                     service_perms = [p.value for p in SERVICE_TYPE_DICT[resource["service_type"]].permissions]
@@ -4190,7 +4198,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                     utils.check_val_type(child["permission_names"], list)
                     utils.check_val_equal(str(child["resource_id"]), res_id,
                                           msg="Key resource ID must match object's value, although of different types.")
-                    if LooseVersion(self.version) >= LooseVersion("2.0.0"):
+                    if TestVersion(self.version) >= TestVersion("2.0.0"):
                         utils.check_val_not_equal(len(child["permission_names"]), 0,
                                                   msg="Resource route must always provide its applicable permissions.")
                     break  # stop after one
@@ -4257,8 +4265,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # pre-check of existing parameter in request added for 400, then value gets validated for processing 422
         code = 422
         none = repr(None)
-        if LooseVersion(self.version) >= LooseVersion("2.0.0"):
-            if LooseVersion(self.version) < LooseVersion("3.0"):
+        if TestVersion(self.version) >= TestVersion("2.0.0"):
+            if TestVersion(self.version) < TestVersion("3.0"):
                 code = 400
             none = None
         body = utils.check_response_basic_info(resp, code, expected_method="POST")
@@ -4312,7 +4320,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             utils.check_val_type(res_body, dict)
             utils.check_val_is_in("resource_name", res_body)
             utils.check_val_type(res_body["resource_name"], six.string_types)
-            if LooseVersion(self.version) >= LooseVersion("0.7.0"):
+            if TestVersion(self.version) >= TestVersion("0.7.0"):
                 utils.check_val_is_in("resource_display_name", res_body)
                 utils.check_val_type(res_body["resource_display_name"], six.string_types)
             utils.check_val_is_in("resource_id", res_body)
@@ -4320,7 +4328,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             utils.check_val_equal(res_body["resource_id"], res_id)
             utils.check_val_is_in("parent_id", res_body)
             utils.check_val_equal(res_body["parent_id"], parent_id)
-            if LooseVersion(self.version) >= LooseVersion("0.5.1"):
+            if TestVersion(self.version) >= TestVersion("0.5.1"):
                 utils.check_val_is_in("root_service_id", res_body)
                 utils.check_val_equal(res_body["root_service_id"], root_id)
             utils.check_val_is_in("permission_names", res_body)
@@ -4374,7 +4382,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/resources/{res_id}".format(res_id=res_id)
         resp = utils.test_request(self, self.update_method, path, data={}, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        code = 422 if LooseVersion(self.version) >= LooseVersion("3.0") else 400
+        code = 422 if TestVersion(self.version) >= TestVersion("3.0") else 400
         utils.check_response_basic_info(resp, code, expected_method=self.update_method)
 
     @runner.MAGPIE_TEST_RESOURCES
@@ -4709,7 +4717,7 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestUser(self)
         form = {"edit": None, "user_name": self.test_user_name}
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path="/ui/users")
-        if LooseVersion(self.version) < "2":
+        if TestVersion(self.version) < "2":
             test = "Edit User: {}".format(self.test_user_name)
         else:
             test = "Edit User: [{}]".format(self.test_user_name)
@@ -4725,7 +4733,7 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.delete_TestUser(self)
         form = {"edit": None, "group_name": self.test_group_name}
         resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="edit", path="/ui/groups")
-        if LooseVersion(self.version) < "2":
+        if TestVersion(self.version) < "2":
             test = "Edit Group: {}".format(self.test_group_name)
         else:
             test = "Edit Group: [{}]".format(self.test_group_name)
