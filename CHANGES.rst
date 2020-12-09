@@ -16,7 +16,7 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* N/A
+* Fix inconsistent UI spacing of *tabs* for panel selector and employ mako function to avoid duplicated code fragments.
 
 `3.3.0 <https://github.com/Ouranosinc/Magpie/tree/3.3.0>`_ (2020-11-25)
 ------------------------------------------------------------------------------------
