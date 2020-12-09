@@ -654,7 +654,7 @@ cause ambiguous resolution, the ``match`` :term:`Permission` is prioritized over
 .. perm_example_resolve:
 .. |perm_example_resolve| replace:: Permission Resolution example
 
-Resolution of Overlapping Permissions
+Resolution of Permissions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. todo: permission resolution example with >2 group that contradict, >2 groups that have redundant (same) permissions
