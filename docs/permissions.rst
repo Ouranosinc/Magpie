@@ -259,7 +259,7 @@ This query can be extremely useful to quickly answer *"does the user have any pe
 without needing to manually execute multiple successive lookup requests with all combinations of :term:`Resource`
 identifiers in the hierarchy.
 
-.. versionchanged:: 3.4
+.. versionchanged:: 3.5
     As of this version, API responses also provide ``reason`` field to help identify the source of every returned
     :term:`Permission`. Please refer to `Permissions Representation`_ for more details.
 
@@ -367,7 +367,7 @@ It can be noted that the previous JSON representation also provides a fourth ``t
 indicative detail about the kind of :term:`Permission` being displayed, in attempt to reduce the ambiguity described in
 :ref:`permission_types`.
 
-.. versionadded:: 3.4
+.. versionadded:: 3.5
     Fifth field named ``reason`` is introduced. It is also an informative field such as ``type`` and does not impact
     the stored :term:`Permission`, but helps comprehend how :term:`ACL` gets resolved for a given :term:`User`.
 
@@ -431,7 +431,7 @@ This section details the step-by-step process employed to resolve :term:`Effecti
 :term:`User` access to a given :term:`Resource`. Some of the steps also apply to :term:`Inherited Permissions`
 resolution (see :term:`Extended Representation`_).
 
-.. versionchanged:: 3.4
+.. versionchanged:: 3.5
     Previous versions of `Magpie` would consider every :term:`Group` with equal priority (step (2.2) in below list),
     not making any distinction between them although there are usually some implied priorities in practice. Later
     versions include step (2.3) to remediate this issue.

@@ -344,7 +344,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Invalid token in cookies must be ignored completely and return unauthorized response.
         """
-        utils.warn_version(self, "session retrieval with invalid token", "3.4.0", skip=True)
+        utils.warn_version(self, "session retrieval with invalid token", "3.5.0", skip=True)
 
         # magpie uses SHA512, which is 64 bytes, converted to HEX becomes 128 characters
         # adds 8 bytes to represent the timestamp + variable length of the user_id
@@ -985,7 +985,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Logged user is allowed to delete his own account.
         """
-        utils.warn_version(self, "Delete the logged user's own account", "3.4.0", skip=True)
+        utils.warn_version(self, "Delete the logged user's own account", "3.5.0", skip=True)
 
         # login as test user and delete its own account
         self.login_test_user()
@@ -1963,7 +1963,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         perm.update({"access": Access.ALLOW.value, "scope": Scope.RECURSIVE.value, "type": PermissionType.DIRECT.value})
         expect_perms.append(perm)
 
-        if TestVersion(self.version) >= TestVersion("3.4.0"):
+        if TestVersion(self.version) >= TestVersion("3.5.0"):
             for perm in expect_perms:
                 perm["reason"] = "user:{}:{}".format(test_user_id, self.test_user_name)
 
@@ -2009,7 +2009,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         query parameters considering user is member of *multiple groups* which each can have conflicting permission
         specifications on a corresponding resource.
         """
-        utils.warn_version(self, "inherited/effective combined permissions resolution", "3.5", skip=True)
+        utils.warn_version(self, "inherited/effective combined permissions resolution", "3.5.0", skip=True)
 
         # setup
         test_group_1 = "unittest-test-{!s}".format(uuid.uuid4())
@@ -3020,7 +3020,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             perms_denied = [PermissionSet(perm, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE).json()
                             for perm in perms_names if perm != PermissionSet(applied_perm).name]
             effective_permissions = [effective_perm.json()] + perms_denied  # noqa
-            if TestVersion(self.version) >= TestVersion("3.4"):
+            if TestVersion(self.version) >= TestVersion("3.5.0"):
                 effective_permissions[0]["reason"] = "group:{}:{}".format(anonym_id, anonymous)
                 for perm in effective_permissions[1:]:
                     perm["reason"] = PERMISSION_REASON_DEFAULT
@@ -3596,7 +3596,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_GROUPS
     def test_PostGroups_ReturnedID(self):
-        utils.warn_version(self, "group ID returned immediately in creation response", "3.4", skip=True)
+        utils.warn_version(self, "group ID returned immediately in creation response", "3.5.0", skip=True)
 
         utils.TestSetup.delete_TestGroup(self)
         # do the call manually to ensure there are no extra steps introduced by test utils
@@ -4928,7 +4928,7 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Logged user can delete his own account on account page.
         """
-        utils.warn_version(self, "delete account on user account page", "3.4.0", skip=True)
+        utils.warn_version(self, "delete account on user account page", "3.5.0", skip=True)
 
         other_user = self.test_user_name + "-other"
         utils.TestSetup.delete_TestUser(self, override_user_name=other_user)
