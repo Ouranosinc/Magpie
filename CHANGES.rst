@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`3.4.0 <https://github.com/Ouranosinc/Magpie/tree/3.4.0>`_ (2020-12-09)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add option to delete the ``User``'s own account.
