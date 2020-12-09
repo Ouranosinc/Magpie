@@ -13,6 +13,8 @@ Features / Changes
 * Add ``MAGPIE_TEST_VERSION`` to control (override) the local version to consider against test `safeguards`.
   Allows development of *future* versions using ``MAGPIE_TEST_VERSION=latest``.
 * Add documentation about testing methodologies and setup configuration.
+* Bump version of ``Twitcher`` to ``v0.5.4`` to provide Docker image with integrated ``MagpieAdapter`` using
+  performance fix (see PR `bird-house/twitcher#98 <https://github.com/bird-house/twitcher/pull/98>`_).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
