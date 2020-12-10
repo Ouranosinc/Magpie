@@ -105,7 +105,10 @@ More specifically, following distinctions can be observed between different kind
     enum :class:`magpie.permissions.Permission`, but rather from a combination of special :term:`Group` and
     :ref:`Configuration` constants. See `Route Access`_ for more details.
 
+.. todo: (?) resource owner permission?
+.. todo: (?) role permission to access different API requests/sections by user-context
 .. following are potential but not implemented / unused:
+    !! also add appropriately in other parts of the doc such as "type" field
     ownership permissions:
         user/group that owns the service/resource
         defined with the id saved directly under that Resource (see Resource.owner_[user|group]_id)
@@ -349,11 +352,13 @@ Therefore, it can be noted that all API responses that contain details about per
                 "name": "permission-name",
                 "access": "allow|deny",
                 "scope": "match|recursive",
-                "type": "access|allowed|applied|direct|inherited|effective|owned",
+                "type": "access|allowed|applied|direct|inherited|effective",
                 "reason": "<optional>"
             }
         ]
     }
+
+.. todo: (?) add "owned" to list of "type" if implemented alter on
 
 
 .. note::
@@ -486,8 +491,7 @@ continues until reaching the top-most :term:`Service` to validate :attr:`Access.
 :term:`Permission` was found. If still no :term:`Permission` is defined after complete hierarchy processing, the result
 defaults to :attr:`Access.DENY`, and indicated by ``"no-permission"`` reason.
 
-.. todo: pseudo-code to represent the 'effective permission' portion of the resolution
-
+.. todo: (?) pseudo-code to represent the 'effective permission' portion of the resolution
 
 
 .. seealso::
@@ -657,6 +661,101 @@ cause ambiguous resolution, the ``match`` :term:`Permission` is prioritized over
 Resolution of Permissions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+This example will demonstrate the simultaneous resolution of all following concepts to obtain
+:term:`Effective Permissions` of a :term:`User` over a given targeted :term:`Resource`:
+
+- Combining :term:`Direct Permissions` and :term:`Inherited Permissions` (see :ref:`permission_types`)
+- Having multiple :term:`Inherited Permissions` with different or equal :term:`Group` priorities
+- Getting access from local and hierarchical :class:`Scope` modifier (see `Basic Representation`_)
+- Reverting access using :class:`Access` modifier at different levels (see `Basic Representation`_)
+
+It is recommended to have a general understanding of all the concepts by going though corresponding sections that
+describe them individually and in more details.
+
+We start by defining the following :term:`Service` and :term:`Resource` hierarchy. We employ the `ServiceAPI`_
+implementation that only allows one type of :term:`Resource` (``route``), and that easily converts path elements into
+the given hierarchy. In this case, every :term:`Resource` can be applied with either :attr:`Permission.READ` (``r``) or
+:attr:`Permission.WRITE` (``w``). For a compact display, we indicate :attr:`Access.ALLOW` (``A``),
+:attr:`Access.DENY` (``D``), :attr:`Scope.MATCH` (``M``) and :attr:`Scope.RECURSIVE` (``R``) using the
+``[name]-[access]-[scope]`` representation for :term:`Applied Permissions`.
+
+.. note::
+    Below ``[unspecified-#]`` identifiers are employed to indicate path element that would land onto
+    no existing :term:`Resource` (e.g.: ``/service-A/resource-1/Unknown`` mapped to ``[unspecified-1]``), but that
+    will still obtain :term:`Effective Permissions` according to applied :attr:`Scope.RECURSIVE` modifier if any.
+
+                                      | TestUser      | TestGroup1    | TestGroup2    | Anonymous
+                                      | [user]        | [group]       | [group]       | [group] (special)
+    ==================================+=======+=======+=======+=======+=======+=======+=======+=======+
+    service-A [api]                   | r-A-M |       |       |       |       |       |       |       |
+        resource-1 [route]            |       |       |       |       |       |       | r-D-R |       |
+            [unspecified-1]           |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |
+            resource-2 [route]        |       |       |       |       | r-A-R |       |       |       |
+                resource-3 [route]    |       | w-D-M |       |       |       |       |       |       |
+                    [unspecified-2]   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |
+
+Presented below is the resolved :term:`Effective Permissions` matrix of ``TestUser`` considering above definitions.
+
 .. todo: permission resolution example with >2 group that contradict, >2 groups that have redundant (same) permissions
 .. todo: permission resolution example with some Group ALLOW > anonymous DENY
 .. todo: permission resolution example that includes simultaneously recursive/match, allow/deny and user/multi-group
+
+.. |check| unicode:: U+2713
+.. |cross| unicode:: U+2715
+
+.. list-table::
+    :header-rows: 1
+
+    * - Target
+      - :term:`Permission`
+      - Resolved Access
+      - Detail
+    * - ``service-A``
+      - ``read``
+      - |check|
+      - Granted access because the :term:`Direct Permission` on ``service-A`` takes precedence over everything.
+    * - ``service-A``
+      - ``write``
+      -
+      -
+    * - ``resource-1``
+      - ``read``
+      -
+      -
+    * - ``resource-1``
+      - ``write``
+      -
+      -
+    * - ``resource-2``
+      - ``read``
+      -
+      -
+    * - ``resource-2``
+      - ``write``
+      -
+      -
+    * - ``resource-3``
+      - ``read``
+      -
+      -
+    * - ``resource-3``
+      - ``write``
+      - |cross|
+      - Explicit denied access by :term:`Direct Permission` onto ``resource-3`` overrides anything specified at higher
+        level in the hierarchy.
+    * - ``[unspecified-1]``
+      - ``read``
+      -
+      -
+    * - ``[unspecified-1]``
+      - ``write``
+      -
+      -
+    * - ``[unspecified-2]``
+      - ``read``
+      -
+      -
+    * - ``[unspecified-2]``
+      - ``write``
+      -
+      -

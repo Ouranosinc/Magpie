@@ -165,7 +165,7 @@ class PermissionSet(object):
         (to protect the :term:`Resource`), and :attr:`Scope.MATCH` is *closer* to the actual :term:`Resource` than
         :attr:`Scope.RECURSIVE` permission received from a *farther* parent in the hierarchy.
 
-        Explicitly, sorting becomes::
+        Explicitly, sorted explicit string representation becomes::
 
             [name1]-[allow]-[match]
             [name1]-[allow]-[recursive]
@@ -187,7 +187,19 @@ class PermissionSet(object):
                modifier rather than only the punctual resource.
 
         .. warning::
-            Sorting names is not aesthetic in this case, it impacts the resolution order of some combinations.
+            Alphabetically sorting permissions by string representation (implicit/explicit) is not equivalent to
+            sorting them according to :term:`Permission` priority according to how modifiers are resolved. To obtain
+            the prioritized sorting as strings, a list of :class:`PermissionSet` (with the strings as input) should be
+            used to convert and correctly interpreted the raw strings, and then be converted back after sorting.
+
+            .. code-block:: python
+
+                # valid priority-sorted strings
+                [str(perm) for perm in sorted(PermissionSet(p) for p in permission_strings)]
+
+                # not equivalent to raw sorting
+                list(sorted(permission_strings))
+
         """
         if not isinstance(other, PermissionSet):
             other = PermissionSet(other)
