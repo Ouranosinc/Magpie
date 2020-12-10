@@ -1,4 +1,9 @@
 .. include:: ../README.rst
+
+----------------------
+Table of Contents
+----------------------
+
 .. include:: toc.rst
 
 

@@ -2,7 +2,7 @@
 .. include:: references.rst
 
 .. default location to quickly reference items without the explicit and long prefix
-.. using the full name when introducing the element (to make the location obvious), the reuse shorthand variant
+.. using the full name when introducing the element (to make the location obvious), then reuse shorthand variant
 .. py:currentmodule:: magpie.permissions
 
 Permissions
@@ -242,30 +242,6 @@ to execute `Magpie` application. Effectively, when the active session correspond
 :term:`Public` accessible items.
 
 
-Finding User Permissions
-----------------------------
-
-One of the trickiest (and often confusing) situation when we want to figure out which :term:`Service` a :term:`User` has
-any :term:`Permission` on, is where to actually start looking? Effectively, if we have a vast amount of registered
-:term:`Service` each with a immense hierarchy of :term:`Resource`, doing an exhaustive search can be quite daunting,
-not to mention costly in terms of request lookup and resources.
-
-For this purpose, there is one query parameter named ``cascade`` that can be employed with request
-``GET /users/{user_name}/services``. In normal condition (without the parameter), this request responds with every
-:term:`Service` where the user has :term:`Immediate Permissions` on (doesn't lookup the whole tree hierarchy). With the
-added query parameter, it tells `Magpie` to recursively search the hierarchy of `Applied Permissions`_ and return all
-:term:`Service` instances that possess *any* :term:`Permission` given to at least one child :term:`Resource` at *any*
-level. Furthermore, the ``cascade`` query can be combined with ``inherited`` query to search for all combinations of
-:term:`Inherited Permissions` instead of (by default) only for the :term:`User`'s :term:`Direct Permissions`.
-
-This query can be extremely useful to quickly answer *"does the user have any permission at all on this service"*,
-without needing to manually execute multiple successive lookup requests with all combinations of :term:`Resource`
-identifiers in the hierarchy.
-
-.. versionchanged:: 3.5
-    As of this version, API responses also provide ``reason`` field to help identify the source of every returned
-    :term:`Permission`. Please refer to `Permissions Representation`_ for more details.
-
 .. _permission_modifiers:
 
 Permission Definition and Modifiers
@@ -317,7 +293,7 @@ hierarchy and by :term:`Group` memberships.
 
 .. seealso::
     - |perm_example_modifiers|_
-    - |perm_example_resolution|_
+    - |perm_example_resolve|_
 
 .. _permission_representations:
 
@@ -352,13 +328,13 @@ Therefore, it can be noted that all API responses that contain details about per
                 "name": "permission-name",
                 "access": "allow|deny",
                 "scope": "match|recursive",
-                "type": "access|allowed|applied|direct|inherited|effective",
+                "type": "allowed|applied|direct|inherited|effective",
                 "reason": "<optional>"
             }
         ]
     }
 
-.. todo: (?) add "owned" to list of "type" if implemented alter on
+.. todo: (?) add "access|owned" to list of "type" if implemented alter on
 
 
 .. note::
@@ -421,7 +397,7 @@ complementary or even contradicting :term:`Permission` entries on the :term:`Res
 
 .. seealso::
     - `Permissions Resolution`_
-    - |perm_example_resolution|_
+    - |perm_example_resolve|_
 
 .. warning::
     Field ``resolve`` does not return the *final* :term:`Effective Permissions` resolution (:attr:`Scope.RECURSIVE` is
@@ -499,6 +475,34 @@ defaults to :attr:`Access.DENY`, and indicated by ``"no-permission"`` reason.
 
 Examples
 -------------------
+
+.. _perm_example_search:
+.. |perm_example_search| replace:: Permission Search example
+
+Finding User Permissions
+----------------------------
+
+One of the trickiest (and often confusing) situation when we want to figure out which :term:`Service` a :term:`User` has
+any :term:`Permission` on, is where to actually start looking? Effectively, if we have a vast amount of registered
+:term:`Service` each with a immense hierarchy of :term:`Resource`, doing an exhaustive search can be quite daunting,
+not to mention costly in terms of request lookup and resources.
+
+For this purpose, there is one query parameter named ``cascade`` that can be employed with request
+``GET /users/{user_name}/services``. In normal condition (without the parameter), this request responds with every
+:term:`Service` where the user has :term:`Immediate Permissions` on (doesn't lookup the whole tree hierarchy). With the
+added query parameter, it tells `Magpie` to recursively search the hierarchy of `Applied Permissions`_ and return all
+:term:`Service` instances that possess *any* :term:`Permission` given to at least one child :term:`Resource` at *any*
+level. Furthermore, the ``cascade`` query can be combined with ``inherited`` query to search for all combinations of
+:term:`Inherited Permissions` instead of (by default) only for the :term:`User`'s :term:`Direct Permissions`.
+
+This query can be extremely useful to quickly answer *"does the user have any permission at all on this service"*,
+without needing to manually execute multiple successive lookup requests with all combinations of :term:`Resource`
+identifiers in the hierarchy.
+
+.. versionchanged:: 3.5
+    As of this version, API responses also provide ``reason`` field to help identify the source of every returned
+    :term:`Permission`. Please refer to `Permissions Representation`_ for more details.
+
 
 .. _perm_example_type:
 .. |perm_example_type| replace:: Permission Types example
@@ -612,10 +616,10 @@ In summary, ``effective`` tells us *"which permissions does the user have access
 ``inherited`` answers *"which permissions does the user have on this resource alone"*, and without any query, we
 obtain *"what are the permissions that this user explicitly has on this resource"*.
 
-.. perm_example_modifiers:
+.. _perm_example_modifiers:
 .. |perm_example_modifiers| replace:: Permission Modifiers example
 
-The effect of Permission Modifiers
+Effect of Permission Modifiers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Below are examples of :term:`Permission` definitions that can help better understand the different concepts.
@@ -655,7 +659,7 @@ the default interpretation of protected access control defined by `Magpie`. When
 cause ambiguous resolution, the ``match`` :term:`Permission` is prioritized over inherited access via parent ``scope``.
 
 
-.. perm_example_resolve:
+.. _perm_example_resolve:
 .. |perm_example_resolve| replace:: Permission Resolution example
 
 Resolution of Permissions
