@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import requests
 import six
 from pyramid.httpexceptions import (
     HTTPBadRequest,
@@ -8,6 +9,7 @@ from pyramid.httpexceptions import (
     HTTPForbidden,
     HTTPInternalServerError,
     HTTPNotFound,
+    HTTPFailedDependency,
     HTTPOk
 )
 from ziggurat_foundations.models.services.group import GroupService
@@ -18,6 +20,7 @@ from ziggurat_foundations.models.services.user_resource_permission import UserRe
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
+from magpie.api.exception import raise_http
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
@@ -106,8 +109,31 @@ def create_user(user_name, password, email, group_name, db_session):
         _add_to_group(new_user, _get_group(anonym_grp_name))
         new_user_groups.append(anonym_grp_name)
 
-    return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
-                         content={"user": uf.format_user(new_user, new_user_groups)})
+    # user_name_list = ax.evaluate_call(lambda: [user.user_name for user in
+    #                                            UserService.all(models.User, db_session=db_session)],
+    #                                   fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
+    #                                   msg_on_fail=s.Users_GET_ForbiddenResponseSchema.description)
+    # print(user_name_list)
+
+    valid_http = ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
+                               content={"user": uf.format_user(new_user, new_user_groups)})
+
+    webhook_url = get_constant("MAGPIE_WEBHOOK_PRE_USER_CREATION_URL")
+
+    # FIXME: add try, in case url is not available
+    if webhook_url is not None and webhook_url != "":
+        try:
+            # TODO: set status to 0
+            resp = requests.post(webhook_url + "/create", data={'user_name': user_name})
+            print(resp.status_code)
+            print(resp.text)
+        except Exception as e:
+            # TODO: clean up, remove pending user
+            raise_http(http_error=HTTPFailedDependency,
+                       detail="Error occurred during parameter verification")
+    # TODO: reset status to finished
+
+    return valid_http
 
 
 def create_user_resource_permission_response(user, resource, permission, db_session, overwrite=False):

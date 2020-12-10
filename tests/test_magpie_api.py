@@ -7,7 +7,7 @@ test_magpie_api
 
 Tests for :mod:`magpie.api` module.
 """
-
+import os
 import unittest
 
 import mock
@@ -106,6 +106,35 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.check_requirements()
         cls.setup_test_values()
+
+    def test_CreateUser_Webhook(self):
+        """
+        Test creating a user using a webhook.
+        """
+        with mock.patch.dict(os.environ, {'MAGPIE_WEBHOOK_PRE_USER_CREATION_URL':
+                                          get_constant('MAGPIE_TEST_WEBHOOK_PRE_USER_CREATION_URL')}):
+            utils.get_test_webhook_app()
+            utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        assert 0 == 1
+
+    def test_CreateUser_FailingWebhook(self):
+        """
+        Test creating a user using a failing webhook url.
+        """
+        with mock.patch.dict(os.environ, {'MAGPIE_WEBHOOK_PRE_USER_CREATION_URL':
+                                          get_constant('MAGPIE_TEST_WEBHOOK_PRE_USER_CREATION_URL')}):
+            utils.get_test_webhook_app()
+            utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        assert 0 == 1
+
+    def test_CreateUser_EmptyWebhook(self):
+        """
+        Test creating a user with an empty webhook url.
+        """
+        with mock.patch.dict(os.environ, {'MAGPIE_WEBHOOK_PRE_USER_CREATION_URL': ""}):
+            utils.get_test_webhook_app()
+            utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        assert 0 == 1
 
 
 @runner.MAGPIE_TEST_API

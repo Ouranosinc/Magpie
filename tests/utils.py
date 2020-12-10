@@ -1,6 +1,11 @@
+import os
+from errno import EADDRINUSE
+import threading
+from cgi import FieldStorage
 import functools
 import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
+from time import sleep
 import unittest
 import warnings
 from distutils.version import LooseVersion
@@ -11,10 +16,13 @@ import pytest
 import requests
 import requests.exceptions
 import six
-from pyramid.httpexceptions import HTTPException
+from pyramid.config import Configurator
+from pyramid.response import Response
+from pyramid.httpexceptions import HTTPException, HTTPInternalServerError
 from pyramid.settings import asbool
 from pyramid.testing import DummyRequest, setUp as PyramidSetUp
 from six.moves.urllib.parse import urlparse
+from waitress import serve
 from webtest.app import AppError, TestApp  # noqa
 from webtest.forms import Form
 from webtest.response import TestResponse
@@ -239,6 +247,41 @@ def get_app_or_url(test_item):
     if not app_or_url:
         raise ValueError("Invalid test class, application or URL could not be found.")
     return app_or_url
+
+
+def get_test_webhook_app():
+    """
+    Instantiate a local test application used for the prehook for user creation and deletion.
+    """
+    def webhook_create(request):
+        user = request.POST['user_name']
+        if user == 'failure_user':
+            # Simulates an error in the webhook process
+            return HTTPInternalServerError()
+        sleep(1)
+        return Response(user + " webhook")
+
+    def webhook_app():
+        with Configurator() as config:
+            config.add_route('create', '/create')
+            config.add_view(webhook_create, route_name='create', request_method="POST", request_param="user_name")
+            app = config.make_wsgi_app()
+        try:
+            webhook_url_info = urlparse(get_constant("MAGPIE_WEBHOOK_PRE_USER_CREATION_URL"))
+            serve(app, host=webhook_url_info.hostname, port=webhook_url_info.port)
+        except OSError as e:
+            if e.errno == EADDRINUSE:
+                # The app is already running, nothing to do.
+                return
+            else:
+                raise
+    x = threading.Thread(target=webhook_app, daemon=True)
+    x.start()
+
+    # FIXME: sometimes an error for first request, with BadGateway
+    #  (probably the app didn't had the time to startup completely)
+
+    return
 
 
 def get_hostname(test_item):

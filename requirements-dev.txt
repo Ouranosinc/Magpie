@@ -18,3 +18,4 @@ pyramid-twitcher==0.5.3
 pytest
 tox>=3.0
 webtest
+waitress
