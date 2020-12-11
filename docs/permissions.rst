@@ -687,6 +687,8 @@ the given hierarchy. In this case, every :term:`Resource` can be applied with ei
     Below ``[unspecified-#]`` identifiers are employed to indicate path element that would land onto
     no existing :term:`Resource` (e.g.: ``/service-A/resource-1/Unknown`` mapped to ``[unspecified-1]``), but that
     will still obtain :term:`Effective Permissions` according to applied :attr:`Scope.RECURSIVE` modifier if any.
+    Because the :term:`Resource` does not exist, there cannot be any corresponding :term:`Applied Permissions` on
+    them, as indicated by ``-``.
 
                                       | TestUser      | TestGroup1    | TestGroup2    | Anonymous
                                       | [user]        | [group]       | [group]       | [group] (special)
