@@ -1,13 +1,11 @@
 import functools
 import itertools
-import math
 from typing import TYPE_CHECKING
 
 import six
 from pyramid.security import Everyone
 from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
-from magpie.constants import get_constant
 from magpie.utils import ExtendedEnum
 
 if TYPE_CHECKING:
@@ -364,11 +362,7 @@ class PermissionSet(object):
         Priority accessor in case of group inherited permission resolved by :class:`PermissionTuple`.
         """
         if self._tuple is not None and self.type == PermissionType.INHERITED:
-            if self._tuple.group.group_name == get_constant("MAGPIE_ANONYMOUS_GROUP"):
-                return -1
-            elif self._tuple.group.group_name == get_constant("MAGPIE_ADMIN_GROUP"):
-                return math.inf  # make sure that everything will be lower than admins
-            return max(self._tuple.group.priority, 0)  # make sure that nothing can be lower/equal to anonymous
+            return self._tuple.group.priority
         return None
 
     @property

@@ -1,3 +1,4 @@
+import math
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
@@ -51,12 +52,16 @@ class Group(GroupMixin, Base):
         """
         return sa.Column(sa.Boolean(), default=False)
 
-    @declared_attr
+    @property
     def priority(self):
         """
-        Sorting priority weight of the group for resolving conflicting effective permissions.
+        Sorting priority weight of the group for resolving conflicting permissions.
         """
-        return sa.Column(sa.Integer(), nullable=False, default=0)
+        if self.group_name == get_constant("MAGPIE_ANONYMOUS_GROUP"):
+            return -1
+        elif self.group_name == get_constant("MAGPIE_ADMIN_GROUP"):
+            return math.inf  # make sure that everything will be lower than admins
+        return 0  # make sure that nothing can be lower/equal to anonymous
 
 
 class GroupPermission(GroupPermissionMixin, Base):
