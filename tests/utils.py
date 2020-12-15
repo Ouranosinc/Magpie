@@ -1397,7 +1397,7 @@ class TestSetup(object):
     @staticmethod
     def update_TestAnyResourcePermission(test_case,                         # type: AnyMagpieTestCaseType
                                          item_type,                         # type: Str
-                                         method,                            # type: Str
+                                         method,                            # type: Str  # POST|PUT|DELETE
                                          override_item_name=null,           # type: Optional[Str]
                                          resource_info=null,                # type: Optional[JSON]
                                          override_resource_id=null,         # type: Optional[int]
