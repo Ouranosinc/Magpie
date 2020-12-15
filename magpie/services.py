@@ -357,8 +357,8 @@ class ServiceInterface(object):
                     elif prev_perm.type == PermissionType.INHERITED:
                         # - If new permission to process is done against the previous permission from same tree-level,
                         #   there is a possibility to combine equal priority groups. In such case, reason is 'MULTIPLE'.
-                        # - If not of equal priority, the appropriate resource is selected by the method and reason is
-                        #   overridden by the new higher priority permission.
+                        # - If not of equal priority, the appropriate permission is selected by the method and reason is
+                        #   accordingly overridden by the new higher priority permission.
                         # - If same permission priority occurs, but at *different* tree-level, the new permission
                         #   reverts the access. The reason must be picked as that last permission instead of 'MULTIPLE'.
                         choice = None

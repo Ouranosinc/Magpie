@@ -2234,7 +2234,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         For each combination, there is always only one :term:`Applied Permission` for a user or group per resource in
         the hierarchy. This makes :term:`Inherited Permissions` and :term:`Resolved Permissions` field ``reasons`` much
-        easier to validate as there are no intra-resource (same) permission resolution, only inter-resource (disticnt)
+        easier to validate as there are no intra-resource (same) permission resolution, only inter-resource (distinct)
         permission inheritance according to local-level priorities, making ``reason`` always single-entry.
         These are highlighted by the corresponding arrow comments in the code.
 
@@ -2290,7 +2290,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             (a_n, p_D, a_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  #  4
             (a_n, p_A, g_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  #  5
             (a_n, p_A, g_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  #  6
-            (a_n, p_D, g_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, g_r)]),  #  7
+            (a_n, p_D, g_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  #  7   # ---- 2nd effective p_A current makes sense,  should be p_D ?
             (a_n, p_D, g_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  #  8
             (a_n, p_A, u_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  #  9
             (a_n, p_A, u_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 10
@@ -2298,12 +2298,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             (a_n, p_D, u_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 12
             # ---
             (g_n, p_A, a_n, p_A, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, g_r)]),  # 13
-            (g_n, p_A, a_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)]),  # 14
+            (g_n, p_A, a_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, g_r)]),  # 14
             (g_n, p_D, a_n, p_A, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, g_r)]),  # 15
             (g_n, p_D, a_n, p_D, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)]),  # 16
             (g_n, p_A, g_n, p_A, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  # 17
             (g_n, p_A, g_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  # 18
-            (g_n, p_D, g_n, p_A, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  # 19
+            (g_n, p_D, g_n, p_A, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, g_r)]),  # 19   # ----- 2nd effective should be p_A ? here p_D seems incorrect
             (g_n, p_D, g_n, p_D, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  # 20
             (g_n, p_A, u_n, p_A, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 21
             (g_n, p_A, u_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 22
@@ -2311,16 +2311,16 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             (g_n, p_D, u_n, p_D, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 24
             # ---
             (u_n, p_A, a_n, p_A, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, u_r)]),  # 25
-            (u_n, p_A, a_n, p_D, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, u_r)]),  # 26
-            (u_n, p_D, a_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, u_r)]),  # 27
+            (u_n, p_A, a_n, p_D, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, u_r)]),  # 26
+            (u_n, p_D, a_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, u_r)]),  # 27
             (u_n, p_D, a_n, p_D, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, u_r)]),  # 28
             (u_n, p_A, g_n, p_A, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, u_r)]),  # 29
-            (u_n, p_A, g_n, p_D, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, u_r)]),  # 30
-            (u_n, p_D, g_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, u_r)]),  # 31
+            (u_n, p_A, g_n, p_D, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_A, u_r)]),  # 30
+            (u_n, p_D, g_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, u_r)]),  # 31
             (u_n, p_D, g_n, p_D, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, u_r)]),  # 32
             (u_n, p_A, u_n, p_A, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 33
             (u_n, p_A, u_n, p_D, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 34
-            (u_n, p_D, u_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 35
+            (u_n, p_D, u_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, u_r)]),  # 35  # ---- 2nd effective should be p_A ? here p_D seems incorrect
             (u_n, p_D, u_n, p_D, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 36
         ]
         # self-validation of test that all combinations are indeed defined (avoid incorrectly defined/edited test)
@@ -2416,20 +2416,21 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             R: recursive
 
         Permissions::
-                                        user            group           effective (reason/importance)
 
-            Service1                    (r-A-M)                         r-A, w-D  (default)
-                Resource1               (w-A-M)         (r-A-R)         r-A, w-A
-                    Resource2           (r-D-M)         (r-D-R)         r-D, w-D  (default + group-res2)
-                        Resource3       (w-A-M)                         r-D, w-A  (group-res2)
-            Service2                                                    r-D, w-D  (default)
-                Resource4               (w-A-M)         (w-D-R)         r-D, w-A  (user > group)
-                    Resource5           (r-A-R)         (r-D-M)         r-A, w-D  (user > group)
-                        Resource6       (w-A-M)                         r-A. w-A  (user > group)
-            Service3                    (w-D-M)         (w-A-R)         r-D, w-D  (user > group)
-                Resource7                                               r-D, w-A  (group-svc3)
-                    Resource8                           (w-D-R)         r-D, w-D  (revert group-svc3)
-                        Resource9       (w-A-R)                         r-D, w-A  (user > group, revert group-res8)
+            resources hierarchy       | applied (user)  | applied (group) | effective (reason/importance)
+            ==========================+=================+=================+============================================
+            Service1                  | (r-A-M)         |                 | r-A, w-D  (default)
+                Resource1             |         (w-A-M) | (r-A-R)         | r-A, w-A
+                    Resource2         | (r-D-M)         | (r-D-R)         | r-D, w-D  (default + group-res2)
+                        Resource3     |         (w-A-M) |                 | r-D, w-A  (group-res2)
+            Service2                  |                 |                 | r-D, w-D  (default)
+                Resource4             |         (w-A-M) |         (w-D-R) | r-D, w-A  (user > group)
+                    Resource5         | (r-A-R)         | (r-D-M)         | r-A, w-D  (user > group)
+                        Resource6     |         (w-A-M) |                 | r-A. w-A  (user > group)
+            Service3                  |         (w-D-M) |         (w-A-R) | r-D, w-D  (user > group)
+                Resource7             |                 |                 | r-D, w-A  (group-svc3)
+                    Resource8         |                 |         (w-D-R) | r-D, w-D  (revert group-svc3)
+                        Resource9     |         (w-A-R) |                 | r-D, w-A  (user > group, revert group-res8)
         """
         utils.warn_version(self, "effective permissions resolution with deny", "3.0", skip=True)
 
