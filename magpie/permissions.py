@@ -10,12 +10,13 @@ from magpie.utils import ExtendedEnum
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Collection, Dict, List, Optional, Type, Union
+    from typing import Any, Collection, Dict, List, Optional, Union
 
     from magpie import models
     from magpie.typedefs import (
         AccessControlEntryType,
         AnyPermissionType,
+        GroupPriority,
         PermissionObject,
         ResolvablePermissionType,
         Str
@@ -299,8 +300,13 @@ class PermissionSet(object):
         self._reason = reason
 
     @classmethod
-    def resolve(cls, permission1, permission2, context=PermissionType.INHERITED):
-        # type: (ResolvablePermissionType, ResolvablePermissionType, PermissionType) -> ResolvablePermissionType
+    def resolve(cls,
+                permission1,                        # type: ResolvablePermissionType
+                permission2,                        # type: ResolvablePermissionType
+                context=PermissionType.INHERITED,   # type: PermissionType
+                multiple_choice=None,               # type: Optional[ResolvablePermissionType]
+                ):                                  # type: (...) -> ResolvablePermissionType
+
         """
         Resolves provided permissions into a single one considering various modifiers and groups for a resource.
 
@@ -349,15 +355,15 @@ class PermissionSet(object):
         # same group priority are resolved according to corresponding permission names/access/scope (__lt__)
         if permission1 == permission2:
             # if the two different groups have the exact same resolution value,
-            # indicate that multiple groups resolve into the same access
-            permission1.reason = PERMISSION_REASON_MULTIPLE
+            # indicate that multiple groups resolve into the same access, unless a choice was provided
+            permission1.reason = multiple_choice.reason if multiple_choice else PERMISSION_REASON_MULTIPLE
             return permission1  # preserved group in perm-tuple doesn't matter as they are equivalent
         # otherwise return whichever group permission has higher resolution value
         return permission2 if permission1 < permission2 else permission1
 
     @property
     def group_priority(self):
-        # type: () -> Optional[Union[int, Type[math.inf]]]
+        # type: () -> Optional[GroupPriority]
         """
         Priority accessor in case of group inherited permission resolved by :class:`PermissionTuple`.
         """

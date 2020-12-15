@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Dict, Type
 
-    from magpie.typedefs import AccessControlListType, Str
+    from magpie.typedefs import AccessControlListType, GroupPriority, Str
 
 Base = declarative_base()   # pylint: disable=C0103,invalid-name
 
@@ -54,6 +54,7 @@ class Group(GroupMixin, Base):
 
     @property
     def priority(self):
+        # type: () -> Optional[Union[int, Type[math.inf]]]
         """
         Sorting priority weight of the group for resolving conflicting permissions.
         """

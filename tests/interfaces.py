@@ -2068,7 +2068,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         .. seealso::
             :meth:`test_GetUserResourcePermissions_PermissionsHierarchyResolution`
         """
-        utils.warn_version(self, "inherited/effective combined permissions resolution", "3.5.0", skip=True)
+        utils.warn_version(self, "inherited/effective prioritized permissions resolution", "3.5.0", skip=True)
 
         # setup
         test_group_1 = "unittest-test-{!s}".format(uuid.uuid4())
@@ -2201,7 +2201,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         self.create_validate_permissions(
             test_user, res_id, res_id, "group", test_group_1, perm8,
             [(perm7, user_reason), (perm4, grp2_reason), (perm5, grp1_reason), (perm1, anonym_reason),
-            (perm8, grp1_reason)],  # all previous permissions untouched, only new one added
+             (perm8, grp1_reason)],  # all previous permissions untouched, only new one added
             [(perm7, user_reason), (perm8, grp1_reason)],  # resolved with prioritized regrouped by name
             [(effect_perm1_allow, user_reason), (effect_perm2_deny, grp1_reason)]
         )
@@ -2211,7 +2211,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         self.create_validate_permissions(
             test_user, res_id, res_id, "group", test_group_2, perm8,  # same permission, different group
             [(perm7, user_reason), (perm4, grp2_reason), (perm5, grp1_reason), (perm1, anonym_reason),
-            (perm8, grp1_reason), (perm8, grp2_reason)],  # again everything remains, but adds new one
+             (perm8, grp1_reason), (perm8, grp2_reason)],  # again everything remains, but adds new one
             [(perm7, user_reason), (perm8, PERMISSION_REASON_MULTIPLE)],  # reason multiple equal groups
             [(effect_perm1_allow, user_reason), (effect_perm2_deny, PERMISSION_REASON_MULTIPLE)]
         )
@@ -2232,13 +2232,14 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 middle-resource
                     child-resource      <-- 2nd permission applied
 
-        For each combination, there is always only one permission per resource in the hierarchy.
-        This makes permission ``reasons`` much easier to validate as there are no intra-resource permission resolution,
-        but only inter-resource permission inheritance according to priorities, making ``reason`` always single-entry.
-        For the same reason, the ``inherited`` and ``resolved`` permissions for each corresponding resource should be
-        the same as the applied one (plus the added ``type`` and ``reason`` in response body).
-        During ``effective`` resolution, the result will depend on user/group priority, parent/child order of resources
-        onto which the permissions were applied, as they ``access`` modifier.
+        For each combination, there is always only one :term:`Applied Permission` for a user or group per resource in
+        the hierarchy. This makes :term:`Inherited Permissions` and :term:`Resolved Permissions` field ``reasons`` much
+        easier to validate as there are no intra-resource (same) permission resolution, only inter-resource (disticnt)
+        permission inheritance according to local-level priorities, making ``reason`` always single-entry.
+        These are highlighted by the corresponding arrow comments in the code.
+
+        During ``effective`` resolution though, the result will depend on user/group priority, parent/child order of
+        resources onto which the permissions were applied, as well as their ``access`` modifier.
 
         All permissions are created with :attr:`Scope.RECURSIVE` to evaluate hierarchy resolution.
         Created user is always provided membership to both the test-group and the anonymous special group.
@@ -2246,6 +2247,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         .. seealso::
             - :meth:`test_GetUserResourcePermissions_CombinedMultiplePermissions`
         """
+        utils.warn_version(self, "inherited/effective prioritized permissions resolution", "3.5.0", skip=True)
 
         # setup user/group
         u_n = self.test_user_name
@@ -2264,24 +2266,31 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         u_r = "user:{}:{}".format(u_id, u_n)
         utils.TestSetup.assign_TestUserGroup(self, override_group_name=g_n)
         perm_name = self.test_service_resource_perms[0]
+        undef_perms = set(self.test_service_resource_perms) - {perm_name}
         p_A, p_D = Access.ALLOW, Access.DENY  # noqa  # aliases just to make combinations on same line "easier" to read
 
         # for each of the following test combinations, items are defined as:
         #   (service-user/group, service-perm, resource-user/group, resource-perm,      # permissions creation items
         #    [inherit-perm/reasons], [resolve-perm/reasons], [effective-perm/reasons],  # expected service permissions
         #    [inherit-perm/reasons], [resolve-perm/reasons], [effective-perm/reasons])  # expected resource permissions
-        # order is not important for actual test, but they are somewhat placed by least to more specific, and by
-        # least to more restrictive, for 1st/2nd resource, to help lookup during debug in case of problem
+        # order is not really important for actual test, but they are somewhat placed by least to more specific,
+        # and by least to more restrictive, for 1st/2nd resource, to help lookup during debug in case of problem
         combinations = [
             # pylint: disable=E501
-            # ==> create items  | ==> expected permissions on service     | ==> expected permissions on resource       | test case
+            #                +------------------------------------------------+-------------+ matching single-entry
+            #                |                                                |             | (inherited/resolved)
+            #      +---------c------+-------------+ matching single-entry     |             |
+            #      |         |      |             | (inherited/resolved)      |             |
+            #      v         v      v             v                           v             v
+            #  items to create  |     expected permissions on service     |     expected permissions on resource    |  test
+            #  (applied perms)  | inherited     resolved      effective   | inherited     resolved      effective   |  case
             (a_n, p_A, a_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),  #  1
             (a_n, p_A, a_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  #  2
-            (a_n, p_D, a_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  #  3
+            (a_n, p_D, a_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, a_r)]),  #  3
             (a_n, p_D, a_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  #  4
             (a_n, p_A, g_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  #  5
             (a_n, p_A, g_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  #  6
-            (a_n, p_D, g_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  #  7
+            (a_n, p_D, g_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, g_r)]),  #  7
             (a_n, p_D, g_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  #  8
             (a_n, p_A, u_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  #  9
             (a_n, p_A, u_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 10
@@ -2290,7 +2299,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             # ---
             (g_n, p_A, a_n, p_A, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, g_r)]),  # 13
             (g_n, p_A, a_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)]),  # 14
-            (g_n, p_D, a_n, p_A, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)]),  # 15
+            (g_n, p_D, a_n, p_A, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, g_r)]),  # 15
             (g_n, p_D, a_n, p_D, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)]),  # 16
             (g_n, p_A, g_n, p_A, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  # 17
             (g_n, p_A, g_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  # 18
@@ -2352,8 +2361,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                                              override_resource_id=res_id,
                                                              override_permission=perm2)
             # test expected results of current combination
-            # inherited & resolved should always have same type as created permission (since only 1 on that resource)
-            # effective is always overridden by the hierarchical resolution with MATCH/EFFECTIVE, and prioritized reason
+            # - inherited & resolved should always have same type as created permission (since only 1 on that resource)
+            # - effective are always overridden by the hierarchical resolution with MATCH/EFFECTIVE, with prioritized
+            #   reason, but missing permissions are added for all applicable ones with default DENY and MISSING reason
             perm1_type = PermissionType.DIRECT if test_target1 == u_n else PermissionType.INHERITED
             perm2_type = PermissionType.DIRECT if test_target2 == u_n else PermissionType.INHERITED
             perm_effect = PermissionType.EFFECTIVE
@@ -2363,16 +2373,23 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 expect_resolved1[j] = PermissionSet(perm_name, access, Scope.RECURSIVE, perm1_type), reason
             for j, (access, reason) in enumerate(expect_effective1):
                 expect_effective1[j] = PermissionSet(perm_name, access, Scope.MATCH, perm_effect), reason
+            for perm in undef_perms:
+                perm_reason = (PermissionSet(perm, p_D, Scope.MATCH, perm_effect), PERMISSION_REASON_DEFAULT)
+                expect_effective1.append(perm_reason)
             for j, (access, reason) in enumerate(expect_inherited2):
                 expect_inherited2[j] = PermissionSet(perm_name, access, Scope.RECURSIVE, perm2_type), reason
             for j, (access, reason) in enumerate(expect_resolved2):
                 expect_resolved2[j] = PermissionSet(perm_name, access, Scope.RECURSIVE, perm2_type), reason
             for j, (access, reason) in enumerate(expect_effective2):
                 expect_effective2[j] = PermissionSet(perm_name, access, Scope.MATCH, perm_effect), reason
-            msg = "Test-Case {}".format(i + 1)
-            self.create_validate_permissions(u_n, svc_id, svc_id, None, None, None,
+            for perm in undef_perms:
+                perm_reason = (PermissionSet(perm, p_D, Scope.MATCH, perm_effect), PERMISSION_REASON_DEFAULT)
+                expect_effective2.append(perm_reason)
+            msg = "Test Case #{} (service)".format(i + 1)
+            self.create_validate_permissions(u_n, svc_id, None, None, None, None,  # pre-created, only validate
                                              expect_inherited1, expect_resolved1, expect_effective1, error_prefix=msg)
-            self.create_validate_permissions(u_n, res_id, res_id, None, None, None,
+            msg = "Test Case #{} (resource)".format(i + 1)
+            self.create_validate_permissions(u_n, res_id, None, None, None, None,  # pre-created, only validate
                                              expect_inherited2, expect_resolved2, expect_effective2, error_prefix=msg)
 
     @runner.MAGPIE_TEST_USERS
@@ -5312,7 +5329,7 @@ class SetupMagpieAdapter(object):
         request.registry = registry
         settings = kwargs.get("settings")
         if settings:
-            request.registry.settings.update(settings)
+            request.registry.settings.update(settings)  # noqa
         methods = registry.queryUtility(IRequestExtensions).descriptors
         # process the reify request methods as they would normally be generated by pyramid app
         # this ensures they become available as properties from the request (eg: request.db, request.user, etc.)

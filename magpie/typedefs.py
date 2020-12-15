@@ -6,9 +6,10 @@ Magpie additional typing definitions.
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    import math
     from typing import Any
     from typing import AnyStr as _AnyStr
-    from typing import Dict, Iterable, List, Optional, Tuple, Union
+    from typing import Dict, Iterable, List, Optional, Tuple, Type, Union
 
     import six
     from pyramid.config import Configurator
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
     ChildrenResourceNodes = Dict[int, Dict[Str, Union[models.Resource, "ChildrenResourceNodes"]]]
     ResourcePermissionMap = Dict[int, List[PermissionSet]]  # raw mapping of permission-names applied per resource ID
 
+    GroupPriority = Union[int, Type[math.inf]]
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ServiceOrResourceType = Union[models.Service, models.Resource]
     PermissionObject = Dict[Str, Optional[Str]]

@@ -18,6 +18,7 @@ from magpie.owsrequest import ows_parser_factory
 from magpie.permissions import (
     PERMISSION_REASON_ADMIN,
     PERMISSION_REASON_DEFAULT,
+    PERMISSION_REASON_MULTIPLE,
     Access,
     Permission,
     PermissionSet,
@@ -290,15 +291,20 @@ class ServiceInterface(object):
                 for perm in permissions
             ]
 
-        # current and parent resource(s) recursive-scope
         match = allow_match
-        while resource is not None:  # bottom-up until service is reached
+        effective_level = dict()  # type: Dict[Permission, int]
+        current_level = 0
+        full_break = False
+        # current and parent resource(s) recursive-scope
+        while resource is not None and not full_break:  # bottom-up until service is reached
 
             # include both permissions set in database as well as defined directly on resource
             cur_res_perms = ResourceService.perms_for_user(resource, user, db_session=db_session)
             cur_res_perms.extend(permission_to_pyramid_acls(resource.__acl__))
 
             for perm_name in requested_perms:
+                if full_break:
+                    break
                 for i, perm_tup in enumerate(cur_res_perms):
                     perm_set = PermissionSet(perm_tup)
 
@@ -318,17 +324,19 @@ class ServiceInterface(object):
                             else:
                                 all_perm = PermissionSet(perm, perm_set.access, perm.scope, PermissionType.OWNED)
                                 effective_perms.setdefault(perm, all_perm)
-                        continue
-                    # skip if the current permission must not be processed (at all or for the moment until next iter)
+                        full_break = True
+                        break
+                    # skip if the current permission must not be processed (at all or for the moment until next 'name')
                     elif perm_set.name not in requested_perms or perm_set.name != perm_name:
                         continue
                     # only first resource can use match (if even enabled with found one), parents are recursive-only
                     if not match and perm_set.scope == Scope.MATCH:
                         continue
                     # pick the first permission if none was found up to this point
-                    perm = effective_perms.get(perm_name)
-                    if not perm:
+                    prev_perm = effective_perms.get(perm_name)
+                    if not prev_perm:
                         effective_perms[perm_name] = perm_set
+                        effective_level[perm_name] = current_level
                         continue
 
                     # user direct permissions have priority over inherited ones from groups
@@ -338,22 +346,39 @@ class ServiceInterface(object):
                         # if inherited permission was previously set, user direct ALLOW has priority over inherited DENY
                         #   no need to check explicitly for ALLOW since it was either already set during last iteration
                         #   (at that moment, perm=None) or DENY was already set which takes precedence over ALLOW
-                        if perm.type == PermissionType.INHERITED or perm_set.access == Access.DENY:
+                        if prev_perm.type == PermissionType.INHERITED or perm_set.access == Access.DENY:
                             effective_perms[perm_name] = perm_set
+                            effective_level[perm_name] = current_level
                         continue  # final decision for this user, skip any group permissions
 
                     # resolve prioritized permission according to ALLOW/DENY, scope and group priority
                     # (see called method for extensive details)
-                    # skip if last permission is not on group to avoid redundant USER > GROUP check
-                    elif perm.type == PermissionType.INHERITED:
-                        resolved_perm = PermissionSet.resolve(perm_set, perm, context=PermissionType.EFFECTIVE)
+                    # skip if last permission is not on group to avoid redundant USER > GROUP check processed before
+                    elif prev_perm.type == PermissionType.INHERITED:
+                        # - If new permission to process is done against the previous permission from same tree-level,
+                        #   there is a possibility to combine equal priority groups. In such case, reason is 'MULTIPLE'.
+                        # - If not of equal priority, the appropriate resource is selected by the method and reason is
+                        #   overridden by the new higher priority permission.
+                        # - If same permission priority occurs, but at *different* tree-level, the new permission
+                        #   reverts the access. The reason must be picked as that last permission instead of 'MULTIPLE'.
+                        choice = None
+                        if effective_level[perm_name] != current_level:
+                            choice = prev_perm
+                        resolved_perm = PermissionSet.resolve(perm_set, prev_perm, multiple_choice=choice,
+                                                              context=PermissionType.EFFECTIVE)
+                        if resolved_perm.reason != PERMISSION_REASON_MULTIPLE:
+                            # if permission access was reverted with parent level permission
+                            effective_level[perm_name] = current_level
                         effective_perms[perm_name] = resolved_perm
 
             # don't bother moving to parent if everything is resolved already
-            if len(effective_perms) == len(requested_perms):
+            # can only assume nothing left to resolve if all permissions are direct on user (highest priority)
+            if (len(effective_perms) == len(requested_perms) and
+                    all(perm.type == PermissionType.DIRECT for perm in effective_perms.values())):
                 break
             # otherwise, move to parent if any available, since we are not done rewinding the resource tree
             match = False  # reset match not applicable anymore for following parent resources
+            current_level += 1
             if resource.parent_id:
                 resource = ResourceService.by_resource_id(resource.parent_id, db_session=db_session)
             else:
