@@ -2007,35 +2007,50 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                     expected_inherited_perm_reasons,    # type: List[Tuple[PermissionSet, Str]]
                                     expected_resolved_perm_reasons,     # type: List[Tuple[PermissionSet, Str]]
                                     expected_effective_perm_reasons,    # type: List[Tuple[PermissionSet, Str]]
+                                    error_prefix="",                    # type: Str
                                     ):                                  # type: (...) -> None
+        """
+        Optionally create some user/group permission on an existing resource, and then validate expected permissions
+        according to each resolution method query ``inherited``, ``resolved``, ``effective``. List of expected
+        permissions for each case must be fully defined, and provided with (pre-set) ``type`` and expected ``reason``.
+
+        .. seealso::
+            - :meth:`test_GetUserResourcePermissions_CombinedMultiplePermissions`
+            - :meth:`test_GetUserResourcePermissions_PermissionsHierarchyResolution`
+        """
         user_path = "/users/{}/resources/{}/permissions".format(self.test_user_name, resource_id)
         user_path_inherit = "{}?inherited=true".format(user_path)
-        user_path_resolve = "{}?resolve=true".format(user_path)
+        user_path_resolve = "{}?resolved=true".format(user_path)
         user_path_effect = "{}?effective=true".format(user_path)
         if new_permission is not None:
             utils.TestSetup.update_TestAnyResourcePermission(self, new_user_group_type, "POST",
+                                                             override_item_name=new_user_group_name,
                                                              override_resource_id=resource_id,
-                                                             override_item_name=new_user_group_name)
+                                                             override_permission=new_permission)
         # expected permissions can have more than one entry if the names are not the same, otherwise always only one
         _expect_inherit = [_perm[0].json() for _perm in expected_inherited_perm_reasons]
         for i, (_, _reason) in enumerate(expected_inherited_perm_reasons):
             _expect_inherit[i]["reason"] = _reason
         _expect_resolve = [_perm[0].json() for _perm in expected_resolved_perm_reasons]
-        for i, (_, _reason) in enumerate(_resolve):
+        for i, (_, _reason) in enumerate(expected_resolved_perm_reasons):
             _expect_resolve[i]["reason"] = _reason
         _expect_effect = [_perm[0].json() for _perm in expected_effective_perm_reasons]
-        for i, (_, _reason) in enumerate(_effect):
+        for i, (_, _reason) in enumerate(expected_effective_perm_reasons):
             _expect_effect[i]["reason"] = _reason
         # tests
+        error_prefix = "[{}]: ".format(error_prefix) if error_prefix else ""
         _resp = utils.test_request(self, "GET", user_path_inherit, headers=self.json_headers, cookies=self.cookies)
         _body = utils.check_response_basic_info(_resp)
-        utils.check_all_equal(_body["permissions"], _expect_inherit, any_order=True)
+        _msg = "{}Test inherited permissions".format(error_prefix)
+        utils.check_all_equal(_body["permissions"], _expect_inherit, any_order=True, msg=_msg)
         _resp = utils.test_request(self, "GET", user_path_resolve, headers=self.json_headers, cookies=self.cookies)
         _body = utils.check_response_basic_info(_resp)
-        utils.check_all_equal(_body["permissions"], _expect_resolve, any_order=True)
+        _msg = "{}Test resolved permissions".format(error_prefix)
+        utils.check_all_equal(_body["permissions"], _expect_resolve, any_order=True, msg=_msg)
         _resp = utils.test_request(self, "GET", user_path_effect, headers=self.json_headers, cookies=self.cookies)
         _body = utils.check_response_basic_info(_resp)
-        utils.check_all_equal(_body["permissions"], _expect_effect, any_order=True)
+        _msg = "{}Test effective permissions".format(error_prefix)
+        utils.check_all_equal(_body["permissions"], _expect_effect, any_order=True, msg=_msg)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
@@ -2214,92 +2229,98 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 middle-resource
                     child-resource      <-- 2nd permission applied
 
-        Created user is always provided membership to both the test-group and the anonymous special group.
-
         For each combination, there is always only one permission per resource in the hierarchy.
         This makes permission ``reasons`` much easier to validate as there are no intra-resource permission resolution,
         but only inter-resource permission inheritance according to priorities, making ``reason`` always single-entry.
+        For the same reason, the ``inherited`` and ``resolved`` permissions for each corresponding resource should be
+        the same as the applied one (plus the added ``type`` and ``reason`` in response body).
+        During ``effective`` resolution, the result will depend on user/group priority, parent/child order of resources
+        onto which the permissions were applied, as they ``access`` modifier.
+
         All permissions are created with :attr:`Scope.RECURSIVE` to evaluate hierarchy resolution.
+        Created user is always provided membership to both the test-group and the anonymous special group.
 
         .. seealso::
             - :meth:`test_GetUserResourcePermissions_CombinedMultiplePermissions`
         """
 
         # setup user/group
-        test_usr = self.test_user_name
-        test_grp = "unittest-test-{!s}".format(uuid.uuid4())
-        anon_grp = get_constant("MAGPIE_ANONYMOUS_GROUP")
-        info = utils.TestSetup.get_GroupInfo(self, override_group_name=anon_grp)
+        u_n = self.test_user_name
+        g_n = "unittest-test-{!s}".format(uuid.uuid4())
+        a_n = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        info = utils.TestSetup.get_GroupInfo(self, override_group_name=a_n)
         a_id = info["group_id"]
-        a_r = "group:{}:{}".format(a_id, anon_grp)
-        body = utils.TestSetup.create_TestGroup(self, override_group_name=test_grp)
+        a_r = "group:{}:{}".format(a_id, a_n)
+        body = utils.TestSetup.create_TestGroup(self, override_group_name=g_n)
         info = utils.TestSetup.get_GroupInfo(self, override_body=body)
         g_id = info["group_id"]
-        g_r = "group:{}:{}".format(g_id, test_grp)
+        g_r = "group:{}:{}".format(g_id, g_n)
+        body = utils.TestSetup.create_TestUser(self, override_group_name=a_n)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
         u_id = info["user_id"]
-        u_r = "user:{}:{}".format(u_id, test_usr)
-        utils.TestSetup.assign_TestUserGroup(self, override_group_name=anon_grp)
+        u_r = "user:{}:{}".format(u_id, u_n)
+        utils.TestSetup.assign_TestUserGroup(self, override_group_name=g_n)
         perm_name = self.test_service_resource_perms[0]
-        p_A, p_D = Access.ALLOW, Access.ALLOW  # aliases just to make combinations on same line "easier" to read
+        p_A, p_D = Access.ALLOW, Access.DENY  # noqa  # aliases just to make combinations on same line "easier" to read
 
         # for each of the following test combinations, items are defined as:
         #   (service-user/group, service-perm, resource-user/group, resource-perm,      # permissions creation items
         #    [inherit-perm/reasons], [resolve-perm/reasons], [effective-perm/reasons],  # expected service permissions
         #    [inherit-perm/reasons], [resolve-perm/reasons], [effective-perm/reasons])  # expected resource permissions
-        # order is not important for actual test, but they are placed by least to more specific, and by
+        # order is not important for actual test, but they are somewhat placed by least to more specific, and by
         # least to more restrictive, for 1st/2nd resource, to help lookup during debug in case of problem
         combinations = [
-            # ==> create items    | ==> expected permissions on service     | ==> expected permissions on resource
-            (a_id, p_A, a_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (a_id, p_A, a_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),
-            (a_id, p_D, a_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (a_id, p_D, a_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (a_id, p_A, g_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (a_id, p_A, g_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (a_id, p_D, g_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (a_id, p_D, g_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (a_id, p_A, u_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (a_id, p_A, u_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (a_id, p_D, u_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (a_id, p_D, u_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
+            # pylint: disable=E501
+            # ==> create items  | ==> expected permissions on service     | ==> expected permissions on resource       | test case
+            (a_n, p_A, a_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),  #  1
+            (a_n, p_A, a_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  #  2
+            (a_n, p_D, a_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  #  3
+            (a_n, p_D, a_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  #  4
+            (a_n, p_A, g_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  #  5
+            (a_n, p_A, g_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  #  6
+            (a_n, p_D, g_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  #  7
+            (a_n, p_D, g_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  #  8
+            (a_n, p_A, u_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  #  9
+            (a_n, p_A, u_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 10
+            (a_n, p_D, u_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 11
+            (a_n, p_D, u_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 12
             # ---
-            (g_id, p_A, a_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (g_id, p_A, a_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (g_id, p_D, a_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (g_id, p_D, a_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (g_id, p_A, g_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (g_id, p_A, g_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (g_id, p_D, g_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (g_id, p_D, g_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (g_id, p_A, u_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (g_id, p_A, u_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (g_id, p_D, u_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (g_id, p_D, u_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
+            (g_n, p_A, a_n, p_A, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, g_r)]),  # 13
+            (g_n, p_A, a_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)]),  # 14
+            (g_n, p_D, a_n, p_A, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)]),  # 15
+            (g_n, p_D, a_n, p_D, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)]),  # 16
+            (g_n, p_A, g_n, p_A, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  # 17
+            (g_n, p_A, g_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  # 18
+            (g_n, p_D, g_n, p_A, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  # 19
+            (g_n, p_D, g_n, p_D, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  # 20
+            (g_n, p_A, u_n, p_A, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 21
+            (g_n, p_A, u_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 22
+            (g_n, p_D, u_n, p_A, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 23
+            (g_n, p_D, u_n, p_D, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 24
             # ---
-            (u_id, p_A, a_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (u_id, p_A, a_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (u_id, p_D, a_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (u_id, p_D, a_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (u_id, p_A, g_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (u_id, p_A, g_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (u_id, p_D, g_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (u_id, p_D, g_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (u_id, p_A, u_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (u_id, p_A, u_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (u_id, p_D, u_id, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
-            (u_id, p_D, u_id, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),
+            (u_n, p_A, a_n, p_A, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, u_r)]),  # 25
+            (u_n, p_A, a_n, p_D, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, u_r)]),  # 26
+            (u_n, p_D, a_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, u_r)]),  # 27
+            (u_n, p_D, a_n, p_D, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, u_r)]),  # 28
+            (u_n, p_A, g_n, p_A, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, u_r)]),  # 29
+            (u_n, p_A, g_n, p_D, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, u_r)]),  # 30
+            (u_n, p_D, g_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, u_r)]),  # 31
+            (u_n, p_D, g_n, p_D, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, u_r)]),  # 32
+            (u_n, p_A, u_n, p_A, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 33
+            (u_n, p_A, u_n, p_D, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 34
+            (u_n, p_D, u_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 35
+            (u_n, p_D, u_n, p_D, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 36
         ]
         # self-validation of test that all combinations are indeed defined (avoid incorrectly defined/edited test)
         # repeat each set of possible target/access, representing one per service/resource: total = 36 use cases
-        valid_combo = list(itertools.product([u_id, g_id, a_id], [p_A, p_D], [u_id, g_id, a_id], [p_A, p_D]))
-        test_combo = [list(test)[:4] for test in combinations]
-        utils.check_all_equal(test_combo, valid_combo, any_order=True)
+        valid_combo = list(itertools.product([u_n, g_n, a_n], [p_A, p_D], [u_n, g_n, a_n], [p_A, p_D]))
+        test_combo = [test[:4] for test in combinations]
+        utils.check_all_equal(test_combo, valid_combo, any_order=True, msg="invalid self-validation of combinations.")
 
         # actual test
-        for (test_target1, test_access1, test_target2, test_access2,
-             expect_inherited1, expect_resolved1, expect_effective1,
-             expect_inherited2, expect_resolved2, expect_effective2
-        ) in combinations:
+        for i, (test_target1, test_access1, test_target2, test_access2,
+                expect_inherited1, expect_resolved1, expect_effective1,
+                expect_inherited2, expect_resolved2, expect_effective2) in enumerate(combinations):
             # to guarantee that everything is applied properly and not carried over between iterations,
             # recreate service from scratch every single time (all permissions under it are flushed automatically)
             utils.TestSetup.delete_TestService(self)
@@ -2315,8 +2336,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             res_id = info["resource_id"]  # child resource (2nd permission)
             # create the combination permissions
             # (pre-create both here to correctly resolve using both during validate utility call)
-            item1_type = "user" if test_target1 == test_usr else "group"
-            item2_type = "user" if test_target2 == test_usr else "group"
+            item1_type = "user" if test_target1 == u_n else "group"
+            item2_type = "user" if test_target2 == u_n else "group"
             perm1 = PermissionSet(perm_name, test_access1, Scope.RECURSIVE)
             perm2 = PermissionSet(perm_name, test_access2, Scope.RECURSIVE)
             utils.TestSetup.update_TestAnyResourcePermission(self, item1_type, "POST",
@@ -2327,21 +2348,29 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                                              override_item_name=test_target2,
                                                              override_resource_id=res_id,
                                                              override_permission=perm2)
-            # test expected results
+            # test expected results of current combination
             # inherited & resolved should always have same type as created permission (since only 1 on that resource)
-            # effective is always overridden by the hierarchical resolution
-            perm1_type = PermissionType.DIRECT if test_target1 == test_usr else PermissionType.INHERITED
-            perm2_type = PermissionType.DIRECT if test_target2 == test_usr else PermissionType.INHERITED
-            expect_inherited1[0].type = perm1_type
-            expect_resolved1[0].type = perm1_type
-            expect_effective1[0].type = PermissionType.EFFECTIVE
-            expect_inherited2[0].type = perm2_type
-            expect_resolved2[0].type = perm2_type
-            expect_effective2[0].type = PermissionType.EFFECTIVE
-            self.create_validate_permissions(test_usr, svc_id, None, None, None,
-                                             expect_inherited1, expect_resolved1, expect_effective1)
-            self.create_validate_permissions(test_usr, res_id, None, None, None,
-                                             expect_inherited2, expect_resolved2, expect_effective2)
+            # effective is always overridden by the hierarchical resolution with MATCH/EFFECTIVE, and prioritized reason
+            perm1_type = PermissionType.DIRECT if test_target1 == u_n else PermissionType.INHERITED
+            perm2_type = PermissionType.DIRECT if test_target2 == u_n else PermissionType.INHERITED
+            perm_effect = PermissionType.EFFECTIVE
+            for j, (access, reason) in enumerate(expect_inherited1):
+                expect_inherited1[j] = PermissionSet(perm_name, access, Scope.RECURSIVE, perm1_type), reason
+            for j, (access, reason) in enumerate(expect_resolved1):
+                expect_resolved1[j] = PermissionSet(perm_name, access, Scope.RECURSIVE, perm1_type), reason
+            for j, (access, reason) in enumerate(expect_effective1):
+                expect_effective1[j] = PermissionSet(perm_name, access, Scope.MATCH, perm_effect), reason
+            for j, (access, reason) in enumerate(expect_inherited2):
+                expect_inherited2[j] = PermissionSet(perm_name, access, Scope.RECURSIVE, perm2_type), reason
+            for j, (access, reason) in enumerate(expect_resolved2):
+                expect_resolved2[j] = PermissionSet(perm_name, access, Scope.RECURSIVE, perm2_type), reason
+            for j, (access, reason) in enumerate(expect_effective2):
+                expect_effective2[j] = PermissionSet(perm_name, access, Scope.MATCH, perm_effect), reason
+            msg = "Test-Case {}".format(i + 1)
+            self.create_validate_permissions(svc_id, None, None, None,
+                                             expect_inherited1, expect_resolved1, expect_effective1, error_prefix=msg)
+            self.create_validate_permissions(res_id, None, None, None,
+                                             expect_inherited2, expect_resolved2, expect_effective2, error_prefix=msg)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
