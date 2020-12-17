@@ -156,7 +156,6 @@ a combined configuration as follows.
         - ...
 
 
-
 For backward compatibility reasons, `Magpie` will first look for separate files to load each section individually.
 To enforce using a combined file as above, either provide ``MAGPIE_CONFIG_PATH = <path>/config.yml`` or ensure that each
 specific environment variable ``MAGPIE_PROVIDERS_CONFIG_PATH`` and ``MAGPIE_PERMISSIONS_CONFIG_PATH`` point to the same
@@ -171,7 +170,7 @@ creation. Otherwise defaults are assumed and only the specified user or group na
 `providers.cfg`_ and `permissions.cfg`_ for further details about specific formatting and behaviour of each available
 field.
 
-A section for ``webhooks`` has also been added to the combined configuration file. This section defines a list of
+A section for webhooks has also been added to the combined configuration file. This section defines a list of
 urls that should be called when either creating or deleting a user. The webhooks urls are responsible for any extra
 steps that should be taken on external services during the user creation/deletion.
 
