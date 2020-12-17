@@ -87,13 +87,28 @@ More specifically, following distinctions can be observed between different kind
         to as :term:`Inherited Permissions` in the documentation and naturally from a linguistic standpoint, query
         ``inherited`` (with ``ed``) is now the *official* parameter. The older variant remains supported and equivalent.
 
+.. _`resolved permissions`:
+- **Resolved Permissions**:
+    Specific interpretation of :term:`Inherited Permissions`_ when there are multiple :term:`Applied Permissions`
+    combinations to the :term:`User` and/or his :term:`Group` memberships. The *resolution* of all those definitions
+    are interpreted on a per-:term:`Resource` basis to obtain an equivalent and unique :term:`Permission` matching
+    the one with highest priority, only for that localized scope. This resulting *resolved* :term:`Permission` reduces
+    the set of defined :term:`Inherited Permissions`_ such that other entries on the same :term:`Resource` can be
+    ignored as they are either redundant or conflicting but of lesser priority. The resolution considers the various
+    priorities according to their associated :term:`User`, :term:`Group`, :class:`Access` and :class:`Scope` attributes.
+    See `Extended Representation`_ section for details.
+
+    .. versionadded:: 3.5
+        The concept did not exist before this version as all :term:`Groups` where considered equally, whether they were
+        with a *special* connotation (e.g.: ``MAGPIE_ANONYMOUS_GROUP``) or any other *generic* :term:`Group`.
+
 .. _`effective permissions`:
 
 - **Effective Permissions**:
-    Represents all `Inherited Permissions`_ of the :term:`User` and all its :term:`Group` membership, as well as the
+    Represents all `Resolved Permissions`_ of the :term:`User` and all its :term:`Group` membership, as well as the
     extensive resolution of the :term:`Service` and every children :term:`Resource` in its hierarchy for the requested
-    :term:`Resource` scope. Effective permissions automatically imply ``inherited=True``, and can be obtained from
-    :term:`User`-scoped requests with ``effective=true`` query parameter wherever supported.
+    :term:`Resource` scope. Effective permissions automatically imply ``inherited=True`` and ``resolved=True``, and can
+    be obtained only from :term:`User`-scoped requests with ``effective=true`` query parameter wherever supported.
     See |perm_example_type|_ for complete comparison.
 
 .. _`access permissions`:
@@ -370,7 +385,7 @@ set. This field can be represented with the following combinations:
       - The resolved access to the :term:`Resource` is caused by an :term:`Inherited Permissions` the :term:`User`
         obtains through the specified :term:`Group` membership.
     * - ``"multiple"``
-      - The resolved access to the :term:`Resource` is simultaneously caused by multiple :term:`Inherited Permissions`
+      - The resolved access to the :term:`Resource` is simultaneously caused by multiple :term:`Resolved Permissions`
         of equal priority. This can be displayed when using ``resolve`` detailed below, and that not only a single
         :term:`Group` affects the resulting :term:`Permission`.
     * - ``"no-permission"``
@@ -622,6 +637,9 @@ obtain *"what are the permissions that this user explicitly has on this resource
 Effect of Permission Modifiers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. seealso::
+    Section `permission_modifiers`_ provides details about concepts relative to this example.
+
 Below are examples of :term:`Permission` definitions that can help better understand the different concepts.
 The definitions employ the ``[name]-[access]-[scope]`` convention to illustrate the applied :term:`Permission`.
 
@@ -685,10 +703,10 @@ the given hierarchy. In this case, every :term:`Resource` can be applied with ei
 
 .. note::
     Below ``[unspecified-#]`` identifiers are employed to indicate path element that would land onto
-    no existing :term:`Resource` (e.g.: ``/service-A/resource-1/Unknown`` mapped to ``[unspecified-1]``), but that
-    will still obtain :term:`Effective Permissions` according to applied :attr:`Scope.RECURSIVE` modifier if any.
-    Because the :term:`Resource` does not exist, there cannot be any corresponding :term:`Applied Permissions` on
-    them, as indicated by ``-``.
+    non existing :term:`Resource` (e.g.: ``/service-A/resource-1/Unknown`` mapped to ``[unspecified-1]``), but that
+    will still obtain :term:`Effective Permissions` affected by any applied :attr:`Scope.RECURSIVE` modifier on parent
+    :term:`Resource` locations (i.e.: resources that *would* be its parent if it did exist). Because ``[unspecified-#]``
+    items do not exist, there cannot be any corresponding :term:`Applied Permissions` on them, as indicated by ``-``.
 
                                       | TestUser      | TestGroup1    | TestGroup2    | Anonymous
                                       | [user]        | [group]       | [group]       | [group] (special)

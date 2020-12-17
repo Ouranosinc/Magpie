@@ -170,18 +170,26 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             R: recursive
 
         Permissions Applied::
-                                                user            group           effective (reason/importance)
-            Service1                            (w-D-M)         (w-A-R)         r-D, w-D  (user > group)
-                Resource1                       (r-A-R)                         r-A, w-A
-                    Resource2                                   (r-D-R)         r-D, w-A  (revert user-res1)
-                        Resource3               (w-A-R)         (w-D-M)         r-D, w-A  (user > group)
-                            Resource4                           (w-D-M)         r-D, w-D  (match > recursive)
-                                Resource5 (*)   [doesn't exist]                 r-D, w-A  (see note below)
+                                              | user            | group           | effective (reason/importance)
+            ==================================+=================+=================+====================================
+            Service1                          |         (w-D-M) |         (w-A-R) | r-D, w-D  (user > group)
+                Resource1                     |                 | (r-A-R)         | r-A, w-A
+                    Resource2                 | (r-D-R)         |                 | r-D, w-A  (revert user-res1)
+                        Resource3             |         (w-A-R) |         (w-D-M) | r-D, w-A  (user > group)
+                            Resource4         |         (w-D-M) |                 | r-D, w-D  (match > recursive)
+                                Resource5 (*) | [-----n/a-----] | [-----n/a-----] | r-D, w-A  (see note below)
 
         .. note:: (*)
             Last ``Resource5`` doesn't exist, but recursive access should be granted/refused from *closest* parent
             resource *recursive* permission that could be found. In this case ``Resource2`` for ``read`` permission
             and ``Resource3`` for ``write`` permission.
+
+        .. versionchanged:: 3.5
+            User and Group permissions for ``Resource1`` and ``Resource2`` have been swapped since new priorities make
+            :term:`Direct Permissions` more important than :term:`Inherited Permissions`. The :attr:`Access.DENY` was
+            not being reverted with original definitions that assumed them to be of equal importance, and therefore
+            plain ``DENY > ALLOW`` was working. Permission on ``Resource4`` was moved from Group to User for the same
+            reason.
         """
         svc_name = "unittest-service-api"
         svc_type = ServiceAPI.service_type
@@ -212,11 +220,11 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         wDM = PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)         # noqa
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc_id, override_permission=wDM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc_id, override_permission=wAR)
-        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res1_id, override_permission=rAR)
-        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res2_id, override_permission=rDR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res1_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res2_id, override_permission=rDR)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res3_id, override_permission=wAR)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res3_id, override_permission=wDM)
-        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res4_id, override_permission=wDM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res4_id, override_permission=wDM)
 
         # login test user for which the permissions were set
         self.login_test_user()
@@ -224,44 +232,44 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         # Service1 direct call
         path = "/ows/proxy/{}".format(svc_name)
         req = self.mock_request(path, method="GET")
-        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg="Using [GET, {}]".format(path))
         req = self.mock_request(path, method="POST")
-        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg="Using [POST, {}]".format(path))
 
         # Service1/Resource1
         path = "/ows/proxy/{svc}/{res}".format(svc=svc_name, res=res_name)
         req = self.mock_request(path, method="GET")
-        utils.check_no_raise(lambda: self.ows.check_request(req))
+        utils.check_no_raise(lambda: self.ows.check_request(req), msg="Using [GET, {}]".format(path))
         req = self.mock_request(path, method="POST")
-        utils.check_no_raise(lambda: self.ows.check_request(req))
+        utils.check_no_raise(lambda: self.ows.check_request(req), msg="Using [POST, {}]".format(path))
 
         # Service1/Resource1/Resource2
         path = "/ows/proxy/{svc}/{res}/{res}".format(svc=svc_name, res=res_name)
         req = self.mock_request(path, method="GET")
-        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg="Using [GET, {}]".format(path))
         req = self.mock_request(path, method="POST")
-        utils.check_no_raise(lambda: self.ows.check_request(req))
+        utils.check_no_raise(lambda: self.ows.check_request(req), msg="Using [POST, {}]".format(path))
 
         # Service1/Resource1/Resource2/Resource3
         path = "/ows/proxy/{svc}/{res}/{res}/{res}".format(svc=svc_name, res=res_name)
         req = self.mock_request(path, method="GET")
-        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg="Using [GET, {}]".format(path))
         req = self.mock_request(path, method="POST")
-        utils.check_no_raise(lambda: self.ows.check_request(req))
+        utils.check_no_raise(lambda: self.ows.check_request(req), msg="Using [POST, {}]".format(path))
 
         # Service1/Resource1/Resource2/Resource3/Resource4
         path = "/ows/proxy/{svc}/{res}/{res}/{res}/{res}".format(svc=svc_name, res=res_name)
         req = self.mock_request(path, method="GET")
-        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg="Using [GET, {}]".format(path))
         req = self.mock_request(path, method="POST")
-        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg="Using [POST, {}]".format(path))
 
         # Service1/Resource1/Resource2/Resource3/Resource4/Resource5 (last resource does not exist)
         path = "/ows/proxy/{svc}/{res}/{res}/{res}/{res}/{res}".format(svc=svc_name, res=res_name)
         req = self.mock_request(path, method="GET")
-        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg="Using [GET, {}]".format(path))
         req = self.mock_request(path, method="POST")
-        utils.check_no_raise(lambda: self.ows.check_request(req))
+        utils.check_no_raise(lambda: self.ows.check_request(req), msg="Using [POST, {}]".format(path))
 
         # login with admin user, validate full access granted even if no explicit permissions was set admins
         utils.check_or_try_logout_user(self)
@@ -271,7 +279,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             path = "/ows/proxy/{}".format(svc_name) + res_count * "/{}".format(res_name)
             for method in ["GET", "POST", "PUT", "DELETE"]:
                 req = self.mock_request(path, method=method)
-                msg = "Using combination [{}, {}]".format(method, path)
+                msg = "Using [{}, {}]".format(method, path)
                 utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
 
     @utils.mock_get_settings
@@ -299,17 +307,19 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             R: recursive
 
         Permissions Applied::
-                                        user                group               effective (reason/importance)
-            Service1                    (w-D-M)             (w-A-R)             b-D, r-D, w-D  (user > group)
-                Directory1              (b-A-R), (r-A-R)                        b-A, r-A, w-A
-                    Directory2                              (b-D-R), (r-D-R)    b-D, r-D, w-A  (revert user-res1)
-                        Directory3      (w-A-R)             (w-D-M)             b-D, r-D, w-A  (user > group)
-                            File1                           (w-D-M)             b-D, r-D, w-D  (match > recursive)
-                Directory4                                  (b-A-R), (r-A-R)    b-A, r-A, w-A
-                    File2               (b-D-M), (r-D-M)    (w-D-R)             b-D, r-D, w-W
-                    Directory5                                                  b-A, r-A, w-W
-                        File3                                                   b-A, r-A, w-W
-            Service2                                        (b-A-R)             b-A, r-D, w-D  (validate catalog access)
+
+                               | user                    | group                   | effective (reason/importance)
+            ===================+=========================+=========================+==================================
+            Service1           |                 (w-D-M) |                 (w-A-R) | b-D, r-D, w-D  (user > group)
+              Directory1       |                         | (b-A-R) (r-A-R)         | b-A, r-A, w-A
+                Directory2     | (b-D-R) (r-D-R)         |                         | b-D, r-D, w-A  (revert group-dir1)
+                  Directory3   |                 (w-A-R) |                 (w-D-M) | b-D, r-D, w-A  (user > group)
+                    File1      |                         |                 (w-D-M) | b-D, r-D, w-D  (match > recursive)
+              Directory4       |                         | (b-A-R) (r-A-R)         | b-A, r-A, w-A
+                File2          | (b-D-M), (r-D-M)        |                 (w-D-R) | b-D, r-D, w-W
+                  Directory5   |                         |                         | b-A, r-A, w-W
+                    File3      |                         |                         | b-A, r-A, w-W
+            Service2           |                         | (b-A-R)                 | b-A, r-D, w-D  (validate catalog)
 
         .. note::
             Permission :attr:`Permission.WRITE` can be created, but they don't actually have any use for the moment
@@ -318,6 +328,12 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         .. seealso::
             Reference test server to explore supported formats by THREDDS service (many files and formats available):
             https://remotetest.unidata.ucar.edu/thredds/catalog/catalog.html
+
+        .. versionchanged:: 3.5
+            User and Group permissions for ``Directory1`` and ``Directory2`` have been swapped since new priorities make
+            :term:`Direct Permissions` more important than :term:`Inherited Permissions`. The :attr:`Access.DENY` was
+            not being reverted with original definitions that assumed them to be of equal importance, and therefore
+            plain ``DENY > ALLOW`` was working.
         """
         svc_type = ServiceTHREDDS.service_type
         svc1_name = "unittest-service-thredds-1"
@@ -365,10 +381,10 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         wDM = PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)         # noqa
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc1_id, override_permission=wDM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc1_id, override_permission=wAR)
-        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir1_id, override_permission=bAR)
-        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir1_id, override_permission=rAR)
-        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir2_id, override_permission=bDR)
-        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir2_id, override_permission=rDR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir1_id, override_permission=bAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir1_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir2_id, override_permission=bDR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir2_id, override_permission=rDR)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=dir3_id, override_permission=wAR)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=dir3_id, override_permission=wDM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=file1_id, override_permission=wDM)

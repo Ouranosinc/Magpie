@@ -42,6 +42,8 @@ def get_session_callable(request):
 
 
 class Group(GroupMixin, Base):
+    _priority = None
+
     def get_member_count(self, db_session=None):
         return BaseService.all(UserGroup, db_session=db_session).filter(UserGroup.group_id == self.id).count()
 
@@ -54,15 +56,19 @@ class Group(GroupMixin, Base):
 
     @property
     def priority(self):
-        # type: () -> Optional[Union[int, Type[math.inf]]]
+        # type: () -> GroupPriority
         """
         Sorting priority weight of the group for resolving conflicting permissions.
         """
+        if self._priority is not None:
+            return self._priority
         if self.group_name == get_constant("MAGPIE_ANONYMOUS_GROUP"):
-            return -1
+            self._priority = -1  # lowest of all for *special* public group
         elif self.group_name == get_constant("MAGPIE_ADMIN_GROUP"):
-            return math.inf  # make sure that everything will be lower than admins
-        return 0  # make sure that nothing can be lower/equal to anonymous
+            self._priority = math.inf  # everything will be lower than admins
+        else:
+            self._priority = 0  # nothing can be lower/equal to anonymous, equal for any *generic* group
+        return self._priority
 
 
 class GroupPermission(GroupPermissionMixin, Base):

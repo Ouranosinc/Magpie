@@ -2,6 +2,7 @@ import functools
 import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import unittest
+import uuid
 import warnings
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
@@ -1332,6 +1333,7 @@ class TestSetup(object):
     @staticmethod
     def create_TestServiceResource(test_case,                       # type: AnyMagpieTestCaseType
                                    override_service_name=null,      # type: Optional[Str]
+                                   override_service_type=null,      # type: Optional[Str]
                                    override_resource_name=null,     # type: Optional[Str]
                                    override_resource_type=null,     # type: Optional[Str]
                                    override_data=null,              # type: Optional[JSON]
@@ -1339,13 +1341,21 @@ class TestSetup(object):
                                    override_cookies=null,           # type: Optional[CookiesType]
                                    ):                               # type: (...) -> JSON
         """
-        Creates the test resource nested *immediately* under the test service. Test service *must* exist beforehand.
+        Creates a two-level tree with the test resource nested *immediately* under the test service.
+        Test service gets created if it did not exist beforehand, but its information are not returned.
 
+        .. seealso::
+            :meth:`create_TestServiceResourceTree`
+
+        :returns: response body of the created resource nested under the service.
         :raises AssertionError: if the response correspond to failure to create the test resource.
         """
         app_or_url = get_app_or_url(test_case)
         svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
-        TestSetup.create_TestService(test_case, override_service_name=svc_name)
+        svc_type = override_service_type if override_service_type is not null else test_case.test_service_type
+        TestSetup.create_TestService(test_case,
+                                     override_service_name=svc_name, override_service_type=svc_type,
+                                     override_headers=override_headers, override_cookies=override_cookies)
         path = "/services/{svc}/resources".format(svc=svc_name)
         data = override_data if override_data is not null else {
             "resource_name": override_resource_name or test_case.test_resource_name,
@@ -1355,6 +1365,60 @@ class TestSetup(object):
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
         return check_response_basic_info(resp, 201, expected_method="POST")
+
+    @staticmethod
+    def create_TestServiceResourceTree(test_case,                       # type: AnyMagpieTestCaseType
+                                       resource_depth=null,             # type: Optional[int]
+                                       override_service_name=null,      # type: Optional[Str]
+                                       override_service_type=null,      # type: Optional[Str]
+                                       override_resource_names=null,    # type: Optional[List[Str]]
+                                       override_resource_types=null,    # type: Optional[List[Str]]
+                                       override_headers=null,           # type: Optional[HeadersType]
+                                       override_cookies=null,           # type: Optional[CookiesType]
+                                       ):                               # type: (...) -> List[int]
+        """
+        Creates a :term:`Service` and nested N-depth :term:`Resource` hierarchy.
+
+        The number of sub-:term:`Resources` to create under the :term:`Service` will be equal to the number of
+        elements in lists :paramref:`override_resource_names` and :paramref:`override_resource_types` if specified
+        (must be equal lengths), or using :paramref:`resource_depth` value with randomly generated names.
+
+        Using :paramref:`resource_depth`, :paramref:`override_resource_names` and :paramref:`override_resource_types`
+        can be a single value to replicate over each of the N-depth :term:`Resource`. If more than one are provided in
+        this case, the first is picked. Test case defaults are used instead in each situation if not specified.
+
+        :returns: list of ordered IDs of the service and all following resources (N-depth + 1 elements).
+        :raises AssertionError: if the response correspond to failure to create any of the elements.
+        """
+        svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
+        svc_type = override_service_type if override_service_type is not null else test_case.test_service_type
+        res_type = override_resource_types if override_resource_types is not null else test_case.test_resource_type
+        res_name = override_resource_names
+        if resource_depth:
+            if isinstance(res_name, (list, set, tuple)):
+                res_name = res_name[0]
+            if isinstance(res_type, (list, set, tuple)):
+                res_name = res_type[0]
+            res_type = [res_type] * resource_depth
+        if res_name is null:
+            res_name = ["resource_{}_{}".format(i, uuid.uuid4()) for i in range(resource_depth)]
+        elif resource_depth:
+            res_name = [res_name] * resource_depth
+        body = TestSetup.create_TestService(test_case,
+                                            override_service_name=svc_name, override_service_type=svc_type,
+                                            override_headers=override_headers, override_cookies=override_cookies)
+        info = TestSetup.get_ResourceInfo(test_case, override_body=body,
+                                          override_headers=override_headers, override_cookies=override_cookies)
+        parent_id = info["resource_id"]
+        all_ids = [parent_id]
+        for res_n, res_t in zip(res_name, res_type):
+            body = TestSetup.create_TestResource(test_case, parent_resource_id=parent_id,
+                                                 override_resource_name=res_n, override_resource_type=res_t,
+                                                 override_headers=override_headers, override_cookies=override_cookies)
+            info = TestSetup.get_ResourceInfo(test_case, override_body=body, full_detail=True)
+            parent_id = info["resource_id"]
+            all_ids.append(parent_id)
+        return all_ids
 
     @staticmethod
     def create_TestResource(test_case,                      # type: AnyMagpieTestCaseType
