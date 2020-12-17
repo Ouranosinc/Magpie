@@ -20,7 +20,7 @@ Therefore, care must be taken to consider under which context this term is obser
 of observed results.
 
 .. versionchanged:: 3.0
-    Following the introduced :ref:`Permission Representations` as JSON objects with this version, a new
+    Following introduction of :ref:`Permission Representations` as JSON objects with this version, a new
     :class:`magpie.permissions.PermissionType` enum was added to make following types more explicit. Responses from
     the API will include a ``type`` field that indicates precisely the type of :term:`Permission` returned, for each
     specific item presented below.
@@ -29,7 +29,8 @@ of observed results.
     - `Permissions Representation`_
     - |perm_example_type|_
 
-More specifically, following distinctions can be observed between different kind of :term:`Permission` used by `Magpie`:
+More specifically, following distinctions and terminology can be observed between different kind of :term:`Permission`
+employed by `Magpie`:
 
 .. _`allowed permissions`:
 
@@ -117,7 +118,7 @@ More specifically, following distinctions can be observed between different kind
     Represents the required level of :term:`Permission` needed to access `Magpie` API routes to request details. These
     can be referred to as "roles", but are inferred by :term:`Group` memberships of the :term:`Logged User` attempting
     to complete the request. It is the only kind of :term:`Permission` which the values are not retrieved from the
-    enum :class:`magpie.permissions.Permission`, but rather from a combination of special :term:`Group` and
+    enum :class:`magpie.permissions.Permission`, but rather from a combination of *special* :term:`Group` and
     :ref:`Configuration` constants. See `Route Access`_ for more details.
 
 .. todo: (?) resource owner permission?
@@ -146,19 +147,23 @@ a running `Magpie` instance or the instance's version route.
 .. versionchanged:: 2.0
 
     Some routes under ``/users/{user_name}`` are also granted more *contextual access* than the default admin-only
-    access requirement to allow self-referencing user operations. Using a combination of view configurations with
-    :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION` and
-    :py:data:`magpie.constants.MAGPIE_CONTEXT_PERMISSION`, the permitted functionalities are controlled according to
-    the actual procedure being executed. In other words, if the :term:`Request User` corresponds to the path variable
-    :term:`Context User`, access *could* also granted to allow that individual to obtain or update its own details.
-    In this situation, allowed routes are controlled on a per-request basis with for the respective contextual
+    access requirement to allow self-referencing :term:`User` operations. Using a combination of view configurations
+    with :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION` and :py:data:`magpie.constants.MAGPIE_CONTEXT_PERMISSION`,
+    the permitted functionalities are controlled according to the actual procedure being executed. In other words, if
+    the :term:`Request User` corresponds to the path variable :term:`Context User`, access *could* also be granted to
+    allow that individual to obtain or update its own details.
+    In this situation, allowed routes are controlled on a per-request basis for the respective contextual
     operations accomplished by each request. For example, :term:`Logged User` could be granted access to update its
     account details, but won't be able to grant itself more permissions on a given :term:`Service` or :term:`Resource`.
 
-Typically, request `Access Permissions`_ fall into one of the following category for all API endpoints. Higher
-permissions in the table typically imply higher access conditions.
+Typically, request `Access Permissions`_ fall into one of the following categories for all API endpoints.
+Permissions listed in the table typically imply descending access conditions, the first being the most restrictive
+access (or requiring the highest privileges), and the last being more permissive to the open public.
 
-.. list-table::
+.. _request_access_table:
+.. |request_access_table| replace:: Request Access Conditions
+
+.. list-table:: Request Access Conditions
     :header-rows: 1
 
     * - View Permission
@@ -181,23 +186,23 @@ permissions in the table typically imply higher access conditions.
 When targeting specific :term:`User`-scoped routes, the following (simplified) operations are applied to determine if
 access should be granted to execute the request:
 
-1. :term:`Logged User` has administrative-level `Access Permissions`_ (always granted access).
-2. :term:`Context User` corresponds exactly to same :term:`Request User` identified from the path variable.
-3. :term:`Context User` in path variable is the special keyword :py:data:`magpie.constants.MAGPIE_LOGGED_USER`.
-4. :term:`Context User` in path variable is special user :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`.
+1. verify if :term:`Logged User` has administrative-level `Access Permissions`_ (always granted access).
+2. verify if :term:`Context User` corresponds exactly to same :term:`Request User` identified from the path variable.
+3. verify if :term:`Context User` in path variable is *special* keyword :py:data:`magpie.constants.MAGPIE_LOGGED_USER`.
+4. verify if :term:`Context User` in path variable is *special* user :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`.
 
 For the first matched of the above steps, the condition is compared to the specific request requirement.
-Access is granted or denied according to met or insufficient condition result.
+Access is granted or denied respectively to met or insufficient privileges against the |request_access_table|_ table.
 
 Every time a :term:`User`-scoped request is executed, the targeted :term:`Context User` is resolved accordingly to
 either the explicit ``{user_name}}`` value provided, or the auto-resolved :py:data:`magpie.constants.MAGPIE_LOGGED_USER`
-value that implicitly retrieves the :term:`Request User` as the :term:`Context User`.
+value that implicitly retrieves the :term:`Request User` as equal to the :term:`Context User`.
 
 .. note::
     Whenever one of the :term:`User`-scoped requests refers to specials keywords such as
     :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` or :py:data:`magpie.constants.MAGPIE_ADMIN_GROUP`, any operation
     that has the intention to modify the corresponding :term:`User` or :term:`Group` are forbidden. There is therefore
-    some additional request-specific logic (depending on its purpose and resulting actions) for special-cases that is
+    some additional request-specific logic (depending on its purpose and resulting actions) for special cases that are
     not explicitly detailed in above steps. Some of these special behaviors can be observed across the various `tests`_.
 
 
@@ -207,50 +212,60 @@ provided that they act almost the same way. More precisely, they both work in th
 :term:`Request User` is equal to :term:`Context User`, but each for different sets of applicable values for those
 :term:`User` references.
 
-When a route is attributed :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION`, it means that the :term:`Request User`
-must absolutely be authenticated (i.e.: not ``None``), while :py:data:`magpie.constants.MAGPIE_CONTEXT_PERMISSION` does
-not enforce this criteria. The *contextual* permission is an extended set of the *logged* one with two exceptions, which
-are when the :term:`Request User` is unauthenticated and/or when the referenced :term:`Context User` is resolved to the
-unauthenticated :term:`User` defined by :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`.
+When a route is attributed with :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION` access requirement, it means that
+the :term:`Request User` must absolutely be authenticated (i.e.: not ``None``) to be granted access, while
+:py:data:`magpie.constants.MAGPIE_CONTEXT_PERMISSION` does not specifically enforce this criteria. The *contextual*
+permission is an extended set of the *logged* one with two exceptions, which are when the :term:`Request User` is
+unauthenticated and/or when the referenced :term:`Context User` is resolved as the *special* :term:`User` defined
+by :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` that also represents unauthenticated :term:`User`.
 
 An example where such distinction is important goes as follows. A request that requires to update :term:`User`
-details typically *minimally* requires a :term:`Logged User` because it does not make sense to attempt modification
+details *minimally* requires a :term:`Logged User` because it does not make sense to attempt modification
 of an undefined :term:`User`. If the :py:data:`magpie.constants.MAGPIE_CONTEXT_PERMISSION` requirement was applied, it
-would imply that unauthenticated :term:`Context User` *could* update itself, which is obviously wrong. On the other
-hand, it makes sense to allow the :term:`Request User` to update its own details. In this case, the applicable view
-configuration is :py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION` so that it immediately forbids the operation if
+would imply that unauthenticated *special* :term:`Context User` *could* update itself, which is obviously wrong since
+it does not represent a *real* :term:`User` account. On the other hand, it makes sense to allow some
+:term:`Request User` to update its personal details. In this case, the applicable view configuration should be
+:py:data:`magpie.constants.MAGPIE_LOGGED_PERMISSION` so that it immediately forbids the operation if
 the :term:`Request User` did not accomplish prior :term:`Authentication`. As counter example, requesting details about
 resources that are :term:`Public` (more details in :ref:`Public Access` for this), makes sense even when we did not
 complete prior :term:`Authentication`, as they are accessible to everyone. The view configuration in this case should
 employ :py:data:`magpie.constants.MAGPIE_CONTEXT_PERMISSION` so that :term:`Context User` referring to unauthenticated
-:term:`User` will be permitted. They cannot be set to :py:data:`pyramid.security.Authenticated`, as this would enforce
-the need to signin in first, while :py:data:`pyramid.security.NO_PERMISSION_REQUIRED` would fully open *all* requests
-targeting for example an administrator as :term:`Context User`. It is important to distinguish in this situation between
-:ref:`Access Permissions` of the view configuration and listed :ref:`Applied Permissions` on resources.
+:term:`User` will be permitted. For previous cases, `Access Permissions`_ cannot be defined using
+:py:data:`pyramid.security.Authenticated`, as this would enforce requirement to login first (when not always needed),
+while :py:data:`pyramid.security.NO_PERMISSION_REQUIRED` would fully open *all* requests, including ones targeting
+for example an administrator as :term:`Context User` which should be masked to non-administrators.
+
+For all presented reasons above, it is important to distinguish between :ref:`Access Permissions` applied to request
+view configuration and :ref:`Applied Permissions` on resources, and they conceptually represent completely different
+operations, but are managed according to overlapping :term:`User` and :term:`Group` definitions.
 
 Public Access
 -------------
 
-In order to achieve publicly accessible :term:`Service` or :term:`Resource` functionality by any given individual, the
-desired :term:`Permission` must be applied on special :term:`Group` defined with configuration setting
+In order to achieve publicly accessible :term:`Service` or :term:`Resource` functionality by any given individual,
+the desired :term:`Permission` must be applied on *special* :term:`Group` defined with configuration setting
 :py:data:`magpie.constants.MAGPIE_ANONYMOUS_GROUP`. Since every existing :term:`User` automatically gets attributed
-membership to that special :term:`Group` at creation time, all applied :term:`Permission` to it are inherited by
+membership to that *special* :term:`Group` at creation time, all :term:`Applied Permissions` to it are inherited by
 everyone, making the corresponding :term:`Resource` effectively :term:`Public`.
 
-Note that it is **VERY** important to apply :term:`Permission` on the :term:`Group` defined by
-:py:data:`magpie.constants.MAGPIE_ANONYMOUS_GROUP` rather than then :term:`User` defined by
-:py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` in order to achieve :term:`Public`-like access by everyone. This is
-because using the :term:`User` instead of the :term:`Group` would instead make the :term:`Resource`
-accessible **ONLY** while not authenticated (i.e.: when :term:`Logged User` corresponds to
-:py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`). Once a real :term:`User` would authenticate itself, they would
-suddenly *lose* the :term:`Public` :term:`Permission` since :term:`Logged User` would not be the special :term:`User`
-anymore. That would lead to unexpected behavior where :term:`Resource` intended to be always :term:`Public` would
-contextually change access criteria depending on active :term:`Logged User` session. More precisely, this would cause
-confusing situation where an unauthenticated :term:`User` would be able to see publicly accessible elements, but
-wouldn't see them anymore as soon as he would authenticate itself (login). That :term:`User` would have the impression
-that its access rights are lowered although they should be increased by authenticating itself.
+.. note::
+    It is **VERY** important to apply :term:`Permission` on the *special* :term:`Group` defined by
+    :py:data:`magpie.constants.MAGPIE_ANONYMOUS_GROUP` rather than then *special* :term:`User` defined by
+    :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` in order to achieve :term:`Public`-like access by everyone.
+    This is because using the :term:`User` instead of the :term:`Group` would instead make the :term:`Resource`
+    accessible **ONLY** while not authenticated (i.e.: when :term:`Logged User` corresponds to
+    :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`). Doing so would cause unnatural situations.
+    If the :term:`Permission` was applied for :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`, once a real
+    :term:`User` would authenticate itself, they would suddenly *lose* the :term:`Public` :term:`Permission` since
+    :term:`Logged User` would not be the *special* :term:`User` anymore (as if login to a different account).
+    That would lead to unexpected behavior where :term:`Resource` intended to be always :term:`Public` would
+    contextually change access criteria depending on active :term:`Logged User` session. More precisely, this would
+    cause confusing situation where an unauthenticated :term:`User` would be able to see publicly accessible elements,
+    but the same person wouldn't retain access to the same resources anymore as soon as he would authenticate itself
+    (login). That :term:`User` would have the impression that its access rights are lowered although they should
+    naturally expect increased privileges after authenticating itself.
 
-Special user :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` is available only for evaluation purpose of
+Special :term:`User` :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` is available only for evaluation purpose of
 :term:`Public`-only :term:`Permission` applied to :term:`Service` and :term:`Resource`, but is technically not required
 to execute `Magpie` application. Effectively, when the active session corresponds to unauthenticated
 :term:`Logged User`, it is still allowed to call :term:`User`-scoped API request paths, which will return details about
