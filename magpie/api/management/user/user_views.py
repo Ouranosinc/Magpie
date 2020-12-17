@@ -1,6 +1,8 @@
 """
 User Views, both for specific user-name provided as request path variable and special keyword for logged session user.
 """
+import multiprocessing
+
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
@@ -17,6 +19,7 @@ from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
 from magpie.permissions import PermissionType, format_permissions
+from magpie.register import get_all_configs
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
 
@@ -135,6 +138,19 @@ def delete_user_view(request):
                     http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
     ax.evaluate_call(lambda: request.db.delete(user), fallback=lambda: request.db.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
+
+    # Check for webhook requests
+    config_path = get_constant("MAGPIE_CONFIG_PATH", default_value=None,
+                               raise_missing=False, raise_not_set=False, print_missing=True)
+    if config_path:
+        webhook_configs = get_all_configs(config_path, 'webhooks', allow_missing=True)
+        for cfg in webhook_configs:
+            if 'delete' in cfg.keys() and len(cfg['delete']) > 0:
+                # Execute all webhook requests
+                pool = multiprocessing.Pool(processes=len(cfg['delete']))
+                args = [(url, user.user_name) for url in cfg['delete']]
+                result = pool.starmap_async(uu.webhook_request, args, error_callback=uu.webhook_error_callback)
+
     return ax.valid_http(http_success=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)
 
 

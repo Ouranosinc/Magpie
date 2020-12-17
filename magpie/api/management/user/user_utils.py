@@ -1,3 +1,4 @@
+import multiprocessing
 from typing import TYPE_CHECKING
 
 import requests
@@ -26,7 +27,11 @@ from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
+from magpie.register import get_all_configs
 from magpie.services import service_factory
+from magpie.utils import get_logger
+
+LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -109,31 +114,38 @@ def create_user(user_name, password, email, group_name, db_session):
         _add_to_group(new_user, _get_group(anonym_grp_name))
         new_user_groups.append(anonym_grp_name)
 
-    # user_name_list = ax.evaluate_call(lambda: [user.user_name for user in
-    #                                            UserService.all(models.User, db_session=db_session)],
-    #                                   fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
-    #                                   msg_on_fail=s.Users_GET_ForbiddenResponseSchema.description)
-    # print(user_name_list)
+    # Check for webhook requests
+    config_path = get_constant("MAGPIE_CONFIG_PATH", default_value=None,
+                               raise_missing=False, raise_not_set=False, print_missing=True)
+    if config_path:
+        webhook_configs = get_all_configs(config_path, 'webhooks', allow_missing=True)
+        for cfg in webhook_configs:
+            if 'create' in cfg.keys() and len(cfg['create']) > 0:
+                # Execute all webhook requests
+                pool = multiprocessing.Pool(processes=len(cfg['create']))
+                args = [(url, user_name) for url in cfg['create']]
+                result = pool.starmap_async(webhook_request, args, error_callback=webhook_error_callback)
 
-    valid_http = ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
-                               content={"user": uf.format_user(new_user, new_user_groups)})
+    return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
+                         content={"user": uf.format_user(new_user, new_user_groups)})
 
-    webhook_url = get_constant("MAGPIE_WEBHOOK_PRE_USER_CREATION_URL")
 
-    # FIXME: add try, in case url is not available
-    if webhook_url is not None and webhook_url != "":
-        try:
-            # TODO: set status to 0
-            resp = requests.post(webhook_url + "/create", data={'user_name': user_name})
-            print(resp.status_code)
-            print(resp.text)
-        except Exception as e:
-            # TODO: clean up, remove pending user
-            raise_http(http_error=HTTPFailedDependency,
-                       detail="Error occurred during parameter verification")
-    # TODO: reset status to finished
+def webhook_request(webhook_url, user_name):
+    """
+    Sends a webhook request using the url parameter
+    """
+    # TODO: create a real temp_url that will be called if the webhook service has an error
+    #  this would also set the user's status to 0
+    resp = requests.post(webhook_url, data={'user_name': user_name, 'temp_url': 'temp_url:80/todo'})
 
-    return valid_http
+
+def webhook_error_callback(r):
+    """
+    Error callback function called if an error occurs in the webhook_call function
+    """
+    # TODO : (related to TODO in webhook_call function) handle errors occuring in the thread for the webhook_call
+    #  change user's status to 0?
+    LOGGER.error(str(r))
 
 
 def create_user_resource_permission_response(user, resource, permission, db_session, overwrite=False):

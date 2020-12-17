@@ -1,11 +1,8 @@
-import os
 from errno import EADDRINUSE
 import threading
-from cgi import FieldStorage
 import functools
 import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
-from time import sleep
 import unittest
 import warnings
 from distutils.version import LooseVersion
@@ -253,35 +250,52 @@ def get_test_webhook_app():
     """
     Instantiate a local test application used for the prehook for user creation and deletion.
     """
-    def webhook_create(request):
+    def webhook_request(request):
+        # Simulates a webhook url call
         user = request.POST['user_name']
-        if user == 'failure_user':
-            # Simulates an error in the webhook process
-            return HTTPInternalServerError()
-        sleep(1)
-        return Response(user + " webhook")
+        temp_url = request.POST['temp_url']
+
+        # Status is incremented to count the number of successful test webhooks
+        settings["webhook_status"] += 1
+        return Response("Successful webhook url for user " + user)
+
+    def get_status(request):
+        # Returns the status number
+        return Response(str(settings["webhook_status"]))
+
+    def reset_status(request):
+        settings["webhook_status"] = 0
+        return Response("Webhook status has been reset to 0.")
+
+    with Configurator() as config:
+        settings = config.registry.settings
+        # Initialize status
+        settings["webhook_status"] = 0
+        config.add_route('webhook', '/webhook')
+        config.add_route('get_status', '/get_status')
+        config.add_route('reset_status', '/reset_status')
+        config.add_view(webhook_request, route_name='webhook', request_method="POST", request_param="user_name")
+        config.add_view(get_status, route_name='get_status', request_method="GET")
+        config.add_view(reset_status, route_name='reset_status', request_method="POST")
+        app = config.make_wsgi_app()
 
     def webhook_app():
-        with Configurator() as config:
-            config.add_route('create', '/create')
-            config.add_view(webhook_create, route_name='create', request_method="POST", request_param="user_name")
-            app = config.make_wsgi_app()
         try:
-            webhook_url_info = urlparse(get_constant("MAGPIE_WEBHOOK_PRE_USER_CREATION_URL"))
+            webhook_url_info = urlparse(get_constant("MAGPIE_TEST_USER_WEBHOOK_URL"))
             serve(app, host=webhook_url_info.hostname, port=webhook_url_info.port)
         except OSError as e:
             if e.errno == EADDRINUSE:
-                # The app is already running, nothing to do.
+                # The app is already running, we just need to reset the webhook status for a new test.
+                resp = requests.post(get_constant('MAGPIE_TEST_USER_WEBHOOK_URL') + '/reset_status')
+                check_response_basic_info(resp, 200, expected_method="POST")
                 return
             else:
                 raise
+
     x = threading.Thread(target=webhook_app, daemon=True)
     x.start()
 
-    # FIXME: sometimes an error for first request, with BadGateway
-    #  (probably the app didn't had the time to startup completely)
-
-    return
+    return app
 
 
 def get_hostname(test_item):

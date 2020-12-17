@@ -34,3 +34,14 @@ groups:
   - name: <groupname>                 # required if entry provided
     description: <some description>   # optional
     discoverable: True                # optional
+
+# Definitions of all the webhooks urls that will be called when creating or deleting a users.
+webhooks:
+  create :
+    - <url1>
+    - <url2>
+    - ...
+  delete :
+    - <url1>
+    - <url2>
+    - ...
